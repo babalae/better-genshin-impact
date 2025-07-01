@@ -65,11 +65,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
         Notify.Event(NotificationEvent.DomainStart).Success($"{Name}启动");
 
         await DoDomain();
-
-
-        await Delay(2000, ct);
-        await Bv.WaitForMainUi(_ct, 30);
-        await Delay(2000, ct);
+        
+        await Delay(3000, ct);
 
         await ArtifactSalvage();
         Notify.Event(NotificationEvent.DomainEnd).Success($"{Name}结束");
@@ -516,6 +513,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(star).Start(_ct);
+        await new AutoArtifactSalvageTask(star, false).Start(_ct);
     }
 }

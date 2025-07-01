@@ -51,9 +51,9 @@ public class SwitchPartyTask
             {
                 Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
 
-                // 考虑加载时间 2s，共检查 3s，如果失败则抛出异常
+                // 考虑加载时间 2s，共检查 4.2s，如果失败则抛出异常
                 
-                for (int i = 0; i < 5; i++) // 检查 5 次
+                for (int i = 0; i < 7; i++) // 检查 7 次
                 {
                     await Delay(600, ct);
                     using var raCheck = CaptureToRectArea();

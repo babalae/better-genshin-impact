@@ -58,7 +58,7 @@
         </ui:Grid>
         <ui:TitleBar Title="关于">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
     </Grid>
