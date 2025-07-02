@@ -51,6 +51,8 @@ public partial class ScriptControlViewModel : ViewModel
 
     private readonly IScriptService _scriptService;
     
+    private readonly IConfigService _configService;
+    
     /// <summary>
     /// 配置组配置
     /// </summary>
@@ -72,10 +74,11 @@ public partial class ScriptControlViewModel : ViewModel
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService)
+    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService, IConfigService configService)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
+        _configService = configService;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
 
@@ -121,6 +124,47 @@ public partial class ScriptControlViewModel : ViewModel
         SelectedScriptGroup.Projects.Clear();
         WriteScriptGroup(SelectedScriptGroup);
     }
+
+    [RelayCommand]
+    private async Task OpenNewLogParse()
+    {
+        try
+        {
+            // 获取HTTP服务器配置
+            var config = _configService.Get().HttpServerConfig;
+            
+            // 构建URL
+            var url = $"http://{config.Host}:{config.Port}/CanLiang";
+            
+            // 使用系统默认浏览器打开URL
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+            
+            _snackbarService.Show(
+                "参量质变仪已启动",
+                $"参量质变仪Web界面已在浏览器中打开，地址: {url}",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "打开参量质变仪时发生错误");
+            _snackbarService.Show(
+                "启动失败",
+                $"打开参量质变仪时发生错误: {ex.Message}",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
 
     [RelayCommand]
     private async Task OpenLogParse()
