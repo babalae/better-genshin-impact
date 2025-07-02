@@ -5,13 +5,14 @@ using System.Diagnostics;
 using System.Drawing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map.Camera;
+using BetterGenshinImpact.GameTask.Common.Map.MiniMap;
 using Point = OpenCvSharp.Point;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
 public class CameraOrientation
 {
-    private static readonly CameraOrientationFromLimint _coV2 = new();
+    private static readonly MiniMapPreprocessor _coV2 = new();
     
     /// <summary>
     /// 计算当前小地图摄像机朝向的角度
@@ -32,9 +33,9 @@ public class CameraOrientation
     public static float ComputeMiniMap(Mat mat)
     {
        var (angle, confidence)  = _coV2.PredictRotationWithConfidence(mat);
-       if (confidence < 0.3)
+       if (confidence < 0.2)
        {
-           Debug.WriteLine($"置信度过低, {confidence}<0.3, 不可靠视角 {angle}");
+           Debug.WriteLine($"置信度过低, {confidence}<0.2, 不可靠视角 {angle}");
            Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
            return CameraOrientationFromGia.ComputeMiniMap(mat);
        }

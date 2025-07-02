@@ -103,7 +103,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     {
         try
         {
-            var defaultPauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\default_pause_options.json");
+            var defaultPauseListJson = Global.ReadAllTextIfExist(@"Assets\Config\Skip\default_pause_options.json");
             if (!string.IsNullOrEmpty(defaultPauseListJson))
             {
                 _defaultPauseList = JsonSerializer.Deserialize<List<string>>(defaultPauseListJson, ConfigService.JsonOptions) ?? [];
@@ -117,7 +117,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
         try
         {
-            var pauseListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\pause_options.json");
+            var pauseListJson = Global.ReadAllTextIfExist(@"Assets\Config\Skip\pause_options.json");
             if (!string.IsNullOrEmpty(pauseListJson))
             {
                 _pauseList = JsonSerializer.Deserialize<List<string>>(pauseListJson, ConfigService.JsonOptions) ?? [];
@@ -131,7 +131,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
         try
         {
-            var selectListJson = Global.ReadAllTextIfExist(@"User\AutoSkip\select_options.json");
+            var selectListJson = Global.ReadAllTextIfExist(@"Assets\Config\Skip\select_options.json");
             if (!string.IsNullOrEmpty(selectListJson))
             {
                 _selectList = JsonSerializer.Deserialize<List<string>>(selectListJson, ConfigService.JsonOptions) ?? [];

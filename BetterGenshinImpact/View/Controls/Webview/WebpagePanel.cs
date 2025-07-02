@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
@@ -177,9 +178,8 @@ public class WebpagePanel : UserControl
     public void NavigateToMd(string md, string backgroundColor = "#2b2b2b")
     {
         md = WebUtility.HtmlEncode(md);
-        string md2Html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html",
-            Encoding.UTF8);
-        var html = md2Html.Replace("{{content}}", md).Replace("#202020", backgroundColor);
+        string md2html = File.ReadAllText(Global.Absolute(@"Assets\Strings\md2html.html"), Encoding.UTF8);
+        var html = md2html.Replace("{{content}}", md).Replace("#202020", backgroundColor);
         NavigateToHtml(html);
     }
 

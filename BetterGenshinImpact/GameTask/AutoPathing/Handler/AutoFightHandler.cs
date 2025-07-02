@@ -15,10 +15,6 @@ internal class AutoFightHandler : IActionHandler
     private readonly ILogger<AutoFightHandler> _logger = App.GetLogger<AutoFightHandler>();
     public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        if (!(config != null && config is PathingPartyConfig patyConfig && patyConfig is {AutoFightEnabled:true,JsScriptUseEnabled:true,SoloTaskUseFightEnabled:true}  ))
-        {
-            config = null;
-        }
         await StartFight(ct, config,waypointForTrack);
     }
 
@@ -44,7 +40,7 @@ internal class AutoFightHandler : IActionHandler
         }
 
         //根据怪物标签，调整拾取配置
-        if (waypointForTrack!=null)
+        if (waypointForTrack!=null && waypointForTrack.EnableMonsterLootSplit)
         {
            // normal 小怪,elite 精英,legendary 传奇
            //不为精英或者小怪

@@ -50,6 +50,12 @@ public partial class JsListViewModel : ViewModel
 
     private TaskCompletionSource<bool>? _navigationCompletionSource;
     private const int NavigationTimeoutMs = 10000; // 10秒超时
+    
+    [ObservableProperty] 
+    private ScriptProject? _selectedScriptProject;
+    
+    [ObservableProperty]
+    private bool _isRightClickSelection;
 
     public JsListViewModel(IScriptService scriptService, IConfigService configService)
     {
@@ -144,9 +150,15 @@ public partial class JsListViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void SetRightClickSelection(string isRightClick)
+    {
+        IsRightClickSelection = "True".Equals(isRightClick, StringComparison.OrdinalIgnoreCase);
+    }
+    
+    [RelayCommand]
     private void OpenScriptDetailDrawer(object? scriptItem)
     {
-        if (scriptItem == null)
+        if (scriptItem == null || IsRightClickSelection)
         {
             return;
         }
@@ -172,6 +184,7 @@ public partial class JsListViewModel : ViewModel
                 });
                 DrawerVm.setDrawerOpenedAction(async () =>
                 {
+                    SelectedScriptProject = null;
                     if (_mdWebpagePanel != null)
                     {
                         // 等待导航完成或超时
@@ -193,7 +206,10 @@ public partial class JsListViewModel : ViewModel
             else
             {
                 DrawerVm.SetDrawerClosingAction(_ => { });
-                DrawerVm.setDrawerOpenedAction(() => { });
+                DrawerVm.setDrawerOpenedAction(() =>
+                {
+                    SelectedScriptProject = null;
+                });
                 DrawerVm.DrawerWidth = 300;
             }
 

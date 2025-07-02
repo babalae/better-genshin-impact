@@ -88,7 +88,7 @@
                                  Padding="0,5,0,0"
                                  Background="Transparent"
                                  BorderThickness="0"
-                                 FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Assets/Fonts/MiSans-Regular.ttf#MiSans"
+                                 FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
                                  FontSize="12"
                                  Foreground="LightGray"
                                  IsHitTestVisible="False"

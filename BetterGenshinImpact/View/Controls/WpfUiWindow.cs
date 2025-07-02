@@ -38,7 +38,7 @@ public class WpfUiWindow : FluentWindow
 
         var titleBar = new TitleBar
         {
-            Icon = new ImageIcon { Source = new BitmapImage(new Uri(@"pack://application:,,,/Assets/Images/logo.png", UriKind.Absolute)) }
+            Icon = new ImageIcon { Source = new BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute)) }
         };
         Grid.SetRow(titleBar, 0);
         grid.Children.Add(titleBar);

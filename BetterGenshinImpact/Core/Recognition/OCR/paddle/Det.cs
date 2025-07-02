@@ -20,7 +20,7 @@ public class Det
     }
 
     /// <summary>Gets or sets the maximum size for resizing the input image.</summary>
-    public int? MaxSize { get; set; } = 1536;
+    public int? MaxSize { get; set; } = 960;
 
     /// <summary>Gets or sets the size for dilation during preprocessing.</summary>
     public int? DilatedSize { get; set; } = 2;
@@ -104,6 +104,7 @@ public class Det
             3 => src,
             var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
         };
+        // DetResizeForTest resize_long
         using (var resized = MatResize(padded, MaxSize))
         {
             resizedSize = new Size(resized.Width, resized.Height);
@@ -145,6 +146,12 @@ public class Det
             Scalar.Black);
     }
 
+    /// <summary>
+    /// 按比例缩放图像，保持长边不超过 maxSize。
+    /// </summary>
+    /// <param name="src"></param>
+    /// <param name="maxSize"></param>
+    /// <returns></returns>
     private static Mat MatResize(Mat src, int? maxSize)
     {
         if (maxSize == null) return src.Clone();

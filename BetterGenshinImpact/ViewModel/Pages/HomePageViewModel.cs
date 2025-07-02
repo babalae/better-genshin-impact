@@ -19,6 +19,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -412,10 +413,10 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenGameCommandLineDocument()
     {
-        string md = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/gicli.md", Encoding.UTF8);
+        string md = File.ReadAllText(Global.Absolute(@"Assets\Strings\gicli.md"), Encoding.UTF8);
 
         md = WebUtility.HtmlEncode(md);
-        string md2html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html", Encoding.UTF8);
+        string md2html = File.ReadAllText(Global.Absolute(@"Assets\Strings\md2html.html"), Encoding.UTF8);
         var html = md2html.Replace("{{content}}", md);
 
         WebpageWindow win = new()

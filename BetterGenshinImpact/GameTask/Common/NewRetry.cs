@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Model.Area;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common;
@@ -97,7 +98,7 @@ public static class NewRetry
     /// <returns>是否成功找到元素</returns>
     public static async Task<bool> WaitForElementAppear(
         RecognitionObject recognitionObject,
-        Action retryAction,
+        Action? retryAction,
         CancellationToken ct,
         int maxAttemptCount = 10,
         int retryInterval = 1000
@@ -137,7 +138,7 @@ public static class NewRetry
     /// <returns>是否成功等待元素消失</returns>
     public static async Task<bool> WaitForElementDisappear(
         RecognitionObject recognitionObject,
-        Action retryAction,
+        Action? retryAction,
         CancellationToken ct,
         int maxAttemptCount = 10,
         int retryInterval = 1000)
@@ -161,6 +162,33 @@ public static class NewRetry
             {
                 return true;
             }
+        }
+        return false;
+    }
+    
+    public static async Task<bool> WaitForElementDisappear(
+        RecognitionObject recognitionObject,
+        Action<ImageRegion> retryAction,  // 接收截图的回调
+        CancellationToken ct,
+        int maxAttemptCount = 10,
+        int retryInterval = 1000)
+    {
+        for (int i = 0; i < maxAttemptCount; i++)
+        {
+            if (ct.IsCancellationRequested) return false;
+            
+            // 截图并查找元素
+            using var screen = CaptureToRectArea();
+            using var result = screen.Find(recognitionObject);
+            
+            // 元素已消失
+            if (result.IsEmpty()) return true;
+            
+            // 执行重试操作（传入当前截图）
+            retryAction?.Invoke(screen);
+            
+            // 等待指定时间
+            await Delay(retryInterval, ct);
         }
         return false;
     }

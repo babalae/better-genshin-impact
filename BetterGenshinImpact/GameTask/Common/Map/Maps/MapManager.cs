@@ -44,9 +44,9 @@ public static class MapManager
     {
         return mapType switch
         {
-            MapTypes.Teyvat => new TeyvatMap(),
-            MapTypes.TheChasm => new TheChasmMap(),
-            MapTypes.Enkanomiya => new EnkanomiyaMap(),
+            MapTypes.Teyvat => new TeyvatMapTest(),
+            MapTypes.TheChasm => new TheChasmMapTest(),
+            MapTypes.Enkanomiya => new EnkanomiyaMapTest(),
             MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
             MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
             _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))

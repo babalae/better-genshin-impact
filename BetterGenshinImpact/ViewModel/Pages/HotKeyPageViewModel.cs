@@ -581,56 +581,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    // var handler = new ElementalCollectHandler(ElementalType.Anemo);
-                    // handler.RunAsync(new CancellationToken());
-
-                    // var handler = new PickAroundHandler();
-                    // handler.RunAsync(new CancellationToken());
-
-                    // SwitchPartyTask switchPartyTask = new SwitchPartyTask();
-                    // Task.Run(async () => { await switchPartyTask.Start("三保一", new CancellationToken()); });
-                    //
-                    // GoToAdventurersGuildTask goToAdventurersGuildTask = new GoToAdventurersGuildTask();
-                    // Task.Run(async () => { await goToAdventurersGuildTask.Start("蒙德", new CancellationToken()); });
-
-                    // ArtifactSalvageTask artifactSalvageTask = new ArtifactSalvageTask();
-                    // Task.Run(async () => { await artifactSalvageTask.Start(4, new CancellationToken()); });
-
-                    // 领取纪行奖励
-                    // Task.Run(async () => { await new ClaimBattlePassRewardsTask().Start(new CancellationToken()); });
-
-                    // 领取邮件奖励
-                    // Task.Run(async () => { await new ClaimMailRewardsTask().Start(new CancellationToken()); });
-
-                    // 拾取物品
-                    // Task.Run(async () => { await new ScanPickTask().Start(new CancellationToken()); });
-
-                    // Simulation.SendInput.Keyboard.KeyDown(false, User32.VK.VK_LMENU);
-                    // // TaskContext.Instance().PostMessageSimulator.KeyDown(User32.VK.VK_MENU);
-                    // Thread.Sleep(500);
-                    // GameCaptureRegion.GameRegion1080PPosMove(200, 100);
-                    // Thread.Sleep(500);
-                    // // TaskContext.Instance().PostMessageSimulator.KeyUp(User32.VK.VK_MENU);
-                    // Simulation.SendInput.Keyboard.KeyUp(false, User32.VK.VK_LMENU);
-
-                    // TaskControl.Logger.LogInformation("大地图界面缩放按钮位置：{Position}", Bv.GetBigMapScale( TaskControl.CaptureToRectArea()));
-
-
-                    // TaskControl.Logger.LogInformation($"尝试显示遮罩窗口");
-                    // var maskWindow = MaskWindow.Instance();
-                    // maskWindow.Invoke(() => { maskWindow.Show(); });
-                    Task.Run(async () =>
-                    {
-                        for (int i = 0; i < 100; i++)
-                        {
-                            var imageRegion = TaskControl.CaptureToRectArea();
-                            var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
-                            var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
-                            var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
-                            TaskControl.Logger.LogInformation("冷却时间 {Num}", StringUtils.TryParseDouble(text));
-                            await Task.Delay(10);
-                        }
-                    });
+                    LowerHeadThenWalkToTask _lowerHeadThenWalkToTask = new("chest_tip.png", 20000);
+                    _lowerHeadThenWalkToTask.Start(CancellationToken.None);
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
