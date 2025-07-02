@@ -149,7 +149,7 @@
                                     SelectionMode="Single">
                                     <ui:ListView.ItemTemplate>
                                         <DataTemplate>
-                                            <ui:Card Margin="0,2,0,2" 
+                                            <ui:Card Margin="0,2,0,2"
                                                      Padding="10,8,10,8">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -231,7 +231,7 @@
                                     SelectionMode="Single">
                                     <ui:ListView.ItemTemplate>
                                         <DataTemplate>
-                                            <ui:Card Margin="0,2,0,2" 
+                                            <ui:Card Margin="0,2,0,2"
                                                      Padding="10,8,10,8">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
@@ -337,13 +337,8 @@
 
 
         <!-- 右侧任务管理区域 -->
-        <Border Grid.Column="2"
-                Margin="6"
-                Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
-            <Grid Margin="12">
+        <Border Grid.Column="2" Margin="0,14,6,15">
+            <Grid >
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -352,30 +347,23 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- 标题 -->
-                <ui:TextBlock Grid.Row="0"
-                              Margin="0,0,0,8"
-                              FontTypography="BodyStrong"
-                              Text="任务调度器" />
-
-                <!-- 描述 -->
-                <ui:TextBlock Grid.Row="1"
-                              Margin="0,0,0,12"
-                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              TextWrapping="Wrap"
-                              Text="通过不同的触发方式执行预设的任务序列，支持顺序执行、定时执行和热键触发。" />
-
                 <!-- 操作按钮 -->
                 <StackPanel Grid.Row="2"
                             Orientation="Horizontal"
-                            Margin="0,0,0,12">
+                            Margin="0,0,0,0">
                     <ui:Button Command="{Binding AddTaskCommand}"
                                Content="添加任务"
-                               Icon="{ui:SymbolIcon Add24}" />
+                               Icon="{ui:SymbolIcon Add24}"
+                               Height="26"
+                               Padding="8,2,14,0"
+                               Margin="0"/>
                     <Separator Width="10" Opacity="0" />
 
-                    <ui:DropDownButton Content="导入导出"
-                                       Icon="{ui:SymbolIcon ArrowAutofitDown20}">
+                    <!--<ui:DropDownButton Content="导入导出"
+                                       Icon="{ui:SymbolIcon ArrowAutofitDown20}"
+                                       Height="25"
+                                       Padding="0"
+                                       Margin="0">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu>
                                 <MenuItem Header="导入任务配置" Command="{Binding ImportTasksCommand}" />
@@ -388,84 +376,60 @@
 
                     <ui:Button Command="{Binding SettingsCommand}"
                                Content="全局设置"
-                               Icon="{ui:SymbolIcon Settings24}" />
+                               Icon="{ui:SymbolIcon Settings24}"
+                               Height="25"
+                               Padding="0"
+                               Margin="0"/>-->
                 </StackPanel>
 
-                <!-- 列表标题 -->
-                <Grid Grid.Row="3" Margin="0,0,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="40" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="120" />
-                        <ColumnDefinition Width="80" />
-                        <ColumnDefinition Width="20" />
-                    </Grid.ColumnDefinitions>
-
-                    <Grid x:Name="Col1" Grid.Column="0" />
-                    <Grid x:Name="Col2" Grid.Column="1" />
-                    <Grid x:Name="Col3" Grid.Column="2" />
-                    <Grid x:Name="Col4" Grid.Column="3" />
-                </Grid>
-
                 <!-- 任务列表 -->
-                <ui:ListView Grid.Row="4"
-                             HorizontalAlignment="Stretch"
-                             VerticalAlignment="Stretch"
-                             dd:DragDrop.IsDragSource="True"
-                             dd:DragDrop.IsDropTarget="True"
-                             dd:DragDrop.UseDefaultDragAdorner="True"
-                             ItemsSource="{Binding Tasks, Mode=TwoWay}"
-                             SelectionMode="Single">
-                    <ListView.View>
-                        <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
-                            <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding Index}"
-                                            Header="#" />
-                            <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
-                                            Header="任务名称">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" FontSize="14" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
-                                            DisplayMemberBinding="{Binding TypeDescription}"
-                                            Header="任务类型" />
-                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}"
-                                            Header="启用状态">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <ui:ToggleSwitch IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                        </GridView>
-                    </ListView.View>
+                <ui:Border Grid.Row="4"
+                           Background="{DynamicResource CardBackground}"
+                           BorderBrush="{DynamicResource CardBorderBrush}"
+                           BorderThickness="1"
+                           CornerRadius="0">
+                    <Grid Margin="4">
+                        <ui:Grid ColumnDefinitions="*,235" Visibility="Hidden">
+                            <Grid x:Name="TreeColumnStar" Grid.Column="0" />
+                        </ui:Grid>
+                        <ui:TreeListView BorderThickness="0" ItemsSource="{Binding TaskList2}">
+                            <ui:TreeListView.Columns>
+                                <GridViewColumnCollection>
+                                    <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}"
+                                                       Header="功能">
+                                        <ui:GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ui:TreeRowExpander Content="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ui:GridViewColumn.CellTemplate>
+                                    </ui:GridViewColumn>
+                                    <ui:GridViewColumn Width="100" Header="Text">
+                                        <ui:GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock VerticalAlignment="Center" Text="Text" />
+                                            </DataTemplate>
+                                        </ui:GridViewColumn.CellTemplate>
+                                    </ui:GridViewColumn>
+                                    <ui:GridViewColumn
+                                        Width="80"
+                                        DisplayMemberBinding="{Binding Name}"
+                                        Header="说明" />
+                                    <ui:GridViewColumn Width="120" Header="状态">
+                                        <ui:GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ui:ToggleSwitch VerticalAlignment="Center" IsChecked="{Binding IsChecked}" />
 
-                    <ListView.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Command="{Binding AddTaskCommand}"
-                                      Header="添加任务" />
-                            <MenuItem Command="{Binding EditTaskCommand}"
-                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="编辑任务" />
-                            <MenuItem Command="{Binding DuplicateTaskCommand}"
-                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="复制任务" />
-                            <MenuItem Command="{Binding DeleteTaskCommand}"
-                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="删除任务" />
-                        </ContextMenu>
-                    </ListView.ContextMenu>
-
-                    <ListView.Style>
-                        <Style TargetType="{x:Type ListView}">
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Background" Value="Transparent" />
-                        </Style>
-                    </ListView.Style>
-                </ui:ListView>
+                                            </DataTemplate>
+                                        </ui:GridViewColumn.CellTemplate>
+                                    </ui:GridViewColumn>
+                                </GridViewColumnCollection>
+                            </ui:TreeListView.Columns>
+                            <ui:TreeListView.ItemTemplate>
+                                <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+                            </ui:TreeListView.ItemTemplate>
+                        </ui:TreeListView>
+                    </Grid>
+                </ui:Border>
             </Grid>
         </Border>
     </Grid>

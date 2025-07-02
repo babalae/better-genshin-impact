@@ -40,6 +40,14 @@ public partial class SchedulerViewModel : ViewModel
 
 
     [ObservableProperty] private OneDragonTaskItem? _selectedTask;
+    
+    [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList2 =
+    [
+        new("领取邮件"),
+        new("合成树脂"),
+        // new ("每日委托"),
+        new("自动秘境"),
+    ];
 
     // 命令
     [RelayCommand]
