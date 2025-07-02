@@ -155,6 +155,9 @@
 		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\LogParse\static\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
