@@ -23,12 +23,7 @@ public class AvatarClassifyTransparentGen
     public static void GenAll()
     {
         List<string> sideImageFiles = [];
-        List<string> imgNames =
-        [
-            "UI_AvatarIcon_Side_Escoffier.png", "UI_AvatarIcon_Side_Ifa.png",
-            "UI_AvatarIcon_Side_Flamingo.png", "UI_AvatarIcon_Side_Hookwalker.png", "UI_AvatarIcon_Side_Mosasaurus.png",
-            "UI_AvatarIcon_Side_Shamansaurus.png", "UI_AvatarIcon_Side_Drillhead.png"
-        ];
+        List<string> imgNames = AvatarClassifyGen.ImgNames;
         foreach (string imgName in imgNames)
         {
             sideImageFiles.Add(Path.Combine(BaseDir, imgName));

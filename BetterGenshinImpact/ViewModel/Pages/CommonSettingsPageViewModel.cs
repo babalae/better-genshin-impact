@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using Windows.System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
@@ -16,6 +17,8 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.View.Converters;
@@ -25,9 +28,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Meziantou.Framework.Win32;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
 using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -42,8 +47,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
 
     private string _selectedCountry = string.Empty;
-    [ObservableProperty]
-    private List<string> _adventurersGuildCountry = ["无","枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)
     {
@@ -57,17 +62,18 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
 
-    [ObservableProperty]
-    private FrozenDictionary<string, string> _languageDict = new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
-        .ToFrozenDictionary(
-            c => c,
-            c =>
-            {
-                CultureInfo.CurrentUICulture = new CultureInfo(c);
-                var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
-                return stringLocalizer["简体中文"].ToString();
-            }
-        );
+    [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
+        new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
+            .ToFrozenDictionary(
+                c => c,
+                c =>
+                {
+                    CultureInfo.CurrentUICulture = new CultureInfo(c);
+                    var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ??
+                                          throw new NullReferenceException();
+                    return stringLocalizer["简体中文"].ToString();
+                }
+            );
 
     public string SelectedCountry
     {
@@ -220,15 +226,16 @@ public partial class CommonSettingsPageViewModel : ViewModel
         {
             var zipPath = dialog.FileName;
             // 删除旧文件夹
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
-                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
+                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPathOld);
             }
 
             ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
 
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
+                DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
                 MessageBox.Information("脚本仓库离线包导入成功！");
             }
             else
@@ -238,7 +245,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
             }
         }
     }
-    
+
     [RelayCommand]
     private void OpenAboutWindow()
     {
@@ -246,7 +253,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         aboutWindow.Owner = Application.Current.MainWindow;
         aboutWindow.ShowDialog();
     }
-    
+
     [RelayCommand]
     private void OpenKeyBindingsWindow()
     {
@@ -259,5 +266,32 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
     {
         await OcrFactory.ChangeCulture(type.Key);
+    }
+
+    [RelayCommand]
+    private async Task CheckUpdateAsync()
+    {
+        await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
+        {
+            Trigger = UpdateTrigger.Manual,
+            Channel = UpdateChannel.Stable
+        });
+    }
+
+    [RelayCommand]
+    private async Task CheckUpdateAlphaAsync()
+    {
+        await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
+        {
+            Trigger = UpdateTrigger.Manual,
+            Channel = UpdateChannel.Alpha,
+        });
+    }
+
+    [RelayCommand]
+    private async Task GotoGithubActionAsync()
+    {
+        await Launcher.LaunchUriAsync(
+            new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
     }
 }

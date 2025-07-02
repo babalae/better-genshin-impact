@@ -22,15 +22,6 @@ public class RepoWebBridge
     {
         try
         {
-            await ScriptRepoUpdater.Instance.UpdateCenterRepo();
-        }
-        catch (Exception e)
-        {
-            Toast.Warning($"更新仓库信息失败：{e.Message}");
-        }
-
-        try
-        {
             if (!Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
             {
                 throw new Exception("仓库文件夹不存在，请至少成功更新一次仓库！");

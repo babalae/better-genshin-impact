@@ -684,7 +684,7 @@ public class PathExecutor
         var screen = CaptureToRectArea();
         var position = await GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
@@ -699,7 +699,7 @@ public class PathExecutor
         var screen = CaptureToRectArea();
         var (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogInformation("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
@@ -743,7 +743,7 @@ public class PathExecutor
             Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
             {
-                Logger.LogInformation("到达路径点附近");
+                Logger.LogDebug("到达路径点附近");
                 break;
             }
 
@@ -943,7 +943,7 @@ public class PathExecutor
         ImageRegion screen;
         Point2f position;
         int targetOrientation;
-        Logger.LogInformation("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
 
         var stepsTaken = 0;
         while (!ct.IsCancellationRequested)
@@ -962,7 +962,7 @@ public class PathExecutor
             position = await GetPosition(screen, waypoint);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
-                Logger.LogInformation("已到达路径点");
+                Logger.LogDebug("已到达路径点");
                 break;
             }
 
@@ -1189,7 +1189,7 @@ public class PathExecutor
             preTime = DateTime.Now;
         }
 
-        //Logger.LogInformation("识别到路径："+position.X+","+position.Y);
+        //Logger.LogDebug("识别到路径："+position.X+","+position.Y);
         return (position,time);
     }
 

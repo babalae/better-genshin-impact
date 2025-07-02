@@ -1,6 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
+using GameTask.Model.GameUI;
 using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
@@ -8,12 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Media.Media3D;
 using static BetterGenshinImpact.GameTask.AutoArtifactSalvage.AutoArtifactSalvageTask;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
 {
-    [Collection("Paddle Collection")]
+    [Collection("Init Collection")]
     public partial class AutoArtifactSalvageTaskTests
     {
         private readonly PaddleFixture paddle;
@@ -54,7 +53,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
 
             //
-            var result = AutoArtifactSalvageTask.GetArtifactGridItems(mat);
+            var result = GridScreen.GridEnumerator.GetGridItems(mat);
 
             //
             Assert.Equal(4, result.Count());
@@ -71,7 +70,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\ArtifactGrid.png");
 
             //
-            var result = AutoArtifactSalvageTask.GetArtifactGridItems(mat);
+            var result = GridScreen.GridEnumerator.GetGridItems(mat);
             using Mat leftTopOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 < mat.Width / 2 && r.Y + r.Height / 2 < mat.Height / 2));
             using Mat rightTopOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 > mat.Width / 2 && r.Y + r.Height / 2 < mat.Height / 2));
             using Mat leftBottomOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 < mat.Width / 2 && r.Y + r.Height / 2 > mat.Height / 2));

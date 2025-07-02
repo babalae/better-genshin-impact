@@ -24,6 +24,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
@@ -50,6 +51,8 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly int? maxNumToCheck;
 
+    private bool returnToMainUi = true;
+
     public AutoArtifactSalvageTask(int star, string? regularExpression = null, int? maxNumToCheck = null)
     {
         this.star = star;
@@ -58,7 +61,8 @@ public class AutoArtifactSalvageTask : ISoloTask
         IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
-        numOfStarLocalizedString = [
+        numOfStarLocalizedString =
+        [
             stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
@@ -66,10 +70,18 @@ public class AutoArtifactSalvageTask : ISoloTask
         ];
     }
 
+    public AutoArtifactSalvageTask(int star, bool returnToMainUi) : this(star)
+    {
+        this.returnToMainUi = returnToMainUi;
+    }
+
     public async Task Start(CancellationToken ct)
     {
         this.ct = ct;
-        await _returnMainUiTask.Start(ct);
+        if (returnToMainUi)
+        {
+            await _returnMainUiTask.Start(ct);
+        }
 
         // B键打开背包
         input.SimulateAction(GIActions.OpenInventory);
@@ -159,6 +171,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 }
             }
         }
+
         Bv.ClickWhiteConfirmButton(ra4);
         await Delay(500, ct);
 
@@ -202,126 +215,53 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             input.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
 
-            await _returnMainUiTask.Start(ct);
+            if (returnToMainUi)
+            {
+                await _returnMainUiTask.Start(ct);
+            }
         }
-
     }
 
     private async Task Salvage5Star(string regularExpression, int maxNumToCheck)
     {
         int count = maxNumToCheck;
-        Queue<string> checkedArtifactAffixesQueue = new Queue<string>();
-        int duplicateSum = 0;
-        while (count > 0 && duplicateSum < 3)
+
+        using var ra0 = CaptureToRectArea();
+        Rect gridRoi = new Rect((int)(ra0.Width * 0.025), (int)(ra0.Width * 0.055), (int)(ra0.Width * 0.66), (int)(ra0.Width * 0.4));
+        GridScreen gridScreen = new GridScreen(gridRoi, 3, 40, 28, 0.018, this.logger, this.ct); // 圣遗物分解Grid有4行9列
+        await foreach (ImageRegion itemRegion in gridScreen)
         {
-            // VisionContext.Instance().DrawContent.ClearAll();
-            // await Delay(400, this.ct);
-
-            using var ra = CaptureToRectArea();
-            using ImageRegion grid = ra.DeriveCrop(new Rect((int)(ra.Width * 0.025), (int)(ra.Width * 0.055), (int)(ra.Width * 0.66), (int)(ra.Width * 0.4)));
-            IEnumerable<Rect> gridItems = GetArtifactGridItems(grid.SrcMat);
-
-            //foreach (Rect item in gridItems)
-            //{
-            //    grid.DrawRect(item, item.GetHashCode().ToString(), new System.Drawing.Pen(System.Drawing.Color.Blue));
-            //}
-
-            bool anyItemChecked = false;
-            foreach (Rect item in gridItems)
+            Rect gridRect = itemRegion.ToRect();
+            if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
             {
-                using ImageRegion itemRegion = grid.DeriveCrop(item);
-                if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
+                itemRegion.Click();
+                await Delay(300, ct);
+
+                using var ra1 = CaptureToRectArea();
+                using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridRoi.X, gridRoi.Y));
+                if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
-                    anyItemChecked = true;
-                    itemRegion.Click();
-                    await Delay(300, ct);
+                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.24), (int)(ra1.Width * 0.29)));
+                    string affixes = GetArtifactAffixes(card.SrcMat, OcrFactory.Paddle);
 
-                    using var ra1 = CaptureToRectArea();
-                    using ImageRegion grid1 = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.025), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.66), (int)(ra1.Width * 0.4)));
-                    using ImageRegion itemRegion1 = grid1.DeriveCrop(item);
-                    if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
+                    if (IsMatchRegularExpression(affixes, regularExpression, out string msg))
                     {
-                        using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.24), (int)(ra1.Width * 0.29)));
-                        string affixes = GetArtifactAffixes(card.SrcMat, OcrFactory.Paddle);
-
-                        if (checkedArtifactAffixesQueue.Any(c => c == affixes))
-                        {
-                            duplicateSum++;
-                            logger.LogInformation($"重复检查了该圣遗物");
-                        }
-                        if (checkedArtifactAffixesQueue.Count >= 36)  // 一个grid最多能看到36个完整的圣遗物
-                        {
-                            checkedArtifactAffixesQueue.Dequeue();
-                        }
-                        checkedArtifactAffixesQueue.Enqueue(affixes);
-
-                        if (IsMatchRegularExpression(affixes, regularExpression, out string msg))
-                        {
-                            logger.LogInformation(message: msg);
-                        }
-                        else
-                        {
-                            itemRegion.Click();
-                            await Delay(100, ct);
-                        }
-                        if (duplicateSum >= 3)
-                        {
-                            break;
-                        }
-                    }
-                    count--;
-                    if (count <= 0)
-                    {
-                        break;
-                    }
-                }
-            }
-            if (count <= 0 || duplicateSum >= 3)
-            {
-                break;
-            }
-            if (anyItemChecked)
-            {
-                for (int i = 0; i < 32; i++)    // 先滚动大约三行半
-                {
-                    input.Mouse.VerticalScroll(-2);
-                    await Delay(40, ct);
-                }
-
-                DateTimeOffset rollingEndTime = DateTime.Now.AddSeconds(2);
-                while (DateTime.Now < rollingEndTime)
-                {
-                    await Delay(60, ct);
-                    using var ra2 = CaptureToRectArea();
-                    using ImageRegion grid2 = ra2.DeriveCrop(new Rect((int)(ra2.Width * 0.025), (int)(ra2.Width * 0.055), (int)(ra2.Width * 0.66), (int)(ra2.Width * 0.4)));
-                    IEnumerable<Rect> gridItems2 = GetArtifactGridItems(grid2.SrcMat);
-                    if (gridItems2.Min(i => i.Y) > (ra2.Width * 0.018))  // 精细滚动，保证完整地显示四行
-                    {
-                        input.Mouse.VerticalScroll(-1);
+                        logger.LogInformation(message: msg);
                     }
                     else
                     {
-                        break;
+                        itemRegion.Click();
+                        await Delay(100, ct);
                     }
                 }
 
-                grid.MoveTo(grid.Width, grid.Height);
-                await Delay(500, ct);
+                count--;
+                if (count <= 0)
+                {
+                    logger.LogInformation("检查次数已耗尽");
+                    break;
+                }
             }
-            else
-            {
-                await Delay(400, ct);
-                logger.LogInformation("找不到可检查的圣遗物了");
-                break;
-            }
-        }
-        if (count <= 0)
-        {
-            logger.LogInformation("检查次数已耗尽");
-        }
-        if (duplicateSum >= 3)
-        {
-            logger.LogInformation("重复检查次数过多，推断为找不到可检查的了");
         }
     }
 
@@ -343,6 +283,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             msg = "匹配失败！";
         }
+
         return match.Success;
     }
 
@@ -350,33 +291,6 @@ public class AutoArtifactSalvageTask : ISoloTask
     {
         var ocrResult = ocrService.OcrResult(src);
         return ocrResult.Text;
-    }
-
-    public static IEnumerable<Rect> GetArtifactGridItems(Mat src)
-    {
-        using Mat grey = src.CvtColor(ColorConversionCodes.BGR2GRAY);
-
-        using Mat canny = grey.Canny(20, 40);
-
-        Cv2.FindContours(canny, out var contours, out _, RetrievalModes.External,
-            ContourApproximationModes.ApproxSimple, null);
-
-        IEnumerable<Rect> boxes = contours.Where(c => Cv2.MinAreaRect(c).Angle % 90 <= 1)   // 剔除倾斜
-            .Select(Cv2.BoundingRect).Where(r =>
-            {
-                if (r.Height == 0)
-                {
-                    return false;
-                }
-                return Math.Abs((float)r.Width / r.Height - 0.8) < 0.05; // 按形状筛选
-            }).ToList();
-
-        //src.DrawContours(contours, -1, Scalar.Red);
-
-        int biggestRectHeight = boxes.Max(b => b.Height);
-        boxes = boxes.Where(b => (float)b.Height / biggestRectHeight > 0.88);   // 剔除太小的
-
-        return boxes.ToArray();
     }
 
     public static ArtifactStatus GetArtifactStatus(Mat src)
@@ -397,12 +311,12 @@ public class AutoArtifactSalvageTask : ISoloTask
         Cv2.FindContours(pinkThreshold, out var contours, out _, RetrievalModes.External,
             ContourApproximationModes.ApproxSimple, null);
 
-        var allPinkContours = contours.Where(c => c.Max(p => p.X) < pinkMask.Width * 0.2)   // 都在左侧
-            .SelectMany(c => c);    // 拼凑零碎的像素
+        var allPinkContours = contours.Where(c => c.Max(p => p.X) < pinkMask.Width * 0.2) // 都在左侧
+            .SelectMany(c => c); // 拼凑零碎的像素
         if (allPinkContours.Any())
         {
             var bounding = Cv2.BoundingRect(allPinkContours);
-            if (bounding.Width > pinkMask.Width * 0.07 && bounding.Height > pinkMask.Height * 0.3)  //不能太小
+            if (bounding.Width > pinkMask.Width * 0.07 && bounding.Height > pinkMask.Height * 0.3) //不能太小
             {
                 return ArtifactStatus.Locked;
             }
@@ -419,11 +333,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         Cv2.FindContours(greenMask, out contours, out _, RetrievalModes.External,
             ContourApproximationModes.ApproxSimple, null);
 
-        var allGreenContours = contours.SelectMany(c => c);    // 拼凑零碎的像素
+        var allGreenContours = contours.SelectMany(c => c); // 拼凑零碎的像素
         if (allGreenContours.Any())
         {
             var bounding = Cv2.BoundingRect(allGreenContours);
-            if (bounding.Width > greenMask.Width * 0.2 && bounding.Height > greenMask.Height * 0.8)  //不能太小；至少存在右上角勾号的绿色背景，忽略上底边的绿线（因有缩放动画，每次都要重新框定不利缩减步骤）
+            if (bounding.Width > greenMask.Width * 0.2 && bounding.Height > greenMask.Height * 0.8) //不能太小；至少存在右上角勾号的绿色背景，忽略上底边的绿线（因有缩放动画，每次都要重新框定不利缩减步骤）
             {
                 return ArtifactStatus.Selected;
             }
@@ -441,10 +355,12 @@ public class AutoArtifactSalvageTask : ISoloTask
         /// 啥也没有
         /// </summary>
         None,
+
         /// <summary>
         /// 左上角有粉色锁定标记
         /// </summary>
         Locked,
+
         /// <summary>
         /// 上下有绿色选择框
         /// </summary>

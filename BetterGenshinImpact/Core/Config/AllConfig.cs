@@ -19,6 +19,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -74,7 +75,13 @@ public partial class AllConfig : ObservableObject
 
     [ObservableProperty]
     private List<ValueTuple<string, int, string, string>> _nextScheduledTask = [];
-
+    
+    /// <summary>
+    /// 连续执行任务时，从此任务开始执行
+    /// </summary>
+    [JsonIgnore]
+    public string NextScriptGroupName { get; set; }= string.Empty;
+    
     /// <summary>
     /// 一条龙选中使用的配置
     /// </summary>
@@ -145,6 +152,12 @@ public partial class AllConfig : ObservableObject
     ///     自动秘境配置
     /// </summary>
     public AutoDomainConfig AutoDomainConfig { get; set; } = new();
+    
+    
+    /// <summary>
+    ///     自动秘境配置
+    /// </summary>
+    public AutoStygianOnslaughtConfig AutoStygianOnslaughtConfig { get; set; } = new();
 
     /// <summary>
     ///     自动分解圣遗物配置
@@ -226,6 +239,7 @@ public partial class AllConfig : ObservableObject
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoStygianOnslaughtConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;

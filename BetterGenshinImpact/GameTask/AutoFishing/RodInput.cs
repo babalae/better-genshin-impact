@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.GameTask.AutoFishing;
+﻿using static TorchSharp.torch;
+
+namespace BetterGenshinImpact.GameTask.AutoFishing;
 
 public record RodInput
 {

@@ -17,7 +17,7 @@
     <StackPanel>
         <ui:TitleBar Name="MyTitleBar">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
         <Grid>
@@ -32,7 +32,7 @@
                     </VisualBrush>
                 </Border.BorderBrush>
             </Border>
-            <Image Name="Screenshot" Source="pack://application:,,,/Assets/Images/logo.png" Stretch="None" Margin="3"/>
+            <Image Name="Screenshot" Source="pack://application:,,,/Resources/Images/logo.png" Stretch="None" Margin="3"/>
         </Grid>
         <StackPanel Margin="12">
             <ui:TextBox Name="TxtRecognized"  Margin="5" />
