@@ -26,6 +26,11 @@ public class PathingTaskInfo
     /// </summary>
     public string Type { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 区分怪物拾取
+    /// </summary>
+    public bool EnableMonsterLootSplit { get; set; } = false;
+
     [JsonIgnore]
     public string TypeDesc => PathingTaskType.GetMsgByCode(Type);
     
