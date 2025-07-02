@@ -140,34 +140,77 @@
                         </TabItem.Header>
                         <Grid>
                             <StackPanel Margin="8">
-                                <ui:TextBlock Margin="0,0,0,8"
-                                              Text="按照设定的顺序依次执行任务"
-                                              TextWrapping="Wrap" />
+                                <ui:ListView
+                                    dd:DragDrop.IsDragSource="True"
+                                    dd:DragDrop.IsDropTarget="True"
+                                    dd:DragDrop.UseDefaultDragAdorner="True"
+                                    ItemsSource="{Binding TaskList, Mode=TwoWay}"
+                                    SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                                    SelectionMode="Single">
+                                    <ui:ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <ui:Card Margin="0,2,0,2" 
+                                                     Padding="10,8,10,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:FontIcon Grid.Column="0"
+                                                                 Glyph="&#xe411;"
+                                                                 Style="{StaticResource FaFontIconStyleForOneDragon}" />
+                                                    <Ellipse Grid.Column="1"
+                                                             Width="10"
+                                                             Height="10"
+                                                             Margin="10,0,10,0"
+                                                             Fill="{Binding StatusColor}"
+                                                             IsHitTestVisible="False" />
+                                                    <TextBlock Grid.Column="2"
+                                                               VerticalAlignment="Center"
+                                                               IsHitTestVisible="False"
+                                                               Text="{Binding Name}" />
 
-                                <ui:Card Margin="0,8">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
 
-                                        <StackPanel Grid.Row="0">
-                                            <ui:ToggleSwitch Content="启用顺序触发"
-                                                             IsChecked="{Binding IsSequentialEnabled, Mode=TwoWay}" />
+                                                    <ui:ToggleSwitch Grid.Column="3"
+                                                                     IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                                </Grid>
+                                            </ui:Card>
+                                        </DataTemplate>
+                                    </ui:ListView.ItemTemplate>
+                                    <ui:ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <!--  添加以下设置来禁用选中效果  -->
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                                        <Border x:Name="Bd"
+                                                                Padding="{TemplateBinding Padding}"
+                                                                Background="{TemplateBinding Background}"
+                                                                SnapsToDevicePixels="true">
+                                                            <ContentPresenter
+                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="false">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ui:ListView.ItemContainerStyle>
+                                </ui:ListView>
 
-                                            <ui:NumberBox Margin="0,8,0,0"
-                                                          Value="{Binding SequentialInterval, Mode=TwoWay}"
-                                                          Minimum="0" />
-                                        </StackPanel>
-
-                                        <ui:Button Grid.Row="1"
-                                                   Margin="0,8,0,0"
-                                                   HorizontalAlignment="Right"
-                                                   Content="立即执行"
-                                                   Command="{Binding StartSequentialCommand}"
-                                                   Icon="{ui:SymbolIcon Play24}" />
-                                    </Grid>
-                                </ui:Card>
                             </StackPanel>
                         </Grid>
                     </TabItem>
@@ -179,44 +222,73 @@
                         </TabItem.Header>
                         <Grid>
                             <StackPanel Margin="8">
-                                <ui:TextBlock Margin="0,0,0,8"
-                                              Text="在指定时间点触发任务执行"
-                                              TextWrapping="Wrap" />
+                                <ui:ListView
+                                    dd:DragDrop.IsDragSource="True"
+                                    dd:DragDrop.IsDropTarget="True"
+                                    dd:DragDrop.UseDefaultDragAdorner="True"
+                                    ItemsSource="{Binding TaskList, Mode=TwoWay}"
+                                    SelectedItem="{Binding SelectedTask, Mode=TwoWay}"
+                                    SelectionMode="Single">
+                                    <ui:ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <ui:Card Margin="0,2,0,2" 
+                                                     Padding="10,8,10,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Ellipse Grid.Column="1"
+                                                             Width="10"
+                                                             Height="10"
+                                                             Margin="10,0,10,0"
+                                                             Fill="{Binding StatusColor}"
+                                                             IsHitTestVisible="False" />
+                                                    <TextBlock Grid.Column="2"
+                                                               VerticalAlignment="Center"
+                                                               IsHitTestVisible="False"
+                                                               Text="{Binding Name}" />
 
-                                <ui:Card Margin="0,8">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
 
-                                        <StackPanel Grid.Row="0">
-                                            <ui:ToggleSwitch Content="启用定时触发"
-                                                             IsChecked="{Binding IsScheduledEnabled, Mode=TwoWay}" />
-
-                                            <ui:TimePicker Margin="0,8,0,0"
-                                                           Header="触发时间"
-                                                           SelectedTime="{Binding ScheduledTime, Mode=TwoWay}" />
-
-                                            <CheckBox Margin="0,8,0,0"
-                                                      Content="每天重复"
-                                                      IsChecked="{Binding IsRepeatDaily, Mode=TwoWay}" />
-                                        </StackPanel>
-
-                                        <ui:TextBlock Grid.Row="1"
-                                                      Margin="0,8,0,0"
-                                                      Text="{Binding NextScheduledRunText}"
-                                                      TextWrapping="Wrap" />
-
-                                        <ui:Button Grid.Row="2"
-                                                   Margin="0,8,0,0"
-                                                   HorizontalAlignment="Right"
-                                                   Content="立即执行"
-                                                   Command="{Binding StartScheduledCommand}"
-                                                   Icon="{ui:SymbolIcon Play24}" />
-                                    </Grid>
-                                </ui:Card>
+                                                    <ui:ToggleSwitch Grid.Column="3"
+                                                                     IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                                </Grid>
+                                            </ui:Card>
+                                        </DataTemplate>
+                                    </ui:ListView.ItemTemplate>
+                                    <ui:ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <!--  添加以下设置来禁用选中效果  -->
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                                        <Border x:Name="Bd"
+                                                                Padding="{TemplateBinding Padding}"
+                                                                Background="{TemplateBinding Background}"
+                                                                SnapsToDevicePixels="true">
+                                                            <ContentPresenter
+                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="false">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ui:ListView.ItemContainerStyle>
+                                </ui:ListView>
                             </StackPanel>
                         </Grid>
                     </TabItem>

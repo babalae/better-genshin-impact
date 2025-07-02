@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -28,6 +29,17 @@ public partial class SchedulerViewModel : ViewModel
 
     // 任务列表
     [ObservableProperty] private ObservableCollection<SchedulerTask> _tasks = new();
+    
+    [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
+    [
+        new("领取邮件"),
+        new("合成树脂"),
+        // new ("每日委托"),
+        new("自动秘境"),
+    ];
+
+
+    [ObservableProperty] private OneDragonTaskItem? _selectedTask;
 
     // 命令
     [RelayCommand]
