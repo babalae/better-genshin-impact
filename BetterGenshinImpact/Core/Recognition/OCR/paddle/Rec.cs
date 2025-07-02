@@ -87,7 +87,7 @@ public class Rec
         try
         {
             resultTensors = srcs
-                .AsParallel()
+                // .AsParallel()
                 .Select(src =>
                 {
                     using var channel3 = src.Channels() switch
