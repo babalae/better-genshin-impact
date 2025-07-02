@@ -15,10 +15,6 @@ internal class AutoFightHandler : IActionHandler
     private readonly ILogger<AutoFightHandler> _logger = App.GetLogger<AutoFightHandler>();
     public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        if (!(config != null && config is PathingPartyConfig patyConfig && patyConfig is {AutoFightEnabled:true,JsScriptUseEnabled:true,SoloTaskUseFightEnabled:true}  ))
-        {
-            config = null;
-        }
         await StartFight(ct, config,waypointForTrack);
     }
 

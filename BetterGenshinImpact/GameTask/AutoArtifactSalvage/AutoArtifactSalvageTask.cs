@@ -51,6 +51,8 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly int? maxNumToCheck;
 
+    private bool returnToMainUi = true;
+
     public AutoArtifactSalvageTask(int star, string? regularExpression = null, int? maxNumToCheck = null)
     {
         this.star = star;
@@ -59,7 +61,8 @@ public class AutoArtifactSalvageTask : ISoloTask
         IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
-        numOfStarLocalizedString = [
+        numOfStarLocalizedString =
+        [
             stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
@@ -67,10 +70,18 @@ public class AutoArtifactSalvageTask : ISoloTask
         ];
     }
 
+    public AutoArtifactSalvageTask(int star, bool returnToMainUi) : this(star)
+    {
+        this.returnToMainUi = returnToMainUi;
+    }
+
     public async Task Start(CancellationToken ct)
     {
         this.ct = ct;
-        await _returnMainUiTask.Start(ct);
+        if (returnToMainUi)
+        {
+            await _returnMainUiTask.Start(ct);
+        }
 
         // B键打开背包
         input.SimulateAction(GIActions.OpenInventory);
@@ -160,6 +171,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 }
             }
         }
+
         Bv.ClickWhiteConfirmButton(ra4);
         await Delay(500, ct);
 
@@ -203,9 +215,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             input.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
 
-            await _returnMainUiTask.Start(ct);
+            if (returnToMainUi)
+            {
+                await _returnMainUiTask.Start(ct);
+            }
         }
-
     }
 
     private async Task Salvage5Star(string regularExpression, int maxNumToCheck)
@@ -214,7 +228,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         using var ra0 = CaptureToRectArea();
         Rect gridRoi = new Rect((int)(ra0.Width * 0.025), (int)(ra0.Width * 0.055), (int)(ra0.Width * 0.66), (int)(ra0.Width * 0.4));
-        GridScreen gridScreen = new GridScreen(gridRoi, 3, 40, 28, 0.018, this.logger, this.ct);    // 圣遗物分解Grid有4行9列
+        GridScreen gridScreen = new GridScreen(gridRoi, 3, 40, 28, 0.018, this.logger, this.ct); // 圣遗物分解Grid有4行9列
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             Rect gridRect = itemRegion.ToRect();
@@ -240,6 +254,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         await Delay(100, ct);
                     }
                 }
+
                 count--;
                 if (count <= 0)
                 {
@@ -268,6 +283,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             msg = "匹配失败！";
         }
+
         return match.Success;
     }
 
@@ -295,12 +311,12 @@ public class AutoArtifactSalvageTask : ISoloTask
         Cv2.FindContours(pinkThreshold, out var contours, out _, RetrievalModes.External,
             ContourApproximationModes.ApproxSimple, null);
 
-        var allPinkContours = contours.Where(c => c.Max(p => p.X) < pinkMask.Width * 0.2)   // 都在左侧
-            .SelectMany(c => c);    // 拼凑零碎的像素
+        var allPinkContours = contours.Where(c => c.Max(p => p.X) < pinkMask.Width * 0.2) // 都在左侧
+            .SelectMany(c => c); // 拼凑零碎的像素
         if (allPinkContours.Any())
         {
             var bounding = Cv2.BoundingRect(allPinkContours);
-            if (bounding.Width > pinkMask.Width * 0.07 && bounding.Height > pinkMask.Height * 0.3)  //不能太小
+            if (bounding.Width > pinkMask.Width * 0.07 && bounding.Height > pinkMask.Height * 0.3) //不能太小
             {
                 return ArtifactStatus.Locked;
             }
@@ -317,11 +333,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         Cv2.FindContours(greenMask, out contours, out _, RetrievalModes.External,
             ContourApproximationModes.ApproxSimple, null);
 
-        var allGreenContours = contours.SelectMany(c => c);    // 拼凑零碎的像素
+        var allGreenContours = contours.SelectMany(c => c); // 拼凑零碎的像素
         if (allGreenContours.Any())
         {
             var bounding = Cv2.BoundingRect(allGreenContours);
-            if (bounding.Width > greenMask.Width * 0.2 && bounding.Height > greenMask.Height * 0.8)  //不能太小；至少存在右上角勾号的绿色背景，忽略上底边的绿线（因有缩放动画，每次都要重新框定不利缩减步骤）
+            if (bounding.Width > greenMask.Width * 0.2 && bounding.Height > greenMask.Height * 0.8) //不能太小；至少存在右上角勾号的绿色背景，忽略上底边的绿线（因有缩放动画，每次都要重新框定不利缩减步骤）
             {
                 return ArtifactStatus.Selected;
             }
@@ -339,10 +355,12 @@ public class AutoArtifactSalvageTask : ISoloTask
         /// 啥也没有
         /// </summary>
         None,
+
         /// <summary>
         /// 左上角有粉色锁定标记
         /// </summary>
         Locked,
+
         /// <summary>
         /// 上下有绿色选择框
         /// </summary>

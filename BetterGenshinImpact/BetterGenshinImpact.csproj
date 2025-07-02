@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.46.3-alpha.1</Version>
+		<Version>0.47.1-alpha.2</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -11,12 +11,12 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<LangVersion>12.0</LangVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
+		<ApplicationIcon>Resources\Images\logo.ico</ApplicationIcon>
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
-	<ItemGroup>
+<!--	<ItemGroup>
 		<None Remove="Assets\Images\*.jpg" />
 		<None Remove="Assets\Images\*" />
 		<None Remove="Assets\Images\*.png" />
@@ -26,23 +26,22 @@
 		<None Remove="Assets\Strings\*.html" />
 		<None Remove="Assets\Strings\*.md" />
 		<None Remove="Assets\Audios\*.mp3" />
-	</ItemGroup>
+		<None Update="Assets\Config\*"/>
+	</ItemGroup>-->
 
 	<ItemGroup>
-		<Resource Include="Assets\Images\*.jpg" />
-		<Resource Include="Assets\Images\Anniversary\*" />
-		<Resource Include="Assets\Images\*.png" />
-		<Resource Include="Assets\Images\*.ico" />
-		<Resource Include="Assets\Fonts\*.ttf" />
-		<Resource Include="Assets\Highlighting\*.xshd" />
-		<Resource Include="Assets\Strings\*.html" />
-		<Resource Include="Assets\Strings\*.md" />
-		<Resource Include="Assets\Audios\*.mp3" />
+		<Resource Include="Resources\Images\*.jpg" />
+		<Resource Include="Resources\Images\Anniversary\*" />
+		<Resource Include="Resources\Images\*.png" />
+		<Resource Include="Resources\Images\*.ico" />
+		<Resource Include="Resources\Fonts\*.ttf" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
+		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
+		<PackageReference Include="BetterGI.Assets" Version="1.0.2" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
@@ -104,6 +103,9 @@
 		<None Update="Assets\Model\**">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<None Update="Assets\Config\**">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\AutoFight\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -159,6 +161,7 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\OneDragon\" />
+	  <Folder Include="Resources\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />
 	</ItemGroup>
@@ -186,6 +189,10 @@
 	    <SubType>Code</SubType>
 	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
 	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
 	</ItemGroup>
 	
 </Project>

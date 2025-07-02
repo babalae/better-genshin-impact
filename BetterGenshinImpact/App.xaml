@@ -14,8 +14,8 @@
                 <ResourceDictionary Source="/View/Controls/Drawer/DrawerStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
-            <FontFamily x:Key="TextThemeFontFamily">/Assets/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
-            <FontFamily x:Key="DigitalThemeFontFamily">/Assets/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
+            <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
+            <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:BooleanToEnableTextConverter x:Key="BooleanToEnableTextConverter" />

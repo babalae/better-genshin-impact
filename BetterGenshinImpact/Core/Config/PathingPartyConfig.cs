@@ -70,11 +70,11 @@ public partial class PathingPartyConfig : ObservableObject
     
     //允许在jsScript脚本中使用此地图追踪配置
     [ObservableProperty]
-    private bool _jsScriptUseEnabled = false;
+    private bool _jsScriptUseEnabled = true;
     
     //允许在此调度器中（一般在JS脚本中）调用自动战斗任务时，采用此追踪配置里的战斗策略
     [ObservableProperty]
-    private bool _soloTaskUseFightEnabled = false;
+    private bool _soloTaskUseFightEnabled = true;
     
     //不在某时执行
     [ObservableProperty] 

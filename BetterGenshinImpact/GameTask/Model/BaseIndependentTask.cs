@@ -1,10 +1,11 @@
-﻿using Vanara.PInvoke;
+﻿using OpenCvSharp;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Model;
 
 public class BaseIndependentTask
 {
     protected SystemInfo Info => TaskContext.Instance().SystemInfo;
-    protected RECT CaptureRect => TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    protected Rect CaptureRect => TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     protected double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
 }

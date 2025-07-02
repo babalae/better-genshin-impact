@@ -30,6 +30,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     
                     <!-- 第一行：更新渠道 -->
@@ -71,6 +72,15 @@
                             Content="打开仓库"
                             Command="{Binding OpenLocalScriptRepoCommand}" />
                     </StackPanel>
+                    
+                    <StackPanel Grid.Row="2"  Margin="0,8,0,4" Visibility="{Binding IsUpdating, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:TextBlock Text="{Binding UpdateProgressText}" 
+                                      Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0" />
+                        <ProgressBar Value="{Binding UpdateProgressValue}" 
+                                     Maximum="100"   />
+                    </StackPanel>
                 </Grid>
             </Border>
         </ui:Grid>
@@ -79,7 +89,7 @@
                      ShowMaximize="False"
                      ShowMinimize="False">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
     </Grid>

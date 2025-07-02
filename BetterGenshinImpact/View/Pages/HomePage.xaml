@@ -29,7 +29,7 @@
             <Grid>
                 <Border ClipToBounds="True" CornerRadius="8">
                     <Border.Background>
-                        <ImageBrush ImageSource="pack://application:,,,/Assets/Images/banner.jpg"
+                        <ImageBrush ImageSource="pack://application:,,,/Resources/Images/banner.jpg"
                                     RenderOptions.BitmapScalingMode="HighQuality"
                                     Stretch="UniformToFill" />
                     </Border.Background>

@@ -1226,7 +1226,283 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.AutoDomainConfig.AutoEat, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="角色死亡后重试次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="秘境战斗中，发生角色死亡重试的次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Text="{Binding Config.AutoDomainConfig.ReviveRetryCount, Mode=TwoWay}"
+                                Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0" />
+                 </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+        
+        <!--  自动幽境危战  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xe588;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动幽境危战"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        在接触钥匙后的界面启动本任务 -
+                        <Hyperlink Command="{Binding GoToAutoStygianOnslaughtUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
+                    </ui:TextBlock>
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoStygianOnslaughtCommand}"
+                                             EnableContent="{Binding SwitchAutoStygianOnslaughtButtonText}"
+                                             IsChecked="{Binding SwitchAutoStygianOnslaughtEnabled}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="选择战斗策略"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="用于战斗"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,12,0"
+                               Content="脚本仓库"
+                               Command="{Binding OpenLocalScriptRepoCommand}"
+                               Icon="{ui:SymbolIcon Archive24}" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,12,0"
+                               Command="{Binding OpenFightFolderCommand}"
+                               Content="打开目录" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="3"
+                              Width="180"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              SelectedItem="{Binding Config.AutoStygianOnslaughtConfig.StrategyName, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="DropDownOpened">
+                                <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                       CommandParameter="Combat" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
+                </Grid>
+                
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="刷取至树脂耗尽"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Margin="0,0,36,0"
+                                      IsChecked="{Binding Config.AutoStygianOnslaughtConfig.SpecifyResinUse,Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
+                    <!-- 指定树脂使用开关 -->
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="指定每种树脂刷取次数"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="开启后会根据配置的次数使用对应的树脂"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoStygianOnslaughtConfig.SpecifyResinUse, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- 树脂设置组 -->
+                <Border Margin="16,8,16,16"
+                        BorderThickness="1"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8"
+                        IsEnabled="{Binding Config.AutoStygianOnslaughtConfig.SpecifyResinUse, Mode=OneWay}">
+                    <StackPanel Margin="12">
+
+                        <!-- 原粹树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,8,0,12">
+                            <ui:TextBlock Text="原粹树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoStygianOnslaughtConfig.OriginalResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120"/>
+                        </StackPanel>
+
+                        <!-- 浓缩树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,12">
+                            <ui:TextBlock Text="浓缩树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoStygianOnslaughtConfig.CondensedResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120" />
+                        </StackPanel>
+
+                        <!-- 须臾树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,12">
+                            <ui:TextBlock Text="须臾树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoStygianOnslaughtConfig.TransientResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120" />
+                        </StackPanel>
+
+                        <!-- 脆弱树脂设置 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,0,0,0">
+                            <ui:TextBlock Text="脆弱树脂刷取次数："
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,8,0" />
+                            <ui:NumberBox Value="{Binding Config.AutoStygianOnslaughtConfig.FragileResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Minimum="0"
+                                          SmallChange="1"
+                                          LargeChange="5"
+                                          SpinButtonPlacementMode="Inline"
+                                          Width="120" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="结束后自动分解圣遗物"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="需要快速分解圣遗物的最高星级"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="80"
+                              Margin="0,0,10,0"
+                              ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
+                              SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                    </ComboBox>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="2"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoStygianOnslaughtConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+
+                </Grid>
+                
             </StackPanel>
         </ui:CardExpander>
 
