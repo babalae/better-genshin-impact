@@ -141,12 +141,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
 
                     // 使用浅拉取选项
-                    // var fetchOptions = new FetchOptions
-                    // {
-                    //     Depth = 1 // 浅拉取，只获取最新的提交
-                    // };
+                    var fetchOptions = new FetchOptions();
+                    fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
 
-                    Commands.Fetch(repo, remote.Name, refSpecs, null, "拉取最新更新");
+                    Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
 
                     // 获取当前分支
                     var branch = repo.Branches["main"] ?? repo.Branches["master"];
