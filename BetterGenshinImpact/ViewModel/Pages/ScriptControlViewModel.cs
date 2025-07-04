@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
@@ -51,6 +52,10 @@ public partial class ScriptControlViewModel : ViewModel
 
     private readonly IScriptService _scriptService;
     
+    private readonly Service.Quartz.SchedulerManager? _schedulerManager;
+    
+    private readonly Service.Quartz.DynamicTaskExampleService? _dynamicTaskService;
+    
     /// <summary>
     /// 配置组配置
     /// </summary>
@@ -76,6 +81,8 @@ public partial class ScriptControlViewModel : ViewModel
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
+        _schedulerManager = App.GetService<Service.Quartz.SchedulerManager>();
+        _dynamicTaskService = App.GetService<Service.Quartz.DynamicTaskExampleService>();
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
 
@@ -1712,7 +1719,489 @@ public partial class ScriptControlViewModel : ViewModel
         {
             RunnerContext.Instance.Reset();
         }
-
-
     }
+
+    #region Quartz.NET 动态任务管理示例
+
+    /// <summary>
+    /// 为当前选中的脚本组添加定时任务
+    /// </summary>
+    [RelayCommand]
+    public async Task OnAddScheduledTaskAsync()
+    {
+        if (SelectedScriptGroup == null)
+        {
+            _snackbarService.Show(
+                "未选择配置组",
+                "请先选择一个配置组",
+                ControlAppearance.Caution,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        if (_dynamicTaskService == null)
+        {
+            _snackbarService.Show(
+                "服务未初始化",
+                "Quartz.NET 服务未正确初始化",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        try
+        {
+            // 创建输入对话框
+            var stackPanel = new StackPanel();
+            
+            // Cron表达式输入
+            var cronLabel = new TextBlock { Text = "Cron表达式:", Margin = new Thickness(0, 0, 0, 5) };
+            var cronTextBox = new TextBox 
+            { 
+                Text = "0 0 0 * * ? *", // 默认每天午夜执行
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            
+            // 预设选项
+            var presetLabel = new TextBlock { Text = "或选择预设:", Margin = new Thickness(0, 0, 0, 5) };
+            var presetComboBox = new ComboBox
+            {
+                ItemsSource = new[]
+                {
+                    new { Text = "每天执行", Value = "0 0 0 * * ? *" },
+                    new { Text = "每小时执行", Value = "0 0 * * * ? *" },
+                    new { Text = "每30分钟执行", Value = "0 0/30 * * * ? *" },
+                    new { Text = "每周一执行", Value = "0 0 0 ? * MON *" },
+                    new { Text = "每月1号执行", Value = "0 0 0 1 * ? *" },
+                    new { Text = "工作日执行", Value = "0 0 0 ? * MON-FRI *" }
+                },
+                DisplayMemberPath = "Text",
+                SelectedValuePath = "Value",
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            
+            presetComboBox.SelectionChanged += (s, e) =>
+            {
+                if (presetComboBox.SelectedValue != null)
+                {
+                    cronTextBox.Text = presetComboBox.SelectedValue.ToString();
+                }
+            };
+            
+            stackPanel.Children.Add(cronLabel);
+            stackPanel.Children.Add(cronTextBox);
+            stackPanel.Children.Add(presetLabel);
+            stackPanel.Children.Add(presetComboBox);
+            
+            var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+            {
+                Title = "添加定时任务",
+                Content = stackPanel,
+                CloseButtonText = "取消",
+                PrimaryButtonText = "添加",
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            };
+
+            var result = await uiMessageBox.ShowDialogAsync();
+            if (result == MessageBoxResult.Primary)
+            {
+                var cronExpression = cronTextBox.Text?.Trim();
+                if (string.IsNullOrEmpty(cronExpression))
+                {
+                    _snackbarService.Show(
+                        "参数错误",
+                        "请输入有效的Cron表达式",
+                        ControlAppearance.Caution,
+                        null,
+                        TimeSpan.FromSeconds(2)
+                    );
+                    return;
+                }
+
+                bool success = await _dynamicTaskService.AddScriptGroupScheduleAsync(SelectedScriptGroup, cronExpression);
+                if (success)
+                {
+                    _snackbarService.Show(
+                        "任务添加成功",
+                        $"已为配置组 {SelectedScriptGroup.Name} 添加定时任务",
+                        ControlAppearance.Success,
+                        null,
+                        TimeSpan.FromSeconds(3)
+                    );
+                }
+                else
+                {
+                    _snackbarService.Show(
+                        "任务添加失败",
+                        "请检查Cron表达式是否正确",
+                        ControlAppearance.Danger,
+                        null,
+                        TimeSpan.FromSeconds(3)
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "添加定时任务失败");
+            _snackbarService.Show(
+                "添加定时任务失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    /// <summary>
+    /// 查看所有定时任务
+    /// </summary>
+    [RelayCommand]
+    public async Task OnViewScheduledTasksAsync()
+    {
+        if (_schedulerManager == null)
+        {
+            _snackbarService.Show(
+                "服务未初始化",
+                "Quartz.NET 服务未正确初始化",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        try
+        {
+            var tasks = await _schedulerManager.GetAllScheduledTasksAsync();
+            
+            if (tasks.Count == 0)
+            {
+                _snackbarService.Show(
+                    "没有定时任务",
+                    "当前没有配置任何定时任务",
+                    ControlAppearance.Info,
+                    null,
+                    TimeSpan.FromSeconds(2)
+                );
+                return;
+            }
+
+            // 创建任务列表显示
+            var stackPanel = new StackPanel();
+            
+            foreach (var task in tasks.OrderBy(t => t.ScriptGroupName))
+            {
+                var taskPanel = new StackPanel 
+                { 
+                    Margin = new Thickness(0, 0, 0, 10),
+                    Background = new SolidColorBrush(Colors.LightGray) { Opacity = 0.1 }
+                };
+                
+                taskPanel.Children.Add(new TextBlock 
+                { 
+                    Text = $"任务名称: {task.JobName}",
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(5, 5, 5, 0)
+                });
+                
+                taskPanel.Children.Add(new TextBlock 
+                { 
+                    Text = $"脚本组: {task.ScriptGroupName}",
+                    Margin = new Thickness(5, 0, 5, 0)
+                });
+                
+                taskPanel.Children.Add(new TextBlock 
+                { 
+                    Text = $"Cron表达式: {task.CronExpression}",
+                    Margin = new Thickness(5, 0, 5, 0)
+                });
+                
+                if (task.NextFireTime.HasValue)
+                {
+                    taskPanel.Children.Add(new TextBlock 
+                    { 
+                        Text = $"下次执行: {task.NextFireTime:yyyy-MM-dd HH:mm:ss}",
+                        Margin = new Thickness(5, 0, 5, 5)
+                    });
+                }
+                
+                stackPanel.Children.Add(taskPanel);
+            }
+            
+            var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+            {
+                Title = $"定时任务列表 ({tasks.Count} 个任务)",
+                Content = new ScrollViewer
+                {
+                    Content = stackPanel,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Height = 400,
+                    Width = 600
+                },
+                CloseButtonText = "关闭",
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            };
+
+            await uiMessageBox.ShowDialogAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "查看定时任务失败");
+            _snackbarService.Show(
+                "查看定时任务失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    /// <summary>
+    /// 删除定时任务
+    /// </summary>
+    [RelayCommand]
+    public async Task OnRemoveScheduledTasksAsync()
+    {
+        if (SelectedScriptGroup == null)
+        {
+            _snackbarService.Show(
+                "未选择配置组",
+                "请先选择一个配置组",
+                ControlAppearance.Caution,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        if (_dynamicTaskService == null)
+        {
+            _snackbarService.Show(
+                "服务未初始化",
+                "Quartz.NET 服务未正确初始化",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        try
+        {
+            var result = MessageBox.Show(
+                $"确定要删除配置组 {SelectedScriptGroup.Name} 的所有定时任务吗？",
+                "删除定时任务",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question
+            );
+
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                int removedCount = await _dynamicTaskService.RemoveScriptGroupSchedulesAsync(SelectedScriptGroup.Name);
+                
+                _snackbarService.Show(
+                    "删除完成",
+                    $"成功删除 {removedCount} 个定时任务",
+                    ControlAppearance.Success,
+                    null,
+                    TimeSpan.FromSeconds(3)
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "删除定时任务失败");
+            _snackbarService.Show(
+                "删除定时任务失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    /// <summary>
+    /// 查看定时任务报告
+    /// </summary>
+    [RelayCommand]
+    public async Task OnViewScheduledTaskReportAsync()
+    {
+        if (_dynamicTaskService == null)
+        {
+            _snackbarService.Show(
+                "服务未初始化",
+                "Quartz.NET 服务未正确初始化",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        try
+        {
+            var report = await _dynamicTaskService.GetScheduledTaskReportAsync();
+            
+            var stackPanel = new StackPanel();
+            
+            // 总览信息
+            stackPanel.Children.Add(new TextBlock 
+            { 
+                Text = "定时任务总览",
+                FontSize = 16,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+            
+            stackPanel.Children.Add(new TextBlock 
+            { 
+                Text = $"总任务数: {report.TotalTasks}",
+                Margin = new Thickness(0, 0, 0, 5)
+            });
+            
+            stackPanel.Children.Add(new TextBlock 
+            { 
+                Text = $"活跃任务数: {report.ActiveTasks}",
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+            
+            // 按脚本组分组
+            if (report.TasksByScriptGroup.Any())
+            {
+                stackPanel.Children.Add(new TextBlock 
+                { 
+                    Text = "按脚本组分组:",
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 0, 5)
+                });
+                
+                foreach (var group in report.TasksByScriptGroup)
+                {
+                    stackPanel.Children.Add(new TextBlock 
+                    { 
+                        Text = $"  {group.Key}: {group.Value} 个任务",
+                        Margin = new Thickness(10, 0, 0, 2)
+                    });
+                }
+                
+                stackPanel.Children.Add(new TextBlock { Text = "", Margin = new Thickness(0, 0, 0, 5) });
+            }
+            
+            // 即将执行的任务
+            if (report.NextExecutions.Any())
+            {
+                stackPanel.Children.Add(new TextBlock 
+                { 
+                    Text = "即将执行的任务:",
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 0, 5)
+                });
+                
+                foreach (var execution in report.NextExecutions)
+                {
+                    stackPanel.Children.Add(new TextBlock 
+                    { 
+                        Text = $"  {execution.ScriptGroupName} - {execution.NextFireTime:yyyy-MM-dd HH:mm:ss}",
+                        Margin = new Thickness(10, 0, 0, 2)
+                    });
+                }
+            }
+            
+            var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+            {
+                Title = "定时任务报告",
+                Content = new ScrollViewer
+                {
+                    Content = stackPanel,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Height = 400,
+                    Width = 500
+                },
+                CloseButtonText = "关闭",
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            };
+
+            await uiMessageBox.ShowDialogAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "查看定时任务报告失败");
+            _snackbarService.Show(
+                "查看定时任务报告失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    /// <summary>
+    /// 批量添加定时任务示例
+    /// </summary>
+    [RelayCommand]
+    public async Task OnBatchAddScheduledTasksAsync()
+    {
+        if (_dynamicTaskService == null)
+        {
+            _snackbarService.Show(
+                "服务未初始化",
+                "Quartz.NET 服务未正确初始化",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(2)
+            );
+            return;
+        }
+
+        try
+        {
+            var result = MessageBox.Show(
+                "这将为所有启用的脚本组添加定时任务（每天午夜执行）。确定继续吗？",
+                "批量添加定时任务",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question
+            );
+
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                var enabledScriptGroups = ScriptGroups.Where(sg => 
+                    sg.Projects.Any(p => p.Status == "Enabled")).ToList();
+                
+                int successCount = await _dynamicTaskService.AddMultipleScriptGroupSchedulesAsync(enabledScriptGroups);
+                
+                _snackbarService.Show(
+                    "批量添加完成",
+                    $"成功添加 {successCount}/{enabledScriptGroups.Count} 个定时任务",
+                    ControlAppearance.Success,
+                    null,
+                    TimeSpan.FromSeconds(3)
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "批量添加定时任务失败");
+            _snackbarService.Show(
+                "批量添加定时任务失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(3)
+            );
+        }
+    }
+
+    #endregion
 }
