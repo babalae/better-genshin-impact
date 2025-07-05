@@ -129,6 +129,18 @@ public partial class App : Application
                 services.AddSingleton(sp=> sp.GetRequiredService<HomePageViewModel>().Config.HardwareAccelerationConfig);
                 services.AddSingleton<BgiOnnxFactory>();
 
+                // Quartz.NET 服务
+                services.AddQuartz(q =>
+                {
+                    // 使用内存存储
+                    q.UseInMemoryStore();
+                    // 使用默认线程池
+                    q.UseDefaultThreadPool(tp => tp.MaxConcurrency = 10);
+                });
+                services.AddSingleton<Service.Quartz.SchedulerManager>();
+                services.AddSingleton<Service.Quartz.DynamicTaskExampleService>();
+                services.AddHostedService<Service.Quartz.QuartzHostedService>();
+
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
             }
