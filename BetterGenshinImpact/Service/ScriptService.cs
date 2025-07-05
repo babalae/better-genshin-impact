@@ -125,6 +125,8 @@ public partial class ScriptService : IScriptService
             {
                 var stopwatch = new Stopwatch();
                 int projectIndex = -1;
+                // 在配置组开始执行前进行队伍切换
+                await SwitchPartyBeforeGroup(list, groupName);
                 foreach (var project in list)
                 {
                     projectIndex++;
@@ -158,10 +160,7 @@ public partial class ScriptService : IScriptService
                         _logger.LogInformation("执行被取消");
                         break;
                     }
-                    
-                    // 在配置组开始执行前进行队伍切换
-                    await SwitchPartyBeforeGroup(list, groupName);
-                    
+
                     if (fisrt)
                     {
                         fisrt = false;
