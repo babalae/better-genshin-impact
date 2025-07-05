@@ -140,13 +140,6 @@ public class PathExecutor
             return;
         }
 
-
-        // 切换队伍
-        if (!await SwitchPartyBefore(task))
-        {
-            return;
-        }
-
         // 校验路径是否可以执行
         if (!await ValidateGameWithTask(task))
         {
@@ -285,50 +278,6 @@ public class PathExecutor
         return waypoint.Type == WaypointType.Target.Code;
     }
 
-    private async Task<bool> SwitchPartyBefore(PathingTask task)
-    {
-        var ra = CaptureToRectArea();
-
-        // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
-        if (Bv.ClickIfInReviveModal(ra))
-        {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
-            await Delay(4000, ct);
-            // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
-        }
-
-        var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
-        if (pRaList.Count > 0)
-        {
-            Logger.LogInformation("处于联机状态下，不切换队伍");
-        }
-        else
-        {
-            if (PartyConfig is { Enabled: false })
-            {
-                // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
-                var partyName = FilterPartyNameByConditionConfig(task);
-                if (!await SwitchParty(partyName))
-                {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
-                    return false;
-                }
-            }
-            else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
-            {
-                if (!await SwitchParty(PartyConfig.PartyName))
-                {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
@@ -352,65 +301,6 @@ public class PathExecutor
                 gameScreenSize.Width, gameScreenSize.Height);
             throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
         }
-    }
-
-    /// <summary>
-    /// 切换队伍
-    /// </summary>
-    /// <param name="partyName"></param>
-    /// <returns></returns>
-    private async Task<bool> SwitchParty(string? partyName)
-    {
-        bool success = true;
-        if (!string.IsNullOrEmpty(partyName))
-        {
-            if (RunnerContext.Instance.PartyName == partyName)
-            {
-                return success;
-            }
-
-            bool forceTp = PartyConfig.IsVisitStatueBeforeSwitchParty;
-
-            if (forceTp) // 强制传送模式
-            {
-                await new TpTask(ct).TpToStatueOfTheSeven(); // fix typos
-                success = await new SwitchPartyTask().Start(partyName, ct);
-            }
-            else // 优先原地切换模式
-            {
-                try
-                {
-                    success = await new SwitchPartyTask().Start(partyName, ct);
-                }
-                catch (PartySetupFailedException)
-                {
-                    await new TpTask(ct).TpToStatueOfTheSeven();
-                    success = await new SwitchPartyTask().Start(partyName, ct);
-                }
-            }
-
-            if (success)
-            {
-                RunnerContext.Instance.PartyName = partyName;
-                RunnerContext.Instance.ClearCombatScenes();
-            }
-        }
-
-        return success;
-    }
-
-
-    private static string? FilterPartyNameByConditionConfig(PathingTask task)
-    {
-        var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
-        var materialName = task.GetMaterialName();
-        var specialActions = task.Positions
-            .Select(p => p.Action)
-            .Where(action => !string.IsNullOrEmpty(action))
-            .Distinct()
-            .ToList();
-        var partyName = pathingConditionConfig.FilterPartyName(materialName, specialActions);
-        return partyName;
     }
 
     /// <summary>
