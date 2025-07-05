@@ -286,17 +286,6 @@ public class PathExecutor
     private async Task<bool> SwitchPartyBefore(PathingTask task)
     {
         var ra = CaptureToRectArea();
-
-        // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
-        if (Bv.ClickIfInReviveModal(ra))
-        {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
-            await Delay(4000, ct);
-            // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
-        }
-
         var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
         if (pRaList.Count > 0)
         {

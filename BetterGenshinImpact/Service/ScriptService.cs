@@ -125,11 +125,11 @@ public partial class ScriptService : IScriptService
             {
                 var stopwatch = new Stopwatch();
                 int projectIndex = -1;
-                // 在配置组开始执行前进行队伍切换
-                await SwitchPartyBeforeGroup(list, groupName);
                 foreach (var project in list)
                 {
                     projectIndex++;
+                    // 在配置组开始执行前进行队伍切换
+                    await SwitchPartyBeforeGroup(project, groupName);
                     if (taskProgress != null && taskProgress.Next != null)
                     {
                         if (taskProgress.Next.Index>projectIndex)
@@ -189,7 +189,17 @@ public partial class ScriptService : IScriptService
 
                             stopwatch.Reset();
                             stopwatch.Start();
-                            
+                            var ra = TaskControl.CaptureToRectArea();
+
+                            // 做一次全队阵亡判断
+                            if (Bv.ClickIfInReviveModal(ra))
+                            {
+                                await Bv.WaitForMainUi(_ct); // 等待主界面加载完成
+                                _logger.LogInformation("复苏完成");
+                                await Task.Delay(4000, _ct);
+                                // 血量肯定不满，直接去七天神像回血
+                                await TpStatueOfTheSeven();
+                            }
                             await ExecuteProject(project);
 
                             //多次执行时及时中断
@@ -225,8 +235,6 @@ public partial class ScriptService : IScriptService
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
                         }
-
-                        await Task.Delay(2000, _ct);
                     }
 
                     if (taskProgress != null)
@@ -407,30 +415,19 @@ public partial class ScriptService : IScriptService
     /// <summary>
     /// 在配置组开始执行前进行队伍切换
     /// </summary>
-    /// <param name="projectList">项目列表</param>
+    /// <param name="project">项目</param>
     /// <param name="groupName">配置组名称</param>
-    private async Task SwitchPartyBeforeGroup(List<ScriptGroupProject> projectList, string groupName)
+    private async Task SwitchPartyBeforeGroup(ScriptGroupProject project, string groupName)
     {
-        // 查找配置组中第一个有效的 PathingConfig
-        ScriptGroupProject? pathingProject = null;
-        foreach (var project in projectList)
-        {
-            if (project.GroupInfo?.Config.PathingConfig != null && 
-                !string.IsNullOrEmpty(project.GroupInfo.Config.PathingConfig.PartyName))
-            {
-                pathingProject = project;
-                break;
-            }
-        }
 
-        if (pathingProject?.GroupInfo?.Config.PathingConfig == null || 
-            string.IsNullOrEmpty(pathingProject.GroupInfo.Config.PathingConfig.PartyName))
+        if (project.GroupInfo?.Config.PathingConfig == null || 
+            string.IsNullOrEmpty(project.GroupInfo.Config.PathingConfig.PartyName))
         {
             return;
         }
 
-        var partyName = pathingProject.GroupInfo.Config.PathingConfig.PartyName;
-        var partyConfig = pathingProject.GroupInfo.Config.PathingConfig;
+        var partyName = project.GroupInfo.Config.PathingConfig.PartyName;
+        var partyConfig = project.GroupInfo.Config.PathingConfig;
         
         _logger.LogInformation("配置组 {GroupName} 任务：开始切换队伍到 {PartyName}", groupName, partyName);
         
@@ -456,17 +453,6 @@ public partial class ScriptService : IScriptService
     private async Task<bool> SwitchPartyBefore(Core.Config.PathingPartyConfig partyConfig, string partyName)
     {
         var ra = TaskControl.CaptureToRectArea();
-
-        // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
-        if (Bv.ClickIfInReviveModal(ra))
-        {
-            await Bv.WaitForMainUi(CancellationContext.Instance.Cts.Token); // 等待主界面加载完成
-            _logger.LogInformation("复苏完成");
-            await Task.Delay(4000, CancellationContext.Instance.Cts.Token);
-            // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
-        }
-
         var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
         if (pRaList.Count > 0)
         {
