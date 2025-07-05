@@ -140,13 +140,11 @@ public class PathExecutor
             return;
         }
 
-
         // 切换队伍
         if (!await SwitchPartyBefore(task))
         {
             return;
         }
-
         // 校验路径是否可以执行
         if (!await ValidateGameWithTask(task))
         {
@@ -288,17 +286,6 @@ public class PathExecutor
     private async Task<bool> SwitchPartyBefore(PathingTask task)
     {
         var ra = CaptureToRectArea();
-
-        // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
-        if (Bv.ClickIfInReviveModal(ra))
-        {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
-            await Delay(4000, ct);
-            // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
-        }
-
         var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
         if (pRaList.Count > 0)
         {
@@ -306,54 +293,17 @@ public class PathExecutor
         }
         else
         {
-            if (PartyConfig is { Enabled: false })
+            var partyName = FilterPartyNameByConditionConfig(task);
+            if (!await SwitchParty(partyName))
             {
-                // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
-                var partyName = FilterPartyNameByConditionConfig(task);
-                if (!await SwitchParty(partyName))
-                {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
-                    return false;
-                }
-            }
-            else if (!string.IsNullOrEmpty(PartyConfig.PartyName))
-            {
-                if (!await SwitchParty(PartyConfig.PartyName))
-                {
-                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
-                    return false;
-                }
+                Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
+                return false;
             }
         }
 
         return true;
     }
-
-    private void InitializePathing(PathingTask task)
-    {
-        LogScreenResolution();
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
-            "UpdateCurrentPathing", new object(), task));
-    }
-
-    private void LogScreenResolution()
-    {
-        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
-        {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！",
-                gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用地图追踪功能！");
-        }
-
-        if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
-        {
-            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！",
-                gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
-        }
-    }
-
+    
     /// <summary>
     /// 切换队伍
     /// </summary>
@@ -411,6 +361,31 @@ public class PathExecutor
             .ToList();
         var partyName = pathingConditionConfig.FilterPartyName(materialName, specialActions);
         return partyName;
+    }
+    
+    private void InitializePathing(PathingTask task)
+    {
+        LogScreenResolution();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
+            "UpdateCurrentPathing", new object(), task));
+    }
+
+    private void LogScreenResolution()
+    {
+        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+        if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
+        {
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！",
+                gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用地图追踪功能！");
+        }
+
+        if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
+        {
+            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！",
+                gameScreenSize.Width, gameScreenSize.Height);
+            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
+        }
     }
 
     /// <summary>

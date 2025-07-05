@@ -11,9 +11,12 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -27,6 +30,10 @@ public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private readonly CancellationToken _ct = CancellationContext.Instance.Cts.Token;
+    private readonly RunnerContext _runnerContext = RunnerContext.Instance;
+    private readonly TaskContext _taskContext = TaskContext.Instance();
+
     private static bool IsCurrentHourEqual(string input)
     {
         // 尝试将输入字符串转换为整数
@@ -121,6 +128,8 @@ public partial class ScriptService : IScriptService
                 foreach (var project in list)
                 {
                     projectIndex++;
+                    // 在配置组开始执行前进行队伍切换
+                    await SwitchPartyBeforeGroup(project, groupName);
                     if (taskProgress != null && taskProgress.Next != null)
                     {
                         if (taskProgress.Next.Index>projectIndex)
@@ -139,20 +148,19 @@ public partial class ScriptService : IScriptService
                         continue;
                     }
                     //月卡检测
-                    await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
+                    await _blessingOfTheWelkinMoonTask.Start(_ct);
                     if (project.Status != "Enabled")
                     {
                         _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
                         continue;
                     }
 
-                    if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                    if (_ct.IsCancellationRequested)
                     {
                         _logger.LogInformation("执行被取消");
                         break;
                     }
 
-                    
                     if (fisrt)
                     {
                         fisrt = false;
@@ -181,7 +189,17 @@ public partial class ScriptService : IScriptService
 
                             stopwatch.Reset();
                             stopwatch.Start();
-                            
+                            var ra = TaskControl.CaptureToRectArea();
+
+                            // 做一次全队阵亡判断
+                            if (Bv.ClickIfInReviveModal(ra))
+                            {
+                                await Bv.WaitForMainUi(_ct); // 等待主界面加载完成
+                                _logger.LogInformation("复苏完成");
+                                await Task.Delay(4000, _ct);
+                                // 血量肯定不满，直接去七天神像回血
+                                await TpStatueOfTheSeven();
+                            }
                             await ExecuteProject(project);
 
                             //多次执行时及时中断
@@ -217,8 +235,6 @@ public partial class ScriptService : IScriptService
                                 elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                             _logger.LogInformation("------------------------------");
                         }
-
-                        await Task.Delay(2000);
                     }
 
                     if (taskProgress != null)
@@ -255,7 +271,7 @@ public partial class ScriptService : IScriptService
                                 && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
                             {
                                 SystemControl.CloseGame();
-                                Thread.Sleep(2000);
+                                await Task.Delay(2000, _ct);
                             }
 
                             SystemControl.RestartApplication(["--TaskProgress",taskProgress.Name]);
@@ -348,7 +364,7 @@ public partial class ScriptService : IScriptService
 
     private async Task ExecuteProject(ScriptGroupProject project)
     {
-        TaskContext.Instance().CurrentScriptProject = project;
+        _taskContext.CurrentScriptProject = project;
         if (project.Type == "Javascript")
         {
             if (project.Project == null)
@@ -396,6 +412,120 @@ public partial class ScriptService : IScriptService
     [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
     private static partial Regex DispatcherAddTimerRegex();
 
+    /// <summary>
+    /// 在配置组开始执行前进行队伍切换
+    /// </summary>
+    /// <param name="project">项目</param>
+    /// <param name="groupName">配置组名称</param>
+    private async Task SwitchPartyBeforeGroup(ScriptGroupProject project, string groupName)
+    {
+
+        if (project.GroupInfo?.Config.PathingConfig == null || 
+            string.IsNullOrEmpty(project.GroupInfo.Config.PathingConfig.PartyName))
+        {
+            return;
+        }
+
+        var partyName = project.GroupInfo.Config.PathingConfig.PartyName;
+        var partyConfig = project.GroupInfo.Config.PathingConfig;
+        
+        _logger.LogInformation("配置组 {GroupName} 任务：开始切换队伍到 {PartyName}", groupName, partyName);
+        
+            
+        // 执行完整的队伍切换逻辑
+        var success = await SwitchPartyBefore(partyConfig, partyName);
+            
+        if (!success)
+        {
+            _logger.LogError("配置组 {GroupName} 队伍切换失败，结束配置组执行", groupName);
+            throw new Exception($"配置组 {groupName} 队伍切换到 {partyName} 失败");
+        }
+            
+        _logger.LogInformation("配置组 {GroupName} 队伍切换成功，继续执行配置组", groupName);
+    }
+
+    /// <summary>
+    /// 配置组队伍切换前的完整逻辑
+    /// </summary>
+    /// <param name="partyConfig">队伍配置</param>
+    /// <param name="partyName">队伍名称</param>
+    /// <returns></returns>
+    private async Task<bool> SwitchPartyBefore(Core.Config.PathingPartyConfig partyConfig, string partyName)
+    {
+        var ra = TaskControl.CaptureToRectArea();
+        var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
+        if (pRaList.Count > 0)
+        {
+            _logger.LogInformation("处于联机状态下，不切换队伍");
+        }
+        else
+        {
+            if (!await SwitchParty(partyName, partyConfig))
+            {
+                _logger.LogError("切换队伍失败，无法执行配置组！请检查配置组中的地图追踪配置！");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 执行队伍切换操作
+    /// </summary>
+    /// <param name="partyName">队伍名称</param>
+    /// <param name="partyConfig">队伍配置</param>
+    /// <returns></returns>
+    private async Task<bool> SwitchParty(string? partyName, Core.Config.PathingPartyConfig partyConfig)
+    {
+        bool success = true;
+        if (!string.IsNullOrEmpty(partyName))
+        {
+            if (_runnerContext.PartyName == partyName)
+            {
+                return success;
+            }
+
+            bool forceTp = partyConfig.IsVisitStatueBeforeSwitchParty;
+
+            if (forceTp) // 强制传送模式
+            {
+                await new TpTask(_ct).TpToStatueOfTheSeven(); 
+                success = await new SwitchPartyTask().Start(partyName, _ct);
+            }
+            else // 优先原地切换模式
+            {
+                try
+                {
+                    success = await new SwitchPartyTask().Start(partyName, _ct);
+                }
+                catch (PartySetupFailedException)
+                {
+                    await new TpTask(_ct).TpToStatueOfTheSeven();
+                    success = await new SwitchPartyTask().Start(partyName, _ct);
+                }
+            }
+
+            if (success)
+            {
+                _runnerContext.PartyName = partyName;
+                _runnerContext.ClearCombatScenes();
+            }
+        }
+
+        return success;
+    }
+
+    /// <summary>
+    /// 传送到七天神像回血
+    /// </summary>
+    private async Task TpStatueOfTheSeven()
+    {
+        // tp 到七天神像回血
+        var tpTask = new TpTask(_ct);
+        await _runnerContext.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
+        _logger.LogInformation("血量恢复完成");
+    }
 
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
