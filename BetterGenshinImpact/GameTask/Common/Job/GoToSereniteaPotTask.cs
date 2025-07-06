@@ -115,7 +115,7 @@ internal class GoToSereniteaPotTask
                 dongTianName = "";
                 break;
             }
-            await Task.Delay(100, ct);
+            await Delay(100, ct);
         }
 
         for (int attempt = 1; !ct.IsCancellationRequested; attempt++)  // 点击住宅图标、传送住宅按钮、传送按钮
