@@ -345,7 +345,7 @@ internal class GoToSereniteaPotTask
                 }
                 await Delay(300, ct);
             }
-            await Delay(100, ct);
+            await Delay(500, ct); // 默认开启动态模糊，停顿时间太短的情况下，截图可能会模糊，导致识别失败
             if (continuousCount > 180)
             {
                 Logger.LogWarning("领取尘歌壶奖励:{text}", "寻找阿圆失败");
