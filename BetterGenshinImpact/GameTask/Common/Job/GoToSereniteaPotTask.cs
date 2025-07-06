@@ -84,13 +84,13 @@ internal class GoToSereniteaPotTask
         await new ReturnMainUiTask().Start(ct);
     
         await Delay(200, ct);
-    
+
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
         await Delay(900, ct);
-    
+
         // 进入 壶
         await ChangeCountryForce("尘歌壶", ct);
-    
+
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
         ImageRegion? ra = null;
         for (int i = 1;; i++)
@@ -109,7 +109,7 @@ internal class GoToSereniteaPotTask
                 break;
             }
             Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
-    
+
             if (i >= 5)
             {
                 dongTianName = "";
@@ -117,7 +117,7 @@ internal class GoToSereniteaPotTask
             }
             await Task.Delay(100, ct);
         }
-    
+
         for (int attempt = 1;; attempt++)  //点击传送按钮、传送住宅按钮
         {
             ra = CaptureToRectArea();
@@ -137,7 +137,7 @@ internal class GoToSereniteaPotTask
                     break; // 确认按钮消失后退出循环
                 continue;
             }
-    
+
             // 有没有传送住宅按钮
             var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (teleportSereniteaPotHome.IsExist())
@@ -152,7 +152,7 @@ internal class GoToSereniteaPotTask
                 );
                 continue;
             }
-    
+
             // 有没有住宅图标
             var sereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
             if (sereniteaPotHomeIcon.IsExist())
@@ -170,18 +170,18 @@ internal class GoToSereniteaPotTask
                 );
                 continue;
             }
-    
+
             if (attempt >= 10)
             {
                 Logger.LogWarning("领取尘歌壶奖励:{text}", "传送至尘歌壶失败");
                 return false;
             }
-    
+
             Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
             await new Core.Script.Dependence.Genshin().SetBigMapZoomLevel(2.5 - (attempt - 1) % 5 * 0.2);//尝试缩放地图
             await Task.Delay(1000, ct);
         }
-    
+
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
         return true;
     }
