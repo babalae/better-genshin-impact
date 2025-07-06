@@ -93,7 +93,7 @@ internal class GoToSereniteaPotTask
 
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
         ImageRegion? ra = null;
-        for (int i = 1;; i++)
+        for (int i = 1; !ct.IsCancellationRequested; i++)
         {
             ra = CaptureToRectArea();
             //确定洞天名称
@@ -118,7 +118,7 @@ internal class GoToSereniteaPotTask
             await Task.Delay(100, ct);
         }
 
-        for (int attempt = 1;; attempt++)  //点击传送按钮、传送住宅按钮
+        for (int attempt = 1; !ct.IsCancellationRequested; attempt++)  //点击传送按钮、传送住宅按钮
         {
             ra = CaptureToRectArea();
             // 有没有传送按钮
