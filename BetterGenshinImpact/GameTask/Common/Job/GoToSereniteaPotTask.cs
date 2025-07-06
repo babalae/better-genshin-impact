@@ -82,7 +82,7 @@ internal class GoToSereniteaPotTask
     {
         // 退出到主页面
         await new ReturnMainUiTask().Start(ct);
-    
+
         await Delay(200, ct);
 
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
