@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -126,41 +126,56 @@ internal class GoToSereniteaPotTask
             }
         }
 
-        
         for (int attempt = 0; attempt < 10; attempt++) // 尝试点击传送按钮
         {
             ra = CaptureToRectArea();
             var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
             if (teleportBtn.IsExist())
             {
+                await Delay(300, ct);
                 teleportBtn.Click();
-                break; // 找到并点击后退出循环
-            }
+                await Delay(500, ct);
+        
+                bool isReClickRequired = true;
+                for(int i = 0; i < 10; i++)     
+                {
+                    ra = CaptureToRectArea();
+                    teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
+                    if (!teleportBtn.IsExist())     //传送按钮消失
+                    {
+                        isReClickRequired = false;
+                        break;
+                    }
+                    await Delay(500, ct);   // 传送按钮还在，等待游戏反应
+                }
 
+                if (isReClickRequired)
+                {
+                    continue;   //传送按钮未消失，再次尝试点击
+                }
+                break; // 找到并点击传送按钮、确认按钮消失后退出循环
+            }
+        
+            //未找到传送按钮，点击传送住宅按钮
             var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (teleportSereniteaPotHome.IsExist())
             {
                 teleportSereniteaPotHome.Click();
-                break; // 找到并点击后退出循环
+                await Delay(800, ct);  
+                continue; // 找到并点击传送住宅按钮后再次点击传送按钮
             }
-            await Delay(500, ct);
+        
+            if (attempt == 9)
+            {
+                fail = true;
+                Logger.LogWarning("领取尘歌壶奖励:{text}", "传送至尘歌壶失败");
+                return;
+            }
+        
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "传送按钮、传送住宅按钮未找到，重试");
+            await Delay(800, ct);    // 重试间隔
         }
         
-        for (int i = 0; i < 10; i++)//有传送图标，点击传送
-        {
-            ra = CaptureToRectArea();
-            var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
-            if (teleportBtn.IsExist())
-            {
-                teleportBtn.Click();
-                await Delay(1000, ct);
-            }
-            else
-            {
-                break;
-            }
-        }
-
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
     }
 
