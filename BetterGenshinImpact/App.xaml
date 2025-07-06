@@ -1,6 +1,7 @@
 ﻿<Application x:Class="BetterGenshinImpact.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:bgivc="clr-namespace:BetterGenshinImpact.View.Converters"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta">
@@ -11,9 +12,9 @@
                 <ui:ControlsDictionary />
                 <vio:ControlsDictionary />
                 <ResourceDictionary Source="/View/Controls/WpfUi/FaFontIconStyle.xaml" />
-                <ResourceDictionary Source="/View/Controls/Drawer/DrawerStyles.xaml"/>
+                <ResourceDictionary Source="/View/Controls/Drawer/DrawerStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            
+
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -23,6 +24,12 @@
             <bgivc:NotNullConverter x:Key="NotNullConverter" />
             <bgivc:EnumToKVPConverter x:Key="EnumToKVPConverter" />
             <bgivc:CultureInfoNameToKVPConverter x:Key="CultureInfoNameToKVPConverter" />
+            <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
+                <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
+            </Style>
+            <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type ui:TextBox}">
+                <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
