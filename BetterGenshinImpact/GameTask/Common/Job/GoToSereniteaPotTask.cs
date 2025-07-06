@@ -29,7 +29,6 @@ internal class GoToSereniteaPotTask
 {
     public string Name => "领取尘歌壶奖励";
 
-    private bool fail = false;
     private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
 
     private readonly string ayuanHeyString;
@@ -74,111 +73,115 @@ internal class GoToSereniteaPotTask
         }
     }
 
+    /// <summary>
+    /// 通过地图进入尘歌壶
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <returns>成功进入壶并初始化壶名称返回 true。</returns>
     private async Task<bool> IntoSereniteaPot(CancellationToken ct)
     {
         // 退出到主页面
         await new ReturnMainUiTask().Start(ct);
-
+    
         await Delay(200, ct);
-
+    
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
         await Delay(900, ct);
-        
+    
         // 进入 壶
         await ChangeCountryForce("尘歌壶", ct);
-        
+    
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
-        var  ra = CaptureToRectArea();
-        for (int i = 0; i < 5; i++){
+        ImageRegion? ra = null;
+        for (int i = 1;; i++)
+        {
             ra = CaptureToRectArea();
             //确定洞天名称
             var list = ra.FindMulti(new RecognitionObject
             {
                 RecognitionType = RecognitionTypes.Ocr,
-                RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height*9/10, (int)(ra.Width * 0.073), (int)(ra.Height*0.04))
+                RegionOfInterest = new Rect((int)(ra.Width * 0.86), ra.Height * 9 / 10, (int)(ra.Width * 0.073), (int)(ra.Height * 0.04))
             });
             if (list.Count > 0)
             {
                 dongTianName = list[0].Text;
                 Logger.LogInformation("领取尘歌壶奖励:{text}", "洞天名称：" + dongTianName);
-                await Task.Delay(100, ct);
                 break;
             }
-            else
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
+    
+            if (i >= 5)
             {
                 dongTianName = "";
-                Logger.LogInformation("领取尘歌壶奖励:{text}", "未识别到洞天名称");
+                break;
             }
             await Task.Delay(100, ct);
         }
-
-        for (int i = 0; i < 5; i++)
-        {
-            var sereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
-            if (!sereniteaPotHomeIcon.IsExist())
-            {
-                Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
-                await Task.Delay(1000, ct);
-                await new Core.Script.Dependence.Genshin().SetBigMapZoomLevel(2.5-i*0.2);//尝试缩放地图
-                await Task.Delay(1000, ct);
-            }
-            else
-            {
-                sereniteaPotHomeIcon.Click();
-                await Delay(500, ct);
-                break;
-            }
-        }
-
-        for (int attempt = 0; attempt < 10; attempt++) // 尝试点击传送按钮
+    
+        for (int attempt = 1;; attempt++)  //点击传送按钮、传送住宅按钮
         {
             ra = CaptureToRectArea();
+            // 有没有传送按钮
             var teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
             if (teleportBtn.IsExist())
             {
-                await Delay(300, ct);
                 teleportBtn.Click();
-                await Delay(500, ct);
-        
-                bool isReClickRequired = true;
-                for(int i = 0; i < 10; i++)     
-                {
-                    ra = CaptureToRectArea();
-                    teleportBtn = ra.Find(QuickTeleportAssets.Instance.TeleportButtonRo);
-                    if (!teleportBtn.IsExist())     //传送按钮消失
-                    {
-                        isReClickRequired = false;
-                        break;
-                    }
-                    await Delay(500, ct);   // 传送按钮还在，等待游戏反应
-                }
-
-                if (isReClickRequired)
-                {
-                    continue;   //传送按钮未消失，再次尝试点击
-                }
-                break; // 找到并点击传送按钮、确认按钮消失后退出循环
+                bool IsDisappeared = await NewRetry.WaitForElementDisappear(
+                    QuickTeleportAssets.Instance.TeleportButtonRo,
+                    (Action?)null,
+                    ct,
+                    10,
+                    500
+                );
+                if (IsDisappeared)
+                    break; // 确认按钮消失后退出循环
+                continue;
             }
-        
-            //未找到传送按钮，点击传送住宅按钮
+    
+            // 有没有传送住宅按钮
             var teleportSereniteaPotHome = ra.Find(ElementAssets.Instance.TeleportSereniteaPotHomeRo);
             if (teleportSereniteaPotHome.IsExist())
             {
                 teleportSereniteaPotHome.Click();
-                await Delay(800, ct);  
-                continue; // 找到并点击传送住宅按钮后再次点击传送按钮
+                await NewRetry.WaitForElementDisappear(
+                    ElementAssets.Instance.TeleportSereniteaPotHomeRo,
+                    (Action?)null,
+                    ct,
+                    10,
+                    500
+                );
+                continue;
             }
-        
-            if (attempt == 9)
+    
+            // 有没有住宅图标
+            var sereniteaPotHomeIcon = ra.Find(ElementAssets.Instance.SereniteaPotHomeRo);
+            if (sereniteaPotHomeIcon.IsExist())
+            {
+                sereniteaPotHomeIcon.Click();
+                await NewRetry.WaitForOneOfElementsAppear(
+                    new List<RecognitionObject> { 
+                        QuickTeleportAssets.Instance.TeleportButtonRo,
+                        ElementAssets.Instance.TeleportSereniteaPotHomeRo
+                    },
+                    null,
+                    ct,
+                    10,
+                    500
+                );
+                continue;
+            }
+    
+            if (attempt >= 10)
             {
                 Logger.LogWarning("领取尘歌壶奖励:{text}", "传送至尘歌壶失败");
                 return false;
             }
-        
-            Logger.LogInformation("领取尘歌壶奖励:{text}", "传送按钮、传送住宅按钮未找到，重试");
-            await Delay(800, ct);    // 重试间隔
+    
+            Logger.LogInformation("领取尘歌壶奖励:{text}", "住宅图标未找到，调整地图缩放至2。");
+            await new Core.Script.Dependence.Genshin().SetBigMapZoomLevel(2.5 - (attempt - 1) % 5 * 0.2);//尝试缩放地图
+            await Task.Delay(1000, ct);
         }
-        
+    
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
         return true;
     }
@@ -238,10 +241,15 @@ internal class GoToSereniteaPotTask
         return false;
     }
 
-    // 寻找阿圆并靠近
-    private async Task FindAYuan(CancellationToken ct)
+    /// <summary>
+    /// 寻找阿圆并靠近
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <returns>成功靠近阿圆返回 true。</returns>
+    private async Task<bool> FindAYuan(CancellationToken ct)
     {
-        if (!string.IsNullOrEmpty(dongTianName)){
+        if (!string.IsNullOrEmpty(dongTianName))
+        {
             await Delay(500, ct);
             switch (dongTianName)
             {
@@ -290,8 +298,7 @@ internal class GoToSereniteaPotTask
         // 中键回正视角
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(900, ct);
-        int continuousCount = 0;
-        while (!ct.IsCancellationRequested)
+        for (int continuousCount = 0; !ct.IsCancellationRequested; continuousCount++)
         {
             var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
@@ -300,12 +307,11 @@ internal class GoToSereniteaPotTask
                 RegionOfInterest = new Rect(ra.Width / 5, ra.Height / 15, (int)(ra.Width * 0.65), ra.Height / 2)
             });
             Region? ayuanIcon = list.FirstOrDefault(r =>
-                r.Text.Contains(ayuanHeyString) || r.Text.Contains(ayuanHuolingString)||
-                 r.Text.Contains(ayuanHuoling2String)); 
+                r.Text.Contains(ayuanHeyString) || r.Text.Contains(ayuanHuolingString) ||
+                 r.Text.Contains(ayuanHuoling2String));
             if (ayuanIcon == null)
             {
                 Simulation.SendInput.Mouse.MoveMouseBy(ra.Width / 10, 0);
-                continuousCount++;
             }
             else
             {
@@ -319,16 +325,16 @@ internal class GoToSereniteaPotTask
                 }
                 var middle = ra.Width / 2;
                 var ayuanMiddle = ayuanIcon.X + ayuanIcon.Width / 2;
-                if (Math.Abs(middle - ayuanMiddle) > ayuanIcon.Width*1.4) //放宽范围，尽快找到阿圆
+                if (Math.Abs(middle - ayuanMiddle) > ayuanIcon.Width * 1.4) //放宽范围，尽快找到阿圆
                 {
-                    if(ayuanMiddle - middle > 0)
+                    if (ayuanMiddle - middle > 0)
                     {
-                        Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle)/2, 0);//未对正前小转
+                        Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle) / 2, 0);//未对正前小转
                         await Delay(300, ct);
                     }
-                    else if(ayuanMiddle - middle < 0)
+                    else if (ayuanMiddle - middle < 0)
                     {
-                        Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle)*3/2, 0);//转过头回转加大距离
+                        Simulation.SendInput.Mouse.MoveMouseBy((ayuanMiddle - middle) * 3 / 2, 0);//转过头回转加大距离
                         await Delay(300, ct);
                     }
                 }
@@ -339,15 +345,14 @@ internal class GoToSereniteaPotTask
                 }
                 await Delay(300, ct);
             }
-            await Delay(500, ct); // 默认开启动态模糊，停顿时间太短的情况下，截图可能会模糊，导致识别失败
+            await Delay(100, ct);
             if (continuousCount > 180)
             {
-                fail = true;
                 Logger.LogWarning("领取尘歌壶奖励:{text}", "寻找阿圆失败");
-                return;
+                return false;
             }
         }
-
+    
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown); // 向前走
         Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆");
         var findDialog = new Task(async () =>
@@ -367,6 +372,7 @@ internal class GoToSereniteaPotTask
         }, treeCts.Token);
         findDialog.Start();
         await Task.WhenAll(findDialog);
+        return true;
     }
 
     private async Task BuyMaxNumber(CancellationToken ct)
@@ -658,15 +664,14 @@ internal class GoToSereniteaPotTask
         }
         
         // 寻找阿圆并靠近
-        await FindAYuan(ct);
-        // 领取奖励
-        if (fail)
+        success = await FindAYuan(ct);
+        if (!success)
         {
             await Finished(ct);
             return;
         }
-
         await Delay(500, ct);
+        // 领取奖励
         await GetReward(ct);
 
         // 收尾操作 - 退出到主页面 - 传送到提瓦特大陆
