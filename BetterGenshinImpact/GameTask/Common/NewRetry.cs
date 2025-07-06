@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -120,6 +120,50 @@ public static class NewRetry
             
             // 元素已出现
             if (!result.IsEmpty())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 重试直到多个元素当中之一出现，可执行键盘或鼠标操作。
+    /// </summary>
+    /// <param name="recognitionObject">要识别的目标对象</param>
+    /// <param name="retryAction">每次重试时执行的操作</param>
+    /// <param name="ct">取消令牌</param>
+    /// <param name="maxAttemptCount">最大尝试次数</param>
+    /// <param name="retryInterval">重试间隔(毫秒)</param>
+    /// <returns>是否成功找到元素</returns>
+    public static async Task<bool> WaitForOneOfElementsAppear(
+        List<RecognitionObject> recognitionObjectList,
+        Action? retryAction,
+        CancellationToken ct,
+        int maxAttemptCount = 10,
+        int retryInterval = 1000
+        )
+    {
+        for (int i = 0; i < maxAttemptCount; i++)
+        {
+            if (ct.IsCancellationRequested) return false;
+
+            // 执行重试操作（如按键）
+            retryAction?.Invoke();
+
+            // 等待指定时间
+            await TaskControl.Delay(retryInterval, ct);
+
+            // 截图并查找元素
+            using var screen = CaptureToRectArea();
+            bool IsAppeared = recognitionObjectList.Any((recognitionObject) =>
+            {
+                using var result = screen.Find(recognitionObject);
+                return result.IsExist();
+            });
+
+            // 元素已出现
+            if (IsAppeared)
             {
                 return true;
             }
