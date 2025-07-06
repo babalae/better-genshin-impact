@@ -248,7 +248,6 @@ internal class GoToSereniteaPotTask
     /// <returns>成功靠近阿圆返回 true。</returns>
     private async Task<bool> FindAYuan(CancellationToken ct)
     {
-        
         if (!string.IsNullOrEmpty(dongTianName))
         {
             await Delay(500, ct);
