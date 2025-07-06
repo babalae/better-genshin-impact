@@ -248,6 +248,7 @@ internal class GoToSereniteaPotTask
     /// <returns>成功靠近阿圆返回 true。</returns>
     private async Task<bool> FindAYuan(CancellationToken ct)
     {
+        
         if (!string.IsNullOrEmpty(dongTianName))
         {
             await Delay(500, ct);
@@ -300,6 +301,11 @@ internal class GoToSereniteaPotTask
         await Delay(900, ct);
         for (int continuousCount = 0; !ct.IsCancellationRequested; continuousCount++)
         {
+            if (continuousCount > 180)
+            {
+                Logger.LogWarning("领取尘歌壶奖励:{text}", "寻找阿圆失败");
+                return false;
+            }
             var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
             {
@@ -343,16 +349,10 @@ internal class GoToSereniteaPotTask
                     Logger.LogInformation("领取尘歌壶奖励:{text}", "寻找阿圆成功");
                     break;
                 }
-                await Delay(300, ct);
             }
             await Delay(500, ct); // 默认开启动态模糊，停顿时间太短的情况下，截图可能会模糊，导致识别失败
-            if (continuousCount > 180)
-            {
-                Logger.LogWarning("领取尘歌壶奖励:{text}", "寻找阿圆失败");
-                return false;
-            }
         }
-    
+
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.MoveForward, KeyType.KeyDown); // 向前走
         Logger.LogInformation("领取尘歌壶奖励:{text}", "接近阿圆");
         var findDialog = new Task(async () =>
