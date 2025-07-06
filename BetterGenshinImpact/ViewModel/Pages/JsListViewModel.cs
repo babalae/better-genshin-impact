@@ -53,6 +53,9 @@ public partial class JsListViewModel : ViewModel
     
     [ObservableProperty] 
     private ScriptProject? _selectedScriptProject;
+    
+    [ObservableProperty]
+    private bool _isRightClickSelection;
 
     public JsListViewModel(IScriptService scriptService, IConfigService configService)
     {
@@ -147,9 +150,15 @@ public partial class JsListViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void SetRightClickSelection(string isRightClick)
+    {
+        IsRightClickSelection = "True".Equals(isRightClick, StringComparison.OrdinalIgnoreCase);
+    }
+    
+    [RelayCommand]
     private void OpenScriptDetailDrawer(object? scriptItem)
     {
-        if (scriptItem == null)
+        if (scriptItem == null || IsRightClickSelection)
         {
             return;
         }

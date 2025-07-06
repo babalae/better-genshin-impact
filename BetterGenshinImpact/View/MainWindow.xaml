@@ -180,7 +180,7 @@
 
         <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/Images/logo.png" />
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
@@ -207,7 +207,7 @@
 
         <tray:NotifyIcon Grid.Row="0"
                          FocusOnLeftClick="False"
-                         Icon="pack://application:,,,/Assets/Images/logo.ico"
+                         Icon="pack://application:,,,/Resources/Images/logo.ico"
                          LeftDoubleClick="OnNotifyIconLeftDoubleClick"
                          MenuOnRightClick="True"
                          TooltipText="BetterGI">

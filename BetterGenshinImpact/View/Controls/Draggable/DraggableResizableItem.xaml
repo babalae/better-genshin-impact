@@ -41,7 +41,7 @@
         <!--<Rectangle x:Name="DragHandle" Fill="Blue" >
 
         </Rectangle>-->
-        <Image x:Name="DragHandle" Source="pack://application:,,,/BetterGI;component;component/Assets/Images/drag.png" />
+        <Image x:Name="DragHandle" Source="pack://application:,,,/BetterGI;component;component/Resources/Images/drag.png" />
 
         <!--<ControlTemplate.Triggers>
             <Trigger Property="Selector.IsSelected" Value="False">

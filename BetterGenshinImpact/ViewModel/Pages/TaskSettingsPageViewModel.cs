@@ -33,6 +33,7 @@ using System.Reflection;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -79,6 +80,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private string _switchAutoDomainButtonText = "启动";
+    
+    [ObservableProperty]
+    private int _autoStygianOnslaughtRoundNum;
+
+    [ObservableProperty]
+    private bool _switchAutoStygianOnslaughtEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoStygianOnslaughtButtonText = "启动";
 
     [ObservableProperty]
     private bool _switchAutoFightEnabled;
@@ -293,15 +303,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     public bool GetFightStrategy(out string path)
     {
-        if (string.IsNullOrEmpty(Config.AutoFightConfig.StrategyName))
+        return GetFightStrategy(Config.AutoFightConfig.StrategyName, out path);
+    }
+
+    public bool GetFightStrategy(string strategyName, out string path)
+    {
+        if (string.IsNullOrEmpty(strategyName))
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在【独立任务——自动战斗】下拉列表配置中选择战斗策略！"); });
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在下拉列表配置中选择战斗策略！"); });
             path = string.Empty;
             return true;
         }
 
-        path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
-        if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
+        path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
@@ -320,6 +335,27 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
     }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoStygianOnslaught()
+    {
+        if (GetFightStrategy(Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
+        {
+            return;
+        }
+
+        SwitchAutoStygianOnslaughtEnabled = true;
+        await new TaskRunner()
+            .RunSoloTaskAsync(new AutoStygianOnslaughtTask(Config.AutoStygianOnslaughtConfig, path));
+        SwitchAutoStygianOnslaughtEnabled = false;
+    }
+    
+    [RelayCommand]
+    private async Task OnGoToAutoStygianOnslaughtUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/stygian.html"));
+    }
+
 
     [RelayCommand]
     public void OnOpenFightFolder()
