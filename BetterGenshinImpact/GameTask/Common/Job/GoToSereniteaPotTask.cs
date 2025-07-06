@@ -68,9 +68,13 @@ internal class GoToSereniteaPotTask
             Logger.LogDebug(e, "领取尘歌壶奖励异常");
             Logger.LogError("领取尘歌壶奖励异常: {Msg}", e.Message);
         }
+        finally
+        {
+            Simulation.ReleaseAllKey();
+        }
     }
 
-    private async Task IntoSereniteaPot(CancellationToken ct)
+    private async Task<bool> IntoSereniteaPot(CancellationToken ct)
     {
         // 退出到主页面
         await new ReturnMainUiTask().Start(ct);
@@ -167,9 +171,8 @@ internal class GoToSereniteaPotTask
         
             if (attempt == 9)
             {
-                fail = true;
                 Logger.LogWarning("领取尘歌壶奖励:{text}", "传送至尘歌壶失败");
-                return;
+                return false;
             }
         
             Logger.LogInformation("领取尘歌壶奖励:{text}", "传送按钮、传送住宅按钮未找到，重试");
@@ -177,6 +180,7 @@ internal class GoToSereniteaPotTask
         }
         
         await NewRetry.WaitForAction(() => Bv.IsInMainUi(CaptureToRectArea()), ct);
+        return true;
     }
 
     /// <summary>
@@ -335,7 +339,7 @@ internal class GoToSereniteaPotTask
                 }
                 await Delay(300, ct);
             }
-            await Delay(100, ct);
+            await Delay(500, ct); // 默认开启动态模糊，停顿时间太短的情况下，截图可能会模糊，导致识别失败
             if (continuousCount > 180)
             {
                 fail = true;
@@ -442,7 +446,6 @@ internal class GoToSereniteaPotTask
             CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).Click();
         }
         
-        InitConfigList();
         await Delay(900, ct);
         // 商店购买
         if (SelectedConfig.SecretTreasureObjects.Count == 0) 
@@ -630,6 +633,7 @@ internal class GoToSereniteaPotTask
 
     public async Task DoOnce(CancellationToken ct)
     {
+        InitConfigList();
         // /**
         //  * 1. 首先退出到主页面
         //  * 2. 进入尘歌壶
@@ -638,10 +642,21 @@ internal class GoToSereniteaPotTask
         //  * 5. 领取奖励
         //  */
         // 进入尘歌壶
-        if (!await IntoSereniteaPotByBag(ct))
+        var success = false;
+        if (SelectedConfig!.SereniteaPotTpType == "地图传送")
         {
-            await IntoSereniteaPot(ct);
+            success = await IntoSereniteaPot(ct);
         }
+        else
+        {
+            success = await IntoSereniteaPotByBag(ct);
+        }
+        if (!success)
+        {
+            await Finished(ct);
+            return;
+        }
+        
         // 寻找阿圆并靠近
         await FindAYuan(ct);
         // 领取奖励
