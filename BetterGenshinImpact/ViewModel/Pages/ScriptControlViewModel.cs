@@ -640,18 +640,92 @@ public partial class ScriptControlViewModel : ViewModel
     private void OnAddJsScript()
     {
         var list = LoadAllJsScriptProjects();
-        var combobox = new ComboBox();
+        var stackPanel = CreateJsScriptSelectionPanel(list);
 
-        foreach (var scriptProject in list)
+        var result = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", stackPanel, new Size(500, 600));
+        if (!string.IsNullOrEmpty(result))
         {
-            combobox.Items.Add(scriptProject.FolderName + " - " + scriptProject.Manifest.Name);
+            AddSelectedJsScripts((StackPanel)stackPanel.Content);
+        }
+    }
+
+    private ScrollViewer CreateJsScriptSelectionPanel(List<ScriptProject> list)
+    {
+        var stackPanel = new StackPanel();
+        
+        var filterTextBox = new TextBox
+        {
+            Margin = new Thickness(0, 0, 0, 10),
+            PlaceholderText = "输入搜索条件...",
+        };
+        filterTextBox.TextChanged += delegate { ApplyJsScriptFilter(stackPanel, list, filterTextBox.Text); };
+        stackPanel.Children.Add(filterTextBox);
+        
+        AddJsScriptsToPanel(stackPanel, list, filterTextBox.Text);
+
+        var scrollViewer = new ScrollViewer
+        {
+            Content = stackPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Height = 435 // 固定高度
+        };
+
+        return scrollViewer;
+    }
+
+    private void ApplyJsScriptFilter(StackPanel parentPanel, List<ScriptProject> scripts, string filter)
+    {
+        if (parentPanel.Children.Count > 0)
+        {
+            List<UIElement> removeElements = new List<UIElement>();
+            foreach (UIElement parentPanelChild in parentPanel.Children)
+            {
+                if (parentPanelChild is FrameworkElement frameworkElement && frameworkElement.Name.StartsWith("dynamic_"))
+                {
+                    removeElements.Add(frameworkElement);
+                }
+            }
+
+            removeElements.ForEach(parentPanel.Children.Remove);
         }
 
-        var str = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", combobox);
-        if (!string.IsNullOrEmpty(str))
+        AddJsScriptsToPanel(parentPanel, scripts, filter);
+    }
+
+    private void AddJsScriptsToPanel(StackPanel parentPanel, List<ScriptProject> scripts, string filter)
+    {
+        foreach (var script in scripts)
         {
-            var folderName = str.Split(" - ")[0];
-            SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+            var displayText = script.FolderName + " - " + script.Manifest.Name;
+            
+            if (!string.IsNullOrEmpty(filter) && 
+                !displayText.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+                !script.FolderName.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+                !script.Manifest.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var checkBox = new CheckBox
+            {
+                Content = displayText,
+                Tag = script.FolderName,
+                Margin = new Thickness(0, 2, 0, 2),
+                Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
+            };
+
+            parentPanel.Children.Add(checkBox);
+        }
+    }
+
+    private void AddSelectedJsScripts(StackPanel stackPanel)
+    {
+        foreach (var child in stackPanel.Children)
+        {
+            if (child is CheckBox { IsChecked: true } checkBox && checkBox.Tag is string folderName)
+            {
+                SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+            }
         }
     }
 
