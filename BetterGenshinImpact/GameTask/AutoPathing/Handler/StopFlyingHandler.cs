@@ -13,15 +13,18 @@ public class StopFlyingHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
+        // 如果有参数，先自由落体，然后恢复飞行
         if (waypointForTrack != null
             && !string.IsNullOrEmpty(waypointForTrack.ActionParams)
             && int.TryParse(waypointForTrack.ActionParams, out var stopFlyingWaitTime))
         {
             Simulation.SendInput.SimulateAction(GIActions.Jump);
             await Delay(stopFlyingWaitTime, ct);
+            Simulation.SendInput.SimulateAction(GIActions.Jump);
+            await Delay(300, ct);
         }
 
-        //下落攻击接近目的地
+        // 下落攻击接近目的地
         Logger.LogInformation("动作：下落攻击");
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
         int i;
