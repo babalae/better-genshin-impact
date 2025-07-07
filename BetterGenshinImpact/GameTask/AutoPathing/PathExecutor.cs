@@ -810,7 +810,7 @@ public class PathExecutor
                     await Delay(200, ct);
                 }
 
-                await Delay(200, ct);
+                await Delay(100, ct);
                 continue;
             }
 
