@@ -328,14 +328,27 @@ public class AutoDomainTask : ISoloTask
     {
         var fightAssets = AutoFightAssets.Instance;
 
-        // 等待F菜单界面出现并F
-        await NewRetry.WaitForElementAppear(
-            fightAssets.ConfirmRa,
+        var targetText = "匹配挑战";
+        // 等待F菜单界面文字出现--使用新增的OCR的方法
+        var menuFound = await NewRetry.WaitForElementAppear(
+            RecognitionObject.Ocr(CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5, CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5,targetText),
             () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
             _ct,
             20,
             500
         );
+        if (!menuFound)
+        {
+            throw new Exception( targetText + "未出现，请检查是否已进入秘境页面");
+        }
+        // // 等待F菜单界面出现---使用图像模板的方法
+        // await NewRetry.WaitForElementAppear(
+        //     fightAssets.ConfirmRa,
+        //     () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
+        //     _ct,
+        //     20,
+        //     500
+        // );
         
         using var limitedFullyStringRa = CaptureToRectArea();
         var limitedFullyStringRaocrList =
@@ -413,7 +426,7 @@ public class AutoDomainTask : ISoloTask
             await Delay(300, _ct);
         }
         
-        // 点击单人挑战确认并等待队伍界面
+        // 点击单人挑战确认并等待队伍界面--使用图像模版匹配的方法，也可以使用文字OCR的方法识别“单人挑战”直到消失
         await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.PartyBtnChooseView,
             ()  => {  
@@ -454,9 +467,9 @@ public class AutoDomainTask : ISoloTask
             throw new Exception("队伍选择界面未出现。");
         }
         
-        // 点击开始挑战确认并等待消失
+        // 点击开始挑战确认并等待“快速编队”文字消失
         var startFightFound = await NewRetry.WaitForElementDisappear(
-            ElementAssets.Instance.PartyBtnChooseView,
+            RecognitionObject.Ocr(CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5, CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5 ,"快速编队"),
             screen => {screen.Find(fightAssets.ConfirmRa, ra => { 
                 ra.Click(); 
                 ra.Dispose(); 
