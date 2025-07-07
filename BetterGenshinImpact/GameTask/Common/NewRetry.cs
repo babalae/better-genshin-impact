@@ -113,13 +113,12 @@ public static class NewRetry
     
             using var screen = CaptureToRectArea();
     
-            if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && !string.IsNullOrEmpty(recognitionObject.OcrTargetText))
+           if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && recognitionObject.OneContainMatchText?.Count > 0)
             {
-                // OCR识别
                 var ocrList = screen.FindMulti(recognitionObject);
-                if (ocrList.Any(t => t.Text.Contains(recognitionObject.OcrTargetText)))
+                if (ocrList.Any(t => recognitionObject.OneContainMatchText.Any(match => t.Text.Contains(match))))
                 {
-                    return true;
+                    return true; // 出现
                 }
             }
             else
@@ -159,10 +158,10 @@ public static class NewRetry
     
             using var screen = CaptureToRectArea();
     
-            if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && !string.IsNullOrEmpty(recognitionObject.OcrTargetText))
+           if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && recognitionObject.OneContainMatchText?.Count > 0)
             {
                 var ocrList = screen.FindMulti(recognitionObject);
-                if (!ocrList.Any(t => t.Text.Contains(recognitionObject.OcrTargetText)))
+                if (!ocrList.Any(t => recognitionObject.OneContainMatchText.Any(match => t.Text.Contains(match))))
                 {
                     return true;
                 }
@@ -192,10 +191,10 @@ public static class NewRetry
     
             using var screen = CaptureToRectArea();
     
-            if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && !string.IsNullOrEmpty(recognitionObject.OcrTargetText))
+            if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && recognitionObject.OneContainMatchText?.Count > 0)
             {
                 var ocrList = screen.FindMulti(recognitionObject);
-                if (!ocrList.Any(t => t.Text.Contains(recognitionObject.OcrTargetText)))
+                if (!ocrList.Any(t => recognitionObject.OneContainMatchText.Any(match => t.Text.Contains(match))))
                 {
                     return true; 
                 }

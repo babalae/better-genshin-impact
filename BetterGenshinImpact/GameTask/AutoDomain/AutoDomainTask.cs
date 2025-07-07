@@ -327,8 +327,7 @@ public class AutoDomainTask : ISoloTask
     private async Task EnterDomain()
     {
         var fightAssets = AutoFightAssets.Instance;
-
-        var targetText = "匹配挑战";
+        string[] targetText = { "单人挑战" };//可以写成单个string，也可以写成数组进行多个匹配
         // 等待F菜单界面文字出现--使用新增的OCR的方法
         var menuFound = await NewRetry.WaitForElementAppear(
             RecognitionObject.Ocr(CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5, CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5,targetText),
