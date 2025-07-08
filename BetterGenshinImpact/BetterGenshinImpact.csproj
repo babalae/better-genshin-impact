@@ -79,10 +79,10 @@
 		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.1.3" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
-		<PackageReference Include="WPF-UI" Version="4.0.2" />
-		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.2" />
-		<PackageReference Include="WPF-UI.Tray" Version="4.0.2" />
-		<PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
+		<PackageReference Include="WPF-UI" Version="4.0.3" />
+		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.3" />
+		<PackageReference Include="WPF-UI.Tray" Version="4.0.3" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.0.3.1" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />
 	</ItemGroup>

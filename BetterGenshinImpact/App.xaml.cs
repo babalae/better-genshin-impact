@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +27,7 @@ using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
+using Wpf.Ui.Violeta.Appearance;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact;
@@ -131,6 +133,8 @@ public partial class App : Application
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
+                
+                I18N.Culture = new CultureInfo("zh-Hans"); // #1846
             }
         )
         .Build();
