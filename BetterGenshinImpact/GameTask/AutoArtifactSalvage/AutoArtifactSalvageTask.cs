@@ -228,7 +228,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         using var ra0 = CaptureToRectArea();
         Rect gridRoi = new Rect((int)(ra0.Width * 0.025), (int)(ra0.Width * 0.055), (int)(ra0.Width * 0.66), (int)(ra0.Width * 0.4));
-        GridScreen gridScreen = new GridScreen(gridRoi, 3, 40, 28, 0.018, this.logger, this.ct); // 圣遗物分解Grid有4行9列
+        GridScreen gridScreen = new GridScreen(gridRoi, 9, 3, 40, 28, 0.018, this.logger, this.ct); // 圣遗物分解Grid有4行9列
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             Rect gridRect = itemRegion.ToRect();
