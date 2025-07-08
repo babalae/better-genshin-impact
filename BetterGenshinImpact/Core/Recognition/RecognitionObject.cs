@@ -194,11 +194,11 @@ public class RecognitionObject
         };
     }
     
-    public static RecognitionObject Ocr(double x, double y, double w, double h, params string[] matchTexts)
+    public static RecognitionObject OcrMatch(double x, double y, double w, double h, params string[] matchTexts)
     {
         return new RecognitionObject
         {
-            RecognitionType = RecognitionTypes.Ocr,
+            RecognitionType = RecognitionTypes.OcrMatch,
             RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h)),
             OneContainMatchText = matchTexts?.ToList() ?? []
         };

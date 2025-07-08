@@ -63,6 +63,7 @@ public static class NewRetry
         {
             throw exceptions.Last();
         }
+
         throw new AggregateException(exceptions);
     }
 
@@ -84,9 +85,10 @@ public static class NewRetry
                 return true;
             }
         }
+
         return false;
     }
-    
+
     /// <summary>
     /// 重试直到某个元素出现，可执行键盘或鼠标操作。
     /// </summary>
@@ -102,34 +104,29 @@ public static class NewRetry
         CancellationToken ct,
         int maxAttemptCount = 10,
         int retryInterval = 1000
-        )
+    )
     {
         for (int i = 0; i < maxAttemptCount; i++)
         {
             if (ct.IsCancellationRequested) return false;
-    
+
+            // 执行重试操作（如按键）
             retryAction?.Invoke();
+
+            // 等待指定时间
             await TaskControl.Delay(retryInterval, ct);
-    
+
+            // 截图并查找元素
             using var screen = CaptureToRectArea();
-    
-           if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && recognitionObject.OneContainMatchText?.Count > 0)
+            using var result = screen.Find(recognitionObject);
+
+            // 元素已出现
+            if (!result.IsEmpty())
             {
-                var ocrList = screen.FindMulti(recognitionObject);
-                if (ocrList.Any(t => recognitionObject.OneContainMatchText.Any(match => t.Text.Contains(match))))
-                {
-                    return true; // 出现
-                }
-            }
-            else
-            {
-                using var result = screen.Find(recognitionObject);
-                if (!result.IsEmpty())
-                {
-                    return true;
-                }
+                return true;
             }
         }
+
         return false;
     }
 
@@ -152,35 +149,30 @@ public static class NewRetry
         for (int i = 0; i < maxAttemptCount; i++)
         {
             if (ct.IsCancellationRequested) return false;
-    
+
+            // 执行重试操作（如按键）
             retryAction?.Invoke();
+
+            // 等待指定时间
             await TaskControl.Delay(retryInterval, ct);
-    
+
+            // 截图并查找元素
             using var screen = CaptureToRectArea();
-    
-           if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && recognitionObject.OneContainMatchText?.Count > 0)
+            using var result = screen.Find(recognitionObject);
+
+            // 元素已消失
+            if (result.IsEmpty())
             {
-                var ocrList = screen.FindMulti(recognitionObject);
-                if (!ocrList.Any(t => recognitionObject.OneContainMatchText.Any(match => t.Text.Contains(match))))
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                using var result = screen.Find(recognitionObject);
-                if (result.IsEmpty())
-                {
-                    return true;
-                }
+                return true;
             }
         }
+
         return false;
     }
-    
-   public static async Task<bool> WaitForElementDisappear(
+
+    public static async Task<bool> WaitForElementDisappear(
         RecognitionObject recognitionObject,
-        Action<ImageRegion> retryAction,
+        Action<ImageRegion> retryAction, // 接收截图的回调
         CancellationToken ct,
         int maxAttemptCount = 10,
         int retryInterval = 1000)
@@ -188,27 +180,21 @@ public static class NewRetry
         for (int i = 0; i < maxAttemptCount; i++)
         {
             if (ct.IsCancellationRequested) return false;
-    
+
+            // 截图并查找元素
             using var screen = CaptureToRectArea();
-    
-            if (recognitionObject.RecognitionType == RecognitionTypes.Ocr && recognitionObject.OneContainMatchText?.Count > 0)
-            {
-                var ocrList = screen.FindMulti(recognitionObject);
-                if (!ocrList.Any(t => recognitionObject.OneContainMatchText.Any(match => t.Text.Contains(match))))
-                {
-                    return true; 
-                }
-            }
-            else
-            {
-                using var result = screen.Find(recognitionObject);
-                if (result.IsEmpty()) return true;
-            }
-    
+            using var result = screen.Find(recognitionObject);
+
+            // 元素已消失
+            if (result.IsEmpty()) return true;
+
+            // 执行重试操作（传入当前截图）
             retryAction?.Invoke(screen);
+
+            // 等待指定时间
             await Delay(retryInterval, ct);
         }
+
         return false;
     }
 }
-

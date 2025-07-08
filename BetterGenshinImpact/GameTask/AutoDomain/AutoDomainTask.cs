@@ -327,10 +327,10 @@ public class AutoDomainTask : ISoloTask
     private async Task EnterDomain()
     {
         var fightAssets = AutoFightAssets.Instance;
-        string[] targetText = { "单人挑战" };//可以写成单个string，也可以写成数组进行多个匹配
+        string[] targetText = { "单人挑战" }; //可以写成单个string，也可以写成数组进行多个匹配
         // 等待F菜单界面文字出现--使用新增的OCR的方法
         var menuFound = await NewRetry.WaitForElementAppear(
-            RecognitionObject.Ocr(CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5, CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5,targetText),
+            RecognitionObject.OcrMatch(CaptureToRectArea().Width * 0.5, CaptureToRectArea().Height * 0.5, CaptureToRectArea().Width * 0.5, CaptureToRectArea().Height * 0.5, targetText),
             () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
             _ct,
             20,
@@ -338,7 +338,7 @@ public class AutoDomainTask : ISoloTask
         );
         if (!menuFound)
         {
-            throw new Exception( targetText + "未出现，请检查是否已进入秘境页面");
+            throw new Exception(targetText + "未出现，请检查是否已进入秘境页面");
         }
         // // 等待F菜单界面出现---使用图像模板的方法
         // await NewRetry.WaitForElementAppear(
@@ -348,7 +348,7 @@ public class AutoDomainTask : ISoloTask
         //     20,
         //     500
         // );
-        
+
         using var limitedFullyStringRa = CaptureToRectArea();
         var limitedFullyStringRaocrList =
             limitedFullyStringRa.FindMulti(RecognitionObject.Ocr(0, 0, limitedFullyStringRa.Width * 0.5,
@@ -360,7 +360,7 @@ public class AutoDomainTask : ISoloTask
         {
             Logger.LogInformation("自动秘境：{Text}", "检测到秘境限时全开");
         }
-        
+
         DateTime now = DateTime.Now;
         if ((now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4) || limitedFullyStringRaocrListdone != null)
         {
@@ -424,19 +424,22 @@ public class AutoDomainTask : ISoloTask
 
             await Delay(300, _ct);
         }
-        
+
         // 点击单人挑战确认并等待队伍界面--使用图像模版匹配的方法，也可以使用文字OCR的方法识别“单人挑战”直到消失
         await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.PartyBtnChooseView,
-            ()  => {  
+            async void () =>
+            {
                 using var ra = CaptureToRectArea();
                 var ra2 = ra.Find(fightAssets.ConfirmRa);
                 if (!ra2.IsEmpty())
                 {
+                    await Delay(50, _ct);
                     ra2.Click();
                     ra2.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");//看LOG是否要显示
+                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战"); //看LOG是否要显示
                 }
+
                 using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
                     ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
                 if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
@@ -449,7 +452,7 @@ public class AutoDomainTask : ISoloTask
             20,
             500
         );
-        
+
         // 等待队伍选择界面出现
         var teamUiFound = await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.PartyBtnChooseView,
@@ -465,15 +468,19 @@ public class AutoDomainTask : ISoloTask
         {
             throw new Exception("队伍选择界面未出现。");
         }
-        
+
         // 点击开始挑战确认并等待“快速编队”文字消失
         var startFightFound = await NewRetry.WaitForElementDisappear(
-            RecognitionObject.Ocr(CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5, CaptureToRectArea().Width*0.5, CaptureToRectArea().Height*0.5 ,"快速编队"),
-            screen => {screen.Find(fightAssets.ConfirmRa, ra => { 
-                ra.Click(); 
-                ra.Dispose(); 
-                Logger.LogInformation("自动秘境：点击 {Text}", "开始挑战");//看LOG是否要显示
-            });},
+            RecognitionObject.OcrMatch(CaptureToRectArea().Width * 0.5, CaptureToRectArea().Height * 0.5, CaptureToRectArea().Width * 0.5, CaptureToRectArea().Height * 0.5, "快速编队"),
+            screen =>
+            {
+                screen.Find(fightAssets.ConfirmRa, ra =>
+                {
+                    ra.Click();
+                    ra.Dispose();
+                    Logger.LogInformation("自动秘境：点击 {Text}", "开始挑战"); //看LOG是否要显示
+                });
+            },
             _ct,
             20,
             500
