@@ -64,7 +64,11 @@ public class PathingTask
         var task = JsonSerializer.Deserialize<PathingTask>(json, PathRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize PathingTask");
         task.FileName = Path.GetFileName(filePath);
         task.FullPath = filePath;
-
+        //添加区分怪物拾取标志
+        foreach (var taskPosition in task.Positions)
+        {
+            taskPosition.PointExtParams.EnableMonsterLootSplit = task.Info.EnableMonsterLootSplit;
+        }
         // 比较版本号大小 BgiVersion
         if (!string.IsNullOrWhiteSpace(task.Info.BgiVersion) && Global.IsNewVersion(task.Info.BgiVersion))
         {

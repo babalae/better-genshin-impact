@@ -98,7 +98,7 @@ public static class NewRetry
     /// <returns>是否成功找到元素</returns>
     public static async Task<bool> WaitForElementAppear(
         RecognitionObject recognitionObject,
-        Action retryAction,
+        Action? retryAction,
         CancellationToken ct,
         int maxAttemptCount = 10,
         int retryInterval = 1000
@@ -138,7 +138,7 @@ public static class NewRetry
     /// <returns>是否成功等待元素消失</returns>
     public static async Task<bool> WaitForElementDisappear(
         RecognitionObject recognitionObject,
-        Action retryAction,
+        Action? retryAction,
         CancellationToken ct,
         int maxAttemptCount = 10,
         int retryInterval = 1000)

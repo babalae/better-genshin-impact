@@ -25,6 +25,8 @@ public class WaypointForTrack : Waypoint
     
     //怪物标签
     public string MonsterTag { get; set; } ="";
+    //区分怪物拾取，只有为true时怪物标签才生效
+    public bool EnableMonsterLootSplit{ get; set; } = false;
 
     /// <summary>
     /// 存在 combat_script 的 action 的话，这个值会存在

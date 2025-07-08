@@ -141,12 +141,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
 
                     // 使用浅拉取选项
-                    // var fetchOptions = new FetchOptions
-                    // {
-                    //     Depth = 1 // 浅拉取，只获取最新的提交
-                    // };
+                    var fetchOptions = new FetchOptions();
+                    fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
 
-                    Commands.Fetch(repo, remote.Name, refSpecs, null, "拉取最新更新");
+                    Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
 
                     // 获取当前分支
                     var branch = repo.Branches["main"] ?? repo.Branches["master"];
@@ -195,7 +193,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private static void SimpleCloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
     {
-        // 使用浅克隆选项
         var options = new CloneOptions
         {
             Checkout = true,
@@ -203,7 +200,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             RecurseSubmodules = false, // 不递归克隆子模块
             OnCheckoutProgress = onCheckoutProgress
         };
-        options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+        // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 克隆仓库
         Repository.Clone(repoUrl, repoPath, options);
     }

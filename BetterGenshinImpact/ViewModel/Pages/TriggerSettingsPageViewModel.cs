@@ -9,31 +9,30 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using BetterGenshinImpact.GameTask;
 using Wpf.Ui;
-using Wpf.Ui.Controls;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TriggerSettingsPageViewModel : ViewModel
 {
-    [ObservableProperty]
-    private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
+    [ObservableProperty] private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
 
-    [ObservableProperty]
-    private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
+    [ObservableProperty] private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
 
-    [ObservableProperty]
-    private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
+    [ObservableProperty] private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
 
-    [ObservableProperty]
-    private List<string> _pickButtonNames;
+    [ObservableProperty] private List<string> _pickButtonNames;
 
     public AllConfig Config { get; set; }
 
     private readonly INavigationService _navigationService;
 
-    [ObservableProperty]
-    private List<string> _hangoutBranches;
+    [ObservableProperty] private List<string> _hangoutBranches;
 
     public TriggerSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
     {
@@ -54,13 +53,73 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnEditBlacklist()
     {
-        JsonMonoDialog.Show(@"User\pick_black_lists.json");
+        var path = @"User\pick_black_lists.txt";
+        var text = Global.ReadAllTextIfExist(path);
+        if (string.IsNullOrEmpty(text))
+        {
+            text = "";
+        }
+
+        var multilineTextBox = new TextBox
+        {
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = true,
+            Height = 340,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            PlaceholderText = "请在此输入黑名单配置，每行一条记录。\n" +
+                              "示例：\n" +
+                              "精致的宝箱\n" +
+                              "史莱姆凝液\n" +
+                              "牢固的箭簇"
+        };
+        var p = new PromptDialog(
+            "黑名单配置，每行一条记录",
+            "黑名单配置",
+            multilineTextBox,
+            text);
+        p.Height = 500;
+        p.ShowDialog();
+        if (p.DialogResult == true)
+        {
+            File.WriteAllText(Global.Absolute(path), multilineTextBox.Text);
+            GameTaskManager.RefreshTriggerConfigs();
+        }
     }
 
     [RelayCommand]
     private void OnEditWhitelist()
     {
-        JsonMonoDialog.Show(@"User\pick_white_lists.json");
+        var path = @"User\pick_white_lists.txt";
+        var text = Global.ReadAllTextIfExist(path);
+        if (string.IsNullOrEmpty(text))
+        {
+            text = "";
+        }
+
+        var multilineTextBox = new TextBox
+        {
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = true,
+            Height = 340,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            PlaceholderText = "请在此输入白名单配置，每行一条记录。\n" +
+                              "示例：\n" +
+                              "调查\n" +
+                              "合成\n" +
+                              "启动"
+        };
+        var p = new PromptDialog(
+            "白名单配置，每行一条记录",
+            "白名单配置",
+            multilineTextBox,
+            text);
+        p.Height = 500;
+        p.ShowDialog();
+        if (p.DialogResult == true)
+        {
+            File.WriteAllText(Global.Absolute(path), multilineTextBox.Text);
+            GameTaskManager.RefreshTriggerConfigs();
+        }
     }
 
     // [RelayCommand]
@@ -70,12 +129,6 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     //         "派遣角色优先级配置", Config.AutoSkipConfig.AutoReExploreCharacter);
     //     Config.AutoSkipConfig.AutoReExploreCharacter = str.Replace("，", ",").Replace(" ", "");
     // }
-
-    [RelayCommand]
-    public void OnGoToQGroupUrl()
-    {
-        Process.Start(new ProcessStartInfo("http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=mL1O7atys6Prlu5LBVqmDlfOrzyPMLN4&authKey=jSI2WuZyUjmpIUIAsBAf5g0r5QeSu9K6Un%2BRuSsQ8fQGYwGYwRVioFfJyYnQqvbf&noverify=0&group_code=863012276") { UseShellExecute = true });
-    }
 
     [RelayCommand]
     public void OnGoToHotKeyPage()

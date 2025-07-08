@@ -497,6 +497,7 @@ public class PathExecutor
             WaypointForTrack wft=new WaypointForTrack(waypoint, task.Info.MapName);
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
             wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
+            wft.EnableMonsterLootSplit = waypoint.PointExtParams.EnableMonsterLootSplit;
             return wft;
         }).ToList();
 
@@ -809,7 +810,7 @@ public class PathExecutor
                     await Delay(200, ct);
                 }
 
-                await Delay(200, ct);
+                await Delay(100, ct);
                 continue;
             }
 

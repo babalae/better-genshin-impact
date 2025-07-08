@@ -16,29 +16,30 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class MiningHandler : IActionHandler
 {
-    private readonly CombatScript _miningCombatScript = CombatScriptParser.ParseContext("""
-        荒泷一斗 attack(2.0)
-        迪希雅 attack(2.0)
-        玛薇卡 attack(2.0)
-        基尼奇 attack(2.0)
-        娜维娅 attack(2.0)
-        菲米尼 attack(2.0)
-        迪卢克 attack(2.0)
-        诺艾尔 attack(2.0)
-        卡维 attack(2.0)
-        雷泽 attack(2.0)
-        优菈 attack(2.0)
-        嘉明 attack(2.0)
-        辛焱 attack(2.0)
-        重云 attack(2.0)
-        多莉 attack(2.0)
-        北斗 attack(2.5)
-        早柚 attack(2.5)
-        坎蒂丝 e(hold,wait)
-        雷泽 e(hold,wait)
-        钟离 e(hold,wait)
-        凝光 attack(4.0)
-        """);
+    private readonly string[] _miningActions =
+    [
+        "诺艾尔 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "娜维娅 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "荒泷一斗 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "迪希雅 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "玛薇卡 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "基尼奇 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "菲米尼 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "迪卢克 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "卡维 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "优菈 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "嘉明 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "辛焱 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "重云 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "多莉 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "北斗 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "早柚 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
+        "坎蒂丝 e(hold,wait)",
+        "雷泽 e(hold,wait)",
+        "凝光 attack(4.0)",
+        "钟离 e(hold,wait)"
+    ];
+    
 
     private readonly ScanPickTask _scanPickTask = new();
 
@@ -70,13 +71,21 @@ public class MiningHandler : IActionHandler
     {
         try
         {
-            // 通用化战斗策略
-            foreach (var command in _miningCombatScript.CombatCommands)
+            bool foundAvatar = false;
+            foreach (var miningActionStr in _miningActions)
             {
-                var avatar = combatScenes.SelectAvatar(command.Name);
-                if (avatar != null)
+                var miningAction = CombatScriptParser.ParseContext(miningActionStr);
+                foreach (var command in miningAction.CombatCommands)
                 {
-                    command.Execute(combatScenes);
+                    var avatar = combatScenes.SelectAvatar(command.Name);
+                    if (avatar != null)
+                    {
+                        command.Execute(combatScenes);
+                        foundAvatar = true;
+                    }
+                }
+                if (foundAvatar)
+                {
                     break;
                 }
             }
