@@ -1000,6 +1000,7 @@ public class PathExecutor
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
             Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Delay(300, ct);
             var screen = CaptureToRectArea();
             var position = await GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
