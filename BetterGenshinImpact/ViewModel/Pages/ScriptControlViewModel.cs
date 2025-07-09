@@ -15,6 +15,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
@@ -511,7 +512,34 @@ public partial class ScriptControlViewModel : ViewModel
         projects.ForEach(item => SelectedScriptGroup?.Projects.Add(item));
         if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
-
+    [RelayCommand]
+    private void ExportMergerJsons()
+    {
+        int count = 0;
+        var pathDir = Path.Combine(LogPath,"exportMergerJson",DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),"AutoPathing");
+        foreach (var scriptGroupProject in SelectedScriptGroup?.Projects ?? [])
+        {
+            if (scriptGroupProject.Type == "Pathing")
+            {
+                var mergerJson= JsonMerger.getMergePathingJson(Path.Combine(MapPathingViewModel.PathJsonPath,
+                    scriptGroupProject.FolderName, scriptGroupProject.Name));
+                string fullPath = Path.Combine(pathDir,scriptGroupProject.FolderName,scriptGroupProject.Name);
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(fullPath, mergerJson);
+                count++;
+            }
+        }
+        if (count>0)
+        {
+            Process.Start("explorer.exe", pathDir);
+        }
+    }
+    
+    
     [RelayCommand]
     public void AddScriptGroupNextFlag(ScriptGroup? item)
     {
