@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.GetGridIcons;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -163,6 +164,11 @@ public partial class AllConfig : ObservableObject
     ///     自动分解圣遗物配置
     /// </summary>
     public AutoArtifactSalvageConfig AutoArtifactSalvageConfig { get; set; } = new();
+
+    /// <summary>
+    ///     截取物品图标配置
+    /// </summary>
+    public GetGridIconsConfig GetGridIconsConfig { get; set; } = new();
 
     /// <summary>
     ///     宏配置

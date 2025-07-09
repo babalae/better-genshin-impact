@@ -75,7 +75,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动打牌 - 
+                        全自动打牌 -
                         <Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
@@ -1251,10 +1251,10 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0" />
-                 </Grid>
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
-        
+
         <!--  自动幽境危战  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
@@ -1346,7 +1346,7 @@
                         </b:Interaction.Triggers>
                     </ComboBox>
                 </Grid>
-                
+
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -1502,7 +1502,7 @@
                                      IsChecked="{Binding Config.AutoStygianOnslaughtConfig.AutoArtifactSalvage, Mode=TwoWay}" />
 
                 </Grid>
-                
+
             </StackPanel>
         </ui:CardExpander>
 
@@ -1809,8 +1809,8 @@
                                   Maximum="60"
                                   Minimum="5"
                                   ValidationMode="InvalidInputOverwritten"
-                                  Value="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay}"
-                                  Text="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay}" />
+                                  Value="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Text="{Binding Config.AutoFishingConfig.AutoThrowRodTimeOut, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1838,8 +1838,8 @@
                                   Maximum="1800"
                                   Minimum="0"
                                   ValidationMode="InvalidInputOverwritten"
-                                  Value="{Binding Config.AutoFishingConfig.WholeProcessTimeoutSeconds, Mode=TwoWay}"
-                                  Text="{Binding Config.AutoFishingConfig.WholeProcessTimeoutSeconds, Mode=TwoWay}" />
+                                  Value="{Binding Config.AutoFishingConfig.WholeProcessTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Text="{Binding Config.AutoFishingConfig.WholeProcessTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1919,7 +1919,7 @@
            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             下载
                         </Hyperlink> 到本地后填入torch_cpu.dll或torch_cuda.dll的完整地址。如未生效可尝试重启BGI。
-                        
+
                     </ui:TextBlock>
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -2077,8 +2077,171 @@
                                 Grid.Column="1"
                                 MinWidth="90"
                                 Margin="0,0,36,0"
-                                Value="{Binding Config.AutoArtifactSalvageConfig.MaxNumToCheck, Mode=TwoWay}"
-                                Text="{Binding Config.AutoArtifactSalvageConfig.MaxNumToCheck, Mode=TwoWay}" />
+                                Value="{Binding Config.AutoArtifactSalvageConfig.MaxNumToCheck, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Text="{Binding Config.AutoArtifactSalvageConfig.MaxNumToCheck, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
+        <!-- 截取物品图标（开发者） -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" 
+                         Visibility="{Binding Config.CommonConfig.ScreenshotEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf4bb;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="183*" />
+                        <ColumnDefinition Width="70*"/>
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="截取物品图标（开发者）"
+                                  TextWrapping="Wrap" Grid.ColumnSpan="2" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Grid.RowSpan="2"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap" Grid.ColumnSpan="2">
+                        须要打开设置-启用保存截图功能，文件保存在
+                        <Hyperlink Command="{Binding GoToGridIconsFolderCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            log/gridIcons
+                        </Hyperlink>
+                        <LineBreak/>
+                        以下过长的内容在pr时会搬到教程里去
+                        <LineBreak/>
+                        需要漆黑的背景以降低干扰，比如渊下宫-蛇肠之路的一个锚点，将视角竖直向上看向洞顶
+                        <LineBreak/>
+                        诸如提纳里的耳朵太长了，他装备的物品角标目前无法正确地和正上方的物品图标进行轮廓分割，请手动规避
+                    </ui:TextBlock>
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="2"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchGetGridIconsCommand}"
+                                             EnableContent="{Binding SwitchGetGridIconsButtonText}"
+                                             IsChecked="{Binding SwitchGetGridIconsEnabled}" VerticalAlignment="Top" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="界面名称"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="不同界面的参数不一样，请选择你要扫描的界面"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="150"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding GridNameDict}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value"
+                              SelectedItem="{Binding Config.GetGridIconsConfig.GridName, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}">
+                    </ComboBox>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="使用星星作为名称后缀（待开发）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="有些物品具有相同的名称，但具有不同的图标和星星数"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsEnabled="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}"
+                                     IsChecked="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="使用等级作为名称后缀（待开发）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="有些物品具有相同的名称，但具有不同的图标和等级"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsEnabled="{Binding Config.GetGridIconsConfig.LvAsSuffix, Mode=TwoWay}"
+                                     IsChecked="{Binding Config.GetGridIconsConfig.LvAsSuffix, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16" Cursor="">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="7*" />
+                        <ColumnDefinition Width="3*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="最大截取数量"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="达到最大截取数量后会停止"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,36,0"
+                                Value="{Binding Config.GetGridIconsConfig.MaxNumToGet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Text="{Binding Config.GetGridIconsConfig.MaxNumToGet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

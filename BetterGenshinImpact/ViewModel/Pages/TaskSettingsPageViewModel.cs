@@ -35,6 +35,8 @@ using System.Diagnostics;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -80,7 +82,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private string _switchAutoDomainButtonText = "启动";
-    
+
     [ObservableProperty]
     private int _autoStygianOnslaughtRoundNum;
 
@@ -124,7 +126,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
-    
+
     [ObservableProperty]
     private OneDragonFlowViewModel? _oneDragonFlowViewModel;
 
@@ -154,6 +156,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private bool _switchArtifactSalvageEnabled;
 
+    [ObservableProperty]
+    private bool _switchGetGridIconsEnabled;
+    [ObservableProperty]
+    private string _switchGetGridIconsButtonText = "启动";
+    [ObservableProperty]
+    private FrozenDictionary<Enum, string> _gridNameDict = Enum.GetValues(typeof(GridScreenName))
+        .Cast<GridScreenName>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -168,21 +184,21 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
     }
-  
-    
+
+
     [RelayCommand]
     private async Task OnSOneDragonFlow()
-    {   
-       if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
-       {
+    {
+        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+        {
             OneDragonFlowViewModel.OnNavigatedTo();
             if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
             {
                 Toast.Warning("未设置任务!");
                 return;
             }
-       }
-       await OneDragonFlowViewModel.OnOneKeyExecute();
+        }
+        await OneDragonFlowViewModel.OnOneKeyExecute();
     }
 
     [RelayCommand]
@@ -349,7 +365,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             .RunSoloTaskAsync(new AutoStygianOnslaughtTask(Config.AutoStygianOnslaughtConfig, path));
         SwitchAutoStygianOnslaughtEnabled = false;
     }
-    
+
     [RelayCommand]
     private async Task OnGoToAutoStygianOnslaughtUrlAsync()
     {
@@ -504,5 +520,31 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
         OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
         ocrDialog.ShowDialog();
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchGetGridIcons()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OnGoToGridIconsFolder()
+    {
+        var path = Global.Absolute(@"log\gridIcons\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
     }
 }

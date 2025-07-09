@@ -1,6 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
-using GameTask.Model.GameUI;
 using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
@@ -42,24 +42,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             Assert.Equal(status, result);
         }
 
-        [Theory]
-        [InlineData(@"ArtifactGrid.png")]
-        /// <summary>
-        /// 测试获取分解圣遗物Grid界面中的圣遗物，结果应正确
-        /// </summary>
-        public void GetArtifactGridItems_ShouldBeRight(string screenshot)
-        {
-            //
-            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
-
-            //
-            var result = GridScreen.GridEnumerator.GetGridItems(mat);
-
-            //
-            Assert.Equal(4, result.Count());
-        }
-
-
         [Fact]
         /// <summary>
         /// 测试获取分解圣遗物Grid界面中的圣遗物，以及其状态，结果应正确
@@ -70,7 +52,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\ArtifactGrid.png");
 
             //
-            var result = GridScreen.GridEnumerator.GetGridItems(mat);
+            var result = GridScreen.GridEnumerator.GetGridItems(mat, 2);
             using Mat leftTopOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 < mat.Width / 2 && r.Y + r.Height / 2 < mat.Height / 2));
             using Mat rightTopOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 > mat.Width / 2 && r.Y + r.Height / 2 < mat.Height / 2));
             using Mat leftBottomOne = new Mat(mat, result.Single(r => r.X + r.Width / 2 < mat.Width / 2 && r.Y + r.Height / 2 > mat.Height / 2));
