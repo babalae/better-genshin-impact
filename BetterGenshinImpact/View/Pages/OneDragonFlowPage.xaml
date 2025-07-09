@@ -822,7 +822,7 @@
                                         <StackPanel Margin="12">
                                             <Grid>
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
                                                 </Grid.RowDefinitions>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
@@ -830,13 +830,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <!-- 模式选择 -->
                                                 <ToggleButton Grid.Column="0"
-                                                        Margin="0,0,0,10"
+                                                        Margin="0,0,0,0"
                                                         IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=TwoWay}"
                                                         Content="模式切换" />
                                                 
                                                 <!-- 根据模SpecifyResinUse显示不同的文字 -->
                                                 <ui:TextBlock Grid.Column="1"
-                                                                Margin="12,0,0,10"
+                                                                Margin="12,0,0,0"
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
@@ -845,7 +845,7 @@
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                                                 <ui:TextBlock Grid.Column="1"
-                                                                Margin="5,0,0,10"
+                                                                Margin="5,0,0,0"
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
@@ -855,15 +855,15 @@
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </Grid>
                                             
-                                            <StackPanel IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse}" Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">   
+                                            <StackPanel Margin="0,10,0,0" IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse}" Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">   
                                                 <!-- 细线 -->
                                                 <Separator Height="1"
                                                            Margin="0,0,0,0"
-                                                           Background="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                           Background="Gray"/>
                                                 
                                                 <!-- 原粹树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
-                                                            Margin="0,8,0,12">
+                                                            Margin="0,10,0,12">
                                                     <ui:TextBlock Text="原粹树脂刷取次数："
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
