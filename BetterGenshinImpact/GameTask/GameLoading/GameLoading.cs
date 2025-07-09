@@ -261,8 +261,17 @@ public class GameLoadingTrigger : ITaskTrigger
         {
             TaskControl.Logger.LogWarning("B服判断异常: " + ex.Message);
         }
-        var enterGameRo = _assets.EnterGameRo;
-        using var ra = content.CaptureRectArea.Find(enterGameRo);
+        // 官服流程：先识别并点击顶号或切号的后一次“进入游戏”弹窗按钮
+        if (!isBili)
+        {
+            var extraEnterGameBtn = content.CaptureRectArea.Find(_assets.ChooseEnterGameRo);
+            if (!extraEnterGameBtn.IsEmpty())
+            {
+                extraEnterGameBtn.Click();
+                return;
+            }
+        }
+        using var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
         if (!ra.IsEmpty())
         {
             if (isBili)
@@ -275,19 +284,11 @@ public class GameLoadingTrigger : ITaskTrigger
                         var process = Process.GetProcessesByName("YuanShen").FirstOrDefault();
                         if (process != null && GetBiliLoginWindow(process) != IntPtr.Zero)
                         {
-                            TaskControl.Sleep(4000, CancellationToken.None);
-                            var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-                            var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                            var centerX = captureRect.X + captureRect.Width / 2;
-                            var centerY = captureRect.Y + captureRect.Height / 2;
-                            var offsetY = 90 * scale;
-                            var clickX = centerX;
-                            var clickY = centerY + offsetY;
-                            DesktopRegion.DesktopRegionClick(clickX, clickY);
+                            GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                             TaskControl.Sleep(3000, CancellationToken.None);
                             if (GetBiliLoginWindow(process) != IntPtr.Zero)
                             {
-                                DesktopRegion.DesktopRegionClick(clickX, clickY);
+                                GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                             }
                             biliLoginClicked = true;
                             break;
