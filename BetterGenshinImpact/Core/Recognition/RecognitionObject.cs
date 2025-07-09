@@ -4,6 +4,7 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition;
 
@@ -183,13 +184,23 @@ public class RecognitionObject
     ///     多个值全匹配的情况下才算成功
     /// </summary>
     public List<string> RegexMatchText { get; set; } = [];
-
+    
     public static RecognitionObject Ocr(double x, double y, double w, double h)
     {
         return new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h))
+        };
+    }
+    
+    public static RecognitionObject OcrMatch(double x, double y, double w, double h, params string[] matchTexts)
+    {
+        return new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h)),
+            OneContainMatchText = matchTexts?.ToList() ?? []
         };
     }
 
