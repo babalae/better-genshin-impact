@@ -220,6 +220,10 @@ public class PathExecutor
 
                     break;
                 }
+                catch (HandledException handledException)
+                {
+                    break;
+                }
                 catch (NormalEndException normalEndException)
                 {
                     Logger.LogInformation(normalEndException.Message);
@@ -1282,7 +1286,7 @@ public class PathExecutor
     {
         if (EndAction != null && EndAction(ra))
         {
-            throw new NormalEndException("达成结束条件，结束地图追踪");
+            throw new HandledException("达成结束条件，结束地图追踪");
         }
     }
 }
