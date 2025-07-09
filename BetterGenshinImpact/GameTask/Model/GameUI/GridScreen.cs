@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GameTask.Model.GameUI
+namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
     public class GridScreen : IAsyncEnumerable<ImageRegion>
     {
@@ -36,25 +36,25 @@ namespace GameTask.Model.GameUI
         /// <param name="gridRoi">Grid所在位置</param>
         /// <param name="logger"></param>
         /// <param name="ct"></param>
-        public GridScreen(Rect gridRoi, int columns, int s1Round, int roundMilliseconds, int s2Round, double s3Scale, ILogger logger, CancellationToken ct)
+        public GridScreen(Rect gridRoi, GridScreenParams @params, ILogger logger, CancellationToken ct)
         {
             this.gridRoi = gridRoi;
             this.ct = ct;
             this.logger = logger;
-            if (columns < 4)
+            if (@params.Columns < 4)
             {
-                throw new ArgumentOutOfRangeException(nameof(columns));
+                throw new ArgumentOutOfRangeException(nameof(@params.Columns));
             }
-            this.columns = columns;
-            this.s1Round = s1Round;
-            this.roundMilliseconds = roundMilliseconds;
-            this.s2Round = s2Round;
-            this.s3Scale = s3Scale;
+            this.columns = @params.Columns;
+            this.s1Round = @params.S1Round;
+            this.roundMilliseconds = @params.RoundMilliseconds;
+            this.s2Round = @params.S2Round;
+            this.s3Scale = @params.S3Scale;
         }
 
         public IAsyncEnumerator<ImageRegion> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            return new GridEnumerator(this.gridRoi, this.columns, this.s1Round, this.roundMilliseconds, this.s2Round, this.s3Scale, this.logger, this.input, this.ct);
+            return new GridEnumerator(gridRoi, columns, s1Round, roundMilliseconds, s2Round, s3Scale, logger, input, ct);
         }
 
         public class GridEnumerator : IAsyncEnumerator<ImageRegion>
@@ -130,10 +130,10 @@ namespace GameTask.Model.GameUI
             /// <param name="nextGray">尝试滚动并等待可能的回弹后的灰度图</param>
             /// <param name="shift">估计的位移</param>
             /// <param name="lowerThreshold">低于下限则可能不存在平移</param>
-            /// <param name="upperThreshold">上限用于抵消微小的其他差异</param>
+            /// <param name="upperThreshold">上限用于抵消微小的其他差异，比如高亮图标的呼吸闪烁</param>
             /// <param name="logger"></param>
             /// <returns></returns>
-            public static bool IsScrolling(Mat prevGray, Mat nextGray, out Point2d shift, double lowerThreshold = 0.5, double upperThreshold = 0.99, ILogger? logger = null)
+            public static bool IsScrolling(Mat prevGray, Mat nextGray, out Point2d shift, double lowerThreshold = 0.5, double upperThreshold = 0.95, ILogger? logger = null)
             {
                 using Mat prev = new Mat();
                 prevGray.ConvertTo(prev, MatType.CV_32FC1);
@@ -142,7 +142,7 @@ namespace GameTask.Model.GameUI
 
                 using Mat window = new Mat();
                 shift = Cv2.PhaseCorrelate(prev, next, window, out double response);    // 相位相关性
-                logger?.LogInformation($"response={response:F3}, shift=({shift.X:F2}, {shift.Y:F2})");
+                //logger?.LogInformation($"response={response:F3}, shift=({shift.X:F2}, {shift.Y:F2})");
                 return response > lowerThreshold && response < upperThreshold;
             }
 
@@ -280,6 +280,8 @@ namespace GameTask.Model.GameUI
                 //Cv2.WaitKey();
 
                 //闭运算把一些断裂的边缘粘合一下
+                //局限：提纳里的耳朵太长了一直连到了正上方的另一个图标，这里闭运算就会把最后一丝空隙也连起来，仅凭亮度边缘无法分隔轮廓……
+                //todo：使用头像识别，先行去掉头像
                 using Mat closeKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(5, 5));
                 using Mat close = canny.MorphologyEx(MorphTypes.Close, closeKernel);
                 //Cv2.ImShow("close", close);

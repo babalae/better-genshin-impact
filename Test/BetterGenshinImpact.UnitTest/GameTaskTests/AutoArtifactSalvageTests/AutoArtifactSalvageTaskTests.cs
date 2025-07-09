@@ -1,6 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
-using GameTask.Model.GameUI;
 using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
