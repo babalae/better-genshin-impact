@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.47.1-alpha.4</Version>
+		<Version>0.47.2-alpha.1</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -41,7 +41,7 @@
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets" Version="1.0.2" />
+		<PackageReference Include="BetterGI.Assets" Version="1.0.3" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
