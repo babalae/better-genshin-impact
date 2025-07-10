@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Core.Script.Utils;
@@ -74,47 +75,156 @@ public class JsonMerger
         return MergeJson(JObject.Parse(controlJson),JObject.Parse(originalJson),name);
     }
 
+    
+    
+    
     public static string MergeJson( JObject control,JObject original, string name)
     {
-        // 全局属性覆盖
-        if (control["global_cover"] is JObject globalCover)
+        // 1. 应用全局覆盖规则
+        JToken globalCover = control["global_cover"];
+        if (globalCover != null && globalCover.Type == JTokenType.Object)
         {
-            ApplyPropertyCover(original, globalCover);
+            MergeObject((JObject)globalCover, original, new List<string>());
         }
 
-        // 全局对象覆盖
-        if (control["obj_global_cover"] is JObject objGlobalCover)
+        // 2. 查找匹配名称的覆盖规则
+        JArray jsonList = control["json_list"] as JArray;
+        if (jsonList != null)
         {
-            ApplyObjectCover(original, objGlobalCover);
-        }
-
-        // 处理json_list中的特定规则
-        if (control["json_list"] is JArray jsonList)
-        {
-            foreach (var item in jsonList)
+            foreach (JToken item in jsonList)
             {
                 if (item["name"]?.ToString() == name)
                 {
-                    // 属性覆盖
-                    if (item["cover"] is JObject cover)
+                    JToken cover = item["cover"];
+                    if (cover != null && cover.Type == JTokenType.Object)
                     {
-                        ApplyPropertyCover(original, cover);
+                        MergeObject((JObject)cover, original, new List<string>());
                     }
-
-                    // 对象覆盖
-                    if (item["obj_ cover"] is JObject objCover) // 注意空格匹配原始键名
-                    {
-                        ApplyObjectCover(original, objCover);
-                    }
-
-                    break; // 找到匹配项后退出循环
+                    break;
                 }
             }
         }
 
         return original.ToString();
     }
+    private static void MergeObject(JObject control, JObject target, List<string> processedKeys)
+    {
+        HashSet<string> skipKeys = new HashSet<string>();
 
+        // 处理特殊控制指令
+        ProcessSpecialInstructions(control, target, skipKeys);
+
+        // 处理普通属性
+        foreach (var prop in control.Properties().ToList())
+        {
+            string key = prop.Name;
+            
+            // 跳过已处理键和控制指令
+            if (skipKeys.Contains(key)) continue;
+            
+            JToken controlValue = prop.Value;
+            JToken targetValue = target[key];
+
+            // 处理对象类型
+            if (controlValue.Type == JTokenType.Object)
+            {
+                
+                if (targetValue == null || targetValue.Type != JTokenType.Object)
+                {
+                    target[key] = controlValue.DeepClone();
+                }
+                else
+                {
+                    MergeObject((JObject)controlValue, (JObject)targetValue, new List<string>());
+                }
+                continue;
+            }
+
+            // 处理数组类型
+            if (controlValue.Type == JTokenType.Array)
+            {
+                target[key] = controlValue.DeepClone();
+                continue;
+            }
+
+            // 处理其他类型
+            target[key] = controlValue.DeepClone();
+        }
+    }
+    private static void ProcessSpecialInstructions(JObject control, JObject target, HashSet<string> skipKeys)
+    {
+        // 处理_obj_cover指令（对象覆盖）
+        JToken objOver = control["_obj_cover"];
+        if (objOver != null && objOver.Type == JTokenType.Array)
+        {
+            foreach (JToken item in (JArray)objOver)
+            {
+                string propName = item.ToString();
+                if (control[propName] != null)
+                {
+                    target[propName] = control[propName].DeepClone();
+                    skipKeys.Add(propName);
+                }
+            }
+            skipKeys.Add("_obj_cover");
+        }
+
+        // 处理_arr_add指令（数组合并）
+        JToken arrAdd = control["_arr_add"];
+        if (arrAdd != null && arrAdd.Type == JTokenType.Array)
+        {
+            foreach (JToken item in (JArray)arrAdd)
+            {
+                string propName = item.ToString();
+                JToken controlArray = control[propName];
+                
+                if (controlArray != null && controlArray.Type == JTokenType.Array)
+                {
+                    JToken targetArray = target[propName];
+                    if (targetArray != null && targetArray.Type == JTokenType.Array)
+                    {
+                        target[propName] = MergeArrays((JArray)controlArray, (JArray)targetArray);
+                    }
+                    else
+                    {
+                        target[propName] = controlArray.DeepClone();
+                    }
+                    skipKeys.Add(propName);
+                }
+            }
+            skipKeys.Add("_arr_add");
+        }
+    }
+
+    private static JArray MergeArrays(JArray source, JArray target)
+    {
+        // 合并数组并去重
+        List<JToken> result = new List<JToken>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        // 添加目标数组元素
+        foreach (var item in target)
+        {
+            string json = item.ToString(Newtonsoft.Json.Formatting.None);
+            if (seen.Add(json))
+            {
+                result.Add(item);
+            }
+        }
+
+        // 添加源数组元素
+        foreach (var item in source)
+        {
+            string json = item.ToString(Newtonsoft.Json.Formatting.None);
+            if (seen.Add(json))
+            {
+                result.Add(item);
+            }
+        }
+
+        return new JArray(result);
+    }
+    /*
     // 属性覆盖（递归合并）
     private static void ApplyPropertyCover(JObject target, JObject source)
     {
@@ -152,5 +262,5 @@ public class JsonMerger
             var propName = prop.Name;
             target[propName] = prop.Value.DeepClone();
         }
-    }
+    }*/
 }
