@@ -218,9 +218,9 @@ public partial class OneDragonFlowViewModel : ViewModel
         CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
-            if (TaskList.Any(taskName => scriptGroup.Name.Contains(taskName.Name)))
+            if (TaskList.Any(taskName => scriptGroup.Name == taskName.Name))
             {
-                continue; // 不显示已经存在的配置组
+                continue; // 只有当文件名完全相同时才跳过显示
             }
             var checkBox = new CheckBox
             {
