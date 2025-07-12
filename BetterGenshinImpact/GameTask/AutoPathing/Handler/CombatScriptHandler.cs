@@ -25,6 +25,9 @@ public class CombatScriptHandler : IActionHandler
                 return;
             }
 
+            // 设置取消令牌到 CombatScenes 和 Avatar 对象
+            combatScenes.BeforeTask(ct);
+
 
             // 提前校验是否存在策略要求的角色
             if (!combatScript.AvatarNames.Contains(CombatScriptParser.CurrentAvatarName))
@@ -37,12 +40,12 @@ public class CombatScriptHandler : IActionHandler
                 }
             }
 
-
             try
             {
                 // 通用化战斗策略
                 foreach (var command in combatScript.CombatCommands)
                 {
+                    ct.ThrowIfCancellationRequested();
                     command.Execute(combatScenes);
                 }
             }
