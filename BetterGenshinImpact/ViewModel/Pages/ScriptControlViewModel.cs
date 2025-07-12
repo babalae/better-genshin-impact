@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.TaskProgress;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -1138,70 +1139,89 @@ public partial class ScriptControlViewModel : ViewModel
 
     private void ScriptGroupsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.NewItems != null)
-        {
-            foreach (ScriptGroup newItem in e.NewItems)
+        // 防抖
+        DebounceHelper.Debounce("ScriptGroupsCollectionChanged_e12389",
+            () =>
             {
-                newItem.Projects.CollectionChanged += ScriptProjectsCollectionChanged;
-                foreach (var project in newItem.Projects)
+                if (e.NewItems != null)
                 {
-                    project.PropertyChanged += ScriptProjectsPChanged;
-                }
-            }
-        }
-
-        if (e.OldItems != null)
-        {
-            foreach (ScriptGroup oldItem in e.OldItems)
-            {
-                foreach (var project in oldItem.Projects)
-                {
-                    project.PropertyChanged -= ScriptProjectsPChanged;
+                    foreach (ScriptGroup newItem in e.NewItems)
+                    {
+                        newItem.Projects.CollectionChanged += ScriptProjectsCollectionChanged;
+                        foreach (var project in newItem.Projects)
+                        {
+                            project.PropertyChanged += ScriptProjectsPChanged;
+                        }
+                    }
                 }
 
-                oldItem.Projects.CollectionChanged -= ScriptProjectsCollectionChanged;
-            }
-        }
+                if (e.OldItems != null)
+                {
+                    foreach (ScriptGroup oldItem in e.OldItems)
+                    {
+                        foreach (var project in oldItem.Projects)
+                        {
+                            project.PropertyChanged -= ScriptProjectsPChanged;
+                        }
 
-        // 补充排序字段
-        var i = 1;
-        foreach (var group in ScriptGroups)
-        {
-            group.Index = i++;
-        }
+                        oldItem.Projects.CollectionChanged -= ScriptProjectsCollectionChanged;
+                    }
+                }
 
-        // 保存配置组配置
-        foreach (var group in ScriptGroups)
-        {
-            WriteScriptGroup(group);
-        }
+                // 补充排序字段
+                var i = 1;
+                foreach (var group in ScriptGroups)
+                {
+                    group.Index = i++;
+                }
+
+                // 保存配置组配置
+                foreach (var group in ScriptGroups)
+                {
+                    WriteScriptGroup(group);
+                }
+            },
+            20
+        );
+       
     }
 
     private void ScriptProjectsPChanged(object? sender, PropertyChangedEventArgs e)
     {
-        foreach (var group in ScriptGroups)
+        DebounceHelper.Debounce("ScriptProjectsPChanged_e12u89", () =>
         {
-            WriteScriptGroup(group);
-        }
+            foreach (var group in ScriptGroups)
+            {
+                WriteScriptGroup(group);
+            }
+        }, 20);
     }
 
     private void ScriptProjectsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // 补充排序字段
-        if (SelectedScriptGroup is { Projects.Count: > 0 })
-        {
-            var i = 1;
-            foreach (var project in SelectedScriptGroup.Projects)
+        // 防抖
+        DebounceHelper.Debounce("ScriptProjectsCollectionChanged_3hy98r",
+            () =>
             {
-                project.Index = i++;
-            }
-        }
+                // 补充排序字段
+                if (SelectedScriptGroup is { Projects.Count: > 0 })
+                {
+                    var i = 1;
+                    foreach (var project in SelectedScriptGroup.Projects)
+                    {
+                        project.Index = i++;
+                    }
+                }
 
-        // 保存配置组配置
-        if (SelectedScriptGroup != null)
-        {
-            WriteScriptGroup(SelectedScriptGroup);
-        }
+                // 保存配置组配置
+                if (SelectedScriptGroup != null)
+                {
+                    WriteScriptGroup(SelectedScriptGroup);
+                }
+            },
+            20
+        );
+
     }
 
 
