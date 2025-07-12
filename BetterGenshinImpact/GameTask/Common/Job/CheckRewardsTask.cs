@@ -53,7 +53,7 @@ public class CheckRewardsTask
         {
             await new ReturnMainUiTask().Start(ct);
             
-            var book= await NewRetry.WaitForElementAppear(
+            _ = await NewRetry.WaitForElementAppear(
                 GetConfirmRa(true,"每日委托奖励"),
                 ()=>
                 {
