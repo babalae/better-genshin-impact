@@ -27,11 +27,14 @@ public class SwitchPartyTask
 
     public async Task<bool> Start(string partyName, CancellationToken ct)
     {
+        bool isInPartyViewUi = false;
+        
         Logger.LogInformation("尝试切换至队伍: {Name}", partyName);
         using var ra1 = CaptureToRectArea();
-
+        
         if (!Bv.IsInPartyViewUi(ra1))
         {
+            isInPartyViewUi = true;
             // 如果不在主界面，则返回主界面
             if (!Bv.IsInMainUi(ra1))
             {
@@ -93,9 +96,13 @@ public class SwitchPartyTask
         if (Regex.IsMatch(currTeamName, partyName))
         {
             Logger.LogInformation("当前队伍[{Name}]即为目标队伍，无需切换", currTeamName);
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await Delay(500, ct);
-            await _returnMainUiTask.Start(ct);
+            if (isInPartyViewUi)
+            {
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                await Delay(500, ct);
+                await _returnMainUiTask.Start(ct);
+            }
+            
             return true;
         }
 
@@ -135,7 +142,7 @@ public class SwitchPartyTask
         for (var i = 0; i < 11; i++)
         {
             using var page = CaptureToRectArea();
-            var found = await FindPage(partyName, page, partyDeleteBtn, ct);
+            var found = await FindPage(partyName, page, partyDeleteBtn, ct, isInPartyViewUi);
             if (found)
             {
                 RunnerContext.Instance.ClearCombatScenes();
@@ -158,10 +165,9 @@ public class SwitchPartyTask
         Logger.LogInformation("如果找不到设定的队伍名，有可能是文字识别效果不佳，请尝试正则表达式");
         await _returnMainUiTask.Start(ct);
         return false;
-
     }
 
-    private async Task<bool> FindPage(string partyName, ImageRegion page, Region partyDeleteBtn, CancellationToken ct)
+    private async Task<bool> FindPage(string partyName, ImageRegion page, Region partyDeleteBtn, CancellationToken ct, bool isInPartyViewUi = false)
     {
         var partySwitchNameRaList = page.FindMulti(new RecognitionObject
         {
@@ -177,7 +183,7 @@ public class SwitchPartyTask
                 page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
                 await Delay(200, ct);
                 Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
-                await ConfirmParty(page, ct);
+                await ConfirmParty(page, ct, isInPartyViewUi);
                 return true;
             }
         }
@@ -185,7 +191,7 @@ public class SwitchPartyTask
         return false;
     }
 
-    private async Task ConfirmParty(ImageRegion page, CancellationToken ct)
+    private async Task ConfirmParty(ImageRegion page, CancellationToken ct, bool isInPartyViewUi = false)
     {
         var r1 = Bv.ClickWhiteConfirmButton(page.DeriveCrop(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
@@ -201,6 +207,6 @@ public class SwitchPartyTask
         using var ra = CaptureToRectArea();
         var r2 = Bv.ClickWhiteConfirmButton(ra.DeriveCrop(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);
-        await _returnMainUiTask.Start(ct);
+        if (isInPartyViewUi)await _returnMainUiTask.Start(ct);
     }
 }
