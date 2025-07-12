@@ -1060,11 +1060,12 @@ function sortTable(table, columnIndex, sortType) {
             MoraStatistics allms = new MoraStatistics();
             allms.ActionItems.AddRange(actionItems);
 
-            List<Dictionary<string, object>> farmingPlanJsonList = new();
+            
             int groupIndex = 0;
             // 遍历每个配置组生成表格
             foreach (var group in configGroups)
             {
+                List<Dictionary<string, object>> farmingPlanJsonList = new();
                 groupIndex++;
                 TimeSpan? timeDiff = group.EndDate - group.StartDate;
                 double totalSeconds = timeDiff?.TotalSeconds ?? 0;
@@ -1238,7 +1239,7 @@ function sortTable(table, columnIndex, sortType) {
                     html.AppendLine("    <tr class=\"ignore-sort\">");
 
                     html.AppendLine(
-                        $"        <td colspan=\"{colspan}\"><div>锄地规划数据：<button onclick=\"togglePre('farmingPlan{groupIndex}', this)\">显示</button><button id=\"copyBtn\" onclick=\"copyPreContent('farmingPlan{groupIndex}')\">复制到剪贴板</button>\n<pre style=\"display:none;\" id=\"farmingPlan{groupIndex}\">");
+                        $"        <td colspan=\"{colspan}\"><div>锄地规划数据：<button onclick=\"togglePre('farmingPlan{groupIndex}', this)\">显示 JSON</button><button id=\"copyBtn\" onclick=\"copyPreContent('farmingPlan{groupIndex}')\">复制到剪贴板</button>\n<pre style=\"display:none;\" id=\"farmingPlan{groupIndex}\">");
                     var controlMap = new Dictionary<string, object>
                     {
                         ["global_cover"] = new Dictionary<string, object>
