@@ -38,6 +38,9 @@ public partial class ScriptRepoWindow
     // 选中的渠道
     [ObservableProperty] private RepoChannel? _selectedRepoChannel;
 
+    // 控制仓库地址是否只读
+    [ObservableProperty] private bool _isRepoUrlReadOnly = true;
+
     // 添加进度相关的可观察属性
     [ObservableProperty] private bool _isUpdating;
     [ObservableProperty] private int _updateProgressValue;
@@ -117,6 +120,9 @@ public partial class ScriptRepoWindow
         {
             return;
         }
+
+        // 更新仓库地址只读状态
+        IsRepoUrlReadOnly = SelectedRepoChannel.Name != "自定义";
 
         // 更新配置中的选中仓库URL
         if (SelectedRepoChannel.Name != "自定义")

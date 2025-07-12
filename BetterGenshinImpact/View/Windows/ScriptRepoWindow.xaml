@@ -62,7 +62,8 @@
                         <TextBox MinWidth="160"
                                  MaxWidth="200"
                                  VerticalAlignment="Center"
-                                 IsReadOnly="False"
+                                 IsReadOnly="{Binding IsRepoUrlReadOnly}"
+                                 IsEnabled="{Binding IsRepoUrlReadOnly}"
                                  Text="{Binding Config.SelectedRepoUrl}" />
                     </StackPanel>
 
