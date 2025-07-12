@@ -7,8 +7,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
+using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.LogParse.LogParse.ConfigGroupEntity;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BetterGenshinImpact.GameTask.LogParse
 {
@@ -228,8 +230,9 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
             //配置人物列表xxx.json
             public List<ConfigTask> ConfigTaskList { get; } = new();
-
-
+            
+            //锄地规划数据
+            public Dictionary<string, object> FarmingPlanData = new();
 
             public class ConfigTask
             {
@@ -482,6 +485,8 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 )
             };
             
+            
+            
             StringBuilder html = new StringBuilder();
             //从文件解析札记数据
             NotifyHtmlGenerationStatus("正在解析札记数据...");
@@ -497,11 +502,14 @@ namespace BetterGenshinImpact.GameTask.LogParse
                         actionItem.Time = SubtractFiveSeconds(actionItem.Time, hoeingDelay);
                     }
                 }
+                
+                //  FarmingPlanData
+                
             }
             NotifyHtmlGenerationStatus("正在生成日志分析内容...");
             string htmlContent = GenerHtmlByConfigGroupEntity(configGroups, "日志分析", colConfigList.ToArray(),
                 col2Configs, actionItems,
-                msColConfigs);
+                msColConfigs,scriptGroupLogParseConfig);
 
             // 检查HTML内容大小，如果超过阈值则保存为文件
             const int maxHtmlSize = 1 * 1024 * 1024; // 1MB 阈值，可以根据实际情况调整
@@ -559,7 +567,9 @@ namespace BetterGenshinImpact.GameTask.LogParse
             (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs,
             (string name, Func<MoraStatistics, string> value, string sortType)[] col2Configs,
             List<ActionItem> actionItems,
-            (string name, Func<MoraStatistics, string> value, string sortType)[] msColConfigs)
+            (string name, Func<MoraStatistics, string> value, string sortType)[] msColConfigs
+            ,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig
+            )
         {
             StringBuilder html = new StringBuilder();
 
@@ -932,7 +942,73 @@ function sortTable(table, columnIndex, sortType) {
         }
     }
 }");
+
             html.AppendLine("    </script>");
+            html.AppendLine(@"<script>
+  function togglePre(preId, btn) {
+    const pre = document.getElementById(preId);
+    if (!pre) {
+      console.error(`未找到 ID 为 ""${preId}"" 的元素`);
+      return;
+    }
+
+    if (window.getComputedStyle(pre).display === ""none"") {
+      pre.style.display = ""block"";
+      btn.textContent = ""隐藏 JSON"";
+    } else {
+      pre.style.display = ""none"";
+      btn.textContent = ""显示 JSON"";
+    }
+  }
+
+  function copyPreContent(preId) {
+    const pre = document.getElementById(preId);
+    if (!pre) {
+      console.error(`未找到 ID 为 ""${preId}"" 的元素`);
+      return;
+    }
+
+    const docComment = `
+// 如果所有 JSON 都在同一目录下，可直接拷贝并命名为 control.json5，放入该追踪目录。
+// 注意：有些因为卡死或其他原因导致失败的记录需自行判断处理。
+// 参数说明：
+// primary_target: "" 
+//   主目标，值为 elite或normal 时，所配置的类别达到上限时，就会跳过该路径。
+//   填写 disable 表示非锄地脚本（如挖矿战斗），也会纳入统计，即使达到上限，但不影响继续执行。
+//   如果不填或其他值，则两种都达到上限（另一种目标数为0也会跳过）才会跳过。
+// global_cover: 针对该目录所有 JSON。
+// json_list.cover: name 与实际文件名匹配的 JSON。
+// allow_farming_count: true 开启锄地规划时纳入统计。
+// enable_monster_loot_split: true 允许区分怪物拾取，支持调度器只拾取精英配置，这里把精英为0的直接启用了。
+// normal_mob_count: 小怪计数。
+// elite_mob_count: 精英计数。
+// duration_seconds: 执行秒数。
+// elite_details: 精英详细。
+// total_mora: 摩拉数。
+
+`;
+
+    const text = docComment + pre.textContent;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => alert(""已复制到剪贴板！""))
+        .catch(err => console.error(""复制失败："", err));
+    } else {
+      const textarea = document.createElement(""textarea"");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand(""copy"");
+        alert(""已复制到剪贴板！"");
+      } catch (err) {
+        console.error(""复制失败："", err);
+      }
+      document.body.removeChild(textarea);
+    }
+  }
+</script>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
 
@@ -984,10 +1060,12 @@ function sortTable(table, columnIndex, sortType) {
             MoraStatistics allms = new MoraStatistics();
             allms.ActionItems.AddRange(actionItems);
 
-
+            List<Dictionary<string, object>> farmingPlanJsonList = new();
+            int groupIndex = 0;
             // 遍历每个配置组生成表格
             foreach (var group in configGroups)
             {
+                groupIndex++;
                 TimeSpan? timeDiff = group.EndDate - group.StartDate;
                 double totalSeconds = timeDiff?.TotalSeconds ?? 0;
                 MoraStatistics groupms = allms.GetFilterMoraStatistics(item =>
@@ -1075,6 +1153,37 @@ function sortTable(table, columnIndex, sortType) {
                         );
                         configTaskMs.StatisticsStart = task.StartDate;
                         configTaskMs.StatisticsEnd = task.EndDate;
+
+                        if (configTaskMs.ActionItems.Count >0)
+                        {
+                            //farmingPlanJsonList
+                            // 构建配置
+                            var fp = new Dictionary<string, object>
+                            {
+                                ["name"] = task.Name,
+                                ["cover"] = new Dictionary<string, object>
+                                {
+                                    ["info"] = new Dictionary<string, object>(),
+                                    ["farming_info"] = new Dictionary<string, object>
+                                    {
+                                        ["normal_mob_count"] = configTaskMs.SmallMonsterStatistics,
+                                        ["elite_mob_count"] = configTaskMs.EliteGameStatistics,
+                                        ["duration_seconds"] = timeDiff.HasValue ? timeDiff.Value.TotalSeconds : 0,
+                                        ["elite_details"] = configTaskMs.EliteDetails,
+                                        ["total_mora"] = configTaskMs.TotalMoraKillingMonstersMora
+                                    }
+                                }
+                            };
+                            if (configTaskMs.EliteGameStatistics == 0)
+                            {
+                                //纯小怪给与区分怪物标志
+                                ((Dictionary<string, object>)((Dictionary<string, object>)fp["cover"])["info"])
+                                    ["enable_monster_loot_split"] = true;
+                            }
+                            farmingPlanJsonList.Add(fp);
+                        }
+                        
+    
                         foreach (var item in col2Configs)
                         {
                             html.AppendLine($"        <td>{item.value.Invoke(configTaskMs)}</td>");
@@ -1123,6 +1232,28 @@ function sortTable(table, columnIndex, sortType) {
                                                                   ConcatenateStrings("，每秒摩拉", (groupms.TotalMoraKillingMonstersMora / (groupms.StatisticsEnd - groupms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2"))}");
                     html.AppendLine("    </tr>");
 
+                }
+                if (farmingPlanJsonList.Count > 0)
+                {
+                    html.AppendLine("    <tr class=\"ignore-sort\">");
+
+                    html.AppendLine(
+                        $"        <td colspan=\"{colspan}\"><div>锄地规划数据：<button onclick=\"togglePre('farmingPlan{groupIndex}', this)\">显示</button><button id=\"copyBtn\" onclick=\"copyPreContent('farmingPlan{groupIndex}')\">复制到剪贴板</button>\n<pre style=\"display:none;\" id=\"farmingPlan{groupIndex}\">");
+                    var controlMap = new Dictionary<string, object>
+                    {
+                        ["global_cover"] = new Dictionary<string, object>
+                        {
+                            ["farming_info"] = new Dictionary<string, object>
+                            {
+                                ["allow_farming_count"] = true,
+                                ["primary_target"] = ""
+                            }
+                        },
+                        ["json_list"] = farmingPlanJsonList
+                    };
+                    html.AppendLine(JsonConvert.SerializeObject(controlMap, Formatting.Indented));
+
+                    html.AppendLine(" </pre> </div></tr>");     
                 }
 
 

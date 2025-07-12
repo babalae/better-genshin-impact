@@ -40,17 +40,11 @@ public class FarmingSession
     public double DurationSeconds { get; set; } = 0;
 
     /// <summary>
-    /// 600摩拉精英数量
+    /// 精英详细
     /// </summary>
-    [JsonProperty("high_value_elite_count")]
-    public double HighValueEliteCount { get; set; } = 0;
-
-    /// <summary>
-    /// 200摩拉精英数量
-    /// </summary>
-    [JsonProperty("standard_elite_count")]
-    public double StandardEliteCount { get; set; } = 0;
-
+    [JsonProperty("elite_details")]
+    public string EliteDetails { get; set; } = "";
+    
     /// <summary>
     /// 本次锄地获得的总摩拉
     /// </summary>
