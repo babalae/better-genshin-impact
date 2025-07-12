@@ -24,30 +24,51 @@ public class CheckRewardsTask
 {
     private readonly ILogger<CheckRewardsTask> _logger = App.GetLogger<CheckRewardsTask>();
 
-    private readonly string dailyRewardsClaimedLocalizedString;
+    private readonly string _dailyRewardsClaimedLocalizedString;
 
     public CheckRewardsTask()
     {
         IStringLocalizer<CheckRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<CheckRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "今日奖励已领取");
+        this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "今日奖励已领取");
     }
 
     public string Name => "检查奖励并通知的任务";
+    
+    private static RecognitionObject GetConfirmRa(bool isOcrMatch = false,params string[] targetText)
+    {
+        var screenArea = CaptureToRectArea();
+        var x = (int)(screenArea.Width * 0.1);
+        var y = (int)(screenArea.Height * 0.1);
+        var width = (int)(screenArea.Width * 0.3);
+        var height = (int)(screenArea.Height * 0.7);
+        
+        return isOcrMatch ? RecognitionObject.OcrMatch(x, y, width, height, targetText) : 
+            RecognitionObject.Ocr(x, y, width, height);
+    }
 
     public async Task Start(CancellationToken ct)
     {
         try
         {
             await new ReturnMainUiTask().Start(ct);
-            Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook); // F1 开书
-            await Delay(2000, ct);
+            
+            _ = await NewRetry.WaitForElementAppear(
+                GetConfirmRa(true,"每日委托奖励"),
+                ()=>
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook); 
+                    var screen = CaptureToRectArea();
+                    var ra = screen.FindMulti(GetConfirmRa())
+                        .FirstOrDefault(btn => btn.Text == "委托");
+                        ra?.Click();
+                },ct,4,1000);
+            
             // OCR识别每日是否完成
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-            using var ra = CaptureToRectArea();
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height - ra.Height / 3.0, 730 * assetScale, ra.Height / 3.0));
-            var done = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.dailyRewardsClaimedLocalizedString));
-            if (done != null)
+            var done = await NewRetry.WaitForElementAppear(
+                GetConfirmRa(true,_dailyRewardsClaimedLocalizedString),null,
+                ct,4,500);
+            if (done)
             {
                 Logger.LogInformation("检查每日奖励结果：{Msg}", "今日奖励已领取");
                 Notify.Event(NotificationEvent.DailyReward).Success("检查每日奖励：已领取");

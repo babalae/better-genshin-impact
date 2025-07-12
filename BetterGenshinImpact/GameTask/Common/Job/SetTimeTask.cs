@@ -50,11 +50,11 @@ public class SetTimeTask
         h = ((h % 24) + 24) % 24;
         Logger.LogInformation($"设置时间到 {h} 点 {m} 分");
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(1000, ct);
+        await Delay(800, ct);
         GameCaptureRegion.GameRegion1080PPosClick(50, 700);
-        await Delay(2000, ct);
+        await Delay(900, ct);
         await SetTime(h, m, r1, r2, r3, stepDuration, ct);
-        await Delay(1000, ct);
+        await Delay(100, ct);
         GameCaptureRegion.GameRegion1080PPosClick(1500, 1000); // 确认
         
         if (skipTimeAdjustmentAnimation)
@@ -62,9 +62,9 @@ public class SetTimeTask
             // 跳过调整动画
             await Delay(1, ct);
             await CancelAnimation(ct);
-            await Delay(1000, ct);
+            await Delay(200, ct);
             GameCaptureRegion.GameRegion1080PPosClick(45, 715);
-            await Delay(600, ct);
+            await Delay(400, ct);
             await _returnMainUiTask.Start(ct);
         }
         else

@@ -24,7 +24,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
-using GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
@@ -227,8 +227,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         int count = maxNumToCheck;
 
         using var ra0 = CaptureToRectArea();
-        Rect gridRoi = new Rect((int)(ra0.Width * 0.025), (int)(ra0.Width * 0.055), (int)(ra0.Width * 0.66), (int)(ra0.Width * 0.4));
-        GridScreen gridScreen = new GridScreen(gridRoi, 3, 40, 28, 0.018, this.logger, this.ct); // 圣遗物分解Grid有4行9列
+        GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.ArtifactSalvage];
+        Rect gridRoi = gridParams.GetRect(ra0);
+        GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             Rect gridRect = itemRegion.ToRect();

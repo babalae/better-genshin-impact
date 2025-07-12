@@ -156,7 +156,11 @@ public class PathRecorder : Singleton<PathRecorder>
             query["map"] = mapName;
             uri.Query = query.ToString();
             _webWindow.NavigateToFile(uri.ToString());
-            _webWindow.Panel!.OnWebViewInitializedAction = () => _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("mapEditorWebBridge", new MapEditorWebBridge());
+            _webWindow.Panel!.OnWebViewInitializedAction = () =>
+            {
+                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("mapEditorWebBridge", new MapEditorWebBridge());
+                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("fileAccessBridge", new FileAccessBridge(Global.Absolute("User/AutoPathing")));
+            };
             _webWindow.Show();
         }
         else
