@@ -1182,7 +1182,7 @@ public partial class ScriptControlViewModel : ViewModel
                 }
             },
             20
-        );
+        ).Wait();
        
     }
 
@@ -1194,33 +1194,35 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 WriteScriptGroup(group);
             }
-        }, 20);
+        }, 20).Wait();
     }
 
     private void ScriptProjectsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        var selectedScriptGroup = SelectedScriptGroup;
+        if (selectedScriptGroup == null)
+        {
+            return;
+        }
         // 防抖
-        DebounceHelper.Debounce("ScriptProjectsCollectionChanged_3hy98r",
+        DebounceHelper.Debounce("ScriptProjectsCollectionChanged_3hy98r_" + selectedScriptGroup.Name,
             () =>
             {
                 // 补充排序字段
-                if (SelectedScriptGroup is { Projects.Count: > 0 })
+                if (selectedScriptGroup is { Projects.Count: > 0 })
                 {
                     var i = 1;
-                    foreach (var project in SelectedScriptGroup.Projects)
+                    foreach (var project in selectedScriptGroup.Projects)
                     {
                         project.Index = i++;
                     }
                 }
 
                 // 保存配置组配置
-                if (SelectedScriptGroup != null)
-                {
-                    WriteScriptGroup(SelectedScriptGroup);
-                }
+                WriteScriptGroup(selectedScriptGroup);
             },
             20
-        );
+        ).Wait();
 
     }
 
