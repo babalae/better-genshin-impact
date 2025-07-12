@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,9 +12,11 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -73,6 +76,29 @@ public partial class ScriptService : IScriptService
             }
             
         }
+
+        if (TaskContext.Instance().Config.OtherConfig.FarmingPlanConfig.Enabled)
+        {
+            try
+            {
+                var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, project.FolderName, project.Name));
+                string message;
+                if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
+                {
+                    _logger.LogInformation($"{project.Name}:{message},跳过此任务！");
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                TaskControl.Logger.LogError($"锄地规划统计异常：{e.Message}");
+            }
+
+            
+        }
+        
+        
+        
         return false; // 不跳过
     }
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using BetterGenshinImpact.Core.Script.Utils;
+using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -29,6 +30,11 @@ public class PathingTask
     public string FullPath { get; set; } = string.Empty;
 
     public PathingTaskInfo Info { get; set; } = new();
+    
+    /// <summary>
+    /// 锄地信息
+    /// </summary>
+    public FarmingSession  FarmingInfo { get; set; } = new();
     public List<Waypoint> Positions { get; set; } = [];
 
     public bool HasAction(string actionName)

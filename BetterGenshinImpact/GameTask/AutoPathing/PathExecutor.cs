@@ -46,7 +46,7 @@ public class PathExecutor
     private readonly TrapEscaper _trapEscaper;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
-
+    public int SuccessFight = 0;
     private PathingPartyConfig? _partyConfig;
     private CancellationToken ct;
     private PathExecutorSuspend pathExecutorSuspend;
@@ -1032,6 +1032,11 @@ public class PathExecutor
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
             await handler.RunAsync(ct, waypoint, PartyConfig);
+            //统计结束战斗的次数
+            if (waypoint.Action == ActionEnum.Fight.Code)
+            {
+                SuccessFight++;
+            }
             await Delay(1000, ct);
         }
     }

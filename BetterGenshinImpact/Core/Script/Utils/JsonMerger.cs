@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Core.Script.Utils;
@@ -61,13 +63,23 @@ public class JsonMerger
          {
              return "";
          }
-         var controlObj = GetPathingCtrJObject(Path.GetDirectoryName(pathingPath));
+
          var json = File.ReadAllText(pathingPath);
-         if (controlObj == null)
+         try
          {
-             return json;
+             var controlObj = GetPathingCtrJObject(Path.GetDirectoryName(pathingPath));
+             if (controlObj == null)
+             {
+                 return json;
+             }
+             return MergeJson(controlObj,JObject.Parse(json),Path.GetFileNameWithoutExtension(pathingPath));
          }
-         return MergeJson(controlObj,JObject.Parse(json),Path.GetFileNameWithoutExtension(pathingPath));
+         catch (Exception e)
+         {
+             TaskControl.Logger.LogError($"加载追踪控制文件或合并异常，请检查{pathingPath} 所在目录：{e.Message}");
+         }
+         
+         return json;
      }
     public static string MergeJson( string controlJson,string originalJson, string name)
     {

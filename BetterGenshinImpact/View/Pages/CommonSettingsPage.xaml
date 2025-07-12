@@ -1084,10 +1084,136 @@
                                      IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.RestartGameTogether, Mode=TwoWay}">
                     </ui:ToggleSwitch>
                     </Grid>
-
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="战斗失败算异常"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                       在锄地脚本中，实际战斗成功次数大于等于预期战斗次数，才能成功，否则抛出异常。可以解决锄地时，应打开地图失败、切换队伍、或卡在按Z的切换界面、卡月卡等，可能导致的无限卡死。
+                       但需要确定自己的队伍练度，有无可能连续超过配置失败次数个脚本都复活超次，导致判断失败，从而触发无限重启。
+                    </ui:TextBlock>
+                    
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.IsFightFailureExceptional, Mode=TwoWay}">
+                    </ui:ToggleSwitch>
+                </Grid>
+                
+                
             </StackPanel>
         </ui:CardExpander>
+            <!--锄地规划配置 -->
+                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 Icon="{ui:SymbolIcon SquareHintSparkles24}">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="锄地规划配置"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="开启后，当每日（4点开始）统计锄地超过上限（需脚本支持，勾选允许锄地统计标志，或通过追踪文件目录的控制文件，来记录各追踪文件数据），会跳过接下来的锄地任务。"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             IsChecked="{Binding Config.OtherConfig.FarmingPlanConfig.Enabled, Mode=TwoWay}" />
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="Unchecked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                                <b:EventTrigger EventName="Checked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="日精英上限"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="当锄地精英数量到达上限时，跳过主目标为精英的锄地脚本。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,36,0"
+                                        Text="{Binding Config.OtherConfig.FarmingPlanConfig.DailyEliteCap, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="日小怪上限"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="当锄地小怪数量到达上限时，会跳过主目标为小怪的锄地脚本。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,36,0"
+                                        Text="{Binding Config.OtherConfig.FarmingPlanConfig.DailyMobCap, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                        </Grid>
 
+                    </StackPanel>
+                </ui:CardExpander>
             </StackPanel>
         </ui:CardExpander>
         <!--  地图  -->
