@@ -42,14 +42,9 @@ public class CheckRewardsTask
         var y = (int)(screenArea.Height * 0.1);
         var width = (int)(screenArea.Width * 0.3);
         var height = (int)(screenArea.Height * 0.7);
-
-        if (isOcrMatch)
-        {
-            return RecognitionObject.OcrMatch(x, y, width, height, targetText);
-        }
-
-        return RecognitionObject.Ocr(x, y, width, height);
-
+        
+        return isOcrMatch ? RecognitionObject.OcrMatch(x, y, width, height, targetText) : 
+            RecognitionObject.Ocr(x, y, width, height);
     }
 
     public async Task Start(CancellationToken ct)
