@@ -15,6 +15,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
@@ -202,7 +203,13 @@ public partial class ScriptControlViewModel : ViewModel
         };
         stackPanel.Children.Add(faultStatsSwitch);
 
-
+        CheckBox GenerateFarmingPlanData = new CheckBox
+        {
+            Content = "生成锄地规划数据",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stackPanel.Children.Add(GenerateFarmingPlanData);
+        
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox hoeingStatsSwitch = new CheckBox
         {
@@ -301,6 +308,7 @@ public partial class ScriptControlViewModel : ViewModel
         dayRangeComboBox.SelectedValue = sgpc.DayRangeValue;
         cookieTextBox.Text = config.Cookie;
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
+        GenerateFarmingPlanData.IsChecked = sgpc.GenerateFarmingPlanData;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
         hoeingDelayTextBox.Text = sgpc.HoeingDelay;
 
@@ -317,6 +325,7 @@ public partial class ScriptControlViewModel : ViewModel
             sgpc.DayRangeValue = dayRangeValue;
             sgpc.RangeValue = rangeValue;
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
+            sgpc.GenerateFarmingPlanData = GenerateFarmingPlanData.IsChecked ?? false;
             sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
             sgpc.HoeingDelay = hoeingDelayTextBox.Text;
 
@@ -511,7 +520,34 @@ public partial class ScriptControlViewModel : ViewModel
         projects.ForEach(item => SelectedScriptGroup?.Projects.Add(item));
         if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
-
+    [RelayCommand]
+    private void ExportMergerJsons()
+    {
+        int count = 0;
+        var pathDir = Path.Combine(LogPath,"exportMergerJson",DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),"AutoPathing");
+        foreach (var scriptGroupProject in SelectedScriptGroup?.Projects ?? [])
+        {
+            if (scriptGroupProject.Type == "Pathing")
+            {
+                var mergerJson= JsonMerger.getMergePathingJson(Path.Combine(MapPathingViewModel.PathJsonPath,
+                    scriptGroupProject.FolderName, scriptGroupProject.Name));
+                string fullPath = Path.Combine(pathDir,scriptGroupProject.FolderName,scriptGroupProject.Name);
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(fullPath, mergerJson);
+                count++;
+            }
+        }
+        if (count>0)
+        {
+            Process.Start("explorer.exe", pathDir);
+        }
+    }
+    
+    
     [RelayCommand]
     public void AddScriptGroupNextFlag(ScriptGroup? item)
     {

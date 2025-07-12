@@ -16,6 +16,10 @@ public partial class OtherConfig : ObservableObject
     private string _autoFetchDispatchAdventurersGuildCountry = "无";
     [ObservableProperty]
     private AutoRestart _autoRestartConfig = new();
+    //锄地规划
+    [ObservableProperty]
+    private FarmingPlan _farmingPlanConfig = new();
+
     public partial class AutoRestart : ObservableObject
     {
         [ObservableProperty]
@@ -29,8 +33,26 @@ public partial class OtherConfig : ObservableObject
         [ObservableProperty]
         private bool _restartGameTogether = false;
         
+        //锄地脚本，如果打架次数不一致，则判定任务失败。
+        [ObservableProperty]
+        private bool _isFightFailureExceptional = false;
+        
     }
-
+    public partial class FarmingPlan : ObservableObject
+    {
+        [ObservableProperty]
+        private bool _enabled = false;
+        
+        //日精英上限
+        [ObservableProperty]
+        private int _dailyEliteCap = 400;
+        
+        //日小怪上限
+        [ObservableProperty]
+        private int _dailyMobCap = 2000;
+        
+    }
+    
     //public partial class OtherConfig : ObservableObject
     
     /// <summary>
