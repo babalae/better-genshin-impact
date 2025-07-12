@@ -57,7 +57,7 @@ public class MiningHandler : IActionHandler
 
 
         if (waypointForTrack is { ActionParams: not null }
-            && waypointForTrack.ActionParams.Contains("disablePickupAround",
+            && !waypointForTrack.ActionParams.Contains("disablePickupAround",
                 StringComparison.InvariantCultureIgnoreCase))
         {
             await Delay(1000, ct);
