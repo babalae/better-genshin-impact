@@ -225,6 +225,7 @@ public class PathExecutor
                 }
                 catch (HandledException handledException)
                 {
+                    SuccessEnd = true;
                     break;
                 }
                 catch (NormalEndException normalEndException)
