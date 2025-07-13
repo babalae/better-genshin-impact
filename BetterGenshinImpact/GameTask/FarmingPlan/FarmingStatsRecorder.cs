@@ -33,7 +33,7 @@ public static class FarmingStatsRecorder
 
     public static bool IsDailyFarmingLimitReached(FarmingSession farmingSession, out string message)
     {
-        if (farmingSession.PrimaryTarget == "disable")
+        if (!farmingSession.AllowFarmingCount || farmingSession.PrimaryTarget == "disable")
         {
             message = "";
             return false;

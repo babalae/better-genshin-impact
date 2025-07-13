@@ -86,7 +86,15 @@ public class JsonMerger
          var json = File.ReadAllText(pathingPath);
          try
          {
-             var controlObj = GetCtrJObject(Path.GetDirectoryName(pathingPath));
+             string dirpath = Path.GetDirectoryName(pathingPath);
+             //第一级别肯定是文件
+             string  ctrFileName = Path.Combine(dirpath, ControlFileName);
+             if (!File.Exists(ctrFileName))
+             {
+                 return json;
+             }
+
+             var controlObj = GetCtrJObject(ctrFileName);
              if (controlObj == null)
              {
                  return json;
