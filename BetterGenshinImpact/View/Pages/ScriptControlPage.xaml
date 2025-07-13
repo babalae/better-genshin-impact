@@ -299,7 +299,7 @@
                                             Header="名称" >
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" FontSize="14">
+                                        <TextBlock Text="{Binding Name}" FontSize="14" ToolTip="{Binding FolderName}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="White" />
