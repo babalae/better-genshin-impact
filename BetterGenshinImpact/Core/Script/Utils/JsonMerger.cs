@@ -72,7 +72,7 @@ public class JsonMerger
             string newfile=Path.Combine(Path.GetDirectoryName(filePath),refValue);
             return GetCtrJObject(newfile);
         }
-        TaskControl.Logger.LogInformation($"路径追踪匹配控制文件：{filePath}");
+        //TaskControl.Logger.LogInformation($"路径追踪匹配控制文件：{filePath}");
         return jObject;
     }
 
