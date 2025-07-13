@@ -55,8 +55,8 @@ public static class FarmingStatsRecorder
         bool isNormalOverLimit = totalNormalMobCount >= dailyMobCap;
 
         var messages = new List<string>();
-        if (isEliteOverLimit) messages.Add($"精英超上限:{dailyFarmingData.TotalEliteMobCount}/{dailyEliteCap}");
-        if (isNormalOverLimit) messages.Add($"小怪超上限:{dailyFarmingData.TotalNormalMobCount}/{dailyMobCap}");
+        if (isEliteOverLimit) messages.Add($"精英超上限:{totalEliteMobCount}/{dailyEliteCap}");
+        if (isNormalOverLimit) messages.Add($"小怪超上限:{totalNormalMobCount}/{dailyMobCap}");
         
         //尝试更新米游社的条件，超过最后札记两个小时，并且超过上次尝试更新20分钟
         debugInfo($"尝试更新米游社：{DateTime.Now} > {dailyFarmingData.TravelsDiaryDetailManagerUpdateTime.AddHours(2)}&&{DateTime.Now}> {dailyFarmingData.LastMiyousheUpdateTime.AddMinutes(20)}");
@@ -72,14 +72,14 @@ public static class FarmingStatsRecorder
         if (isEliteOverLimit && isNormalOverLimit)
         {
             message = string.Join(",", messages);
-            return false;
+            return true;
         }
 
-        if ( farmingSession.NormalMobCount == 0 || farmingSession.EliteMobCount ==0)
+        if ( farmingSession.NormalMobCount == 0 && farmingSession.EliteMobCount ==0)
         {
             messages.Add("精英和小怪计数都为0，请确认配置");
             message = string.Join(",", messages);
-            return false;  
+            return true;  
         }
 
         if ((farmingSession.EliteMobCount == 0 && farmingSession.PrimaryTarget == "elite")
@@ -87,7 +87,7 @@ public static class FarmingStatsRecorder
         {
             messages.Add("主目标计数为0，请确认配置");
             message = string.Join(",", messages);
-            return false;  
+            return true;  
         }
         
         

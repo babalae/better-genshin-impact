@@ -1180,7 +1180,7 @@ function sortTable(table, columnIndex, sortType) {
                             // 构建配置
                             var fp = new Dictionary<string, object>
                             {
-                                ["name"] = task.Name,
+                                ["name"] = task.Name.Replace(".json",""),
                                 ["cover"] = new Dictionary<string, object>
                                 {
                                     ["info"] = new Dictionary<string, object>(),
