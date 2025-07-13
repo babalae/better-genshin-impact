@@ -1,4 +1,6 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.LogParse;
+using System.Text.Json;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.AspNetCore.Builder;
@@ -6,12 +8,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -68,6 +71,9 @@ public class HttpServerService : IHostedService, IDisposable
     {
         try
         {
+            // 初始化LogAnalyzer
+            LogAnalyzer.Initialize();
+            
             var builder = WebApplication.CreateBuilder();
 
             // 配置 Kestrel 服务器
@@ -111,6 +117,23 @@ public class HttpServerService : IHostedService, IDisposable
             //     // _webApp.UseSwagger();
             //     // _webApp.UseSwaggerUI();
             // }
+
+            // 配置静态文件服务
+            var staticPath = Path.Combine(Directory.GetCurrentDirectory(), "GameTask", "LogParse", "static");
+            _logger.LogInformation($"日志分析静态文件路径: {staticPath}");
+            if (Directory.Exists(staticPath))
+            {
+                _webApp.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new PhysicalFileProvider(staticPath),
+                    RequestPath = "/loganalyzer"
+                });
+                _logger.LogInformation($"已配置日志分析器静态文件服务：{staticPath}");
+            }
+            else
+            {
+                _logger.LogWarning($"日志分析器静态文件目录不存在：{staticPath}");
+            }
 
             // 配置路由
             ConfigureRoutes(_webApp);
@@ -192,10 +215,144 @@ public class HttpServerService : IHostedService, IDisposable
         .WithTags("Scripts")
         .WithSummary("获取可用脚本列表");
 
+        // 日志分析器静态文件路由
+        ConfigureLogAnalyzerRoutes(app);
+
         // // 静态文件服务（可选）
         // app.MapGet("/", () => Results.Redirect("/swagger"));
     }
 
+    private void ConfigureLogAnalyzerRoutes(WebApplication app)
+    {
+        var staticPath = Path.Combine(Directory.GetCurrentDirectory(), "GameTask", "LogParse", "static");
+
+        // 根路径返回index.html
+        app.MapGet("/CanLiang", async context =>
+        {
+            var indexPath = Path.Combine(staticPath, "index.html");
+            if (File.Exists(indexPath))
+            {
+                context.Response.ContentType = "text/html";
+                await context.Response.SendFileAsync(indexPath);
+            }
+            else
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync("index.html not found");
+            }
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("参量质变仪首页");
+        
+        // 处理静态文件请求 /CanLiang/{filename}
+        app.MapGet("/CanLiang/{*filename}", async context =>
+        {
+            var filename = context.Request.RouteValues["filename"]?.ToString();
+            if (string.IsNullOrEmpty(filename))
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync("File not found");
+                return;
+            }
+            
+            // 构建文件路径，支持_next目录下的文件
+            var filePath = Path.Combine(staticPath, filename);
+            
+            if (File.Exists(filePath))
+            {
+                // 获取文件的MIME类型
+                var contentType = GetContentType(filePath);
+                context.Response.ContentType = contentType;
+                await context.Response.SendFileAsync(filePath);
+            }
+            else
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync($"File not found: {filename}");
+            }
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("参量质变仪静态文件");
+
+        // API路由
+        app.MapGet("/api/LogList", async context =>
+        {
+            var response = LogAnalyzer.GetLogListData();
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("获取日志列表");
+
+        app.MapGet("/api/analyse", async context =>
+        {
+            var date = context.Request.Query["date"].FirstOrDefault() ?? "all";
+            var response = LogAnalyzer.GetAnalyseData(date);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("分析日志数据");
+
+        app.MapGet("/api/item-trend", async context =>
+        {
+            var itemName = context.Request.Query["item"].FirstOrDefault() ?? "";
+            var response = LogAnalyzer.GetItemTrendData(itemName);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("获取物品趋势");
+
+        app.MapGet("/api/duration-trend", async context =>
+        {
+            var response = LogAnalyzer.GetDurationTrendData();
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("获取时长趋势");
+
+        app.MapGet("/api/total-items-trend", async context =>
+        {
+            var response = LogAnalyzer.GetTotalItemsTrendData();
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        })
+        .WithTags("LogAnalyzer")
+        .WithSummary("获取总物品趋势");
+    }
+
+    /// <summary>
+    /// 根据文件扩展名获取MIME类型
+    /// </summary>
+    /// <param name="filePath">文件路径</param>
+    /// <returns>MIME类型</returns>
+    private string GetContentType(string filePath)
+    {
+        var ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return ext switch
+        {
+            ".html" => "text/html",
+            ".css" => "text/css",
+            ".js" => "application/javascript",
+            ".json" => "application/json",
+            ".png" => "image/png",
+            ".jpg" => "image/jpeg",
+            ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".ico" => "image/x-icon",
+            ".woff" => "font/woff",
+            ".woff2" => "font/woff2",
+            ".ttf" => "font/ttf",
+            ".eot" => "application/vnd.ms-fontobject",
+            ".otf" => "font/otf",
+            ".txt" => "text/plain",
+            _ => "application/octet-stream"
+        };
+    }
+    
     public void Dispose()
     {
         _webApp?.DisposeAsync().AsTask().Wait();
