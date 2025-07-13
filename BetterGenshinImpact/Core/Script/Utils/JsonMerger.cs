@@ -10,6 +10,7 @@ namespace BetterGenshinImpact.Core.Script.Utils;
 
 public class JsonMerger
 {
+    private static string ControlFileName = "control.json5";
     private class CacheItem
     {
         public DateTime LastWriteTimeUtc { get; set; }
@@ -24,10 +25,23 @@ public class JsonMerger
     /// </summary>
     /// <param name="filePath">文件完整路径</param>
     /// <returns>JObject</returns>
-    public static JObject? GetJObject(string filePath)
+    public static JObject? GetCtrJObject(string path)
     {
-        if (!File.Exists(filePath)) return null;
-            
+
+;       string filePath = path;
+        
+        if (File.Exists(path))
+        {
+            filePath = path;
+        }
+        else if (Directory.Exists(filePath))
+        {
+            filePath=Path.Combine(path, ControlFileName);
+        }
+        else
+        {
+            return null;
+        }
 
         DateTime lastWriteTimeUtc = File.GetLastWriteTimeUtc(filePath);
 
@@ -36,28 +50,33 @@ public class JsonMerger
             if (cacheItem.LastWriteTimeUtc == lastWriteTimeUtc)
             {
                 // 文件未变更，直接返回缓存的 JObject
-                return cacheItem.JObject;
+                return GetRefFile(cacheItem.JObject,filePath);;
             }
         }
-
-        // 文件有变更或第一次读取
         string jsonText = File.ReadAllText(filePath);
         JObject jObject = JObject.Parse(jsonText);
-
         _cache[filePath] = new CacheItem
         {
             LastWriteTimeUtc = lastWriteTimeUtc,
             JObject = jObject
         };
+        
+        return GetRefFile(jObject,filePath);
+    }
 
+    public static JObject? GetRefFile(JObject jObject, string filePath)
+    {
+        string refValue = jObject["ref"]?.ToString() ?? string.Empty;
+        if (refValue!=string.Empty)
+        {
+            string newfile=Path.Combine(Path.GetDirectoryName(filePath),refValue);
+            return GetCtrJObject(newfile);
+        }
+        TaskControl.Logger.LogInformation($"路径追踪匹配控制文件：{filePath}");
         return jObject;
     }
 
-     public static JObject? GetPathingCtrJObject(string dirPath)
-     {
-         return GetJObject(Path.Combine(dirPath,"control.json5"));
-     }
-     public static string getMergePathingJson(string? pathingPath)
+    public static string getMergePathingJson(string? pathingPath)
      {
          if (pathingPath == null)
          {
@@ -67,7 +86,7 @@ public class JsonMerger
          var json = File.ReadAllText(pathingPath);
          try
          {
-             var controlObj = GetPathingCtrJObject(Path.GetDirectoryName(pathingPath));
+             var controlObj = GetCtrJObject(Path.GetDirectoryName(pathingPath));
              if (controlObj == null)
              {
                  return json;
