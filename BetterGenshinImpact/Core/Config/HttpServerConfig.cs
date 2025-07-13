@@ -13,13 +13,13 @@ public partial class HttpServerConfig : ObservableObject
     /// 是否启用 HTTP 服务器
     /// </summary>
     [ObservableProperty]
-    private bool _enabled = true;
+    private bool _enabled = false;
 
     /// <summary>
     /// HTTP 服务器端口
     /// </summary>
     [ObservableProperty]
-    private int _port = 8080;
+    private int _port = 30648;
 
     /// <summary>
     /// 是否启用 CORS
@@ -37,7 +37,7 @@ public partial class HttpServerConfig : ObservableObject
     /// API 访问令牌（可选，用于安全验证）
     /// </summary>
     [ObservableProperty]
-    private string _accessToken = string.Empty;
+    private string _accessToken = Guid.NewGuid().ToString("N");
 
     // /// <summary>
     // /// 是否启用 Swagger 文档

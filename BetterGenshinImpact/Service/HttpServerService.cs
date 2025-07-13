@@ -23,10 +23,9 @@ namespace BetterGenshinImpact.Service;
 public class HttpServerService : IHostedService, IDisposable
 {
     private readonly ILogger<HttpServerService> _logger;
-    private readonly IConfigService _configService;
     private readonly IServiceProvider _serviceProvider;
     private WebApplication? _webApp;
-    private HttpServerConfig? _config;
+    private readonly HttpServerConfig _config;
     private CancellationTokenSource? _cancellationTokenSource;
 
     public HttpServerService(
@@ -35,13 +34,12 @@ public class HttpServerService : IHostedService, IDisposable
         IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _configService = configService;
         _serviceProvider = serviceProvider;
+        _config = configService.Get().HttpServerConfig;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _config = _configService.Get().HttpServerConfig;
         if (!_config.Enabled)
         {
             _logger.LogInformation("HTTP 服务器未启用");
