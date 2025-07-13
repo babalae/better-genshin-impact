@@ -112,7 +112,12 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
                     if (configTask != null)
                     {
-
+                        
+                        if (logstr.Contains("此追踪脚本未正常走完！"))
+                        {
+                            configTask.Fault.PathingSuccessEnd = false;
+                        }
+                        
                         //前往七天神像复活
                         if (logstr.EndsWith("前往七天神像复活"))
                         {
@@ -163,6 +168,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
                         {
                             configTask.AddPick(result.Item2[1]);
                         }
+                        
                     }
                 }
 
@@ -247,6 +253,8 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 //拾取字典
                 public Dictionary<string, int> Picks { get; } = new();
 
+                
+
                 public void AddPick(string val)
                 {
                     if (!Picks.ContainsKey(val))
@@ -261,6 +269,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
                 public class FaultScenario
                 {
+                    public bool PathingSuccessEnd { get; set; } = true;
                     //复活次数
                     public int ReviveCount { get; set; } = 0;
 
@@ -324,6 +333,15 @@ namespace BetterGenshinImpact.GameTask.LogParse
             result = result.OrderBy(r => r.Date).ToList();
 
             return result;
+        }
+
+        public static string TaskNameRender (string taskName, bool enable , bool success)
+        {
+            if (enable && !success)
+            {
+                return $"<span style='color:red;'>{taskName}</span>";
+            }
+            return taskName;
         }
 
         public static string ConvertSecondsToTime(double totalSeconds)
@@ -427,9 +445,10 @@ namespace BetterGenshinImpact.GameTask.LogParse
             GameInfo? gameInfo,
             LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
+            
             (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs =
             [
-                (name: "任务名称", value: task => Path.GetFileNameWithoutExtension(task.Name), sortType: "string"),
+                (name: "任务名称", value: task => TaskNameRender(Path.GetFileNameWithoutExtension(task.Name),scriptGroupLogParseConfig.FaultStatsSwitch,task.Fault.PathingSuccessEnd), sortType: "string"),
                 (name: "开始时间", value: task => task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
                 (name: "结束时间", value: task => task.EndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
                 (name: "任务耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0),

@@ -37,6 +37,10 @@ public partial class OtherConfig : ObservableObject
         [ObservableProperty]
         private bool _isFightFailureExceptional = false;
         
+        //任何追踪任务，未走完全路径结束，视为失败。
+        [ObservableProperty]
+        private bool _isPathingFailureExceptional = false;
+        
     }
     public partial class FarmingPlan : ObservableObject
     {

@@ -47,6 +47,8 @@ public class PathExecutor
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
     public int SuccessFight = 0;
+    //路径追踪完全走完所有路径结束的标识
+    public bool SuccessEnd = false;
     private PathingPartyConfig? _partyConfig;
     private CancellationToken ct;
     private PathExecutorSuspend pathExecutorSuspend;
@@ -163,7 +165,7 @@ public class PathExecutor
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
-
+            bool waypointsSuccssEnd = false;
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -218,6 +220,7 @@ public class PathExecutor
                         }
                     }
 
+                    waypointsSuccssEnd = true;
                     break;
                 }
                 catch (HandledException handledException)
@@ -265,6 +268,10 @@ public class PathExecutor
                     Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
                     Simulation.SendInput.Mouse.RightButtonUp();
                 }
+            }
+            if (waypointsSuccssEnd && waypoints == waypointsList.Last())
+            {
+                SuccessEnd = true;
             }
         }
     }

@@ -199,21 +199,37 @@ public partial class ScriptGroupProject : ObservableObject
            
             if (task.FarmingInfo.AllowFarmingCount)
             {
-                var fightCount = task.Positions.Count(pos => pos.Action == ActionEnum.Fight.Code);
-                var successFight = pathingTask.SuccessFight >= fightCount;
-                //判断为锄地脚本
-                if (task.FarmingInfo.PrimaryTarget!="disable")
+                var successFight = pathingTask.SuccessEnd;
+                var fightCount = 0;
+                OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+                //未走完完整路径下，才校验打架次数
+                if (!successFight)
                 {
-
-                    if (TaskContext.Instance().Config.OtherConfig.AutoRestartConfig.Enabled
-                        &&TaskContext.Instance().Config.OtherConfig.AutoRestartConfig.IsFightFailureExceptional
-                        &&!successFight)
+                    fightCount = task.Positions.Count(pos => pos.Action == ActionEnum.Fight.Code);
+                    successFight = pathingTask.SuccessFight >= fightCount;
+                    //判断为锄地脚本
+                    if (task.FarmingInfo.PrimaryTarget!="disable")
                     {
-                        throw new Exception($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
+
+                        if (autoRestart.Enabled
+                            &&autoRestart.IsFightFailureExceptional
+                            &&!successFight)
+                        {
+                            throw new Exception($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
+                        }
+                    }
+                }
+                else
+                {
+                    TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
+                    if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
+                    {
+                        throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
                     }
                 }
 
-                
+
+
                 if (successFight)
                 {
                     //每日锄地记录
