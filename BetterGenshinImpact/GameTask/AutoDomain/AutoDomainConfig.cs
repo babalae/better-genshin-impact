@@ -80,4 +80,8 @@ public partial class AutoDomainConfig : ObservableObject
     // 使用脆弱树脂刷取副本次数
     [ObservableProperty]
     private int _fragileResinUseCount = 0;
+
+    // 战斗死亡后重试次数
+    [ObservableProperty]
+    private int _reviveRetryCount = 3;
 }

@@ -3,6 +3,7 @@ using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using System.IO;
 using System.Xml;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.View.Controls.CodeEditor;
 
@@ -16,7 +17,7 @@ public class JsonCodeBox : CodeBox
     private void RegisterHighlighting()
     {
         IHighlightingDefinition luaHighlighting;
-        using Stream s = ResourceHelper.GetStream(@"pack://application:,,,/Assets/Highlighting/Json.xshd");
+        using Stream s = File.OpenRead(Global.Absolute(@"Assets\Highlighting\Json.xshd"));
         using XmlReader reader = new XmlTextReader(s);
         luaHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
 

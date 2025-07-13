@@ -44,11 +44,15 @@ public class ResinStatus
             throw new Exception("未找到原粹树脂图标");
         }
 
-        // 找出 icon 的位置 + 30 ~ w-267 就是原粹树脂的数字
-        var originalResinCountRect = new Rect(originalResinRes.Right + 30, (int)(37 * assetScale),
-            captureArea.Width - (originalResinRes.Right + 30) - (int)(267 * assetScale), (int)(21 * assetScale));
+        var originalResinCountRect =  new Rect(originalResinRes.Right + 30, (int)(37 * assetScale),
+      captureArea.Width - (originalResinRes.Right + 30) - (int)(190 * assetScale), (int)(21 * assetScale));
         string cnt1 = OcrFactory.Paddle.OcrWithoutDetector(region.DeriveCrop(originalResinCountRect).SrcMat);
-        status.OriginalResinCount = StringUtils.TryExtractPositiveInt(cnt1, 0);
+        var match = System.Text.RegularExpressions.Regex.Match(cnt1, @"(\d+)\s*[/17]\s*(2|20|200)");
+        if (match.Success)
+        {
+            var numericPart = match.Groups[1].Value;
+            status.OriginalResinCount = StringUtils.TryExtractPositiveInt(numericPart, 0);
+        }
 
         // 2. 浓缩树脂
         var condensedResinRes = region.Find(AutoFightAssets.Instance.CondensedResinTopIconRa);

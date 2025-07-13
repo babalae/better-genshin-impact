@@ -33,7 +33,10 @@ using System.Reflection;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -81,6 +84,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoDomainButtonText = "启动";
 
     [ObservableProperty]
+    private int _autoStygianOnslaughtRoundNum;
+
+    [ObservableProperty]
+    private bool _switchAutoStygianOnslaughtEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoStygianOnslaughtButtonText = "启动";
+
+    [ObservableProperty]
     private bool _switchAutoFightEnabled;
 
     [ObservableProperty]
@@ -114,7 +126,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
-    
+
     [ObservableProperty]
     private OneDragonFlowViewModel? _oneDragonFlowViewModel;
 
@@ -144,6 +156,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private bool _switchArtifactSalvageEnabled;
 
+    [ObservableProperty]
+    private bool _switchGetGridIconsEnabled;
+    [ObservableProperty]
+    private string _switchGetGridIconsButtonText = "启动";
+    [ObservableProperty]
+    private FrozenDictionary<Enum, string> _gridNameDict = Enum.GetValues(typeof(GridScreenName))
+        .Cast<GridScreenName>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -158,21 +184,21 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
     }
-  
-    
+
+
     [RelayCommand]
     private async Task OnSOneDragonFlow()
-    {   
-       if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
-       {
+    {
+        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+        {
             OneDragonFlowViewModel.OnNavigatedTo();
             if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
             {
                 Toast.Warning("未设置任务!");
                 return;
             }
-       }
-       await OneDragonFlowViewModel.OnOneKeyExecute();
+        }
+        await OneDragonFlowViewModel.OnOneKeyExecute();
     }
 
     [RelayCommand]
@@ -293,15 +319,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     public bool GetFightStrategy(out string path)
     {
-        if (string.IsNullOrEmpty(Config.AutoFightConfig.StrategyName))
+        return GetFightStrategy(Config.AutoFightConfig.StrategyName, out path);
+    }
+
+    public bool GetFightStrategy(string strategyName, out string path)
+    {
+        if (string.IsNullOrEmpty(strategyName))
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在【独立任务——自动战斗】下拉列表配置中选择战斗策略！"); });
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在下拉列表配置中选择战斗策略！"); });
             path = string.Empty;
             return true;
         }
 
-        path = Global.Absolute(@"User\AutoFight\" + Config.AutoFightConfig.StrategyName + ".txt");
-        if ("根据队伍自动选择".Equals(Config.AutoFightConfig.StrategyName))
+        path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        if ("根据队伍自动选择".Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
@@ -320,6 +351,27 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
     }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoStygianOnslaught()
+    {
+        if (GetFightStrategy(Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
+        {
+            return;
+        }
+
+        SwitchAutoStygianOnslaughtEnabled = true;
+        await new TaskRunner()
+            .RunSoloTaskAsync(new AutoStygianOnslaughtTask(Config.AutoStygianOnslaughtConfig, path));
+        SwitchAutoStygianOnslaughtEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnGoToAutoStygianOnslaughtUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/stygian.html"));
+    }
+
 
     [RelayCommand]
     public void OnOpenFightFolder()
@@ -468,5 +520,31 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
         OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
         ocrDialog.ShowDialog();
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchGetGridIcons()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OnGoToGridIconsFolder()
+    {
+        var path = Global.Absolute(@"log\gridIcons\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
     }
 }

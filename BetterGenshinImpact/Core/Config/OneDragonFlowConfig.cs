@@ -51,6 +51,10 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private string _sundaySelectedValue = "0";
     
+    // 尘歌壶传送方式，1. 地图传送 2. 尘歌壶道具
+    [ObservableProperty]
+    private string _sereniteaPotTpType = "地图传送";
+    
     // 尘歌壶洞天购买商品
     [ObservableProperty]
     private List<string> _secretTreasureObjects = new();

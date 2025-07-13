@@ -11,7 +11,7 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
-             d:DesignHeight="600"
+             d:DesignHeight="1000"
              d:DesignWidth="800"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -444,21 +444,21 @@
                                           Width="Auto"
                                           HorizontalAlignment="Left"
                                           HorizontalContentAlignment="Center"
-                                          Margin="15,0,10,0"
+                                          Margin="10,0,10,0"
                                           ItemsSource="{Binding DomainNameList}"
                                           SelectedItem="{Binding SelectedConfig.DomainName, Mode=TwoWay}">
                                 </ComboBox>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="2"
-                                              Margin="17,0,20,0"
+                                              Margin="10,0,10,0"
                                               FontTypography="Body"
                                               HorizontalAlignment="Right"
-                                              Text="周日副本"
+                                              Text="周日或限时"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="2"
-                                              Margin="17,0,20,0"
+                                              Margin="10,0,10,0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               HorizontalAlignment="Right"
                                               Text="选择序号"
@@ -467,6 +467,7 @@
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="3"
                                           Grid.RowSpan="2"
+                                          MinWidth="60"
                                           Margin="0,0,36,0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           HorizontalContentAlignment="Center"
@@ -743,7 +744,7 @@
                                         Padding="10">
                                     <ui:TextBlock FontTypography="Body"
                                                   FontSize="13" 
-                                                  Text="周日开放三种奖励,从上往下（1/2/3）序号:"
+                                                  Text="周日或限时三种奖励,从上往下(1/2/3)序号:"
                                                   TextAlignment="Justify"
                                                   TextWrapping="Wrap" />
                                 </Border>
@@ -781,8 +782,9 @@
                                 <ToggleButton Grid.Row="0"
                                               Grid.Column="0"   
                                               Grid.RowSpan="2"
+                                              Height="36"
                                               VerticalAlignment="Center"
-                                                HorizontalAlignment="Center"
+                                              HorizontalAlignment="Center"
                                               Margin="0,0,0,0"
                                               Content="领奖树脂设定"
                                               x:Name="ToggleButton">
@@ -822,7 +824,7 @@
                                         <StackPanel Margin="12">
                                             <Grid>
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
                                                 </Grid.RowDefinitions>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" />
@@ -830,13 +832,13 @@
                                                 </Grid.ColumnDefinitions>
                                                 <!-- 模式选择 -->
                                                 <ToggleButton Grid.Column="0"
-                                                        Margin="0,0,0,10"
+                                                        Margin="0,0,0,0"
                                                         IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=TwoWay}"
                                                         Content="模式切换" />
                                                 
                                                 <!-- 根据模SpecifyResinUse显示不同的文字 -->
                                                 <ui:TextBlock Grid.Column="1"
-                                                                Margin="12,0,0,10"
+                                                                Margin="12,0,0,0"
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
@@ -845,7 +847,7 @@
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                                                 <ui:TextBlock Grid.Column="1"
-                                                                Margin="5,0,0,10"
+                                                                Margin="5,0,0,0"
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
@@ -855,15 +857,15 @@
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             </Grid>
                                             
-                                            <StackPanel IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse}" Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">   
+                                            <StackPanel Margin="0,10,0,0" IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse}" Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">   
                                                 <!-- 细线 -->
                                                 <Separator Height="1"
                                                            Margin="0,0,0,0"
-                                                           Background="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                           Background="Gray"/>
                                                 
                                                 <!-- 原粹树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
-                                                            Margin="0,8,0,12">
+                                                            Margin="0,10,0,12">
                                                     <ui:TextBlock Text="原粹树脂刷取次数："
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -1013,7 +1015,8 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="尘歌壶奖励" />
+                               Text="尘歌壶配置" />
+                   
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
                             <ui:FontIcon Glyph="&#xf07a;" Style="{StaticResource FaFontIconStyle}" />
@@ -1027,19 +1030,26 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="洞天百宝奖励"
+                                              Text="进壶方式选择"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="执行购买的日期和商品"
+                                              Text="购买日期和商品"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
-                            <Button MinWidth="100"
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox MinWidth="90"
+                                      Margin="0,0,10,0"
+                                      SelectedItem="{Binding SelectedConfig.SereniteaPotTpType, Mode=TwoWay}"
+                                      ItemsSource="{Binding SereniteaPotTpTypes}" />
+                            <Button MinWidth="90"
+                                    Height="36"
                                     Margin="0,0,28,0"
                                     Content="购买选择"
                                     Command="{Binding AddPotBuyItemCommand}" />
+                        </StackPanel>
                     </ui:CardControl>
                     
                     <!--  完成后操作  -->

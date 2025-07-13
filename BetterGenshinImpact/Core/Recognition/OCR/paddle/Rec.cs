@@ -87,6 +87,7 @@ public class Rec
         try
         {
             resultTensors = srcs
+                // .AsParallel()
                 .Select(src =>
                 {
                     using var channel3 = src.Channels() switch
@@ -105,8 +106,7 @@ public class Rec
 
                     return result;
                 })
-                .Select(
-                    inputTensor =>
+                .Select(inputTensor =>
                     {
                         lock (_session)
                         {
@@ -132,49 +132,48 @@ public class Rec
             owners.ForEach(x => { x.Dispose(); });
         }
 
-        return resultTensors.SelectMany(
-            resultTensor =>
+        return resultTensors.SelectMany(resultTensor =>
+        {
+            var resultArray = resultTensor.Item2;
+            var resultShape = resultTensor.Item1;
+            GCHandle dataHandle = default;
+            try
             {
-                var resultArray = resultTensor.Item2;
-                var resultShape = resultTensor.Item1;
-                GCHandle dataHandle = default;
-                try
-                {
-                    dataHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
-                    var dataPtr = dataHandle.AddrOfPinnedObject();
-                    var labelCount = resultShape[2];
-                    var charCount = resultShape[1];
+                dataHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
+                var dataPtr = dataHandle.AddrOfPinnedObject();
+                var labelCount = resultShape[2];
+                var charCount = resultShape[1];
 
-                    return Enumerable.Range(0, resultShape[0])
-                        .Select(i =>
+                return Enumerable.Range(0, resultShape[0])
+                    .Select(i =>
+                    {
+                        StringBuilder sb = new();
+                        var lastIndex = 0;
+                        float score = 0;
+                        for (var n = 0; n < charCount; ++n)
                         {
-                            StringBuilder sb = new();
-                            var lastIndex = 0;
-                            float score = 0;
-                            for (var n = 0; n < charCount; ++n)
+                            using var mat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1,
+                                dataPtr + (n + i * charCount) * labelCount * sizeof(float));
+                            var maxIdx = new int[2];
+                            mat.MinMaxIdx(out _, out var maxVal, [], maxIdx);
+
+                            if (maxIdx[1] > 0 && !(n > 0 && maxIdx[1] == lastIndex))
                             {
-                                using var mat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1,
-                                    dataPtr + (n + i * charCount) * labelCount * sizeof(float));
-                                var maxIdx = new int[2];
-                                mat.MinMaxIdx(out _, out var maxVal, [], maxIdx);
-
-                                if (maxIdx[1] > 0 && !(n > 0 && maxIdx[1] == lastIndex))
-                                {
-                                    score += (float)maxVal;
-                                    sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
-                                }
-
-                                lastIndex = maxIdx[1];
+                                score += (float)maxVal;
+                                sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
                             }
 
-                            return new OcrRecognizerResult(sb.ToString(), score / sb.Length);
-                        })
-                        .ToArray();
-                }
-                finally
-                {
-                    dataHandle.Free();
-                }
-            }).ToArray();
+                            lastIndex = maxIdx[1];
+                        }
+
+                        return new OcrRecognizerResult(sb.ToString(), score / sb.Length);
+                    })
+                    .ToArray();
+            }
+            finally
+            {
+                dataHandle.Free();
+            }
+        }).ToArray();
     }
 }

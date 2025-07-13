@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.TemplateMatch;
 using OpenCvSharp;
 using BetterGenshinImpact.GameTask.Common.Map.MiniMap;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -24,21 +21,15 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     
     public struct MatchResult
     {
-        private double _confidence = 0;                   // 匹配置信度
         public BaseMapLayerByTemplateMatch? Layer = null; // 地图信息
         public Point2f MapPos = new Point2f(0, 0);        // 匹配位置
-        public double Confidence
+        public double Confidence = 0;
+
+        public bool IsSuccess(int rank)
         {
-            get => _confidence;
-            set
-            {
-                IsFailed = value < LowThreshold || value > 1.0;
-                IsSuccess = value >= HighThreshold && value <= 1.0;
-                _confidence = value;
-            }
+            var r = Math.Clamp(rank, 0, ConfidenceThresholds.Length);
+            return Confidence <= 1 && Confidence >= ConfidenceThresholds[r];
         }
-        public bool IsSuccess;
-        public bool IsFailed;
         public MatchResult() {}
     }
     
@@ -52,6 +43,11 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         : base(type, mapSize, mapOriginInImageCoordinate, mapImageBlockWidth, splitRow, splitCol)
     {
     }
+
+    protected void SetBaseLayers(List<BaseMapLayer> layers)
+    {
+        base.Layers = layers;
+    }
     
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat)
     {
@@ -60,10 +56,18 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         using (mask)
         {
             GlobalMatch(miniMap, mask);
-            return CurResult.IsSuccess ? CurResult.MapPos : default;
+            Debug.WriteLine($"全局匹配, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
+            return CurResult.IsSuccess(2) ? ConvertGenshinMapCoordinatesToImageCoordinates(CurResult.MapPos) : default;
         }
     }
 
+    /// <summary>
+    /// 小地图局部匹配，失败不进行全局匹配，若需要全局请用全局匹配
+    /// </summary>
+    /// <param name="colorMiniMapMat"></param>
+    /// <param name="prevX"></param>
+    /// <param name="prevY"></param>
+    /// <returns></returns>
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY)
     {
         if (prevX <= 0 || prevY <= 0)
@@ -74,8 +78,9 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         using (miniMap)
         using (mask)
         {
-            LocalMatch(miniMap, mask, new Point2f(prevX, prevY));
-            return CurResult.IsSuccess ? CurResult.MapPos : default;
+            LocalMatch(miniMap, mask, ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(prevX, prevY)));
+            Debug.WriteLine($"局部匹配, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
+            return CurResult.IsSuccess(2) ? ConvertGenshinMapCoordinatesToImageCoordinates(CurResult.MapPos) : default;
         }
     }
     
@@ -94,17 +99,25 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     
     public void GlobalMatch(Mat miniMap, Mat mask)
     {
+        SpeedTimer speedTimer = new SpeedTimer("全局匹配");
         using var context = new MatchContext(miniMap, mask);
         RoughMatchGlobal(context);
+        speedTimer.Record("全局粗匹配");
         ExactMatch(context);
+        speedTimer.Record("精确匹配");
+        speedTimer.DebugPrint();
     }
 
     // 局部匹配：在上一次匹配位置附近进行搜索
     public void LocalMatch(Mat miniMap, Mat mask, Point2f pos)
     {
+        SpeedTimer speedTimer = new SpeedTimer("局部匹配");
         using var context = new MatchContext(miniMap, mask);
         RoughMatchLocal(context, pos);
+        speedTimer.Record("局部粗匹配");
         ExactMatch(context);
+        speedTimer.Record("精确匹配");
+        speedTimer.DebugPrint();
     }
     
     public void RoughMatchGlobal(MatchContext context)
@@ -119,12 +132,12 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
             CurResult.MapPos = tempPos;
             flag = true;
         }
-
         if (flag)
         {
             CurResult.Confidence = context.NormalizerRough.Confidence();
             Debug.WriteLine($"粗匹配成功, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
         }
+        Debug.WriteLine($"粗匹配失败, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
     }
     
     public void RoughMatchLocal(MatchContext context, Point2f pos)
@@ -144,7 +157,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
                 CurResult.Confidence = context.NormalizerRough.Confidence();
             }
         }
-        if (CurResult.IsSuccess) return;
+        if (CurResult.IsSuccess(0)) return;
         
         var flag = false;
         foreach (var layer in (CurResult.Layer == null)? Layers : Layers.Where(layer => layer != CurResult.Layer))
@@ -156,16 +169,17 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
             flag = true;
         }
         if (flag) CurResult.Confidence = context.NormalizerRough.Confidence();
-        
-        if (CurResult.IsSuccess) return;
-
-        RoughMatchLocalChan(context, pos);
-        
-        if (CurResult.IsSuccess) return;
-        
-        RoughMatchGlobal(context);
+        //if (CurResult.IsSuccess) return;
+        //RoughMatchLocalChan(context, pos);
+        //if (CurResult.IsSuccess) return;
+        //RoughMatchGlobal(context);
     }
 
+    /// <summary>
+    /// 指定通道匹配，用于边缘位置匹配，暂时不用，等后续优化
+    /// </summary>
+    /// <param name="context"></param>
+    /// <param name="pos"></param>
     public void RoughMatchLocalChan(MatchContext context, Point2f pos)
     {
         CurResult = default;
@@ -184,7 +198,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     public void ExactMatch(MatchContext context)
     {
         if (CurResult.Layer == null) return;
-        if (CurResult.IsFailed) return;
+        if (!CurResult.IsSuccess(2)) return;
         var (tempPos, tempVal) = CurResult.Layer.ExactMatch(context.MiniMapExact, context.MaskExact, CurResult.MapPos);
         if (context.NormalizerExact.Update(tempVal))
         {
@@ -195,6 +209,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         {
             CurResult = default;
         }
+        Debug.WriteLine($"粗匹配, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
     }
     #endregion
     

@@ -48,5 +48,14 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         /// 自定义按键拾取
         /// </summary>
         [ObservableProperty] private string _pickKey = "F";
+    
+        // 黑名单启用状态
+        [ObservableProperty]
+        private bool _blackListEnabled = true;
+
+    
+        // 白名单启用状态
+        [ObservableProperty]
+        private bool _whiteListEnabled= false;
     }
 }

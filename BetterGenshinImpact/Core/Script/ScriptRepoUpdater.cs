@@ -117,7 +117,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 如果仓库不存在，执行浅克隆操作
                     _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
-                    SimpleCloneRepository(repoUrl, repoPath, onCheckoutProgress);
+                    CloneRepository(repoUrl, repoPath, onCheckoutProgress);
 
                     // CloneRepository(repoUrl, repoPath);
                     updated = true;
@@ -141,12 +141,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
 
                     // 使用浅拉取选项
-                    // var fetchOptions = new FetchOptions
-                    // {
-                    //     Depth = 1 // 浅拉取，只获取最新的提交
-                    // };
+                    var fetchOptions = new FetchOptions();
+                    fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
 
-                    Commands.Fetch(repo, remote.Name, refSpecs, null, "拉取最新更新");
+                    Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
 
                     // 获取当前分支
                     var branch = repo.Branches["main"] ?? repo.Branches["master"];
@@ -195,7 +193,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private static void SimpleCloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
     {
-        // 使用浅克隆选项
         var options = new CloneOptions
         {
             Checkout = true,
@@ -203,7 +200,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             RecurseSubmodules = false, // 不递归克隆子模块
             OnCheckoutProgress = onCheckoutProgress
         };
-        options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+        // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 克隆仓库
         Repository.Clone(repoUrl, repoPath, options);
     }
@@ -214,8 +211,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     /// <param name="repoUrl"></param>
     /// <param name="repoPath"></param>
+    /// <param name="onCheckoutProgress"></param>
     /// <exception cref="Exception"></exception>
-    private void CloneRepository(string repoUrl, string repoPath)
+    private void CloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
     {
         // 1. 创建目录
         Directory.CreateDirectory(repoPath);
@@ -232,9 +230,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 4. 获取数据（使用浅克隆选项）
         var fetchOptions = new FetchOptions
         {
-            Depth = 1, // 浅克隆，只获取最新的提交
             TagFetchMode = TagFetchMode.None // 不获取标签
         };
+        fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
 
         // 5. 执行获取操作
         Commands.Fetch(repo, remote.Name, ["+refs/heads/*:refs/remotes/origin/*"], fetchOptions, "初始化拉取");
@@ -253,7 +251,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
 
         // 9. 检出分支
-        Commands.Checkout(repo, localBranch);
+        CheckoutOptions checkoutOptions = new CheckoutOptions
+        {
+            OnCheckoutProgress = onCheckoutProgress
+        };  
+        Commands.Checkout(repo, localBranch, checkoutOptions);
     }
 
     private void GitConfig(Repository repo)

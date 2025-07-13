@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
@@ -6,11 +6,21 @@ namespace BetterGenshinImpact.GameTask.GameLoading.Assets;
 
 public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
 {
+    public RecognitionObject ChooseEnterGameRo;
     public RecognitionObject EnterGameRo;
     public RecognitionObject WelkinMoonRo;
 
     private GameLoadingAssets()
     {
+        ChooseEnterGameRo = new RecognitionObject
+        {
+            Name = "ChooseEnterGame",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "choose_enter_game.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height - CaptureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        
         EnterGameRo = new RecognitionObject
         {
             Name = "EnterGame",

@@ -119,19 +119,26 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="黑名单（修改后需要重启软件生效）"
+                                  Text="黑名单"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="排除 NPC 对话、各类交互选项、不需要拾取的物品等"
                                   TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding EditBlacklistCommand}"
-                               Content="前往设置" />
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Margin="0,0,36,0">
+                        <ui:ToggleSwitch
+                            Margin="0,0,12,0"
+                            IsChecked="{Binding Config.AutoPickConfig.BlackListEnabled, Mode=TwoWay}" />
+                        <ui:Button
+                            Command="{Binding EditBlacklistCommand}"
+                            Content="前往设置" />
+                    </StackPanel>
+
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -145,19 +152,25 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="白名单（修改后需要重启软件生效）"
+                                  Text="白名单"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="需要主动按下 F 交互的内容，请配合黑名单使用"
                                   TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding EditWhitelistCommand}"
-                               Content="前往设置" />
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Margin="0,0,36,0">
+                        <ui:ToggleSwitch
+                            Margin="0,0,12,0"
+                            IsChecked="{Binding Config.AutoPickConfig.WhiteListEnabled, Mode=TwoWay}" />
+                        <ui:Button
+                            Command="{Binding EditWhitelistCommand}"
+                            Content="前往设置" />
+                    </StackPanel>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -733,10 +746,13 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        按下<Hyperlink Command="{Binding GoToHotKeyPageCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        按下
+                        <Hyperlink Command="{Binding GoToHotKeyPageCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             [手动触发快速传送触发快捷键]
                         </Hyperlink>
-                        后才进行快速传送</ui:TextBlock>
+                        后才进行快速传送
+                    </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -745,8 +761,8 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        
-        
+
+
         <!--  自动烹饪  -->
         <ui:CardControl Margin="0,0,0,12">
             <ui:CardControl.Icon>
