@@ -133,10 +133,19 @@ public partial class ScriptControlViewModel : ViewModel
 
         GameInfo? gameInfo = null;
         var config = LogParse.LoadConfig();
+        
+        OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
+        if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(mcfg.Cookie))
+        {
+            config.Cookie = mcfg.Cookie;
+        }
+        
         if (!string.IsNullOrEmpty(config.Cookie))
         {
             config.CookieDictionary.TryGetValue(config.Cookie, out gameInfo);
         }
+
+
 
         LogParseConfig.ScriptGroupLogParseConfig? sgpc;
         if (!config.ScriptGroupLogDictionary.TryGetValue(SelectedScriptGroup.Name, out sgpc))
@@ -332,6 +341,11 @@ public partial class ScriptControlViewModel : ViewModel
             config.Cookie = cookieValue;
             config.ScriptGroupLogDictionary[SelectedScriptGroup.Name] = sgpc;
 
+            if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(cookieValue))
+            {
+                mcfg.Cookie  = cookieValue;
+            }
+            
             LogParse.WriteConfigFile(config);
 
 

@@ -19,6 +19,10 @@ public partial class OtherConfig : ObservableObject
     //锄地规划
     [ObservableProperty]
     private FarmingPlan _farmingPlanConfig = new();
+    
+    [ObservableProperty]
+    private Miyoushe _miyousheConfig = new();
+    
 
     public partial class AutoRestart : ObservableObject
     {
@@ -42,8 +46,39 @@ public partial class OtherConfig : ObservableObject
         private bool _isPathingFailureExceptional = false;
         
     }
+    
+    public partial class Miyoushe : ObservableObject
+    {
+
+        //cookie
+        [ObservableProperty]
+        private string _cookie = "";
+        
+        //与调度器日志处相互同步cookie
+        [ObservableProperty]
+        private bool _logSyncCookie = true;
+        
+    }
+    public partial class MiyousheDataSupport : ObservableObject
+    {
+        [ObservableProperty]
+        private bool _enabled = false;
+        
+        //日精英上限
+        [ObservableProperty]
+        private int _dailyEliteCap = 400;
+        
+        //日小怪上限
+        [ObservableProperty]
+        private int _dailyMobCap = 2000;
+    }
     public partial class FarmingPlan : ObservableObject
     {
+
+
+        [ObservableProperty]
+        private MiyousheDataSupport _miyousheDataConfig = new();
+
         [ObservableProperty]
         private bool _enabled = false;
         
