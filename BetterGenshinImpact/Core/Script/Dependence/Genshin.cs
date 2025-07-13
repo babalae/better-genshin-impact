@@ -207,6 +207,12 @@ public class Genshin
         return GetPositionFromMap(MapTypes.Teyvat.ToString());
     }
 
+    public float GetCameraOrientation()
+    {
+        var imageRegion = CaptureToRectArea();
+        return CameraOrientation.Compute(imageRegion.SrcMat);
+    }
+
     /// <summary>
     /// 获取当前在小地图上的位置坐标
     /// </summary>
