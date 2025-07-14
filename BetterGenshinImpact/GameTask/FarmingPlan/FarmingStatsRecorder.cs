@@ -46,10 +46,10 @@ public static class FarmingStatsRecorder
         var cap = dailyFarmingData.getFinalCap();
         var ft = dailyFarmingData.getFinalTotalMobCount();
         
-        var dailyEliteCap = cap.eliteCap;
-        var dailyMobCap = cap.normalCap;
-        var totalEliteMobCount = ft.elite;
-        var totalNormalMobCount = ft.normal;
+        var dailyEliteCap = cap.DailyEliteCap;
+        var dailyMobCap = cap.DailyMobCap;
+        var totalEliteMobCount = ft.TotalEliteMobCount;
+        var totalNormalMobCount = ft.TotalNormalMobCount;
         
         bool isEliteOverLimit = totalEliteMobCount >= dailyEliteCap;
         bool isNormalOverLimit = totalNormalMobCount >= dailyMobCap;
@@ -139,8 +139,8 @@ public static class FarmingStatsRecorder
             // 保存更新后的数据
             SaveDailyData(dailyData.FilePath, dailyData);
             TaskControl.Logger.LogInformation(
-                $"锄地进度:[小怪:{ft.normal}/{cap.normalCap}" +
-                $",精英:{ft.elite}/{cap.eliteCap}]"+(dailyData.EnableMiyousheStats()?"(合并米游社数据)":""));
+                $"锄地进度:[小怪:{ft.TotalNormalMobCount}/{cap.DailyMobCap}" +
+                $",精英:{ft.TotalEliteMobCount}/{cap.DailyEliteCap}]"+(dailyData.EnableMiyousheStats()?"(合并米游社数据)":""));
         }
         catch (Exception e)
         {

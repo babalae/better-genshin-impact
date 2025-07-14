@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.FarmingPlan;
 using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.LogParse.LogParse.ConfigGroupEntity;
@@ -1031,6 +1032,16 @@ function sortTable(table, columnIndex, sortType) {
             html.AppendLine("</head>");
             html.AppendLine("<body>");
 
+            if (scriptGroupLogParseConfig.GenerateFarmingPlanData)
+            {
+                DailyFarmingData dailyData =  FarmingStatsRecorder.ReadDailyFarmingData();
+                var ft = dailyData.getFinalTotalMobCount();
+                var cap = dailyData.getFinalCap();
+                // 保存更新后的数据
+                html.AppendLine($"实时锄地进度:[小怪:{ft.TotalNormalMobCount}/{cap.DailyMobCap}" +
+                                $",精英:{ft.TotalEliteMobCount}/{cap.DailyEliteCap}]"+(dailyData.EnableMiyousheStats()?"(合并米游社数据)":""));
+            }
+            
             // 修改 colspan 计算逻辑
             int colspan = colConfigs.Length;
 

@@ -62,7 +62,7 @@ public class DailyFarmingData
         return MiyousheTotalEliteMobCount + MiyousheTotalNormalMobCount > 0;
     }
 
-    public (double elite, double normal) getFinalTotalMobCount()
+    public (double TotalEliteMobCount, double TotalNormalMobCount) getFinalTotalMobCount()
     {
         if (MiyousheTotalEliteMobCount + MiyousheTotalNormalMobCount > 0)
         {
@@ -80,7 +80,7 @@ public class DailyFarmingData
         return (TotalEliteMobCount, TotalNormalMobCount);
     }
 
-    public (double eliteCap, double normalCap) getFinalCap()
+    public (double DailyEliteCap, double DailyMobCap) getFinalCap()
     {
         var config = TaskContext.Instance().Config.OtherConfig.FarmingPlanConfig;
         var mysdCfg = config.MiyousheDataConfig;

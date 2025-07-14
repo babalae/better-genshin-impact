@@ -226,12 +226,6 @@ public partial class ScriptGroupProject : ObservableObject
                         }
                     }
                 }
-                else
-                {
-
-                }
-
-
 
                 if (successFight)
                 {
