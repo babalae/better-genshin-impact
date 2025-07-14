@@ -165,7 +165,6 @@ public class PathExecutor
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
-            bool waypointsSuccssEnd = false;
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -220,7 +219,10 @@ public class PathExecutor
                         }
                     }
 
-                    waypointsSuccssEnd = true;
+                    if (waypoints == waypointsList.Last())
+                    {
+                        SuccessEnd = true;
+                    }
                     break;
                 }
                 catch (HandledException handledException)
@@ -270,10 +272,7 @@ public class PathExecutor
                     Simulation.SendInput.Mouse.RightButtonUp();
                 }
             }
-            if (waypointsSuccssEnd && waypoints == waypointsList.Last())
-            {
-                SuccessEnd = true;
-            }
+
         }
     }
 

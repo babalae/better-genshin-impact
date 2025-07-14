@@ -194,14 +194,21 @@ public partial class ScriptGroupProject : ObservableObject
 
             
             
+            OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+            if (!pathingTask.SuccessEnd)
+            {
+                TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
+                if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
+                {
+                    throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
+                }
+            }
 
-
-           
             if (task.FarmingInfo.AllowFarmingCount)
             {
                 var successFight = pathingTask.SuccessEnd;
                 var fightCount = 0;
-                OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+                
                 //未走完完整路径下，才校验打架次数
                 if (!successFight)
                 {
@@ -221,11 +228,7 @@ public partial class ScriptGroupProject : ObservableObject
                 }
                 else
                 {
-                    TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
-                    if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
-                    {
-                        throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
-                    }
+
                 }
 
 
