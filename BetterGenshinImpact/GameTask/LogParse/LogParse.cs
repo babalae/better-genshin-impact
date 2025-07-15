@@ -485,7 +485,8 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 ("精英详细", ms => ms.EliteDetails, "string"),
                 ("最后精英时间", ms => ms.LastEliteTime, "date"),
                 ("总计锄地摩拉", ms => ms.TotalMoraKillingMonstersMora.ToString(), "number"),
-                ("突发事件获取摩拉", ms => ms.EmergencyBonus, "number")
+                ("突发事件获取摩拉", ms => ms.EmergencyBonus, "number"),
+                ("宝箱奖励（狗粮附带）", ms => ms.ChestReward, "number")
             };
 
             //锄地部分新曾字段

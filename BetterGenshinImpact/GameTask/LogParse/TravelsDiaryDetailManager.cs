@@ -58,7 +58,7 @@ public class TravelsDiaryDetailManager
                 if (_temp != null)
                 {
                     //统计杀怪或突发事件奖励
-                    actionItems.AddRange(_temp.Data.List.Where(item => item.ActionId == 37 || item.ActionId == 28));
+                    actionItems.AddRange(_temp.Data.List.Where(item => item.ActionId == 37 || item.ActionId == 28 || item.ActionId == 39));
                 }
             }
         }
