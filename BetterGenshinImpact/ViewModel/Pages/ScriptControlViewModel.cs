@@ -204,6 +204,13 @@ public partial class ScriptControlViewModel : ViewModel
         dayRangeComboBox.SelectedIndex = 0;
         stackPanel.Children.Add(dayRangeComboBox);
 
+        CheckBox mergerStatsSwitch = new CheckBox
+        {
+            Content = "合并相邻同名配置组",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stackPanel.Children.Add(mergerStatsSwitch);
+        
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox faultStatsSwitch = new CheckBox
         {
@@ -211,13 +218,6 @@ public partial class ScriptControlViewModel : ViewModel
             VerticalAlignment = VerticalAlignment.Center
         };
         stackPanel.Children.Add(faultStatsSwitch);
-
-        CheckBox GenerateFarmingPlanData = new CheckBox
-        {
-            Content = "生成锄地规划数据",
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        stackPanel.Children.Add(GenerateFarmingPlanData);
         
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox hoeingStatsSwitch = new CheckBox
@@ -225,6 +225,14 @@ public partial class ScriptControlViewModel : ViewModel
             Content = "统计锄地摩拉怪物数",
             VerticalAlignment = VerticalAlignment.Center
         };
+        
+        CheckBox GenerateFarmingPlanData = new CheckBox
+        {
+            Content = "生成锄地规划数据",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stackPanel.Children.Add(GenerateFarmingPlanData);
+        
         //firstRow.Children.Add(toggleSwitch);
 
         // 将第一行添加到 StackPanel
@@ -319,6 +327,8 @@ public partial class ScriptControlViewModel : ViewModel
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
         GenerateFarmingPlanData.IsChecked = sgpc.GenerateFarmingPlanData;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
+        mergerStatsSwitch.IsChecked = sgpc.MergerStatsSwitch;
+        
         hoeingDelayTextBox.Text = sgpc.HoeingDelay;
 
         MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
@@ -336,6 +346,7 @@ public partial class ScriptControlViewModel : ViewModel
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
             sgpc.GenerateFarmingPlanData = GenerateFarmingPlanData.IsChecked ?? false;
             sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
+            sgpc.MergerStatsSwitch = mergerStatsSwitch.IsChecked ?? false;
             sgpc.HoeingDelay = hoeingDelayTextBox.Text;
 
             config.Cookie = cookieValue;

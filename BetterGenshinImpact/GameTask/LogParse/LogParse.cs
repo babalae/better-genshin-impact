@@ -236,13 +236,11 @@ namespace BetterGenshinImpact.GameTask.LogParse
             public DateTime? EndDate { get; set; }
 
             //配置人物列表xxx.json
-            public List<ConfigTask> ConfigTaskList { get; } = new();
+            public List<ConfigTask> ConfigTaskList { get; set; } = new();
             
-            //锄地规划数据
-            public Dictionary<string, object> FarmingPlanData = new();
-
             public class ConfigTask
             {
+                public bool IsMerger { get; set; } = false;
                 public string Name { get; set; }
 
                 //开始日期
@@ -252,7 +250,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 public DateTime? EndDate { get; set; }
 
                 //拾取字典
-                public Dictionary<string, int> Picks { get; } = new();
+                public Dictionary<string, int> Picks { get; set; } = new();
 
                 
 
@@ -446,11 +444,18 @@ namespace BetterGenshinImpact.GameTask.LogParse
             GameInfo? gameInfo,
             LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
+            //移除空的记录
+            configGroups.RemoveAll(group => group.ConfigTaskList == null || group.ConfigTaskList.Count == 0);
+            if (scriptGroupLogParseConfig.MergerStatsSwitch)
+            {
+                configGroups = new ConfigGroupMerger().MergeConfigGroups(configGroups);
+                configGroups.Reverse();
+            }
             
             (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs =
             [
                 (name: "任务名称", value: task => TaskNameRender(Path.GetFileNameWithoutExtension(task.Name),scriptGroupLogParseConfig.FaultStatsSwitch,task.Fault.PathingSuccessEnd), sortType: "string"),
-                (name: "开始时间", value: task => task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
+                (name: "开始时间", value: task => (task.IsMerger?"<span style='color:blue'>":"")+ (task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "")+(task.IsMerger?"</span>":""), sortType: "date"),
                 (name: "结束时间", value: task => task.EndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
                 (name: "任务耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0),
                     sortType: "number")
