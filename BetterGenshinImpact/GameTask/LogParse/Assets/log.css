@@ -1,0 +1,44 @@
+﻿body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background-color: #fbfaef;}
+table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 20px; }
+th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }
+th { background-color: #3f51b5; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }
+tr:nth-child(odd) { background-color: #f5fbef; }
+tr:nth-child(even) { background-color: #f2faea; }
+tr:hover { background-color: #cadbb8; transition: background-color 0.2s ease; }
+th::after { content: ''; display: block; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; opacity: 0; transition: opacity 0.2s ease; }
+th.sort-asc::after, th.sort-desc::after { opacity: 1; }
+th.sort-asc::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid white; }
+th.sort-desc::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid white; }
+.table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid #cce3e5; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }
+.sticky-header { position: sticky; top: 0; z-index: 100; }
+.sticky-header th {
+    position: sticky;
+    top: 0;
+    background-color: #59a2ab;
+    z-index: 100;
+    border-width: 0;
+    outline: 1.5px solid #cce3e5;
+    text-align: center;
+    vertical-align: middle;
+}
+.sticky-header th:first-child {
+    border-top-left-radius: 8px;
+}
+.sticky-header th:last-child {
+    border-top-right-radius: 8px;
+}
+.sticky-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 100%;
+    pointer-events: none;
+    z-index: 99;
+}
+tbody tr:first-child td { border-top-color: transparent; }
+tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
+tbody tr:last-child td:last-child { border-bottom-right-radius: 8px; }
+.table-container table { margin-bottom: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
