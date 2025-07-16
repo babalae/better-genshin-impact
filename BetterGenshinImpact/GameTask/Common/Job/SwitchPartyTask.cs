@@ -106,9 +106,17 @@ public class SwitchPartyTask
             return true;
         }
 
-        // 点击队伍选择按钮
-        partyViewBtn.Click();
-        await Delay(500, ct);
+        var menu = await NewRetry.WaitForElementAppear(
+            ElementAssets.Instance.PartyBtnDelete,
+            () => partyViewBtn.Click(),// 点击队伍选择按钮
+            ct,
+            4,
+            500
+        );
+        if (!menu)
+        {
+            throw new PartySetupFailedException("未能打开队伍选择页面");
+        }
 
         ImageRegion? switchRa = null;
         Region? partyDeleteBtn = null;
