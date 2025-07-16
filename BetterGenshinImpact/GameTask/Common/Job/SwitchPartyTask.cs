@@ -110,8 +110,8 @@ public class SwitchPartyTask
             ElementAssets.Instance.PartyBtnDelete,
             () => partyViewBtn.Click(),// 点击队伍选择按钮
             ct,
-            5,
-            1000
+            4,
+            500
         );
         if (!menu)
         {
