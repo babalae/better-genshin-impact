@@ -445,3 +445,67 @@ jobs:
           version_name: ${{ needs.validate.outputs.version }}
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
+  cnb_uploading:
+    if: github.repository_owner == 'babalae'
+    needs: [validate, build_dist, build_installer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare files for upload
+        run: |
+          mkdir -p upload_files
+          # 只复制 7z 文件和 Install.exe 文件
+          find artifacts -name "*.7z" -exec cp {} upload_files/ \;
+          find artifacts -name "BetterGI.Install.*.exe" -exec cp {} upload_files/ \;
+          echo "📦 准备上传的文件:"
+          ls -la upload_files/
+
+      - name: Upload to CNB
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          # 创建 JSON 配置
+          cat > cnb_config.json << EOF
+          {
+            "token": "$CNB_TOKEN",
+            "project_path": "bettergi/better-genshin-impact",
+            "base_url": "https://api.cnb.cool",
+            "overwrite": true,
+            "release_data": {
+              "tag_name": "$VERSION",
+              "name": "BetterGI v$VERSION",
+              "body": "BetterGI v$VERSION 自动发布",
+              "draft": false,
+              "prerelease": $(if [[ "$VERSION" == *"-"* ]]; then echo "true"; else echo "false"; fi),
+              "target_commitish": "main",
+              "make_latest": $(if [[ "$VERSION" == *"-"* ]]; then echo "\"false\""; else echo "\"true\""; fi)
+            },
+            "asset_files": [
+          $(find upload_files -type f \( -name "*.7z" -o -name "*.exe" \) -printf '    "%p"' | head -c -1 | sed 's/$/,/g' | sed '$ s/,$//')
+            ]
+          }
+          EOF
+          
+          # 检查配置文件内容
+          echo "📋 CNB 配置内容:"
+          cat cnb_config.json | jq '.' || cat cnb_config.json
+          
+          # 执行上传
+          python .github/workflows/cnb_release.py cnb_config.json
