@@ -537,7 +537,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OnGoToGridIconsFolder()
+    private void OnGoToGetGridIconsFolder()
     {
         var path = Global.Absolute(@"log\gridIcons\");
         if (!Directory.Exists(path))
@@ -546,5 +546,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    private async Task OnGoToGetGridIconsUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
     }
 }
