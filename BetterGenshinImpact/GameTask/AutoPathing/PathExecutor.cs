@@ -46,7 +46,9 @@ public class PathExecutor
     private readonly TrapEscaper _trapEscaper;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
-
+    public int SuccessFight = 0;
+    //路径追踪完全走完所有路径结束的标识
+    public bool SuccessEnd = false;
     private PathingPartyConfig? _partyConfig;
     private CancellationToken ct;
     private PathExecutorSuspend pathExecutorSuspend;
@@ -163,7 +165,6 @@ public class PathExecutor
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
-
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -218,10 +219,15 @@ public class PathExecutor
                         }
                     }
 
+                    if (waypoints == waypointsList.Last())
+                    {
+                        SuccessEnd = true;
+                    }
                     break;
                 }
                 catch (HandledException handledException)
                 {
+                    SuccessEnd = true;
                     break;
                 }
                 catch (NormalEndException normalEndException)
@@ -266,6 +272,7 @@ public class PathExecutor
                     Simulation.SendInput.Mouse.RightButtonUp();
                 }
             }
+
         }
     }
 
@@ -1032,6 +1039,11 @@ public class PathExecutor
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
             await handler.RunAsync(ct, waypoint, PartyConfig);
+            //统计结束战斗的次数
+            if (waypoint.Action == ActionEnum.Fight.Code)
+            {
+                SuccessFight++;
+            }
             await Delay(1000, ct);
         }
     }

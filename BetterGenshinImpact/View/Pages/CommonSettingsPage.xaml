@@ -1220,10 +1220,393 @@
                                      IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.RestartGameTogether, Mode=TwoWay}">
                     </ui:ToggleSwitch>
                     </Grid>
-
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="战斗失败算异常"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                       在锄地脚本中，实际战斗成功次数大于等于预期战斗次数，才能成功，否则抛出异常。可以解决锄地时，应打开地图失败、切换队伍、或卡在按Z的切换界面、卡月卡等，可能导致的无限卡死。
+                       但需要确定自己的队伍练度，有无可能连续超过配置失败次数个脚本都复活超次，导致判断失败，从而触发无限重启。
+                    </ui:TextBlock>
+                    
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.IsFightFailureExceptional, Mode=TwoWay}">
+                    </ui:ToggleSwitch>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="路径未完全走完算异常"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        比战斗失败更严格的条件，勾选此项下，追踪文件，如果未执行完，算失败。此项勾选需要自身的追踪任务稳定性高。可以先关观察日志，打开异常情况统计下，有无连续标红超过失败次数的情况，有则不建议勾选。
+                    </ui:TextBlock>
+                    
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.AutoRestartConfig.IsPathingFailureExceptional, Mode=TwoWay}">
+                    </ui:ToggleSwitch>
+                </Grid>                
+                
             </StackPanel>
         </ui:CardExpander>
+            <!--锄地规划配置 -->
+                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 Icon="{ui:SymbolIcon SquareHintSparkles24}">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="锄地规划配置"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="开启后，当每日（4点开始）统计锄地超过上限（需脚本支持，勾选允许锄地统计标志，或通过追踪文件目录的控制文件，来记录各追踪文件数据），会跳过接下来的锄地任务。"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             IsChecked="{Binding Config.OtherConfig.FarmingPlanConfig.Enabled, Mode=TwoWay}" />
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="Unchecked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                                <b:EventTrigger EventName="Checked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="日精英上限"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="当锄地精英数量到达上限时，跳过主目标为精英的锄地脚本。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,36,0"
+                                        Text="{Binding Config.OtherConfig.FarmingPlanConfig.DailyEliteCap, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="日小怪上限"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="当锄地小怪数量到达上限时，会跳过主目标为小怪的锄地脚本。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,36,0"
+                                        Text="{Binding Config.OtherConfig.FarmingPlanConfig.DailyMobCap, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                        </Grid>
+                        <StackPanel>
+                            <!-- 结合米游社数据计算上限 -->
+                            <ui:CardExpander Margin="0,0,0,12"
+                                             ContentPadding="0"
+                                             Icon="{ui:SymbolIcon SquareHintSparkles24}">
+                                <ui:CardExpander.Header>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="Body"
+                                                      Text="结合米游社数据计算"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="使用米游社数据（大概两三小时延时），对锄地数量进行修正，由于米游社cookie在一段时间后会失效，需要重新获取，所以如果当天存在米游社的数据，则上限需按照下面配置的来，否则按照上方配置的限制来（考虑到锄地之外的杀怪，如狗粮卡时间，所以估算值可能不一样）。"
+                                                      TextWrapping="Wrap" />
+                                        <ui:ToggleSwitch Grid.Row="0"
+                                                         Grid.RowSpan="2"
+                                                         Grid.Column="1"
+                                                         Margin="0,0,24,0"
+                                                         IsChecked="{Binding Config.OtherConfig.FarmingPlanConfig.MiyousheDataConfig.Enabled, Mode=TwoWay}" />
+                                        <b:Interaction.Triggers>
+                                            <b:EventTrigger EventName="Unchecked">
+                                                <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                            </b:EventTrigger>
+                                            <b:EventTrigger EventName="Checked">
+                                                <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                            </b:EventTrigger>
+                                        </b:Interaction.Triggers>
+                                    </Grid>
+                                </ui:CardExpander.Header>
+                                <StackPanel>
+                                    <Grid Margin="16">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="Body"
+                                                      Text="日精英上限"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="当锄地精英数量到达上限时，跳过主目标为精英的锄地脚本。"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBox Grid.Row="0"
+                                                    Grid.RowSpan="2"
+                                                    Grid.Column="1"
+                                                    MinWidth="90"
+                                                    Margin="0,0,36,0"
+                                                    Text="{Binding Config.OtherConfig.FarmingPlanConfig.MiyousheDataConfig.DailyEliteCap, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                                    </Grid>
+                                    <Grid Margin="16">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                                      Grid.Column="0"
+                                                      FontTypography="Body"
+                                                      Text="日小怪上限"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                                      Grid.Column="0"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="当锄地小怪数量到达上限时，会跳过主目标为小怪的锄地脚本。"
+                                                      TextWrapping="Wrap" />
+                                        <ui:TextBox Grid.Row="0"
+                                                    Grid.RowSpan="2"
+                                                    Grid.Column="1"
+                                                    MinWidth="90"
+                                                    Margin="0,0,36,0"
+                                                    Text="{Binding Config.OtherConfig.FarmingPlanConfig.MiyousheDataConfig.DailyMobCap, Mode=TwoWay, 
+                                ValidatesOnNotifyDataErrors=True}" />
+                                    </Grid>
+                                </StackPanel>
+                            </ui:CardExpander>
+                        </StackPanel>
+                    </StackPanel>
+                </ui:CardExpander>
+                <!--米游社相关 -->
+                                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 Icon="{ui:SymbolIcon SquareHintSparkles24}">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="米游社相关"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="用于配置米游社相关的信息如cookie"
+                                          TextWrapping="Wrap" />
 
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="Unchecked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                                <b:EventTrigger EventName="Checked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <!-- 第一行高度自适应 -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 第二行高度设为2*，使其占比更大 -->
+                                <RowDefinition Height="2*" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <!-- 左侧文本列 -->
+                                <ColumnDefinition Width="*" />
+                                <!-- 右侧输入框列 -->
+                                <ColumnDefinition Width="Auto" />
+                                <!-- 新增按钮列 -->
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 标题文本 -->
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="cookie"
+                                          TextWrapping="Wrap"
+                                          VerticalAlignment="Center"/>
+
+                            <!-- 说明文本 - 占据两行 -->
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.RowSpan="2"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="米游社cookie"
+                                          TextWrapping="Wrap"
+                                          VerticalAlignment="Top"
+                                          Margin="0,24,0,0"/> <!-- 增加上边距使文本向下偏移 -->
+
+                            <!-- 输入框 - 占据两行 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MaxWidth="400" 
+                                        MinWidth="400" 
+                                        MinHeight="60" 
+                                        Margin="0,0,8,0"
+                                        VerticalAlignment="Stretch" 
+                                        Text="{Binding Config.OtherConfig.MiyousheConfig.Cookie, Mode=TwoWay, 
+                        ValidatesOnNotifyDataErrors=True}"/>
+
+                            <!-- 新增帮助按钮 -->
+                            <ui:Button Grid.Row="0"
+                                       Grid.Column="2"
+                                       Content="?"
+                                       Width="50"
+                                       Height="28"
+                                       FontWeight="Bold"
+                                       Margin="4,0,0,0"
+                                       VerticalAlignment="Top"
+                                       Command="{Binding QuestionButtonOnClickCommand}"
+        
+                            /> 
+                            
+                            <!-- 绑定点击事件 -->
+                        </Grid>
+                         <Grid  Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="cookie与调度器日志处同步"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="开启后，当调度器日志更改，或此处更改，都会同步其cookie。"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             IsChecked="{Binding Config.OtherConfig.MiyousheConfig.LogSyncCookie, Mode=TwoWay}" />
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="Unchecked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                                <b:EventTrigger EventName="Checked">
+                                    <b:InvokeCommandAction Command="{Binding SwitchMaskEnabledCommand}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                        </Grid>
+
+                    </StackPanel>
+                </ui:CardExpander>
             </StackPanel>
         </ui:CardExpander>
         <!--  地图  -->

@@ -12,8 +12,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.FarmingPlan;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Group;
 
@@ -185,8 +190,63 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             }
-
             await pathingTask.Pathing(task);
+
+            
+            
+            OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+            if (!pathingTask.SuccessEnd)
+            {
+                TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
+                if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
+                {
+                    throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
+                }
+            }
+
+            if (task.FarmingInfo.AllowFarmingCount)
+            {
+                var successFight = pathingTask.SuccessEnd;
+                var fightCount = 0;
+                
+                //未走完完整路径下，才校验打架次数
+                if (!successFight)
+                {
+                    fightCount = task.Positions.Count(pos => pos.Action == ActionEnum.Fight.Code);
+                    successFight = pathingTask.SuccessFight >= fightCount;
+                    //判断为锄地脚本
+                    if (task.FarmingInfo.PrimaryTarget!="disable")
+                    {
+
+                        if (autoRestart.Enabled
+                            &&autoRestart.IsFightFailureExceptional
+                            &&!successFight)
+                        {
+                            throw new Exception($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
+                        }
+                    }
+                }
+
+                if (successFight)
+                {
+                    //每日锄地记录
+                    FarmingStatsRecorder.RecordFarmingSession(task.FarmingInfo, new FarmingRouteInfo
+                    {
+                        GroupName = GroupInfo?.Name ?? "",
+                        FolderName = FolderName,
+                        ProjectName = Name
+                    });
+                }
+                else
+                {
+                    TaskControl.Logger.LogWarning($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，此次不纳入成功锄地规划的统计上限！");
+                }
+
+            }
+        
+
+            
+
         }
         else if (Type == "Shell")
         {
