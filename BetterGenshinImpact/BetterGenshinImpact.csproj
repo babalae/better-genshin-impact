@@ -73,6 +73,7 @@
 		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Semver" Version="3.0.0" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
 		<PackageReference Include="System.Drawing.Common" Version="9.0.5" />
