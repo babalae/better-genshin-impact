@@ -451,22 +451,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests
-
+  
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
+  
       - name: Prepare files for upload
         run: |
           mkdir -p upload_files
@@ -475,12 +475,37 @@ jobs:
           find artifacts -name "BetterGI.Install.*.exe" -exec cp {} upload_files/ \;
           echo "📦 准备上传的文件:"
           ls -la upload_files/
-
+  
+      - name: Copy CNB uploader script
+        run: |
+          # 复制 CNB 上传脚本到当前目录
+          cp .github/workflows/cnb_release.py ./cnb_release.py
+  
       - name: Upload to CNB
         env:
           CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
+          # 生成文件列表数组
+          FILE_LIST=""
+          for file in upload_files/*; do
+            if [ -f "$file" ]; then
+              if [ -n "$FILE_LIST" ]; then
+                FILE_LIST="$FILE_LIST,"
+              fi
+              FILE_LIST="$FILE_LIST\"$file\""
+            fi
+          done
+          
+          # 判断是否为预发布版本
+          if [[ "$VERSION" == *"-"* ]]; then
+            IS_PRERELEASE="true"
+            MAKE_LATEST="false"
+          else
+            IS_PRERELEASE="false"
+            MAKE_LATEST="true"
+          fi
+          
           # 创建 JSON 配置
           cat > cnb_config.json << EOF
           {
@@ -489,23 +514,26 @@ jobs:
             "base_url": "https://api.cnb.cool",
             "overwrite": true,
             "release_data": {
-              "tag_name": "$VERSION",
+              "tag_name": "v$VERSION",
               "name": "BetterGI v$VERSION",
               "body": "BetterGI v$VERSION 自动发布",
               "draft": false,
-              "prerelease": $(if [[ "$VERSION" == *"-"* ]]; then echo "true"; else echo "false"; fi),
+              "prerelease": $IS_PRERELEASE,
               "target_commitish": "main",
-              "make_latest": $(if [[ "$VERSION" == *"-"* ]]; then echo "\"false\""; else echo "\"true\""; fi)
+              "make_latest": "$MAKE_LATEST"
             },
             "asset_files": [
-          $(find upload_files -type f \( -name "*.7z" -o -name "*.exe" \) -printf '    "%p"' | head -c -1 | sed 's/$/,/g' | sed '$ s/,$//')
+              $FILE_LIST
             ]
           }
           EOF
           
           # 检查配置文件内容
           echo "📋 CNB 配置内容:"
-          cat cnb_config.json | jq '.' || cat cnb_config.json
+          cat cnb_config.json
+          
+          # 验证 JSON 格式
+          python -c "import json; print('✅ JSON 格式验证通过'); json.load(open('cnb_config.json'))"
           
           # 执行上传
-          python .github/workflows/cnb_release.py cnb_config.json
+          python cnb_release.py cnb_config.json
