@@ -20,6 +20,9 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// 用于原神的各类识别与控制操作
 ///
 /// 此处主要是对游戏内的一些状态进行识别
+/// 
+/// 注意：推荐使用新的 Playwright-inspired API (BgiPage, BgiLocator, BgiElement)
+/// 来实现更优雅和强大的自动化操作。参见 BgiPage.cs, BgiLocator.cs, BgiElement.cs
 /// </summary>
 public static partial class Bv
 {
