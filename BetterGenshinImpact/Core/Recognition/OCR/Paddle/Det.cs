@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OCR.engine;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.paddle;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
 public class Det
 {

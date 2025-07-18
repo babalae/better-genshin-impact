@@ -5,14 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using BetterGenshinImpact.Core.Recognition.OCR.engine;
-using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.paddle;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
 public class Rec
 {
