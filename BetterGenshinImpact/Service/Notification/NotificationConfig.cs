@@ -167,6 +167,16 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _telegramApiBaseUrl = string.Empty;
 
     /// <summary>
+    ///     Telegram代理地址(可选，格式：http://127.0.0.1:7890)
+    /// </summary>
+    [ObservableProperty] private string _telegramProxyUrl = "http://127.0.0.1:10809";
+
+    /// <summary>
+    ///     是否启用Telegram代理
+    /// </summary>
+    [ObservableProperty] private bool _telegramProxyEnabled = false;
+
+    /// <summary>
     ///     Telegram机器人Token
     /// </summary>
     [ObservableProperty] private string _telegramBotToken = string.Empty;
