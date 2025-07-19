@@ -2,13 +2,13 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using OpenCvSharp.Dnn;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Engine;
 
 public static class OcrUtils
 {

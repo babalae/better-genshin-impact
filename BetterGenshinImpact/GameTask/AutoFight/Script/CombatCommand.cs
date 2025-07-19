@@ -72,10 +72,6 @@ public class CombatCommand
             // 如果是当前角色，不进行角色切换
             var avatarName = combatScenes.CurrentAvatar();
             avatar = avatarName is not null ? combatScenes.SelectAvatar(avatarName) : combatScenes.SelectAvatar(1);
-            if (avatar == null)
-            {
-                return;
-            }
         }
         else
         {

@@ -1,4 +1,4 @@
-namespace BetterGenshinImpact.Core.Recognition.OCR.engine.data;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 
 /// <summary>
 ///     标准归一化的三个参数

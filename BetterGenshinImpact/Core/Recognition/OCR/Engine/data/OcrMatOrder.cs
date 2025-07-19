@@ -1,4 +1,4 @@
-namespace BetterGenshinImpact.Core.Recognition.OCR.engine.data;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 
 /// <summary>
 ///     Mat的通道顺序
