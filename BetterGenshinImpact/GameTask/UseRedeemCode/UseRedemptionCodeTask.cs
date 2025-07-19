@@ -88,12 +88,13 @@ public class UseRedemptionCodeTask
         await page.Locator(ElementAssets.Instance.BtnWhiteConfirm).Click();
 
         // 兑换成功
-        var list = await page.GetByText("兑换成功").WithRoi(captureRect.CutRight(0.3)).TryWaitFor(2000);
+        var list = await page.GetByText("兑换成功").TryWaitFor(2000);
         if (list.Count > 0)
         {
             _logger.LogInformation("兑换码 {Code} 兑换成功", redeemCode.Code);
             // 点击确认
             await page.Locator(ElementAssets.Instance.BtnBlackConfirm).Click();
+            await page.Wait(5100);
         }
         else
         {

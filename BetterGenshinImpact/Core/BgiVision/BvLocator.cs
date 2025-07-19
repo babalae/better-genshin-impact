@@ -58,7 +58,7 @@ public class BvLocator
         else if (RecognitionObject.RecognitionType == RecognitionTypes.Ocr)
         {
             var results = screen.FindMulti(RecognitionObject);
-            if (string.IsNullOrEmpty(RecognitionObject.Text))
+            if (!string.IsNullOrEmpty(RecognitionObject.Text))
             {
                 return results.FindAll(r => r.Text.Contains(RecognitionObject.Text));
             }
