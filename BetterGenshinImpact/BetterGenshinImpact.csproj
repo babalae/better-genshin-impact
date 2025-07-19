@@ -160,6 +160,9 @@
 		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -173,6 +176,7 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\OneDragon\" />
+	  <Folder Include="GameTask\UseRedeemCode\Assets\1920x1080\" />
 	  <Folder Include="Resources\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />

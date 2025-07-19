@@ -3,14 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Bv;
+namespace BetterGenshinImpact.Core.BgiVision;
 
 public class BvPage
 {
@@ -107,16 +106,6 @@ public class BvPage
     public List<Region> Ocr(Rect rect = default)
     {
         return Locator(string.Empty, rect).FindAll();
-    }
-
-    public async Task<List<Region>> WaitForLocator(BvLocator locator, int? timeout = null)
-    {
-        return await locator.WaitFor(timeout);
-    }
-
-    public async Task WaitForLocatorDisappear(BvLocator locator, int? timeout = null)
-    {
-        await locator.WaitForDisappear(timeout);
     }
 
 

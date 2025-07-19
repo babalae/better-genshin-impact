@@ -11,7 +11,7 @@ using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 
-namespace BetterGenshinImpact.Core.Bv;
+namespace BetterGenshinImpact.Core.BgiVision;
 
 /// <summary>
 /// 针对 Region 体系的包装
@@ -69,6 +69,11 @@ public class BvLocator
         {
             throw new NotSupportedException($"不被 Locator 支持的识别类型: {RecognitionObject.RecognitionType}");
         }
+    }
+
+    public bool IsExist()
+    {
+        return FindAll().Count > 0;
     }
 
     public async Task<Region> Click(int? timeout = null)

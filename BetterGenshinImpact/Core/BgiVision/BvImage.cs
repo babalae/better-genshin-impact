@@ -2,7 +2,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Bv;
+namespace BetterGenshinImpact.Core.BgiVision;
 
 public class BvImage
 {
