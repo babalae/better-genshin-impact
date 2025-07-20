@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
@@ -407,7 +407,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         ZipFile.ExtractToDirectory(zipPath, ReposPath, true);
     }
 
-    public async Task ImportScriptFromClipboard( string clipboardText )
+    public async Task ImportScriptFromClipboard(string clipboardText)
     {
         // 获取剪切板内容
         try
@@ -604,6 +604,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     File.Copy(scriptPath, destPath, true);
                 }
 
+                UpdateSubscribedScriptPaths();
                 Toast.Success("脚本订阅链接导入完成");
             }
             else
@@ -611,6 +612,34 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 Toast.Warning($"未知的脚本路径：{path}");
             }
         }
+    }
+
+    // 更新订阅脚本路径列表，移除无效路径
+    public void UpdateSubscribedScriptPaths()
+    {
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+        var validRoots = PathMapper.Keys.ToHashSet();
+
+        // 过滤并保留有效路径
+        scriptConfig.SubscribedScriptPaths = scriptConfig.SubscribedScriptPaths
+            .Distinct()
+            .Where(path =>
+            {
+                if (string.IsNullOrEmpty(path) || !path.Contains('/'))
+                    return false;
+
+                var root = path.Split('/')[0];
+
+                if (!validRoots.Contains(root))
+                    return false;
+
+                var (_, remainingPath) = GetFirstFolderAndRemainingPath(path);
+                var userPath = Path.Combine(PathMapper[root], remainingPath);
+
+                return Directory.Exists(userPath) || File.Exists(userPath);
+            })
+            .OrderBy(path => path)
+            .ToList();
     }
 
     private void CopyDirectory(string sourceDir, string destDir)
@@ -667,7 +696,22 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
             _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
+            {
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+
+                // 允许内部外链使用默认浏览器打开
+                _webWindow.Panel!.WebView.CoreWebView2.NewWindowRequested += (sender, e) =>
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        UseShellExecute = true,
+                        FileName = e.Uri
+                    };
+                    Process.Start(psi);
+
+                    e.Handled = true;
+                };
+            };
             _webWindow.Show();
         }
         else

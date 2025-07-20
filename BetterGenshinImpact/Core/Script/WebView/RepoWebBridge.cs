@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -53,6 +53,24 @@ public class RepoWebBridge
         catch (Exception e)
         {
             await MessageBox.ShowAsync(e.Message, "订阅脚本链接失败！");
+        }
+    }
+
+    public async Task<string> GetUserConfigJson()
+    {
+        try
+        {
+            string userConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "User", "config.json");
+            if (!File.Exists(userConfigPath))
+            {
+                throw new Exception("用户配置文件不存在: " + userConfigPath);
+            }
+            return await File.ReadAllTextAsync(userConfigPath);
+        }
+        catch (Exception e)
+        {
+            await MessageBox.ShowAsync(e.Message, "获取用户配置失败");
+            return "";
         }
     }
 }
