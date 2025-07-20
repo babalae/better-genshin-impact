@@ -17,16 +17,32 @@ using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.GameTask.UseRedeemCode;
 
-public class UseRedemptionCodeTask
+public class UseRedemptionCodeTask : ISoloTask
 {
     private static readonly ILogger _logger = App.GetLogger<UseRedemptionCodeTask>();
 
     private Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
 
+    private readonly List<RedeemCode> _list;
 
-    public async Task Start(List<RedeemCode> list, CancellationToken ct)
+    public UseRedemptionCodeTask(List<RedeemCode> list)
     {
-        InitLog(list);
+        this._list = list;
+    }
+    
+    public UseRedemptionCodeTask(List<string> strList)
+    {
+        _list = strList
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => new RedeemCode(code, null))
+            .ToList();
+    }
+
+    public string Name => "使用兑换码";
+
+    public async Task Start(CancellationToken ct)
+    {
+        InitLog(_list);
 
         try
         {
@@ -55,7 +71,7 @@ public class UseRedemptionCodeTask
             await page.GetByText("兑换奖励").WaitFor();
 
 
-            foreach (var redeemCode in list)
+            foreach (var redeemCode in _list)
             {
                 if (string.IsNullOrEmpty(redeemCode.Code))
                 {

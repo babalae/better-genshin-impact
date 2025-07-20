@@ -582,10 +582,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    GetLiveRedeemCode getLiveRedeemCode = new GetLiveRedeemCode();
-
-                    UseRedemptionCodeTask useRedemptionCodeTask = new UseRedemptionCodeTask();
-                    Task.Run(async () => { await useRedemptionCodeTask.Start(await getLiveRedeemCode.GetCodeMsgAsync(), CancellationToken.None); });
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(
