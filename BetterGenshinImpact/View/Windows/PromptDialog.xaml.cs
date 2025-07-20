@@ -28,7 +28,7 @@ public partial class PromptDialog
 {
     private readonly PromptDialogConfig _config;
 
-    public PromptDialog(string question, string title, UIElement uiElement, string defaultValue, PromptDialogConfig? config = null)
+    public PromptDialog(string question, string title, UIElement uiElement, string? defaultValue, PromptDialogConfig? config = null)
     {
         InitializeComponent();
         MyTitleBar.Title = title;
@@ -36,11 +36,11 @@ public partial class PromptDialog
         _config = config ?? new PromptDialogConfig();
 
         DynamicContent.Content = uiElement;
-        if (DynamicContent.Content is TextBox textBox)
+        if (DynamicContent.Content is TextBox textBox && defaultValue != null)
         {
             textBox.Text = defaultValue;
         }
-        else if (DynamicContent.Content is ComboBox comboBox)
+        else if (DynamicContent.Content is ComboBox comboBox && defaultValue != null)
         {
             comboBox.Text = defaultValue;
         }

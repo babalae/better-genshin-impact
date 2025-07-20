@@ -167,23 +167,28 @@ public class RecognitionObject
     public Dictionary<string, string[]> ReplaceDictionary { get; set; } = [];
 
     /// <summary>
-    ///     包含匹配
+    ///     包含匹配 （用于单个确认是否存在）
     ///     多个值全匹配的情况下才算成功
     ///     复杂情况请用下面的正则匹配
     /// </summary>
     public List<string> AllContainMatchText { get; set; } = [];
 
     /// <summary>
-    ///     包含匹配
+    ///     包含匹配（用于单个确认是否存在）
     ///     一个值匹配就算成功
     /// </summary>
     public List<string> OneContainMatchText { get; set; } = [];
 
     /// <summary>
-    ///     正则匹配
+    ///     正则匹配（用于单个确认是否存在）
     ///     多个值全匹配的情况下才算成功
     /// </summary>
     public List<string> RegexMatchText { get; set; } = [];
+    
+    /// <summary>
+    /// 用于多个OCR结果的匹配
+    /// </summary>
+    public string Text { get; set; } = string.Empty;
     
     public static RecognitionObject Ocr(double x, double y, double w, double h)
     {

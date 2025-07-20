@@ -407,16 +407,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         ZipFile.ExtractToDirectory(zipPath, ReposPath, true);
     }
 
-    public async Task ImportScriptFromClipboard()
+    public async Task ImportScriptFromClipboard( string clipboardText )
     {
         // 获取剪切板内容
         try
         {
-            if (Clipboard.ContainsText())
-            {
-                string clipboardText = Clipboard.GetText();
-                await ImportScriptFromUri(clipboardText, true);
-            }
+            await ImportScriptFromUri(clipboardText, true);
         }
         catch (Exception e)
         {
