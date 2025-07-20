@@ -539,6 +539,41 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+        
+        <!-- 地图追踪设置 -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DataTreemap24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="地图追踪优先使用的特征匹配方式"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="影响所有地图追踪功能，重启后生效"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               MinWidth="120"
+                               ItemsSource="{Binding MapPathingTypes}"
+                               SelectedItem="{Binding Config.PathingConditionConfig.MapPathingType}"
+                               />
+                </Grid>
+
+            </ui:CardControl.Header>
+        </ui:CardControl>
 
         <!--  大地图传送相关设置  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
