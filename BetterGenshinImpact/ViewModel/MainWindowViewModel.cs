@@ -231,6 +231,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Global.Absolute(@"Assets\Map\mainMap256Block_SIFT.mat"),
             Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.kp"),
             Global.Absolute(@"Assets\Map\mainMap2048Block_SIFT.mat"),
+            Global.Absolute(@"Assets\Map\Teyvat\map_info.json"),
         ];
 
         // 循环删除

@@ -42,6 +42,12 @@ public class Genshin
     /// 系统屏幕的DPI缩放比例
     /// </summary>
     public double ScreenDpiScale => TaskContext.Instance().DpiScale;
+    
+    public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
+    {
+        Navigation.WarmUp();
+        return new NavigationInstance();
+    });
 
     /// <summary>
     /// 传送到指定位置
@@ -201,6 +207,12 @@ public class Genshin
         return GetPositionFromMap(MapTypes.Teyvat.ToString());
     }
 
+    public float GetCameraOrientation()
+    {
+        var imageRegion = CaptureToRectArea();
+        return CameraOrientation.Compute(imageRegion.SrcMat);
+    }
+
     /// <summary>
     /// 获取当前在小地图上的位置坐标
     /// </summary>
@@ -214,7 +226,7 @@ public class Genshin
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
-        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(Navigation.GetPositionStable(imageRegion, mapName));
+        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value.GetPositionStable(imageRegion, mapName));
     }
 
     #endregion 大地图操作

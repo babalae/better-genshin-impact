@@ -281,6 +281,12 @@ public partial class AutoPickTrigger : ITaskTrigger
             {
                 return;
             }
+            
+            // 纯英文不拾取
+            if (StringUtils.IsPureEnglish(text))
+            {
+                return;
+            }
 
             if (config.WhiteListEnabled && (_whiteList.Contains(text) || _whiteList.Contains(simpleText)))
             {
@@ -367,4 +373,6 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     [GeneratedRegex(@"^[\p{P} ]+|[\p{P} ]+$")]
     private static partial Regex PunctuationAndSpacesRegex();
+    
+    
 }

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask.LogParse;
@@ -39,7 +41,12 @@ public class TravelsDiaryDetailManager
 
     public static List<ActionItem> loadAllActionItems(GameInfo gameInfo, List<LogParse.ConfigGroupEntity> configGroups)
     {
-        List<(int year, int month)> ms = GetInvolvedMonths(configGroups);
+      return loadAllActionItems(gameInfo,GetInvolvedMonths(configGroups));
+    }
+
+    public static List<ActionItem> loadAllActionItems(GameInfo gameInfo,List<(int year, int month)> ms)
+    {
+        //List<(int year, int month)> ms = GetInvolvedMonths(configGroups);
         string tddPath = Global.Absolute(@$"{basePath}\{gameInfo.GameUid}\travelsdiarydetail");
         List<ActionItem> actionItems = new List<ActionItem>();
         foreach (var m in ms)
@@ -51,18 +58,71 @@ public class TravelsDiaryDetailManager
                 if (_temp != null)
                 {
                     //统计杀怪或突发事件奖励
-                    actionItems.AddRange(_temp.Data.List.Where(item => item.ActionId == 37 || item.ActionId == 28));
+                    actionItems.AddRange(_temp.Data.List.Where(item => item.ActionId == 37 || item.ActionId == 28 || item.ActionId == 39));
                 }
             }
         }
 
         return actionItems.OrderBy(m => DateTime.Parse(m.Time)).ToList();
     }
+    private static List<(int year, int month)> GetMonthPairs()
+    {
+        DateTime now = DateTime.Now;
+
+        List<(int year, int month)> result = new List<(int, int)>();
+
+        if (now.Day == 1 && now.Hour < 4)
+        {
+            // 上个月
+            DateTime lastMonth = now.AddMonths(-1);
+            result.Add((lastMonth.Year, lastMonth.Month));
+        }
+
+        // 当前月
+        result.Add((now.Year, now.Month));
+
+        return result;
+    }
+    
+    
+    //取今天的札记数据
+    public static List<ActionItem> loadNowDayActionItems(GameInfo gameInfo)
+    {
+        //正序的
+        var sortedList = loadAllActionItems(gameInfo, GetMonthPairs());
+        DateTime now = DateTime.Now;
+        DateTime today4am = now.Date.AddHours(4);
+
+        DateTime startTime, endTime;
+
+        if (now < today4am)
+        {
+            // 现在是今天凌晨4点前，区间是昨天4点 ~ 今天4点前
+            startTime = today4am.AddDays(-1);
+            endTime = today4am;
+        }
+        else
+        {
+            // 现在是今天4点后，区间是今天4点 ~ 明天4点
+            startTime = today4am;
+            endTime = today4am.AddDays(1);
+        }
+
+        // 取出符合时间段的数据
+        var dayItems = sortedList
+            .Where(m =>
+            {
+                var time = DateTime.Parse(m.Time);
+                return time >= startTime && time < endTime;
+            })
+            .ToList();
+        return dayItems;
+    }
 
     /*
      * 增量更新，米游社札记摩拉记录
      */
-    public static async Task<GameInfo> UpdateTravelsDiaryDetailManager(string cookie)
+    public static async Task<GameInfo> UpdateTravelsDiaryDetailManager(string cookie,bool skipToast = false)
     {
         List<(int year, int month)> months = GetCurrentAndPreviousTwoMonths();
         months.Reverse();
@@ -110,7 +170,16 @@ public class TravelsDiaryDetailManager
                 {
                     var _temp2 = await ys.GetTravelsDiaryDetailAsync(gameInfo, cookie, month.month, 2);
                     writeFile(tddfile, _temp2);
-                    Toast.Information($"{month.year}_{month.month}数据获取成功！");
+                    if (!skipToast)
+                    {
+                        Toast.Information($"{month.year}_{month.month}数据获取成功！");
+                    }
+                    else
+                    {
+                        TaskControl.Logger.LogError($"米游社札记数据:{month.year}_{month.month}获取成功！");
+
+                    }
+
                 }
                 /*else
                 {
@@ -121,7 +190,16 @@ public class TravelsDiaryDetailManager
         }
         catch (NoLoginException e)
         {
-            Toast.Warning("token未登录，请重新登录获取，此次将不新最新数据！");
+            if (!skipToast)
+            {
+                Toast.Warning("token未登录，请重新登录获取，此次将不新最新数据！");
+            }
+            else
+            {
+                TaskControl.Logger.LogError($"token未登录，请重新登录获取，此次将不新最新数据！");
+            }
+
+
         }
 
         return gameInfo;

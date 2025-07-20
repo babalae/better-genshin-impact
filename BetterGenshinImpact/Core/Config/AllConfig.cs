@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.GetGridIcons;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -165,6 +166,11 @@ public partial class AllConfig : ObservableObject
     public AutoArtifactSalvageConfig AutoArtifactSalvageConfig { get; set; } = new();
 
     /// <summary>
+    ///     截取物品图标配置
+    /// </summary>
+    public GetGridIconsConfig GetGridIconsConfig { get; set; } = new();
+
+    /// <summary>
     ///     宏配置
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
@@ -217,6 +223,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public HardwareAccelerationConfig HardwareAccelerationConfig { get; set; } = new();
 
+    /// <summary>
+    /// HTTP 服务器配置
+    /// </summary>
+    public HttpServerConfig HttpServerConfig { get; set; } = new();
+
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -247,6 +258,7 @@ public partial class AllConfig : ObservableObject
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
+        HttpServerConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

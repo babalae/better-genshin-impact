@@ -256,10 +256,12 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.TelegramNotificationEnabled == true)
         {
             _notifierManager.RegisterNotifier(new TelegramNotifier(
-                _notifyHttpClient,
+                null,
                 _notificationConfig.TelegramBotToken,
                 _notificationConfig.TelegramChatId,
-                _notificationConfig.TelegramApiBaseUrl
+                _notificationConfig.TelegramApiBaseUrl,
+                _notificationConfig.TelegramProxyUrl,
+                _notificationConfig.TelegramProxyEnabled
             ));
         }
     }
