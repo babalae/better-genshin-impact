@@ -23,6 +23,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages;
 using DeviceId;
@@ -37,17 +38,15 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly IConfigService _configService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
-    [ObservableProperty]
-    private bool _isVisible = true;
+    [ObservableProperty] private bool _isVisible = true;
 
-    [ObservableProperty]
-    private WindowState _windowState = WindowState.Normal;
+    [ObservableProperty] private WindowState _windowState = WindowState.Normal;
 
-    [ObservableProperty]
-    private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
+    [ObservableProperty] private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
 
-    [ObservableProperty]
-    private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
+    [ObservableProperty] private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
+    
+    private bool _firstActivated = true;
 
     public AllConfig Config { get; set; }
 
@@ -61,7 +60,37 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnActivated()
     {
-        await ScriptRepoUpdater.Instance.ImportScriptFromClipboard();
+        // 首次激活时不处理
+        if (_firstActivated)
+        {
+            _firstActivated = false;
+            return;
+        }
+        
+        // 激活时候获取剪切板内容 用于脚本导入、兑换码自动兑换等
+        try
+        {
+            if (Clipboard.ContainsText())
+            {
+                string clipboardText = Clipboard.GetText();
+
+                if (string.IsNullOrEmpty(clipboardText)
+                    || clipboardText.Length > 1000)
+                {
+                    return;
+                }
+                
+                
+                // 1. 导入脚本
+                await ScriptRepoUpdater.Instance.ImportScriptFromClipboard(clipboardText);
+                // 2. 自动兑换码
+                await RedeemCodeManager.ImportFromClipboard(clipboardText);
+            }
+        }
+        catch
+        {
+            // 忽略异常，可能是因为没有权限访问剪切板
+        }
     }
 
     [RelayCommand]

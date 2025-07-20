@@ -21,7 +21,6 @@ public class UseRedemptionCodeTask : ISoloTask
 {
     private static readonly ILogger _logger = App.GetLogger<UseRedemptionCodeTask>();
 
-    private Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
 
     private readonly List<RedeemCode> _list;
 
@@ -46,6 +45,8 @@ public class UseRedemptionCodeTask : ISoloTask
 
         try
         {
+            Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+
             await new ReturnMainUiTask().Start(ct);
 
             var page = new BvPage(ct);
@@ -88,13 +89,18 @@ public class UseRedemptionCodeTask : ISoloTask
         }
         finally
         {
+            // 清空剪贴板
+            UIDispatcherHelper.Invoke(Clipboard.Clear);
             // 返回主界面
             await new ReturnMainUiTask().Start(ct);
+            
         }
     }
 
     private async Task UseRedeemCode(RedeemCode redeemCode, BvPage page)
     {
+        Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        
         _logger.LogInformation("输入兑换码: {Code}", redeemCode.Code);
         // 将要输入的文本复制到剪贴板
         UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(redeemCode.Code!));
@@ -104,7 +110,7 @@ public class UseRedemptionCodeTask : ISoloTask
         await page.Locator(ElementAssets.Instance.BtnWhiteConfirm).Click();
 
         // 兑换成功
-        var list = await page.GetByText("兑换成功").TryWaitFor(2000);
+        var list = await page.GetByText("兑换成功").TryWaitFor(1000);
         if (list.Count > 0)
         {
             _logger.LogInformation("兑换码 {Code} 兑换成功", redeemCode.Code);

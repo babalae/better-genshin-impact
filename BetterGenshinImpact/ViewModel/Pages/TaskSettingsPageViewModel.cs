@@ -573,7 +573,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             "输入兑换码",
             "自动使用兑换码",
             multilineTextBox,
-            "");
+            null);
         p.Height = 500;
         p.ShowDialog();
         if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
