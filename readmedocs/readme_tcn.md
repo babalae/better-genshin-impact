@@ -29,7 +29,11 @@
 
 <br/>  
 
-[English](./readmedocs/readme_en.md) | [中文](../README.md)| [繁体中文](../readmedocs/readme_tcn.md)
+[English](./readmedocs/readme_en.md) | [中文](./README.md)| [繁体中文](./readmedocs/readme_tcn.md)
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20Chat-%237289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8xUfcw5nTS)
+
+
 
 BetterGI · 更好的原神， 一個基於電腦視覺技術，意圖讓原神變得更佳的項目。
 
@@ -134,4 +138,3 @@ BetterGI · 更好的原神， 一個基於電腦視覺技術，意圖讓原神�
 
 提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 discord  
 
-<iframe src="https://discord.com/widget?id=1396326291837423777&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
