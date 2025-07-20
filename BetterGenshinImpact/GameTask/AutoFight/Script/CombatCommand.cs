@@ -66,22 +66,9 @@ public class CombatCommand
 
     public void Execute(CombatScenes combatScenes)
     {
-        Avatar? avatar;
-        if (Name == CombatScriptParser.CurrentAvatarName)
+        Avatar avatar = combatScenes.SelectAvatar(Name) ?? combatScenes.SelectAvatar(1);
+        if (Name != CombatScriptParser.CurrentAvatarName)
         {
-            // 如果是当前角色，不进行角色切换
-            var avatarName = combatScenes.CurrentAvatar();
-            avatar = avatarName is not null ? combatScenes.SelectAvatar(avatarName) : combatScenes.SelectAvatar(1);
-        }
-        else
-        {
-            // 其余情况要进行角色切换
-            avatar = combatScenes.SelectAvatar(Name);
-            if (avatar == null)
-            {
-                return;
-            }
-
             // 非宏类脚本，等待切换角色成功
             if (Method != Method.Wait
                 && Method != Method.MouseDown
@@ -95,7 +82,6 @@ public class CombatCommand
                 avatar.Switch();
             }
         }
-
         Execute(avatar);
     }
 
