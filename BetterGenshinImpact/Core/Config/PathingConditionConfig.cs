@@ -12,6 +12,9 @@ namespace BetterGenshinImpact.Core.Config;
 [Serializable]
 public partial class PathingConditionConfig : ObservableObject
 {
+    [ObservableProperty]
+    private string _mapPathingType = "SIFT";
+    
     // 地图追踪条件配置
     [ObservableProperty]
     private ObservableCollection<Condition> _partyConditions = [];
