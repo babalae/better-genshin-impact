@@ -85,7 +85,8 @@ public partial class ScriptRepoWindow
         {
             new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
             new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
-            new("Gitee", "https://gitee.com/babalae/bettergi-scripts-list"),
+            // 暂时无法使用
+            // new("Gitee", "https://gitee.com/babalae/bettergi-scripts-list"),
             new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
             new("自定义", "https://example.com/custom-repo")
         };
