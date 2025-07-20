@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.FarmingPlan;
+using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -96,9 +97,12 @@ public partial class ScriptService : IScriptService
 
             
         }
-        
-        
-        
+        string skipMessage;
+        if (ExecutionRecordStorage.IsSkipTask(project,out skipMessage))
+        {
+            TaskControl.Logger.LogError($"{project.Name}:{skipMessage},跳过此任务！");
+            return true;
+        }
         return false; // 不跳过
     }
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
@@ -211,7 +215,7 @@ public partial class ScriptService : IScriptService
                             await ExecuteProject(project);
 
                             //多次执行时及时中断
-                            if (ShouldSkipTask(project))
+                            if (project.RunNum > 1 && ShouldSkipTask(project))
                             {
                                 continue;
                             }

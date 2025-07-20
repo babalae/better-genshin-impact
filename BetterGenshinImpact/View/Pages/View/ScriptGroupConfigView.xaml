@@ -451,6 +451,127 @@
                         </ui:CardExpander>
 
                     </Grid>
+                                       
+                                       
+                                       <!-- 跳过执行配置 -->
+                    <Grid Margin="16">
+
+                        <ui:CardExpander Margin="0,0,36,12"
+                                         ContentPadding="0"
+                                         IsExpanded="False">
+
+                            <ui:CardExpander.Header>
+                                <Grid>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="跳过执行配置"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="跳过指定时间内完成的调度器任务（js等未抛出异常则算成功，路径追踪任务，走完最后路径才算成功）的配置"
+                                                  TextWrapping="Wrap" />
+                                    <ui:ToggleSwitch Grid.Row="0"
+                                                     Grid.RowSpan="2"
+                                                     Grid.Column="1"
+                                                     Margin="0,0,24,0"
+                                                     IsChecked="{Binding PathingConfig.TaskCompletionSkipRuleConfig.Enable, Mode=TwoWay}" />
+                                </Grid>
+                            </ui:CardExpander.Header>
+                            <StackPanel>
+                                <Grid Margin="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="跳过执行策略"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="根据不同的策略来跳过任务"
+                                                  TextWrapping="Wrap" />
+                                    <ComboBox Grid.Row="0"
+                                              Grid.RowSpan="2"
+                                              Grid.Column="1"
+                                              MinWidth="100"
+                                              SelectedValuePath="Key"
+                                              DisplayMemberPath="Value"
+                                              ItemsSource="{Binding SkipPolicySource}"
+                                              SelectedValue="{Binding PathingConfig.TaskCompletionSkipRuleConfig.SkipPolicy}" />
+                                </Grid>
+                                <Grid Margin="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="分界时间"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="分界时间，一般填0或4，如果填0则当天从0点开始算，如果填4，则当天从凌晨4点开始算，小于4点算前一天，填写小于0的数或大于23，如-1，则不启用，适用于考虑固定刷新时间，且一天内不重复执行的情况。"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBox Grid.Row="0"
+                                                Grid.RowSpan="2"
+                                                Grid.Column="1"
+                                                MinWidth="120"
+                                                Text="{Binding PathingConfig.TaskCompletionSkipRuleConfig.BoundaryTime}" />
+                                </Grid>
+                                <Grid Margin="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="和上次运行的间隔秒数"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="和上一次运行时间间隔时间小于配置时间，则跳过执行，小于0时不启用，出于精度考虑，这里使用秒为单位。"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBox Grid.Row="0"
+                                                Grid.RowSpan="2"
+                                                Grid.Column="1"
+                                                MinWidth="120"
+                                                Text="{Binding PathingConfig.TaskCompletionSkipRuleConfig.LastRunGapSeconds}" />
+                                </Grid>
+
+                            </StackPanel>
+                        </ui:CardExpander>
+
+                    </Grid>                                       
                 </StackPanel>
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"

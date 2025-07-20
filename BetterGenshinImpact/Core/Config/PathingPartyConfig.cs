@@ -95,6 +95,10 @@ public partial class PathingPartyConfig : ObservableObject
     //执行周期配置
     [ObservableProperty]
     private PathingPartyTaskCycleConfig _taskCycleConfig = new();
+    
+    //任务完成跳过执行配置
+    [ObservableProperty]
+    private TaskCompletionSkipRuleConfig _taskCompletionSkipRuleConfig = new();
 
     //启用自动战斗配置
     [ObservableProperty]
