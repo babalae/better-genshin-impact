@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask.Model.Area;
@@ -100,10 +101,20 @@ public class Region : IDisposable
     /// 点击【自己】的中心
     /// region.Derive(x,y).Click() 等效于 region.ClickTo(x,y)
     /// </summary>
-    public void Click()
+    public Region Click()
     {
         // 相对自己是 0, 0 坐标
         ClickTo(0, 0, Width, Height);
+        return this;
+    }
+    
+    public Region DoubleClick()
+    {
+        // 相对自己是 0, 0 坐标
+        ClickTo(0, 0, Width, Height);
+        TaskControl.Sleep(60);
+        ClickTo(0, 0, Width, Height);
+        return this;
     }
 
     /// <summary>

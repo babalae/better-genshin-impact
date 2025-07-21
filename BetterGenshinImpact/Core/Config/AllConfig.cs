@@ -223,11 +223,6 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public HardwareAccelerationConfig HardwareAccelerationConfig { get; set; } = new();
 
-    /// <summary>
-    /// HTTP 服务器配置
-    /// </summary>
-    public HttpServerConfig HttpServerConfig { get; set; } = new();
-
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
@@ -258,7 +253,6 @@ public partial class AllConfig : ObservableObject
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
-        HttpServerConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
