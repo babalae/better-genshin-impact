@@ -14,8 +14,6 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using System.IO;
-using System.Drawing;
-using static Vanara.PInvoke.Gdi32;
 using OpenCvSharp.Extensions;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 
@@ -27,8 +25,6 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public class GetGridIconsTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
-    private readonly InputSimulator input = Simulation.SendInput;
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
 
     private CancellationToken ct;
 
@@ -38,9 +34,12 @@ public class GetGridIconsTask : ISoloTask
 
     private readonly GridScreenName gridScreenName;
 
-    public GetGridIconsTask(GridScreenName gridScreenName, int? maxNumToGet = null)
+    private readonly bool starAsSuffix;
+
+    public GetGridIconsTask(GridScreenName gridScreenName, bool starAsSuffix, int? maxNumToGet = null)
     {
         this.gridScreenName = gridScreenName;
+        this.starAsSuffix = starAsSuffix;
         this.maxNumToGet = maxNumToGet;
         IStringLocalizer<GetGridIconsTask> stringLocalizer = App.GetService<IStringLocalizer<GetGridIconsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
@@ -60,7 +59,7 @@ public class GetGridIconsTask : ISoloTask
         Directory.CreateDirectory(directory);
 
         GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct);
-        HashSet<string> itemNames = new HashSet<string>();
+        HashSet<string> fileNames = new HashSet<string>();
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             itemRegion.Click();
@@ -70,9 +69,17 @@ public class GetGridIconsTask : ISoloTask
             using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
             var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
             string itemName = ocrResult.Text;
-            if (itemNames.Add(itemName))
+            string itemStar = "";
+            if (this.starAsSuffix)
             {
-                string filePath = Path.Combine(directory, $"{itemName}.png");
+                using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
+                itemStar = String.Join(string.Empty, Enumerable.Repeat("★", GetStars(starRegion.SrcMat)));
+            }
+
+            string fileName = itemName + itemStar;
+            if (fileNames.Add(fileName))
+            {
+                string filePath = Path.Combine(directory, $"{fileName}.png");
                 Thread saveThread = new Thread(() =>
                 {
                     try
@@ -81,11 +88,11 @@ public class GetGridIconsTask : ISoloTask
                         {
                             itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                         }
-                        logger.LogInformation("图片保存成功：{Text}", itemName);
+                        logger.LogInformation("图片保存成功：{Text}", fileName);
                     }
                     catch (Exception e)
                     {
-                        logger.LogError(e, "图片保存失败：{Text}", itemName);
+                        logger.LogError(e, "图片保存失败：{Text}", fileName);
                     }
                 });
                 saveThread.IsBackground = true; // 设置为后台线程
@@ -93,7 +100,7 @@ public class GetGridIconsTask : ISoloTask
             }
             else
             {
-                logger.LogInformation("重复的物品：{Text}", itemName);
+                logger.LogInformation("重复的物品：{Text}", fileName);
             }
 
             count--;
@@ -103,5 +110,20 @@ public class GetGridIconsTask : ISoloTask
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// OCR检测★字符很不稳定，因此用cv
+    /// 非常简陋的色彩检测，请传入聚焦的图像，勿带入可能的干扰
+    /// </summary>
+    /// <param name="mat"></param>
+    /// <returns></returns>
+    public static int GetStars(Mat mat)
+    {
+        Scalar yellowLower = new Scalar(50 - 5, 204 - 5, 255 - 5);
+        Scalar yellowUpper = new Scalar(50 + 5, 204 + 5, 255 + 0);
+        using Mat mask = mat.InRange(yellowLower, yellowUpper);
+        var contours = mask.FindContoursAsArray(RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        return contours?.Length ?? 0;
     }
 }

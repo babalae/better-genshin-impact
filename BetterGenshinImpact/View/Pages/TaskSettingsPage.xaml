@@ -2175,7 +2175,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用星星作为名称后缀（待开发）"
+                                  Text="使用星星作为名称后缀"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -2186,7 +2186,6 @@
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
-                                     IsEnabled="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}"
                                      IsChecked="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">

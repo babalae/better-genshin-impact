@@ -528,7 +528,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         try
         {
             SwitchGetGridIconsEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.StarAsSuffix, Config.GetGridIconsConfig.MaxNumToGet));
         }
         finally
         {
