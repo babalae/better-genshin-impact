@@ -204,7 +204,7 @@ public class ExecutionRecordStorage
                 // 如果配置了间隔时间，检查记录是否在时间间隔内
                 if (config.LastRunGapSeconds >= 0)
                 {
-                    double secondsSinceLastRun = (DateTime.Now - record.StartTime).TotalSeconds;
+                    double secondsSinceLastRun = (DateTime.Now - record.EndTime).TotalSeconds;
 
                     // 跳过超过配置间隔时间的记录
                     if (secondsSinceLastRun > config.LastRunGapSeconds) continue;
@@ -258,7 +258,7 @@ public class ExecutionRecordStorage
                     if (config.LastRunGapSeconds >= 0)
                     {
                         // 计算下次可执行时间
-                        DateTime nextExecutionTime = record.StartTime.AddSeconds(config.LastRunGapSeconds);
+                        DateTime nextExecutionTime = record.EndTime.AddSeconds(config.LastRunGapSeconds);
                         message += $", 需在 {nextExecutionTime:yyyy-M-d H:mm:ss} 之后才能开始执行";
                     }
                     else if (boundaryTimeEnable)
