@@ -96,6 +96,10 @@ internal class GameTaskManager
                 triggerName = "AutoSkip";
                 trigger = new AutoSkip.AutoSkipTrigger();
                 break;
+            case "AutoEat":
+                triggerName = "AutoEat";
+                trigger = new AutoEat.AutoEatTrigger();
+                break;
         }
 
         if (triggerName == null || trigger == null)

@@ -231,6 +231,35 @@
                         TextWrapping="NoWrap" />
                 </ui:CardControl>
                 
+                <ui:CardControl Margin="0,0,0,12" >
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="开启自动吃药"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="检测到红血状态时自动使用便携营养袋"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+
+                    <ui:ToggleSwitch
+                        Margin="0,0,36,0"
+                        IsChecked="{Binding Config.PathingConditionConfig.AutoEatEnabled, Mode=TwoWay}" />
+                </ui:CardControl>
+                
                 
                 <ui:CardControl Margin="0,0,0,12" >
                     <ui:CardControl.Icon>
