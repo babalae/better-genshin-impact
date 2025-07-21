@@ -29,7 +29,7 @@
 
 <br/>
 
-[English](../Docs/readme_en.md) | [中文](./README.md)| [繁体中文](../Docs/readme_tcn.md)  
+[English](./Docs/readme_en.md) | [中文](./README.md)| [繁体中文](./Docs/readme_tcn.md)  
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
