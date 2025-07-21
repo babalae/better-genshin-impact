@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -83,7 +84,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("toast.startScreenshotFirst"));
             return;
         }
         if (!IsRecording)

@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -133,7 +134,8 @@ public partial class MapPathingViewModel : ViewModel
 
         if (item.IsDirectory)
         {
-            Toast.Warning("执行多个地图追踪任务的时候，请使用调度器功能");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("toast.useSchedulerForMultiple"));
             return;
         }
 
@@ -243,7 +245,8 @@ public partial class MapPathingViewModel : ViewModel
                     }
                     catch (TimeoutException)
                     {
-                        Toast.Error("Markdown内容加载超时");
+                        var localizationService = App.GetService<ILocalizationService>();
+                        Toast.Error(localizationService.GetString("toast.markdownLoadTimeout"));
                     }
                 }
             });

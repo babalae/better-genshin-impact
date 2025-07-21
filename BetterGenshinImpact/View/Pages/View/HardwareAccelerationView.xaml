@@ -6,6 +6,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:HardwareAccelerationViewModel}"
              d:DesignHeight="600"
@@ -34,14 +35,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="推理设备配置"
+                                      Text="{markup:Localize Key=hardware.title}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            修改后需要重启程序生效，不正确的修改可能会导致程序异常
-                        </ui:TextBlock>
+                                      Text="{markup:Localize Key=hardware.restartRequired}"
+                                      TextWrapping="Wrap" />
                     </Grid>
                     <!-- <TextBlock FontWeight="SemiBold" Text="推理设备配置" /> -->
                 </ui:CardExpander.Header>
@@ -60,7 +60,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="推理设备类型" />
+                                      Text="{markup:Localize Key=hardware.inferenceDeviceType}" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
                                   Grid.Column="1"
@@ -70,7 +70,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="选择推理使用的硬件设备类型 默认使用CPU" />
+                                      Text="{markup:Localize Key=hardware.inferenceDeviceTypeDescription}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -89,12 +89,12 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="缓存文件管理" />
+                                      Text="{markup:Localize Key=hardware.cacheManagement}" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.Column="1"
                                    Command="{Binding OpenCacheFolderCommand}"
-                                   Content="打开缓存目录" />
+                                   Content="{markup:Localize Key=hardware.openCacheDirectory}" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -114,7 +114,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="强制OCR使用CPU" />
+                                      Text="{markup:Localize Key=hardware.forceCpuOcr}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -142,7 +142,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="GPU设备ID" />
+                                      Text="{markup:Localize Key=hardware.gpuDeviceId}" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
@@ -151,7 +151,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="指定使用的GPU设备编号 使用默认配置请设为0 可以在任务管理器中查看编号" />
+                                      Text="{markup:Localize Key=hardware.gpuDeviceIdDescription}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -171,7 +171,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="是否输出优化后的模型文件到缓存" />
+                                      Text="{markup:Localize Key=hardware.optimizedModel}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -179,7 +179,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="注意:在不支持的执行器上使用会导致异常。默认关闭。" />
+                                      Text="{markup:Localize Key=hardware.optimizedModelDescription}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -205,14 +205,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="CUDA配置"
+                                      Text="{markup:Localize Key=hardware.cudaConfig}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            修改后需要重启程序生效。
-                        </ui:TextBlock>
+                                      Text="{markup:Localize Key=settings.restartRequired}"
+                                      TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardExpander.Header>
                 <StackPanel>
@@ -230,7 +229,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="CUDA设备ID" />
+                                      Text="{markup:Localize Key=hardware.cudaDeviceId}" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
@@ -239,7 +238,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="指定CUDA设备编号 使用默认配置请设为0 可以在nvidia-smi中查看编号" />
+                                      Text="{markup:Localize Key=hardware.cudaDeviceIdDescription}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -258,7 +257,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="自动添加CUDA路径" />
+                                      Text="{markup:Localize Key=hardware.autoAppendCudaPath}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -266,7 +265,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="自动添加系统CUDA环境路径 默认开启" />
+                                      Text="{markup:Localize Key=hardware.autoAppendCudaPathDescription}" />
                     </Grid>
                     <!--  _additionalPath  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
@@ -282,12 +281,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="附加PATH"
+                                      Text="{markup:Localize Key=hardware.additionalPath}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="附加path，用;分割。默认为空。可用于附加DLL路径"
+                                      Text="{markup:Localize Key=hardware.additionalPathDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -318,14 +317,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="TensorRT配置"
+                                      Text="{markup:Localize Key=hardware.tensorRtConfig}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            修改后需要重启程序生效。
-                        </ui:TextBlock>
+                                      Text="{markup:Localize Key=settings.restartRequired}"
+                                      TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardExpander.Header>
                 <StackPanel>
@@ -343,7 +341,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="启用TensorRT缓存" />
+                                      Text="{markup:Localize Key=hardware.enableTensorRtCache}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -351,7 +349,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="提升TensorRT模型加载速度 默认开启" />
+                                      Text="{markup:Localize Key=hardware.enableTensorRtCacheDescription}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -372,7 +370,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="嵌入式引擎缓存" />
+                                      Text="{markup:Localize Key=hardware.embedTensorRtCache}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -380,7 +378,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="将引擎缓存嵌入模型文件 默认开启" />
+                                      Text="{markup:Localize Key=hardware.embedTensorRtCacheDescription}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"

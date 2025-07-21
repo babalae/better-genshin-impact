@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -20,7 +21,7 @@
 
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="实时触发的自动化任务设置" />
+                      Text="{markup:Localize Key=trigger.title}" />
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon HandWave24}">
@@ -37,12 +38,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动拾取"
+                                  Text="{markup:Localize Key=trigger.autoPick.title}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选项不是NPC对话且不在黑名单时，自动按下 F 拾取/交互"
+                                  Text="{markup:Localize Key=trigger.autoPick.description}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -92,12 +93,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择自动拾取文字识别引擎"
+                                  Text="{markup:Localize Key=trigger.autoPick.ocrEngine}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Paddle可识别所有文字,速度慢,消耗少;Yap可识别部分文字,快且准,消耗大"
+                                  Text="{markup:Localize Key=trigger.autoPick.ocrEngineDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -119,12 +120,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="黑名单"
+                                  Text="{markup:Localize Key=trigger.autoPick.blacklist}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="排除 NPC 对话、各类交互选项、不需要拾取的物品等"
+                                  Text="{markup:Localize Key=trigger.autoPick.blacklistDescription}"
                                   TextWrapping="Wrap" />
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -136,7 +137,7 @@
                             IsChecked="{Binding Config.AutoPickConfig.BlackListEnabled, Mode=TwoWay}" />
                         <ui:Button
                             Command="{Binding EditBlacklistCommand}"
-                            Content="前往设置" />
+                            Content="{markup:Localize Key=common.goToSettings}" />
                     </StackPanel>
 
                 </Grid>
@@ -152,12 +153,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="白名单"
+                                  Text="{markup:Localize Key=trigger.autoPick.whitelist}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="需要主动按下 F 交互的内容，请配合黑名单使用"
+                                  Text="{markup:Localize Key=trigger.autoPick.whitelistDescription}"
                                   TextWrapping="Wrap" />
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -169,7 +170,7 @@
                             IsChecked="{Binding Config.AutoPickConfig.WhiteListEnabled, Mode=TwoWay}" />
                         <ui:Button
                             Command="{Binding EditWhitelistCommand}"
-                            Content="前往设置" />
+                            Content="{markup:Localize Key=common.goToSettings}" />
                     </StackPanel>
                 </Grid>
                 <Grid Margin="16">
@@ -184,12 +185,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义拾取按键"
+                                  Text="{markup:Localize Key=trigger.autoPick.customKey}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认为 F，自带了 E 按键，需要改成其他键的请阅读文档"
+                                  Text="{markup:Localize Key=trigger.autoPick.customKeyDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -220,12 +221,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动剧情"
+                                  Text="{markup:Localize Key=trigger.autoSkip.title}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速跳过剧情文本、自动选择选项、自动提交物品等"
+                                  Text="{markup:Localize Key=trigger.autoSkip.description}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -247,12 +248,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用后台模式（会只用交互键进行剧情）"
+                                  Text="{markup:Localize Key=trigger.autoSkip.backgroundMode}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏请不要最小化，不在对话中的时候鼠标会自动吸附回游戏中"
+                                  Text="{markup:Localize Key=trigger.autoSkip.backgroundModeDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -298,12 +299,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速跳过对话文本"
+                                  Text="{markup:Localize Key=trigger.autoSkip.quickSkip}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你要听完整的主线语音的话，可以关闭此功能"
+                                  Text="{markup:Localize Key=trigger.autoSkip.quickSkipDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -323,12 +324,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择选项优先级"
+                                  Text="{markup:Localize Key=trigger.autoSkip.optionPriority}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先选择第一个选项、选择最后一个选项、不选择选项"
+                                  Text="{markup:Localize Key=trigger.autoSkip.optionPriorityDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -349,12 +350,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择对话选项前的延迟（毫秒）"
+                                  Text="{markup:Localize Key=trigger.autoSkip.optionDelay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动剧情的情况下，依旧能够看清楚选项"
+                                  Text="{markup:Localize Key=trigger.autoSkip.optionDelayDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -375,12 +376,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动提交物品"
+                                  Text="{markup:Localize Key=trigger.autoSkip.submitGoods}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="对话过程中出现提交物品界面，会自动提交，支持多个物品"
+                                  Text="{markup:Localize Key=trigger.autoSkip.submitGoodsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -400,12 +401,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动关闭弹出页"
+                                  Text="{markup:Localize Key=trigger.autoSkip.closePopup}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="关闭对话过程中出现的弹出页面，可能会误关地图、相机"
+                                  Text="{markup:Localize Key=trigger.autoSkip.closePopupDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -425,7 +426,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="凯瑟琳 - 自动领取『每日委托』奖励"
+                                  Text="{markup:Localize Key=trigger.autoSkip.dailyRewards}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -451,12 +452,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="凯瑟琳 - 自动重新派遣"
+                                  Text="{markup:Localize Key=trigger.autoSkip.reExplore}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动领取已完成探索的奖励，并重新派遣"
+                                  Text="{markup:Localize Key=trigger.autoSkip.reExploreDescription}"
                                   TextWrapping="Wrap" />
                     <!--<ui:Button
                         Grid.Row="0"
@@ -493,12 +494,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动邀约"
+                                  Text="{markup:Localize Key=trigger.autoHangout.title}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动剧情开启的情况下此功能才会生效，自动选择邀约选项"
+                                  Text="{markup:Localize Key=trigger.autoHangout.description}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -520,12 +521,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="存在跳过按钮时自动点击"
+                                  Text="{markup:Localize Key=trigger.autoHangout.skipButton}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="邀约过程中左上角存在跳过按钮时候，自动点击跳过"
+                                  Text="{markup:Localize Key=trigger.autoHangout.skipButtonDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"

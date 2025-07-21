@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -31,6 +31,7 @@ using StackPanel = Wpf.Ui.Controls.StackPanel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
 using System.Collections.Specialized;
 
@@ -46,15 +47,15 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
     [
-        new("é¢†å–é‚®ä»¶"),
-        new("åˆæˆæ ‘è„‚"),
-        // new ("æ¯æ—¥å§”æ‰˜"),
-        new("è‡ªåŠ¨ç§˜å¢ƒ"),
-        // new ("è‡ªåŠ¨é”»é€ "),
-        // new ("è‡ªåŠ¨åˆ·åœ°è„‰èŠ±"),
-        new("é¢†å–æ¯æ—¥å¥–åŠ±"),
-        new ("é¢†å–å°˜æ­Œå£¶å¥–åŠ±"),
-        // new ("è‡ªåŠ¨ä¸ƒåœ£å¬å”¤"),
+        new("ÁìÈ¡ÓÊ¼ş"),
+        new("ºÏ³ÉÊ÷Ö¬"),
+        // new ("Ã¿ÈÕÎ¯ÍĞ"),
+        new("×Ô¶¯ÃØ¾³"),
+        // new ("×Ô¶¯¶ÍÔì"),
+        // new ("×Ô¶¯Ë¢µØÂö»¨"),
+        new("ÁìÈ¡Ã¿ÈÕ½±Àø"),
+        new ("ÁìÈ¡³¾¸èºø½±Àø"),
+        // new ("×Ô¶¯ÆßÊ¥ÕÙ»½"),
     ];
 
 
@@ -68,7 +69,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
-    // å…¶ä»–å±æ€§å’Œæ–¹æ³•...
+    // ÆäËûÊôĞÔºÍ·½·¨...
     [ObservableProperty] private string _inputScriptGroupName = string.Empty;
 
     [ObservableProperty]
@@ -80,11 +81,11 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private ObservableCollection<ScriptGroup> _scriptGroupsdefault =
         new ObservableCollection<ScriptGroup>()
         {
-            new() { Name = "é¢†å–é‚®ä»¶" },
-            new() { Name = "åˆæˆæ ‘è„‚" },
-            new() { Name = "è‡ªåŠ¨ç§˜å¢ƒ" },
-            new() { Name = "é¢†å–æ¯æ—¥å¥–åŠ±" },
-            new() {Name = "é¢†å–å°˜æ­Œå£¶å¥–åŠ±" },
+            new() { Name = "ÁìÈ¡ÓÊ¼ş" },
+            new() { Name = "ºÏ³ÉÊ÷Ö¬" },
+            new() { Name = "×Ô¶¯ÃØ¾³" },
+            new() { Name = "ÁìÈ¡Ã¿ÈÕ½±Àø" },
+            new() {Name = "ÁìÈ¡³¾¸èºø½±Àø" },
         };
 
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
@@ -130,7 +131,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 }
                 catch (Exception e)
                 {
-                    _logger.LogInformation(e, "è¯»å–é…ç½®ç»„é…ç½®æ—¶å¤±è´¥");
+                    _logger.LogInformation(e, "¶ÁÈ¡ÅäÖÃ×éÅäÖÃÊ±Ê§°Ü");
                 }
             }
 
@@ -138,7 +139,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         catch (Exception e)
         {
-            _logger.LogInformation(e, "è¯»å–é…ç½®ç»„é…ç½®æ—¶å¤±è´¥");
+            _logger.LogInformation(e, "¶ÁÈ¡ÅäÖÃ×éÅäÖÃÊ±Ê§°Ü");
         }
     }
 
@@ -185,7 +186,8 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     if (pickTaskCount == 1)
                     {
-                        Toast.Success("ä¸€æ¡é¾™ä»»åŠ¡æ·»åŠ æˆåŠŸ");
+                        var localizationService = App.GetService<ILocalizationService>();
+                        Toast.Success(localizationService.GetString("toast.dragonTaskAddSuccess"));
                     }
                 }
                 else
@@ -193,7 +195,8 @@ public partial class OneDragonFlowViewModel : ViewModel
                     TaskList.Add(taskItem);
                     if (pickTaskCount == 1)
                     {
-                        Toast.Success("é…ç½®ç»„æ·»åŠ æˆåŠŸ");
+                        var localizationService = App.GetService<ILocalizationService>();
+                        Toast.Success(localizationService.GetString("toast.configGroupAddSuccess"));
                     }
                 }
             }
@@ -201,60 +204,64 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 if (pickTaskCount == 1)
                 {
-                    Toast.Warning("ä»»åŠ¡æˆ–é…ç½®ç»„å·²å­˜åœ¨");
+                    var localizationService = App.GetService<ILocalizationService>();
+                    Toast.Warning(localizationService.GetString("toast.taskAlreadyExists"));
                 }
             } 
         }
         if (pickTaskCount > 1)
         {
-                Toast.Success(pickTaskCount + " ä¸ªä»»åŠ¡æ·»åŠ æˆåŠŸ");  
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Success(localizationService.GetString("toast.tasksAddSuccess", pickTaskCount));  
         }
     }
 
     public async Task<string?> OnStartMultiScriptGroupAsync()
     {
+        var localizationService = App.GetService<ILocalizationService>();
+        
         var stackPanel = new StackPanel();
         var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
-        CheckBox selectedCheckBox = null; // ç”¨äºä¿å­˜å½“å‰é€‰ä¸­çš„ CheckBox
+        CheckBox selectedCheckBox = null; // ÓÃÓÚ±£´æµ±Ç°Ñ¡ÖĞµÄ CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
             if (TaskList.Any(taskName => scriptGroup.Name == taskName.Name))
             {
-                continue; // åªæœ‰å½“æ–‡ä»¶åå®Œå…¨ç›¸åŒæ—¶æ‰è·³è¿‡æ˜¾ç¤º
+                continue; // Ö»ÓĞµ±ÎÄ¼şÃûÍêÈ«ÏàÍ¬Ê±²ÅÌø¹ıÏÔÊ¾
             }
             var checkBox = new CheckBox
             {
                 Content = scriptGroup.Name,
                 Tag = scriptGroup,
-                IsChecked = false // åˆå§‹çŠ¶æ€ä¸‹éƒ½æœªé€‰ä¸­
+                IsChecked = false // ³õÊ¼×´Ì¬ÏÂ¶¼Î´Ñ¡ÖĞ
             };
             checkBoxes[scriptGroup] = checkBox;
             stackPanel.Children.Add(checkBox);
         }
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-        Title = "é€‰æ‹©å¢åŠ çš„é…ç½®ç»„ï¼ˆå¯å¤šé€‰ï¼‰",
+        Title = "Ñ¡ÔñÔö¼ÓµÄÅäÖÃ×é£¨¿É¶àÑ¡£©",
         Content = new ScrollViewer
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         },
-        CloseButtonText = "å…³é—­",
-        PrimaryButtonText = "ç¡®è®¤",
+        CloseButtonText = localizationService.GetString("common.close"),
+        PrimaryButtonText = localizationService.GetString("common.ok"),
         Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
         WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        SizeToContent = SizeToContent.Width , // ç¡®ä¿å¼¹çª—æ ¹æ®å†…å®¹è‡ªåŠ¨è°ƒæ•´å¤§å°
+        SizeToContent = SizeToContent.Width , // È·±£µ¯´°¸ù¾İÄÚÈİ×Ô¶¯µ÷Õû´óĞ¡
         MaxHeight = 600,
         };
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
-            List<string> selectedItems = new List<string>(); // ç”¨äºå­˜å‚¨æ‰€æœ‰é€‰ä¸­çš„é¡¹
+            List<string> selectedItems = new List<string>(); // ÓÃÓÚ´æ´¢ËùÓĞÑ¡ÖĞµÄÏî
             foreach (var checkBox in checkBoxes.Values)
             {
                 if (checkBox.IsChecked == true)
                 {
-                    // ç¡®ä¿ Tag æ˜¯ ScriptGroup ç±»å‹ï¼Œå¹¶è¿”å›å…¶ Name å±æ€§
+                    // È·±£ Tag ÊÇ ScriptGroup ÀàĞÍ£¬²¢·µ»ØÆä Name ÊôĞÔ
                     var scriptGroup = checkBox.Tag as ScriptGroup;
                     if (scriptGroup != null)
                     { 
@@ -262,17 +269,19 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     else
                     {
-                        Toast.Error("é…ç½®ç»„åŠ è½½å¤±è´¥");
+                        Toast.Error(localizationService.GetString("toast.configGroupLoadFailed"));
                     }
                 }
             }
-            return string.Join(",", selectedItems); // è¿”å›æ‰€æœ‰é€‰ä¸­çš„é¡¹
+            return string.Join(",", selectedItems); // ·µ»ØËùÓĞÑ¡ÖĞµÄÏî
         }
         return null;
     }
 
     public async Task<string?> OnPotBuyItemAsync()
     {
+        var localizationService = App.GetService<ILocalizationService>();
+        
         var stackPanel = new StackPanel
         {
             Orientation = Orientation.Vertical,
@@ -284,22 +293,22 @@ public partial class OneDragonFlowViewModel : ViewModel
         
         if (SelectedConfig.SecretTreasureObjects == null || SelectedConfig.SecretTreasureObjects.Count == 0)
         {
-            Toast.Warning("æœªé…ç½®æ´å¤©ç™¾å®è´­ä¹°é…ç½®ï¼Œè¯·å…ˆè®¾ç½®");
-            SelectedConfig.SecretTreasureObjects.Add("æ¯å¤©é‡å¤");
+            Toast.Warning(localizationService.GetString("toast.noSecretTreasureConfig"));
+            SelectedConfig.SecretTreasureObjects.Add("Ã¿ÌìÖØ¸´");
         }
         var infoTextBlock = new TextBlock
         {
-            Text = "æ—¥æœŸä¸å½±å“é¢†å–å¥½æ„Ÿå’Œé’±å¸",
+            Text = "ÈÕÆÚ²»Ó°ÏìÁìÈ¡ºÃ¸ĞºÍÇ®±Ò",
             HorizontalAlignment = HorizontalAlignment.Center,
             FontSize = 12,
             Margin = new Thickness(0, 0, 0, 10)
         };
 
         stackPanel.Children.Add(infoTextBlock);
-        // æ·»åŠ ä¸‹æ‹‰é€‰æ‹©æ¡†
+        // Ìí¼ÓÏÂÀ­Ñ¡Ôñ¿ò
         var dayComboBox = new ComboBox
         {
-            ItemsSource = new List<string> { "æ˜ŸæœŸä¸€", "æ˜ŸæœŸäºŒ", "æ˜ŸæœŸä¸‰", "æ˜ŸæœŸå››", "æ˜ŸæœŸäº”", "æ˜ŸæœŸå…­", "æ˜ŸæœŸæ—¥", "æ¯å¤©é‡å¤" },
+            ItemsSource = new List<string> { "ĞÇÆÚÒ»", "ĞÇÆÚ¶ş", "ĞÇÆÚÈı", "ĞÇÆÚËÄ", "ĞÇÆÚÎå", "ĞÇÆÚÁù", "ĞÇÆÚÈÕ", "Ã¿ÌìÖØ¸´" },
             SelectedItem = SelectedConfig.SecretTreasureObjects.First(),
             FontSize = 12,
             Margin = new Thickness(0, 0, 0, 10)
@@ -321,17 +330,17 @@ public partial class OneDragonFlowViewModel : ViewModel
         
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-            Title = "æ´å¤©ç™¾å®è´­ä¹°é€‰æ‹©",
+            Title = "¶´Ìì°Ù±¦¹ºÂòÑ¡Ôñ",
             Content = new ScrollViewer
             {
                 Content = stackPanel,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             },
-            CloseButtonText = "å…³é—­",
-            PrimaryButtonText = "ç¡®è®¤",
+            CloseButtonText = localizationService.GetString("common.close"),
+            PrimaryButtonText = localizationService.GetString("common.ok"),
             Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            SizeToContent = SizeToContent.Width, // ç¡®ä¿å¼¹çª—æ ¹æ®å†…å®¹è‡ªåŠ¨è°ƒæ•´å¤§å°
+            SizeToContent = SizeToContent.Width, // È·±£µ¯´°¸ù¾İÄÚÈİ×Ô¶¯µ÷Õû´óĞ¡
             MinWidth = 200,
             MaxHeight = 500,
         };
@@ -341,7 +350,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             SelectedConfig.SecretTreasureObjects.Clear();
             SelectedConfig.SecretTreasureObjects.Add(dayComboBox.SelectedItem.ToString());
-            List<string> selectedItems = new List<string>(); // ç”¨äºå­˜å‚¨æ‰€æœ‰é€‰ä¸­çš„é¡¹
+            List<string> selectedItems = new List<string>(); // ÓÃÓÚ´æ´¢ËùÓĞÑ¡ÖĞµÄÏî
             foreach (var checkBox in checkBoxes.Values)
             {
                 if (checkBox.IsChecked == true)
@@ -354,17 +363,17 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     else
                     {
-                        Toast.Error("åŠ è½½å¤±è´¥");
+                        Toast.Error(localizationService.GetString("toast.loadFailed"));
                     }
                 }
             }
             if (selectedItems.Count > 0)
             {
-                return string.Join(",", selectedItems); // è¿”å›æ‰€æœ‰é€‰ä¸­çš„é¡¹
+                return string.Join(",", selectedItems); // ·µ»ØËùÓĞÑ¡ÖĞµÄÏî
             }
             else
             {
-                Toast.Warning("é€‰æ‹©ä¸ºç©ºï¼Œè¯·é€‰æ‹©è´­ä¹°çš„å®ç‰©");
+                Toast.Warning(localizationService.GetString("toast.selectTreasureWarning"));
             }
         }
         return null;
@@ -372,25 +381,25 @@ public partial class OneDragonFlowViewModel : ViewModel
     
     [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
     /// <summary>
-    /// å½“å‰ç”Ÿæ•ˆé…ç½®
+    /// µ±Ç°ÉúĞ§ÅäÖÃ
     /// </summary>
     [ObservableProperty] private OneDragonFlowConfig? _selectedConfig;
 
-    [ObservableProperty] private List<string> _craftingBenchCountry = ["æ«ä¸¹", "ç¨»å¦»", "ç’ƒæœˆ", "è’™å¾·"];
+    [ObservableProperty] private List<string> _craftingBenchCountry = ["·ãµ¤", "µ¾ÆŞ", "Á§ÔÂ", "ÃÉµÂ"];
 
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["æ«ä¸¹", "ç¨»å¦»", "ç’ƒæœˆ", "è’™å¾·"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = ["·ãµ¤", "µ¾ÆŞ", "Á§ÔÂ", "ÃÉµÂ"];
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
-    [ObservableProperty] private List<string> _completionActionList = ["æ— ", "å…³é—­æ¸¸æˆ", "å…³é—­æ¸¸æˆå’Œè½¯ä»¶", "å…³æœº"];
+    [ObservableProperty] private List<string> _completionActionList = ["ÎŞ", "¹Ø±ÕÓÎÏ·", "¹Ø±ÕÓÎÏ·ºÍÈí¼ş", "¹Ø»ú"];
 
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
     
     [ObservableProperty] private List<string> _sundaySelectedValueList = ["","1", "2", "3"];
 
-    [ObservableProperty] private List<string> _secretTreasureObjectList = ["å¸ƒåŒ¹","é¡»è‡¾æ ‘è„‚","å¤§è‹±é›„çš„ç»éªŒ","æµæµªè€…çš„ç»éªŒ","ç²¾é”»ç”¨é­”çŸ¿","æ‘©æ‹‰","ç¥åœ£ç²¾å","ç¥åœ£æ²¹è†"];
+    [ObservableProperty] private List<string> _secretTreasureObjectList = ["²¼Æ¥","Ğëô§Ê÷Ö¬","´óÓ¢ĞÛµÄ¾­Ñé","Á÷ÀËÕßµÄ¾­Ñé","¾«¶ÍÓÃÄ§¿ó","Ä¦À­","×£Ê¥¾«»ª","×£Ê¥ÓÍ¸à"];
     
-    [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["åœ°å›¾ä¼ é€", "å°˜æ­Œå£¶é“å…·"];
+    [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["µØÍ¼´«ËÍ", "³¾¸èºøµÀ¾ß"];
     
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
@@ -447,7 +456,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private void InitConfigList()
     {
         Directory.CreateDirectory(OneDragonFlowConfigFolder);
-        // è¯»å–æ–‡ä»¶å¤¹å†…æ‰€æœ‰jsoné…ç½®ï¼ŒæŒ‰åˆ›å»ºæ—¶é—´æ­£åº
+        // ¶ÁÈ¡ÎÄ¼ş¼ĞÄÚËùÓĞjsonÅäÖÃ£¬°´´´½¨Ê±¼äÕıĞò
         var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
         var configs = new List<OneDragonFlowConfig>();
 
@@ -476,7 +485,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 selected = new OneDragonFlowConfig
                 {
-                    Name = "é»˜è®¤é…ç½®"
+                    Name = "Ä¬ÈÏÅäÖÃ"
                 };
                 configs.Add(selected);
             }
@@ -489,11 +498,11 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig = selected;
-        LoadDisplayTaskListFromConfig(); // åŠ è½½ DisplayTaskList ä»é…ç½®æ–‡ä»¶
+        LoadDisplayTaskListFromConfig(); // ¼ÓÔØ DisplayTaskList ´ÓÅäÖÃÎÄ¼ş
         SetSomeSelectedConfig(SelectedConfig);
     }
 
-    // æ–°å¢æ–¹æ³•ï¼šä»é…ç½®æ–‡ä»¶åŠ è½½ DisplayTaskList
+    // ĞÂÔö·½·¨£º´ÓÅäÖÃÎÄ¼ş¼ÓÔØ DisplayTaskList
 
     public void LoadDisplayTaskListFromConfig()
     {
@@ -510,7 +519,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 IsEnabled = kvp.Value
             };
             TaskList.Add(taskItem);
-            // _logger.LogInformation($"åŠ è½½é…ç½®: {kvp.Key} {kvp.Value}");
+            // _logger.LogInformation($"¼ÓÔØÅäÖÃ: {kvp.Key} {kvp.Value}");
         }
     }
 
@@ -520,7 +529,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         if (SelectedConfig == null || SelectedTask == null ||
             SelectedConfig.TaskEnabledList == null) //|| SelectedConfig.TaskEnabledList == null 
         {
-            Toast.Warning("è¯·å…ˆé€‰æ‹©é…ç½®ç»„å’Œä»»åŠ¡");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("toast.selectConfigAndTask"));
             return;
         }
 
@@ -535,7 +545,8 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 TaskList.Add(taskItem);
                 taskItem = null;
-                Toast.Information("å·²ç»åˆ é™¤");
+                var localizationService = App.GetService<ILocalizationService>();
+                Toast.Information(localizationService.GetString("toast.deleted"));
             }
         }
     }
@@ -583,7 +594,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     private void SaveActionConfig()
     {
         SaveConfig();
-        Toast.Information("æ’åºå·²ä¿å­˜");
+        var localizationService = App.GetService<ILocalizationService>();
+        Toast.Information(localizationService.GetString("toast.sortingSaved"));
     }
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
@@ -605,7 +617,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        await Task.Delay(100); //ç­‰ä¼šåŠ è½½å®Œå†ä¿å­˜
+        await Task.Delay(100); //µÈ»á¼ÓÔØÍêÔÙ±£´æ
         SaveConfig();
     }
 
@@ -631,8 +643,9 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "ä¿å­˜é…ç½®æ—¶å¤±è´¥");
-            Toast.Error("ä¿å­˜é…ç½®æ—¶å¤±è´¥");
+            _logger.LogDebug(e, "±£´æÅäÖÃÊ±Ê§°Ü");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Error(localizationService.GetString("toast.saveConfigFailed"));
         }
     }
     
@@ -641,7 +654,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void OnLoaded()
     {
-        // ç»„ä»¶é¦–æ¬¡åŠ è½½æ—¶è¿è¡Œä¸€æ¬¡ã€‚
+        // ×é¼şÊ×´Î¼ÓÔØÊ±ÔËĞĞÒ»´Î¡£
         if (!_autoRun)
         {
             return;
@@ -651,26 +664,27 @@ public partial class OneDragonFlowViewModel : ViewModel
         var args = Environment.GetCommandLineArgs();
         if (args.Length > 1 && args[1].Contains("startOneDragon"))
         {
-            // é€šè¿‡å‘½ä»¤è¡Œå‚æ•°å¯åŠ¨ä¸€æ¡é¾™ã€‚
+            // Í¨¹ıÃüÁîĞĞ²ÎÊıÆô¶¯Ò»ÌõÁú¡£
             if (args.Length > 2)
             {
-                // ä»å‘½ä»¤è¡Œå‚æ•°ä¸­æå–ä¸€æ¡é¾™é…ç½®åç§°ã€‚
-                _logger.LogInformation($"å‚æ•°æŒ‡å®šçš„ä¸€æ¡é¾™é…ç½®ï¼š{args[2]}");
+                // ´ÓÃüÁîĞĞ²ÎÊıÖĞÌáÈ¡Ò»ÌõÁúÅäÖÃÃû³Æ¡£
+                _logger.LogInformation($"²ÎÊıÖ¸¶¨µÄÒ»ÌõÁúÅäÖÃ£º{args[2]}");
                 var argsOneDragonConfig = ConfigList.FirstOrDefault(x => x.Name == args[2], null);
                 if (argsOneDragonConfig != null)
                 {
-                    // è®¾å®šé…ç½®ï¼Œé…ç½®ä¸‹æ‹‰æ¡†ä¼šé€‰å®šã€‚
+                    // Éè¶¨ÅäÖÃ£¬ÅäÖÃÏÂÀ­¿ò»áÑ¡¶¨¡£
                     SelectedConfig = argsOneDragonConfig;
-                    // è°ƒç”¨é€‰å®šæ›´æ–°å‡½æ•°ã€‚
+                    // µ÷ÓÃÑ¡¶¨¸üĞÂº¯Êı¡£
                     OnConfigDropDownChanged();
                 }
                 else
                 {
-                    _logger.LogWarning("æœªæ‰¾åˆ°ï¼Œè¯·æ£€æŸ¥ã€‚");
+                    _logger.LogWarning("Î´ÕÒµ½£¬Çë¼ì²é¡£");
                 }
             }
-            // å¼‚æ­¥æ‰§è¡Œä¸€æ¡é¾™
-            Toast.Information($"å‘½ä»¤è¡Œä¸€æ¡é¾™ã€Œ{SelectedConfig.Name}ã€ã€‚");
+            // Òì²½Ö´ĞĞÒ»ÌõÁú
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Information(localizationService.GetString("toast.commandLineDragon", SelectedConfig.Name));
             OnOneKeyExecute();
         }
     }
@@ -678,8 +692,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        _logger.LogInformation($"å¯ç”¨ä¸€æ¡é¾™é…ç½®ï¼š{SelectedConfig.Name}");
-        var taskListCopy = new List<OneDragonTaskItem>(TaskList);//é¿å…æ‰§è¡Œè¿‡ç¨‹ä¸­ä¿®æ”¹TaskList
+        _logger.LogInformation($"ÆôÓÃÒ»ÌõÁúÅäÖÃ£º{SelectedConfig.Name}");
+        var taskListCopy = new List<OneDragonTaskItem>(TaskList);//±ÜÃâÖ´ĞĞ¹ı³ÌÖĞĞŞ¸ÄTaskList
         foreach (var task in taskListCopy)
         {
             task.InitAction(SelectedConfig);
@@ -688,7 +702,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         int finishOneTaskcount = 1;
         int finishTaskcount = 1;
         int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
-        _logger.LogInformation($"å¯ç”¨ä»»åŠ¡æ€»æ•°é‡: {enabledTaskCountall}");
+        _logger.LogInformation($"ÆôÓÃÈÎÎñ×ÜÊıÁ¿: {enabledTaskCountall}");
 
         await ScriptService.StartGameTask();
 
@@ -705,33 +719,34 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
         {
-            Toast.Warning("è¯·å…ˆé€‰æ‹©ä»»åŠ¡");
-            _logger.LogInformation("æ²¡æœ‰é…ç½®,é€€å‡ºæ‰§è¡Œ!");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("toast.selectTaskFirst"));
+            _logger.LogInformation("Ã»ÓĞÅäÖÃ,ÍË³öÖ´ĞĞ!");
             return;
         }
 
         int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
-        _logger.LogInformation($"å¯ç”¨ä¸€æ¡é¾™ä»»åŠ¡çš„æ•°é‡: {enabledoneTaskCount}");
+        _logger.LogInformation($"ÆôÓÃÒ»ÌõÁúÈÎÎñµÄÊıÁ¿: {enabledoneTaskCount}");
 
         await ScriptService.StartGameTask();
         SaveConfig();
         int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
             t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
-        _logger.LogInformation($"å¯ç”¨é…ç½®ç»„ä»»åŠ¡çš„æ•°é‡: {enabledTaskCount}");
+        _logger.LogInformation($"ÆôÓÃÅäÖÃ×éÈÎÎñµÄÊıÁ¿: {enabledTaskCount}");
 
         if (enabledoneTaskCount <= 0)
         {
-            _logger.LogInformation("æ²¡æœ‰ä¸€æ¡é¾™ä»»åŠ¡!");
+            _logger.LogInformation("Ã»ÓĞÒ»ÌõÁúÈÎÎñ!");
         }
 
-        Notify.Event(NotificationEvent.DragonStart).Success("ä¸€æ¡é¾™å¯åŠ¨");
+        Notify.Event(NotificationEvent.DragonStart).Success("notification.message.dragonStart");
         foreach (var task in taskListCopy)
         {
             if (task is { IsEnabled: true, Action: not null })
             {
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
-                    _logger.LogInformation($"ä¸€æ¡é¾™ä»»åŠ¡æ‰§è¡Œ: {finishOneTaskcount++}/{enabledoneTaskCount}");
+                    _logger.LogInformation($"Ò»ÌõÁúÈÎÎñÖ´ĞĞ: {finishOneTaskcount++}/{enabledoneTaskCount}");
                     await new TaskRunner().RunThreadAsync(async () =>
                     {
                         await task.Action();
@@ -744,15 +759,15 @@ public partial class OneDragonFlowViewModel : ViewModel
                     {
                         if (enabledTaskCount <= 0)
                         {
-                            _logger.LogInformation("æ²¡æœ‰é…ç½®ç»„ä»»åŠ¡,é€€å‡ºæ‰§è¡Œ!");
+                            _logger.LogInformation("Ã»ÓĞÅäÖÃ×éÈÎÎñ,ÍË³öÖ´ĞĞ!");
                             return;
                         }
 
-                        Notify.Event(NotificationEvent.DragonStart).Success("é…ç½®ç»„ä»»åŠ¡å¯åŠ¨");
+                        Notify.Event(NotificationEvent.DragonStart).Success("notification.message.configGroupStart");
 
                         if (SelectedConfig.TaskEnabledList[task.Name])
                         {
-                            _logger.LogInformation($"é…ç½®ç»„ä»»åŠ¡æ‰§è¡Œ: {finishTaskcount++}/{enabledTaskCount}");
+                            _logger.LogInformation($"ÅäÖÃ×éÈÎÎñÖ´ĞĞ: {finishTaskcount++}/{enabledTaskCount}");
                             await Task.Delay(500);
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
@@ -763,41 +778,42 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     catch (Exception e)
                     {
-                        _logger.LogDebug(e, "æ‰§è¡Œé…ç½®ç»„ä»»åŠ¡æ—¶å¤±è´¥");
-                        Toast.Error("æ‰§è¡Œé…ç½®ç»„ä»»åŠ¡æ—¶å¤±è´¥");
+                        _logger.LogDebug(e, "Ö´ĞĞÅäÖÃ×éÈÎÎñÊ±Ê§°Ü");
+                        var localizationService = App.GetService<ILocalizationService>();
+                        Toast.Error(localizationService.GetString("toast.executeConfigFailed"));
                     }
                 }
-                // å¦‚æœä»»åŠ¡å·²ç»è¢«å–æ¶ˆï¼Œä¸­æ–­æ‰€æœ‰ä»»åŠ¡
+                // Èç¹ûÈÎÎñÒÑ¾­±»È¡Ïû£¬ÖĞ¶ÏËùÓĞÈÎÎñ
                 if (CancellationContext.Instance.Cts.IsCancellationRequested)
                 {
-                    _logger.LogInformation("ä»»åŠ¡è¢«å–æ¶ˆï¼Œé€€å‡ºæ‰§è¡Œ");
-                    Notify.Event(NotificationEvent.DragonEnd).Success("ä¸€æ¡é¾™å’Œé…ç½®ç»„ä»»åŠ¡ç»“æŸ");
-                    return; // åç»­çš„æ£€æŸ¥ä»»åŠ¡ä¹Ÿä¸æ‰§è¡Œ
+                    _logger.LogInformation("ÈÎÎñ±»È¡Ïû£¬ÍË³öÖ´ĞĞ");
+                    Notify.Event(NotificationEvent.DragonEnd).Success("notification.message.dragonEnd");
+                    return; // ºóĞøµÄ¼ì²éÈÎÎñÒ²²»Ö´ĞĞ
                 }
             }
         }
 
-        // æ£€æŸ¥å’Œæœ€ç»ˆç»“æŸçš„ä»»åŠ¡
+        // ¼ì²éºÍ×îÖÕ½áÊøµÄÈÎÎñ
         await new TaskRunner().RunThreadAsync(async () =>
         {
             await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
             await Task.Delay(500);
-            Notify.Event(NotificationEvent.DragonEnd).Success("ä¸€æ¡é¾™å’Œé…ç½®ç»„ä»»åŠ¡ç»“æŸ");
-            _logger.LogInformation("ä¸€æ¡é¾™å’Œé…ç½®ç»„ä»»åŠ¡ç»“æŸ");
+            Notify.Event(NotificationEvent.DragonEnd).Success("notification.message.dragonEnd");
+            _logger.LogInformation("Ò»ÌõÁúºÍÅäÖÃ×éÈÎÎñ½áÊø");
 
-            // æ‰§è¡Œå®Œæˆåæ“ä½œ
+            // Ö´ĞĞÍê³Éºó²Ù×÷
             if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
             {
                 switch (SelectedConfig.CompletionAction)
                 {
-                    case "å…³é—­æ¸¸æˆ":
+                    case "¹Ø±ÕÓÎÏ·":
                         SystemControl.CloseGame();
                         break;
-                    case "å…³é—­æ¸¸æˆå’Œè½¯ä»¶":
+                    case "¹Ø±ÕÓÎÏ·ºÍÈí¼ş":
                         SystemControl.CloseGame();
                         Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
                         break;
-                    case "å…³æœº":
+                    case "¹Ø»ú":
                         SystemControl.CloseGame();
                         SystemControl.Shutdown();
                         break;
@@ -817,14 +833,15 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void OnAddConfig()
     {
-        // æ·»åŠ é…ç½®
-        var str = PromptDialog.Prompt("è¯·è¾“å…¥ä¸€æ¡é¾™é…ç½®åç§°", "æ–°å¢ä¸€æ¡é¾™é…ç½®");
+        // Ìí¼ÓÅäÖÃ
+        var str = PromptDialog.Prompt("ÇëÊäÈëÒ»ÌõÁúÅäÖÃÃû³Æ", "ĞÂÔöÒ»ÌõÁúÅäÖÃ");
         if (!string.IsNullOrEmpty(str))
         {
-            // æ£€æŸ¥æ˜¯å¦å·²å­˜åœ¨
+            // ¼ì²éÊÇ·ñÒÑ´æÔÚ
             if (ConfigList.Any(x => x.Name == str))
             {
-                Toast.Warning($"ä¸€æ¡é¾™é…ç½® {str} å·²ç»å­˜åœ¨ï¼Œè¯·å‹¿é‡å¤æ·»åŠ ");
+                var localizationService = App.GetService<ILocalizationService>();
+                Toast.Warning(localizationService.GetString("toast.configAlreadyExists", str));
             }
             else
             {

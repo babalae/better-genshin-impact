@@ -115,7 +115,7 @@ public class AutoDomainTask : ISoloTask
         _ct = ct;
 
         Init();
-        Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
+        Notify.Event(NotificationEvent.DomainStart).Success("notification.message.domainStart");
 
         // 复活重试
         for (var i = 0; i < _config.ReviveRetryCount; i++)
@@ -153,7 +153,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(2000, ct);
 
         await ArtifactSalvage();
-        Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
+        Notify.Event(NotificationEvent.DomainEnd).Success("notification.message.domainEnd");
     }
 
     private async Task DoDomain()
@@ -209,7 +209,7 @@ public class AutoDomainTask : ISoloTask
                 break;
             }
 
-            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
+            Notify.Event(NotificationEvent.DomainReward).Success("notification.message.domainReward");
         }
     }
 

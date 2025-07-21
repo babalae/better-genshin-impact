@@ -78,6 +78,11 @@ public partial class App : Application
 
                 services.AddLocalization();
 
+                // Localization Services
+                services.AddSingleton<ILanguageManager, LanguageManager>();
+                services.AddSingleton<ILocalizationService, LocalizationService>();
+                services.AddSingleton<LocalizationViewModel>();
+
                 services.AddNavigationViewPageProvider();
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
@@ -126,6 +131,7 @@ public partial class App : Application
 
                 // My Services
                 services.AddSingleton<TaskTriggerDispatcher>();
+                services.AddSingleton<NotificationMessageService>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
@@ -287,10 +293,32 @@ public partial class App : Application
         }
         catch
         {
-            // Fallback.
+            // Fallback with safe localization service usage
+            var localizationService = GetService<ILocalizationService>();
+            var errorMessage = "Program Exception";
+            
+            try
+            {
+                // Try to get localized error message, but handle cases where service isn't available
+                if (localizationService != null)
+                {
+                    errorMessage = localizationService.GetString("dialog.programException");
+                    // If the key returns the "not found" format, use English fallback
+                    if (errorMessage.StartsWith("[KEY_NOT_FOUND:") || errorMessage.StartsWith("[ERROR:"))
+                    {
+                        errorMessage = "Program Exception";
+                    }
+                }
+            }
+            catch
+            {
+                // If localization service fails, use English fallback
+                errorMessage = "Program Exception";
+            }
+            
             System.Windows.Forms.MessageBox.Show(
                 $"""
-                 程序异常：{e.Source}
+                 {errorMessage}：{e.Source}
                  --
                  {e.StackTrace}
                  --

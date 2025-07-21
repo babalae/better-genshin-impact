@@ -11,6 +11,8 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -135,9 +137,11 @@ public partial class ScriptRepoWindow
     [RelayCommand]
     private async Task UpdateRepo()
     {
+        var localizationService = App.GetService<ILocalizationService>();
+        
         if (SelectedRepoChannel is null)
         {
-            Toast.Warning("请选择一个脚本仓库更新渠道。");
+            Toast.Warning(localizationService.GetString("toast.selectRepoChannel"));
             return;
         }
         try
@@ -146,7 +150,7 @@ public partial class ScriptRepoWindow
             string repoUrl = SelectedRepoChannel.Url;
 
             // 显示更新中提示
-            Toast.Information("正在更新脚本仓库，请耐心等待...");
+            Toast.Information(localizationService.GetString("toast.updatingRepo"));
 
             // 设置进度显示
             IsUpdating = true;
@@ -166,11 +170,11 @@ public partial class ScriptRepoWindow
             // 更新结果提示
             if (updated)
             {
-                Toast.Success("脚本仓库更新成功，有新内容");
+                Toast.Success(localizationService.GetString("toast.repoUpdateSuccess"));
             }
             else
             {
-                Toast.Success("脚本仓库已是最新");
+                Toast.Success(localizationService.GetString("toast.repoAlreadyLatest"));
             }
         }
         catch (Exception ex)
@@ -195,16 +199,18 @@ public partial class ScriptRepoWindow
     [RelayCommand]
     private async Task ResetRepo()
     {
+        var localizationService = App.GetService<ILocalizationService>();
+        
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前更新完成后再进行重置操作。");
+            Toast.Warning(localizationService.GetString("toast.waitForUpdateComplete"));
             return;
         }
 
         // 添加确认对话框
         var result = await MessageBox.ShowAsync(
-            "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
-            "确认重置",
+            localizationService.GetString("dialog.confirmResetRepo"),
+            localizationService.GetString("dialog.confirmReset"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
 
@@ -215,16 +221,16 @@ public partial class ScriptRepoWindow
                 if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
                 {
                     DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                    Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
+                    Toast.Success(localizationService.GetString("toast.repoResetSuccess"));
                 }
                 else
                 {
-                    Toast.Information("脚本仓库不存在，无需重置");
+                    Toast.Information(localizationService.GetString("toast.repoNotExist"));
                 }
             }
             catch (Exception ex)
             {
-                Toast.Error($"重置失败: {ex.Message}");
+                Toast.Error(localizationService.GetString("toast.resetFailed", ex.Message));
             }
         }
     }

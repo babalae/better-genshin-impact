@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 namespace BetterGenshinImpact.Service.Notification;
 
 /// <summary>
-///     通知服务类，管理和分发各种通知
+///     Notification service c
 /// </summary>
 public class NotificationService : IHostedService, IDisposable
 {
@@ -28,11 +28,11 @@ public class NotificationService : IHostedService, IDisposable
     private readonly HttpClient _notifyHttpClient;
     private readonly CancellationTokenSource? _webSocketCts;
 
-    // 缓存配置对象引用
+    // Notification couration
     private NotificationConfig? _notificationConfig;
 
     /// <summary>
-    ///     构造函数
+    ///     Constr
     /// </summary>
     public NotificationService(NotifierManager notifierManager)
     {
@@ -47,7 +47,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     释放资源
+    ///     Releasces
     /// </summary>
     public void Dispose()
     {
@@ -58,7 +58,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     服务启动时初始化所有通知器
+    ///     Initialize notifiers wstarts
     /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -68,7 +68,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     服务停止时取消WebSocket连接
+    ///     Cancel WebSocket connecvice stops
     /// </summary>
     public Task StopAsync(CancellationToken cancellationToken)
     {
@@ -77,24 +77,24 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     获取NotificationService单例实例
+    ///     Get NotificationService single
     /// </summary>
     public static NotificationService Instance()
     {
-        if (_instance == null) throw new InvalidOperationException("NotificationService 未初始化");
+        if (_instance == null) throw new InvalidOperationException("notification.error.serviceNotalized");
 
         return _instance;
     }
 
     /// <summary>
-    ///     初始化所有通知器
-    ///     注意：添加新的通知渠道时，需在此处添加相应的初始化方法调用
+    ///     Initialize al
+    ///     Note: When adding new notifiers, add correspon
     /// </summary>
     private void InitializeNotifiers()
     {
         if (_notificationConfig == null) _notificationConfig = TaskContext.Instance().Config.NotificationConfig;
 
-        // 初始化各类通知器
+        // Initialize als
         InitializeWebhookNotifier();
         InitializeWindowsUwpNotifier();
         InitializeFeishuNotifier();
@@ -107,14 +107,14 @@ public class NotificationService : IHostedService, IDisposable
         InitializeTelegramNotifier();
         InitializeXxtuiNotifier();
 
-        // 添加新通知渠道时，在此处添加对应的初始化方法调用
+        // Add initialization for new notifiers hee
     }
 
-    // =================== 各类通知器初始化方法 ===================
-    // 添加新的通知渠道时，参考以下模板创建新的初始化方法
+    // =================== Notifier initialization methods ===========
+    // When adding new notifiers, use these me
 
     /// <summary>
-    ///     初始化Webhook通知器
+    ///     Initialize Webhoifier
     /// </summary>
     private void InitializeWebhookNotifier()
     {
@@ -123,7 +123,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化Windows UWP通知器
+    ///     Initialize Windows U
     /// </summary>
     private void InitializeWindowsUwpNotifier()
     {
@@ -134,7 +134,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化飞书通知器
+    ///     Initialize Fetifier
     /// </summary>
     private void InitializeFeishuNotifier()
     {
@@ -148,7 +148,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化OneBot通知器
+    ///     Initialize OneBfier
     /// </summary>
     private void InitializeOneBotNotifier()
     {
@@ -163,7 +163,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化企业微信通知器
+    ///     Initialize Workr
     /// </summary>
     private void InitializeWorkWeixinNotifier()
     {
@@ -177,7 +177,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化WebSocket通知器
+    ///     Initialize WebSockfier
     /// </summary>
     private void InitializeWebSocketNotifier()
     {
@@ -197,7 +197,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化Bark通知器
+    ///     Initialize Ba
     /// </summary>
     private void InitializeBarkNotifier()
     {
@@ -213,7 +213,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化邮件通知器
+    ///     Initialize E
     /// </summary>
     private void InitializeEmailNotifier()
     {
@@ -232,7 +232,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化钉钉通知器
+    ///     Initialize Dier
     /// </summary>
     private void InitializeDingDingNotifier()
     {
@@ -249,7 +249,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化Telegram通知器
+    ///     Initialize Telegrier
     /// </summary>
     private void InitializeTelegramNotifier()
     {
@@ -265,7 +265,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化信息推送通知器
+    ///     Initialize Xxtuifier
     /// </summary>
     private void InitializeXxtuiNotifier()
     {
@@ -281,7 +281,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     解析信息推送通知渠道配置
+    ///     Parse Xxtui notificats
     /// </summary>
     private static XxtuiChannel[] ParseXxtuiChannels(string channelsStr)
     {
@@ -301,8 +301,8 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     刷新所有通知器
-    ///     配置更改后调用此方法应用新配置
+    ///     Refresh allers
+    ///     Call this method after changes
     /// </summary>
     public void RefreshNotifiers()
     {
@@ -312,7 +312,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     测试指定类型的通知器
+    ///     Test a specific er
     /// </summary>
     public async Task<NotificationTestResult> TestNotifierAsync<T>() where T : INotifier
     {
@@ -321,7 +321,7 @@ public class NotificationService : IHostedService, IDisposable
             var notifier = _notifierManager.GetNotifier<T>();
             if (notifier == null)
             {
-                return NotificationTestResult.Error("通知类型未启用");
+                return NotificationTestResult.Error("notification.eled");
             }
 
             var testData = CreateTestNotificationData();
@@ -334,20 +334,21 @@ public class NotificationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            return NotificationTestResult.Error($"测试通知时发生未知错误: {ex.Message}");
+            return NotificationTestResult.Error("notification.error.unexpectedTestError");
         }
     }
 
     /// <summary>
-    ///     创建测试用的通知数据
+    ///     Create test notif
     /// </summary>
     private static BaseNotificationData CreateTestNotificationData()
     {
+        var messageService = App.GetService<NotificationMessageService>();
         var testData = new BaseNotificationData
         {
             Event = NotificationEvent.Test.Code,
             Result = NotificationEventResult.Success,
-            Message = "这是一条测试通知信息"
+            Message = messageService != null ? messageService.TestMessage : "notification.message.test"
         };
 
         if (TaskContext.Instance().IsInitialized)
@@ -358,7 +359,8 @@ public class NotificationService : IHostedService, IDisposable
             }
             catch (Exception ex)
             {
-                TaskControl.Logger.LogWarning(ex, "获取测试通知截图失败");
+                var errorMessage = messageService != null ? messageService.ScreenshotFailedError : "notification.error.screenshotFailed";
+                TaskControl.Logger.LogWarning(ex, errorMessage);
             }
         }
 
@@ -366,7 +368,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     向所有通知器发送通知（异步方法）
+    ///     Send notification to all n
     /// </summary>
     public async Task NotifyAllNotifiersAsync(BaseNotificationData notificationData)
     {
@@ -381,12 +383,12 @@ public class NotificationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogError(ex, "发送通知时发生错误");
+            TaskControl.Logger.LogError(ex, "notification.errorror");
         }
     }
 
     /// <summary>
-    ///     判断是否应该发送此类型的通知
+    ///     Determine if notific event
     /// </summary>
     private bool ShouldSendNotification(string eventCode)
     {
@@ -397,7 +399,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     如果需要，为通知添加截图
+    ///     Add screenshot toded
     /// </summary>
     private async Task AddScreenshotIfNeededAsync(BaseNotificationData notificationData)
     {
@@ -417,14 +419,14 @@ public class NotificationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogDebug(ex, "补充通知截图失败");
+            TaskControl.Logger.LogDebug(ex, "notification.error.screenshotFailed");
         }
 
         await Task.CompletedTask;
     }
 
     /// <summary>
-    ///     向所有通知器发送通知（非阻塞方法）
+    ///     Send notification to all notifd
     /// </summary>
     public void NotifyAllNotifiers(BaseNotificationData notificationData)
     {
@@ -438,7 +440,7 @@ public class NotificationService : IHostedService, IDisposable
             }
             catch (Exception ex)
             {
-                TaskControl.Logger.LogError(ex, "后台发送通知时发生错误");
+                TaskControl.Logger.LogError(ex, "notification.error.baor");
             }
         });
     }

@@ -10,6 +10,7 @@
              xmlns:oneDragonView="clr-namespace:BetterGenshinImpact.View.Pages.OneDragon"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
              d:DesignHeight="1000"
              d:DesignWidth="800"
@@ -38,10 +39,10 @@
        <DockPanel Grid.Column="0">
            <DockPanel.ContextMenu>
                <ContextMenu>
-                   <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
+                   <MenuItem Command="{Binding AddTaskGroupCommand}" Header="{markup:Localize Key=oneDragon.addConfig}" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                              CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                             Header="删除配置" />
+                             Header="{markup:Localize Key=oneDragon.deleteConfig}" />
            </ContextMenu>
        </DockPanel.ContextMenu>
        <Grid DockPanel.Dock="Top"

@@ -7,6 +7,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
+      xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
       d:DesignHeight="2000"
@@ -20,7 +21,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="软件设置" />
+                      Text="{local:Localize Key=settings.softwareSettings}" />
 
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon LocalLanguage24}">
             <ui:CardControl.Header>
@@ -36,12 +37,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="游戏语言"
+                                  Text="{local:Localize Key=settings.gameLanguage}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Game Language"
+                                  Text="{local:Localize Key=settings.gameLanguageDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -64,6 +65,51 @@
             </ui:CardControl.Header>
         </ui:CardControl>
 
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Translate24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{local:Localize Key=settings.language}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{local:Localize Key=settings.interfaceLanguageDescription}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="200"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding LocalizationViewModel.AvailableLanguages}"
+                              SelectedItem="{Binding LocalizationViewModel.SelectedLanguage, Mode=TwoWay}"
+                              IsEnabled="{Binding LocalizationViewModel.IsLoading, Converter={StaticResource InverseBooleanConverter}}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding NativeName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding LocalizationViewModel.ChangeLanguageCommand}"
+                                                       CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
+                </Grid>
+            </ui:CardControl.Header>
+        </ui:CardControl>
+
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
@@ -81,12 +127,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用遮罩窗口"
+                                  Text="{local:Localize Key=settings.maskWindow}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="重启后生效"
+                                  Text="{local:Localize Key=settings.restartRequired}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -116,16 +162,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示日志窗口"
+                                  Text="{local:Localize Key=settings.showLogWindow}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在遮罩内显示日志窗口，
+                        <Run Text="{local:Localize Key=settings.showLogWindowDescription}" />
                         <Hyperlink Command="{Binding GoToLogFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击打开日志文件夹
+                            <Run Text="{local:Localize Key=settings.showLogWindowDescription}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
@@ -155,12 +201,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示实时任务启用状态"
+                                  Text="{local:Localize Key=settings.showTaskStatus}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在遮罩内显示实时任务启用状态"
+                                  Text="{local:Localize Key=settings.showTaskStatusDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -189,12 +235,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示游戏FPS（实验功能）"
+                                  Text="{local:Localize Key=settings.showGameFps}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改设置后重启生效，可能存在使游戏崩溃的BUG"
+                                  Text="{local:Localize Key=settings.showGameFpsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -242,12 +288,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示图像识别结果"
+                                  Text="{local:Localize Key=settings.showImageRecognition}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="实时显示各种图像识别的结果"
+                                  Text="{local:Localize Key=settings.showImageRecognitionDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -267,12 +313,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用UID遮盖"
+                                  Text="{local:Localize Key=settings.enableUidCover}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="遮盖右下角的UID区域"
+                                  Text="{local:Localize Key=settings.enableUidCoverDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -301,12 +347,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示小地图方位"
+                                  Text="{local:Localize Key=settings.showMinimapDirections}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在小地图周围显示东南西北的文字"
+                                  Text="{local:Localize Key=settings.showMinimapDirectionsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -370,13 +416,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用保存截图功能（开发者）"
+                                  Text="{local:Localize Key=settings.screenshot}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        可以通过快捷键保存截图，文件保存在
+                        <Run Text="{local:Localize Key=settings.screenshotDescription}" />
                         <Hyperlink Command="{Binding GoToFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             log/screenshot
@@ -411,19 +457,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图快捷键"
+                                  Text="{local:Localize Key=settings.screenshotHotkey}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="截图功能主要用于错误排查，训练素材快速获取等开发相关功能"
+                                  Text="{local:Localize Key=settings.screenshotHotkeyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{local:Localize Key=common.bindHotkey}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -437,12 +483,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图遮盖UID"
+                                  Text="{local:Localize Key=settings.screenshotUidCover}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="生成的截图会遮盖右下角的UID区域"
+                                  Text="{local:Localize Key=settings.screenshotUidCoverDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -465,12 +511,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="退出时最小化到系统托盘"
+                                  Text="{local:Localize Key=settings.exitToTray}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启用后点击右上角退出按钮会最小化到系统托盘继续运行，右键托盘图标退出"
+                                  Text="{local:Localize Key=settings.exitToTrayDescription}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>

@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -57,7 +58,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoGeniusInvokationEnabled;
 
     [ObservableProperty]
-    private string _switchAutoGeniusInvokationButtonText = "启动";
+    private string _switchAutoGeniusInvokationButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private int _autoWoodRoundNum;
@@ -69,7 +70,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoWoodEnabled;
 
     [ObservableProperty]
-    private string _switchAutoWoodButtonText = "启动";
+    private string _switchAutoWoodButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     //[ObservableProperty]
     //private string[] _combatStrategyList;
@@ -81,7 +82,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoDomainEnabled;
 
     [ObservableProperty]
-    private string _switchAutoDomainButtonText = "启动";
+    private string _switchAutoDomainButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private int _autoStygianOnslaughtRoundNum;
@@ -90,31 +91,31 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoStygianOnslaughtEnabled;
 
     [ObservableProperty]
-    private string _switchAutoStygianOnslaughtButtonText = "启动";
+    private string _switchAutoStygianOnslaughtButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private bool _switchAutoFightEnabled;
 
     [ObservableProperty]
-    private string _switchAutoFightButtonText = "启动";
+    private string _switchAutoFightButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
-    private string _switchAutoTrackButtonText = "启动";
+    private string _switchAutoTrackButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
-    private string _switchAutoTrackPathButtonText = "启动";
+    private string _switchAutoTrackPathButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private bool _switchAutoMusicGameEnabled;
 
     [ObservableProperty]
-    private string _switchAutoMusicGameButtonText = "启动";
+    private string _switchAutoMusicGameButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private bool _switchAutoAlbumEnabled;
 
     [ObservableProperty]
-    private string _switchAutoAlbumButtonText = "启动";
+    private string _switchAutoAlbumButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private List<string> _domainNameList;
@@ -122,7 +123,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
 
     [ObservableProperty]
-    private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
+    private List<string> _autoMusicLevelList = [
+        App.GetService<ILocalizationService>().GetString("music.legendary"),
+        App.GetService<ILocalizationService>().GetString("music.master"),
+        App.GetService<ILocalizationService>().GetString("music.hard"),
+        App.GetService<ILocalizationService>().GetString("music.normal"),
+        App.GetService<ILocalizationService>().GetString("music.all")
+    ];
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
@@ -134,7 +141,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoFishingEnabled;
 
     [ObservableProperty]
-    private string _switchAutoFishingButtonText = "启动";
+    private string _switchAutoFishingButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private FrozenDictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
@@ -159,7 +166,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private bool _switchGetGridIconsEnabled;
     [ObservableProperty]
-    private string _switchGetGridIconsButtonText = "启动";
+    private string _switchGetGridIconsButtonText = App.GetService<ILocalizationService>().GetString("common.start");
     [ObservableProperty]
     private FrozenDictionary<Enum, string> _gridNameDict = Enum.GetValues(typeof(GridScreenName))
         .Cast<GridScreenName>()
@@ -194,7 +201,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
             OneDragonFlowViewModel.OnNavigatedTo();
             if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
             {
-                Toast.Warning("未设置任务!");
+                var localizationService = App.GetService<ILocalizationService>();
+                Toast.Warning(localizationService.GetString("toast.noTaskSet"));
                 return;
             }
         }
@@ -244,7 +252,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
         content = string.Empty;
         if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
         {
-            Toast.Warning("请先选择策略");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("toast.selectStrategyFirst"));
             return true;
         }
 
@@ -252,7 +261,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         if (!File.Exists(path))
         {
-            Toast.Error("策略文件不存在");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Error(localizationService.GetString("toast.strategyFileNotExist"));
             return true;
         }
 
@@ -326,7 +336,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         if (string.IsNullOrEmpty(strategyName))
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在下拉列表配置中选择战斗策略！"); });
+            var localizationService = App.GetService<ILocalizationService>();
+            UIDispatcherHelper.Invoke(() => { Toast.Warning(localizationService.GetString("toast.selectCombatStrategy")); });
             path = string.Empty;
             return true;
         }
@@ -339,7 +350,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         if (!File.Exists(path) && !Directory.Exists(path))
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Error("当前选择的自动战斗策略文件不存在"); });
+            var localizationService = App.GetService<ILocalizationService>();
+            UIDispatcherHelper.Invoke(() => { Toast.Error(localizationService.GetString("toast.combatStrategyNotExist")); });
             return true;
         }
 
@@ -515,10 +527,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            PromptDialog.Prompt("请先启动截图器！", "");    // todo 自动启动截图器
+            var localizationService = App.GetService<ILocalizationService>();
+            PromptDialog.Prompt(localizationService.GetString("toast.startScreenshotFirst"), "");    // todo 自动启动截图器
             return;
         }
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
+        var localizationService2 = App.GetService<ILocalizationService>();
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, localizationService2.GetString("artifact.decompose"), this.Config.AutoArtifactSalvageConfig.RegularExpression);
         ocrDialog.ShowDialog();
     }
 

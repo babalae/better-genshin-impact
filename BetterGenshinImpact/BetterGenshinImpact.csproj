@@ -38,6 +38,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<None Include="Languages\*.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />

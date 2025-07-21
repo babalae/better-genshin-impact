@@ -1,27 +1,39 @@
-﻿namespace BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Interface;
 
-public class NotificationEvent(string code, string msg)
+namespace BetterGenshinImpact.Service.Notification.Model.Enum;
+
+public class NotificationEvent(string code, string msgKey)
 {
-    public static readonly NotificationEvent Test = new("notify.test", "测试通知");
-    public static readonly NotificationEvent DomainReward = new("domain.reward", "自动秘境奖励");
-    public static readonly NotificationEvent DomainStart = new("domain.start", "自动秘境启动");
-    public static readonly NotificationEvent DomainEnd = new("domain.end", "自动秘境结束");
-    public static readonly NotificationEvent DomainRetry = new("domain.retry", "自动秘境重试");
-    public static readonly NotificationEvent TaskCancel = new("task.cancel", "任务启动");
-    public static readonly NotificationEvent TaskError = new("task.error", "任务错误");
-    public static readonly NotificationEvent GroupStart = new("group.start", "配置组启动");
-    public static readonly NotificationEvent GroupEnd = new("group.end", "配置组结束");
-    public static readonly NotificationEvent DragonStart = new("dragon.start", "一条龙启动");
-    public static readonly NotificationEvent DragonEnd = new("dragon.end", "一条龙结束");
-    public static readonly NotificationEvent TcgStart = new("tcg.start", "七圣召唤启动");
-    public static readonly NotificationEvent TcgEnd = new("tcg.end", "七圣召唤结束");
-    public static readonly NotificationEvent AlbumStart = new("album.start", "自动音游专辑启动");
-    public static readonly NotificationEvent AlbumEnd = new("album.end", "自动音游专辑结束");
-    public static readonly NotificationEvent AlbumError = new("album.error", "自动音游专辑错误");
-    public static readonly NotificationEvent DailyReward = new("daily.reward", "检查每日奖励领取状态");
-    public static readonly NotificationEvent JsCustom = new("js.custom", "JS自定义事件");
-    public static readonly NotificationEvent JsError = new("js.error", "JS运行时错误");
+    public static readonly NotificationEvent Test = new("notify.test", "notification.event.test");
+    public static readonly NotificationEvent DomainReward = new("domain.reward", "notification.event.domainReward");
+    public static readonly NotificationEvent DomainStart = new("domain.start", "notification.event.domainStart");
+    public static readonly NotificationEvent DomainEnd = new("domain.end", "notification.event.domainEnd");
+    public static readonly NotificationEvent DomainRetry = new("domain.retry", "notification.event.domainRetry");
+    public static readonly NotificationEvent TaskCancel = new("task.cancel", "notification.event.taskCancel");
+    public static readonly NotificationEvent TaskError = new("task.error", "notification.event.taskError");
+    public static readonly NotificationEvent GroupStart = new("group.start", "notification.event.groupStart");
+    public static readonly NotificationEvent GroupEnd = new("group.end", "notification.event.groupEnd");
+    public static readonly NotificationEvent DragonStart = new("dragon.start", "notification.event.dragonStart");
+    public static readonly NotificationEvent DragonEnd = new("dragon.end", "notification.event.dragonEnd");
+    public static readonly NotificationEvent TcgStart = new("tcg.start", "notification.event.tcgStart");
+    public static readonly NotificationEvent TcgEnd = new("tcg.end", "notification.event.tcgEnd");
+    public static readonly NotificationEvent AlbumStart = new("album.start", "notification.event.albumStart");
+    public static readonly NotificationEvent AlbumEnd = new("album.end", "notification.event.albumEnd");
+    public static readonly NotificationEvent AlbumError = new("album.error", "notification.event.albumError");
+    public static readonly NotificationEvent DailyReward = new("daily.reward", "notification.event.dailyReward");
+    public static readonly NotificationEvent JsCustom = new("js.custom", "notification.event.jsCustom");
+    public static readonly NotificationEvent JsError = new("js.error", "notification.event.jsError");
     
     public string Code { get; private set; } = code;
-    public string Msg { get; private set; } = msg;
+    public string MsgKey { get; private set; } = msgKey;
+    
+    /// <summary>
+    /// Gets the localized message for this notification event
+    /// </summary>
+    /// <returns>Localized message string</returns>
+    public string GetLocalizedMessage()
+    {
+        var messageService = App.GetService<NotificationMessageService>();
+        return messageService != null ? messageService.GetMessage(MsgKey) : MsgKey;
+    }
 }

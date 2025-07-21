@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:BetterGenshinImpact.Core.Script.Group"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:editable="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Editable"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
@@ -33,12 +34,12 @@
             <TextBlock Margin="0,0,0,10" Text="执行次数" />
             <TextBox Margin="0,0,0,20" Text="{Binding RunNum, Mode=TwoWay}" />-->
 
-            <TextBlock Margin="0,0,0,10" Text="状态" />
+            <TextBlock Margin="0,0,0,10" Text="{markup:Localize Key=scriptEditor.status}" />
             <ComboBox DisplayMemberPath="Value"
                       ItemsSource="{Binding Source={StaticResource StatusDescriptionsProvider}}"
                       SelectedValue="{Binding Status, Mode=TwoWay}"
                       SelectedValuePath="Key" />
-            <TextBlock Margin="0,10,0,5" Text="JS 通知权限"
+            <TextBlock Margin="0,10,0,5" Text="{markup:Localize Key=scriptEditor.jsNotificationPermission}"
                        Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
             <ComboBox Margin="0,0,0,10"
                       ItemsSource="{Binding JsNotificationOptions}"

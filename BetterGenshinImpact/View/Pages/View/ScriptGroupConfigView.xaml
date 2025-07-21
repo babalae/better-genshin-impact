@@ -6,6 +6,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:ScriptGroupConfigViewModel}"
              d:DesignHeight="850"
@@ -35,14 +36,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="地图追踪行走配置（不启用则使用地图追踪内的条件配置）"
+                                      Text="{markup:Localize Key=scriptGroup.pathingConfig}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            强制修改行走途中配置开盾/回血等角色在队伍内的编号
-                        </ui:TextBlock>
+                                      Text="{markup:Localize Key=scriptGroup.pathingConfigDescription}"
+                                      TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -63,12 +63,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="是否开启自动拾取"
+                                      Text="{markup:Localize Key=scriptGroup.autoPickEnabled}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="推荐开启以拾取路线中的掉落物、采集物"
+                                      Text="{markup:Localize Key=scriptGroup.autoPickDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -87,12 +87,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="切换到队伍的名称（为空则不切换）"
+                                      Text="{markup:Localize Key=scriptGroup.partyName}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="队伍名称是你在游戏中手动设置的队伍名称文字"
+                                      Text="{markup:Localize Key=scriptGroup.partyNameDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -112,12 +112,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="切换队伍前强制前往安全的神像区域"
+                                      Text="{markup:Localize Key=scriptGroup.visitStatueBeforeSwitch}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="前往七天神像切换队伍可以避免切换队伍时位于异常状态导致切换失败"
+                                      Text="{markup:Localize Key=scriptGroup.visitStatueBeforeDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -136,12 +136,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="【生存位】在队伍内的编号"
+                                      Text="{markup:Localize Key=scriptGroup.guardianAvatarIndex}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="开盾/回血的角色位置，推荐琦良良、莱依拉"
+                                      Text="{markup:Localize Key=scriptGroup.guardianAvatarDescription}"
                                       TextWrapping="Wrap" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -162,12 +162,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="【生存位】释放元素战技的间隔（秒）"
+                                      Text="{markup:Localize Key=scriptGroup.guardianElementalSkillInterval}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="可能要填的时间略大于实际技能CD时间"
+                                      Text="{markup:Localize Key=scriptGroup.guardianElementalSkillIntervalDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -187,12 +187,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="【生存位】元素战技是否长按"
+                                      Text="{markup:Localize Key=scriptGroup.guardianElementalSkillLongPress}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="钟离长按开盾、琦良良长按变猫等"
+                                      Text="{markup:Localize Key=scriptGroup.guardianElementalSkillLongPressDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -213,12 +213,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="【行走位】主要行走的角色在队伍内的编号"
+                                      Text="{markup:Localize Key=scriptGroup.mainAvatarIndex}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="推荐和生存位相同，没有特殊需求无需配置"
+                                      Text="{markup:Localize Key=scriptGroup.mainAvatarDescription}"
                                       TextWrapping="Wrap" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -327,12 +327,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="执行周期配置"
+                                                  Text="{markup:Localize Key=scriptGroup.taskCycleConfig}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="以天为单位来决定是否执行此配置组"
+                                                  Text="{markup:Localize Key=scriptGroup.taskCycleConfigDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:ToggleSwitch Grid.Row="0"
                                                      Grid.RowSpan="2"
@@ -354,12 +354,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="分界时间"
+                                                  Text="{markup:Localize Key=scriptGroup.boundaryTime}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="分界时间，一般填0或4，如果填0则当天从0点开始算，如果填4，则当天从凌晨4点开始算，小于4点算前一天。"
+                                                  Text="{markup:Localize Key=scriptGroup.boundaryTimeDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -379,12 +379,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="周期"
+                                                  Text="{markup:Localize Key=scriptGroup.cycle}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="不同材料有不同的周期，按需配置，如矿石类是3、突破材料是2，或按照自已想几天执行一次配置即可。"
+                                                  Text="{markup:Localize Key=scriptGroup.cycleDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -404,12 +404,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="执行序号"
+                                                  Text="{markup:Localize Key=scriptGroup.index}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="执行周期序号，按时间戳对应的天数(会根据分界时间修正)，对周期求余值加1，得出的值和配置执一致就会执行，否则跳过任务。可以理解为周期内第几天执行。"
+                                                  Text="{markup:Localize Key=scriptGroup.indexDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -431,19 +431,19 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="计算当天执行序号"
+                                                  Text="{markup:Localize Key=scriptGroup.calculateExecutionIndex}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="点击计算按钮，可计算出当天执行序号（今天是周期内的第几天）。"
+                                                  Text="{markup:Localize Key=scriptGroup.calculateExecutionIndexDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:Button Grid.Row="0"
                                                Grid.RowSpan="2"
                                                Grid.Column="1"
                                                Margin="0,0,12,0"
                                                Command="{Binding GetExecutionOrderCommand}"
-                                               Content="计算"
+                                               Content="{markup:Localize Key=scriptGroup.calculate}"
                                                Icon="{ui:SymbolIcon Archive24}" />
                                    </Grid>
                                
@@ -473,14 +473,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="战斗配置"
+                                      Text="{markup:Localize Key=scriptGroup.combatConfig}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      TextWrapping="Wrap">
-                            需开启上方地图追踪配置，开启此项可制定战斗配置，关闭此项，则用于独立任务中的配置
-                        </ui:TextBlock>
+                                      Text="{markup:Localize Key=scriptGroup.combatConfigDescription}"
+                                      TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"

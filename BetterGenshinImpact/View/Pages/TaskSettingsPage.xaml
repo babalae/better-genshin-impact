@@ -6,6 +6,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
+      xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -23,7 +24,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="独立任务设置" />
+                      Text="{local:Localize Key=task.title}" />
         <!--  ~1~  停止任务  @1@  -->
         <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}"> -->
         <!--     <ui:CardControl.Header> -->
@@ -69,16 +70,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动七圣召唤"
+                                  Text="{local:Localize Key=task.autoGeniusInvocation}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动打牌 -
+                        <Run Text="{local:Localize Key=task.autoGeniusInvokationDescription}" />
                         <Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{local:Localize Key=task.viewTutorial}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -86,7 +87,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoGeniusInvokationCommand}"
                                              EnableContent="{Binding SwitchAutoGeniusInvokationButtonText}"
                                              IsChecked="{Binding SwitchAutoGeniusInvokationEnabled}" />
@@ -106,12 +107,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择卡组"
+                                  Text="{local:Localize Key=task.selectDeck}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择你想要使用的卡组与策略"
+                                  Text="{local:Localize Key=task.selectDeckDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -147,12 +148,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="设置延时（毫秒）"
+                                  Text="{local:Localize Key=task.setDelay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果频繁出现操作速度过快，操作动画未播放完毕的情况可以添加延时"
+                                  Text="{local:Localize Key=task.setDelayDescription}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -183,16 +184,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动伐木"
+                                  Text="{local:Localize Key=task.autoWood}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        装备「王树瑞佑」，通过循环重启游戏刷新并收集木材 -
+                        <Run Text="{local:Localize Key=task.autoWoodDescription}" />
                         <Hyperlink Command="{Binding GoToAutoWoodUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{local:Localize Key=task.viewTutorial}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -200,7 +201,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoWoodCommand}"
                                              EnableContent="{Binding SwitchAutoWoodButtonText}"
                                              IsChecked="{Binding SwitchAutoWoodEnabled}" />
@@ -219,12 +220,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="循环次数"
+                                  Text="{local:Localize Key=task.loopCount}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="循环伐木多少次，输入 0 则为无限循环直到手动终止"
+                                  Text="{local:Localize Key=task.loopCountDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -245,12 +246,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用OCR伐木数量限制（需1080P以上分辨率）"
+                                  Text="{local:Localize Key=task.enableOcrWoodLimit}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="伐木后OCR识别并累计木材数，达到上限后自动停止伐木"
+                                  Text="{local:Localize Key=task.enableOcrWoodLimitDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -270,12 +271,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="伐木数量上限（原神每日每种木材最多2000）"
+                                  Text="{local:Localize Key=task.woodCountLimit}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启用伐木数量限制后生效，达到配置上限后自动停止伐木"
+                                  Text="{local:Localize Key=task.woodCountLimitDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -296,12 +297,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用小道具后的额外延迟（毫秒）"
+                                  Text="{local:Localize Key=task.gadgetDelay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果希望看到使用小道具后获得木材的提示，可以调整这个值"
+                                  Text="{local:Localize Key=task.gadgetDelayDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -356,16 +357,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动战斗"
+                                  Text="{local:Localize Key=task.autoFight}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动执行选择的战斗策略 -
+                        <Run Text="{local:Localize Key=task.autoFightDescription}" />
                         <Hyperlink Command="{Binding GoToAutoFightUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{local:Localize Key=task.viewTutorial}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -373,7 +374,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoFightCommand}"
                                              EnableContent="{Binding SwitchAutoFightButtonText}"
                                              IsChecked="{Binding SwitchAutoFightEnabled}" />
@@ -394,12 +395,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择战斗策略"
+                                  Text="{local:Localize Key=task.selectStrategy}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于战斗"
+                                  Text="{local:Localize Key=task.selectStrategyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -441,12 +442,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="根据技能CD优化出招人员"
+                                  Text="{local:Localize Key=task.optimizeByCd}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="根据填入人或人和cd，来决定当此人元素战技cd未结束时，跳过此人出招，来优化战斗流程，可填入人名或人名数字（用逗号分隔），多种用分号分隔，例如:白术;钟离,12;，如果人名，则用内置cd检查（或填入数字也小于0），如果是人名和数字，则把数字当做出招cd(秒)。"
+                                  Text="{local:Localize Key=task.optimizeByCdDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -479,12 +480,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动检测战斗结束"
+                                              Text="{local:Localize Key=task.autoDetectFightEnd}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="检测到战斗已经结束的情况下，停止自动战斗功能"
+                                              Text="{local:Localize Key=task.autoDetectFightEndDescription}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -523,12 +524,12 @@
                                                 <ui:TextBlock Grid.Row="0"
                                                               Grid.Column="0"
                                                               FontTypography="Body"
-                                                              Text="更快检查结束战斗"
+                                                              Text="{local:Localize Key=task.fasterFightEndCheck}"
                                                               TextWrapping="Wrap" />
                                                 <ui:TextBlock Grid.Row="1"
                                                               Grid.Column="0"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                              Text="快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                              Text="{local:Localize Key=task.fasterFightEndCheckDescription}"
                                                               TextWrapping="Wrap" />
                                                 <ui:ToggleSwitch Grid.Row="0"
                                                                  Grid.RowSpan="2"
@@ -831,7 +832,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoDomainCommand}"
                                              EnableContent="{Binding SwitchAutoDomainButtonText}"
                                              IsChecked="{Binding SwitchAutoDomainEnabled}" />
@@ -852,12 +853,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择战斗策略"
+                                  Text="{local:Localize Key=task.selectStrategy}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于战斗"
+                                  Text="{local:Localize Key=task.selectStrategyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1290,7 +1291,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoStygianOnslaughtCommand}"
                                              EnableContent="{Binding SwitchAutoStygianOnslaughtButtonText}"
                                              IsChecked="{Binding SwitchAutoStygianOnslaughtEnabled}" />
@@ -1311,12 +1312,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择战斗策略"
+                                  Text="{local:Localize Key=task.selectStrategy}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于战斗"
+                                  Text="{local:Localize Key=task.selectStrategyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1608,7 +1609,7 @@
             </ui:CardControl.Header>
             <controls:TwoStateButton Margin="0,0,40,0"
                                      DisableCommand="{Binding StopSoloTaskCommand}"
-                                     DisableContent="停止"
+                                     DisableContent="{local:Localize Key=task.stop}"
                                      EnableCommand="{Binding SwitchAutoMusicGameCommand}"
                                      EnableContent="{Binding SwitchAutoMusicGameButtonText}"
                                      IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
@@ -1649,7 +1650,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoAlbumCommand}"
                                              EnableContent="{Binding SwitchAutoAlbumButtonText}"
                                              IsChecked="{Binding SwitchAutoAlbumEnabled}" />
@@ -1748,7 +1749,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchAutoFishingCommand}"
                                              EnableContent="{Binding SwitchAutoFishingButtonText}"
                                              IsChecked="{Binding SwitchAutoFishingEnabled}" />
@@ -1964,7 +1965,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchArtifactSalvageCommand}"
                                              EnableContent="{Binding SwitchAutoFishingButtonText}"
                                              IsChecked="{Binding SwitchArtifactSalvageEnabled}" />
@@ -2127,7 +2128,7 @@
                                              Grid.Column="2"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{local:Localize Key=task.stop}"
                                              EnableCommand="{Binding SwitchGetGridIconsCommand}"
                                              EnableContent="{Binding SwitchGetGridIconsButtonText}"
                                              IsChecked="{Binding SwitchGetGridIconsEnabled}" VerticalAlignment="Top" />
@@ -2321,7 +2322,7 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="自动战斗" />
+                        Text="{local:Localize Key=task.autoFight}" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"

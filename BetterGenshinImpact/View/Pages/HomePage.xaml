@@ -4,6 +4,7 @@
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -48,12 +49,12 @@
                         <ui:TextBlock FontTypography="Title" Text="BetterGI" />
                         <ui:TextBlock FontTypography="Subtitle"
                                       Opacity="0.8"
-                                      Text="更好的原神，免费且开源" />
+                                      Text="{markup:Localize Key=home.subtitle}" />
                         <ui:TextBlock FontTypography="BodyStrong" Opacity="0.6">
                             <Hyperlink Command="{Binding GoToWikiUrlCommand}"
                                        Foreground="#B7FFFFFF"
                                        TextDecorations="None">
-                                <Run>点击查看文档与教程</Run>
+                                <Run Text="{markup:Localize Key=home.viewDocs}" />
                                 <Run FontFamily="{StaticResource FluentSystemIcons}" FontWeight="Light">&#xEE7A;</Run>
                             </Hyperlink>
 
@@ -80,26 +81,28 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="BetterGI 截图器，启动！"
+                                  Text="{markup:Localize Key=home.captureTitle}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        截图器启动后才能使用各项功能，<Run FontWeight="Bold" TextDecorations="Underline">
-                            点击展开启动相关配置
-                        </Run>
-                        。</ui:TextBlock>
+                        <ui:TextBlock.Inlines>
+                            <Run Text="{markup:Localize Key=home.captureDescriptionPart1}" />
+                            <Run FontWeight="Bold" TextDecorations="Underline" Text="{markup:Localize Key=home.captureDescriptionPart2}" />
+                            <Run Text="{markup:Localize Key=home.captureDescriptionPart3}" />
+                        </ui:TextBlock.Inlines>
+                    </ui:TextBlock>
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 Margin="0,0,24,0"
                                 Orientation="Horizontal">
                         <controls:TwoStateButton DisableCommand="{Binding StopTriggerCommand}"
-                                                 DisableContent="停止"
+                                                 DisableContent="{markup:Localize Key=home.stop}"
                                                  DisableIcon="{ui:SymbolIcon Dismiss24}"
                                                  EnableCommand="{Binding StartTriggerCommand}"
-                                                 EnableContent="启动"
+                                                 EnableContent="{markup:Localize Key=home.start}"
                                                  EnableIcon="{ui:SymbolIcon Play24}"
                                                  IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
                         <!--  <ui:Button Command="{Binding StartTriggerCommand}"  -->
@@ -127,12 +130,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图模式"
+                                  Text="{markup:Localize Key=home.captureMode}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="推荐选择 BitBlt，问题较少"
+                                  Text="{markup:Localize Key=home.captureModeDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -162,12 +165,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="触发器间隔（毫秒）"
+                                  Text="{markup:Localize Key=home.triggerInterval}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认50ms，普通用户不建议调整这个值，具体调整方式见文档"
+                                  Text="{markup:Localize Key=home.triggerIntervalDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -189,12 +192,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="WindowsGraphicsCapture 截图方式启用位图缓存"
+                                  Text="{markup:Localize Key=home.wgcBitmapCache}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="云原神出现获取到黑屏图案、原神出现掉帧的情况请尝试关闭此功能，并重启软件"
+                                  Text="{markup:Localize Key=home.wgcBitmapCacheDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -216,12 +219,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="AI推理设备设置"
+                                  Text="{markup:Localize Key=home.aiInferenceDevice}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改后需要重启程序生效"
+                                  Text="{markup:Localize Key=home.aiInferenceDeviceDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -240,7 +243,7 @@
                                Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenHardwareAccelerationSettingsCommand}"
-                               Content="更多..." />
+                               Content="{markup:Localize Key=home.more}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -255,19 +258,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试图像捕获"
+                                  Text="{markup:Localize Key=home.testCapture}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="测试功能，测试几种截图模式的效果"
+                                  Text="{markup:Localize Key=home.testCaptureDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding StartCaptureTestCommand}"
-                               Content="测试图像捕获" />
+                               Content="{markup:Localize Key=home.testCaptureButton}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -282,7 +285,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="手动选择窗口（无法找到原神窗口时使用）"
+                                  Text="{markup:Localize Key=home.manualSelectWindow}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -294,7 +297,7 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding ManualPickWindowCommand}"
-                               Content="选择捕获窗口" />
+                               Content="{markup:Localize Key=home.selectCaptureWindow}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -310,12 +313,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动关闭 Windows11 窗口化优化以支持 BitBlt"
+                                  Text="{markup:Localize Key=home.autoCloseWin11Optimization}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改设置后重启游戏生效"
+                                  Text="{markup:Localize Key=home.autoCloseWin11OptimizationDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -327,7 +330,7 @@
                                Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenDisplayAdvancedGraphicsSettingsCommand}"
-                               Content="手动设置" />
+                               Content="{markup:Localize Key=home.manualSettings}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -349,12 +352,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="同时启动原神"
+                                  Text="{markup:Localize Key=home.launchGenshinSimultaneously}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动截图器时，如果原神未启动，则自动启动原神。"
+                                  Text="{markup:Localize Key=home.launchGenshinSimultaneouslyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -377,7 +380,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="原神安装位置（不支持云原神的联动启动）"
+                                  Text="{markup:Localize Key=home.genshinInstallLocation}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -389,7 +392,7 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding SelectInstallPathCommand}"
-                               Content="浏览" />
+                               Content="{markup:Localize Key=home.browse}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
@@ -407,14 +410,14 @@
                                   FontTypography="Body"
                                   TextWrapping="Wrap">
                         <ui:TextBlock.Inlines>
-                            <Run Text="启动参数" />
+                            <Run Text="{markup:Localize Key=home.launchParametersTitle}" />
                             <ui:HyperlinkButton Grid.Row="1"
                                                 Margin="0,0,0,0"
                                                 Padding="0"
                                                 Command="{Binding OpenGameCommandLineDocumentCommand}"
                                                 Cursor="Hand">
                                 <ui:HyperlinkButton.Content>
-                                    <TextBlock FontSize="11" Text="打开文档" />
+                                    <TextBlock FontSize="11" Text="{markup:Localize Key=home.openDocumentation}" />
                                 </ui:HyperlinkButton.Content>
                             </ui:HyperlinkButton>
                         </ui:TextBlock.Inlines>
@@ -422,7 +425,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你不知道什么是启动参数请不要填写。"
+                                  Text="{markup:Localize Key=home.launchParametersWarning}"
                                   TextWrapping="Wrap" />
                     <!--  常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080  -->
                     <ui:TextBox Grid.Row="0"
@@ -431,7 +434,7 @@
                                 MinWidth="300"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                PlaceholderText="示例：-screen-width 1920"
+                                PlaceholderText="{markup:Localize Key=home.launchParametersExample}"
                                 Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
                                 TextWrapping="Wrap" />
                 </Grid>
@@ -448,12 +451,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动进入游戏"
+                                  Text="{markup:Localize Key=home.autoEnterGame}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="原神启动后自动进入游戏（自动开门、领取月卡）"
+                                  Text="{markup:Localize Key=home.autoEnterGameDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -474,12 +477,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用Starward记录游戏时间"
+                                  Text="{markup:Localize Key=home.useStarwardRecord}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启动游戏后Starward将同步记录时间"
+                                  Text="{markup:Localize Key=home.useStarwardRecordDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -502,12 +505,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动点击获取月卡"
+                                  Text="{markup:Localize Key=home.autoClickMonthlyCard}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="进入游戏后自动点击月卡，如果有的话"
+                                  Text="{markup:Localize Key=home.autoClickMonthlyCardDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -523,3 +526,4 @@
 
     </StackPanel>
 </Page>
+
