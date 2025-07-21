@@ -100,7 +100,7 @@ public partial class ScriptService : IScriptService
         string skipMessage;
         if (ExecutionRecordStorage.IsSkipTask(project,out skipMessage))
         {
-            TaskControl.Logger.LogError($"{project.Name}:{skipMessage},跳过此任务！");
+            TaskControl.Logger.LogInformation($"{project.Name}:{skipMessage},跳过此任务！");
             return true;
         }
         return false; // 不跳过
