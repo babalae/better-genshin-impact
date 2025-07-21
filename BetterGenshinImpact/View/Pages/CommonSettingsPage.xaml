@@ -993,6 +993,47 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />
                 </Grid>
+                
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="电脑网络检测失败时，自动暂停BGI脚本"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="等待网络恢复后自动恢复，注意该功能不能重试脚本和断点执行，Ping地址无需HTTP前缀。"
+                                  TextWrapping="Wrap" />
+                    
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="20,0,10,0"
+                                MaxWidth="180"
+                                Text="{Binding Config.OtherConfig.NetworkDetectionUrl, Mode=TwoWay}" />
+                    
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="2"
+                                     VerticalContentAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     HorizontalAlignment="Center"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.NetworkDetectionConfig, Mode=TwoWay}" />
+                </Grid>
+                
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

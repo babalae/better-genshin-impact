@@ -23,6 +23,13 @@ public partial class OtherConfig : ObservableObject
     [ObservableProperty]
     private Miyoushe _miyousheConfig = new();
     
+    //网络检测
+    [ObservableProperty]
+    private bool _networkDetectionConfig = false;
+    
+    //网络检测网址
+    [ObservableProperty]
+    private string _networkDetectionUrl = "www.baidu.com";
 
     public partial class AutoRestart : ObservableObject
     {
