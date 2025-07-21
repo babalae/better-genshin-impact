@@ -29,7 +29,7 @@
 
 <br/>  
 
-[English](./readme_en.md) | [中文](./readme_cn.md)| [繁体中文](./readme_tcn.md)
+[English](./readme_en.md) | [中文](../README.md)| [繁体中文](./readme_tcn.md)
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-%237289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8xUfcw5nTS)
 
