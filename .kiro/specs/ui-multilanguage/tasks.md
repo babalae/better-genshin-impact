@@ -160,6 +160,7 @@
 
 
 
+
   - [x] HomePage.xaml: Already localized
   - [x] KeyMouseRecordPage.xaml: "键鼠录制回放功能（实验功能）", "建议在游戏内使用快捷键进行录制", "打开脚本目录", "脚本仓库", "开始录制", "停止录制", "名称", "创建时间", "操作", "播放脚本", "修改名称", "删除"
 
@@ -245,6 +246,8 @@
   
   - Add missing translation keys to language files
   - _Requirements: 4.1, 4.2, 4.3_
+
+
 
 - [x] 14. Localize notification and message content
 

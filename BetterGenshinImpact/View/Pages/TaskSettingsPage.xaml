@@ -1618,14 +1618,16 @@
                         </Hyperlink>
                     </ui:TextBlock>
                 </Grid>
-            </ui:CardControl.Header>
-            <controls:TwoStateButton Margin="0,0,40,0"
-                                     DisableCommand="{Binding StopSoloTaskCommand}"
-                                     DisableContent="停止"
-                                     EnableCommand="{Binding SwitchAutoMusicGameCommand}"
-                                     EnableContent="{Binding SwitchAutoMusicGameButtonText}"
-                                     IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
-        </ui:CardControl>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <controls:TwoStateButton Margin="0,0,40,0"
+                                       DisableCommand="{Binding StopSoloTaskCommand}"
+                                       DisableContent="停止"
+                                       EnableCommand="{Binding SwitchAutoMusicGameCommand}"
+                                       EnableContent="{Binding SwitchAutoMusicGameButtonText}"
+                                       IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
+            </StackPanel>
+        </ui:CardExpander>
 
         <!--  自动音游专辑  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
@@ -1667,6 +1669,8 @@
                                              EnableContent="{Binding SwitchAutoAlbumButtonText}"
                                              IsChecked="{Binding SwitchAutoAlbumEnabled}" />
                 </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
