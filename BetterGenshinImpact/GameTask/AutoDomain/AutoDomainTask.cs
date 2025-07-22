@@ -668,7 +668,7 @@ public class AutoDomainTask : ISoloTask
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
-        var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
+        // var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
         combatTask.Start();
         domainEndTask.Start();
         autoEatRecoveryHpTask.Start();
