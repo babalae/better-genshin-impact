@@ -198,8 +198,8 @@
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
                                          IsChecked="{Binding PathingConfig.GuardianElementalSkillLongPress}"
-                                         OffContent="短按"
-                                         OnContent="长按" />
+                                         OffContent="{markup:Localize Key=scriptGroup.shortPress}"
+                                         OnContent="{markup:Localize Key=scriptGroup.longPress}" />
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
@@ -240,12 +240,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="使用小道具的间隔时间（毫秒）"
+                                      Text="{markup:Localize Key=scriptGroup.gadgetIntervalMs}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="在移动期间自动使用小道具，填0为不使用"
+                                      Text="{markup:Localize Key=scriptGroup.gadgetIntervalDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -267,12 +267,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="只在传送点时恢复"
+                                      Text="{markup:Localize Key=scriptGroup.onlyInTeleportRecover}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="只有路径在传送点时，才会去七天神像恢复"
+                                      Text="{markup:Localize Key=scriptGroup.onlyInTeleportRecoverDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -292,12 +292,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="不在某时执行"
+                                      Text="{markup:Localize Key=scriptGroup.skipDuring}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="当执行完一个路线后，如果时间为当前配置的时间（范围：0-23），则此地图追踪任务后续都将都跳过，适用于连续执行的兜底任务，例如想通宵挂机，并且在4点后，开始执行新的任务。"
+                                      Text="{markup:Localize Key=scriptGroup.skipDuringDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -509,26 +509,26 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="选择战斗策略"
+                                      Text="{markup:Localize Key=scriptGroup.selectCombatStrategy}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="用于战斗"
+                                      Text="{markup:Localize Key=scriptGroup.forCombat}"
                                       TextWrapping="Wrap" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.Column="1"
                                    Margin="0,0,12,0"
                                    Command="{Binding OpenLocalScriptRepoCommand}"
-                                   Content="脚本仓库"
+                                   Content="{markup:Localize Key=scriptGroup.scriptRepository}"
                                    Icon="{ui:SymbolIcon Archive24}" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.Column="2"
                                    Margin="0,0,12,0"
                                    Command="{Binding OpenFightFolderCommand}"
-                                   Content="打开目录" />
+                                   Content="{markup:Localize Key=scriptGroup.openDirectory}" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
                                   Grid.Column="3"
@@ -555,12 +555,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="根据技能CD优化出招人员"
+                                      Text="{markup:Localize Key=scriptGroup.optimizeSkillCd}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="根据填入人或人和cd，来决定当此人元素战技cd未结束时，跳过此人出招，来优化战斗流程，可填入人名或人名数字（用逗号分隔），多种用分号分隔，例如:白术;钟离,12;，如果人名，则用内置cd检查（或填入数字也小于0），如果是人名和数字，则把数字当做出招cd(秒)。"
+                                      Text="{markup:Localize Key=scriptGroup.optimizeSkillCdDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -591,12 +591,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="自动检测战斗结束"
+                                                  Text="{markup:Localize Key=scriptGroup.autoCombatEndDetection}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="检测到战斗已经结束的情况下，停止自动战斗功能"
+                                                  Text="{markup:Localize Key=scriptGroup.autoCombatEndDetectionDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:ToggleSwitch Grid.Row="0"
                                                      Grid.RowSpan="2"
@@ -635,12 +635,12 @@
                                                     <ui:TextBlock Grid.Row="0"
                                                                   Grid.Column="0"
                                                                   FontTypography="Body"
-                                                                  Text="更快检查结束战斗"
+                                                                  Text="{markup:Localize Key=scriptGroup.quickCombatEndCheck}"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                                  Text="{markup:Localize Key=scriptGroup.quickCombatEndCheckDescription}"
                                                                   TextWrapping="Wrap" />
                                                     <ui:ToggleSwitch Grid.Row="0"
                                                                      Grid.RowSpan="2"
@@ -662,12 +662,12 @@
                                                     <ui:TextBlock Grid.Row="0"
                                                                   Grid.Column="0"
                                                                   FontTypography="Body"
-                                                                  Text="更快检查结束战斗参数"
+                                                                  Text="{markup:Localize Key=scriptGroup.quickCombatEndCheckParams}"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBlock Grid.Row="1"
                                                                   Grid.Column="0"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                                  Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                                  Text="{markup:Localize Key=scriptGroup.quickCombatEndCheckParamsDescription}"
                                                                   TextWrapping="Wrap" />
                                                     <ui:TextBox Grid.Row="0"
                                                                 Grid.RowSpan="2"
@@ -695,12 +695,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="检查战斗结束的延时"
+                                                  Text="{markup:Localize Key=scriptGroup.combatEndCheckDelay}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                                  Text="{markup:Localize Key=scriptGroup.combatEndCheckDelayDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -720,12 +720,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="按键触发后检查延时"
+                                                  Text="{markup:Localize Key=scriptGroup.keyPressCheckDelay}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                                  Text="{markup:Localize Key=scriptGroup.keyPressCheckDelayDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -758,12 +758,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="自动拾取掉落物"
+                                                  Text="{markup:Localize Key=scriptGroup.autoPickupDrops}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
+                                                  Text="{markup:Localize Key=scriptGroup.autoPickupDropsDescription}"
                                                   TextWrapping="Wrap" />
                                     <ui:ToggleSwitch Grid.Row="0"
                                                      Grid.RowSpan="2"
@@ -785,12 +785,12 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="自动拾取掉落物时长"
+                                                  Text="{markup:Localize Key=scriptGroupConfig.title}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="单位为秒。0表示不自动拾取掉落物。"
+                                                  Text="{markup:Localize Key=scriptGroupConfig.description}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBox Grid.Row="0"
                                                 Grid.RowSpan="2"
@@ -814,12 +814,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="战斗结束后执行万叶长E"
+                                      Text="{markup:Localize Key=scriptGroup.executeKazuhaLongEAfterCombat}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="战斗结束后，如果存在枫原万叶，则战斗结束后执行万叶长E，使用该角色捡材料"
+                                      Text="{markup:Localize Key=scriptGroup.executeKazuhaLongEAfterCombatDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -839,12 +839,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="拾取战斗人次阈值"
+                                      Text="{markup:Localize Key=scriptGroup.pickupCombatThreshold}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="拾取战斗人次阈值,当战斗人次小于一定次数，就结束战斗情况下，不触发拾取掉落物和万叶拾取配置，只有不小于2时才生效。"
+                                      Text="{markup:Localize Key=scriptGroup.pickupCombatThresholdDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -865,12 +865,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="只拾取精英掉落模式"
+                                      Text="{markup:Localize Key=scriptGroup.onlyPickupEliteDrops}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="需要路径文件支持，需勾选区分怪物拾取才生效，可通过仓库标签查看，精英怪物可以在点位的更多》扩展配置》怪物标签中，可标记。只拾取标记为精英或传奇的点位。非精英允许自动拾取：战斗过程中掉落脚下的可以自动拾取，但不会执行万叶拾取和自动拾取配置逻辑。非精英关闭拾取：战斗过程中掉落到脚下的也不会自动拾取。"
+                                      Text="{markup:Localize Key=scriptGroup.onlyPickupEliteDropsDescription}"
                                       TextWrapping="Wrap" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -894,12 +894,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="万叶拾取队伍名"
+                                      Text="{markup:Localize Key=scriptGroup.kazuhaPickupTeamName}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下，并且填写队伍名才会切换），适用于需要多一个人刷经验时，替换调万叶的位置，战斗策略建议兼容两个队伍的，以防止队伍切换不成功也能继续战斗。"
+                                      Text="{markup:Localize Key=scriptGroup.kazuhaPickupTeamNameDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -920,12 +920,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="战斗超时（秒）"
+                                      Text="{markup:Localize Key=scriptGroup.combatTimeoutSeconds}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="当战斗超过一定时间后，自动停止战斗"
+                                      Text="{markup:Localize Key=scriptGroup.combatTimeoutDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -953,13 +953,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="Shell执行配置"
+                                      Text="{markup:Localize Key=scriptGroup.shellExecutionConfig}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       TextWrapping="Wrap">
-                            在本组中执行Shell命令会使用这里的配置。如关闭此项，则使用默认配置。
+                            {markup:Localize Key=scriptGroup.shellExecutionConfigDescription}
                         </ui:TextBlock>
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -981,12 +981,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="禁用Shell任务"
+                                      Text="{markup:Localize Key=scriptGroup.disableShellTasks}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="如果打开，则Shell任务会被跳过执行"
+                                      Text="{markup:Localize Key=scriptGroup.disableShellTasksDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -1005,12 +1005,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="Shell执行超时"
+                                      Text="{markup:Localize Key=scriptGroup.shellExecutionTimeout}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="最长等待命令返回的时间，单位秒。如果时间&lt;=0则不等待，直接返回。"
+                                      Text="{markup:Localize Key=scriptGroup.shellExecutionTimeoutDescription}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -1030,12 +1030,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="隐藏命令执行窗口"
+                                      Text="{markup:Localize Key=scriptGroup.hideCommandWindow}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="推荐启用，不然会有一个大黑框。"
+                                      Text="{markup:Localize Key=scriptGroup.hideCommandWindowDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -1054,12 +1054,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="在Log中记录命令输出"
+                                      Text="{markup:Localize Key=scriptGroup.logCommandOutput}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="打开的话若命令有输出会在Log中显示，关闭则不显示。(只有命令执行成功且有输出才会显示)"
+                                      Text="{markup:Localize Key=scriptGroup.logCommandOutputDescription}"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -1086,13 +1086,13 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="地图追踪动作配置"
+                                      Text="{markup:Localize Key=scriptGroup.pathingActionConfig}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       TextWrapping="Wrap">
-                            地图追踪到达目标点的时候会执行一些动作，有些动作必须配置对应角色在队伍内的位置
+                            {markup:Localize Key=scriptGroup.pathingActionConfigDescription}
                         </ui:TextBlock>
 
                     </Grid>
@@ -1110,12 +1110,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="进行普通攻击的角色在队伍内的编号"
+                                      Text="{markup:Localize Key=scriptGroup.normalAttackCharacterIndex}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="一般用于收集需要元素反应才能采集的植物"
+                                      Text="{markup:Localize Key=scriptGroup.normalAttackCharacterIndexDescription}"
                                       TextWrapping="Wrap" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -1136,12 +1136,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="释放元素战技的角色在队伍内的编号"
+                                      Text="{markup:Localize Key=scriptGroup.elementalSkillCharacterIndex}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="用于采集石珀等"
+                                      Text="{markup:Localize Key=scriptGroup.elementalSkillCharacterIndexDescription}"
                                       TextWrapping="Wrap" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"

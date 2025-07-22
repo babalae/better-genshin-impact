@@ -6,6 +6,7 @@
                  xmlns:dd="urn:gong-wpf-dragdrop"
                  xmlns:local="clr-namespace:BetterGenshinImpact.Model"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:sdl="http://schemas.sdl.com/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
@@ -36,7 +37,7 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontSize="16"
                                   FontTypography="BodyStrong"
-                                  Text="{sdl:Localize Key=pathingConfig.mapTrackingSettings}" />
+                                  Text="{markup:Localize Key=pathingConfig.mapTrackingSettings}" />
 
                 </StackPanel>
 
@@ -45,7 +46,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="{sdl:Localize Key=pathingConfig.teamSwitchSettings}" />
+                                      Text="{markup:Localize Key=pathingConfig.teamSwitchSettings}" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -97,7 +98,7 @@
                                         <ui:TextBlock Margin="10,0"
                                                       VerticalAlignment="Center"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="{sdl:Localize Key=pathingConfig.thenSwitchToTeam}" />
+                                                      Text="{markup:Localize Key=pathingConfig.thenSwitchToTeam}" />
 
 
                                         <!--  结果  -->
@@ -109,7 +110,7 @@
                                         <Button
                                             Command="{Binding DataContext.RemovePartyConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="{sdl:Localize Key=pathingConfig.delete}" />
+                                            Content="{markup:Localize Key=pathingConfig.delete}" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -118,7 +119,7 @@
                         <!--  添加条件按钮  -->
                         <Button HorizontalAlignment="Left"
                                 Command="{Binding AddPartyConditionConfigCommand}"
-                                Content="{sdl:Localize Key=pathingConfig.addCondition}" />
+                                Content="{markup:Localize Key=pathingConfig.addCondition}" />
                     </StackPanel>
                 </ui:Card>
 
@@ -127,7 +128,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="{sdl:Localize Key=pathingConfig.characterSettings}" />
+                                      Text="{markup:Localize Key=pathingConfig.characterSettings}" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -173,7 +174,7 @@
                                         <ui:TextBlock Margin="10,0"
                                                       VerticalAlignment="Center"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="{sdl:Localize Key=pathingConfig.thenCharacterExecutes}" />
+                                                      Text="{markup:Localize Key=pathingConfig.thenCharacterExecutes}" />
 
                                         <!--  结果  -->
                                         <ComboBox MinWidth="160"
@@ -186,7 +187,7 @@
                                         <Button
                                             Command="{Binding DataContext.RemoveAvatarConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="{sdl:Localize Key=pathingConfig.delete}" />
+                                            Content="{markup:Localize Key=pathingConfig.delete}" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -195,7 +196,7 @@
                         <!--  添加条件按钮  -->
                         <Button HorizontalAlignment="Left"
                                 Command="{Binding AddAvatarConditionConfigCommand}"
-                                Content="{sdl:Localize Key=pathingConfig.addCondition}" />
+                                Content="{markup:Localize Key=pathingConfig.addCondition}" />
                     </StackPanel>
                 </ui:Card>
 
@@ -212,12 +213,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="{sdl:Localize Key=pathingConfig.gadgetIntervalTime}"
+                                          Text="{markup:Localize Key=pathingConfig.gadgetIntervalTime}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{sdl:Localize Key=pathingConfig.gadgetIntervalDescription}"
+                                          Text="{markup:Localize Key=pathingConfig.gadgetIntervalDescription}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -243,12 +244,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="{sdl:Localize Key=pathingConfig.onlyRecoverAtTeleport}"
+                                          Text="{markup:Localize Key=pathingConfig.onlyRecoverAtTeleport}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{sdl:Localize Key=pathingConfig.onlyRecoverAtTeleportDescription}"
+                                          Text="{markup:Localize Key=pathingConfig.onlyRecoverAtTeleportDescription}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
