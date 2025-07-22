@@ -6,6 +6,8 @@
         "version": "1.0.0"
     },
     "strings": {
+        "dialog.jsonEditor.title": "JSON 编辑器",
+        "update.updaterNotFound": "更新程序不存在，请选择其他更新方式！",
         "common.ok": "确定",
         "common.cancel": "取消",
         "common.save": "保存",
@@ -254,6 +256,7 @@
         "notification.sendToDescription": "填写发送目标",
         "notification.test": "测试",
         "notification.testDescription": "发送测试通知",
+        "notification.message.testSuccess": "通知测试成功",
         "notification.send": "发送",
         "notification.enableWebSocket": "启用 WebSocket 通知",
         "notification.webSocketSettings": "WebSocket 通知相关设置",
@@ -1014,6 +1017,41 @@
 
         "pathingConfig.gadgetIntervalTime": "使用小道具的间隔时间（毫秒）",
         "pathingConfig.onlyRecoverAtTeleport": "只在传送点时恢复",
-        "pathingConfig.onlyRecoverAtTeleportDescription": "只有路径在传送点时，才会去七天神像恢复"
+        "pathingConfig.onlyRecoverAtTeleportDescription": "只有路径在传送点时，才会去七天神像恢复",
+
+        "update.currentVersionIsLatest": "当前已是最新版本！",
+        "update.getLatestVersionFailed": "获取 BetterGI 最新版本信息失败",
+        "update.newVersionFoundTitle": "发现新版本 {0}",
+        "update.mirrorUpdateCheckFailed": "Mirror酱源更新检查失败，意料之外的严重错误，请及时联系 Mirror 酱的技术支持处理\n，错误代码：{0}，错误信息：{1}",
+        "update.mirrorUpdateCheckFailedGeneral": "Mirror源更新检查失败,{0}",
+        "update.mirrorCdkExpired": "Mirror酱 CDK 已过期，请重新获取CDK",
+        "update.mirrorCdkError": "Mirror酱 CDK 错误!",
+        "update.mirrorCdkDailyLimitReached": "Mirror酱 CDK 今日下载次数已达上限",
+        "update.mirrorCdkTypeMismatch": "Mirror酱 CDK 类型和待下载的资源不匹配",
+        "update.mirrorCdkBanned": "Mirror酱 CDK 已被封禁",
+        "update.mirrorUpdateCheckFailedWithMessage": "Mirror酱源更新检查失败，错误信息：{0}",
+        "update.changelogTitle": "更新日志",
+        "update.getChangelogFailed": "获取更新日志失败，请自行选择是否更新！",
+
+        "script.taskReachedForbiddenTime": "{0}已经到达禁止执行时段，跳过任务",
+        "script.taskSettingIncorrectOrCompleted": "{0}任务设置不正确，或今日任务已执行，跳过任务",
+        "script.taskExceededCycle": "{0}任务已经超过执行周期，当前值{1}!=配置值{2}，跳过任务，等待明天",
+        "script.farmingPlanStatisticsError": "锄地规划统计异常：{0}",
+        "script.defaultGroupName": "默认",
+        "script.groupLoadedAndStarting": "脚本组 {0} 加载完成，共{1}个脚本，开始执行",
+        "script.scriptDisabledSkipping": "脚本 {0} 状态为禁用，跳过执行",
+        "script.executionCancelled": "执行被取消",
+        "script.cancellingTask": "取消执行任务: {0}",
+        "script.scriptExecutionError": "执行脚本时发生异常",
+        "script.scriptExecutionCompleted": "√ 脚本执行结束: {0}, 耗时: {1}分{2:0.000}秒",
+        "script.consecutiveUnexpectedErrors": "连续多次出现未预期的异常，自动重启bgi",
+        "script.groupExecutionCompleted": "脚本组 {0} 执行结束",
+        "script.projectIsNull": "Project 为空",
+        "script.startingJsScript": "√ 开始执行JS脚本: {0}",
+        "script.startingKeyMouseScript": "√ 开始执行键鼠脚本: {0}",
+        "script.startingPathingTask": "√ 开始执行地图追踪任务: {0}",
+        "script.startingShellScript": "√ 开始执行shell: {0}",
+        "script.notInMainUiWaiting": "当前不在游戏主界面，等待进入主界面后执行任务...",
+        "script.mainUiInstructions": "如果你已经在游戏内的主界面，请按下退出当前界面（ESC）或者等待30秒后将尝试自动点击空白区域，使前台任务能够正常执行！"
     }
 }

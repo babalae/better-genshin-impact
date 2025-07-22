@@ -14,35 +14,35 @@ public class BaseNotificationData
 {
     /// <summary>
     /// NotificationEvent
-    /// �¼�����
+    /// 事件类型
     /// </summary>
     public string Event { get; set; } = string.Empty;
 
     /// <summary>
-    /// �¼����
+    /// 事件结果
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public NotificationEventResult Result { get; set; }
 
     /// <summary>
-    /// �¼�����ʱ��
+    /// 事件发生时间
     /// </summary>
     [JsonConverter(typeof(DateTimeJsonConverter))]
     public DateTime Timestamp { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// �¼�����ʱ�Ľ�ͼ
+    /// 事件发生时的截图
     /// </summary>
     [JsonConverter(typeof(ImageToBase64Converter))]
     public Image<Rgb24>? Screenshot { get; set; }
 
     /// <summary>
-    /// �¼���Ϣ
+    /// 事件消息
     /// </summary>
     public string? Message { get; set; }
 
     /// <summary>
-    /// ������¼�����
+    /// 附加事件数据
     /// </summary>
     public object? Data { get; set; }
 
@@ -54,7 +54,7 @@ public class BaseNotificationData
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogDebug(e, "����֪ͨʧ��");
+            TaskControl.Logger.LogDebug(e, "发送通知失败");
         }
     }
 

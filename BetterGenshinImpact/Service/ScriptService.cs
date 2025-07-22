@@ -29,33 +29,36 @@ namespace BetterGenshinImpact.Service;
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
+    private readonly ILocalizationService? _localizationService = App.GetService<ILocalizationService>();
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    
     private static bool IsCurrentHourEqual(string input)
     {
-        // ³¢ÊÔ½«ÊäÈë×Ö·û´®×ª»»ÎªÕûÊı
+        // å°è¯•å°†è¾“å…¥å­—ç¬¦ä¸²è½¬æ¢ä¸ºæ•°å­—
         if (int.TryParse(input, out int hour))
         {
-            // ÑéÖ¤Ğ¡Ê±ÊÇ·ñÔÚºÏ·¨·¶Î§ÄÚ£¨0-23£©
+            // éªŒè¯å°æ—¶æ˜¯å¦åœ¨åˆæ³•èŒƒå›´å†…ï¼ˆ0-23ï¼‰
             if (hour is >= 0 and <= 23)
             {
-                // »ñÈ¡µ±Ç°Ğ¡Ê±Êı
+                // è·å–å½“å‰å°æ—¶æ•°
                 int currentHour = DateTime.Now.Hour;
-                // ÅĞ¶ÏÊÇ·ñÏàµÈ
+                // åˆ¤æ–­æ˜¯å¦ç›¸ç­‰
                 return currentHour == hour;
             }
         }
 
-        // Èç¹ûÊäÈë·ÇÊı×Ö»ò²»ºÏ·¨£¬·µ»Ø false
+        // å¦‚æœè¾“å…¥ä¸æ˜¯æ•°å­—æˆ–ä¸åˆæ³•ï¼Œè¿”å› false
         return false;
     }
+    
     public bool ShouldSkipTask(ScriptGroupProject project)
     {
-
         if (project.GroupInfo is { Config.PathingConfig.Enabled: true } )
         {
             if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
             {
-                _logger.LogInformation($"{project.Name}ÈÎÎñÒÑµ½½ûÖ¹Ö´ĞĞÊ±¶Î£¬½«Ìø¹ı£¡");
+                var message = _localizationService?.GetString("script.taskReachedForbiddenTime", project.Name) ?? $"{project.Name}å·²ç»åˆ°è¾¾ç¦æ­¢æ‰§è¡Œæ—¶æ®µï¼Œè·³è¿‡ä»»åŠ¡";
+                _logger.LogInformation(message);
                 return true;
             }
 
@@ -65,16 +68,16 @@ public partial class ScriptService : IScriptService
                 int index = tcc.GetExecutionOrder(DateTime.Now);
                 if (index == -1)
                 {
-                    _logger.LogInformation($"{project.Name}ÖÜÆÚÅäÖÃ²ÎÊı´íÎó£¬ÅäÖÃ½«²»ÉúĞ§£¬ÈÎÎñÕı³£Ö´ĞĞ£¡");
+                    var message = _localizationService?.GetString("script.taskSettingIncorrectOrCompleted", project.Name) ?? $"{project.Name}ä»»åŠ¡è®¾ç½®ä¸æ­£ç¡®ï¼Œæˆ–ä»Šæ—¥ä»»åŠ¡å·²æ‰§è¡Œï¼Œè·³è¿‡ä»»åŠ¡";
+                    _logger.LogInformation(message);
                 }
                 else if (index != tcc.Index)
                 {
-                    _logger.LogInformation($"{project.Name}ÈÎÎñÒÑ¾­²»ÔÚÖ´ĞĞÖÜÆÚ£¨µ±Ç°Öµ${index}!=ÅäÖÃÖµ${tcc.Index}£©£¬½«Ìø¹ı´ËÈÎÎñ£¡");
+                    var message = _localizationService?.GetString("script.taskExceededCycle", project.Name, index, tcc.Index) ?? $"{project.Name}ä»»åŠ¡å·²ç»è¶…è¿‡æ‰§è¡Œå‘¨æœŸï¼Œå½“å‰å€¼{index}!=é…ç½®å€¼{tcc.Index}ï¼Œè·³è¿‡ä»»åŠ¡ï¼Œç­‰å¾…æ˜å¤©";
+                    _logger.LogInformation(message);
                     return true;
                 }
-               
             }
-            
         }
 
         if (TaskContext.Instance().Config.OtherConfig.FarmingPlanConfig.Enabled)
@@ -85,60 +88,41 @@ public partial class ScriptService : IScriptService
                 string message;
                 if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
                 {
-                    _logger.LogInformation($"{project.Name}:{message},Ìø¹ı´ËÈÎÎñ£¡");
+                    _logger.LogInformation($"{project.Name}:{message},è·³è¿‡ä»»åŠ¡");
                     return true;
                 }
             }
             catch (Exception e)
             {
-                TaskControl.Logger.LogError($"³úµØ¹æ»®Í³¼ÆÒì³££º{e.Message}");
+                var errorMessage = _localizationService?.GetString("script.farmingPlanStatisticsError", e.Message) ?? $"é”„åœ°è§„åˆ’ç»Ÿè®¡å¼‚å¸¸ï¼š{e.Message}";
+                TaskControl.Logger.LogError(errorMessage);
             }
-
-            
         }
         
-        
-        
-        return false; // ²»Ìø¹ı
-    }
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
+        return false;
+    }  
+  public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
-        groupName ??= "Ä¬ÈÏ";
+        groupName ??= _localizationService?.GetString("script.defaultGroupName") ?? "é»˜è®¤";
 
         var list = ReloadScriptProjects(projectList);
         
-        //»Ö¸´ÁÙÊ±µÄÌø¹ı±êÖ¾
+        // Reset skip time related flags
         foreach (var scriptGroupProject in projectList)
         {
             scriptGroupProject.SkipFlag = false;
         }
-        
 
-        // // Õë¶ÔJS ½Å±¾£¬¼ì²éÊÇ·ñ°üº¬¶¨Ê±Æ÷²Ù×÷
-        // var jsProjects = ExtractJsProjects(list);
-        // if (!hasTimer && jsProjects.Count > 0)
-        // {
-        //     var codeList = await ReadCodeList(jsProjects);
-        //     hasTimer = HasTimerOperation(codeList);
-        // }
-
-        // Ã»Æô¶¯Ê±ºò£¬Æô¶¯½ØÍ¼Æ÷
+        // No timer operations, start image capture
         await StartGameTask();
 
         if (!string.IsNullOrEmpty(groupName))
         {
-            // if (hasTimer)
-            // {
-            //     _logger.LogInformation("ÅäÖÃ×é {Name} °üº¬ÊµÊ±ÈÎÎñ²Ù×÷µ÷ÓÃ", groupName);
-            // }
-
-            _logger.LogInformation("ÅäÖÃ×é {Name} ¼ÓÔØÍê³É£¬¹²{Cnt}¸ö½Å±¾£¬¿ªÊ¼Ö´ĞĞ", groupName, list.Count);
+            var message = _localizationService?.GetString("script.groupLoadedAndStarting", groupName, list.Count) ?? $"è„šæœ¬ç»„ {groupName} åŠ è½½å®Œæˆï¼Œå…±{list.Count}ä¸ªè„šæœ¬ï¼Œå¼€å§‹æ‰§è¡Œ";
+            _logger.LogInformation(message);
         }
 
-        // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-
-        
-        bool fisrt = true;
+        bool first = true;
         await new TaskRunner()
             .RunThreadAsync(async () =>
             {
@@ -164,24 +148,25 @@ public partial class ScriptService : IScriptService
                     {
                         continue;
                     }
-                    //ÔÂ¿¨¼ì²â
+                    // Monthly card task
                     await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
                     if (project.Status != "Enabled")
                     {
-                        _logger.LogInformation("½Å±¾ {Name} ×´Ì¬Îª½ûÓÃ£¬Ìø¹ıÖ´ĞĞ", project.Name);
+                        var message = _localizationService?.GetString("script.scriptDisabledSkipping", project.Name) ?? $"è„šæœ¬ {project.Name} çŠ¶æ€ä¸ºç¦ç”¨ï¼Œè·³è¿‡æ‰§è¡Œ";
+                        _logger.LogInformation(message);
                         continue;
                     }
 
                     if (CancellationContext.Instance.Cts.IsCancellationRequested)
                     {
-                        _logger.LogInformation("Ö´ĞĞ±»È¡Ïû");
+                        var message = _localizationService?.GetString("script.executionCancelled") ?? "æ‰§è¡Œè¢«å–æ¶ˆ";
+                        _logger.LogInformation(message);
                         break;
                     }
 
-                    
-                    if (fisrt)
+                    if (first)
                     {
-                        fisrt = false;
+                        first = false;
                         Notify.Event(NotificationEvent.GroupStart).Success("notification.message.configGroupStartNamed", groupName);
                     }
 
@@ -202,7 +187,6 @@ public partial class ScriptService : IScriptService
                         {
                             TaskTriggerDispatcher.Instance().ClearTriggers();
 
-
                             _logger.LogInformation("------------------------------");
 
                             stopwatch.Reset();
@@ -210,7 +194,7 @@ public partial class ScriptService : IScriptService
                             
                             await ExecuteProject(project);
 
-                            //¶à´ÎÖ´ĞĞÊ±¼°Ê±ÖĞ¶Ï
+                            // Check again during execution time
                             if (ShouldSkipTask(project))
                             {
                                 continue;
@@ -222,13 +206,15 @@ public partial class ScriptService : IScriptService
                         }
                         catch (TaskCanceledException e)
                         {
-                            _logger.LogInformation("È¡ÏûÖ´ĞĞÅäÖÃ×é: {Msg}", e.Message);
+                            var message = _localizationService?.GetString("script.cancellingTask", e.Message) ?? $"å–æ¶ˆæ‰§è¡Œä»»åŠ¡: {e.Message}";
+                            _logger.LogInformation(message);
                             throw;
                         }
                         catch (Exception e)
                         {
-                            _logger.LogDebug(e, "Ö´ĞĞ½Å±¾Ê±·¢ÉúÒì³£");
-                            _logger.LogError("Ö´ĞĞ½Å±¾Ê±·¢ÉúÒì³£: {Msg}", e.Message);
+                            var errorMessage = _localizationService?.GetString("script.scriptExecutionError") ?? "æ‰§è¡Œè„šæœ¬æ—¶å‘ç”Ÿå¼‚å¸¸";
+                            _logger.LogDebug(e, errorMessage);
+                            _logger.LogError($"{errorMessage}: {{Msg}}", e.Message);
                             if (taskProgress!=null && taskProgress.CurrentScriptGroupProjectInfo!=null )
                             {
                                 taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
@@ -238,9 +224,9 @@ public partial class ScriptService : IScriptService
                         {
                             stopwatch.Stop();
                             var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
-                            // _logger.LogDebug("¡ú ½Å±¾Ö´ĞĞ½áÊø: {Name}, ºÄÊ±: {ElapsedMilliseconds} ºÁÃë", project.Name, stopwatch.ElapsedMilliseconds);
-                            _logger.LogInformation("¡ú ½Å±¾Ö´ĞĞ½áÊø: {Name}, ºÄÊ±: {Minutes}·Ö{Seconds:0.000}Ãë", project.Name,
-                                elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
+                            var message = _localizationService?.GetString("script.scriptExecutionCompleted", project.Name, elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60) ?? 
+                                $"âˆš è„šæœ¬æ‰§è¡Œç»“æŸ: {project.Name}, è€—æ—¶: {elapsedTime.Hours * 60 + elapsedTime.Minutes}åˆ†{elapsedTime.TotalSeconds % 60:0.000}ç§’";
+                            _logger.LogInformation(message);
                             _logger.LogInformation("------------------------------");
                         }
 
@@ -260,7 +246,7 @@ public partial class ScriptService : IScriptService
                                     taskProgress.CurrentScriptGroupProjectInfo;
                                 taskProgress.LastScriptGroupName =taskProgress.CurrentScriptGroupName;
                             }
-                            //ÀÛ¼ÆÁ¬ĞøÊ§°Ü´ÎÊı
+                            // Accumulate consecutive failure count
                             if (taskProgress.CurrentScriptGroupProjectInfo.Status == 2)
                             {
                                 taskProgress.ConsecutiveFailureCount++;
@@ -270,11 +256,12 @@ public partial class ScriptService : IScriptService
                             TaskProgressManager.SaveTaskProgress(taskProgress);
                         }
 
-                        //Òì³£´ïµ½Ò»´Î´ÎÊı£¬ÖØÆôbgi
+                        // When exceptions reach a certain number, restart BGI
                         var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
                         if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
                         {
-                            _logger.LogInformation("µ÷¶ÈÆ÷ÈÎÎñ³öÏÖÎ´Ô¤ÆÚµÄÒì³££¬×Ô¶¯ÖØÆôbgi");
+                            var message = _localizationService?.GetString("script.consecutiveUnexpectedErrors") ?? "è¿ç»­å¤šæ¬¡å‡ºç°æœªé¢„æœŸçš„å¼‚å¸¸ï¼Œè‡ªåŠ¨é‡å¯bgi";
+                            _logger.LogInformation(message);
                             Notify.Event(NotificationEvent.GroupEnd).Error("notification.error.unexpectedError");
                             if (autoconfig.RestartGameTogether 
                                 && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled 
@@ -286,20 +273,20 @@ public partial class ScriptService : IScriptService
 
                             SystemControl.RestartApplication(["--TaskProgress",taskProgress.Name]);
                         }
-
                     }
                 }
             });
 
-        // »¹Ô­¶¨Ê±Æ÷
+        // Restore timers
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
         
         if (!string.IsNullOrEmpty(groupName))
         {
-            _logger.LogInformation("ÅäÖÃ×é {Name} Ö´ĞĞ½áÊø", groupName);
+            var message = _localizationService?.GetString("script.groupExecutionCompleted", groupName) ?? $"è„šæœ¬ç»„ {groupName} æ‰§è¡Œç»“æŸ";
+            _logger.LogInformation(message);
         }
 
-        if (!fisrt)
+        if (!first)
         {
             Notify.Event(NotificationEvent.GroupEnd).Success("notification.message.configGroupEndNamed", groupName);
         }
@@ -308,7 +295,6 @@ public partial class ScriptService : IScriptService
         {
             taskProgress.Next = null;
         }
-
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
@@ -333,14 +319,12 @@ public partial class ScriptService : IScriptService
                 var newProject = ScriptGroupProject.BuildPathingProject(project.Name, project.FolderName);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
-                // hasTimer = true;
             }
             else if (project.Type == "Shell")
             {
                 var newProject = ScriptGroupProject.BuildShellProject(project.Name);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
-                // hasTimer = true;
             }
         }
 
@@ -358,20 +342,6 @@ public partial class ScriptService : IScriptService
         target.SkipFlag = source.SkipFlag;
     }
 
-    // private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)
-    // {
-    //     var jsProjects = new List<ScriptProject>();
-    //     foreach (var project in list)
-    //     {
-    //         if (project is { Type: "Javascript", Project: not null })
-    //         {
-    //             jsProjects.Add(project.Project);
-    //         }
-    //     }
-    //
-    //     return jsProjects;
-    // }
-
     private async Task ExecuteProject(ScriptGroupProject project)
     {
         TaskContext.Instance().CurrentScriptProject = project;
@@ -379,25 +349,30 @@ public partial class ScriptService : IScriptService
         {
             if (project.Project == null)
             {
-                throw new Exception("Project Îª¿Õ");
+                var errorMessage = _localizationService?.GetString("script.projectIsNull") ?? "Project ä¸ºç©º";
+                throw new Exception(errorMessage);
             }
 
-            _logger.LogInformation("¡ú ¿ªÊ¼Ö´ĞĞJS½Å±¾: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingJsScript", project.Name) ?? $"âˆš å¼€å§‹æ‰§è¡ŒJSè„šæœ¬: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "KeyMouse")
         {
-            _logger.LogInformation("¡ú ¿ªÊ¼Ö´ĞĞ¼üÊó½Å±¾: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingKeyMouseScript", project.Name) ?? $"âˆš å¼€å§‹æ‰§è¡Œé”®é¼ è„šæœ¬: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "Pathing")
         {
-            _logger.LogInformation("¡ú ¿ªÊ¼Ö´ĞĞµØÍ¼×·×ÙÈÎÎñ: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingPathingTask", project.Name) ?? $"âˆš å¼€å§‹æ‰§è¡Œåœ°å›¾è¿½è¸ªä»»åŠ¡: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "Shell")
         {
-            _logger.LogInformation("¡ú ¿ªÊ¼Ö´ĞĞshell: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingShellScript", project.Name) ?? $"âˆš å¼€å§‹æ‰§è¡Œshell: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
     }
@@ -422,10 +397,9 @@ public partial class ScriptService : IScriptService
     [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
     private static partial Regex DispatcherAddTimerRegex();
 
-
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
-        // Ã»Æô¶¯Ê±ºò£¬Æô¶¯½ØÍ¼Æ÷
+        // æ²¡æœ‰å®šæ—¶å™¨æ“ä½œï¼Œå¯åŠ¨å›¾åƒ
         var homePageViewModel = App.GetService<HomePageViewModel>();
         if (!homePageViewModel!.TaskDispatcherEnabled)
         {
@@ -455,14 +429,17 @@ public partial class ScriptService : IScriptService
                         if (first)
                         {
                             first = false;
-                            TaskControl.Logger.LogInformation("µ±Ç°²»ÔÚÓÎÏ·Ö÷½çÃæ£¬µÈ´ı½øÈëÖ÷½çÃæºóÖ´ĞĞÈÎÎñ...");
-                            TaskControl.Logger.LogInformation("Èç¹ûÄãÒÑ¾­ÔÚÓÎÏ·ÄÚµÄÆäËû½çÃæ£¬Çë×ÔĞĞÍË³öµ±Ç°½çÃæ£¨ESC£©£¬»òÊÇ30Ãëºó½«³ÌĞò½«×Ô¶¯³¢ÊÔµ½ÈëÖ÷½çÃæ£¬Ê¹µ±Ç°ÈÎÎñÄÜ¹»¼ÌĞøÔËĞĞ£¡");
+                            var localizationService = App.GetService<ILocalizationService>();
+                            var message1 = localizationService?.GetString("script.notInMainUiWaiting") ?? "å½“å‰ä¸åœ¨æ¸¸æˆä¸»ç•Œé¢ï¼Œç­‰å¾…è¿›å…¥ä¸»ç•Œé¢åæ‰§è¡Œä»»åŠ¡...";
+                            var message2 = localizationService?.GetString("script.mainUiInstructions") ?? "å¦‚æœä½ å·²ç»åœ¨æ¸¸æˆå†…çš„ä¸»ç•Œé¢ï¼Œè¯·æŒ‰ä¸‹é€€å‡ºå½“å‰ç•Œé¢ï¼ˆESCï¼‰æˆ–è€…ç­‰å¾…30ç§’åå°†å°è¯•è‡ªåŠ¨ç‚¹å‡»ç©ºç™½åŒºåŸŸï¼Œä½¿å‰å°ä»»åŠ¡èƒ½å¤Ÿæ­£å¸¸æ‰§è¡Œï¼";
+                            TaskControl.Logger.LogInformation(message1);
+                            TaskControl.Logger.LogInformation(message2);
                         }
 
                         await Task.Delay(500);
                         if (sw.Elapsed.TotalSeconds >= 30)
                         {
-                            //·ÀÖ¹×ÔÆô¶¯ÓÎÏ·ºóÒòÎªÒ»Ğ©Ô­ÒòÊ§½¹£¬µ¼ÖÂÒ»Ö±¿¨×¡
+                            //é˜²æ­¢é•¿æœŸä¸åœ¨æ¸¸æˆå†…ï¼Œä¸ºä¸€äº›åŸå› å¤±å»ç„¦ç‚¹ï¼Œä¸€ç›´å¡ä½
                             if (!SystemControl.IsGenshinImpactActiveByProcess())
                             {
                                 loseFocusCount++;
@@ -473,13 +450,11 @@ public partial class ScriptService : IScriptService
                                 SystemControl.ActivateWindow();
                             }
 
-                            //×ÔÆô¶¯ÓÎÏ·£¬Èç¹ûÊó±êÔÚÓÎÏ·ÍâÃæ£¬½«ÎŞ·¨×Ô¶¯¿ªÃÅ£¬ÕâÀï³¢ÊÔÒÆ¶¯µ½ÓÎÏ·½çÃæ
+                            //å¦‚æœé•¿æœŸåœ¨æ¸¸æˆå†…ï¼Œä½†ä¸åœ¨æ¸¸æˆä¸»ç•Œé¢ï¼Œæ— æ³•è‡ªåŠ¨ç‚¹å‡»ï¼Œè¿™é‡Œå°è¯•ç§»åŠ¨é¼ æ ‡åˆ°æ¸¸æˆå†…
                             if (sw.Elapsed.TotalSeconds < 200)
                             {
                                 GlobalMethod.MoveMouseTo(300, 300);
                             }
-
-
                         }
                     }
                 });
@@ -487,4 +462,3 @@ public partial class ScriptService : IScriptService
         }
     }
 }
-

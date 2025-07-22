@@ -5,7 +5,8 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="JSON 编辑器"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
+                 Title="{markup:Localize Key=dialog.jsonEditor.title}"
                  Width="600"
                  Height="600"
                  d:Background="#D2D2D2"
@@ -41,14 +42,14 @@
                     <Button MinWidth="90"
                             Margin="8,0,8,0"
                             Command="{Binding SaveCommand}"
-                            Content="保存" />
+                            Content="{markup:Localize Key=common.save}" />
                     <Button MinWidth="90"
                             Command="{Binding CloseCommand}"
-                            Content="关闭" />
+                            Content="{markup:Localize Key=common.close}" />
                 </StackPanel>
             </Grid>
         </Grid>
-        <ui:TitleBar Title="JSON 编辑器">
+        <ui:TitleBar Title="{markup:Localize Key=dialog.jsonEditor.title}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
