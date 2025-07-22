@@ -59,7 +59,7 @@
             VerticalAlignment="Center"
             FontSize="16"
             FontWeight="Bold"
-            Text="任务列表" />
+            Text="{markup:Localize Key=oneDragon.taskList}" />
         <ui:Button
             Grid.Column="1"
             Grid.Row="0"
@@ -165,7 +165,7 @@
                             <Setter.Value>
                                 <DataTemplate>
                                     <TextBlock Margin="0,0,0,0"
-                                               Text="      ± 鼠标右击添加或删除任务       "
+                                               Text="{markup:Localize Key=oneDragon.rightClickToAddOrDeleteTasks}"
                                                VerticalAlignment="Top"
                                                HorizontalAlignment="Left"
                                                FontSize="14"
@@ -230,7 +230,7 @@
                                FontSize="16"
                                FontWeight="Bold"
                                VerticalAlignment="Center"
-                               Text="配置" />
+                               Text="{markup:Localize Key=oneDragon.configuration}" />
                     <ComboBox Grid.Column="1"
                               MinWidth="200"
                               Height="34"
@@ -264,7 +264,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="合成树脂" />
+                               Text="{markup:Localize Key=oneDragon.resinSynthesis}" />
                     
                     <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon WeatherMoon24}">
 
@@ -285,7 +285,7 @@
                                               Width="Auto"
                                               HorizontalAlignment="Left"
                                               FontTypography="Body"
-                                              Text="合成树脂合成台"
+                                              Text="{markup:Localize Key=oneDragon.resinSynthesisBench}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
@@ -293,7 +293,7 @@
                                               Width="Auto"
                                               HorizontalAlignment="Left"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="指定地区合成树脂"
+                                              Text="{markup:Localize Key=oneDragon.specifyRegionForResinSynthesis}"
                                               TextWrapping="Wrap" />
                                 <ComboBox 
                                     Grid.Row="0"
@@ -312,7 +312,7 @@
                                               Margin=" 15,0,0,0"
                                               HorizontalAlignment="Left"
                                               FontTypography="Body"
-                                              Text="合成后保留"
+                                              Text="{markup:Localize Key=oneDragon.keepAfterSynthesis}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="2"
@@ -320,7 +320,7 @@
                                               Width="Auto"
                                               HorizontalAlignment="Left"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="原粹树脂数量"
+                                              Text="{markup:Localize Key=oneDragon.originalResinAmount}"
                                               TextWrapping="Wrap" />
                                 <TextBox Grid.Row="0"
                                          Grid.Column="3"
@@ -342,11 +342,11 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
                         <TextBlock FontSize="14"
                                    Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                   Text="自动秘境" />
+                                   Text="{markup:Localize Key=oneDragon.autoDomain}" />
                         <TextBlock Margin="4,0,0,0"
                                    VerticalAlignment="Center"
                                    FontSize="11"
-                                   Text="（此处未覆盖的配置可在 独立任务-自动秘境 中配置）" />
+                                   Text="{markup:Localize Key=oneDragon.uncoveredConfigsInIndependentTasks}" />
                     </StackPanel>
  
 
@@ -367,12 +367,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="每日秘境刷取配置"
+                                              Text="{markup:Localize Key=oneDragon.dailyDomainConfig}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="前往指定秘境消耗树脂，并自动领取奖励。"
+                                              Text="{markup:Localize Key=oneDragon.goToSpecifiedDomainConsumeResin}"
                                               TextWrapping="Wrap">
                                 </ui:TextBlock>
                                 <ui:ToggleSwitch Grid.Row="0"
@@ -395,12 +395,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="进入秘境切换的队伍名称"
+                                              Text="{markup:Localize Key=oneDragon.enterDomainSwitchTeamName}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="注意是游戏内你设置的名称"
+                                              Text="{markup:Localize Key=oneDragon.noteInGameSetName}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
@@ -409,7 +409,7 @@
                                             MaxWidth="800"
                                             Margin="20,0,36,0"
                                             Text="{Binding SelectedConfig.PartyName, Mode=TwoWay}"
-                                            PlaceholderText="填写队伍名称"
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}"
                                             TextAlignment="Center"
                                             TextWrapping="Wrap" />
                             </Grid>
@@ -429,14 +429,14 @@
                                               Grid.Column="0"
                                               FontTypography="Body"
                                               HorizontalAlignment="Left"
-                                              Text="选择秘境"
+                                              Text="{markup:Localize Key=oneDragon.selectDomain}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               HorizontalAlignment="Left"
-                                              Text="秘境名称"
+                                              Text="{markup:Localize Key=oneDragon.domainName}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
@@ -454,7 +454,7 @@
                                               Margin="10,0,10,0"
                                               FontTypography="Body"
                                               HorizontalAlignment="Right"
-                                              Text="周日或限时"
+                                              Text="{markup:Localize Key=oneDragon.sundayOrLimitedTime}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
@@ -462,7 +462,7 @@
                                               Margin="10,0,10,0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               HorizontalAlignment="Right"
-                                              Text="选择序号"
+                                              Text="{markup:Localize Key=oneDragon.selectSequenceNumber}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
@@ -498,12 +498,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="每周秘境刷取配置"
+                                              Text="{markup:Localize Key=oneDragon.weeklyDomainConfig}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="启用后，每日刷取配置将会失效。"
+                                              Text="{markup:Localize Key=oneDragon.enabledWillDisableDailyConfig}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -523,7 +523,7 @@
                                               FontTypography="Body"
                                               FontSize="12"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="周期始于凌晨 4:00 ，如周一 4:00 至周二 3:59 刷取周一秘境" 
+                                              Text="{markup:Localize Key=oneDragon.cycleStartsAt4AM}" 
                                               TextWrapping="Wrap">
                                 </ui:TextBlock>
                            
@@ -537,7 +537,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周一"
+                                              Text="{markup:Localize Key=oneDragon.monday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -547,7 +547,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -566,7 +566,7 @@
                                               FontTypography="Body"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周二"
+                                              Text="{markup:Localize Key=oneDragon.tuesday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -576,7 +576,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -594,7 +594,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周三"
+                                              Text="{markup:Localize Key=oneDragon.wednesday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -604,7 +604,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -623,7 +623,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周四"
+                                              Text="{markup:Localize Key=oneDragon.thursday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -633,7 +633,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -652,7 +652,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周五"
+                                              Text="{markup:Localize Key=oneDragon.friday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -662,7 +662,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -682,7 +682,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周六"
+                                              Text="{markup:Localize Key=oneDragon.saturday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -692,7 +692,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -716,7 +716,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周日"
+                                              Text="{markup:Localize Key=oneDragon.sunday}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -726,7 +726,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{markup:Localize Key=oneDragon.fillTeamName}" />
                                 <ComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="140"
@@ -745,7 +745,7 @@
                                         Padding="10">
                                     <ui:TextBlock FontTypography="Body"
                                                   FontSize="13" 
-                                                  Text="周日或限时三种奖励,从上往下(1/2/3)序号:"
+                                                  Text="{markup:Localize Key=oneDragon.sundayOrLimitedThreeRewards}"
                                                   TextAlignment="Justify"
                                                   TextWrapping="Wrap" />
                                 </Border>
@@ -787,7 +787,7 @@
                                               VerticalAlignment="Center"
                                               HorizontalAlignment="Center"
                                               Margin="0,0,0,0"
-                                              Content="领奖树脂设定"
+                                              Content="{markup:Localize Key=oneDragon.rewardResinSettings}"
                                               x:Name="ToggleButton">
                                 </ToggleButton>
                                 
@@ -795,13 +795,13 @@
                                               Grid.Column="1"
                                               FontTypography="Body"
                                               HorizontalAlignment="Right"
-                                              Text="分解圣遗物"
+                                              Text="{markup:Localize Key=oneDragon.decomposeArtifacts}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="最高的星级"
+                                              Text="{markup:Localize Key=oneDragon.highestStarLevel}"
                                               TextWrapping="Wrap" />
                                 
                                 <!-- 弹窗 -->
@@ -835,7 +835,7 @@
                                                 <ToggleButton Grid.Column="0"
                                                         Margin="0,0,0,0"
                                                         IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=TwoWay}"
-                                                        Content="模式切换" />
+                                                        Content="{markup:Localize Key=oneDragon.modeSwitch}" />
                                                 
                                                 <!-- 根据模SpecifyResinUse显示不同的文字 -->
                                                 <ui:TextBlock Grid.Column="1"
@@ -843,7 +843,7 @@
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
-                                                                Text="先用浓缩,后原粹,其余不用"
+                                                                Text="{markup:Localize Key=oneDragon.useCondensedFirstThenOriginal}"
                                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
@@ -852,7 +852,7 @@
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
-                                                                Text="按下方配置数量使用树脂"
+                                                                Text="{markup:Localize Key=oneDragon.useResinAccordingToConfig}"
                                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -867,7 +867,7 @@
                                                 <!-- 原粹树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,10,0,12">
-                                                    <ui:TextBlock Text="原粹树脂刷取次数："
+                                                    <ui:TextBlock Text="{markup:Localize Key=oneDragon.originalResinUsageCount}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -882,7 +882,7 @@
                                                 <!-- 浓缩树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,0,0,12">
-                                                    <ui:TextBlock Text="浓缩树脂刷取次数："
+                                                    <ui:TextBlock Text="{markup:Localize Key=oneDragon.condensedResinUsageCount}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -897,7 +897,7 @@
                                                 <!-- 须臾树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,0,0,12">
-                                                    <ui:TextBlock Text="须臾树脂刷取次数："
+                                                    <ui:TextBlock Text="{markup:Localize Key=oneDragon.transientResinUsageCount}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -912,7 +912,7 @@
                                                 <!-- 脆弱树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,0,0,0">
-                                                    <ui:TextBlock Text="脆弱树脂刷取次数："
+                                                    <ui:TextBlock Text="{markup:Localize Key=oneDragon.fragileResinUsageCount}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -947,7 +947,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="领取奖励" />
+                               Text="{markup:Localize Key=oneDragon.claimRewards}" />
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
                             <ui:FontIcon Glyph="&#xf14e;" Style="{StaticResource FaFontIconStyle}" />
@@ -961,12 +961,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="领取奖励的冒险者协会"
+                                              Text="{markup:Localize Key=oneDragon.adventurersGuildForRewards}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="前往指定地区冒险者协会领取"
+                                              Text="{markup:Localize Key=oneDragon.goToSpecifiedRegionAdventurersGuild}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -988,7 +988,7 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="领取前切换队伍（好感队）"
+                                              Text="{markup:Localize Key=oneDragon.switchTeamBeforeClaiming}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
@@ -996,7 +996,7 @@
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="用于给指定队伍加好感度"
+                                              Text="{markup:Localize Key=oneDragon.forSpecifiedTeamFriendship}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -1005,7 +1005,7 @@
                             MaxWidth="800"
                             Margin="0,0,28,0"
                             Text="{Binding SelectedConfig.DailyRewardPartyName, Mode=TwoWay}"
-                            PlaceholderText="填写好感队名称"
+                            PlaceholderText="{markup:Localize Key=oneDragon.fillFriendshipTeamName}"
                             TextAlignment="Center"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
@@ -1016,7 +1016,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="尘歌壶配置" />
+                               Text="{markup:Localize Key=oneDragon.serenitea}" />
                    
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
@@ -1031,12 +1031,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="进壶方式选择"
+                                              Text="{markup:Localize Key=oneDragon.enterPotMethod}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="购买日期和商品"
+                                              Text="{markup:Localize Key=oneDragon.purchaseDateAndItems}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -1048,7 +1048,7 @@
                             <Button MinWidth="90"
                                     Height="36"
                                     Margin="0,0,28,0"
-                                    Content="购买选择"
+                                    Content="{markup:Localize Key=oneDragon.purchaseSelection}"
                                     Command="{Binding AddPotBuyItemCommand}" />
                         </StackPanel>
                     </ui:CardControl>
@@ -1057,7 +1057,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="完成后操作" />
+                               Text="{markup:Localize Key=oneDragon.completionActions}" />
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
                             <ui:FontIcon Glyph="&#xf11e;" Style="{StaticResource FaFontIconStyle}" />
@@ -1071,12 +1071,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="任务完成后执行的操作"
+                                              Text="{markup:Localize Key=oneDragon.actionsAfterTaskCompletion}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="一条龙结束后操作"
+                                              Text="{markup:Localize Key=oneDragon.operationsAfterOneDragonEnd}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>

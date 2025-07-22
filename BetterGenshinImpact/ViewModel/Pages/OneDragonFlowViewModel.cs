@@ -44,19 +44,9 @@ public partial class OneDragonFlowViewModel : ViewModel
     public static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
 
     private readonly ScriptService _scriptService;
+    private readonly ILocalizationService _localizationService;
 
-    [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
-    [
-        new("领取邮件"),
-        new("合成树脂"),
-        // new ("每日委托"),
-        new("自动秘境"),
-        // new ("自动锻造"),
-        // new ("自动刷地脉花"),
-        new("领取每日奖励"),
-        new ("领取尘歌壶奖励"),
-        // new ("自动七圣召唤"),
-    ];
+    [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList = [];
 
 
     [ObservableProperty] private OneDragonTaskItem _selectedTask;
@@ -69,7 +59,6 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
-    // 其他属性和方法...
     [ObservableProperty] private string _inputScriptGroupName = string.Empty;
 
     [ObservableProperty]
@@ -78,15 +67,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty]
     private ObservableCollection<ScriptGroup> _scriptGroups = new ObservableCollection<ScriptGroup>();
 
-    [ObservableProperty] private ObservableCollection<ScriptGroup> _scriptGroupsdefault =
-        new ObservableCollection<ScriptGroup>()
-        {
-            new() { Name = "领取邮件" },
-            new() { Name = "合成树脂" },
-            new() { Name = "自动秘境" },
-            new() { Name = "领取每日奖励" },
-            new() {Name = "领取尘歌壶奖励" },
-        };
+    [ObservableProperty] private ObservableCollection<ScriptGroup> _scriptGroupsdefault = [];
 
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     private readonly string _basePath = AppDomain.CurrentDomain.BaseDirectory;
@@ -131,7 +112,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 }
                 catch (Exception e)
                 {
-                    _logger.LogInformation(e, "读取配置组配置时失败");
+                    _logger.LogInformation(e, _localizationService.GetString("oneDragon.readScriptGroupFailed"));
                 }
             }
 
@@ -139,7 +120,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         catch (Exception e)
         {
-            _logger.LogInformation(e, "读取配置组配置时失败");
+            _logger.LogInformation(e, _localizationService.GetString("oneDragon.readScriptGroupFailed"));
         }
     }
 
@@ -222,25 +203,25 @@ public partial class OneDragonFlowViewModel : ViewModel
         
         var stackPanel = new StackPanel();
         var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
-        CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
+        CheckBox selectedCheckBox = null; // Used to store the currently selected CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
             if (TaskList.Any(taskName => scriptGroup.Name == taskName.Name))
             {
-                continue; // 只有当文件名完全相同时才跳过显示
+                continue; // Skip if task already exists in the list
             }
             var checkBox = new CheckBox
             {
                 Content = scriptGroup.Name,
                 Tag = scriptGroup,
-                IsChecked = false // 初始状态下都未选中
+                IsChecked = false // Initial state is unchecked
             };
             checkBoxes[scriptGroup] = checkBox;
             stackPanel.Children.Add(checkBox);
         }
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-        Title = "选择增加的配置组（可多选）",
+        Title = _localizationService.GetString("oneDragon.selectTasksToAdd"),
         Content = new ScrollViewer
         {
             Content = stackPanel,
@@ -250,18 +231,18 @@ public partial class OneDragonFlowViewModel : ViewModel
         PrimaryButtonText = localizationService.GetString("common.ok"),
         Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
         WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
+        SizeToContent = SizeToContent.Width , // Ensure window automatically adjusts to content size
         MaxHeight = 600,
         };
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
-            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
+            List<string> selectedItems = new List<string>(); // Store all selected items
             foreach (var checkBox in checkBoxes.Values)
             {
                 if (checkBox.IsChecked == true)
                 {
-                    // 确保 Tag 是 ScriptGroup 类型，并返回其 Name 属性
+                    // Ensure Tag is ScriptGroup type, then get its Name property
                     var scriptGroup = checkBox.Tag as ScriptGroup;
                     if (scriptGroup != null)
                     { 
@@ -273,7 +254,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                 }
             }
-            return string.Join(",", selectedItems); // 返回所有选中的项
+            return string.Join(",", selectedItems); // Return all selected items
         }
         return null;
     }
@@ -294,21 +275,30 @@ public partial class OneDragonFlowViewModel : ViewModel
         if (SelectedConfig.SecretTreasureObjects == null || SelectedConfig.SecretTreasureObjects.Count == 0)
         {
             Toast.Warning(localizationService.GetString("toast.noSecretTreasureConfig"));
-            SelectedConfig.SecretTreasureObjects.Add("每天重复");
+            SelectedConfig.SecretTreasureObjects.Add(_localizationService.GetString("oneDragon.weekdays.everyday"));
         }
         var infoTextBlock = new TextBlock
         {
-            Text = "日期不影响领取好感和钱币",
+            Text = _localizationService.GetString("oneDragon.notAffectMoney"),
             HorizontalAlignment = HorizontalAlignment.Center,
             FontSize = 12,
             Margin = new Thickness(0, 0, 0, 10)
         };
 
         stackPanel.Children.Add(infoTextBlock);
-        // 添加下拉选择框
+        // Add day selection dropdown
         var dayComboBox = new ComboBox
         {
-            ItemsSource = new List<string> { "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日", "每天重复" },
+            ItemsSource = new List<string> { 
+                _localizationService.GetString("oneDragon.weekdays.monday"),
+                _localizationService.GetString("oneDragon.weekdays.tuesday"),
+                _localizationService.GetString("oneDragon.weekdays.wednesday"),
+                _localizationService.GetString("oneDragon.weekdays.thursday"),
+                _localizationService.GetString("oneDragon.weekdays.friday"),
+                _localizationService.GetString("oneDragon.weekdays.saturday"),
+                _localizationService.GetString("oneDragon.weekdays.sunday"),
+                _localizationService.GetString("oneDragon.weekdays.everyday")
+            },
             SelectedItem = SelectedConfig.SecretTreasureObjects.First(),
             FontSize = 12,
             Margin = new Thickness(0, 0, 0, 10)
@@ -330,7 +320,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-            Title = "洞天百宝购买选择",
+            Title = _localizationService.GetString("oneDragon.selectSecretTreasure"),
             Content = new ScrollViewer
             {
                 Content = stackPanel,
@@ -340,7 +330,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             PrimaryButtonText = localizationService.GetString("common.ok"),
             Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            SizeToContent = SizeToContent.Width, // 确保弹窗根据内容自动调整大小
+            SizeToContent = SizeToContent.Width, // Ensure window automatically adjusts to content size
             MinWidth = 200,
             MaxHeight = 500,
         };
@@ -350,7 +340,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             SelectedConfig.SecretTreasureObjects.Clear();
             SelectedConfig.SecretTreasureObjects.Add(dayComboBox.SelectedItem.ToString());
-            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
+            List<string> selectedItems = new List<string>(); // Store all selected items
             foreach (var checkBox in checkBoxes.Values)
             {
                 if (checkBox.IsChecked == true)
@@ -369,7 +359,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
             if (selectedItems.Count > 0)
             {
-                return string.Join(",", selectedItems); // 返回所有选中的项
+                return string.Join(",", selectedItems); // Return all selected items
             }
             else
             {
@@ -381,30 +371,89 @@ public partial class OneDragonFlowViewModel : ViewModel
     
     [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
     /// <summary>
-    /// 当前生效配置
+    /// Currently effective configuration
     /// </summary>
     [ObservableProperty] private OneDragonFlowConfig? _selectedConfig;
 
-    [ObservableProperty] private List<string> _craftingBenchCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _craftingBenchCountry = [];
 
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = [];
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
-    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
+    [ObservableProperty] private List<string> _completionActionList = [];
 
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
     
     [ObservableProperty] private List<string> _sundaySelectedValueList = ["","1", "2", "3"];
 
-    [ObservableProperty] private List<string> _secretTreasureObjectList = ["布匹","须臾树脂","大英雄的经验","流浪者的经验","精锻用魔矿","摩拉","祝圣精华","祝圣油膏"];
+    [ObservableProperty] private List<string> _secretTreasureObjectList = [];
     
-    [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["地图传送", "尘歌壶道具"];
+    [ObservableProperty] private List<string> _sereniteaPotTpTypes = [];
     
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
-    public OneDragonFlowViewModel()
+    public OneDragonFlowViewModel(ILocalizationService localizationService)
     {
+        _localizationService = localizationService;
+        
+        // Initialize localized lists
+        CraftingBenchCountry = [
+            _localizationService.GetString("oneDragon.countries.mondstadt"),
+            _localizationService.GetString("oneDragon.countries.liyue"),
+            _localizationService.GetString("oneDragon.countries.inazuma"),
+            _localizationService.GetString("oneDragon.countries.sumeru")
+        ];
+        
+        AdventurersGuildCountry = [
+            _localizationService.GetString("oneDragon.countries.mondstadt"),
+            _localizationService.GetString("oneDragon.countries.liyue"),
+            _localizationService.GetString("oneDragon.countries.inazuma"),
+            _localizationService.GetString("oneDragon.countries.sumeru")
+        ];
+        
+        CompletionActionList = [
+            _localizationService.GetString("oneDragon.completionActions.none"),
+            _localizationService.GetString("oneDragon.closeGame"),
+            _localizationService.GetString("oneDragon.closeGameAndApp"),
+            _localizationService.GetString("oneDragon.shutdown")
+        ];
+        
+        // Initialize default task list with localized names
+        TaskList = [
+            new OneDragonTaskItem(_localizationService.GetString("oneDragon.taskNames.collectMail")),
+            new OneDragonTaskItem(_localizationService.GetString("oneDragon.taskNames.synthesizeResin")),
+            new OneDragonTaskItem(_localizationService.GetString("oneDragon.taskNames.autoDomain")),
+            new OneDragonTaskItem(_localizationService.GetString("oneDragon.taskNames.collectDailyRewards")),
+            new OneDragonTaskItem(_localizationService.GetString("oneDragon.taskNames.collectExpeditionRewards"))
+        ];
+        
+        // Initialize default script groups with localized names
+        ScriptGroupsdefault = [
+            new ScriptGroup { Name = _localizationService.GetString("oneDragon.taskNames.collectMail") },
+            new ScriptGroup { Name = _localizationService.GetString("oneDragon.taskNames.synthesizeResin") },
+            new ScriptGroup { Name = _localizationService.GetString("oneDragon.taskNames.autoDomain") },
+            new ScriptGroup { Name = _localizationService.GetString("oneDragon.taskNames.collectDailyRewards") },
+            new ScriptGroup { Name = _localizationService.GetString("oneDragon.taskNames.collectExpeditionRewards") }
+        ];
+        
+        // Initialize secret treasure object list with localized names
+        SecretTreasureObjectList = [
+            _localizationService.GetString("oneDragon.secretTreasure.resin"),
+            _localizationService.GetString("oneDragon.secretTreasure.synthesisResin"),
+            _localizationService.GetString("oneDragon.secretTreasure.heroWit"),
+            _localizationService.GetString("oneDragon.secretTreasure.adventurerExp"),
+            _localizationService.GetString("oneDragon.secretTreasure.mysticOre"),
+            _localizationService.GetString("oneDragon.secretTreasure.ore"),
+            _localizationService.GetString("oneDragon.secretTreasure.sanctifyingEssence"),
+            _localizationService.GetString("oneDragon.secretTreasure.sanctifyingOintment")
+        ];
+        
+        // Initialize Serenitea Pot teleport types with localized names
+        SereniteaPotTpTypes = [
+            _localizationService.GetString("oneDragon.teleportTypes.mapTeleport"),
+            _localizationService.GetString("oneDragon.teleportTypes.sereniteaPot")
+        ];
         ConfigList.CollectionChanged += (sender, e) =>
         {
             if (e.NewItems != null)
@@ -456,7 +505,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private void InitConfigList()
     {
         Directory.CreateDirectory(OneDragonFlowConfigFolder);
-        // 读取文件夹内所有json配置，按创建时间正序
+        // Get files from folder and load json configurations, sorted by creation time
         var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
         var configs = new List<OneDragonFlowConfig>();
 
@@ -485,7 +534,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 selected = new OneDragonFlowConfig
                 {
-                    Name = "默认配置"
+                    Name = _localizationService.GetString("oneDragon.defaultConfig")
                 };
                 configs.Add(selected);
             }
@@ -498,11 +547,11 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SelectedConfig = selected;
-        LoadDisplayTaskListFromConfig(); // 加载 DisplayTaskList 从配置文件
+        LoadDisplayTaskListFromConfig(); // Load DisplayTaskList from configuration file
         SetSomeSelectedConfig(SelectedConfig);
     }
 
-    // 新增方法：从配置文件加载 DisplayTaskList
+    // Load DisplayTaskList from configuration file based on enabled tasks
 
     public void LoadDisplayTaskListFromConfig()
     {
@@ -519,7 +568,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 IsEnabled = kvp.Value
             };
             TaskList.Add(taskItem);
-            // _logger.LogInformation($"加载配置: {kvp.Key} {kvp.Value}");
+            // _logger.LogInformation($"Loading task: {kvp.Key} {kvp.Value}");
         }
     }
 
@@ -617,7 +666,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        await Task.Delay(100); //等会加载完再保存
+        await Task.Delay(100); // Wait a moment before saving
         SaveConfig();
     }
 
@@ -643,7 +692,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "保存配置时失败");
+            _logger.LogDebug(e, _localizationService.GetString("toast.saveConfigFailed"));
             var localizationService = App.GetService<ILocalizationService>();
             Toast.Error(localizationService.GetString("toast.saveConfigFailed"));
         }
@@ -654,7 +703,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void OnLoaded()
     {
-        // 组件首次加载时运行一次。
+        // Load state check runs only once
         if (!_autoRun)
         {
             return;
@@ -664,25 +713,25 @@ public partial class OneDragonFlowViewModel : ViewModel
         var args = Environment.GetCommandLineArgs();
         if (args.Length > 1 && args[1].Contains("startOneDragon"))
         {
-            // 通过命令行参数启动一条龙。
+            // Start One-Dragon via command line parameters
             if (args.Length > 2)
             {
-                // 从命令行参数中提取一条龙配置名称。
-                _logger.LogInformation($"参数指定的一条龙配置：{args[2]}");
+                // Get One-Dragon configuration name from command line parameters
+                _logger.LogInformation(_localizationService.GetString("oneDragon.startSpecifiedConfig"), args[2]);
                 var argsOneDragonConfig = ConfigList.FirstOrDefault(x => x.Name == args[2], null);
                 if (argsOneDragonConfig != null)
                 {
-                    // 设定配置，配置下拉框会选定。
+                    // Set configuration and update selected config
                     SelectedConfig = argsOneDragonConfig;
-                    // 调用选定更新函数。
+                    // Update after config selection change
                     OnConfigDropDownChanged();
                 }
                 else
                 {
-                    _logger.LogWarning("未找到，请检查。");
+                    _logger.LogWarning(_localizationService.GetString("oneDragon.configNotFound"));
                 }
             }
-            // 异步执行一条龙
+            // Asynchronously execute One-Dragon
             var localizationService = App.GetService<ILocalizationService>();
             Toast.Information(localizationService.GetString("toast.commandLineDragon", SelectedConfig.Name));
             OnOneKeyExecute();
@@ -692,8 +741,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
-        _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
-        var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
+        _logger.LogInformation(_localizationService.GetString("oneDragon.startDragonConfig"), SelectedConfig.Name);
+        var taskListCopy = new List<OneDragonTaskItem>(TaskList); // Copy task list to avoid modification during execution
         foreach (var task in taskListCopy)
         {
             task.InitAction(SelectedConfig);
@@ -702,7 +751,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         int finishOneTaskcount = 1;
         int finishTaskcount = 1;
         int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
-        _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
+        _logger.LogInformation(_localizationService.GetString("oneDragon.totalEnabledTasks"), enabledTaskCountall);
 
         await ScriptService.StartGameTask();
 
@@ -721,22 +770,22 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             var localizationService = App.GetService<ILocalizationService>();
             Toast.Warning(localizationService.GetString("toast.selectTaskFirst"));
-            _logger.LogInformation("没有配置,退出执行!");
+            _logger.LogInformation(_localizationService.GetString("oneDragon.noTasksExit"));
             return;
         }
 
         int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
-        _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
+        _logger.LogInformation(_localizationService.GetString("oneDragon.dragonTaskCount"), enabledoneTaskCount);
 
         await ScriptService.StartGameTask();
         SaveConfig();
         int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
             t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
-        _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
+        _logger.LogInformation(_localizationService.GetString("oneDragon.configGroupTaskCount"), enabledTaskCount);
 
         if (enabledoneTaskCount <= 0)
         {
-            _logger.LogInformation("没有一条龙任务!");
+            _logger.LogInformation(_localizationService.GetString("oneDragon.noDragonTasks"));
         }
 
         Notify.Event(NotificationEvent.DragonStart).Success("notification.message.dragonStart");
@@ -746,7 +795,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
-                    _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
+                    _logger.LogInformation(_localizationService.GetString("oneDragon.dragonTaskExecuting"), finishOneTaskcount++, enabledoneTaskCount);
                     await new TaskRunner().RunThreadAsync(async () =>
                     {
                         await task.Action();
@@ -759,7 +808,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     {
                         if (enabledTaskCount <= 0)
                         {
-                            _logger.LogInformation("没有配置组任务,退出执行!");
+                            _logger.LogInformation(_localizationService.GetString("oneDragon.noConfigGroupTasks"));
                             return;
                         }
 
@@ -767,7 +816,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
                         if (SelectedConfig.TaskEnabledList[task.Name])
                         {
-                            _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
+                            _logger.LogInformation(_localizationService.GetString("oneDragon.configGroupExecuting"), finishTaskcount++, enabledTaskCount);
                             await Task.Delay(500);
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
@@ -778,42 +827,42 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     catch (Exception e)
                     {
-                        _logger.LogDebug(e, "执行配置组任务时失败");
+                        _logger.LogDebug(e, _localizationService.GetString("oneDragon.executeConfigGroupFailed"));
                         var localizationService = App.GetService<ILocalizationService>();
                         Toast.Error(localizationService.GetString("toast.executeConfigFailed"));
                     }
                 }
-                // 如果任务已经被取消，中断所有任务
+                // Check if task has been cancelled and interrupt execution
                 if (CancellationContext.Instance.Cts.IsCancellationRequested)
                 {
-                    _logger.LogInformation("任务被取消，退出执行");
+                    _logger.LogInformation(_localizationService.GetString("oneDragon.taskCancelled"));
                     Notify.Event(NotificationEvent.DragonEnd).Success("notification.message.dragonEnd");
-                    return; // 后续的检查任务也不执行
+                    return; // Skip remaining tasks, no longer executing
                 }
             }
         }
 
-        // 检查和最终结束的任务
+        // Check rewards and complete tasks
         await new TaskRunner().RunThreadAsync(async () =>
         {
             await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
             await Task.Delay(500);
             Notify.Event(NotificationEvent.DragonEnd).Success("notification.message.dragonEnd");
-            _logger.LogInformation("一条龙和配置组任务结束");
+            _logger.LogInformation(_localizationService.GetString("oneDragon.dragonCompleted"));
 
-            // 执行完成后操作
+            // Execute completion action
             if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
             {
                 switch (SelectedConfig.CompletionAction)
                 {
-                    case "关闭游戏":
+                    case var action when action == _localizationService.GetString("oneDragon.closeGame"):
                         SystemControl.CloseGame();
                         break;
-                    case "关闭游戏和软件":
+                    case var action when action == _localizationService.GetString("oneDragon.closeGameAndApp"):
                         SystemControl.CloseGame();
                         Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
                         break;
-                    case "关机":
+                    case var action when action == _localizationService.GetString("oneDragon.shutdown"):
                         SystemControl.CloseGame();
                         SystemControl.Shutdown();
                         break;
@@ -833,11 +882,11 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void OnAddConfig()
     {
-        // 添加配置
-        var str = PromptDialog.Prompt("请输入一条龙配置名称", "新增一条龙配置");
+        // Add new configuration
+        var str = PromptDialog.Prompt(_localizationService.GetString("oneDragon.enterNewConfigName"), _localizationService.GetString("oneDragon.addNewConfig"));
         if (!string.IsNullOrEmpty(str))
         {
-            // 检查是否已存在
+            // Check if already exists
             if (ConfigList.Any(x => x.Name == str))
             {
                 var localizationService = App.GetService<ILocalizationService>();

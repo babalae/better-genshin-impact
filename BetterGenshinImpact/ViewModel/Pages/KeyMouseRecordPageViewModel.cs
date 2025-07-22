@@ -34,12 +34,14 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     private bool _isRecording = false;
 
     private readonly ISnackbarService _snackbarService;
+    private readonly ILocalizationService _localizationService;
 
     public AllConfig Config { get; set; }
 
-    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService)
+    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService, ILocalizationService localizationService)
     {
         _snackbarService = snackbarService;
+        _localizationService = localizationService;
         Config = configService.Get();
     }
 
@@ -111,7 +113,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
             }
             catch (Exception e)
             {
-                _logger.LogDebug(e, "停止录制时发生异常");
+                _logger.LogDebug(e, _localizationService.GetString("keyMouseRecord.stopRecordingError"));
                 _logger.LogWarning(e.Message);
             }
         }
@@ -121,7 +123,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     public async Task OnStartPlay(string path)
     {
         string name = Path.GetFileName(path);
-        _logger.LogInformation("重放开始：{Name}", name);
+        _logger.LogInformation(_localizationService.GetString("keyMouseRecord.playbackStarted"), name);
         try
         {
             var s = await File.ReadAllTextAsync(path);
@@ -131,11 +133,11 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "重放脚本时发生异常");
+            _logger.LogError(e, _localizationService.GetString("keyMouseRecord.playbackError"));
         }
         finally
         {
-            _logger.LogInformation("重放结束：{Name}", name);
+            _logger.LogInformation(_localizationService.GetString("keyMouseRecord.playbackFinished"), name);
         }
     }
 
@@ -154,7 +156,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         }
         try
         {
-            var str = PromptDialog.Prompt("请输入要修改为的名称（实际就是文件名）", "修改名称");
+            var str = PromptDialog.Prompt(_localizationService.GetString("keyMouseRecord.editNamePrompt"), _localizationService.GetString("keyMouseRecord.editNameTitle"));
             if (!string.IsNullOrEmpty(str))
             {
                 // 检查原始文件是否存在
@@ -164,8 +166,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
                     // 重命名文件
                     File.Move(originalFilePath, Path.Combine(Path.GetDirectoryName(originalFilePath)!, str + ".json"));
                     _snackbarService.Show(
-                        "修改名称成功",
-                        $"脚本名称 {item.Name} 修改为 {str}",
+                        _localizationService.GetString("keyMouseRecord.editNameSuccess"),
+                        string.Format(_localizationService.GetString("keyMouseRecord.editNameSuccessMessage"), item.Name, str),
                         ControlAppearance.Success,
                         null,
                         TimeSpan.FromSeconds(2)
@@ -176,8 +178,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         catch (Exception)
         {
             _snackbarService.Show(
-                "修改失败",
-                $"{item.Name} 修改失败",
+                _localizationService.GetString("keyMouseRecord.editNameFailed"),
+                string.Format(_localizationService.GetString("keyMouseRecord.editNameFailedMessage"), item.Name),
                 ControlAppearance.Danger,
                 null,
                 TimeSpan.FromSeconds(3)
@@ -200,8 +202,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         {
             File.Delete(item.Path);
             _snackbarService.Show(
-                "删除成功",
-                $"{item.Name} 已经被删除",
+                _localizationService.GetString("keyMouseRecord.deleteSuccess"),
+                string.Format(_localizationService.GetString("keyMouseRecord.deleteSuccessMessage"), item.Name),
                 ControlAppearance.Success,
                 null,
                 TimeSpan.FromSeconds(2)
@@ -210,8 +212,8 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         catch (Exception)
         {
             _snackbarService.Show(
-                "删除失败",
-                $"{item.Name} 删除失败",
+                _localizationService.GetString("keyMouseRecord.deleteFailed"),
+                string.Format(_localizationService.GetString("keyMouseRecord.deleteFailedMessage"), item.Name),
                 ControlAppearance.Danger,
                 null,
                 TimeSpan.FromSeconds(3)

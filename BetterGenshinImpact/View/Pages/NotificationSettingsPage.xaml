@@ -1820,12 +1820,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Discord Webhook 通知"
+                                  Text="{local:Localize Key=notification.enableDiscordWebhook}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Discord Webhook 通知相关设置"
+                                  Text="{local:Localize Key=notification.discordWebhookSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1847,12 +1847,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Webhook 网址"
+                                  Text="{local:Localize Key=notification.discordWebhookUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Discord 提供的 Webhook 网址"
+                                  Text="{local:Localize Key=notification.discordWebhookUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1875,12 +1875,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="用户名"
+                                  Text="{local:Localize Key=notification.discordWebhookUsername}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="讯息显示的名称，为空时使用 Discord 中预先设定的名字"
+                                  Text="{local:Localize Key=notification.discordWebhookUsernameDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1903,12 +1903,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="头像网址"
+                                  Text="{local:Localize Key=notification.discordWebhookAvatarUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="讯息显示的头像，为空时使用 Discord 中预先设定的头像"
+                                  Text="{local:Localize Key=notification.discordWebhookAvatarUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1931,12 +1931,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图编码"
+                                  Text="{local:Localize Key=notification.discordImageEncoder}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="PNG 无损，JPEG 快速压缩，WebP 档案小，按需选择"
+                                  Text="{local:Localize Key=notification.discordImageEncoderDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1958,12 +1958,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Discord Webhook 通知"
+                                  Text="{local:Localize Key=notification.testDiscordWebhook}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.testDiscordWebhookDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1971,7 +1971,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestDiscordWebhookNotificationCommand}"
                                CommandParameter="DiscordWebhook"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

@@ -109,7 +109,7 @@
             </Grid>
         </Grid>
 
-        <!--  �ָ�  -->
+        <!--  分隔符  -->
         <ui:FontIcon Grid.Column="1"
                      HorizontalAlignment="Center" Glyph="&#xf7a5;" Style="{StaticResource FaFontIconStyle}" />
         <GridSplitter Grid.Column="1"
@@ -119,7 +119,7 @@
                       Focusable="False"
                       Opacity="0.4" />
 
-        <!--  �Ҳ���:��ѡ����  -->
+        <!--  右侧面板:未选择组  -->
         <Border Grid.Column="2"
                 Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -159,24 +159,24 @@
                     <ui:Button Margin="0,0,0,12"
                                Command="{Binding AddScriptGroupCommand}"
                                Content="{markup:Localize Key=scheduler.addConfigGroup}" />
-                    <!--  ʾ��������  -->
+                    <!--  示例配置组  -->
                     <!--<ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="Ҳ����ֱ�ӵ�����������ʾ��������" />
+                                  Text="也可以直接点击下面按钮导入示例配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
                         <Hyperlink Command="{Binding ImportScriptGroupCommand}"
                                    CommandParameter="AutoCrystalflyExampleGroup"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            �����Զ�����ʾ��������
+                            导入自动晶蝶示例配置组
                         </Hyperlink>
                     </ui:TextBlock>-->
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!--  �Ҳ���:ѡ����  -->
+        <!--  右侧面板:已选择组  -->
         <Border Grid.Column="2"
                 Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -259,7 +259,7 @@
                                   FontSize="16"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        ֹͣ���������ò�ʹ�ÿ�ݼ���
+                        ֹͣ停止运行请配置并使用快捷键！
                     </ui:TextBlock>-->
                 </StackPanel>
 
