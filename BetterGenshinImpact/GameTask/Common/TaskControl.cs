@@ -60,7 +60,7 @@ public class TaskControl
             if (!isSuspend && RunnerContext.Instance.IsSuspend)
             {
                 Logger.LogWarning("网络恢复中...");
-                NetworkRecovery.Start(CancellationToken.None).Wait(1000);
+                NetworkRecovery.Start(CancellationToken.None).Wait(10000);
             }
             RunnerContext.Instance.IsSuspend = isSuspend;
         }
