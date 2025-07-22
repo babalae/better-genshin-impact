@@ -1290,8 +1290,6 @@
         "oneDragon.checkRewardsAndComplete": "检查奖励并完成任务",
         "oneDragon.executeCompletionAction": "执行完成后动作",
         "oneDragon.checkIfExists": "检查是否已存在",
-        "oneDragon.addConfig": "添加配置",
-        "oneDragon.deleteConfig": "删除配置",
         "oneDragon.taskList": "任务列表",
         "oneDragon.configuration": "配置",
         "oneDragon.rightClickToAddOrDeleteTasks": "± 鼠标右击添加或删除任务",

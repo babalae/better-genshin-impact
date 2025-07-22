@@ -1,0 +1,180 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoWoodTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+        <ui:CardExpander.Icon>
+            <ui:FontIcon Glyph="&#xf6b2;" Style="{StaticResource FaFontIconStyle}" />
+        </ui:CardExpander.Icon>
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.autoWood}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    <Run Text="{local:Localize Key=task.autoWoodDescription}" />
+                    <Hyperlink Command="{Binding GoToAutoWoodUrlCommand}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
+                    </Hyperlink>
+                </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="{local:Localize Key=task.stop}"
+                                         EnableCommand="{Binding SwitchAutoWoodCommand}"
+                                         EnableContent="{Binding SwitchAutoWoodButtonText}"
+                                         IsChecked="{Binding SwitchAutoWoodEnabled}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.loopCount}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.loopCountDescription}"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="90"
+                            Margin="0,0,36,0"
+                            Text="{Binding AutoWoodRoundNum, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.enableOcrWoodLimit}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.enableOcrWoodLimitDescription}"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoWoodConfig.WoodCountOcrEnabled, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.woodCountLimit}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.woodCountLimitDescription}"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="90"
+                            Margin="0,0,36,0"
+                            Text="{Binding AutoWoodDailyMaxCount, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.gadgetDelay}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.gadgetDelayDescription}"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="90"
+                            Margin="0,0,36,0"
+                            Text="{Binding Config.AutoWoodConfig.AfterZSleepDelay, Mode=TwoWay}" />
+            </Grid>
+            <!--<Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="按下两次ESC（其中一下ESC是消除木材已满的提示）"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="多木材点情况下，一种木材已满的时候使用这个功能"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoWoodConfig.PressTwoEscEnabled, Mode=TwoWay}" />
+            </Grid>-->
+        </StackPanel>
+    </ui:CardExpander>
+
+</UserControl>

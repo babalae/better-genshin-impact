@@ -199,7 +199,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
-        _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+        _oneDragonFlowViewModel = new OneDragonFlowViewModel(App.GetService<ILocalizationService>());
     }
 
 

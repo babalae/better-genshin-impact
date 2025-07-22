@@ -1,0 +1,53 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoMusicGameTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <!--  自动千音雅集  -->
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0"
+                     Icon="{ui:SymbolIcon MusicNote224}">
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="自动千音雅集"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    可以自动演奏单个，也可以全自动完成整个专辑 -
+                    <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        点击查看使用教程
+                    </Hyperlink>
+                </ui:TextBlock>
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <controls:TwoStateButton Margin="0,0,40,0"
+                                   DisableCommand="{Binding StopSoloTaskCommand}"
+                                   DisableContent="停止"
+                                   EnableCommand="{Binding SwitchAutoMusicGameCommand}"
+                                   EnableContent="{Binding SwitchAutoMusicGameButtonText}"
+                                   IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
+        </StackPanel>
+    </ui:CardExpander>
+
+</UserControl>

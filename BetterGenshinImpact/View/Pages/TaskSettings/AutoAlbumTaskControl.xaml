@@ -1,0 +1,111 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoAlbumTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <!--  自动音游专辑  -->
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+        <ui:CardExpander.Icon>
+            <ui:FontIcon Glyph="&#xf89f;" Style="{StaticResource FaFontIconStyle}" />
+        </ui:CardExpander.Icon>
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="【专辑】 全自动完成整个专辑"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    进入专辑界面使用，自动演奏未完成乐曲 -
+                    <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        点击查看使用教程
+                    </Hyperlink>
+                </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,36,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="{local:Localize Key=task.stop}"
+                                         EnableCommand="{Binding SwitchAutoAlbumCommand}"
+                                         EnableContent="{Binding SwitchAutoAlbumButtonText}"
+                                         IsChecked="{Binding SwitchAutoAlbumEnabled}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="【专辑】 自动演奏未达成【大音天籁】的乐曲"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="关闭时，奖励已经领取就会跳过乐曲。开启时，达成了【大音天籁】才会跳过乐曲"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoMusicGameConfig.MustCanorusLevel, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="【专辑】 自动演奏的目标难度选择"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="设置为【传说】，【大师】即可获取所有奖励，设置【所有】则会对乐曲的所有难度进行自动演奏"
+                              TextWrapping="Wrap" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="80"
+                          Margin="0,0,36,0"
+                          ItemsSource="{Binding AutoMusicLevelList}"
+                          SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
+                          SelectedIndex="0" />
+            </Grid>
+        </StackPanel>
+    </ui:CardExpander>
+
+</UserControl>

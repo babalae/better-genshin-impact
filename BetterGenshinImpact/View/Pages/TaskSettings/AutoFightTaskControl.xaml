@@ -1,0 +1,468 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoFightTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <!--  自动战斗  -->
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+        <ui:CardExpander.Icon>
+            <ui:FontIcon Glyph="&#xf71d;" Style="{StaticResource FaFontIconStyle}" />
+        </ui:CardExpander.Icon>
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.autoFight}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    <Run Text="{local:Localize Key=task.autoFightDescription}" />
+                    <Hyperlink Command="{Binding GoToAutoFightUrlCommand}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
+                    </Hyperlink>
+                </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="{local:Localize Key=task.stop}"
+                                         EnableCommand="{Binding SwitchAutoFightCommand}"
+                                         EnableContent="{Binding SwitchAutoFightButtonText}"
+                                         IsChecked="{Binding SwitchAutoFightEnabled}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.selectStrategy}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.selectStrategyDescription}"
+                              TextWrapping="Wrap" />
+                <ui:Button Grid.Row="0"
+                           Grid.RowSpan="2"
+                           Grid.Column="1"
+                           Margin="0,0,12,0"
+                           Content="脚本仓库"
+                           Command="{Binding OpenLocalScriptRepoCommand}"
+                           Icon="{ui:SymbolIcon Archive24}" />
+                <ui:Button Grid.Row="0"
+                           Grid.RowSpan="2"
+                           Grid.Column="2"
+                           Margin="0,0,12,0"
+                           Command="{Binding OpenFightFolderCommand}"
+                           Content="打开目录" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="3"
+                          Width="180"
+                          Margin="0,0,36,0"
+                          ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="DropDownOpened">
+                            <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                   CommandParameter="Combat" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                </ComboBox>
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.optimizeByCd}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.optimizeByCdDescription}"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            MaxWidth="800"
+                            Margin="0,0,36,0"
+                            Text="{Binding Config.AutoFightConfig.ActionSchedulerByCd, Mode=TwoWay}"
+                            TextWrapping="Wrap" />
+            </Grid>
+            <!--内嵌的设置-->
+            <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+            <Grid Margin="16,10,52,0">
+
+                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 IsExpanded="False">
+
+                    <ui:CardExpander.Header>
+                        <Grid>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{local:Localize Key=task.autoDetectFightEnd}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{local:Localize Key=task.autoDetectFightEndDescription}"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,36,0"
+                                             IsChecked="{Binding Config.AutoFightConfig.FightFinishDetectEnabled, Mode=TwoWay}" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Margin="16,0,16,0">
+
+                                <ui:CardExpander Margin="0,0,0,12"
+                                                 ContentPadding="0"
+                                                 IsExpanded="False">
+
+                                    <ui:CardExpander.Header>
+                                        <Grid>
+
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:TextBlock Grid.Row="0"
+                                                          Grid.Column="0"
+                                                          FontTypography="Body"
+                                                          Text="{local:Localize Key=task.fasterFightEndCheck}"
+                                                          TextWrapping="Wrap" />
+                                            <ui:TextBlock Grid.Row="1"
+                                                          Grid.Column="0"
+                                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                          Text="{local:Localize Key=task.fasterFightEndCheckDescription}"
+                                                          TextWrapping="Wrap" />
+                                            <ui:ToggleSwitch Grid.Row="0"
+                                                             Grid.RowSpan="2"
+                                                             Grid.Column="1"
+                                                             Margin="0,0,36,0"
+                                                             IsChecked="{Binding Config.AutoFightConfig.FinishDetectConfig.FastCheckEnabled, Mode=TwoWay}" />
+                                        </Grid>
+                                    </ui:CardExpander.Header>
+                                    <StackPanel>
+                                        <Grid Margin="16">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:TextBlock Grid.Row="0"
+                                                          Grid.Column="0"
+                                                          FontTypography="Body"
+                                                          Text="更快检查结束战斗参数"
+                                                          TextWrapping="Wrap" />
+                                            <ui:TextBlock Grid.Row="1"
+                                                          Grid.Column="0"
+                                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                          Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                          TextWrapping="Wrap" />
+                                            <ui:TextBox Grid.Row="0"
+                                                        Grid.RowSpan="2"
+                                                        Grid.Column="1"
+                                                        MinWidth="180"
+                                                        MaxWidth="800"
+                                                        Margin="0,0,36,0"
+                                                        Text="{Binding Config.AutoFightConfig.FinishDetectConfig.FastCheckParams, Mode=TwoWay}"
+                                                        TextWrapping="Wrap" />
+                                        </Grid>
+                                    </StackPanel>
+                                </ui:CardExpander>
+                            </Grid>
+
+                        </Grid>
+
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="检查战斗结束的延时"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="120"
+                                        Text="{Binding Config.AutoFightConfig.FinishDetectConfig.CheckEndDelay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="按键触发后检查延时"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="120"
+                                        Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BeforeDetectDelay}" />
+                        </Grid>
+                        <!--<Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="战斗结束基准色"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="判断战斗结束读条颜色，默认为95,235,255，一般无需修改"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="120"
+                                        Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="战斗结束基准色偏差值"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="对于战斗结束基准色的偏差值，即±某个值（默认为6），例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="120"
+                                        Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance}" />
+                        </Grid>-->
+
+                    </StackPanel>
+                </ui:CardExpander>
+            </Grid>
+            <Separator Margin="-18,0"
+                       BorderThickness="0,1,0,0" />
+            <Grid Margin="16,10,52,0">
+
+                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 IsExpanded="False">
+
+                    <ui:CardExpander.Header>
+                        <Grid>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="自动拾取掉落物"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,36,0"
+                                             IsChecked="{Binding Config.AutoFightConfig.PickDropsAfterFightEnabled}" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="自动拾取掉落物时长"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="单位为秒。0表示不自动拾取掉落物。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        Margin="0,0,36,0"
+                                        MinWidth="120"
+                                        Text="{Binding Config.AutoFightConfig.PickDropsAfterFightSeconds}" />
+                        </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
+            </Grid>
+            <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="战斗结束后使用万叶长E收集掉落物"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="队伍中存在枫原万叶的情况下，战斗结束后，使用长E拾取掉落物"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="战斗超时（秒）"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="当战斗超过一定时间后，自动停止战斗"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            Margin="0,0,36,0"
+                            MinWidth="120"
+                            Text="{Binding Config.AutoFightConfig.Timeout}" />
+            </Grid>
+        </StackPanel>
+    </ui:CardExpander>
+
+</UserControl>

@@ -1,0 +1,473 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoDomainTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <!--  自动刷本  -->
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+        <ui:CardExpander.Icon>
+            <ui:FontIcon Glyph="&#xf438;" Style="{StaticResource FaFontIconStyle}" />
+        </ui:CardExpander.Icon>
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="自动秘境"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    基于钟离的自动循环刷本 -
+                    <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        点击查看使用教程
+                    </Hyperlink>
+                </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="{local:Localize Key=task.stop}"
+                                         EnableCommand="{Binding SwitchAutoDomainCommand}"
+                                         EnableContent="{Binding SwitchAutoDomainButtonText}"
+                                         IsChecked="{Binding SwitchAutoDomainEnabled}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=task.selectStrategy}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=task.selectStrategyDescription}"
+                              TextWrapping="Wrap" />
+                <ui:Button Grid.Row="0"
+                           Grid.RowSpan="2"
+                           Grid.Column="1"
+                           Margin="0,0,12,0"
+                           Content="脚本仓库"
+                           Command="{Binding OpenLocalScriptRepoCommand}"
+                           Icon="{ui:SymbolIcon Archive24}" />
+                <ui:Button Grid.Row="0"
+                           Grid.RowSpan="2"
+                           Grid.Column="2"
+                           Margin="0,0,12,0"
+                           Command="{Binding OpenFightFolderCommand}"
+                           Content="打开目录" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="3"
+                          Width="180"
+                          Margin="0,0,36,0"
+                          ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                          SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="DropDownOpened">
+                            <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
+                                                   CommandParameter="Combat" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                </ComboBox>
+            </Grid>
+
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="自动切换到指定队伍"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="注意队伍名称是游戏内你手动设置的名称"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            Margin="0,0,36,0"
+                            Text="{Binding Config.AutoDomainConfig.PartyName, Mode=TwoWay}" />
+            </Grid>
+
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="指定要前往的秘境"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="自动传送到刷取的秘境"
+                              TextWrapping="Wrap" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="180"
+                          Margin="0,0,36,0"
+                          ItemsSource="{Binding DomainNameList}"
+                          SelectedItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}">
+                </ComboBox>
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="刷取至树脂耗尽"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse,Converter={StaticResource InverseBooleanConverter}, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 指定树脂使用开关 -->
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="指定每种树脂刷取次数"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="开启后会根据配置的次数使用对应的树脂"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=TwoWay}" />
+            </Grid>
+
+            <!-- 树脂设置组 -->
+            <Border Margin="16,8,16,16"
+                    BorderThickness="1"
+                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                    CornerRadius="8"
+                    IsEnabled="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=OneWay}">
+                <StackPanel Margin="12">
+
+                    <!-- 原粹树脂设置 -->
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,8,0,12">
+                        <ui:TextBlock Text="原粹树脂刷取次数："
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0" />
+                        <ui:NumberBox
+                            Value="{Binding Config.AutoDomainConfig.OriginalResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Minimum="0"
+                            SmallChange="1"
+                            LargeChange="5"
+                            SpinButtonPlacementMode="Inline"
+                            Width="120" />
+                    </StackPanel>
+
+                    <!-- 浓缩树脂设置 -->
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,0,0,12">
+                        <ui:TextBlock Text="浓缩树脂刷取次数："
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0" />
+                        <ui:NumberBox
+                            Value="{Binding Config.AutoDomainConfig.CondensedResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Minimum="0"
+                            SmallChange="1"
+                            LargeChange="5"
+                            SpinButtonPlacementMode="Inline"
+                            Width="120" />
+                    </StackPanel>
+
+                    <!-- 须臾树脂设置 -->
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,0,0,12">
+                        <ui:TextBlock Text="须臾树脂刷取次数："
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0" />
+                        <ui:NumberBox
+                            Value="{Binding Config.AutoDomainConfig.TransientResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Minimum="0"
+                            SmallChange="1"
+                            LargeChange="5"
+                            SpinButtonPlacementMode="Inline"
+                            Width="120" />
+                    </StackPanel>
+
+                    <!-- 脆弱树脂设置 -->
+                    <StackPanel Orientation="Horizontal"
+                                Margin="0,0,0,0">
+                        <ui:TextBlock Text="脆弱树脂刷取次数："
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0" />
+                        <ui:NumberBox
+                            Value="{Binding Config.AutoDomainConfig.FragileResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Minimum="0"
+                            SmallChange="1"
+                            LargeChange="5"
+                            SpinButtonPlacementMode="Inline"
+                            Width="120" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="结束后自动分解圣遗物"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="需要快速分解圣遗物的最高星级"
+                              TextWrapping="Wrap" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="80"
+                          Margin="0,0,10,0"
+                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
+                          SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                </ComboBox>
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="2"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoDomainConfig.AutoArtifactSalvage, Mode=TwoWay}" />
+
+            </Grid>
+
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="战斗完成后等待时间（秒）"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="战斗结束后，寻找石化古树前的延迟时间，等一些角色技能完全结束"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="90"
+                            Margin="0,0,36,0"
+                            Text="{Binding Config.AutoDomainConfig.FightEndDelay, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="寻找古树时使用小步伐行走（正常用户请不要启用）"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="如果电脑性能较差，寻找古树时间过久，可以尝试使用这个功能"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoDomainConfig.ShortMovement, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="步行前往开启秘境和领取奖励"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="如果电脑性能较差，开启秘境或者领取奖励的F点击不到，可以尝试此功能"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoDomainConfig.WalkToF, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="寻找古树时确认位置左右移动的次数（正常用户不要修改）"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="小步伐行走的时候左右确认位置的次数"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="90"
+                            Margin="0,0,36,0"
+                            Text="{Binding Config.AutoDomainConfig.LeftRightMoveTimes, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="自动吃药"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="请先装备 &quot;便携营养袋&quot; ，在红血时候后自动按Z键吃药"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,36,0"
+                                 IsChecked="{Binding Config.AutoDomainConfig.AutoEat, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="角色死亡后重试次数"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="秘境战斗中，发生角色死亡重试的次数"
+                              TextWrapping="Wrap" />
+                <ui:TextBox Text="{Binding Config.AutoDomainConfig.ReviveRetryCount, Mode=TwoWay}"
+                            Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            MinWidth="90"
+                            Margin="0,0,36,0" />
+            </Grid>
+        </StackPanel>
+    </ui:CardExpander>
+
+</UserControl>
