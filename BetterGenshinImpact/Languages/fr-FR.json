@@ -99,3 +99,15 @@
                     "settings.view": "Voir"
                 }
 }
+,
+                    "pathingConfig.mapTrackingSettings": "Paramètres de suivi de carte (priorité de configuration de haut en bas, problèmes de style d'interface non résolus)",
+                    "pathingConfig.teamSwitchSettings": "Paramètres de changement d'équipe (Lorsque le chemin contient des actions ou des objets à collecter correspondants, passe automatiquement à l'équipe correspondante)",
+                    "pathingConfig.characterSettings": "Paramètres de personnage (Lorsque plusieurs personnages correspondent aux conditions, la priorité est donnée aux personnages avec des numéros d'équipe plus petits dans le jeu)",
+                    "pathingConfig.thenSwitchToTeam": "puis passer à l'équipe",
+                    "pathingConfig.thenCharacterExecutes": "puis le personnage exécute",
+                    "pathingConfig.delete": "Supprimer",
+                    "pathingConfig.addCondition": "+ Ajouter une condition",
+                    "pathingConfig.gadgetIntervalTime": "Intervalle d'utilisation des gadgets (ms)",
+                    "pathingConfig.gadgetIntervalDescription": "Utiliser automatiquement les gadgets pendant le déplacement, entrez 0 pour désactiver",
+                    "pathingConfig.onlyRecoverAtTeleport": "Récupérer uniquement aux points de téléportation",
+                    "pathingConfig.onlyRecoverAtTeleportDescription": "Ne se rendre à la Statue des Sept pour récupérer que lorsque le chemin est à un point de téléportation"

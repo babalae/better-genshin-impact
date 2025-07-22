@@ -791,3 +791,15 @@
                     "notification.error.barkDeviceError":  "Error sending Bark notification (device: {0}): {1}"
                 }
 }
+,
+                    "pathingConfig.mapTrackingSettings": "Map Tracking Settings (Configuration priority from high to low, UI style issues not resolved)",
+                    "pathingConfig.teamSwitchSettings": "Team Switch Settings (When path contains matching actions or collectibles, automatically switch to corresponding team)",
+                    "pathingConfig.characterSettings": "Character Settings (When multiple characters match conditions, priority is given to characters with smaller team numbers in-game)",
+                    "pathingConfig.thenSwitchToTeam": "then switch to team",
+                    "pathingConfig.thenCharacterExecutes": "then character executes",
+                    "pathingConfig.delete": "Delete",
+                    "pathingConfig.addCondition": "+ Add Condition",
+                    "pathingConfig.gadgetIntervalTime": "Gadget Usage Interval Time (ms)",
+                    "pathingConfig.gadgetIntervalDescription": "Automatically use gadgets during movement, enter 0 to disable",
+                    "pathingConfig.onlyRecoverAtTeleport": "Only Recover at Teleport Points",
+                    "pathingConfig.onlyRecoverAtTeleportDescription": "Only go to Statue of The Seven to recover when path is at a teleport point"

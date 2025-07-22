@@ -350,6 +350,17 @@
         "notification.dingDingSecretDescription": "填写钉钉密钥",
         "notification.testDingDing": "测试钉钉通知",
         "notification.testDingDingDescription": "发送测试通知",
+        "pathingConfig.title": "地图追踪设置（相关配置优先级从高到低,UI样式还有问题未解决）",
+        "pathingConfig.partySettings": "队伍切换设置（路径中存在符合条件的动作、采集物的情况下，自动切换至对应队伍）",
+        "pathingConfig.switchToParty": "则切换到队伍",
+        "pathingConfig.delete": "删除",
+        "pathingConfig.addCondition": "+ 添加条件",
+        "pathingConfig.avatarSettings": "角色设置（存在多个符合条件的角色情况下，优先使用游戏内编队编号更小的）",
+        "pathingConfig.avatarExecute": "则角色执行",
+        "pathingConfig.gadgetInterval": "使用小道具的间隔时间（毫秒）",
+        "pathingConfig.gadgetIntervalDescription": "在移动期间自动使用小道具，填0为不使用",
+        "pathingConfig.onlyTeleportRecover": "只在传送点时恢复",
+        "pathingConfig.onlyTeleportRecoverDescription": "只有路径在传送点时，才会去七天神像恢复",
         "task.title": "独立任务（实验）",
         "task.autoGeniusInvocation": "自动七圣召唤",
         "task.autoGeniusInvokationDescription": "全自动对局 - 点击查看使用教程",
@@ -942,4 +953,16 @@
         "log.error.workweixinNotificationFailed": "发送企业微信通知时出错",
         "log.warning.autoDomain": "自动秘境：{0}"
     }
-}
+},
+       
+             "pathingConfig.mapTrackingSettings": "地图追踪设置（相关配置优先级从高到低,UI样式还有问题未解决）",
+                    "pathingConfig.teamSwitchSettings": "队伍切换设置（路径中存在符合条件的动作、采集物的情况下，自动切换至对应队伍）",
+                    "pathingConfig.characterSettings": "角色设置（存在多个符合条件的角色情况下，优先使用游戏内编队编号更小的）",
+                    "pathingConfig.thenSwitchToTeam": "则切换到队伍",
+                    "pathingConfig.thenCharacterExecutes": "则角色执行",
+                    "pathingConfig.delete": "删除",
+                    "pathingConfig.addCondition": "+ 添加条件",
+                    "pathingConfig.gadgetIntervalTime": "使用小道具的间隔时间（毫秒）",
+                    "pathingConfig.gadgetIntervalDescription": "在移动期间自动使用小道具，填0为不使用",
+                    "pathingConfig.onlyRecoverAtTeleport": "只在传送点时恢复",
+                    "pathingConfig.onlyRecoverAtTeleportDescription": "只有路径在传送点时，才会去七天神像恢复"
