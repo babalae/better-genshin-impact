@@ -106,6 +106,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeDingDingNotifier();
         InitializeTelegramNotifier();
         InitializeXxtuiNotifier();
+        InitializeDiscordWebhookNotifier();
 
         // Add initialization for new notifiers hee
     }
@@ -283,7 +284,23 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     Parse Xxtui notificats
+    ///     初始化 Discord 通知器
+    /// </summary>
+    private void InitializeDiscordWebhookNotifier()
+    {
+        if (_notificationConfig?.DiscordWebhookNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new DiscordWebhookNotifier(
+            _notifyHttpClient,
+            _notificationConfig.DiscordWebhookUrl,
+            _notificationConfig.DiscordWebhookUsername,
+            _notificationConfig.DiscordWebhookAvatarUrl,
+            _notificationConfig.DiscordWebhookImageEncoder
+        ));
+    }
+
+    /// <summary>
+    ///     解析信息推送通知渠道配置
     /// </summary>
     private static XxtuiChannel[] ParseXxtuiChannels(string channelsStr)
     {
