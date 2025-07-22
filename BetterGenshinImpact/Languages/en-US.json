@@ -1051,6 +1051,18 @@
         "script.startingPathingTask": "√ Starting map tracking task: {0}",
         "script.startingShellScript": "√ Starting shell script: {0}",
         "script.notInMainUiWaiting": "Currently not in game main interface, waiting to enter main interface before executing tasks...",
-        "script.mainUiInstructions": "If you are already in the game's main interface, please press exit current interface (ESC) or wait 30 seconds for automatic blank area clicking to enable foreground tasks to execute normally!"
+        "script.mainUiInstructions": "If you are already in the game's main interface, please press exit current interface (ESC) or wait 30 seconds for automatic blank area clicking to enable foreground tasks to execute normally!",
+        "oneDragon.task.claimMail": "Claim Mail",
+        "oneDragon.task.synthesizeResin": "Synthesize Resin",
+        "oneDragon.task.autoDomain": "Auto Domain",
+        "oneDragon.task.claimDailyRewards": "Claim Daily Rewards",
+        "oneDragon.task.claimSereniteaPotRewards": "Claim Serenitea Pot Rewards",
+        "oneDragon.error.synthesizeResinException": "Synthesize resin execution exception: ",
+        "oneDragon.autoFight.autoSelectByTeam": "Auto select by team",
+        "oneDragon.error.autoDomainStrategyNotConfigured": "Auto domain combat strategy {0}, skipping",
+        "oneDragon.error.notConfigured": "not configured",
+        "oneDragon.error.domainNotSelected": "One-dragon configuration {0} domain to farm, skipping",
+        "oneDragon.error.notSelected": "not selected",
+        "oneDragon.info.autoDomainTaskExecuting": "Auto domain task: executing"
     }
 }

@@ -1054,6 +1054,18 @@
         "script.startingPathingTask": "√ Démarrage de la tâche de suivi de carte : {0}",
         "script.startingShellScript": "√ Démarrage du script shell : {0}",
         "script.notInMainUiWaiting": "Actuellement pas dans l'interface principale du jeu, en attente d'entrer dans l'interface principale avant d'exécuter les tâches...",
-        "script.mainUiInstructions": "Si vous êtes déjà dans l'interface principale du jeu, veuillez appuyer sur sortir de l'interface actuelle (ESC) ou attendre 30 secondes pour un clic automatique sur une zone vide afin de permettre aux tâches de premier plan de s'exécuter normalement !"
+        "script.mainUiInstructions": "Si vous êtes déjà dans l'interface principale du jeu, veuillez appuyer sur sortir de l'interface actuelle (ESC) ou attendre 30 secondes pour un clic automatique sur une zone vide afin de permettre aux tâches de premier plan de s'exécuter normalement !",
+        "oneDragon.task.claimMail": "Récupérer le courrier",
+        "oneDragon.task.synthesizeResin": "Synthétiser de la résine",
+        "oneDragon.task.autoDomain": "Domaine automatique",
+        "oneDragon.task.claimDailyRewards": "Récupérer les récompenses quotidiennes",
+        "oneDragon.task.claimSereniteaPotRewards": "Récupérer les récompenses du Pot de Sérénithé",
+        "oneDragon.error.synthesizeResinException": "Exception lors de la synthèse de résine : ",
+        "oneDragon.autoFight.autoSelectByTeam": "Sélection automatique par équipe",
+        "oneDragon.error.autoDomainStrategyNotConfigured": "Stratégie de combat du domaine automatique {0}, ignoré",
+        "oneDragon.error.notConfigured": "non configuré",
+        "oneDragon.error.domainNotSelected": "Configuration One-dragon {0} domaine à farmer, ignoré",
+        "oneDragon.error.notSelected": "non sélectionné",
+        "oneDragon.info.autoDomainTaskExecuting": "Tâche de domaine automatique : exécution"
     }
 }

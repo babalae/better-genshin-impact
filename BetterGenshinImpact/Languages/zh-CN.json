@@ -1052,6 +1052,18 @@
         "script.startingPathingTask": "√ 开始执行地图追踪任务: {0}",
         "script.startingShellScript": "√ 开始执行shell: {0}",
         "script.notInMainUiWaiting": "当前不在游戏主界面，等待进入主界面后执行任务...",
-        "script.mainUiInstructions": "如果你已经在游戏内的主界面，请按下退出当前界面（ESC）或者等待30秒后将尝试自动点击空白区域，使前台任务能够正常执行！"
+        "script.mainUiInstructions": "如果你已经在游戏内的主界面，请按下退出当前界面（ESC）或者等待30秒后将尝试自动点击空白区域，使前台任务能够正常执行！",
+        "oneDragon.task.claimMail": "领取邮件",
+        "oneDragon.task.synthesizeResin": "合成树脂",
+        "oneDragon.task.autoDomain": "自动秘境",
+        "oneDragon.task.claimDailyRewards": "领取每日奖励",
+        "oneDragon.task.claimSereniteaPotRewards": "领取尘歌壶奖励",
+        "oneDragon.error.synthesizeResinException": "合成树脂执行异常：",
+        "oneDragon.autoFight.autoSelectByTeam": "根据队伍自动选择",
+        "oneDragon.error.autoDomainStrategyNotConfigured": "自动秘境战斗策略{0}，跳过",
+        "oneDragon.error.notConfigured": "未配置",
+        "oneDragon.error.domainNotSelected": "一条龙配置内{0}需要刷的秘境，跳过",
+        "oneDragon.error.notSelected": "未选择",
+        "oneDragon.info.autoDomainTaskExecuting": "自动秘境任务：执行"
     }
 }

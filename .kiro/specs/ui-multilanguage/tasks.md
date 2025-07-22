@@ -254,7 +254,9 @@
 
 
 
-- [x] 14. Localize notification and message content
+- [ ] 14. Localize notification and message content
+
+
 
 
 
