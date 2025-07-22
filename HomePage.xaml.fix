@@ -1,0 +1,5 @@
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  TextWrapping="Wrap" />

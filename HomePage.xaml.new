@@ -132,10 +132,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.captureMode}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.captureModeDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -167,10 +167,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.triggerInterval}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.triggerIntervalDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -194,10 +194,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.wgcBitmapCache}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.wgcBitmapCacheDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -221,10 +221,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.aiInferenceDevice}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.aiInferenceDeviceDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -260,10 +260,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.testCapture}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.testCaptureDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -287,10 +287,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.manualSelectWindow}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="ԭ���Ѿ����������£������������Ծ���ʾ�޷��ҵ�����ʱʹ��"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -315,10 +315,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.autoCloseWin11Optimization}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.autoCloseWin11OptimizationDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -354,10 +354,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.launchGenshinSimultaneously}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.launchGenshinSimultaneouslyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -382,10 +382,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.genshinInstallLocation}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{Binding Config.GenshinStartConfig.InstallPath, Mode=TwoWay}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -422,10 +422,10 @@
                             </ui:HyperlinkButton>
                         </ui:TextBlock.Inlines>
                     </ui:TextBlock>
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.launchParametersWarning}"
                                   TextWrapping="Wrap" />
                     <!--  ��������������ޱ߿� -popupwindow ָ���ֱ��� -screen-width 1920 -screen-height 1080  -->
                     <ui:TextBox Grid.Row="0"
@@ -453,10 +453,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.autoEnterGame}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.autoEnterGameDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -479,10 +479,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.useStarwardRecord}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.useStarwardRecordDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -507,10 +507,10 @@
                                   FontTypography="Body"
                                   Text="{markup:Localize Key=home.autoClickMonthlyCard}"
                                   TextWrapping="Wrap" />
-                                        <ui:TextBlock Grid.Row="1"
+                    <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{markup:Localize Key=home.manualSelectWindowDescription}"
+                                  Text="{markup:Localize Key=home.autoClickMonthlyCardDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
