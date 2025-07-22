@@ -1064,6 +1064,27 @@
         "oneDragon.error.notConfigured": "未配置",
         "oneDragon.error.domainNotSelected": "一条龙配置内{0}需要刷的秘境，跳过",
         "oneDragon.error.notSelected": "未选择",
-        "oneDragon.info.autoDomainTaskExecuting": "自动秘境任务：执行"
+        "oneDragon.info.autoDomainTaskExecuting": "自动秘境任务：执行",
+        "keyBindings.title": "按键绑定设置",
+        "mapPathing.devTools.title": "地图追踪开发者工具",
+        "mapPathing.devTools.mapSelectionNote": "(下方地图选择会影响路径录制所在的独立地图)",
+        "mapPathing.devTools.selectMap": "请选择地图：",
+        "mapPathing.devTools.viewRealTimeMap": "查看实时追踪地图",
+        "mapPathing.devTools.recordingEditor": "录制编辑器",
+        "scriptRepo.preparingUpdate": "准备更新...",
+        "dialog.updateFailed": "更新失败，可尝试重置仓库后重新更新。失败原因：{0}",
+        "scriptRepo.custom": "自定义",
+        "error.maskWindowNotInitialized": "MaskWindow 未初始化",
+        "log.betterGenshinImpact": "更好的原神 {0}",
+        "log.maskWindowStarted": "遮罩窗口已启动，游戏大小{0}x{1}，素材缩放{2}，DPI缩放{3}",
+        "log.error.aspectRatioNotSupported": "当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！",
+        "log.warning.msiAfterburnerRunning": "检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！",
+        "log.warning.gameLanguageNotChinese": "当前游戏语言{0}不是简体中文，部分功能可能无法正常使用。",
+        "log.warning.gameSettingsReadFailed": "游戏注册表配置信息读取失败：",
+        "log.error.failedToGetWindowIcon": "获取窗口图标失败",
+        "picker.notGenshinConfirmation": "这看起来不像是原神，确定要选择这个窗口吗？",
+        "picker.currentSelectedWindow": "当前选择的窗口",
+        "picker.confirmSelection": "确认选择",
+        "oneDragon.tcg.title": "自动七圣召唤"
     }
 }

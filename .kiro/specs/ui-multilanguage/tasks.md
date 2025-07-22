@@ -254,7 +254,9 @@
 
 
 
-- [ ] 14. Localize notification and message content
+- [x] 14. Localize notification and message content
+
+
 
 
 
@@ -313,7 +315,11 @@
   - [ ] Add message templates to language files
   - _Requirements: 4.3, 4.4, 4.5_
 
-- [ ] 15. Localize log window content
+- [x] 15. Localize log window content
+
+
+
+
   - [ ] Identify all hardcoded log messages in the application
   - [ ] Create a centralized logging system that supports localization
   - [ ] Extract log message templates to language files

@@ -1063,6 +1063,27 @@
         "oneDragon.error.notConfigured": "not configured",
         "oneDragon.error.domainNotSelected": "One-dragon configuration {0} domain to farm, skipping",
         "oneDragon.error.notSelected": "not selected",
-        "oneDragon.info.autoDomainTaskExecuting": "Auto domain task: executing"
+        "oneDragon.info.autoDomainTaskExecuting": "Auto domain task: executing",
+        "keyBindings.title": "Key Binding Settings",
+        "mapPathing.devTools.title": "Map Tracking Developer Tools",
+        "mapPathing.devTools.mapSelectionNote": "(The map selection below affects the independent map for path recording)",
+        "mapPathing.devTools.selectMap": "Please select a map:",
+        "mapPathing.devTools.viewRealTimeMap": "View Real-time Tracking Map",
+        "mapPathing.devTools.recordingEditor": "Recording Editor",
+        "scriptRepo.preparingUpdate": "Preparing update...",
+        "dialog.updateFailed": "Update failed, you can try resetting the repository and updating again. Failure reason: {0}",
+        "scriptRepo.custom": "Custom",
+        "error.maskWindowNotInitialized": "MaskWindow not initialized",
+        "log.betterGenshinImpact": "Better Genshin Impact {0}",
+        "log.maskWindowStarted": "Mask window started, game size {0}x{1}, asset scale {2}, DPI scale {3}",
+        "log.error.aspectRatioNotSupported": "Current game resolution is not 16:9, one-dragon, team recognition, map teleportation, map tracking and all independent tasks and fully automatic task-related functions will not work properly!",
+        "log.warning.msiAfterburnerRunning": "MSI Afterburner is running, if information is on specific UI covering image recognition elements, it may cause recognition failure. Please close MSI Afterburner or adjust information position and try again!",
+        "log.warning.gameLanguageNotChinese": "Current game language {0} is not Simplified Chinese, some functions may not work properly.",
+        "log.warning.gameSettingsReadFailed": "Failed to read game registry configuration information: ",
+        "log.error.failedToGetWindowIcon": "Failed to get window icon",
+        "picker.notGenshinConfirmation": "This doesn't look like Genshin Impact. Are you sure you want to select this window?",
+        "picker.currentSelectedWindow": "Currently selected window",
+        "picker.confirmSelection": "Confirm Selection",
+        "oneDragon.tcg.title": "Auto Genius Invocation"
     }
 }

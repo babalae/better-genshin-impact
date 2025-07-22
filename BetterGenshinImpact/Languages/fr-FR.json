@@ -1066,6 +1066,27 @@
         "oneDragon.error.notConfigured": "non configuré",
         "oneDragon.error.domainNotSelected": "Configuration One-dragon {0} domaine à farmer, ignoré",
         "oneDragon.error.notSelected": "non sélectionné",
-        "oneDragon.info.autoDomainTaskExecuting": "Tâche de domaine automatique : exécution"
+        "oneDragon.info.autoDomainTaskExecuting": "Tâche de domaine automatique : exécution",
+        "keyBindings.title": "Paramètres de liaison des touches",
+        "mapPathing.devTools.title": "Outils de développement de suivi de carte",
+        "mapPathing.devTools.mapSelectionNote": "(La sélection de carte ci-dessous affecte la carte indépendante pour l'enregistrement du chemin)",
+        "mapPathing.devTools.selectMap": "Veuillez sélectionner une carte :",
+        "mapPathing.devTools.viewRealTimeMap": "Voir la carte de suivi en temps réel",
+        "mapPathing.devTools.recordingEditor": "Éditeur d'enregistrement",
+        "scriptRepo.preparingUpdate": "Préparation de la mise à jour...",
+        "dialog.updateFailed": "La mise à jour a échoué, vous pouvez essayer de réinitialiser le dépôt et de le mettre à jour à nouveau. Raison de l'échec : {0}",
+        "scriptRepo.custom": "Personnalisé",
+        "error.maskWindowNotInitialized": "MaskWindow non initialisé",
+        "log.betterGenshinImpact": "Better Genshin Impact {0}",
+        "log.maskWindowStarted": "Fenêtre de masque démarrée, taille du jeu {0}x{1}, échelle des ressources {2}, échelle DPI {3}",
+        "log.error.aspectRatioNotSupported": "La résolution actuelle du jeu n'est pas 16:9, one-dragon, reconnaissance d'équipe, téléportation de carte, suivi de carte et toutes les tâches indépendantes et les fonctions liées aux tâches entièrement automatiques ne fonctionneront pas correctement !",
+        "log.warning.msiAfterburnerRunning": "MSI Afterburner est en cours d'exécution, si des informations se trouvent sur une interface utilisateur spécifique couvrant des éléments de reconnaissance d'image, cela peut entraîner un échec de reconnaissance. Veuillez fermer MSI Afterburner ou ajuster la position des informations et réessayer !",
+        "log.warning.gameLanguageNotChinese": "La langue actuelle du jeu {0} n'est pas le chinois simplifié, certaines fonctions peuvent ne pas fonctionner correctement.",
+        "log.warning.gameSettingsReadFailed": "Échec de la lecture des informations de configuration du registre du jeu : ",
+        "log.error.failedToGetWindowIcon": "Échec de l'obtention de l'icône de la fenêtre",
+        "picker.notGenshinConfirmation": "Cela ne ressemble pas à Genshin Impact. Êtes-vous sûr de vouloir sélectionner cette fenêtre ?",
+        "picker.currentSelectedWindow": "Fenêtre actuellement sélectionnée",
+        "picker.confirmSelection": "Confirmer la sélection",
+        "oneDragon.tcg.title": "Invocation du Génie Automatique"
     }
 }

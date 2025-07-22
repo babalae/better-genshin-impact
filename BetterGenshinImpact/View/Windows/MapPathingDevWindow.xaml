@@ -6,6 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  d:DataContext="{d:DesignInstance Type=windows:MapPathingDevViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -13,15 +14,15 @@
                  Height="260"
                  mc:Ignorable="d">
     <StackPanel>
-        <ui:TitleBar Title="地图追踪开发者工具">
+        <ui:TitleBar Title="{markup:Localize Key=mapPathing.devTools.title}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
         <StackPanel Margin="12">
-            <ui:TextBlock Margin="5">(下方地图选择会影响路径录制所在的独立地图)</ui:TextBlock>
-            <ui:TextBlock Margin="5">请选择地图：</ui:TextBlock>
+            <ui:TextBlock Margin="5" Text="{markup:Localize Key=mapPathing.devTools.mapSelectionNote}"></ui:TextBlock>
+            <ui:TextBlock Margin="5" Text="{markup:Localize Key=mapPathing.devTools.selectMap}"></ui:TextBlock>
             <ComboBox ItemsSource="{Binding MapTypeItems}"
                       DisplayMemberPath="DisplayName"
                       SelectedValuePath="EnumName"
@@ -36,11 +37,11 @@
             </ComboBox>
             <ui:Button Margin="5"
                        Command="{Binding OpenMapViewerCommand}"
-                       Content="查看实时追踪地图" />
+                       Content="{markup:Localize Key=mapPathing.devTools.viewRealTimeMap}" />
 
             <ui:Button Margin="5"
                        Command="{Binding OpenMapEditorCommand}"
-                       Content="录制编辑器" />
+                       Content="{markup:Localize Key=mapPathing.devTools.recordingEditor}" />
         </StackPanel>
     </StackPanel>
 </ui:FluentWindow>
