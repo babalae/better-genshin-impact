@@ -130,7 +130,6 @@ public partial class ScriptRepoWindow
         IsRepoUrlReadOnly = SelectedRepoChannel.Name != customText;
 
         // Update selected repository URL in configuration
-        var customText = App.GetService<ILocalizationService>().GetString("scriptRepo.custom");
         if (SelectedRepoChannel.Name != customText)
         {
             // If not a custom channel, directly use the selected channel's URL

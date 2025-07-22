@@ -49,7 +49,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private string _selectedArea = string.Empty;
     private string _selectedCountry = string.Empty;
     
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = [
+        App.GetService<ILocalizationService>().GetString("country.none"),
+        App.GetService<ILocalizationService>().GetString("country.fontaine"),
+        App.GetService<ILocalizationService>().GetString("country.inazuma"),
+        App.GetService<ILocalizationService>().GetString("country.liyue"),
+        App.GetService<ILocalizationService>().GetString("country.mondstadt")
+    ];
 
     /// <summary>
     /// ViewModel for managing language selection
@@ -137,7 +143,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         //            Owner = this,
         WebpageWindow cookieWin = new()
         {
-            Title = "日志分析",
+            Title = App.GetService<ILocalizationService>().GetString("window.logAnalysis"),
             Width = 800,
             Height = 600,
 
@@ -217,7 +223,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public void OnRefreshMaskSettings()
     {
         WeakReferenceMessenger.Default.Send(
-            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), App.GetService<ILocalizationService>().GetString("message.recalculateControlPositions")));
     }
 
     [RelayCommand]
@@ -293,11 +299,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
                 DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
-                MessageBox.Information("脚本仓库离线包导入成功！");
+                MessageBox.Information(App.GetService<ILocalizationService>().GetString("message.scriptRepoImportSuccess"));
             }
             else
             {
-                MessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                MessageBox.Error(App.GetService<ILocalizationService>().GetString("message.scriptRepoImportFailed"));
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }

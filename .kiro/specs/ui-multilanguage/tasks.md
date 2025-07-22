@@ -288,6 +288,8 @@
 
 
 
+
+
   - [x] Localize all notification messages sent through various channels (Windows, WebSocket, Webhook, Feishu, OneBot)
 
 
