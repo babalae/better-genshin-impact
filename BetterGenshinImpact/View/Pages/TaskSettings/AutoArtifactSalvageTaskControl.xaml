@@ -28,12 +28,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动分解圣遗物"
+                              Text="{local:Localize Key=artifact.autoSalvage.title}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="自动分解指定星级以下的圣遗物"
+                              Text="{local:Localize Key=artifact.autoSalvage.description}"
                               TextWrapping="Wrap" />
                 <controls:TwoStateButton Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -60,12 +60,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="需要快速分解圣遗物的最高星级"
+                              Text="{local:Localize Key=artifact.autoSalvage.maxStarTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="选择要自动分解的圣遗物星级上限"
+                              Text="{local:Localize Key=artifact.autoSalvage.maxStarDescription}"
                               TextWrapping="Wrap" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
@@ -90,12 +90,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="最多检查圣遗物数量"
+                              Text="{local:Localize Key=artifact.autoSalvage.maxCheckTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="设置最多检查多少个圣遗物，避免无限循环"
+                              Text="{local:Localize Key=artifact.autoSalvage.maxCheckDescription}"
                               TextWrapping="Wrap" />
                 <ui:NumberBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -121,18 +121,18 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="圣遗物词条过滤正则表达式"
+                              Text="{local:Localize Key=artifact.autoSalvage.regexTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="用于匹配需要保留的圣遗物词条，匹配的圣遗物不会被分解"
+                              Text="{local:Localize Key=artifact.autoSalvage.regexDescription}"
                               TextWrapping="Wrap" />
                 <ui:Button Grid.Row="0"
                            Grid.RowSpan="2"
                            Grid.Column="1"
                            Margin="0,0,36,0"
-                           Content="OCR测试"
+                           Content="{local:Localize Key=artifact.autoSalvage.ocrTest}"
                            Command="{Binding OpenArtifactSalvageTestOCRWindowCommand}" />
                 <ui:TextBox Grid.Row="2"
                             Grid.Column="0"
@@ -142,7 +142,7 @@
                             TextWrapping="Wrap"
                             MinHeight="60"
                             Text="{Binding Config.AutoArtifactSalvageConfig.RegularExpression, Mode=TwoWay}"
-                            PlaceholderText="输入正则表达式，例如：(?=[\S\s]*攻击力\+[\d]*\n)(?=[\S\s]*防御力\+[\d]*\n)" />
+                            PlaceholderText="{local:Localize Key=artifact.autoSalvage.regexPlaceholder}" />
             </Grid>
         </StackPanel>
     </ui:CardExpander>

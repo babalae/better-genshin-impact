@@ -28,16 +28,16 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="全自动钓鱼（单个鱼塘）"
+                              Text="{local:Localize Key=task.autoFishing.title}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    不要携带跟宠！在出现钓鱼F按钮的位置启动本任务 -
+                    <Run Text="{local:Localize Key=task.autoFishing.description}" />
                     <Hyperlink Command="{Binding GoToAutoFishingUrlCommand}"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
                     </Hyperlink>
                 </ui:TextBlock>
                 <controls:TwoStateButton Grid.Row="0"
@@ -92,12 +92,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="上钩等待超时时间"
+                              Text="{local:Localize Key=task.autoFishing.hookTimeout}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="超过这个时间将自动提竿，并重新识别并选择鱼饵进行抛竿"
+                              Text="{local:Localize Key=task.autoFishing.hookTimeoutDescription}"
                               TextWrapping="Wrap" />
                 <ui:NumberBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -121,12 +121,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="整个任务超时时间"
+                              Text="{local:Localize Key=task.autoFishing.totalTimeout}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="超过这个时间将强制结束任务"
+                              Text="{local:Localize Key=task.autoFishing.totalTimeoutDescription}"
                               TextWrapping="Wrap" />
                 <ui:NumberBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -150,12 +150,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="昼夜策略"
+                              Text="{local:Localize Key=task.autoFishing.dayNightStrategy}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="钓全天的鱼、还是只钓白天或夜晚的鱼、亦或不调整时间"
+                              Text="{local:Localize Key=task.autoFishing.dayNightStrategyDescription}"
                               TextWrapping="Wrap" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
@@ -179,12 +179,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="关键帧保存截图（开发者）"
+                              Text="{local:Localize Key=task.autoFishing.saveKeyFrameScreenshot}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="在流程判断的关键时刻保存当时的截图，供分析判断。会大量写入，非调试时请关闭。需要启用保存截图功能"
+                              Text="{local:Localize Key=task.autoFishing.saveKeyFrameScreenshotDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -205,18 +205,18 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="torch库文件地址（仅限2.5.1版本）"
+                              Text="{local:Localize Key=task.autoFishing.torchLibraryPath}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    请
+                    <Run Text="{local:Localize Key=task.autoFishing.pleaseText}" />
                     <Hyperlink Command="{Binding GoToTorchPreviousVersionsCommand}"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        下载
+                        <Run Text="{local:Localize Key=task.autoFishing.downloadText}" />
                     </Hyperlink>
-                    到本地后填入torch_cpu.dll或torch_cuda.dll的完整地址。如未生效可尝试重启BGI。
+                    <Run Text="{local:Localize Key=task.autoFishing.torchLibraryDescription}" />
 
                 </ui:TextBlock>
                 <ui:TextBox Grid.Row="0"

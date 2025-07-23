@@ -73,7 +73,7 @@
                            Grid.RowSpan="2"
                            Grid.Column="1"
                            Margin="0,0,12,0"
-                           Content="脚本仓库"
+                           Content="{local:Localize Key=scriptGroup.scriptRepository}"
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Icon="{ui:SymbolIcon Archive24}" />
                 <ui:Button Grid.Row="0"
@@ -81,7 +81,7 @@
                            Grid.Column="2"
                            Margin="0,0,12,0"
                            Command="{Binding OpenFightFolderCommand}"
-                           Content="打开目录" />
+                           Content="{local:Localize Key=task.openDirectory}" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
                           Grid.Column="3"
@@ -218,12 +218,12 @@
                                             <ui:TextBlock Grid.Row="0"
                                                           Grid.Column="0"
                                                           FontTypography="Body"
-                                                          Text="更快检查结束战斗参数"
+                                                          Text="{local:Localize Key=task.autoFight.fastCheckParams}"
                                                           TextWrapping="Wrap" />
                                             <ui:TextBlock Grid.Row="1"
                                                           Grid.Column="0"
                                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                          Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                          Text="{local:Localize Key=task.autoFight.fastCheckParamsDescription}"
                                                           TextWrapping="Wrap" />
                                             <ui:TextBox Grid.Row="0"
                                                         Grid.RowSpan="2"
@@ -252,12 +252,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="检查战斗结束的延时"
+                                          Text="{local:Localize Key=task.autoFight.checkEndDelay}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                          Text="{local:Localize Key=task.autoFight.checkEndDelayDescription}"
                                           TextWrapping="Wrap" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
@@ -277,12 +277,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="按键触发后检查延时"
+                                          Text="{local:Localize Key=task.autoFight.beforeDetectDelay}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                          Text="{local:Localize Key=task.autoFight.beforeDetectDelayDescription}"
                                           TextWrapping="Wrap" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
@@ -366,12 +366,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="自动拾取掉落物"
+                                          Text="{local:Localize Key=task.autoFight.autoPickDrops}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
+                                          Text="{local:Localize Key=task.autoFight.autoPickDropsDescription}"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -393,12 +393,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="自动拾取掉落物时长"
+                                          Text="{local:Localize Key=task.autoFight.pickDropsDuration}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="单位为秒。0表示不自动拾取掉落物。"
+                                          Text="{local:Localize Key=task.autoFight.pickDropsDurationDescription}"
                                           TextWrapping="Wrap" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
@@ -423,12 +423,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="战斗结束后使用万叶长E收集掉落物"
+                              Text="{local:Localize Key=task.autoFight.kazuhaPickup}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="队伍中存在枫原万叶的情况下，战斗结束后，使用长E拾取掉落物"
+                              Text="{local:Localize Key=task.autoFight.kazuhaPickupDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -448,12 +448,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="战斗超时（秒）"
+                              Text="{local:Localize Key=task.autoFight.timeout}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="当战斗超过一定时间后，自动停止战斗"
+                              Text="{local:Localize Key=task.autoFight.timeoutDescription}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Grid.Row="0"
                             Grid.RowSpan="2"

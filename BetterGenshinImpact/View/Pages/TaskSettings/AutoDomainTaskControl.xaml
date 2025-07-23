@@ -25,16 +25,16 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动秘境"
+                              Text="{local:Localize Key=task.autoDomain.title}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    基于钟离的自动循环刷本 -
+                    <Run Text="{local:Localize Key=task.autoDomain.description}" />
                     <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
                     </Hyperlink>
                 </ui:TextBlock>
                 <controls:TwoStateButton Grid.Row="0"
@@ -74,7 +74,7 @@
                            Grid.RowSpan="2"
                            Grid.Column="1"
                            Margin="0,0,12,0"
-                           Content="脚本仓库"
+                           Content="{local:Localize Key=scriptGroup.scriptRepository}"
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Icon="{ui:SymbolIcon Archive24}" />
                 <ui:Button Grid.Row="0"
@@ -82,7 +82,7 @@
                            Grid.Column="2"
                            Margin="0,0,12,0"
                            Command="{Binding OpenFightFolderCommand}"
-                           Content="打开目录" />
+                           Content="{local:Localize Key=task.openDirectory}" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
                           Grid.Column="3"
@@ -111,12 +111,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动切换到指定队伍"
+                              Text="{local:Localize Key=task.autoDomain.autoSwitchTeam}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="注意队伍名称是游戏内你手动设置的名称"
+                              Text="{local:Localize Key=task.autoDomain.teamNameNote}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Grid.Row="0"
                             Grid.RowSpan="2"
@@ -138,12 +138,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="指定要前往的秘境"
+                              Text="{local:Localize Key=task.autoDomain.selectDomain}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="自动传送到刷取的秘境"
+                              Text="{local:Localize Key=task.autoDomain.selectDomainDescription}"
                               TextWrapping="Wrap" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
@@ -166,12 +166,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="刷取至树脂耗尽"
+                              Text="{local:Localize Key=task.autoDomain.useAllResin}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
+                              Text="{local:Localize Key=task.autoDomain.useAllResinDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -193,12 +193,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="指定每种树脂刷取次数"
+                              Text="{local:Localize Key=task.autoDomain.specifyResinUse}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="开启后会根据配置的次数使用对应的树脂"
+                              Text="{local:Localize Key=task.autoDomain.specifyResinUseDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -219,7 +219,7 @@
                     <!-- 原粹树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,8,0,12">
-                        <ui:TextBlock Text="原粹树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.originalResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -234,7 +234,7 @@
                     <!-- 浓缩树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,12">
-                        <ui:TextBlock Text="浓缩树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.condensedResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -249,7 +249,7 @@
                     <!-- 须臾树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,12">
-                        <ui:TextBlock Text="须臾树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.transientResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -264,7 +264,7 @@
                     <!-- 脆弱树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,0">
-                        <ui:TextBlock Text="脆弱树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.fragileResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -291,12 +291,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="结束后自动分解圣遗物"
+                              Text="{local:Localize Key=task.autoDomain.autoArtifactSalvage}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="需要快速分解圣遗物的最高星级"
+                              Text="{local:Localize Key=task.autoDomain.autoArtifactSalvageDescription}"
                               TextWrapping="Wrap" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
@@ -326,12 +326,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="战斗完成后等待时间（秒）"
+                              Text="{local:Localize Key=task.autoDomain.fightEndDelay}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="战斗结束后，寻找石化古树前的延迟时间，等一些角色技能完全结束"
+                              Text="{local:Localize Key=task.autoDomain.fightEndDelayDescription}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Grid.Row="0"
                             Grid.RowSpan="2"
@@ -352,12 +352,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="寻找古树时使用小步伐行走（正常用户请不要启用）"
+                              Text="{local:Localize Key=task.autoDomain.shortMovement}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="如果电脑性能较差，寻找古树时间过久，可以尝试使用这个功能"
+                              Text="{local:Localize Key=task.autoDomain.shortMovementDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -377,12 +377,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="步行前往开启秘境和领取奖励"
+                              Text="{local:Localize Key=task.autoDomain.walkToF}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="如果电脑性能较差，开启秘境或者领取奖励的F点击不到，可以尝试此功能"
+                              Text="{local:Localize Key=task.autoDomain.walkToFDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -402,12 +402,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="寻找古树时确认位置左右移动的次数（正常用户不要修改）"
+                              Text="{local:Localize Key=task.autoDomain.leftRightMoveTimes}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="小步伐行走的时候左右确认位置的次数"
+                              Text="{local:Localize Key=task.autoDomain.leftRightMoveTimesDescription}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Grid.Row="0"
                             Grid.RowSpan="2"
@@ -428,12 +428,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动吃药"
+                              Text="{local:Localize Key=task.autoDomain.autoEat}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="请先装备 &quot;便携营养袋&quot; ，在红血时候后自动按Z键吃药"
+                              Text="{local:Localize Key=task.autoDomain.autoEatDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -453,12 +453,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="角色死亡后重试次数"
+                              Text="{local:Localize Key=task.autoDomain.reviveRetryCount}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="秘境战斗中，发生角色死亡重试的次数"
+                              Text="{local:Localize Key=task.autoDomain.reviveRetryCountDescription}"
                               TextWrapping="Wrap" />
                 <ui:TextBox Text="{Binding Config.AutoDomainConfig.ReviveRetryCount, Mode=TwoWay}"
                             Grid.Row="0"

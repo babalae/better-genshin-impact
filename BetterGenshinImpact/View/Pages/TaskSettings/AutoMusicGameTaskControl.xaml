@@ -26,27 +26,31 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动千音雅集"
+                              Text="{local:Localize Key=task.autoMusicGame.title}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    可以自动演奏单个，也可以全自动完成整个专辑 -
+                    <Run Text="{local:Localize Key=task.autoMusicGame.description}" />
                     <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
                     </Hyperlink>
                 </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                       Grid.RowSpan="2"
+                                       Grid.Column="1"
+                                       Margin="0,0,24,0"
+                                       DisableCommand="{Binding StopSoloTaskCommand}"
+                                       DisableContent="{local:Localize Key=task.stop}"
+                                       EnableCommand="{Binding SwitchAutoMusicGameCommand}"
+                                       EnableContent="{Binding SwitchAutoMusicGameButtonText}"
+                                       IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
             </Grid>
         </ui:CardExpander.Header>
         <StackPanel>
-            <controls:TwoStateButton Margin="0,0,40,0"
-                                   DisableCommand="{Binding StopSoloTaskCommand}"
-                                   DisableContent="停止"
-                                   EnableCommand="{Binding SwitchAutoMusicGameCommand}"
-                                   EnableContent="{Binding SwitchAutoMusicGameButtonText}"
-                                   IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
+            <!-- 空的内容区域，保持可扩展性 -->
         </StackPanel>
     </ui:CardExpander>
 

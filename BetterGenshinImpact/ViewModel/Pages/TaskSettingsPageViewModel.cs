@@ -40,6 +40,8 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
+using BetterGenshinImpact.GameTask.AutoTrack;
+using BetterGenshinImpact.GameTask.AutoMove;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -103,7 +105,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoFightButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
+    private bool _switchAutoTrackEnabled;
+
+    [ObservableProperty]
     private string _switchAutoTrackButtonText = App.GetService<ILocalizationService>().GetString("common.start");
+
+    [ObservableProperty]
+    private bool _switchAutoMoveEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoMoveButtonText = App.GetService<ILocalizationService>().GetString("common.start");
 
     [ObservableProperty]
     private string _switchAutoTrackPathButtonText = App.GetService<ILocalizationService>().GetString("common.start");
@@ -185,7 +196,14 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoRedeemCodeEnabled;
 
     [ObservableProperty]
-    private string _switchAutoRedeemCodeButtonText = "启动";
+    private string _switchAutoRedeemCodeButtonText = App.GetService<ILocalizationService>().GetString("task.autoRedeemCodeButtonText");
+
+    // Team configurations for AutoTrack
+    [ObservableProperty]
+    private List<TeamConfiguration> _teamConfigurations = new();
+
+    [ObservableProperty]
+    private TeamConfiguration? _selectedTeamConfiguration;
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -195,11 +213,14 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         //_strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
 
-        //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
+        //_combatStrategyList = [App.GetService<ILocalizationService>().GetString("task.autoSelectByTeam"), .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel(App.GetService<ILocalizationService>());
+        
+        // Initialize team configurations for AutoTrack
+        InitializeTeamConfigurations();
     }
 
 
@@ -228,6 +249,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoDomainEnabled = false;
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
+        SwitchAutoTrackEnabled = false;
+        SwitchAutoMoveEnabled = false;
         await Task.Delay(800);
     }
 
@@ -353,7 +376,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
-        if ("根据队伍自动选择".Equals(strategyName))
+        if (App.GetService<ILocalizationService>().GetString("task.autoSelectByTeam").Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
@@ -401,39 +424,56 @@ public partial class TaskSettingsPageViewModel : ViewModel
         AutoFightViewModel?.OnOpenFightFolder();
     }
 
-    [Obsolete]
     [RelayCommand]
-    public void OnSwitchAutoTrack()
+    public async Task OnSwitchAutoTrack()
     {
-        // try
-        // {
-        //     lock (_locker)
-        //     {
-        //         if (SwitchAutoTrackButtonText == "启动")
-        //         {
-        //             _cts?.Cancel();
-        //             _cts = new CancellationTokenSource();
-        //             var param = new AutoTrackParam(_cts);
-        //             _taskDispatcher.StartIndependentTask(IndependentTaskEnum.AutoTrack, param);
-        //             SwitchAutoTrackButtonText = "停止";
-        //         }
-        //         else
-        //         {
-        //             _cts?.Cancel();
-        //             SwitchAutoTrackButtonText = "启动";
-        //         }
-        //     }
-        // }
-        // catch (Exception ex)
-        // {
-        //     MessageBox.Error(ex.Message);
-        // }
+        try
+        {
+            SwitchAutoTrackEnabled = true;
+            // TODO: Implement AutoTrackTask when the feature is ready
+            // This is a placeholder for the debug-mode auto track functionality
+            await Task.Delay(1000); // Simulate task execution
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Information(localizationService.GetString("task.autoTrackInDevelopment"));
+        }
+        catch (Exception ex)
+        {
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Error(string.Format(localizationService.GetString("task.autoTrackStartFailed"), ex.Message));
+        }
+        finally
+        {
+            SwitchAutoTrackEnabled = false;
+        }
     }
 
     [RelayCommand]
     public async Task OnGoToAutoTrackUrlAsync()
     {
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
+    }
+
+    [RelayCommand]
+    public async Task OnSwitchAutoMove()
+    {
+        try
+        {
+            SwitchAutoMoveEnabled = true;
+            // TODO: Implement AutoMoveTask when the feature is ready
+            // This is a placeholder for the auto move functionality
+            await Task.Delay(1000); // Simulate task execution
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Information(localizationService.GetString("task.autoMoveInDevelopment"));
+        }
+        catch (Exception ex)
+        {
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Error(string.Format(localizationService.GetString("task.autoMoveStartFailed"), ex.Message));
+        }
+        finally
+        {
+            SwitchAutoMoveEnabled = false;
+        }
     }
 
     [Obsolete]
@@ -581,11 +621,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
             AcceptsReturn = true,
             Height = 340,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            PlaceholderText = "请在此输入兑换码，每行一条记录"
+            PlaceholderText = App.GetService<ILocalizationService>().GetString("task.redeemCodePlaceholder")
         };
         var p = new PromptDialog(
-            "输入兑换码",
-            "自动使用兑换码",
+            App.GetService<ILocalizationService>().GetString("task.enterRedeemCodes"),
+            App.GetService<ILocalizationService>().GetString("task.autoRedeemCodeTitle"),
             multilineTextBox,
             null);
         p.Height = 500;
@@ -599,7 +639,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
             if (codes.Count == 0)
             {
-                Toast.Warning("没有有效的兑换码");
+                var localizationService = App.GetService<ILocalizationService>();
+                Toast.Warning(localizationService.GetString("task.noValidRedeemCodes"));
                 return;
             }
             
@@ -610,5 +651,81 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
         
 
+    }
+
+    [RelayCommand]
+    private async Task OnStopAllTasks()
+    {
+        await OnStopSoloTask();
+        var localizationService = App.GetService<ILocalizationService>();
+        Toast.Information(localizationService.GetString("task.allTasksStopped"));
+    }
+
+    [RelayCommand]
+    private async Task OnRestartAllTasks()
+    {
+        await OnStopSoloTask();
+        await Task.Delay(1000);
+        var localizationService = App.GetService<ILocalizationService>();
+        Toast.Information(localizationService.GetString("task.restartAllTasksInDevelopment"));
+    }
+
+    [RelayCommand]
+    private async Task OnStopAutoGeniusInvokation()
+    {
+        if (SwitchAutoGeniusInvokationEnabled)
+        {
+            CancellationContext.Instance.Cancel();
+            SwitchAutoGeniusInvokationEnabled = false;
+            await Task.Delay(500);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnStopAutoWood()
+    {
+        if (SwitchAutoWoodEnabled)
+        {
+            CancellationContext.Instance.Cancel();
+            SwitchAutoWoodEnabled = false;
+            await Task.Delay(500);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnStopAutoFight()
+    {
+        if (SwitchAutoFightEnabled)
+        {
+            CancellationContext.Instance.Cancel();
+            SwitchAutoFightEnabled = false;
+            await Task.Delay(500);
+        }
+    }
+
+    private void InitializeTeamConfigurations()
+    {
+        TeamConfigurations = new List<TeamConfiguration>
+        {
+            new TeamConfiguration { 
+                Name = App.GetService<ILocalizationService>().GetString("task.defaultTeam"), 
+                Description = App.GetService<ILocalizationService>().GetString("task.defaultTeamDescription") 
+            },
+            new TeamConfiguration { 
+                Name = App.GetService<ILocalizationService>().GetString("task.explorationTeam"), 
+                Description = App.GetService<ILocalizationService>().GetString("task.explorationTeamDescription") 
+            },
+            new TeamConfiguration { 
+                Name = App.GetService<ILocalizationService>().GetString("task.combatTeam"), 
+                Description = App.GetService<ILocalizationService>().GetString("task.combatTeamDescription") 
+            }
+        };
+        SelectedTeamConfiguration = TeamConfigurations.FirstOrDefault();
+    }
+
+    public class TeamConfiguration
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
     }
 }

@@ -29,16 +29,16 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动幽境危战"
+                              Text="{local:Localize Key=task.autoStygianOnslaught.title}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在接触钥匙后的界面启动本任务 -
+                    <Run Text="{local:Localize Key=task.autoStygianOnslaught.description}" />
                     <Hyperlink Command="{Binding GoToAutoStygianOnslaughtUrlCommand}"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
                     </Hyperlink>
                 </ui:TextBlock>
                 <controls:TwoStateButton Grid.Row="0"
@@ -78,7 +78,7 @@
                            Grid.RowSpan="2"
                            Grid.Column="1"
                            Margin="0,0,12,0"
-                           Content="脚本仓库"
+                           Content="{local:Localize Key=scriptGroup.scriptRepository}"
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Icon="{ui:SymbolIcon Archive24}" />
                 <ui:Button Grid.Row="0"
@@ -86,7 +86,7 @@
                            Grid.Column="2"
                            Margin="0,0,12,0"
                            Command="{Binding OpenFightFolderCommand}"
-                           Content="打开目录" />
+                           Content="{local:Localize Key=task.openDirectory}" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
                           Grid.Column="3"
@@ -115,12 +115,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="刷取至树脂耗尽"
+                              Text="{local:Localize Key=task.autoDomain.useAllResin}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
+                              Text="{local:Localize Key=task.autoDomain.useAllResinDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -142,12 +142,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="指定每种树脂刷取次数"
+                              Text="{local:Localize Key=task.autoDomain.specifyResinUse}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="开启后会根据配置的次数使用对应的树脂"
+                              Text="{local:Localize Key=task.autoDomain.specifyResinUseDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
@@ -168,7 +168,7 @@
                     <!-- 原粹树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,8,0,12">
-                        <ui:TextBlock Text="原粹树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.originalResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -183,7 +183,7 @@
                     <!-- 浓缩树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,12">
-                        <ui:TextBlock Text="浓缩树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.condensedResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -198,7 +198,7 @@
                     <!-- 须臾树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,12">
-                        <ui:TextBlock Text="须臾树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.transientResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -213,7 +213,7 @@
                     <!-- 脆弱树脂设置 -->
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,0">
-                        <ui:TextBlock Text="脆弱树脂刷取次数："
+                        <ui:TextBlock Text="{local:Localize Key=task.autoDomain.fragileResinCount}"
                                       VerticalAlignment="Center"
                                       Margin="0,0,8,0" />
                         <ui:NumberBox
@@ -240,12 +240,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="结束后自动分解圣遗物"
+                              Text="{local:Localize Key=task.autoDomain.autoArtifactSalvage}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="需要快速分解圣遗物的最高星级"
+                              Text="{local:Localize Key=task.autoDomain.autoArtifactSalvageDescription}"
                               TextWrapping="Wrap" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"

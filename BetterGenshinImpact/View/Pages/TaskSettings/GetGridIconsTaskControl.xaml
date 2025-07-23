@@ -30,12 +30,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="截取物品图标"
+                              Text="{local:Localize Key=task.getGridIcons}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="截取游戏中各种界面的物品图标，用于开发和调试"
+                              Text="{local:Localize Key=task.getGridIconsDescription}"
                               TextWrapping="Wrap" />
                 <controls:TwoStateButton Grid.Row="0"
                                          Grid.RowSpan="2"
@@ -58,7 +58,7 @@
                 <ui:TextBlock Grid.Column="0"
                               Margin="0,0,12,0"
                               VerticalAlignment="Center"
-                              Text="界面类型:" />
+                              Text="{local:Localize Key=task.gridType}" />
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding GridNameDict}"
                           SelectedValue="{Binding Config.GetGridIconsConfig.GridName, Mode=TwoWay}"
@@ -75,7 +75,7 @@
                 <ui:TextBlock Grid.Column="0"
                               Margin="0,0,12,0"
                               VerticalAlignment="Center"
-                              Text="最大获取数量:" />
+                              Text="{local:Localize Key=task.maxItemsToGet}" />
                 <ui:NumberBox Grid.Column="1"
                               Minimum="1"
                               Maximum="9999"
@@ -89,16 +89,16 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <CheckBox Grid.Column="0"
-                          Content="使用星级作为后缀"
+                          Content="{local:Localize Key=task.useStarAsSuffix}"
                           IsChecked="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}" />
                 <CheckBox Grid.Column="1"
-                          Content="使用等级作为后缀"
+                          Content="{local:Localize Key=task.useLevelAsSuffix}"
                           IsChecked="{Binding Config.GetGridIconsConfig.LvAsSuffix, Mode=TwoWay}" />
             </Grid>
 
             <!-- 文件夹链接 -->
             <Grid Margin="24,12,24,12">
-                <ui:Button Content="打开图标文件夹"
+                <ui:Button Content="{local:Localize Key=task.openIconsFolder}"
                            Command="{Binding GoToGridIconsFolderCommand}"
                            HorizontalAlignment="Left" />
             </Grid>

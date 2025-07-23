@@ -28,22 +28,22 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="【专辑】 全自动完成整个专辑"
+                              Text="{local:Localize Key=music.album.autoCompleteTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    进入专辑界面使用，自动演奏未完成乐曲 -
+                    <Run Text="{local:Localize Key=music.album.description}" />
                     <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                        点击查看使用教程
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
                     </Hyperlink>
                 </ui:TextBlock>
                 <controls:TwoStateButton Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
-                                         Margin="0,0,36,0"
+                                         Margin="0,0,24,0"
                                          DisableCommand="{Binding StopSoloTaskCommand}"
                                          DisableContent="{local:Localize Key=task.stop}"
                                          EnableCommand="{Binding SwitchAutoAlbumCommand}"
@@ -64,17 +64,17 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="【专辑】 自动演奏未达成【大音天籁】的乐曲"
+                              Text="{local:Localize Key=music.album.mustCanorusTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="关闭时，奖励已经领取就会跳过乐曲。开启时，达成了【大音天籁】才会跳过乐曲"
+                              Text="{local:Localize Key=music.album.mustCanorusDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"
                                  Grid.Column="1"
-                                 Margin="0,0,36,0"
+                                 Margin="0,0,24,0"
                                  IsChecked="{Binding Config.AutoMusicGameConfig.MustCanorusLevel, Mode=TwoWay}" />
             </Grid>
             <Grid Margin="16">
@@ -89,18 +89,18 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="【专辑】 自动演奏的目标难度选择"
+                              Text="{local:Localize Key=music.album.targetDifficultyTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="设置为【传说】，【大师】即可获取所有奖励，设置【所有】则会对乐曲的所有难度进行自动演奏"
+                              Text="{local:Localize Key=music.album.targetDifficultyDescription}"
                               TextWrapping="Wrap" />
                 <ComboBox Grid.Row="0"
                           Grid.RowSpan="2"
                           Grid.Column="1"
                           Width="80"
-                          Margin="0,0,36,0"
+                          Margin="0,0,24,0"
                           ItemsSource="{Binding AutoMusicLevelList}"
                           SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
                           SelectedIndex="0" />

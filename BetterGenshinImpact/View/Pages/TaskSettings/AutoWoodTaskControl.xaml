@@ -161,12 +161,12 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="按下两次ESC（其中一下ESC是消除木材已满的提示）"
+                              Text="{local:Localize Key=task.pressEscTwice}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="多木材点情况下，一种木材已满的时候使用这个功能"
+                              Text="{local:Localize Key=task.pressEscTwiceDescription}"
                               TextWrapping="Wrap" />
                 <ui:ToggleSwitch Grid.Row="0"
                                  Grid.RowSpan="2"

@@ -20,20 +20,19 @@
                 <ui:TextBlock Grid.Row="0"
                               Grid.Column="0"
                               FontTypography="Body"
-                              Text="自动使用兑换码"
+                              Text="{local:Localize Key=task.autoRedeemCodeTitle}"
                               TextWrapping="Wrap" />
                 <ui:TextBlock Grid.Row="1"
                               Grid.Column="0"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              TextWrapping="Wrap">
-                    自动使用输入的兑换码
-                </ui:TextBlock>
+                              Text="{local:Localize Key=task.autoRedeemCode.description}"
+                              TextWrapping="Wrap" />
                 <controls:TwoStateButton Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
                                          Margin="0,0,24,0"
                                          DisableCommand="{Binding StopSoloTaskCommand}"
-                                         DisableContent="停止"
+                                         DisableContent="{local:Localize Key=task.stop}"
                                          EnableCommand="{Binding SwitchAutoRedeemCodeCommand}"
                                          EnableContent="{Binding SwitchAutoRedeemCodeButtonText}"
                                          IsChecked="{Binding SwitchAutoRedeemCodeEnabled}" />
