@@ -94,11 +94,6 @@
                               ItemsSource="{Binding LocalizationViewModel.AvailableLanguages}"
                               SelectedItem="{Binding LocalizationViewModel.SelectedLanguage, Mode=TwoWay}"
                               IsEnabled="{Binding LocalizationViewModel.IsLoading, Converter={StaticResource InverseBooleanConverter}}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding NativeName}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="SelectionChanged">
                                 <b:InvokeCommandAction Command="{Binding LocalizationViewModel.ChangeLanguageCommand}"

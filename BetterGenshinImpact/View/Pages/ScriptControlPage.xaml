@@ -216,8 +216,7 @@
                 <ui:TextBlock Grid.Row="1"
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              TextWrapping="Wrap">
-                    {markup:Localize Key=scheduler.rightClickToAddDragToReorder}
+                               Text="{markup:Localize Key=scheduler.rightClickToAddDragToReorder}">
                 </ui:TextBlock>
 
 
