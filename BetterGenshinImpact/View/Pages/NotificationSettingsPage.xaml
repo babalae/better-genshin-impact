@@ -5,6 +5,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
       Title="NotificationSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:NotificationSettingsPageViewModel}"
       d:DesignHeight="1500"
@@ -18,7 +19,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="通知设置" />
+                      Text="{local:Localize Key=notification.title}" />
 
         <!--  全局通知设置  -->
         <ui:CardExpander Margin="0,0,0,12"
@@ -37,12 +38,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="全局通知设置"
+                                  Text="{local:Localize Key=notification.globalSettings}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="影响下方所有通知的设置"
+                                  Text="{local:Localize Key=notification.globalSettingsDescription}"
                                   TextWrapping="Wrap" />
                     <!--<ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -64,12 +65,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知时包含截图"
+                                  Text="{local:Localize Key=notification.includeScreenshot}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="总是在通知中包含截图"
+                                  Text="{local:Localize Key=notification.includeScreenshotDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -89,12 +90,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="是否允许 JS 通知"
+                                  Text="{local:Localize Key=notification.allowJsNotifications}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="开启时允许 JS 脚本发送通知"
+                                  Text="{local:Localize Key=notification.allowJsNotificationsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -114,12 +115,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="需要通知的事件"
+                                  Text="{local:Localize Key=notification.eventsToNotify}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="英文逗号分割，为空为全部通知"
+                                  Text="{local:Localize Key=notification.eventsToNotifyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -149,12 +150,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Webhook"
+                                  Text="{local:Localize Key=notification.enableWebhook}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Webhook 相关设置"
+                                  Text="{local:Localize Key=notification.webhookSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -176,12 +177,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Webhook 端点"
+                                  Text="{local:Localize Key=notification.webhookEndpoint}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Webhook 端点"
+                                  Text="{local:Localize Key=notification.webhookEndpointDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -204,12 +205,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="发送对象"
+                                  Text="{local:Localize Key=notification.sendTo}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写发送对象"
+                                  Text="{local:Localize Key=notification.sendToDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -232,12 +233,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试"
+                                  Text="{local:Localize Key=notification.test}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试载荷"
+                                  Text="{local:Localize Key=notification.testDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.Column="1"
@@ -245,7 +246,7 @@
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right"
                                Command="{Binding TestWebhookCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -266,12 +267,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 WebSocket"
+                                  Text="{local:Localize Key=notification.enableWebSocket}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="WebSocket 相关设置"
+                                  Text="{local:Localize Key=notification.webSocketSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -293,12 +294,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="WebSocket 端点"
+                                  Text="{local:Localize Key=notification.webSocketEndpoint}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 WebSocket 端点"
+                                  Text="{local:Localize Key=notification.webSocketEndpointDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -321,19 +322,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 WebSocket 通知"
+                                  Text="{local:Localize Key=notification.testWebSocket}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.testWebSocketDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWebSocketNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -355,12 +356,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Windows 通知"
+                                  Text="{local:Localize Key=notification.enableWindows}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Windows 通知别与游戏界面重叠，否则易误点通知"
+                                  Text="{local:Localize Key=notification.windowsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -382,19 +383,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Windows 通知"
+                                  Text="{local:Localize Key=notification.testWindows}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.testWindowsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWindowsUwpNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -416,12 +417,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用飞书通知"
+                                  Text="{local:Localize Key=notification.enableFeishu}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="飞书通知相关设置"
+                                  Text="{local:Localize Key=notification.feishuSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -443,12 +444,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="飞书通知地址"
+                                  Text="{local:Localize Key=notification.feishuWebhookUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写飞书通知地址"
+                                  Text="{local:Localize Key=notification.feishuWebhookUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -471,12 +472,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="飞书AppId"
+                                  Text="{local:Localize Key=notification.feishuAppId}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="若填写AppId、AppSecret则发送图片"
+                                  Text="{local:Localize Key=notification.feishuAppIdDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -499,12 +500,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="飞书AppSecret"
+                                  Text="{local:Localize Key=notification.feishuAppSecret}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="若填写AppId、AppSecret则发送图片"
+                                  Text="{local:Localize Key=notification.feishuAppSecretDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -527,19 +528,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试飞书通知"
+                                  Text="{local:Localize Key=notification.testFeishu}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.testFeishuDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestFeishuNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -561,12 +562,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 OneBot 通知"
+                                  Text="{local:Localize Key=notification.enableOneBot}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="OneBot 通知相关设置"
+                                  Text="{local:Localize Key=notification.oneBotSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -588,12 +589,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="OneBot 请求地址"
+                                  Text="{local:Localize Key=notification.oneBotEndpoint}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 OneBot 请求地址"
+                                  Text="{local:Localize Key=notification.oneBotEndpointDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -616,12 +617,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="QQ 号"
+                                  Text="{local:Localize Key=notification.qqNumber}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写接收消息的 QQ 号"
+                                  Text="{local:Localize Key=notification.qqNumberDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -644,12 +645,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="群号"
+                                  Text="{local:Localize Key=notification.groupNumber}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写接收消息的群号"
+                                  Text="{local:Localize Key=notification.groupNumberDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -672,12 +673,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Token"
+                                  Text="{local:Localize Key=notification.token}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 OneBot Token（可选）"
+                                  Text="{local:Localize Key=notification.oneBotTokenDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -700,19 +701,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 OneBot 通知"
+                                  Text="{local:Localize Key=notification.testOneBot}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestOneBotNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -734,12 +735,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用企业微信通知"
+                                  Text="{local:Localize Key=notification.enableWorkWeixin}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="企业微信通知相关设置"
+                                  Text="{local:Localize Key=notification.workWeixinSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -761,12 +762,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="企业微信通知地址"
+                                  Text="{local:Localize Key=notification.workWeixinEndpoint}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写企业微信通知地址"
+                                  Text="{local:Localize Key=notification.workWeixinEndpointDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -789,19 +790,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试企业微信通知"
+                                  Text="{local:Localize Key=notification.testWorkWeixin}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWorkWeixinNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -823,12 +824,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用邮箱通知"
+                                  Text="{local:Localize Key=notification.enableEmail}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="邮箱相关设置（账号密码完全保存于本地）"
+                                  Text="{local:Localize Key=notification.emailSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -850,12 +851,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 服务器"
+                                  Text="{local:Localize Key=notification.smtpServer}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 服务器"
+                                  Text="{local:Localize Key=notification.smtpServerDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -878,12 +879,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 服务器端口"
+                                  Text="{local:Localize Key=notification.smtpPort}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 服务器端口，一般为：587"
+                                  Text="{local:Localize Key=notification.smtpPortDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -907,12 +908,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 用户名"
+                                  Text="{local:Localize Key=notification.smtpUsername}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 用户名"
+                                  Text="{local:Localize Key=notification.smtpUsernameDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -935,12 +936,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 密码"
+                                  Text="{local:Localize Key=notification.smtpPassword}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 密码"
+                                  Text="{local:Localize Key=notification.smtpPasswordDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -963,12 +964,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="发件人邮箱"
+                                  Text="{local:Localize Key=notification.senderEmail}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写发件人邮箱"
+                                  Text="{local:Localize Key=notification.senderEmailDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -991,12 +992,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="发件人姓名"
+                                  Text="{local:Localize Key=notification.senderName}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写发件人姓名"
+                                  Text="{local:Localize Key=notification.senderNameDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1019,12 +1020,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="收件人邮箱"
+                                  Text="{local:Localize Key=notification.recipientEmail}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写收件人邮箱"
+                                  Text="{local:Localize Key=notification.recipientEmailDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1047,19 +1048,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试邮箱通知"
+                                  Text="{local:Localize Key=notification.testEmail}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestEmailNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1080,12 +1081,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Bark 通知"
+                                  Text="{local:Localize Key=notification.enableBark}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Bark ios 推送通知"
+                                  Text="{local:Localize Key=notification.barkSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1107,12 +1108,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Bark API 端点"
+                                  Text="{local:Localize Key=notification.barkApiEndpoint}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Bark API 端点,例如：api.day.app"
+                                  Text="{local:Localize Key=notification.barkApiEndpointDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1136,12 +1137,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="设备 Key"
+                                  Text="{local:Localize Key=notification.deviceKey}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="多个设备使用英文逗号、分号或空格分隔"
+                                  Text="{local:Localize Key=notification.deviceKeyDescription}"
                                   TextWrapping="Wrap" />
 
                     <ui:TextBox Grid.Row="0"
@@ -1167,12 +1168,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="推送级别"
+                                  Text="{local:Localize Key=notification.pushLevel}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改推送级别"
+                                  Text="{local:Localize Key=notification.pushLevelDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1181,10 +1182,10 @@
                               SelectedValuePath="Tag"
                               Margin="0,0,36,0"
                               MinWidth="120">
-                        <ComboBoxItem Content="passive（通知但不提醒）" Tag="passive" />
-                        <ComboBoxItem Content="critical（重要通知）" Tag="critical" />
-                        <ComboBoxItem Content="active（默认通知）" Tag="active" />
-                        <ComboBoxItem Content="sensitive（专注通知）" Tag="timeSensitive" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.pushLevelPassive}" Tag="passive" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.pushLevelCritical}" Tag="critical" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.pushLevelActive}" Tag="active" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.pushLevelSensitive}" Tag="timeSensitive" />
                     </ComboBox>
                 </Grid>
 
@@ -1200,12 +1201,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知声音"
+                                  Text="{local:Localize Key=notification.notificationSound}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择通知声音"
+                                  Text="{local:Localize Key=notification.notificationSoundDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1214,9 +1215,9 @@
                               SelectedValue="{Binding Config.NotificationConfig.BarkSound}"
                               Margin="0,0,36,0"
                               MinWidth="120">
-                        <ComboBoxItem Content="minuet" />
-                        <ComboBoxItem Content="silence" />
-                        <ComboBoxItem Content="bell" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.soundMinuet}" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.soundSilence}" />
+                        <ComboBoxItem Content="{local:Localize Key=notification.soundBell}" />
                     </ComboBox>
                 </Grid>
 
@@ -1232,12 +1233,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知分组"
+                                  Text="{local:Localize Key=notification.notificationGroup}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="按组显示在通知中心"
+                                  Text="{local:Localize Key=notification.notificationGroupDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1261,12 +1262,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="保存推送历史"
+                                  Text="{local:Localize Key=notification.savePushHistory}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择是否保存推送历史"
+                                  Text="{local:Localize Key=notification.savePushHistoryDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1276,8 +1277,8 @@
                               Margin="0,0,36,0"
                               SelectedValue="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
                               SelectedValuePath="Tag">
-                        <ComboBoxItem Content="是" Tag="1" />
-                        <ComboBoxItem Content="否" Tag="0" />
+                        <ComboBoxItem Content="{local:Localize Key=common.yes}" Tag="1" />
+                        <ComboBoxItem Content="{local:Localize Key=common.no}" Tag="0" />
                     </ComboBox>
                 </Grid>
                 <Grid Margin="16">
@@ -1292,12 +1293,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="加密密钥"
+                                  Text="{local:Localize Key=notification.encryptionKey}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="推送内容加密密钥"
+                                  Text="{local:Localize Key=notification.encryptionKeyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1321,19 +1322,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Bark 通知"
+                                  Text="{local:Localize Key=notification.testBark}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestBarkNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1354,12 +1355,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Telegram 通知"
+                                  Text="{local:Localize Key=notification.enableTelegram}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Telegram 机器人相关设置"
+                                  Text="{local:Localize Key=notification.telegramSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1381,12 +1382,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="机器人 Token"
+                                  Text="{local:Localize Key=notification.botToken}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Telegram 机器人的 Token"
+                                  Text="{local:Localize Key=notification.botTokenDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1410,12 +1411,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="聊天 ID"
+                                  Text="{local:Localize Key=notification.chatId}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写接收消息的聊天 ID"
+                                  Text="{local:Localize Key=notification.chatIdDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1439,12 +1440,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="API 基础 URL（可选）"
+                                  Text="{local:Localize Key=notification.apiBaseUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="留空使用官方 API，或填写第三方 API 地址"
+                                  Text="{local:Localize Key=notification.apiBaseUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1524,19 +1525,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Telegram 通知"
+                                  Text="{local:Localize Key=notification.testTelegram}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestTelegramNotificationCommand}"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1557,12 +1558,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 xxtui 信息推送"
+                                  Text="{local:Localize Key=notification.enableXxtui}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="xxtui 信息推送通知相关设置"
+                                  Text="{local:Localize Key=notification.xxtuiSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1584,12 +1585,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="API密钥"
+                                  Text="{local:Localize Key=notification.apiKey}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写信息推送通知API密钥"
+                                  Text="{local:Localize Key=notification.apiKeyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1611,12 +1612,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知来源"
+                                  Text="{local:Localize Key=notification.notificationSource}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写信息推送通知来源"
+                                  Text="{local:Localize Key=notification.notificationSourceDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1625,7 +1626,7 @@
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.XxtuiFrom, Mode=TwoWay}"
-                                PlaceholderText="Better原神"
+                                PlaceholderText="{local:Localize Key=notification.betterGenshin}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
@@ -1640,19 +1641,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知渠道"
+                                  Text="{local:Localize Key=notification.notificationChannel}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写信息推送通知渠道"
+                                  Text="{local:Localize Key=notification.notificationChannelDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.XxtuiChannels, Mode=TwoWay}"
-                                PlaceholderText="WX_MP,WX_QY_ROBOT,DING_ROBOT,BARK"
+                                PlaceholderText="{local:Localize Key=notification.xxtuiChannelsPlaceholder}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
@@ -1667,12 +1668,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试信息推送通知"
+                                  Text="{local:Localize Key=notification.testXxtui}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1680,7 +1681,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestXxtuiNotificationCommand}"
                                CommandParameter="xxtuiNotifier"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1701,12 +1702,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用钉钉机器人通知"
+                                  Text="{local:Localize Key=notification.enableDingTalk}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="钉钉机器人通知相关设置"
+                                  Text="{local:Localize Key=notification.dingTalkSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1728,12 +1729,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="钉钉机器人通知地址"
+                                  Text="{local:Localize Key=notification.dingTalkWebhookUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写钉钉机器人通知地址"
+                                  Text="{local:Localize Key=notification.dingTalkWebhookUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1757,12 +1758,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="钉钉机器人密钥"
+                                  Text="{local:Localize Key=notification.dingTalkSecret}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写钉钉机器人密钥"
+                                  Text="{local:Localize Key=notification.dingTalkSecretDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1785,12 +1786,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试钉钉机器人通知"
+                                  Text="{local:Localize Key=notification.testDingTalk}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.sendTestNotification}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1798,7 +1799,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestDingDingWebhookNotificationCommand}"
                                CommandParameter="DingDingWebhook"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1819,12 +1820,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Discord Webhook 通知"
+                                  Text="{local:Localize Key=notification.enableDiscordWebhook}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Discord Webhook 通知相关设置"
+                                  Text="{local:Localize Key=notification.discordWebhookSettings}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1846,12 +1847,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Webhook 网址"
+                                  Text="{local:Localize Key=notification.discordWebhookUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Discord 提供的 Webhook 网址"
+                                  Text="{local:Localize Key=notification.discordWebhookUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1874,12 +1875,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="用户名"
+                                  Text="{local:Localize Key=notification.discordWebhookUsername}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="讯息显示的名称，为空时使用 Discord 中预先设定的名字"
+                                  Text="{local:Localize Key=notification.discordWebhookUsernameDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1902,12 +1903,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="头像网址"
+                                  Text="{local:Localize Key=notification.discordWebhookAvatarUrl}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="讯息显示的头像，为空时使用 Discord 中预先设定的头像"
+                                  Text="{local:Localize Key=notification.discordWebhookAvatarUrlDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1930,12 +1931,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图编码"
+                                  Text="{local:Localize Key=notification.discordImageEncoder}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="PNG 无损，JPEG 快速压缩，WebP 档案小，按需选择"
+                                  Text="{local:Localize Key=notification.discordImageEncoderDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1957,12 +1958,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Discord Webhook 通知"
+                                  Text="{local:Localize Key=notification.testDiscordWebhook}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{local:Localize Key=notification.testDiscordWebhookDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1970,7 +1971,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestDiscordWebhookNotificationCommand}"
                                CommandParameter="DiscordWebhook"
-                               Content="发送" />
+                               Content="{local:Localize Key=notification.send}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

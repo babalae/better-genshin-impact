@@ -171,7 +171,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                MessageBox.Error("选择的窗体句柄为空");
+                MessageBox.Error(App.GetService<ILocalizationService>().GetString("error.emptyWindowHandle"));
             }
         }
     }
@@ -189,7 +189,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                MessageBox.Error("选择的窗体句柄为空！");
+                MessageBox.Error(App.GetService<ILocalizationService>().GetString("error.emptyWindowHandle"));
             }
         }
     }
@@ -215,7 +215,7 @@ public partial class HomePageViewModel : ViewModel
             {
                 if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
                 {
-                    MessageBox.Error("没有找到原神的安装路径");
+                    MessageBox.Error(App.GetService<ILocalizationService>().GetString("error.genshinInstallPathNotFound"));
                     return;
                 }
 
@@ -228,7 +228,7 @@ public partial class HomePageViewModel : ViewModel
 
             if (hWnd == IntPtr.Zero)
             {
-                await MessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
+                await MessageBox.ErrorAsync(App.GetService<ILocalizationService>().GetString("error.genshinWindowNotFound"));
                 return;
             }
         }
@@ -243,7 +243,7 @@ public partial class HomePageViewModel : ViewModel
         {
             if (Config.TriggerInterval <= 0)
             {
-                MessageBox.Error("触发器触发频率必须大于0");
+                MessageBox.Error(App.GetService<ILocalizationService>().GetString("error.triggerIntervalMustBePositive"));
                 return;
             }
 
@@ -421,7 +421,7 @@ public partial class HomePageViewModel : ViewModel
 
         WebpageWindow win = new()
         {
-            Title = "启动参数说明",
+            Title = App.GetService<ILocalizationService>().GetString("window.launchParametersExplanation"),
             Width = 800,
             Height = 600,
             Owner = Application.Current.MainWindow,
@@ -437,7 +437,7 @@ public partial class HomePageViewModel : ViewModel
     {
         var dialogWindow = new Window
         {
-            Title = "硬件加速设置",
+            Title = App.GetService<ILocalizationService>().GetString("window.hardwareAccelerationSettings"),
             Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,

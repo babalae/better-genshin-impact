@@ -62,14 +62,14 @@ public class AutoStygianOnslaughtTask : ISoloTask
         _ct = ct;
 
         Init();
-        Notify.Event(NotificationEvent.DomainStart).Success($"{Name}启动");
+        Notify.Event(NotificationEvent.DomainStart).Success("notification.message.namedTaskStart", Name);
 
         await DoDomain();
         
         await Delay(3000, ct);
 
         await ArtifactSalvage();
-        Notify.Event(NotificationEvent.DomainEnd).Success($"{Name}结束");
+        Notify.Event(NotificationEvent.DomainEnd).Success("notification.message.namedTaskEnd", Name);
     }
 
     private async Task DoDomain()
@@ -135,7 +135,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 break;
             }
 
-            Notify.Event(NotificationEvent.DomainReward).Success($"{Name}奖励领取");
+            Notify.Event(NotificationEvent.DomainReward).Success("notification.message.namedTaskReward", Name);
         }
     }
 

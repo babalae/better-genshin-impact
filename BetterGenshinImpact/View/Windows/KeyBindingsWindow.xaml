@@ -5,7 +5,8 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
-                 Title="按键绑定设置"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
+                 Title="{markup:Localize Key=keyBindings.title}"
                  Width="800"
                  Height="600"
                  d:DesignHeight="600"
@@ -21,7 +22,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ui:TitleBar Grid.Row="0"
-                     Title="按键绑定设置"
+                     Title="{markup:Localize Key=keyBindings.title}"
                      Icon="pack://application:,,,/Assets/logo.ico" />
     </Grid>
 </ui:FluentWindow>

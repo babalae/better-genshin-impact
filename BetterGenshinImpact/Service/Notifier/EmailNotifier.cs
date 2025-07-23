@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Interface;
 using SixLabors.ImageSharp;
 
 namespace BetterGenshinImpact.Service.Notifier
@@ -52,7 +53,9 @@ namespace BetterGenshinImpact.Service.Notifier
         {
             if (string.IsNullOrEmpty(ToEmail))
             {
-                throw new NotifierException("收件人邮箱地址为空");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.emailRecipientEmpty") : "收件人邮箱地址为空";
+                throw new NotifierException(errorMessage);
             }
 
             // 创建一个新的SmtpClient实例（不复用）
@@ -112,7 +115,9 @@ namespace BetterGenshinImpact.Service.Notifier
                                     /* 忽略清理错误 */
                                 }
 
-                                throw new NotifierException($"发送邮件失败: {ex.Message}");
+                                var localizationService = App.GetService<ILocalizationService>();
+                                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.emailError", ex.Message) : $"发送邮件失败: {ex.Message}";
+                                throw new NotifierException(errorMessage);
                             }
                         }
                         else
@@ -124,7 +129,8 @@ namespace BetterGenshinImpact.Service.Notifier
                 }
                 catch (System.Exception ex)
                 {
-                    var errorMessage = $"发送邮件失败: {ex.Message}";
+                    var localizationService = App.GetService<ILocalizationService>();
+                    var errorMessage = localizationService != null ? localizationService.GetString("notification.error.emailError", ex.Message) : $"发送邮件失败: {ex.Message}";
                     throw new NotifierException(errorMessage);
                 }
             }

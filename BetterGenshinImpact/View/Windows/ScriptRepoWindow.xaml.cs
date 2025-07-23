@@ -11,6 +11,8 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -18,7 +20,7 @@ namespace BetterGenshinImpact.View.Windows;
 [ObservableObject]
 public partial class ScriptRepoWindow
 {
-    // 更新渠道类
+    // Update channel class
     public class RepoChannel
     {
         public string Name { get; set; }
@@ -31,17 +33,17 @@ public partial class ScriptRepoWindow
         }
     }
 
-    // 渠道列表
+    // Channel list
     private ObservableCollection<RepoChannel> _repoChannels;
     public ObservableCollection<RepoChannel> RepoChannels => _repoChannels;
 
-    // 选中的渠道
+    // Selected channel
     [ObservableProperty] private RepoChannel? _selectedRepoChannel;
 
-    // 控制仓库地址是否只读
+    // Control whether repository address is read-only
     [ObservableProperty] private bool _isRepoUrlReadOnly = true;
 
-    // 添加进度相关的可观察属性
+    // Progress-related observable properties
     [ObservableProperty] private bool _isUpdating;
     [ObservableProperty] private int _updateProgressValue;
     [ObservableProperty] private string _updateProgressText = "准备更新...";
@@ -85,33 +87,34 @@ public partial class ScriptRepoWindow
         {
             new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
             new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
-            // 暂时无法使用
+            // Currently unavailable
             // new("Gitee", "https://gitee.com/babalae/bettergi-scripts-list"),
             new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
-            new("自定义", "https://example.com/custom-repo")
+            new(App.GetService<ILocalizationService>().GetString("scriptRepo.custom"), "https://example.com/custom-repo")
         };
 
         if (string.IsNullOrEmpty(Config.SelectedRepoUrl))
         {
-            // 默认选中第一个渠道
+            // Select the first channel by default
             SelectedRepoChannel = _repoChannels[0];
             Config.SelectedRepoUrl = SelectedRepoChannel.Url;
         }
         else
         {
-            // 尝试根据配置中的URL找到对应的渠道
+            // Try to find the corresponding channel based on the URL in the configuration
             OnConfigSelectedRepoUrlChanged();
         }
     }
 
-    // Config.SelectedRepoUrl 变化
+    // Config.SelectedRepoUrl change
     private void OnConfigSelectedRepoUrlChanged()
     {
-        // 如果配置中的URL与当前选中渠道不一致，更新选中渠道
+        // If the URL in the configuration doesn't match the currently selected channel, update the selected channel
         if (string.IsNullOrEmpty(SelectedRepoChannel?.Url) || SelectedRepoChannel.Url != Config.SelectedRepoUrl)
         {
+            var customText = App.GetService<ILocalizationService>().GetString("scriptRepo.custom");
             SelectedRepoChannel = _repoChannels.FirstOrDefault(c => c.Url == Config.SelectedRepoUrl) ??
-                                  _repoChannels.FirstOrDefault(c => c.Name == "自定义") ?? _repoChannels[0];
+                                  _repoChannels.FirstOrDefault(c => c.Name == customText) ?? _repoChannels[0];
         }
     }
 
@@ -122,13 +125,14 @@ public partial class ScriptRepoWindow
             return;
         }
 
-        // 更新仓库地址只读状态
-        IsRepoUrlReadOnly = SelectedRepoChannel.Name != "自定义";
+        // Update repository address read-only status
+        var customText = App.GetService<ILocalizationService>().GetString("scriptRepo.custom");
+        IsRepoUrlReadOnly = SelectedRepoChannel.Name != customText;
 
-        // 更新配置中的选中仓库URL
-        if (SelectedRepoChannel.Name != "自定义")
+        // Update selected repository URL in configuration
+        if (SelectedRepoChannel.Name != customText)
         {
-            // 如果不是自定义渠道，直接使用选中渠道的URL
+            // If not a custom channel, directly use the selected channel's URL
             Config.SelectedRepoUrl = SelectedRepoChannel.Url;
         }
     }
@@ -136,51 +140,53 @@ public partial class ScriptRepoWindow
     [RelayCommand]
     private async Task UpdateRepo()
     {
+        var localizationService = App.GetService<ILocalizationService>();
+        
         if (SelectedRepoChannel is null)
         {
-            Toast.Warning("请选择一个脚本仓库更新渠道。");
+            Toast.Warning(localizationService.GetString("toast.selectRepoChannel"));
             return;
         }
         try
         {
-            // 使用选定渠道的URL进行更新
+            // Use the selected channel's URL for update
             string repoUrl = SelectedRepoChannel.Url;
 
-            // 显示更新中提示
-            Toast.Information("正在更新脚本仓库，请耐心等待...");
+            // Show updating notification
+            Toast.Information(localizationService.GetString("toast.updatingRepo"));
 
-            // 设置进度显示
+            // Set progress display
             IsUpdating = true;
             UpdateProgressValue = 0;
-            UpdateProgressText = "准备更新...";
-            // 执行更新  (repoPath, updated) 
+            UpdateProgressText = App.GetService<ILocalizationService>().GetString("scriptRepo.preparingUpdate");
+            // Execute update (repoPath, updated)
             var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
                 {
-                    // 更新进度显示
+                    // Update progress display
                     double progressPercentage = totalSteps > 0 ? Math.Min(100, (double)steps / totalSteps * 100) : 0;
                     UpdateProgressValue = (int)progressPercentage;
                     UpdateProgressText = $"{path}";
                 });
 
 
-            // 更新结果提示
+            // Update result notification
             if (updated)
             {
-                Toast.Success("脚本仓库更新成功，有新内容");
+                Toast.Success(localizationService.GetString("toast.repoUpdateSuccess"));
             }
             else
             {
-                Toast.Success("脚本仓库已是最新");
+                Toast.Success(localizationService.GetString("toast.repoAlreadyLatest"));
             }
         }
         catch (Exception ex)
         {
-            await MessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：: {ex.Message}");
+            await MessageBox.ErrorAsync(localizationService.GetString("dialog.updateFailed", ex.Message));
         }
         finally
         {
-            // 隐藏进度条
+            // Hide progress bar
             IsUpdating = false;
         }
     }
@@ -196,16 +202,18 @@ public partial class ScriptRepoWindow
     [RelayCommand]
     private async Task ResetRepo()
     {
+        var localizationService = App.GetService<ILocalizationService>();
+        
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前更新完成后再进行重置操作。");
+            Toast.Warning(localizationService.GetString("toast.waitForUpdateComplete"));
             return;
         }
 
-        // 添加确认对话框
+        // Add confirmation dialog
         var result = await MessageBox.ShowAsync(
-            "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
-            "确认重置",
+            localizationService.GetString("dialog.confirmResetRepo"),
+            localizationService.GetString("dialog.confirmReset"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
 
@@ -216,16 +224,16 @@ public partial class ScriptRepoWindow
                 if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
                 {
                     DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                    Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
+                    Toast.Success(localizationService.GetString("toast.repoResetSuccess"));
                 }
                 else
                 {
-                    Toast.Information("脚本仓库不存在，无需重置");
+                    Toast.Information(localizationService.GetString("toast.repoNotExist"));
                 }
             }
             catch (Exception ex)
             {
-                Toast.Error($"重置失败: {ex.Message}");
+                Toast.Error(localizationService.GetString("toast.resetFailed", ex.Message));
             }
         }
     }

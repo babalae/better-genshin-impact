@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Interface;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -32,7 +33,9 @@ public class WorkWeixinNotifier : INotifier
     {
         if (string.IsNullOrEmpty(Endpoint))
         {
-            throw new NotifierException("WorkWeixin webhook endpoint is not set");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.workWeixinEndpointEmpty") : "WorkWeixin webhook endpoint is not set";
+            throw new NotifierException(errorMessage);
         }
         
         try
@@ -45,7 +48,9 @@ public class WorkWeixinNotifier : INotifier
 
                 if (!imageResponse.IsSuccessStatusCode)
                 {
-                    throw new NotifierException($"WorkWeixin image webhook call failed with code: {imageResponse.StatusCode}");
+                    var localizationService = App.GetService<ILocalizationService>();
+                    var errorMessage = localizationService != null ? localizationService.GetString("notification.error.workWeixinImageFailed", imageResponse.StatusCode) : $"WorkWeixin image webhook call failed with code: {imageResponse.StatusCode}";
+                    throw new NotifierException(errorMessage);
                 }
             }
             // 添加延迟让图片先发送出去
@@ -59,7 +64,9 @@ public class WorkWeixinNotifier : INotifier
 
                 if (!textResponse.IsSuccessStatusCode)
                 {
-                    throw new NotifierException($"WorkWeixin text webhook call failed with code: {textResponse.StatusCode}");
+                    var localizationService = App.GetService<ILocalizationService>();
+                    var errorMessage = localizationService != null ? localizationService.GetString("notification.error.workWeixinTextFailed", textResponse.StatusCode) : $"WorkWeixin text webhook call failed with code: {textResponse.StatusCode}";
+                    throw new NotifierException(errorMessage);
                 }
             }
         }
@@ -69,7 +76,9 @@ public class WorkWeixinNotifier : INotifier
         }
         catch (System.Exception ex)
         {
-            throw new NotifierException($"Error sending WorkWeixin webhook: {ex.Message}");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.workWeixinError", ex.Message) : $"Error sending WorkWeixin webhook: {ex.Message}";
+            throw new NotifierException(errorMessage);
         }
     }
 

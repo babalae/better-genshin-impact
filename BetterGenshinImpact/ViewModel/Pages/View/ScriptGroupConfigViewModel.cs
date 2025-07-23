@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,9 +31,9 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<string, string>> _onlyPickEliteDropsSource  = new()
     {
-        new KeyValuePair<string, string>("Closed", "关闭功能"),
-        new KeyValuePair<string, string>("AllowAutoPickupForNonElite", "非精英允许自动拾取"),
-        new KeyValuePair<string, string>("DisableAutoPickupForNonElite", "非精英关闭自动拾取")
+        new KeyValuePair<string, string>("Closed", App.GetService<ILocalizationService>().GetString("config.eliteDrops.closed")),
+        new KeyValuePair<string, string>("AllowAutoPickupForNonElite", App.GetService<ILocalizationService>().GetString("config.eliteDrops.allowNonElite")),
+        new KeyValuePair<string, string>("DisableAutoPickupForNonElite", App.GetService<ILocalizationService>().GetString("config.eliteDrops.disableNonElite"))
     };    
     public ScriptGroupConfigViewModel(AllConfig config, ScriptGroupConfig scriptGroupConfig)
     {
@@ -56,14 +58,15 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     public void OnGetExecutionOrder()
     {
+        var localizationService = App.GetService<ILocalizationService>();
         var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder(DateTime.Now);
         if (index == -1)
         {
-            Toast.Error("计算失败，请检查参数！");
+            Toast.Error(localizationService.GetString("toast.calculationFailed"));
         }
         else
         {
-            Toast.Success("当前执行序号为："+index);
+            Toast.Success(localizationService.GetString("toast.currentExecutionIndex", index));
         }
     }
 

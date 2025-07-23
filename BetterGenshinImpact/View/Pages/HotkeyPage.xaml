@@ -5,6 +5,7 @@
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:model="clr-namespace:BetterGenshinImpact.Model"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -27,11 +28,11 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="快捷键设置" />
+                      Text="{markup:Localize Key=hotkey.title}" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="全局热键：只支持组合键和功能键，软件启动直接生效。键鼠监听：支持任意键盘单键、鼠标侧键，功能启动后才生效（推荐）。点击类型按钮可以切换快捷键类型。其中存在长按需求的功能不能使用全局热键。"
+                      Text="{markup:Localize Key=hotkey.description}"
                       TextWrapping="Wrap" />
 
         <!--<ItemsControl Grid.Row="2" ItemsSource="{Binding HotKeySettingModels}">
@@ -74,14 +75,14 @@
                 <ui:TreeListView BorderThickness="0" ItemsSource="{Binding HotKeySettingModels}">
                     <ui:TreeListView.Columns>
                         <GridViewColumnCollection>
-                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="功能">
+                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="{markup:Localize Key=hotkey.function}">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <ui:TreeRowExpander Content="{Binding FunctionName}" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
-                            <ui:GridViewColumn Width="100" Header="快捷键类型">
+                            <ui:GridViewColumn Width="100" Header="{markup:Localize Key=hotkey.type}">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <ui:Button Height="33"
@@ -93,7 +94,7 @@
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
-                            <ui:GridViewColumn Width="120" Header="配置快捷键">
+                            <ui:GridViewColumn Width="120" Header="{markup:Localize Key=hotkey.configure}">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <hotKey:HotKeyTextBox Padding="16,6,16,6"

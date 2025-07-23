@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -44,6 +45,7 @@ public partial class MapPathingViewModel : ViewModel
 
     private MapPathingDevWindow? _mapPathingDevWindow;
     private readonly IScriptService _scriptService;
+    private readonly ILocalizationService _localizationService;
 
     public AllConfig Config { get; set; }
 
@@ -57,9 +59,10 @@ public partial class MapPathingViewModel : ViewModel
     private const int NavigationTimeoutMs = 10000; // 10秒超时
 
     /// <inheritdoc/>
-    public MapPathingViewModel(IScriptService scriptService, IConfigService configService)
+    public MapPathingViewModel(IScriptService scriptService, IConfigService configService, ILocalizationService localizationService)
     {
         _scriptService = scriptService;
+        _localizationService = localizationService;
         Config = configService.Get();
         WeakReferenceMessenger.Default.Register<RefreshDataMessage>(this, (r, m) => InitScriptListViewData());
 
@@ -133,7 +136,8 @@ public partial class MapPathingViewModel : ViewModel
 
         if (item.IsDirectory)
         {
-            Toast.Warning("执行多个地图追踪任务的时候，请使用调度器功能");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("toast.useSchedulerForMultiple"));
             return;
         }
 
@@ -243,7 +247,7 @@ public partial class MapPathingViewModel : ViewModel
                     }
                     catch (TimeoutException)
                     {
-                        Toast.Error("Markdown内容加载超时");
+                        Toast.Error(_localizationService.GetString("toast.markdownLoadTimeout"));
                     }
                 }
             });
@@ -385,7 +389,7 @@ public partial class MapPathingViewModel : ViewModel
             {
                 panel.Children.Add(new TextBlock
                 {
-                    Text = $"读取文件信息时出错: {ex.Message}",
+                    Text = string.Format(_localizationService.GetString("mapPathing.readFileError"), ex.Message),
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 5, 0, 5)
                 });
@@ -396,7 +400,7 @@ public partial class MapPathingViewModel : ViewModel
             // 显示目录信息
             panel.Children.Add(new TextBlock
             {
-                Text = "这是一个目录，包含多个地图追踪任务。",
+                Text = _localizationService.GetString("mapPathing.directoryDescription"),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 5, 0, 15)
             });
@@ -406,7 +410,7 @@ public partial class MapPathingViewModel : ViewModel
             {
                 panel.Children.Add(new TextBlock
                 {
-                    Text = $"包含 {node.Children.Count} 个子项",
+                    Text = string.Format(_localizationService.GetString("mapPathing.containsSubItems"), node.Children.Count),
                     Margin = new Thickness(0, 5, 0, 5)
                 });
             }
