@@ -577,8 +577,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
         p.Height = 500;
         p.ShowDialog();
         if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
-        {
-            var codes = multilineTextBox.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+        { 
+            char[] separators = ['\r', '\n'];
+                 var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+
                 .Select(code => code.Trim())
                 .Where(code => !string.IsNullOrEmpty(code))
                 .ToList();
