@@ -21,6 +21,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class KeyBindingsSettingsPageViewModel : ViewModel
 {
     private readonly ILogger<KeyBindingsSettingsPageViewModel> _logger;
+    private readonly ILocalizationService _localizationService;
 
     /// <summary>
     /// 配置文件
@@ -30,9 +31,10 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private ObservableCollection<KeyBindingSettingModel> _keyBindingSettingModels = [];
 
-    public KeyBindingsSettingsPageViewModel(IConfigService configService, ILogger<KeyBindingsSettingsPageViewModel> logger)
+    public KeyBindingsSettingsPageViewModel(IConfigService configService, ILogger<KeyBindingsSettingsPageViewModel> logger, ILocalizationService localizationService)
     {
         _logger = logger;
+        _localizationService = localizationService;
 
         // 获取本模块的配置文件
         _config = configService.Get().KeyBindingsConfig;
@@ -49,7 +51,7 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
                     // 使用反射更新配置文件
                     if (e.PropertyName == nameof(model.KeyValue))
                     {
-                        Debug.WriteLine($"按键绑定 \"{model.ActionName}\" 变更为 {model.KeyValue}");
+                        Debug.WriteLine(_localizationService.GetString("keyBindings.bindingChanged", model.ActionName, model.KeyValue));
 
                         var pi = _config.GetType().GetProperty(model.ConfigPropertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                         if (pi != null && pi.CanWrite)
@@ -108,241 +110,241 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     private void BuildKeyBindingsList()
     {
         // 动作按键
-        var actionDirectory = new KeyBindingSettingModel("动作");
+        var actionDirectory = new KeyBindingSettingModel(_localizationService.GetString("keyBindings.actions"));
 
         // 菜单按键
-        var menuDirectory = new KeyBindingSettingModel("菜单");
+        var menuDirectory = new KeyBindingSettingModel(_localizationService.GetString("keyBindings.menus"));
 
         // 添加动作按键的二级菜单
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向前移动",
+                    _localizationService.GetString("keyBindings.moveForward"),
                     nameof(_config.MoveForward),
                     _config.MoveForward
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向后移动",
+                    _localizationService.GetString("keyBindings.moveBackward"),
                     nameof(_config.MoveBackward),
                     _config.MoveBackward
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向左移动",
+                    _localizationService.GetString("keyBindings.moveLeft"),
                     nameof(_config.MoveLeft),
                     _config.MoveLeft
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "向右移动",
+                    _localizationService.GetString("keyBindings.moveRight"),
                     nameof(_config.MoveRight),
                     _config.MoveRight
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换走/跑；特定操作模式下向下移动",
+                    _localizationService.GetString("keyBindings.switchToWalkOrRun"),
                     nameof(_config.SwitchToWalkOrRun),
                     _config.SwitchToWalkOrRun
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "普通攻击",
+                    _localizationService.GetString("keyBindings.normalAttack"),
                     nameof(_config.NormalAttack),
                     _config.NormalAttack
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "元素战技",
+                    _localizationService.GetString("keyBindings.elementalSkill"),
                     nameof(_config.ElementalSkill),
                     _config.ElementalSkill
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "元素爆发",
+                    _localizationService.GetString("keyBindings.elementalBurst"),
                     nameof(_config.ElementalBurst),
                     _config.ElementalBurst
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "冲刺（键盘）",
+                    _localizationService.GetString("keyBindings.sprintKeyboard"),
                     nameof(_config.SprintKeyboard),
                     _config.SprintKeyboard
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "冲刺（鼠标）",
+                    _localizationService.GetString("keyBindings.sprintMouse"),
                     nameof(_config.SprintMouse),
                     _config.SprintMouse
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换瞄准模式",
+                    _localizationService.GetString("keyBindings.switchAimingMode"),
                     nameof(_config.SwitchAimingMode),
                     _config.SwitchAimingMode
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "跳跃；特定操作模式下向上移动",
+                    _localizationService.GetString("keyBindings.jump"),
                     nameof(_config.Jump),
                     _config.Jump
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "落下",
+                    _localizationService.GetString("keyBindings.drop"),
                     nameof(_config.Drop),
                     _config.Drop
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "拾取/交互（自动拾取由AutoPick模块管理）",
+                    _localizationService.GetString("keyBindings.pickUpOrInteract"),
                     nameof(_config.PickUpOrInteract),
                     _config.PickUpOrInteract
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "快捷使用小道具",
+                    _localizationService.GetString("keyBindings.quickUseGadget"),
                     nameof(_config.QuickUseGadget),
                     _config.QuickUseGadget
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "特定玩法内交互操作",
+                    _localizationService.GetString("keyBindings.interactionInSomeMode"),
                     nameof(_config.InteractionInSomeMode),
                     _config.InteractionInSomeMode
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "开启任务追踪",
+                    _localizationService.GetString("keyBindings.questNavigation"),
                     nameof(_config.QuestNavigation),
                     _config.QuestNavigation
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "中断挑战",
+                    _localizationService.GetString("keyBindings.abandonChallenge"),
                     nameof(_config.AbandonChallenge),
                     _config.AbandonChallenge
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色1",
+                    _localizationService.GetString("keyBindings.switchMember1"),
                     nameof(_config.SwitchMember1),
                     _config.SwitchMember1
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色2",
+                    _localizationService.GetString("keyBindings.switchMember2"),
                     nameof(_config.SwitchMember2),
                     _config.SwitchMember2
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色3",
+                    _localizationService.GetString("keyBindings.switchMember3"),
                     nameof(_config.SwitchMember3),
                     _config.SwitchMember3
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色4",
+                    _localizationService.GetString("keyBindings.switchMember4"),
                     nameof(_config.SwitchMember4),
                     _config.SwitchMember4
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "切换小队角色5",
+                    _localizationService.GetString("keyBindings.switchMember5"),
                     nameof(_config.SwitchMember5),
                     _config.SwitchMember5
                 ));
         actionDirectory.Children.Add(new KeyBindingSettingModel(
-                    "呼出快捷轮盘",
+                    _localizationService.GetString("keyBindings.shortcutWheel"),
                     nameof(_config.ShortcutWheel),
                     _config.ShortcutWheel
                 ));
 
         // 添加菜单按键的二级菜单
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开背包",
+                    _localizationService.GetString("keyBindings.openInventory"),
                     nameof(_config.OpenInventory),
                     _config.OpenInventory
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开角色界面",
+                    _localizationService.GetString("keyBindings.openCharacterScreen"),
                     nameof(_config.OpenCharacterScreen),
                     _config.OpenCharacterScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开地图",
+                    _localizationService.GetString("keyBindings.openMap"),
                     nameof(_config.OpenMap),
                     _config.OpenMap
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开派蒙界面",
+                    _localizationService.GetString("keyBindings.openPaimonMenu"),
                     nameof(_config.OpenPaimonMenu),
                     _config.OpenPaimonMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开冒险之证界面",
+                    _localizationService.GetString("keyBindings.openAdventurerHandbook"),
                     nameof(_config.OpenAdventurerHandbook),
                     _config.OpenAdventurerHandbook
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开多人游戏界面",
+                    _localizationService.GetString("keyBindings.openCoOpScreen"),
                     nameof(_config.OpenCoOpScreen),
                     _config.OpenCoOpScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开祈愿界面",
+                    _localizationService.GetString("keyBindings.openWishScreen"),
                     nameof(_config.OpenWishScreen),
                     _config.OpenWishScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开纪行界面",
+                    _localizationService.GetString("keyBindings.openBattlePassScreen"),
                     nameof(_config.OpenBattlePassScreen),
                     _config.OpenBattlePassScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开活动面板",
+                    _localizationService.GetString("keyBindings.openTheEventsMenu"),
                     nameof(_config.OpenTheEventsMenu),
                     _config.OpenTheEventsMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开玩法系统界面（尘歌壶内猫尾酒馆内）",
+                    _localizationService.GetString("keyBindings.openTheSettingsMenu"),
                     nameof(_config.OpenTheSettingsMenu),
                     _config.OpenTheSettingsMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开摆设界面（尘歌壶内）",
+                    _localizationService.GetString("keyBindings.openTheFurnishingScreen"),
                     nameof(_config.OpenTheFurnishingScreen),
                     _config.OpenTheFurnishingScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开星之归还（条件符合期间生效）",
+                    _localizationService.GetString("keyBindings.openStellarReunion"),
                     nameof(_config.OpenStellarReunion),
                     _config.OpenStellarReunion
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "开关任务菜单",
+                    _localizationService.GetString("keyBindings.openQuestMenu"),
                     nameof(_config.OpenQuestMenu),
                     _config.OpenQuestMenu
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开通知详情",
+                    _localizationService.GetString("keyBindings.openNotificationDetails"),
                     nameof(_config.OpenNotificationDetails),
                     _config.OpenNotificationDetails
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开聊天界面",
+                    _localizationService.GetString("keyBindings.openChatScreen"),
                     nameof(_config.OpenChatScreen),
                     _config.OpenChatScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开特殊环境说明",
+                    _localizationService.GetString("keyBindings.openSpecialEnvironmentInformation"),
                     nameof(_config.OpenSpecialEnvironmentInformation),
                     _config.OpenSpecialEnvironmentInformation
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "查看教程详情",
+                    _localizationService.GetString("keyBindings.checkTutorialDetails"),
                     nameof(_config.CheckTutorialDetails),
                     _config.CheckTutorialDetails
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "长按打开元素视野",
+                    _localizationService.GetString("keyBindings.elementalSight"),
                     nameof(_config.ElementalSight),
                     _config.ElementalSight
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "呼出鼠标",
+                    _localizationService.GetString("keyBindings.showCursor"),
                     nameof(_config.ShowCursor),
                     _config.ShowCursor
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开队伍配置界面",
+                    _localizationService.GetString("keyBindings.openPartySetupScreen"),
                     nameof(_config.OpenPartySetupScreen),
                     _config.OpenPartySetupScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "打开好友界面",
+                    _localizationService.GetString("keyBindings.openFriendsScreen"),
                     nameof(_config.OpenFriendsScreen),
                     _config.OpenFriendsScreen
                 ));
         menuDirectory.Children.Add(new KeyBindingSettingModel(
-                    "隐藏主界面",
+                    _localizationService.GetString("keyBindings.hideUI"),
                     nameof(_config.HideUI),
                     _config.HideUI
                 ));
@@ -535,7 +537,7 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
                         // 使用反射更新配置文件
                         if (e.PropertyName == nameof(model.KeyValue))
                         {
-                            Debug.WriteLine($"按键绑定 \"{model.ActionName}\" 变更为 {model.KeyValue}");
+                            Debug.WriteLine(_localizationService.GetString("keyBindings.bindingChanged", model.ActionName, model.KeyValue));
 
                             var pi = _config.GetType().GetProperty(model.ConfigPropertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                             if (pi != null && pi.CanWrite)

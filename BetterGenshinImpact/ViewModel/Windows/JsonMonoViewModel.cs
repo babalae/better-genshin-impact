@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -32,7 +33,8 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Error("读取黑白名单出错：" + e.ToString());
+            var localizationService = App.GetService<ILocalizationService>();
+            MessageBox.Error(localizationService.GetString("error.readBlacklistFailed") + e.ToString());
         }
     }
 
@@ -45,18 +47,21 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Error("保存失败：" + e.ToString());
+            var localizationService = App.GetService<ILocalizationService>();
+            MessageBox.Error(localizationService.GetString("error.saveFailed") + e.ToString());
             return;
         }
 
         try
         {
             Global.WriteAllText(JsonPath, JsonText);
-            Toast.Success("保存成功");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Success(localizationService.GetString("toast.saveSuccess"));
         }
         catch (Exception e)
         {
-            MessageBox.Error("保存失败：" + e.ToString());
+            var localizationService = App.GetService<ILocalizationService>();
+            MessageBox.Error(localizationService.GetString("error.saveFailed") + e.ToString());
         }
     }
 

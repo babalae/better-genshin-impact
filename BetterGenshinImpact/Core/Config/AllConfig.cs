@@ -18,6 +18,8 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoTrack;
+using BetterGenshinImpact.GameTask.AutoMove;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
@@ -171,6 +173,16 @@ public partial class AllConfig : ObservableObject
     public GetGridIconsConfig GetGridIconsConfig { get; set; } = new();
 
     /// <summary>
+    ///     自动跟踪配置
+    /// </summary>
+    public AutoTrackConfig AutoTrackConfig { get; set; } = new();
+
+    /// <summary>
+    ///     自动前进配置
+    /// </summary>
+    public AutoMoveConfig AutoMoveConfig { get; set; } = new();
+
+    /// <summary>
     ///     宏配置
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
@@ -248,6 +260,8 @@ public partial class AllConfig : ObservableObject
         AutoStygianOnslaughtConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoTrackConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoMoveConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;

@@ -34,6 +34,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class JsListViewModel : ViewModel
 {
     private readonly ILogger<JsListViewModel> _logger = App.GetLogger<JsListViewModel>();
+    private readonly ILocalizationService _localizationService;
     private readonly string scriptPath = Global.ScriptPath();
 
     [ObservableProperty] private ObservableCollection<ScriptProject> _scriptItems = [];
@@ -57,9 +58,10 @@ public partial class JsListViewModel : ViewModel
     [ObservableProperty]
     private bool _isRightClickSelection;
 
-    public JsListViewModel(IScriptService scriptService, IConfigService configService)
+    public JsListViewModel(IScriptService scriptService, IConfigService configService, ILocalizationService localizationService)
     {
         _scriptService = scriptService;
+        _localizationService = localizationService;
         Config = configService.Get();
 
         // 注册消息
@@ -78,7 +80,7 @@ public partial class JsListViewModel : ViewModel
             }
             catch (Exception e)
             {
-                Toast.Warning($"脚本 {f.Name} 载入失败：{e.Message}");
+                Toast.Warning(_localizationService.GetString("jslist.scriptLoadFailed", f.Name, e.Message));
             }
         }
     }
@@ -122,8 +124,8 @@ public partial class JsListViewModel : ViewModel
 
         if (!string.IsNullOrEmpty(item.Manifest.SettingsUi))
         {
-            Toast.Information("此脚本存在配置，不配置可能无法正常运行，建议请添加至【调度器】，并右键修改配置后使用！");
-            _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
+            Toast.Information(_localizationService.GetString("jslist.scriptHasConfigWarning"));
+            _logger.LogWarning(_localizationService.GetString("jslist.scriptHasConfigWarning"));
         }
 
         await _scriptService.RunMulti([new ScriptGroupProject(item)]);
@@ -198,7 +200,7 @@ public partial class JsListViewModel : ViewModel
                         }
                         catch (TimeoutException)
                         {
-                            Toast.Error("Markdown内容加载超时");
+                            Toast.Error(_localizationService.GetString("jslist.markdownLoadTimeout"));
                         }
                     }
                 });
@@ -308,7 +310,7 @@ public partial class JsListViewModel : ViewModel
         {
             panel.Children.Add(new TextBlock
             {
-                Text = $"版本: {scriptProject.Manifest.Version}",
+                Text = _localizationService.GetString("jslist.version", scriptProject.Manifest.Version),
                 Margin = new Thickness(0, 5, 0, 5)
             });
 

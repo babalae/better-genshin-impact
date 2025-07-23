@@ -1,9 +1,11 @@
 ﻿using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Notification;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Service.Interface;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -45,7 +47,9 @@ public class NotifierManager
         }
         catch (System.Exception ex)
         {
-            Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
+            var messageService = App.GetService<NotificationMessageService>();
+            var logMessage = messageService != null ? messageService.SendFailedError : "Failed to send notification";
+            Logger.LogWarning("{name} {message}: {ex}", notifier.Name, logMessage, ex.Message);
         }
     }
 

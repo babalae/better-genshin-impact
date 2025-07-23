@@ -1,14 +1,13 @@
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Interface;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json; // 确保 System.Text.Json 命名空间被引用
+using System.Text.Json;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using System.Collections.Generic;
-using BetterGenshinImpact.Service.Notification; // 添加对 System.Collections.Generic 命名空间的引用
-using BetterGenshinImpact.Service.Notification; // 添加对 NotificationConfig 类型的引用
-using System.Text.Json; // 添加对 System.Text.Json 命名空间的引用
+using BetterGenshinImpact.Service.Notification;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -39,7 +38,9 @@ public class WebhookNotifier : INotifier
     {
         if (string.IsNullOrEmpty(Endpoint))
         {
-            throw new NotifierException("Webhook 地址为空");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.webhookEmpty") : "Webhook 地址为空";
+            throw new NotifierException(errorMessage);
         }
         
         try
@@ -48,7 +49,9 @@ public class WebhookNotifier : INotifier
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new NotifierException($"Webhook call failed with code: {response.StatusCode}");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.webhookFailed", response.StatusCode) : $"Webhook call failed with code: {response.StatusCode}";
+                throw new NotifierException(errorMessage);
             }
         }
         catch (NotifierException)
@@ -57,7 +60,9 @@ public class WebhookNotifier : INotifier
         }
         catch (System.Exception ex)
         {
-            throw new NotifierException($"Error sending webhook: {ex.Message}");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.webhookError", ex.Message) : $"Error sending webhook: {ex.Message}";
+            throw new NotifierException(errorMessage);
         }
     }
 

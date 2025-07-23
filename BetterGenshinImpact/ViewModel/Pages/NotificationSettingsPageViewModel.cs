@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +13,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class NotificationSettingsPageViewModel : ObservableObject, IViewModel
 {
     private readonly NotificationService _notificationService;
+    private readonly NotificationMessageService _messageService;
 
     [ObservableProperty] private string _barkStatus = string.Empty;
 
@@ -68,10 +70,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         WebhookStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -87,10 +90,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         WindowsUwpStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -106,10 +110,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         FeishuStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -125,10 +130,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         OneBotStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -144,10 +150,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         WorkWeixinStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -163,10 +170,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         WebSocketStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -182,10 +190,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         EmailStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -201,10 +210,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         BarkStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -220,10 +230,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         TelegramStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -239,10 +250,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         XxtuiStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }
@@ -258,10 +270,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         DingDingStatus = res.Message;
 
         // 添加Toast提示
+        var localizationService = App.GetService<ILocalizationService>();
         if (res.IsSuccess)
-            Toast.Success(res.Message);
+            Toast.Success(localizationService.GetString("toast.notificationSuccess"));
         else
-            Toast.Error(res.Message);
+            Toast.Error(localizationService.GetString("toast.notificationFailed"));
 
         IsLoading = false;
     }

@@ -1,8 +1,28 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System;
+using BetterGenshinImpact.Service.Interface;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.OneDragon;
 
-public partial class CraftViewModel : OneDragonBaseViewModel
+public partial class CraftViewModel : OneDragonBaseViewModel, IDisposable
 {
-    public override string Title { get; } = "合成浓缩树脂";
+    private readonly ILocalizationService _localizationService;
+
+    public CraftViewModel()
+    {
+        _localizationService = App.GetService<ILocalizationService>();
+        _localizationService.LanguageChanged += OnLanguageChanged;
+    }
+
+    public override string Title => _localizationService.GetString("oneDragon.craft.title");
+
+    private void OnLanguageChanged(object? sender, LanguageChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(Title));
+    }
+
+    public void Dispose()
+    {
+        _localizationService.LanguageChanged -= OnLanguageChanged;
+    }
 }

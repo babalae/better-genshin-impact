@@ -8,7 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -19,6 +21,7 @@ namespace BetterGenshinImpact.Service;
 public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
+    private readonly ILogger<ApplicationHostService> _logger = serviceProvider.GetRequiredService<ILogger<ApplicationHostService>>();
 
     /// <summary>
     /// Triggered when the application host is ready to start the service.
@@ -26,6 +29,9 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     /// <param name="cancellationToken">Indicates that the start process has been aborted.</param>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // Initialize localization service with proper error handling
+        await InitializeLocalizationServiceAsync(cancellationToken);
+
         await HandleActivationAsync();
     }
 
@@ -35,6 +41,9 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     /// <param name="cancellationToken">Indicates that the shutdown process should no longer be graceful.</param>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        // Dispose localization service properly
+        await DisposeLocalizationServiceAsync();
+        
         await Task.CompletedTask;
     }
 
@@ -110,6 +119,81 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
             }
         }
         //
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Initializes the localization service with proper error handling and logging
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    private async Task InitializeLocalizationServiceAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _logger.LogInformation("Initializing localization service...");
+
+            var localizationService = serviceProvider.GetService<ILocalizationService>();
+            if (localizationService == null)
+            {
+                _logger.LogError("Localization service not found in dependency injection container");
+                return;
+            }
+
+            // Initialize the localization service
+            await localizationService.InitializeAsync();
+
+            _logger.LogInformation("Localization service initialized successfully. Current language: {Language}", 
+                localizationService.CurrentLanguage);
+
+            // Log available languages for debugging
+            var availableLanguages = localizationService.AvailableLanguages.ToList();
+            _logger.LogDebug("Available languages: {Languages}", 
+                string.Join(", ", availableLanguages.Select(l => $"{l.Code} ({l.DisplayName})")));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Localization service initialization was cancelled");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize localization service. Application will continue with fallback behavior.");
+            
+            // Don't throw here - let the application continue even if localization fails
+            // The localization service should handle its own fallback mechanisms
+        }
+    }
+
+    /// <summary>
+    /// Properly disposes the localization service during application shutdown
+    /// </summary>
+    private async Task DisposeLocalizationServiceAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Disposing localization service...");
+
+            var localizationService = serviceProvider.GetService<ILocalizationService>();
+            if (localizationService is IDisposable disposableService)
+            {
+                disposableService.Dispose();
+                _logger.LogInformation("Localization service disposed successfully");
+            }
+            else if (localizationService != null)
+            {
+                _logger.LogDebug("Localization service does not implement IDisposable");
+            }
+            else
+            {
+                _logger.LogWarning("Localization service not found during disposal");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disposing localization service");
+            // Don't throw during shutdown - log the error and continue
+        }
+
         await Task.CompletedTask;
     }
 }

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.ScriptControlPage"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.ScriptControlPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -8,6 +8,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              d:DataContext="{d:DesignInstance Type=pages:ScriptControlViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="800"
@@ -30,7 +31,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!--  左侧栏  -->
+        <!--  调度器  -->
         <Grid Grid.Column="0" Margin="0,8,8,8">
             <Grid>
                 <Grid.RowDefinitions>
@@ -43,7 +44,7 @@
                         BorderThickness="0,0,0,1">
                     <ui:TextBlock Margin="4,4,8,4"
                                   FontTypography="BodyStrong"
-                                  Text="配置组"
+                                  Text="{markup:Localize Key=scheduler.configGroup}"
                                   TextAlignment="Center" />
                 </Border>
                 <ui:ListView Grid.Row="1"
@@ -71,19 +72,19 @@
                     </ui:ListView.ItemTemplate>
                     <ui:ListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddScriptGroupCommand}" Header="新增组" />
+                            <MenuItem Command="{Binding AddScriptGroupCommand}" Header="{markup:Localize Key=scheduler.addGroup}" />
                             <MenuItem Command="{Binding DeleteScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="删除组" />
+                                      Header="{markup:Localize Key=scheduler.deleteGroup}" />
                             <MenuItem Command="{Binding RenameScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="重命名" />
+                                      Header="{markup:Localize Key=scheduler.rename}" />
                             <MenuItem Command="{Binding CopyScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="复制组" />
+                                      Header="{markup:Localize Key=scheduler.copyGroup}" />
                             <MenuItem Command="{Binding AddScriptGroupNextFlagCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="连续任务从此开始执行" />
+                                      Header="{markup:Localize Key=scheduler.startContinuousTasksFromHere}" />
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
@@ -97,18 +98,18 @@
                                Margin="2"
                                HorizontalAlignment="Stretch"
                                Command="{Binding StartMultiScriptGroupCommand}"
-                               Content="连续执行" />
+                               Content="{markup:Localize Key=scheduler.continuousExecution}" />
 
                     <ui:Button Grid.Row="1"
                                Margin="2"
                                HorizontalAlignment="Stretch"
                                Command="{Binding ContinueMultiScriptGroupCommand}"
-                               Content="继续执行" />
+                               Content="{markup:Localize Key=scheduler.continueExecution}" />
                 </Grid>
             </Grid>
         </Grid>
 
-        <!--  分割  -->
+        <!--  分隔符  -->
         <ui:FontIcon Grid.Column="1"
                      HorizontalAlignment="Center" Glyph="&#xf7a5;" Style="{StaticResource FaFontIconStyle}" />
         <GridSplitter Grid.Column="1"
@@ -118,7 +119,7 @@
                       Focusable="False"
                       Opacity="0.4" />
 
-        <!--  右侧栏:无选中组  -->
+        <!--  右侧面板:未选择组  -->
         <Border Grid.Column="2"
                 Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -142,26 +143,26 @@
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验功能）请在左侧栏选择或新增配置组" />
+                                  Text="{markup:Localize Key=scheduler.experimentalSelectOrAddGroup}" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在左侧栏目右键可以新增/修改配置组，拖拽进行配置组排序。配置组内可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，
+                        <Run Text="{markup:Localize Key=scheduler.rightClickToAddModifyDrag}" />
                         <Hyperlink Command="{Binding GoToScriptGroupUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看调度器使用教程
+                            <Run Text="{markup:Localize Key=scheduler.clickToViewTutorial}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="在左侧栏目右键可以新增配置组，或者直接点击下面按钮新增配置组" />
+                                  Text="{markup:Localize Key=scheduler.rightClickOrButtonToAdd}" />
                     <ui:Button Margin="0,0,0,12"
                                Command="{Binding AddScriptGroupCommand}"
-                               Content="新增配置组" />
+                               Content="{markup:Localize Key=scheduler.addConfigGroup}" />
                     <!--  示例配置组  -->
                     <!--<ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="也可以直接点击导入下面的示例配置组" />
+                                  Text="也可以直接点击下面按钮导入示例配置组" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
@@ -175,7 +176,7 @@
             </Grid>
         </Border>
 
-        <!--  右侧栏:选中组  -->
+        <!--  右侧面板:已选择组  -->
         <Border Grid.Column="2"
                 Margin="6"
                 Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -206,7 +207,7 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal">
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验功能）配置组 - " />
+                                  Text="{markup:Localize Key=scheduler.experimentalConfigGroup}" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="{Binding SelectedScriptGroup.Name}" />
@@ -216,49 +217,49 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序。支持 BetterGI 内的 Javascript 脚本、键鼠录制脚本等，通过调度器可以设置脚本执行次数、顺序等。
+                    {markup:Localize Key=scheduler.rightClickToAddDragToReorder}
                 </ui:TextBlock>
 
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal">
                     <ui:Button Command="{Binding StartScriptGroupCommand}"
-                               Content="运行"
+                               Content="{markup:Localize Key=scheduler.run}"
                                Icon="{ui:SymbolIcon Play24}" />
                     <Separator Width="10" Opacity="0" />
 
 
-                    <ui:DropDownButton Content="添加" Icon="{ui:SymbolIcon Add24}">
+                    <ui:DropDownButton Content="{markup:Localize Key=scheduler.add}" Icon="{ui:SymbolIcon Add24}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu> 
-                                <MenuItem Header="JS脚本" Command="{Binding AddJsScriptCommand}" />
-                                <MenuItem Header="地图追踪任务" Command="{Binding AddPathingCommand}" />
-                                <MenuItem Header="键鼠脚本" Command="{Binding AddKmScriptCommand}" />
-                                <MenuItem Header="Shell" Command="{Binding AddShellCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.jsScript}" Command="{Binding AddJsScriptCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.mapTrackingTask}" Command="{Binding AddPathingCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.keyMouseScript}" Command="{Binding AddKmScriptCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.shell}" Command="{Binding AddShellCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
-                    <ui:DropDownButton Content="更多功能">
+                    <ui:DropDownButton Content="{markup:Localize Key=scheduler.moreFunctions}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu>
-                                <MenuItem Header="清空" Command="{Binding ClearTasksCommand}" />
-                                <MenuItem Header="日志分析" Command="{Binding OpenLogParseCommand}" />
-                                <MenuItem Header="打开脚本仓库" Command="{Binding OpenLocalScriptRepoCommand}" />
-                                <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
-                                <MenuItem Header="任务倒序排列" Command="{Binding ReverseTaskOrderCommand}" />
-                                <MenuItem Header="导出根据控制文件修改任务" Command="{Binding ExportMergerJsonsCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.clear}" Command="{Binding ClearTasksCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.logAnalysis}" Command="{Binding OpenLogParseCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.openScriptRepo}" Command="{Binding OpenLocalScriptRepoCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.updateByFolder}" Command="{Binding UpdateTasksCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.reverseTaskOrder}" Command="{Binding ReverseTaskOrderCommand}" />
+                                <MenuItem Header="{markup:Localize Key=scheduler.exportTasksModifiedByControlFile}" Command="{Binding ExportMergerJsonsCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
                     <ui:Button Command="{Binding OpenScriptGroupSettingsCommand}"
-                               Content="设置"
+                               Content="{markup:Localize Key=scheduler.settings}"
                                Icon="{ui:SymbolIcon Settings24}" />
                     <!--<ui:TextBlock VerticalAlignment="Center"
                                   FontSize="16"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        停止运行请配置并使用快捷键！
+                        ֹͣ停止运行请配置并使用快捷键！
                     </ui:TextBlock>-->
                 </StackPanel>
 
@@ -297,7 +298,7 @@
                                             Header="#" />
                             <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                   
-                                            Header="名称" >
+                                            Header="{markup:Localize Key=scheduler.name}" >
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Name}" FontSize="14" ToolTip="{Binding FolderName}">
@@ -318,8 +319,8 @@
                             </GridViewColumn>
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding TypeDesc}"
-                                            Header="类型" />
-                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="启用状态">
+                                            Header="{markup:Localize Key=scheduler.type}" />
+                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="{markup:Localize Key=scheduler.enableStatus}">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <ui:ToggleSwitch
@@ -331,20 +332,20 @@
                     </ListView.View>
                     <ListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
-                            <MenuItem Command="{Binding AddPathingCommand}" Header="添加地图追踪任务" />
-                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
-                            <MenuItem Command="{Binding AddShellCommand}" Header="添加Shell" />
-                            <MenuItem Command="{Binding AddNextFlagCommand}" Header="下一次任务从此处执行"
+                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="{markup:Localize Key=scheduler.addJsScript}" />
+                            <MenuItem Command="{Binding AddPathingCommand}" Header="{markup:Localize Key=scheduler.addMapTrackingTask}" />
+                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="{markup:Localize Key=scheduler.addKeyMouseScript}" />
+                            <MenuItem Command="{Binding AddShellCommand}" Header="{markup:Localize Key=scheduler.addShell}" />
+                            <MenuItem Command="{Binding AddNextFlagCommand}" Header="{markup:Localize Key=scheduler.nextTaskExecuteFromHere}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       />
                             
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="修改通用配置" />
+                                      Header="{markup:Localize Key=scheduler.modifyCommonConfig}" />
                             <MenuItem Command="{Binding EditJsScriptSettingsCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="修改JS脚本自定义配置">
+                                      Header="{markup:Localize Key=scheduler.modifyJsScriptCustomConfig}">
                                 <MenuItem.Style>
                                     <Style TargetType="MenuItem">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -360,10 +361,10 @@
                             </MenuItem>
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="移除" />
+                                      Header="{markup:Localize Key=scheduler.remove}" />
                             <MenuItem Command="{Binding DeleteScriptByFolderCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="根据文件夹移除">
+                                      Header="{markup:Localize Key=scheduler.removeByFolder}">
                                 <MenuItem.Style>
                                     <Style TargetType="MenuItem">
                                         <Setter Property="Visibility" Value="Collapsed" />

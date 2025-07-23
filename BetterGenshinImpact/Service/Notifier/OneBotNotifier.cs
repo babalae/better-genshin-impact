@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Interface;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -39,12 +40,16 @@ public class OneBotNotifier : INotifier
     {
         if (string.IsNullOrEmpty(Endpoint))
         {
-            throw new NotifierException("OneBot endpoint is not set");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.oneBotEndpointEmpty") : "OneBot endpoint is not set";
+            throw new NotifierException(errorMessage);
         }
         
         if (string.IsNullOrEmpty(UserId) && string.IsNullOrEmpty(GroupId))
         {
-            throw new NotifierException("OneBot requires either a user ID or group ID");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.oneBotIdRequired") : "OneBot requires either a user ID or group ID";
+            throw new NotifierException(errorMessage);
         }
 
         try
@@ -80,7 +85,9 @@ public class OneBotNotifier : INotifier
 
             if (!success)
             {
-                throw new NotifierException("OneBot message sending failed");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.oneBotSendFailed") : "OneBot message sending failed";
+                throw new NotifierException(errorMessage);
             }
         }
         catch (NotifierException)
@@ -89,7 +96,9 @@ public class OneBotNotifier : INotifier
         }
         catch (System.Exception ex)
         {
-            throw new NotifierException($"Error sending OneBot message: {ex.Message}");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.oneBotError", ex.Message) : $"Error sending OneBot message: {ex.Message}";
+            throw new NotifierException(errorMessage);
         }
     }
 

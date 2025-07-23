@@ -10,6 +10,7 @@ using Windows.System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Interface;
 using Meziantou.Framework.Win32;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -155,7 +156,8 @@ public partial class CheckUpdateWindow : FluentWindow
         string updaterExePath = Global.Absolute("BetterGI.update.exe");
         if (!File.Exists(updaterExePath))
         {
-            await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+            var localizationService = App.GetService<ILocalizationService>();
+            await MessageBox.ErrorAsync(localizationService.GetString("update.updaterNotFound"));
             return;
         }
 

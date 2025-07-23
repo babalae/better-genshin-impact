@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Service.Interface;
 using Wpf.Ui.Violeta.Controls;
 using Size = OpenCvSharp.Size;
 
@@ -20,21 +21,23 @@ public partial class CaptureTestWindow
     private long _captureTime;
     private long _transferTime;
     private long _captureCount;
+    private readonly ILocalizationService _localizationService;
 
     public CaptureTestWindow()
     {
         _captureTime = 0;
         _transferTime = 0;
         _captureCount = 0;
+        _localizationService = App.GetService<ILocalizationService>();
         InitializeComponent();
         Closed += (sender, args) =>
         {
             CompositionTarget.Rendering -= Loop;
             _capture?.Stop();
 
-            Debug.WriteLine("平均截图耗时:" + _captureTime * 1.0 / _captureCount);
-            Debug.WriteLine("平均转换耗时:" + _transferTime * 1.0 / _captureCount);
-            Debug.WriteLine("平均总耗时:" + (_captureTime + _transferTime) * 1.0 / _captureCount);
+            Debug.WriteLine(_localizationService.GetString("captureTest.averageCaptureTime") + _captureTime * 1.0 / _captureCount);
+            Debug.WriteLine(_localizationService.GetString("captureTest.averageTransferTime") + _transferTime * 1.0 / _captureCount);
+            Debug.WriteLine(_localizationService.GetString("captureTest.averageTotalTime") + (_captureTime + _transferTime) * 1.0 / _captureCount);
         };
     }
 
@@ -42,7 +45,7 @@ public partial class CaptureTestWindow
     {
         if (hWnd == IntPtr.Zero)
         {
-            Toast.Warning("请选择窗口");
+            Toast.Warning(_localizationService.GetString("captureTest.selectWindow"));
             return;
         }
 
@@ -64,7 +67,7 @@ public partial class CaptureTestWindow
         sw.Start();
         using var mat = _capture?.Capture();
         sw.Stop();
-        Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
+        Debug.WriteLine(_localizationService.GetString("captureTest.captureTime") + sw.ElapsedMilliseconds);
         _captureTime += sw.ElapsedMilliseconds;
 
         if (mat != null)
@@ -83,12 +86,12 @@ public partial class CaptureTestWindow
                 mat.UpdateWriteableBitmap((WriteableBitmap)DisplayCaptureResultImage.Source);
             }
             sw.Stop();
-            Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
+            Debug.WriteLine(_localizationService.GetString("captureTest.transferTime") + sw.ElapsedMilliseconds);
             _transferTime += sw.ElapsedMilliseconds;
         }
         else
         {
-            Debug.WriteLine("截图失败");
+            Debug.WriteLine(_localizationService.GetString("captureTest.captureFailed"));
         }
     }
 }

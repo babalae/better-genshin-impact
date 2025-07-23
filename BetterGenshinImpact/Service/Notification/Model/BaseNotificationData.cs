@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Service.Notification.Converter;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -13,7 +14,7 @@ public class BaseNotificationData
 {
     /// <summary>
     /// NotificationEvent
-    /// 事件名称
+    /// 事件类型
     /// </summary>
     public string Event { get; set; } = string.Empty;
 
@@ -24,13 +25,13 @@ public class BaseNotificationData
     public NotificationEventResult Result { get; set; }
 
     /// <summary>
-    /// 事件触发时间
+    /// 事件发生时间
     /// </summary>
     [JsonConverter(typeof(DateTimeJsonConverter))]
     public DateTime Timestamp { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// 事件触发时的截图
+    /// 事件发生时的截图
     /// </summary>
     [JsonConverter(typeof(ImageToBase64Converter))]
     public Image<Rgb24>? Screenshot { get; set; }
@@ -41,7 +42,7 @@ public class BaseNotificationData
     public string? Message { get; set; }
 
     /// <summary>
-    /// 额外的事件数据
+    /// 附加事件数据
     /// </summary>
     public object? Data { get; set; }
 
@@ -57,36 +58,42 @@ public class BaseNotificationData
         }
     }
 
-    public void Send(string message)
+    public void Send(string messageKey, params object[] args)
     {
-        Message = message;
+        var messageService = App.GetService<NotificationMessageService>();
+        Message = messageService != null ? messageService.GetMessage(messageKey, args) : messageKey;
         Send();
     }
 
-    public void Success(string message)
+    public void Success(string messageKey, params object[] args)
     {
-        Message = message;
+        var messageService = App.GetService<NotificationMessageService>();
+        Message = messageService != null ? messageService.GetMessage(messageKey, args) : messageKey;
         Result = NotificationEventResult.Success;
         Send();
     }
 
-    public void Fail(string message)
+    public void Fail(string messageKey, params object[] args)
     {
-        Message = message;
+        var messageService = App.GetService<NotificationMessageService>();
+        Message = messageService != null ? messageService.GetMessage(messageKey, args) : messageKey;
         Result = NotificationEventResult.Fail;
         Send();
     }
 
-    public void Error(string message)
+    public void Error(string messageKey, params object[] args)
     {
-        Message = message;
+        var messageService = App.GetService<NotificationMessageService>();
+        Message = messageService != null ? messageService.GetErrorMessage(messageKey, args) : messageKey;
         Result = NotificationEventResult.Fail;
         Send();
     }
 
-    public void Error(string message, Exception exception)
+    public void Error(string messageKey, Exception exception)
     {
-        Message = message + Environment.NewLine + exception.Message + Environment.NewLine + exception.StackTrace;
+        var messageService = App.GetService<NotificationMessageService>();
+        string localizedMessage = messageService != null ? messageService.GetErrorMessage(messageKey) : messageKey;
+        Message = localizedMessage + Environment.NewLine + exception.Message + Environment.NewLine + exception.StackTrace;
         Result = NotificationEventResult.Fail;
         Send();
     }

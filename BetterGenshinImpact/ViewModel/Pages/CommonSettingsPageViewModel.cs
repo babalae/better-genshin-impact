@@ -27,6 +27,7 @@ using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Converters;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -42,24 +43,54 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class CommonSettingsPageViewModel : ViewModel
 {
     private readonly INavigationService _navigationService;
-
     private readonly NotificationService _notificationService;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     private string _selectedArea = string.Empty;
-
-
     private string _selectedCountry = string.Empty;
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    
+    [ObservableProperty] private List<string> _adventurersGuildCountry = [
+        App.GetService<ILocalizationService>().GetString("country.none"),
+        App.GetService<ILocalizationService>().GetString("country.fontaine"),
+        App.GetService<ILocalizationService>().GetString("country.inazuma"),
+        App.GetService<ILocalizationService>().GetString("country.liyue"),
+        App.GetService<ILocalizationService>().GetString("country.mondstadt")
+    ];
+
+    /// <summary>
+    /// ViewModel for managing language selection
+    /// </summary>
+    public LocalizationViewModel LocalizationViewModel { get; }
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
-        NotificationService notificationService)
+        NotificationService notificationService, LocalizationViewModel localizationViewModel)
     {
         Config = configService.Get();
         _navigationService = navigationService;
         _notificationService = notificationService;
+        LocalizationViewModel = localizationViewModel;
+        
         InitializeCountries();
         InitializeMiyousheCookie();
+        
+        // Initialize localization after other components
+        _ = InitializeLocalizationAsync();
+    }
+
+    /// <summary>
+    /// Initializes the localization system
+    /// </summary>
+    private async Task InitializeLocalizationAsync()
+    {
+        try
+        {
+            await LocalizationViewModel.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't crash the application
+            System.Diagnostics.Debug.WriteLine($"Failed to initialize localization: {ex.Message}");
+        }
     }
 
     public AllConfig Config { get; set; }
@@ -112,7 +143,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         //            Owner = this,
         WebpageWindow cookieWin = new()
         {
-            Title = "日志分析",
+            Title = App.GetService<ILocalizationService>().GetString("window.logAnalysis"),
             Width = 800,
             Height = 600,
 
@@ -192,7 +223,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public void OnRefreshMaskSettings()
     {
         WeakReferenceMessenger.Default.Send(
-            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), App.GetService<ILocalizationService>().GetString("message.recalculateControlPositions")));
     }
 
     [RelayCommand]
@@ -268,11 +299,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
                 DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
-                MessageBox.Information("脚本仓库离线包导入成功！");
+                MessageBox.Information(App.GetService<ILocalizationService>().GetString("message.scriptRepoImportSuccess"));
             }
             else
             {
-                MessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                MessageBox.Error(App.GetService<ILocalizationService>().GetString("message.scriptRepoImportFailed"));
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }

@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -18,7 +18,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
 /// <summary>
-/// æ£€æŸ¥å¥–åŠ±å¹¶é€šçŸ¥çš„ä»»åŠ¡
+/// ¼ì²é½±Àø²¢Í¨ÖªµÄÈÎÎñ
 /// </summary>
 public class CheckRewardsTask
 {
@@ -30,10 +30,10 @@ public class CheckRewardsTask
     {
         IStringLocalizer<CheckRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<CheckRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "ä»Šæ—¥å¥–åŠ±å·²é¢†å–");
+        this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "½ñÈÕ½±ÀøÒÑÁìÈ¡");
     }
 
-    public string Name => "æ£€æŸ¥å¥–åŠ±å¹¶é€šçŸ¥çš„ä»»åŠ¡";
+    public string Name => "¼ì²é½±Àø²¢Í¨ÖªµÄÈÎÎñ";
     
     private static RecognitionObject GetConfirmRa(bool isOcrMatch = false,params string[] targetText)
     {
@@ -54,35 +54,35 @@ public class CheckRewardsTask
             await new ReturnMainUiTask().Start(ct);
             
             _ = await NewRetry.WaitForElementAppear(
-                GetConfirmRa(true,"æ¯æ—¥å§”æ‰˜å¥–åŠ±"),
+                GetConfirmRa(true,"Ã¿ÈÕÎ¯ÍĞ½±Àø"),
                 ()=>
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook); 
                     var screen = CaptureToRectArea();
                     var ra = screen.FindMulti(GetConfirmRa())
-                        .FirstOrDefault(btn => btn.Text == "å§”æ‰˜");
+                        .FirstOrDefault(btn => btn.Text == "Î¯ÍĞ");
                         ra?.Click();
                 },ct,4,1000);
             
-            // OCRè¯†åˆ«æ¯æ—¥æ˜¯å¦å®Œæˆ
+            // OCRÊ¶±ğÃ¿ÈÕÊÇ·ñÍê³É
             var done = await NewRetry.WaitForElementAppear(
                 GetConfirmRa(true,_dailyRewardsClaimedLocalizedString),null,
                 ct,4,500);
             if (done)
             {
-                Logger.LogInformation("æ£€æŸ¥æ¯æ—¥å¥–åŠ±ç»“æœï¼š{Msg}", "ä»Šæ—¥å¥–åŠ±å·²é¢†å–");
-                Notify.Event(NotificationEvent.DailyReward).Success("æ£€æŸ¥æ¯æ—¥å¥–åŠ±ï¼šå·²é¢†å–");
+                Logger.LogInformation("¼ì²éÃ¿ÈÕ½±Àø½á¹û£º{Msg}", "½ñÈÕ½±ÀøÒÑÁìÈ¡");
+                Notify.Event(NotificationEvent.DailyReward).Success("notification.message.dailyRewardClaimed");
             }
             else
             {
-                Logger.LogWarning("æ£€æŸ¥æ¯æ—¥å¥–åŠ±ç»“æœï¼š{Msg}ï¼Œè¯·æ‰‹åŠ¨æ£€æŸ¥ï¼", "æœªé¢†å–");
-                Notify.Event(NotificationEvent.DailyReward).Error("æ£€æŸ¥åˆ°æ¯æ—¥å¥–åŠ±æœªé¢†å–ï¼Œè¯·æ‰‹åŠ¨æŸ¥çœ‹ï¼");
+                Logger.LogWarning("¼ì²éÃ¿ÈÕ½±Àø½á¹û£º{Msg}£¬ÇëÊÖ¶¯¼ì²é£¡", "Î´ÁìÈ¡");
+                Notify.Event(NotificationEvent.DailyReward).Error("notification.message.dailyRewardUnclaimed");
             }
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "æ£€æŸ¥å¥–åŠ±å¹¶é€šçŸ¥çš„ä»»åŠ¡å¼‚å¸¸");
-            Logger.LogError("æ£€æŸ¥å¥–åŠ±å¹¶é€šçŸ¥çš„ä»»åŠ¡å¼‚å¸¸: {Msg}", e.Message);
+            Logger.LogDebug(e, "¼ì²é½±Àø²¢Í¨ÖªµÄÈÎÎñÒì³£");
+            Logger.LogError("¼ì²é½±Àø²¢Í¨ÖªµÄÈÎÎñÒì³£: {Msg}", e.Message);
         }
     }
 }

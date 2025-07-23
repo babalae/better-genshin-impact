@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              d:DataContext="{d:DesignInstance Type=oneDragon:MailViewModel}"
              d:DesignHeight="450"
              d:DesignWidth="800"
@@ -16,17 +17,17 @@
                    Text="{Binding Title}" />
 
         <ui:ToggleSwitch Margin="0,0,0,10"
-                         Content="领取所有邮件"
+                         Content="{markup:Localize Key=oneDragon.mail.collectAllMail}"
                          IsChecked="{Binding CollectAllMail}" />
 
         <ui:ToggleSwitch Margin="0,0,0,10"
-                         Content="领取附件"
+                         Content="{markup:Localize Key=oneDragon.mail.collectAttachments}"
                          IsChecked="{Binding CollectAttachments}" />
 
         <ui:NumberBox Margin="0,0,0,10"
                       Maximum="100"
                       Minimum="1"
-                      PlaceholderText="最大领取邮件数量"
+                      PlaceholderText="{markup:Localize Key=oneDragon.mail.maxMailsToCollect}"
                       Value="{Binding MaxMailsToCollect}" />
     </StackPanel>
 </UserControl>
