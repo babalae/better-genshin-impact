@@ -147,7 +147,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
 
                     // 获取当前分支
-                    var branch = repo.Branches["main"] ?? repo.Branches["master"];
+                    var branch = repo.Branches["refs/heads/origin/main"] ?? repo.Branches["main"];
                     if (branch == null)
                     {
                         throw new Exception("未找到main或master分支");
