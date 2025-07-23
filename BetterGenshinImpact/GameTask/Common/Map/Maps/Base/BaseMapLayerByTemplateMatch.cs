@@ -90,7 +90,7 @@ public class BaseMapLayerByTemplateMatch
         var rect = GetRect(exactPos, ExactSearchRadius, ExactSize).Intersect(new Rect(0, 0, FineGrayMap.Width, FineGrayMap.Height));
         if (rect.Width < ExactSize || rect.Height < ExactSize)
         {
-            return (new Point2f(0, 0), -1);
+            return (default, -1);
         }
         var bigMap = FineGrayMap[rect];
         var (pos, val) = TemplateMatchHelper.MatchTemplateSubPix(bigMap, miniMap, mode, mask);
