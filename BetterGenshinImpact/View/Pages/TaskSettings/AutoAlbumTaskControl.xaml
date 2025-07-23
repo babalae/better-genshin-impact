@@ -1,0 +1,111 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoAlbumTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <!--  自动音游专辑  -->
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+        <ui:CardExpander.Icon>
+            <ui:FontIcon Glyph="&#xf89f;" Style="{StaticResource FaFontIconStyle}" />
+        </ui:CardExpander.Icon>
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.album.autoCompleteTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    <Run Text="{local:Localize Key=music.album.description}" />
+                    <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="{local:Localize Key=task.viewTutorial}" />
+                    </Hyperlink>
+                </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="{local:Localize Key=task.stop}"
+                                         EnableCommand="{Binding SwitchAutoAlbumCommand}"
+                                         EnableContent="{Binding SwitchAutoAlbumButtonText}"
+                                         IsChecked="{Binding SwitchAutoAlbumEnabled}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.album.mustCanorusTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=music.album.mustCanorusDescription}"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,24,0"
+                                 IsChecked="{Binding Config.AutoMusicGameConfig.MustCanorusLevel, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.album.targetDifficultyTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=music.album.targetDifficultyDescription}"
+                              TextWrapping="Wrap" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="80"
+                          Margin="0,0,24,0"
+                          ItemsSource="{Binding AutoMusicLevelList}"
+                          SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
+                          SelectedIndex="0" />
+            </Grid>
+        </StackPanel>
+    </ui:CardExpander>
+
+</UserControl>

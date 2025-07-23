@@ -4,6 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
                  Width="500"
                  Height="210"
                  MinWidth="400"
@@ -25,24 +26,24 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="1" Margin="12">
-            <emoji:TextBlock Text="🔹 本软件开源且免费，喜欢的可以点🌟Star -> " Margin="5" FontSize="16">
+            <emoji:TextBlock Text="{local:Localize Key=welcome.openSourceFree}" Margin="5" FontSize="16">
                 <Hyperlink NavigateUri="https://github.com/babalae/better-genshin-impact"
                            RequestNavigate="HyperlinkRequestNavigate" Foreground="#1E9BFA">
                     Github
                 </Hyperlink>
             </emoji:TextBlock>
-            <emoji:TextBlock Text="🔹 首次使用请先查看" Margin="5" FontSize="16">
+            <emoji:TextBlock Text="{local:Localize Key=welcome.firstTimeUse}" Margin="5" FontSize="16">
                 <Hyperlink NavigateUri="https://bettergi.com/quickstart.html"
                            RequestNavigate="HyperlinkRequestNavigate" Foreground="#1E9BFA">
-                    《快速上手教程》
+                    <Run Text="{local:Localize Key=welcome.quickStartGuide}" />
                 </Hyperlink>
             </emoji:TextBlock>
             <emoji:TextBlock
                 Margin="5"
                 FontSize="16"
                 TextWrapping="Wrap">
-                <Run Text="❗本软件从未授权任何第三方平台进行" /><Run Text="售卖" Foreground="Red" />
-                <Run Text="。如果你是付费获取的本软件（闲鱼、淘宝等），请举报商家并发起" /><Run Text="退款" Foreground="Red" /><Run Text="！" />
+                <Run Text="{local:Localize Key=welcome.neverAuthorized}" /><Run Text="{local:Localize Key=welcome.selling}" Foreground="Red" />
+                <Run Text="{local:Localize Key=welcome.ifPaidFor}" /><Run Text="{local:Localize Key=welcome.refund}" Foreground="Red" /><Run Text="{local:Localize Key=welcome.exclamation}" />
             </emoji:TextBlock>
             <!--<StackPanel Margin="5"
                         Orientation="Horizontal">
@@ -59,7 +60,7 @@
                            Margin="5"
                            Appearance="Primary"
                            Click="BtnOkClick"
-                           Content="确定"
+                           Content="{local:Localize Key=common.ok}"
                            IsDefault="True" />
             </StackPanel>
         </StackPanel>

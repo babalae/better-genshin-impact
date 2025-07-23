@@ -6,7 +6,8 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
-                 Title="脚本仓库"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
+                 Title="{markup:Localize Key=scriptRepo.title}"
                  Width="350"
                  MinWidth="350"
                  MinHeight="50"
@@ -41,7 +42,7 @@
                         <ui:TextBlock Margin="0,0,8,0"
                                       VerticalAlignment="Center"
                                       Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                      Text="更新渠道：" />
+                                      Text="{markup:Localize Key=scriptRepo.updateChannel}" />
                         <ComboBox Width="160"
                                   VerticalAlignment="Center"
                                   DisplayMemberPath="Name"
@@ -58,7 +59,7 @@
                         <ui:TextBlock Margin="0,0,8,0"
                                       VerticalAlignment="Center"
                                       Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                      Text="仓库地址：" />
+                                      Text="{markup:Localize Key=scriptRepo.repoAddress}" />
                         <TextBox MinWidth="160"
                                  MaxWidth="200"
                                  VerticalAlignment="Center"
@@ -71,15 +72,15 @@
                     <StackPanel Grid.Row="2" Orientation="Horizontal">
                         <ui:Button Margin="0,0,8,0"
                                    Command="{Binding UpdateRepoCommand}"
-                                   Content="更新仓库"
+                                   Content="{markup:Localize Key=scriptRepo.updateRepo}"
                                    Icon="{ui:SymbolIcon CloudSync24}" />
                         <ui:Button Margin="0,0,8,0"
                                    Command="{Binding ResetRepoCommand}"
-                                   Content="重置仓库"
+                                   Content="{markup:Localize Key=scriptRepo.resetRepo}"
                                    Icon="{ui:SymbolIcon ArrowReset24}" />
                         <ui:Button Appearance="Primary"
                                    Command="{Binding OpenLocalScriptRepoCommand}"
-                                   Content="打开仓库"
+                                   Content="{markup:Localize Key=scriptRepo.openRepo}"
                                    Icon="{ui:SymbolIcon BookStar24}" />
                     </StackPanel>
 

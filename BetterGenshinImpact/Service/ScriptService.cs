@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -29,10 +29,12 @@ namespace BetterGenshinImpact.Service;
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
+    private readonly ILocalizationService? _localizationService = App.GetService<ILocalizationService>();
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    
     private static bool IsCurrentHourEqual(string input)
     {
-        // 尝试将输入字符串转换为整数
+        // 尝试将输入字符串转换为数字
         if (int.TryParse(input, out int hour))
         {
             // 验证小时是否在合法范围内（0-23）
@@ -45,17 +47,18 @@ public partial class ScriptService : IScriptService
             }
         }
 
-        // 如果输入非数字或不合法，返回 false
+        // 如果输入不是数字或不合法，返回 false
         return false;
     }
+    
     public bool ShouldSkipTask(ScriptGroupProject project)
     {
-
         if (project.GroupInfo is { Config.PathingConfig.Enabled: true } )
         {
             if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
             {
-                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                var message = _localizationService?.GetString("script.taskReachedForbiddenTime", project.Name) ?? $"{project.Name}已经到达禁止执行时段，跳过任务";
+                _logger.LogInformation(message);
                 return true;
             }
 
@@ -65,16 +68,16 @@ public partial class ScriptService : IScriptService
                 int index = tcc.GetExecutionOrder(DateTime.Now);
                 if (index == -1)
                 {
-                    _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
+                    var message = _localizationService?.GetString("script.taskSettingIncorrectOrCompleted", project.Name) ?? $"{project.Name}任务设置不正确，或今日任务已执行，跳过任务";
+                    _logger.LogInformation(message);
                 }
                 else if (index != tcc.Index)
                 {
-                    _logger.LogInformation($"{project.Name}任务已经不在执行周期（当前值${index}!=配置值${tcc.Index}），将跳过此任务！");
+                    var message = _localizationService?.GetString("script.taskExceededCycle", project.Name, index, tcc.Index) ?? $"{project.Name}任务已经超过执行周期，当前值{index}!=配置值{tcc.Index}，跳过任务，等待明天";
+                    _logger.LogInformation(message);
                     return true;
                 }
-               
             }
-            
         }
 
         if (TaskContext.Instance().Config.OtherConfig.FarmingPlanConfig.Enabled)
@@ -85,60 +88,41 @@ public partial class ScriptService : IScriptService
                 string message;
                 if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
                 {
-                    _logger.LogInformation($"{project.Name}:{message},跳过此任务！");
+                    _logger.LogInformation($"{project.Name}:{message},跳过任务");
                     return true;
                 }
             }
             catch (Exception e)
             {
-                TaskControl.Logger.LogError($"锄地规划统计异常：{e.Message}");
+                var errorMessage = _localizationService?.GetString("script.farmingPlanStatisticsError", e.Message) ?? $"锄地规划统计异常：{e.Message}";
+                TaskControl.Logger.LogError(errorMessage);
             }
-
-            
         }
         
-        
-        
-        return false; // 不跳过
-    }
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
+        return false;
+    }  
+  public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
-        groupName ??= "默认";
+        groupName ??= _localizationService?.GetString("script.defaultGroupName") ?? "默认";
 
         var list = ReloadScriptProjects(projectList);
         
-        //恢复临时的跳过标志
+        // Reset skip time related flags
         foreach (var scriptGroupProject in projectList)
         {
             scriptGroupProject.SkipFlag = false;
         }
-        
 
-        // // 针对JS 脚本，检查是否包含定时器操作
-        // var jsProjects = ExtractJsProjects(list);
-        // if (!hasTimer && jsProjects.Count > 0)
-        // {
-        //     var codeList = await ReadCodeList(jsProjects);
-        //     hasTimer = HasTimerOperation(codeList);
-        // }
-
-        // 没启动时候，启动截图器
+        // No timer operations, start image capture
         await StartGameTask();
 
         if (!string.IsNullOrEmpty(groupName))
         {
-            // if (hasTimer)
-            // {
-            //     _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
-            // }
-
-            _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
+            var message = _localizationService?.GetString("script.groupLoadedAndStarting", groupName, list.Count) ?? $"脚本组 {groupName} 加载完成，共{list.Count}个脚本，开始执行";
+            _logger.LogInformation(message);
         }
 
-        // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
-
-        
-        bool fisrt = true;
+        bool first = true;
         await new TaskRunner()
             .RunThreadAsync(async () =>
             {
@@ -164,25 +148,26 @@ public partial class ScriptService : IScriptService
                     {
                         continue;
                     }
-                    //月卡检测
+                    // Monthly card task
                     await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
                     if (project.Status != "Enabled")
                     {
-                        _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
+                        var message = _localizationService?.GetString("script.scriptDisabledSkipping", project.Name) ?? $"脚本 {project.Name} 状态为禁用，跳过执行";
+                        _logger.LogInformation(message);
                         continue;
                     }
 
                     if (CancellationContext.Instance.Cts.IsCancellationRequested)
                     {
-                        _logger.LogInformation("执行被取消");
+                        var message = _localizationService?.GetString("script.executionCancelled") ?? "执行被取消";
+                        _logger.LogInformation(message);
                         break;
                     }
 
-                    
-                    if (fisrt)
+                    if (first)
                     {
-                        fisrt = false;
-                        Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+                        first = false;
+                        Notify.Event(NotificationEvent.GroupStart).Success("notification.message.configGroupStartNamed", groupName);
                     }
 
                     if (taskProgress!=null)
@@ -202,7 +187,6 @@ public partial class ScriptService : IScriptService
                         {
                             TaskTriggerDispatcher.Instance().ClearTriggers();
 
-
                             _logger.LogInformation("------------------------------");
 
                             stopwatch.Reset();
@@ -210,7 +194,7 @@ public partial class ScriptService : IScriptService
                             
                             await ExecuteProject(project);
 
-                            //多次执行时及时中断
+                            // Check again during execution time
                             if (ShouldSkipTask(project))
                             {
                                 continue;
@@ -222,13 +206,15 @@ public partial class ScriptService : IScriptService
                         }
                         catch (TaskCanceledException e)
                         {
-                            _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
+                            var message = _localizationService?.GetString("script.cancellingTask", e.Message) ?? $"取消执行任务: {e.Message}";
+                            _logger.LogInformation(message);
                             throw;
                         }
                         catch (Exception e)
                         {
-                            _logger.LogDebug(e, "执行脚本时发生异常");
-                            _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                            var errorMessage = _localizationService?.GetString("script.scriptExecutionError") ?? "执行脚本时发生异常";
+                            _logger.LogDebug(e, errorMessage);
+                            _logger.LogError($"{errorMessage}: {{Msg}}", e.Message);
                             if (taskProgress!=null && taskProgress.CurrentScriptGroupProjectInfo!=null )
                             {
                                 taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
@@ -238,9 +224,9 @@ public partial class ScriptService : IScriptService
                         {
                             stopwatch.Stop();
                             var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
-                            // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
-                            _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
-                                elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
+                            var message = _localizationService?.GetString("script.scriptExecutionCompleted", project.Name, elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60) ?? 
+                                $"√ 脚本执行结束: {project.Name}, 耗时: {elapsedTime.Hours * 60 + elapsedTime.Minutes}分{elapsedTime.TotalSeconds % 60:0.000}秒";
+                            _logger.LogInformation(message);
                             _logger.LogInformation("------------------------------");
                         }
 
@@ -260,7 +246,7 @@ public partial class ScriptService : IScriptService
                                     taskProgress.CurrentScriptGroupProjectInfo;
                                 taskProgress.LastScriptGroupName =taskProgress.CurrentScriptGroupName;
                             }
-                            //累计连续失败次数
+                            // Accumulate consecutive failure count
                             if (taskProgress.CurrentScriptGroupProjectInfo.Status == 2)
                             {
                                 taskProgress.ConsecutiveFailureCount++;
@@ -270,12 +256,13 @@ public partial class ScriptService : IScriptService
                             TaskProgressManager.SaveTaskProgress(taskProgress);
                         }
 
-                        //异常达到一次次数，重启bgi
+                        // When exceptions reach a certain number, restart BGI
                         var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
                         if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
                         {
-                            _logger.LogInformation("调度器任务出现未预期的异常，自动重启bgi");
-                            Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
+                            var message = _localizationService?.GetString("script.consecutiveUnexpectedErrors") ?? "连续多次出现未预期的异常，自动重启bgi";
+                            _logger.LogInformation(message);
+                            Notify.Event(NotificationEvent.GroupEnd).Error("notification.error.unexpectedError");
                             if (autoconfig.RestartGameTogether 
                                 && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled 
                                 && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
@@ -286,29 +273,28 @@ public partial class ScriptService : IScriptService
 
                             SystemControl.RestartApplication(["--TaskProgress",taskProgress.Name]);
                         }
-
                     }
                 }
             });
 
-        // 还原定时器
+        // Restore timers
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
         
         if (!string.IsNullOrEmpty(groupName))
         {
-            _logger.LogInformation("配置组 {Name} 执行结束", groupName);
+            var message = _localizationService?.GetString("script.groupExecutionCompleted", groupName) ?? $"脚本组 {groupName} 执行结束";
+            _logger.LogInformation(message);
         }
 
-        if (!fisrt)
+        if (!first)
         {
-            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            Notify.Event(NotificationEvent.GroupEnd).Success("notification.message.configGroupEndNamed", groupName);
         }
 
         if (taskProgress != null)
         {
             taskProgress.Next = null;
         }
-
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
@@ -333,14 +319,12 @@ public partial class ScriptService : IScriptService
                 var newProject = ScriptGroupProject.BuildPathingProject(project.Name, project.FolderName);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
-                // hasTimer = true;
             }
             else if (project.Type == "Shell")
             {
                 var newProject = ScriptGroupProject.BuildShellProject(project.Name);
                 CopyProjectProperties(project, newProject);
                 list.Add(newProject);
-                // hasTimer = true;
             }
         }
 
@@ -358,20 +342,6 @@ public partial class ScriptService : IScriptService
         target.SkipFlag = source.SkipFlag;
     }
 
-    // private List<ScriptProject> ExtractJsProjects(List<ScriptGroupProject> list)
-    // {
-    //     var jsProjects = new List<ScriptProject>();
-    //     foreach (var project in list)
-    //     {
-    //         if (project is { Type: "Javascript", Project: not null })
-    //         {
-    //             jsProjects.Add(project.Project);
-    //         }
-    //     }
-    //
-    //     return jsProjects;
-    // }
-
     private async Task ExecuteProject(ScriptGroupProject project)
     {
         TaskContext.Instance().CurrentScriptProject = project;
@@ -379,25 +349,30 @@ public partial class ScriptService : IScriptService
         {
             if (project.Project == null)
             {
-                throw new Exception("Project 为空");
+                var errorMessage = _localizationService?.GetString("script.projectIsNull") ?? "Project 为空";
+                throw new Exception(errorMessage);
             }
 
-            _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingJsScript", project.Name) ?? $"√ 开始执行JS脚本: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "KeyMouse")
         {
-            _logger.LogInformation("→ 开始执行键鼠脚本: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingKeyMouseScript", project.Name) ?? $"√ 开始执行键鼠脚本: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "Pathing")
         {
-            _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingPathingTask", project.Name) ?? $"√ 开始执行地图追踪任务: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "Shell")
         {
-            _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
+            var message = _localizationService?.GetString("script.startingShellScript", project.Name) ?? $"√ 开始执行shell: {project.Name}";
+            _logger.LogInformation(message);
             await project.Run();
         }
     }
@@ -422,10 +397,9 @@ public partial class ScriptService : IScriptService
     [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
     private static partial Regex DispatcherAddTimerRegex();
 
-
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
-        // 没启动时候，启动截图器
+        // 没有定时器操作，启动图像
         var homePageViewModel = App.GetService<HomePageViewModel>();
         if (!homePageViewModel!.TaskDispatcherEnabled)
         {
@@ -455,14 +429,17 @@ public partial class ScriptService : IScriptService
                         if (first)
                         {
                             first = false;
-                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
+                            var localizationService = App.GetService<ILocalizationService>();
+                            var message1 = localizationService?.GetString("script.notInMainUiWaiting") ?? "当前不在游戏主界面，等待进入主界面后执行任务...";
+                            var message2 = localizationService?.GetString("script.mainUiInstructions") ?? "如果你已经在游戏内的主界面，请按下退出当前界面（ESC）或者等待30秒后将尝试自动点击空白区域，使前台任务能够正常执行！";
+                            TaskControl.Logger.LogInformation(message1);
+                            TaskControl.Logger.LogInformation(message2);
                         }
 
                         await Task.Delay(500);
                         if (sw.Elapsed.TotalSeconds >= 30)
                         {
-                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
+                            //防止长期不在游戏内，为一些原因失去焦点，一直卡住
                             if (!SystemControl.IsGenshinImpactActiveByProcess())
                             {
                                 loseFocusCount++;
@@ -473,13 +450,11 @@ public partial class ScriptService : IScriptService
                                 SystemControl.ActivateWindow();
                             }
 
-                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                            //如果长期在游戏内，但不在游戏主界面，无法自动点击，这里尝试移动鼠标到游戏内
                             if (sw.Elapsed.TotalSeconds < 200)
                             {
                                 GlobalMethod.MoveMouseTo(300, 300);
                             }
-
-
                         }
                     }
                 });

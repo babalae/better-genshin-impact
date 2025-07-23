@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Service.Interface;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -125,7 +126,7 @@ public partial class PickerWindow : Window
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"获取窗口图标失败: {ex.Message}");
+            Debug.WriteLine($"{App.GetService<ILocalizationService>().GetString("log.error.failedToGetWindowIcon")}: {ex.Message}");
         }
 
         // 如果获取失败，返回一个默认图标或null
@@ -143,13 +144,14 @@ public partial class PickerWindow : Window
 
     private static bool AskIsThisGenshinImpact(CapturableWindow window)
     {
+        var localizationService = App.GetService<ILocalizationService>();
         var res = MessageBox.Question(
             $"""
-            这看起来不像是原神，确定要选择这个窗口吗？
+            {localizationService.GetString("picker.notGenshinConfirmation")}
         
-            当前选择的窗口：{window.Name} ({window.ProcessName})
+            {localizationService.GetString("picker.currentSelectedWindow")}: {window.Name} ({window.ProcessName})
             """,
-            "确认选择",
+            localizationService.GetString("picker.confirmSelection"),
             MessageBoxButton.YesNo,
             MessageBoxResult.No
         );

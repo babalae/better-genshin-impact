@@ -20,7 +20,12 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TriggerSettingsPageViewModel : ViewModel
 {
-    [ObservableProperty] private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
+    [ObservableProperty] private string[] _clickChatOptionNames = [
+        App.GetService<ILocalizationService>().GetString("chat.selectFirstOption"),
+        App.GetService<ILocalizationService>().GetString("chat.selectRandomOption"),
+        App.GetService<ILocalizationService>().GetString("chat.selectLastOption"),
+        App.GetService<ILocalizationService>().GetString("chat.noSelection")
+    ];
 
     [ObservableProperty] private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
 
@@ -66,15 +71,12 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             AcceptsReturn = true,
             Height = 340,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            PlaceholderText = "请在此输入黑名单配置，每行一条记录。\n" +
-                              "示例：\n" +
-                              "精致的宝箱\n" +
-                              "史莱姆凝液\n" +
-                              "牢固的箭簇"
+            PlaceholderText = App.GetService<ILocalizationService>().GetString("dialog.blacklistPlaceholder")
         };
+        var localizationService = App.GetService<ILocalizationService>();
         var p = new PromptDialog(
-            "黑名单配置，每行一条记录",
-            "黑名单配置",
+            localizationService.GetString("dialog.blacklistConfig"),
+            localizationService.GetString("dialog.blacklistTitle"),
             multilineTextBox,
             text);
         p.Height = 500;
@@ -102,15 +104,12 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             AcceptsReturn = true,
             Height = 340,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            PlaceholderText = "请在此输入白名单配置，每行一条记录。\n" +
-                              "示例：\n" +
-                              "调查\n" +
-                              "合成\n" +
-                              "启动"
+            PlaceholderText = App.GetService<ILocalizationService>().GetString("dialog.whitelistPlaceholder")
         };
+        var localizationService = App.GetService<ILocalizationService>();
         var p = new PromptDialog(
-            "白名单配置，每行一条记录",
-            "白名单配置",
+            localizationService.GetString("dialog.whitelistConfig"),
+            localizationService.GetString("dialog.whitelistTitle"),
             multilineTextBox,
             text);
         p.Height = 500;

@@ -52,4 +52,10 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private List<string> _onceHadRunDeviceIdList = new();
+    
+    /// <summary>
+    /// 应用程序语言设置
+    /// </summary>
+    [ObservableProperty]
+    private string _language = "en-US";
 }

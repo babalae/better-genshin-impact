@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+        xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -197,7 +198,7 @@
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Foreground="White"
-                               Text="西" />
+                               Text="{local:Localize Key=mask.west}" />
                     <TextBlock Grid.Column="2"
                                Grid.Row="4"
                                HorizontalAlignment="Center"
@@ -207,7 +208,7 @@
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Foreground="White"
-                               Text="南" />
+                               Text="{local:Localize Key=mask.south}" />
                     <TextBlock Grid.Column="4"
                                Grid.Row="2"
                                HorizontalAlignment="Center"
@@ -217,7 +218,7 @@
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Foreground="White"
-                               Text="东" />
+                               Text="{local:Localize Key=mask.east}" />
                     <TextBlock Grid.Column="2"
                                Grid.Row="0"
                                HorizontalAlignment="Center"
@@ -227,7 +228,7 @@
                                FontStretch="Medium"
                                FontWeight="DemiBold"
                                Foreground="White"
-                               Text="北" />
+                               Text="{local:Localize Key=mask.north}" />
                 </Grid>
             </Viewbox>
 

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Security.AccessControl;
+using System.Windows;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Helpers;
@@ -30,7 +33,8 @@ public static class SecurityControlHelper
         catch (Exception e)
         {
             TaskControl.Logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-            MessageBox.Show("检测到当前 BetterGI 位于C盘，尝试修改目录权限失败，可能会导致WebView2相关的功能无法使用！" + e.Message);
+            var localizationService = App.GetService<ILocalizationService>();
+            MessageBox.Show(localizationService.GetString("dialog.securityError") + e.Message);
         }
     }
 }

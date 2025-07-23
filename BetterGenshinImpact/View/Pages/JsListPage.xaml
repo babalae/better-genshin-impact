@@ -8,6 +8,7 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:drawer="clr-namespace:BetterGenshinImpact.View.Controls.Drawer"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              d:DataContext="{d:DesignInstance Type=pages:JsListViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -38,26 +39,26 @@
             <ui:TextBlock Grid.Row="0"
                           Margin="0,0,0,8"
                           FontTypography="BodyStrong"
-                          Text="自定义 Javascript 脚本（实验功能）" />
+                          Text="{markup:Localize Key=jsScript.title}" />
             <ui:TextBlock Grid.Row="1"
                           Margin="0,0,0,8"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                           TextWrapping="Wrap">
-                可以通过 Javascript 调用 BetterGI 在原神中的各项能力。请在调度器中使用！
+                <Run Text="{markup:Localize Key=jsScript.description}" />
                 <Hyperlink Command="{Binding GoToJsScriptUrlCommand}"
                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                    点击查看 Javascript 脚本使用与编写教程
+                    <Run Text="{markup:Localize Key=jsScript.viewTutorial}" />
                 </Hyperlink>
             </ui:TextBlock>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal">
                 <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                           Content="打开脚本目录"
+                           Content="{markup:Localize Key=jsScript.openScriptFolder}"
                            Icon="{ui:SymbolIcon FolderOpen24}" />
                 <Separator Width="10" Opacity="0" />
                 <ui:Button Command="{Binding OpenLocalScriptRepoCommand}" Icon="{ui:SymbolIcon Archive24}">
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <ui:TextBlock>脚本仓库</ui:TextBlock>
+                        <ui:TextBlock Text="{markup:Localize Key=jsScript.scriptRepository}" />
                         <ui:InfoBadge Margin="0,-8,-14,0"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Top"
@@ -111,13 +112,13 @@
                     <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                         <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
                                         DisplayMemberBinding="{Binding FolderName}"
-                                        Header="目录" />
+                                        Header="{markup:Localize Key=jsScript.directory}" />
                         <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                         DisplayMemberBinding="{Binding Manifest.Name}"
-                                        Header="名称" />
+                                        Header="{markup:Localize Key=jsScript.name}" />
                         <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                         DisplayMemberBinding="{Binding Manifest.Version}"
-                                        Header="版本" />
+                                        Header="{markup:Localize Key=jsScript.version}" />
                         <!--<GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="操作">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -137,13 +138,13 @@
                     <ContextMenu>
                         <MenuItem Command="{Binding OpenScriptProjectFolderCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="打开目录" />
+                                  Header="{markup:Localize Key=jsScript.openDirectory}" />
                         <MenuItem Command="{Binding StartRunCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="执行脚本" />
+                                  Header="{markup:Localize Key=jsScript.executeScript}" />
                         <MenuItem Command="{Binding RefreshCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                  Header="刷新" />
+                                  Header="{markup:Localize Key=jsScript.refresh}" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListView.Style>

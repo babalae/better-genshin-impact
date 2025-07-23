@@ -28,6 +28,7 @@ public class UpdateService : IUpdateService
 {
     private readonly ILogger<UpdateService> _logger;
     private readonly IConfigService _configService;
+    private readonly ILocalizationService? _localizationService;
 
     private const string NoticeUrl = "https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json";
     private const string DownloadPageUrl = "https://bettergi.com/download.html";
@@ -38,6 +39,7 @@ public class UpdateService : IUpdateService
     {
         _logger = App.GetLogger<UpdateService>();
         _configService = configService;
+        _localizationService = App.GetService<ILocalizationService>();
         Config = _configService.Get();
     }
 
@@ -73,7 +75,8 @@ public class UpdateService : IUpdateService
             {
                 if (option.Trigger == UpdateTrigger.Manual)
                 {
-                    await MessageBox.InformationAsync("当前已是最新版本！");
+                    var message = _localizationService?.GetString("update.currentVersionIsLatest") ?? "当前已是最新版本！";
+                    await MessageBox.InformationAsync(message);
                 }
 
                 return;
@@ -92,17 +95,19 @@ public class UpdateService : IUpdateService
         {
             Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
                             Environment.NewLine + e.Message);
-            _logger.LogWarning("获取 BetterGI 最新版本信息失败");
+            var logMessage = _localizationService?.GetString("update.getLatestVersionFailed") ?? "获取 BetterGI 最新版本信息失败";
+            _logger.LogWarning(logMessage);
         }
     }
 
     private async Task OpenCheckUpdateWindow(UpdateOption option, string newVersion)
     {
+        var windowTitle = _localizationService?.GetString("update.newVersionFoundTitle", newVersion) ?? $"发现新版本 {newVersion}";
         CheckUpdateWindow win = new(option)
         {
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = $"发现新版本 {newVersion}",
+            Title = windowTitle,
             UserInteraction = async (sender, button) =>
             {
                 CheckUpdateWindow win = (CheckUpdateWindow)sender;
@@ -126,18 +131,15 @@ public class UpdateService : IUpdateService
 
                     case CheckUpdateWindow.CheckUpdateWindowButton.Update:
                     {
-                        // 唤起更新程序
                         string updaterExePath = Global.Absolute("BetterGI.update.exe");
                         if (!File.Exists(updaterExePath))
                         {
-                            await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+                            var errorMessage = _localizationService?.GetString("update.updaterNotFound") ?? "更新程序不存在，请选择其他更新方式！";
+                            await MessageBox.ErrorAsync(errorMessage);
                             return;
                         }
 
-                        // 启动
                         Process.Start(updaterExePath, "-I");
-
-                        // 退出程序
                         Application.Current.Shutdown();
                     }
                         break;
@@ -218,8 +220,9 @@ public class UpdateService : IUpdateService
                 }
                 else if (result.Code < 0)
                 {
-                    Toast.Error(
-                        $"Mirror酱源更新检查失败，意料之外的严重错误，请及时联系 Mirror 酱的技术支持处理\n，错误代码：{result.Code}，错误信息：{result.Msg}");
+                    var errorMessage = _localizationService?.GetString("update.mirrorUpdateCheckFailed", result.Code, result.Msg) ?? 
+                        $"Mirror酱源更新检查失败，意料之外的严重错误，请及时联系 Mirror 酱的技术支持处理\n，错误代码：{result.Code}，错误信息：{result.Msg}";
+                    Toast.Error(errorMessage);
                     return string.Empty;
                 }
                 else
@@ -231,39 +234,40 @@ public class UpdateService : IUpdateService
         catch (Exception e)
         {
             _logger.LogDebug(e, "Mirror源更新检查失败");
-            Toast.Warning($"Mirror源更新检查失败,{e.Message}");
-
+            var warningMessage = _localizationService?.GetString("update.mirrorUpdateCheckFailedGeneral", e.Message) ?? 
+                $"Mirror源更新检查失败,{e.Message}";
+            Toast.Warning(warningMessage);
         }
 
         return string.Empty;
     }
 
-    private static void ToastError(LatestResponse response)
+    private void ToastError(LatestResponse response)
     {
-        if (response.Code == 7001)
+        string message;
+        switch (response.Code)
         {
-            Toast.Warning("Mirror酱 CDK 已过期，请重新获取CDK");
+            case 7001:
+                message = _localizationService?.GetString("update.mirrorCdkExpired") ?? "Mirror酱 CDK 已过期，请重新获取CDK";
+                break;
+            case 7002:
+                message = _localizationService?.GetString("update.mirrorCdkError") ?? "Mirror酱 CDK 错误!";
+                break;
+            case 7003:
+                message = _localizationService?.GetString("update.mirrorCdkDailyLimitReached") ?? "Mirror酱 CDK 今日下载次数已达上限";
+                break;
+            case 7004:
+                message = _localizationService?.GetString("update.mirrorCdkTypeMismatch") ?? "Mirror酱 CDK 类型和待下载的资源不匹配";
+                break;
+            case 7005:
+                message = _localizationService?.GetString("update.mirrorCdkBanned") ?? "Mirror酱 CDK 已被封禁";
+                break;
+            default:
+                message = _localizationService?.GetString("update.mirrorUpdateCheckFailedWithMessage", response.Msg) ?? 
+                    $"Mirror酱源更新检查失败，错误信息：{response.Msg}";
+                break;
         }
-        else if (response.Code == 7002)
-        {
-            Toast.Warning("Mirror酱 CDK 错误!");
-        }
-        else if (response.Code == 7003)
-        {
-            Toast.Warning("Mirror酱 CDK 今日下载次数已达上限");
-        }
-        else if (response.Code == 7004)
-        {
-            Toast.Warning("Mirror酱 CDK 类型和待下载的资源不匹配");
-        }
-        else if (response.Code == 7005)
-        {
-            Toast.Warning("Mirror酱 CDK 已被封禁");
-        }
-        else
-        {
-            Toast.Warning($"Mirror酱源更新检查失败，错误信息：{response.Msg}");
-        }
+        Toast.Warning(message);
     }
 
     private async Task<string> UpdateFromOss()
@@ -327,14 +331,17 @@ public class UpdateService : IUpdateService
 
     private string GetReleaseMarkdownHtmlFallback()
     {
+        var changelogTitle = _localizationService?.GetString("update.changelogTitle") ?? "更新日志";
+        var changelogMessage = _localizationService?.GetString("update.getChangelogFailed") ?? "获取更新日志失败，请自行选择是否更新！";
+        
         return
-            """
+            $$"""
             <!DOCTYPE html>
             <html lang="zh">
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>更新日志</title>
+                <title>{{changelogTitle}}</title>
                 <style>
                     body {
                         background-color: #212121;
@@ -354,7 +361,7 @@ public class UpdateService : IUpdateService
             </head>
             <body>
                 <div class="message">
-                    获取更新日志失败，请自行选择是否更新！
+                    {{changelogMessage}}
                 </div>
             </body>
             </html>

@@ -8,6 +8,7 @@ using System.Linq;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Interface;
 
 namespace BetterGenshinImpact.Service.Notifier
 {
@@ -250,7 +251,9 @@ namespace BetterGenshinImpact.Service.Notifier
             }
             catch (System.Exception ex)
             {
-                throw new NotifierException($"Bark通知发送失败: {ex.Message}");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.barkError", ex.Message) : $"Bark通知发送失败: {ex.Message}";
+                throw new NotifierException(errorMessage);
             }
         }
         
@@ -287,7 +290,9 @@ namespace BetterGenshinImpact.Service.Notifier
             {
                 // 记录发送失败
                 Console.Error.WriteLine($"设备 {deviceKey} 通知发送失败: {ex.Message}");
-                throw new NotifierException($"Bark通知发送失败 (设备: {deviceKey}): {ex.Message}");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.barkDeviceError", deviceKey, ex.Message) : $"Bark通知发送失败 (设备: {deviceKey}): {ex.Message}";
+                throw new NotifierException(errorMessage);
             }
         }
 

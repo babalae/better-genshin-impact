@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
@@ -24,8 +25,8 @@ using FontFamily = System.Windows.Media.FontFamily;
 namespace BetterGenshinImpact.View;
 
 /// <summary>
-/// 一个用于覆盖在游戏窗口上的窗口，用于显示识别结果、显示日志、设置区域位置等
-/// 请使用 Instance 方法获取单例
+/// A window that overlays the game window, used to display recognition results, logs, set area positions, etc.
+/// Please use the Instance method to get the singleton
 /// </summary>
 public partial class MaskWindow : Window
 {
@@ -57,7 +58,7 @@ public partial class MaskWindow : Window
     {
         if (_maskWindow == null)
         {
-            throw new Exception("MaskWindow 未初始化");
+            throw new Exception(App.GetService<ILocalizationService>().GetString("error.maskWindowNotInitialized"));
         }
 
         return _maskWindow;
@@ -141,33 +142,35 @@ public partial class MaskWindow : Window
 
     private void PrintSystemInfo()
     {
-        _logger.LogInformation("更好的原神 {Version}", Global.Version);
+        var localizationService = App.GetService<ILocalizationService>();
+        _logger.LogInformation(localizationService.GetString("log.betterGenshinImpact"), Global.Version);
         var systemInfo = TaskContext.Instance().SystemInfo;
         var width = systemInfo.GameScreenSize.Width;
         var height = systemInfo.GameScreenSize.Height;
         var dpiScale = TaskContext.Instance().DpiScale;
-        _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
+        _logger.LogInformation(localizationService.GetString("log.maskWindowStarted"),
             width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
 
         if (width * 9 != height * 16)
         {
-            _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
+            _logger.LogError(localizationService.GetString("log.error.aspectRatioNotSupported"));
         }
         
         AfterburnerWarning();
 
-        // 读取游戏注册表配置
+        // Read game registry configuration
         GameSettingsChecker.LoadGameSettingsAndCheck();
     }
     
     /**
-     * MSIAfterburner.exe 在左上角会导致识别失败
+     * MSIAfterburner.exe in the top-left corner can cause recognition failure
      */
     private void AfterburnerWarning()
     {
         if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
         {
-            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！");
+            var localizationService = App.GetService<ILocalizationService>();
+            _logger.LogWarning(localizationService.GetString("log.warning.msiAfterburnerRunning"));
         }
     }
 
@@ -180,12 +183,14 @@ public partial class MaskWindow : Window
     //         var lang = settings.Language?.TextLang;
     //         if (lang != null && lang != TextLanguage.SimplifiedChinese)
     //         {
-    //             _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
+    //             var localizationService = App.GetService<ILocalizationService>();
+    //             _logger.LogWarning(localizationService.GetString("log.warning.gameLanguageNotChinese"), lang);
     //         }
     //     }
     //     catch (Exception e)
     //     {
-    //         _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+    //         var localizationService = App.GetService<ILocalizationService>();
+    //         _logger.LogWarning(localizationService.GetString("log.warning.gameSettingsReadFailed") + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
     //     }
     // }
 
