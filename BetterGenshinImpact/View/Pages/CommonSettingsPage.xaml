@@ -1003,33 +1003,58 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
                                   Text="电脑网络检测失败时，自动暂停BGI脚本"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Center"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Center"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="等待网络恢复后自动恢复，注意该功能不能重试脚本和断点执行，Ping地址无需HTTP前缀。"
                                   TextWrapping="Wrap" />
                     
                     <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
                                 Grid.Column="1"
-                                MinWidth="90"
+                                Grid.ColumnSpan="2"
+                                VerticalContentAlignment="Center"
+                                VerticalAlignment="Center"
+                                HorizontalContentAlignment="Center"
+                                HorizontalAlignment="Center"
+                                MinWidth="210"
                                 Margin="20,0,10,0"
-                                MaxWidth="180"
+                                MaxWidth="250"
                                 Text="{Binding Config.OtherConfig.NetworkDetectionUrl, Mode=TwoWay}" />
                     
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Right"
+                                  FontTypography="Body" 
+                                  Text="网络检测间隔(秒): " 
+                                  TextWrapping="Wrap" />
+                    
+                    <ui:TextBox Grid.Row="1"
+                                Grid.Column="2"
+                                VerticalContentAlignment="Center"
+                                VerticalAlignment="Center"
+                                HorizontalContentAlignment="Center"
+                                HorizontalAlignment="Right"
+                                MinWidth="60"
+                                MaxHeight="33"
+                                Margin="10,0,10,0"
+                                Text="{Binding Config.OtherConfig.NetworkDetectionInterval, Mode=TwoWay}" />
+                   
+                    
                     <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="2"
-                                     VerticalContentAlignment="Center"
-                                     VerticalAlignment="Center"
-                                     HorizontalContentAlignment="Center"
-                                     HorizontalAlignment="Center"
+                                     Grid.Column="3"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.NetworkDetectionConfig, Mode=TwoWay}" />
                 </Grid>

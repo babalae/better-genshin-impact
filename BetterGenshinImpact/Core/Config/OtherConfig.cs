@@ -30,6 +30,10 @@ public partial class OtherConfig : ObservableObject
     //网络检测网址
     [ObservableProperty]
     private string _networkDetectionUrl = "www.baidu.com";
+    
+    //网络检测间隔时间
+    [ObservableProperty]
+    private int _networkDetectionInterval = 5;
 
     public partial class AutoRestart : ObservableObject
     {

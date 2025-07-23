@@ -9,7 +9,6 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
-using System.Net.Http;
 using System.Net.NetworkInformation;
 using BetterGenshinImpact.GameTask.Common.Job;
 
@@ -18,15 +17,14 @@ namespace BetterGenshinImpact.GameTask.Common;
 public class TaskControl
 {
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
-    private readonly NetworkRecovery _networkRecovery = new();
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
     
     private static DateTime _lastCheckTime = DateTime.MinValue;
-    private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(TaskContext.Instance().Config.OtherConfig.NetworkDetectionInterval);
     private static readonly Ping PingSender = new Ping();
     
-    private static  Task CheckNetworkStatusAsync()
+    private static Task CheckNetworkStatusAsync()
     {
         if (DateTime.Now - _lastCheckTime < _checkInterval || !TaskContext.Instance().Config.OtherConfig.NetworkDetectionConfig)
         {
@@ -35,33 +33,28 @@ public class TaskControl
 
         _lastCheckTime = DateTime.Now;
 
-        bool isSuspend = true; 
+        var isSuspend = true; 
         try
         {
-            PingReply reply = PingSender.Send(TaskContext.Instance().Config.OtherConfig.NetworkDetectionUrl);
-            if (reply.Status == IPStatus.Success)
+            var reply = PingSender.Send(TaskContext.Instance().Config.OtherConfig.NetworkDetectionUrl);
+            isSuspend = reply.Status != IPStatus.Success;
+            if (isSuspend)
             {
-                isSuspend = false;
+                Logger.LogWarning("网络状态检查：失败");
             }
-            else
-            {
-                isSuspend = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "网络状态检查错误");
-            isSuspend = true;
-
-        }
-        finally
-        {
-            if (isSuspend) Logger.LogWarning("网络状态检查:失败");
-            if (!isSuspend && RunnerContext.Instance.IsSuspend)
+            else if (RunnerContext.Instance.IsSuspend)
             {
                 Logger.LogWarning("网络恢复中...");
                 NetworkRecovery.Start(CancellationToken.None).Wait(10000);
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "网络状态检查：错误");
+            isSuspend = true;
+        }
+        finally
+        {
             RunnerContext.Instance.IsSuspend = isSuspend;
         }
         return Task.CompletedTask;
