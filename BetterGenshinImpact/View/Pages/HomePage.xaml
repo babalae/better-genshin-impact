@@ -64,7 +64,7 @@
             </Grid>
         </Border>
 
-        <!--  ���õ�ԭ�������  -->
+        <!--  更好的原神，启动！  -->
         <ui:CardExpander Margin="0,12,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon Play24}">
@@ -106,7 +106,7 @@
                                                  EnableIcon="{ui:SymbolIcon Play24}"
                                                  IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
                         <!--  <ui:Button Command="{Binding StartTriggerCommand}"  -->
-                        <!--  Content="���"  -->
+                        <!--  Content="启动"  -->
                         <!--  Icon="{ui:SymbolIcon Play24}"  -->
                         <!--  Visibility="{Binding TaskDispatcherEnabled, Converter={StaticResource BooleanToVisibilityRevertConverter}, Mode=OneWay}" />  -->
                         <!--  <ui:Button Command="{Binding StopTriggerCommand}"  -->
@@ -335,7 +335,7 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <!--  ԭ�������  -->
+        <!--  原神，启动！  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon LinkSquare24}">
@@ -521,7 +521,7 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="����" Command="{Binding TestCommand}" />-->
+        <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
 
 
     </StackPanel>
