@@ -620,24 +620,38 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
         var validRoots = PathMapper.Keys.ToHashSet();
 
-        // 过滤并保留有效路径
-        scriptConfig.SubscribedScriptPaths = scriptConfig.SubscribedScriptPaths
+        var allPaths = scriptConfig.SubscribedScriptPaths
             .Distinct()
-            .Where(path =>
+            .OrderBy(path => path)
+            .ToList();
+
+        var pathsToKeep = new HashSet<string>();
+
+        foreach (var path in allPaths)
+        {
+            if (string.IsNullOrEmpty(path) || !path.Contains('/'))
+                continue;
+
+            var root = path.Split('/')[0];
+            if (!validRoots.Contains(root))
+                continue;
+
+            var (_, remainingPath) = GetFirstFolderAndRemainingPath(path);
+            var userPath = Path.Combine(PathMapper[root], remainingPath);
+            if (!Directory.Exists(userPath) && !File.Exists(userPath))
+                continue;
+
+            // 检查是否已被父路径覆盖
+            bool isCoveredByParent = pathsToKeep.Any(p => 
+                path.StartsWith(p + "/") || path == p);
+        
+            if (!isCoveredByParent)
             {
-                if (string.IsNullOrEmpty(path) || !path.Contains('/'))
-                    return false;
+                pathsToKeep.Add(path);
+            }
+        }
 
-                var root = path.Split('/')[0];
-
-                if (!validRoots.Contains(root))
-                    return false;
-
-                var (_, remainingPath) = GetFirstFolderAndRemainingPath(path);
-                var userPath = Path.Combine(PathMapper[root], remainingPath);
-
-                return Directory.Exists(userPath) || File.Exists(userPath);
-            })
+        scriptConfig.SubscribedScriptPaths = pathsToKeep
             .OrderBy(path => path)
             .ToList();
     }
@@ -684,6 +698,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public void OpenLocalRepoInWebView()
     {
+        UpdateSubscribedScriptPaths();
         if (_webWindow is not { IsVisible: true })
         {
             _webWindow = new WebpageWindow
