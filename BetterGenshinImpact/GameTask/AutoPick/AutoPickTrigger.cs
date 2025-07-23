@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
@@ -104,7 +104,8 @@ public partial class AutoPickTrigger : ITaskTrigger
             var txt = Global.ReadAllTextIfExist(textFilePath);
             if (!string.IsNullOrEmpty(txt))
             {
-                return [..txt.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)];
+                // 明确指定使用 char[] 重载版本
+                return new HashSet<string>(txt.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
             }
         }
         catch (Exception e)
