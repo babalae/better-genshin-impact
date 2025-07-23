@@ -1484,6 +1484,8 @@
     "oneDragon.completionActions": "完了後の操作",
     "oneDragon.actionsAfterTaskCompletion": "タスク完了後に実行する操作",
     "oneDragon.operationsAfterOneDragonEnd": "ワンダゴン終了後の操作",
+    "music.music.autoCompleteTitle": "【乐曲】 演奏单个乐曲",
+    "music.music.description": "进入演奏界面使用，下落模式必须选择垂落模式",
     "music.album.autoCompleteTitle": "【アルバム】アルバム全体を全自動で完了",
     "music.album.description": "アルバム画面に入って使用、未完了の楽曲を自動演奏 -",
     "music.album.mustCanorusTitle": "【アルバム】「大音天籟」を達成していない楽曲を自動演奏",

@@ -38,19 +38,121 @@
                         <Run Text="{local:Localize Key=task.viewTutorial}" />
                     </Hyperlink>
                 </ui:TextBlock>
-                <controls:TwoStateButton Grid.Row="0"
-                                       Grid.RowSpan="2"
-                                       Grid.Column="1"
-                                       Margin="0,0,24,0"
-                                       DisableCommand="{Binding StopSoloTaskCommand}"
-                                       DisableContent="{local:Localize Key=task.stop}"
-                                       EnableCommand="{Binding SwitchAutoMusicGameCommand}"
-                                       EnableContent="{Binding SwitchAutoMusicGameButtonText}"
-                                       IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
             </Grid>
         </ui:CardExpander.Header>
         <StackPanel>
-            <!-- 空的内容区域，保持可扩展性 -->
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.music.autoCompleteTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=music.music.description}"
+                              TextWrapping="Wrap"/>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,36,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="停止"
+                                         EnableCommand="{Binding SwitchAutoMusicGameCommand}"
+                                         EnableContent="{Binding SwitchAutoMusicGameButtonText}"
+                                         IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
+            </Grid>
+
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.album.autoCompleteTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=music.album.description}"
+                              TextWrapping="Wrap" />
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="{local:Localize Key=task.stop}"
+                                         EnableCommand="{Binding SwitchAutoAlbumCommand}"
+                                         EnableContent="{Binding SwitchAutoAlbumButtonText}"
+                                         IsChecked="{Binding SwitchAutoAlbumEnabled}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.album.mustCanorusTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=music.album.mustCanorusDescription}"
+                              TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0"
+                                 Grid.RowSpan="2"
+                                 Grid.Column="1"
+                                 Margin="0,0,24,0"
+                                 IsChecked="{Binding Config.AutoMusicGameConfig.MustCanorusLevel, Mode=TwoWay}" />
+            </Grid>
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="{local:Localize Key=music.album.targetDifficultyTitle}"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{local:Localize Key=music.album.targetDifficultyDescription}"
+                              TextWrapping="Wrap" />
+                <ComboBox Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="80"
+                          Margin="0,0,24,0"
+                          ItemsSource="{Binding AutoMusicLevelList}"
+                          SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
+                          SelectedIndex="0" />
+            </Grid>
         </StackPanel>
     </ui:CardExpander>
 
