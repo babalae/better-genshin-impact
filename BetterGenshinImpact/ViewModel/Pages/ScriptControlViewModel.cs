@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
@@ -83,15 +84,17 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OnAddScriptGroup()
     {
-        var str = PromptDialog.Prompt("请输入配置组名称", "新增配置组");
+        var localizationService = App.GetService<ILocalizationService>();
+        var str = PromptDialog.Prompt(localizationService.GetString("dialog.enterConfigGroupName"), localizationService.GetString("dialog.addConfigGroup"));
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
             if (ScriptGroups.Any(x => x.Name == str))
             {
+                var localizationService2 = App.GetService<ILocalizationService>();
                 _snackbarService.Show(
-                    "配置组已存在",
-                    $"配置组 {str} 已经存在，请勿重复添加",
+                    localizationService2.GetString("dialog.configGroupExists"),
+                    localizationService2.GetString("dialog.configGroupExistsMessage", str),
                     ControlAppearance.Caution,
                     null,
                     TimeSpan.FromSeconds(2)
@@ -108,7 +111,8 @@ public partial class ScriptControlViewModel : ViewModel
     private void ClearTasks()
     {
         // 确认？
-        var result = MessageBox.Show("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var localizationService = App.GetService<ILocalizationService>();
+        var result = MessageBox.Show(localizationService.GetString("dialog.confirmClearTasks"), localizationService.GetString("dialog.clearTasks"), MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
@@ -294,12 +298,13 @@ public partial class ScriptControlViewModel : ViewModel
         stackPanel.Children.Add(secondRow);
         stackPanel.Children.Add(threeRow);
         //PrimaryButtonText
+        var localizationService = App.GetService<ILocalizationService>();
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-            Title = "日志分析",
+            Title = localizationService.GetString("dialog.logAnalysis"),
             Content = stackPanel,
-            CloseButtonText = "取消",
-            PrimaryButtonText = "确定",
+            CloseButtonText = localizationService.GetString("dialog.cancel"),
+            PrimaryButtonText = localizationService.GetString("dialog.confirm"),
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
@@ -378,7 +383,7 @@ public partial class ScriptControlViewModel : ViewModel
             }
 
             LogParse.HtmlGenerationStatusChanged += OnHtmlGenerationStatusChanged;
-            Toast.Information("正在准备数据...");
+            Toast.Information(localizationService.GetString("toast.preparingData"));
             List<(string FileName, string Date)> fs = LogParse.GetLogFiles(LogPath);
             if (dayRangeValue != "All")
             {
@@ -395,7 +400,7 @@ public partial class ScriptControlViewModel : ViewModel
 
             if ((hoeingStatsSwitch.IsChecked ?? false) && string.IsNullOrEmpty(cookieValue))
             {
-                Toast.Warning("未填写cookie，此次将不启用锄地统计！");
+                Toast.Warning(localizationService.GetString("toast.noCookieWarning"));
             }
 
             //真正存储的gameinfo
@@ -405,19 +410,19 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 try
                 {
-                    Toast.Information("正在从米游社获取旅行札记数据，请耐心等待！");
+                    Toast.Information(localizationService.GetString("toast.gettingTravelData"));
                     gameInfo = await TravelsDiaryDetailManager.UpdateTravelsDiaryDetailManager(cookieValue);
-                    Toast.Success($"米游社数据获取成功，开始进行解析，请耐心等待！");
+                    Toast.Success(localizationService.GetString("toast.mihoyoDataSuccess"));
                 }
                 catch (Exception)
                 {
                     if (realGameInfo != null)
                     {
-                        Toast.Warning("访问米游社接口异常，此次将锄地统计将不更新最新数据！");
+                        Toast.Warning(localizationService.GetString("toast.mihoyoApiError"));
                     }
                     else
                     {
-                        Toast.Warning("访问米游社接口异常，此次将不启用锄地统计！");
+                        Toast.Warning(localizationService.GetString("toast.mihoyoApiErrorNoStats"));
                     }
                 }
             }
@@ -444,7 +449,7 @@ public partial class ScriptControlViewModel : ViewModel
 
             if (configGroupEntities.Count == 0)
             {
-                Toast.Warning("未解析出日志记录！");
+                Toast.Warning(localizationService.GetString("toast.noLogRecords"));
                 LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
             }
             else
@@ -463,7 +468,7 @@ public partial class ScriptControlViewModel : ViewModel
                 catch (Exception ex)
                 {
                     LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
-                    Toast.Error($"生成日志分析时出错: {ex.Message}");
+                    Toast.Error(localizationService.GetString("toast.logAnalysisError", ex.Message));
                 }
             }
         }
@@ -532,7 +537,8 @@ public partial class ScriptControlViewModel : ViewModel
             SelectedScriptGroup?.AddProject(scriptGroupProject);
         }
 
-        Toast.Success($"增加了{projects.Count - oldcount}个地图追踪任务");
+        var localizationService = App.GetService<ILocalizationService>();
+        Toast.Success(localizationService.GetString("toast.addedMapTasks", projects.Count - oldcount));
         if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
 
@@ -1019,7 +1025,8 @@ public partial class ScriptControlViewModel : ViewModel
                 }
                 catch (Exception e)
                 {
-                    Toast.Warning($"加载单个脚本失败：{e.Message}");
+                    var localizationService = App.GetService<ILocalizationService>();
+                    Toast.Warning(localizationService.GetString("toast.loadScriptFailed", e.Message));
                     return null;
                 }
             })
@@ -1124,7 +1131,8 @@ public partial class ScriptControlViewModel : ViewModel
             var ui = item.Project.LoadSettingUi(item.JsScriptSettingsObject);
             if (ui == null)
             {
-                Toast.Warning("此脚本未提供自定义配置");
+                var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("dialog.noCustomConfig"));
                 return;
             }
 
@@ -1146,7 +1154,8 @@ public partial class ScriptControlViewModel : ViewModel
         }
         else
         {
-            Toast.Warning("只有JS脚本才有自定义配置");
+            var localizationService = App.GetService<ILocalizationService>();
+            Toast.Warning(localizationService.GetString("dialog.onlyJsHasConfig"));
         }
     }
 

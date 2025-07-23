@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:view="clr-namespace:BetterGenshinImpact.View"
-        Title="选择捕获窗口"
+        xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+        Title="{local:Localize Key=picker.selectCaptureWindow}"
         Width="800"
         Height="450"
         WindowStartupLocation="CenterScreen"
@@ -62,13 +63,13 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="选择捕获窗口" 
+                <TextBlock Text="{local:Localize Key=picker.selectCaptureWindow}" 
                          FontSize="24" 
                          FontWeight="SemiBold"
                          Foreground="#FFFFFF"/>
 
                 <TextBlock Grid.Row="1"
-                         Text="双击选中要捕获的窗口" 
+                         Text="{local:Localize Key=picker.doubleClickToSelect}" 
                          Margin="0,8,0,0"
                          Foreground="#99FFFFFF"
                          FontSize="14"/>

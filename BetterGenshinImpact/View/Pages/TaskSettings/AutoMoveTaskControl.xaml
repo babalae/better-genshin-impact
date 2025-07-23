@@ -1,0 +1,125 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.TaskSettings.AutoMoveTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Navigation24}">
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0"
+                              Grid.Column="0"
+                              FontTypography="Body"
+                              Text="自动前进"
+                              TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1"
+                              Grid.Column="0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              TextWrapping="Wrap">
+                    自动前进、飞行、游泳、爬山等移动功能（预留功能）
+                </ui:TextBlock>
+                <controls:TwoStateButton Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,24,0"
+                                         DisableCommand="{Binding StopSoloTaskCommand}"
+                                         DisableContent="停止"
+                                         EnableCommand="{Binding SwitchAutoMoveCommand}"
+                                         EnableContent="{Binding SwitchAutoMoveButtonText}"
+                                         IsChecked="{Binding SwitchAutoMoveEnabled}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <ui:TextBlock Margin="24,0,24,12"
+                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                          TextWrapping="Wrap">
+                此功能为预留功能，当前处于开发阶段。包含自动前进、飞行、游泳、爬山等移动辅助功能。
+            </ui:TextBlock>
+            
+            <!-- 移动设置 -->
+            <ui:CardExpander Margin="24,0,24,12" 
+                             Header="移动设置"
+                             ContentPadding="12">
+                <StackPanel>
+                    <CheckBox Content="启用自动前进"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableAutoWalk}"
+                              Margin="0,0,0,8" />
+                    <CheckBox Content="启用自动飞行"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableAutoFly}"
+                              Margin="0,0,0,8" />
+                    <CheckBox Content="启用自动游泳"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableAutoSwim}"
+                              Margin="0,0,0,8" />
+                    <CheckBox Content="启用自动爬山"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableAutoClimb}"
+                              Margin="0,0,0,8" />
+                </StackPanel>
+            </ui:CardExpander>
+            
+            <!-- 夜兰自动E设置 -->
+            <ui:CardExpander Margin="24,0,24,12" 
+                             Header="角色技能设置"
+                             ContentPadding="12">
+                <StackPanel>
+                    <CheckBox Content="夜兰自动E"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableYelanAutoE}"
+                              Margin="0,0,0,8" />
+                    <ui:TextBlock Margin="0,0,0,8"
+                                  Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                  TextWrapping="Wrap">
+                        自动使用夜兰的元素战技进行快速移动
+                    </ui:TextBlock>
+                    
+                    <!-- E技能冷却时间设置 -->
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Margin="0,0,12,0"
+                                      VerticalAlignment="Center"
+                                      Text="E技能间隔:" />
+                        <Slider Grid.Column="1"
+                                Minimum="1"
+                                Maximum="10"
+                                Value="{Binding Config.AutoMoveConfig.YelanEInterval}"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True" />
+                        <ui:TextBlock Grid.Column="2"
+                                      Margin="12,0,0,0"
+                                      VerticalAlignment="Center"
+                                      Text="{Binding Config.AutoMoveConfig.YelanEInterval, StringFormat={}{0}秒}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+            
+            <!-- 高级设置 -->
+            <ui:CardExpander Margin="24,0,24,12" 
+                             Header="高级设置"
+                             ContentPadding="12">
+                <StackPanel>
+                    <CheckBox Content="智能路径选择"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableSmartPathing}"
+                              Margin="0,0,0,8" />
+                    <CheckBox Content="避障检测"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableObstacleAvoidance}"
+                              Margin="0,0,0,8" />
+                    <CheckBox Content="自动调整视角"
+                              IsChecked="{Binding Config.AutoMoveConfig.EnableAutoViewAdjust}"
+                              Margin="0,0,0,8" />
+                </StackPanel>
+            </ui:CardExpander>
+        </StackPanel>
+    </ui:CardExpander>
+</UserControl>

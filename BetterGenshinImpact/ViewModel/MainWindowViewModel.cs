@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -36,7 +37,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
-    public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    private readonly ILocalizationService _localizationService;
+    
+    public string Title => $"{_localizationService.GetString("app.title")} · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty] private bool _isVisible = true;
 
@@ -50,9 +53,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     public AllConfig Config { get; set; }
 
-    public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
+    public MainWindowViewModel(INavigationService navigationService, IConfigService configService, ILocalizationService localizationService)
     {
         _configService = configService;
+        _localizationService = localizationService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
     }
@@ -233,7 +237,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
+                var localizationService = App.GetService<ILocalizationService>();
+                var res = await MessageBox.ShowAsync(localizationService.GetString("dialog.confirmMigrateConfig"), localizationService.GetString("dialog.betterGI"),
                     System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
@@ -241,7 +246,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
-                    await MessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
+                    await MessageBox.InformationAsync(localizationService.GetString("dialog.migrateConfigSuccess"));
                     Application.Current.Shutdown();
                 }
             }

@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=pages:KeyMouseRecordPageViewModel}"
@@ -35,24 +36,24 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="键鼠录制回放功能（实验功能）" />
+                      Text="{markup:Localize Key=keyMouseRecord.title}" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                       TextWrapping="Wrap">
-            建议在游戏内使用快捷键进行录制，录制完成后在调度器中使用。<Hyperlink Command="{Binding GoToKmScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                点击查看键鼠录制回放功能教程
+            <Run Text="{markup:Localize Key=keyMouseRecord.description}" /><Hyperlink Command="{Binding GoToKmScriptUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                <Run Text="{markup:Localize Key=keyMouseRecord.viewTutorial}" />
             </Hyperlink>
         </ui:TextBlock>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <ui:Button Command="{Binding OpenScriptFolderCommand}"
-                       Content="打开脚本目录"
+                       Content="{markup:Localize Key=keyMouseRecord.openScriptFolder}"
                        Icon="{ui:SymbolIcon FolderOpen24}" />
             <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding OpenLocalScriptRepoCommand}" Icon="{ui:SymbolIcon Archive24}">
                 <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <ui:TextBlock>脚本仓库</ui:TextBlock>
+                    <ui:TextBlock Text="{markup:Localize Key=keyMouseRecord.scriptRepository}" />
                     <ui:InfoBadge Margin="0,-8,-14,0"
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Top"
@@ -63,12 +64,12 @@
             </ui:Button>
             <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding StartRecordCommand}"
-                       Content="开始录制"
+                       Content="{markup:Localize Key=keyMouseRecord.startRecord}"
                        Icon="{ui:SymbolIcon Record20}"
                        IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}" />
             <Separator Width="10" Opacity="0" />
             <ui:Button Command="{Binding StopRecordCommand}"
-                       Content="停止录制"
+                       Content="{markup:Localize Key=keyMouseRecord.stopRecord}"
                        Icon="{ui:SymbolIcon Stop24}"
                        IsEnabled="{Binding IsRecording}" />
         </StackPanel>
@@ -97,17 +98,17 @@
                 <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
                     <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding Name}"
-                                    Header="名称" />
+                                    Header="{markup:Localize Key=keyMouseRecord.name}" />
                     <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                     DisplayMemberBinding="{Binding CreateTimeStr}"
-                                    Header="创建时间" />
-                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                                    Header="{markup:Localize Key=keyMouseRecord.createTime}" />
+                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="{markup:Localize Key=keyMouseRecord.operation}">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:Button Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:KeyMouseRecordPage}}, Path=DataContext.StartPlayCommand}"
                                                CommandParameter="{Binding Path}"
-                                               Content="播放脚本"
+                                               Content="{markup:Localize Key=keyMouseRecord.playScript}"
                                                Icon="{ui:SymbolIcon Play24}" />
                                 </StackPanel>
 
@@ -120,10 +121,10 @@
                 <ContextMenu>
                     <MenuItem Command="{Binding EditScriptCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                              Header="修改名称" />
+                              Header="{markup:Localize Key=keyMouseRecord.editName}" />
                     <MenuItem Command="{Binding DeleteScriptCommand}"
                               CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                              Header="删除" />
+                              Header="{markup:Localize Key=keyMouseRecord.delete}" />
                 </ContextMenu>
             </ListBox.ContextMenu>
             <ListView.Style>

@@ -7,6 +7,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
+      xmlns:local="clr-namespace:BetterGenshinImpact.Markup"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
       d:DesignHeight="2000"
@@ -20,7 +21,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="软件设置" />
+                      Text="{local:Localize Key=settings.softwareSettings}" />
 
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon LocalLanguage24}">
             <ui:CardControl.Header>
@@ -36,12 +37,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="游戏语言"
+                                  Text="{local:Localize Key=settings.gameLanguage}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Game Language"
+                                  Text="{local:Localize Key=settings.gameLanguageDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -64,6 +65,51 @@
             </ui:CardControl.Header>
         </ui:CardControl>
 
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Translate24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{local:Localize Key=settings.language}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{local:Localize Key=settings.interfaceLanguageDescription}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="200"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding LocalizationViewModel.AvailableLanguages}"
+                              SelectedItem="{Binding LocalizationViewModel.SelectedLanguage, Mode=TwoWay}"
+                              IsEnabled="{Binding LocalizationViewModel.IsLoading, Converter={StaticResource InverseBooleanConverter}}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding NativeName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="SelectionChanged">
+                                <b:InvokeCommandAction Command="{Binding LocalizationViewModel.ChangeLanguageCommand}"
+                                                       CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ComboBox>
+                </Grid>
+            </ui:CardControl.Header>
+        </ui:CardControl>
+
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
@@ -81,12 +127,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用遮罩窗口"
+                                  Text="{local:Localize Key=settings.maskWindow}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="重启后生效"
+                                  Text="{local:Localize Key=settings.restartRequired}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -116,16 +162,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示日志窗口"
+                                  Text="{local:Localize Key=settings.showLogWindow}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在遮罩内显示日志窗口，
+                        <Run Text="{local:Localize Key=settings.showLogWindowDescription}" />
                         <Hyperlink Command="{Binding GoToLogFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击打开日志文件夹
+                            <Run Text="{local:Localize Key=settings.showLogWindowDescription}" />
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
@@ -155,12 +201,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示实时任务启用状态"
+                                  Text="{local:Localize Key=settings.showTaskStatus}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在遮罩内显示实时任务启用状态"
+                                  Text="{local:Localize Key=settings.showTaskStatusDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -189,12 +235,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示游戏FPS（实验功能）"
+                                  Text="{local:Localize Key=settings.showGameFps}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改设置后重启生效，可能存在使游戏崩溃的BUG"
+                                  Text="{local:Localize Key=settings.showGameFpsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -216,13 +262,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="显示遮罩边框" />
+                        Text="{local:Localize Key=settings.showMaskBorder}" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="围绕游戏窗口紫色的边框线" />
+                        Text="{local:Localize Key=settings.showMaskBorderDescription}" />
                     <ui:ToggleSwitch
                         Grid.Row="0"
                         Grid.RowSpan="2"
@@ -242,12 +288,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示图像识别结果"
+                                  Text="{local:Localize Key=settings.showImageRecognition}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="实时显示各种图像识别的结果"
+                                  Text="{local:Localize Key=settings.showImageRecognitionDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -267,12 +313,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用UID遮盖"
+                                  Text="{local:Localize Key=settings.enableUidCover}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="遮盖右下角的UID区域"
+                                  Text="{local:Localize Key=settings.enableUidCoverDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -301,12 +347,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示小地图方位"
+                                  Text="{local:Localize Key=settings.showMinimapDirections}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在小地图周围显示东南西北的文字"
+                                  Text="{local:Localize Key=settings.showMinimapDirectionsDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -337,12 +383,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="遮罩以原神子窗体方式启动（实验功能）"
+                                  Text="{local:Localize Key=settings.useMaskSubform}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="遮罩能够完全跟随窗体移动，但存在一些BUG，此配置重启后生效"
+                                  Text="{local:Localize Key=settings.useMaskSubformDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -370,13 +416,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用保存截图功能（开发者）"
+                                  Text="{local:Localize Key=settings.screenshot}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        可以通过快捷键保存截图，文件保存在
+                        <Run Text="{local:Localize Key=settings.screenshotDescription}" />
                         <Hyperlink Command="{Binding GoToFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             log/screenshot
@@ -411,19 +457,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图快捷键"
+                                  Text="{local:Localize Key=settings.screenshotHotkey}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="截图功能主要用于错误排查，训练素材快速获取等开发相关功能"
+                                  Text="{local:Localize Key=settings.screenshotHotkeyDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{local:Localize Key=common.bindHotkey}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -437,12 +483,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图遮盖UID"
+                                  Text="{local:Localize Key=settings.screenshotUidCover}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="生成的截图会遮盖右下角的UID区域"
+                                  Text="{local:Localize Key=settings.screenshotUidCoverDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -465,12 +511,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="退出时最小化到系统托盘"
+                                  Text="{local:Localize Key=settings.exitToTray}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启用后点击右上角退出按钮会最小化到系统托盘继续运行，右键托盘图标退出"
+                                  Text="{local:Localize Key=settings.exitToTrayDescription}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -480,7 +526,7 @@
 
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="通用功能设置" />
+                      Text="{local:Localize Key=settings.generalFunctionSettings}" />
         <!--  按键绑定  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon KeyboardMouse16}">
             <ui:CardExpander.Header>
@@ -496,19 +542,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="按键绑定设置"
+                                  Text="{local:Localize Key=settings.keyBindingSettings}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你有游戏内改键需求，请在此配置对应的改键"
+                                  Text="{local:Localize Key=settings.keyBindingDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,20,0"
                                Command="{Binding OpenKeyBindingsWindowCommand}"
-                               Content="配置" />
+                               Content="{local:Localize Key=settings.configure}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -524,12 +570,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用全局按键映射"
+                                  Text="{local:Localize Key=settings.enableGlobalKeyMapping}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="使按键绑定设置对外部脚本生效"
+                                  Text="{local:Localize Key=settings.enableGlobalKeyMappingDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -555,12 +601,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图追踪优先使用的特征匹配方式"
+                                  Text="{local:Localize Key=settings.mapTrackingFeatureMatchingMethod}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="影响所有地图追踪功能，重启后生效"
+                                  Text="{local:Localize Key=settings.mapTrackingFeatureMatchingMethodDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                                Grid.RowSpan="2"
@@ -593,12 +639,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="大地图地图传送设置"
+                                  Text="{local:Localize Key=settings.worldMapTeleportSettings}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于地图追踪、自动秘境、一条龙等功能中传送功能的配置"
+                                  Text="{local:Localize Key=settings.worldMapTeleportSettingsDescription}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -615,12 +661,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图移动过程中是否缩放地图"
+                                  Text="{local:Localize Key=settings.enableMapZoomDuringMovement}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="建议开启，关闭该设置可能在运行部分脚本时发生错误"
+                                  Text="{local:Localize Key=settings.enableMapZoomDuringMovementDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -640,12 +686,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="单次鼠标移动的最大距离"
+                                  Text="{local:Localize Key=settings.maxMouseMovementDistance}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【100-2000】 过大可能会导致鼠标移动出窗口"
+                                  Text="{local:Localize Key=settings.maxMouseMovementDistanceDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -667,12 +713,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图缩小的距离"
+                                  Text="{local:Localize Key=settings.mapZoomOutDistance}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【>600】大于这个距离会缩小地图以加快传送"
+                                  Text="{local:Localize Key=settings.mapZoomOutDistanceDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -694,12 +740,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图放大的距离"
+                                  Text="{local:Localize Key=settings.mapZoomInDistance}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【200-600】小于这个距离会放大地图以提高移动的精度"
+                                  Text="{local:Localize Key=settings.mapZoomInDistanceDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -721,12 +767,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="鼠标移动的时间间隔（毫秒）"
+                                  Text="{local:Localize Key=settings.mouseMovementInterval}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【2-100】数字越小移动鼠标的速度越快，如果移动地图时产生卡顿，请提高这个数值"
+                                  Text="{local:Localize Key=settings.mouseMovementIntervalDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -756,10 +802,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="七天神像设置"
+                                  Text="{local:Localize Key=settings.statueOfTheSeven}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="用于指定回血的七天神像"
+                                  Text="{local:Localize Key=settings.statueOfTheSevenDescription}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -774,10 +820,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="是否就近七天神像恢复血量"
+                                  Text="{local:Localize Key=settings.useNearestStatue}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="启用后将自动选择最近的七天神像，忽略下方指定位置"
+                                  Text="{local:Localize Key=settings.useNearestStatueDescription}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.IsReviveInNearestStatueOfTheSeven}" />
@@ -792,10 +838,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="传送到七天神像之后是否需要移动后回血"
+                                  Text="{local:Localize Key=settings.moveAfterTeleportToStatue}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="启用后将自动向七天神像方向移动"
+                                  Text="{local:Localize Key=settings.moveAfterTeleportToStatueDescription}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
                                      IsChecked="{Binding Config.TpConfig.ShouldMove}" />
@@ -811,10 +857,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="七天神像国家"
+                                  Text="{local:Localize Key=settings.statueCountry}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="选择七天神像所在国家"
+                                  Text="{local:Localize Key=settings.statueCountryDescription}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                               Margin="0,0,36,0"
@@ -834,10 +880,10 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0" Grid.Column="0"
-                                  Text="七天神像区域"
+                                  Text="{local:Localize Key=settings.statueRegion}"
                                   FontTypography="Body" />
                     <ui:TextBlock Grid.Row="1" Grid.Column="0"
-                                  Text="选择七天神像所在区域"
+                                  Text="{local:Localize Key=settings.statueRegionDescription}"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" />
                     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                               Margin="0,0,36,0"
@@ -858,12 +904,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="回血等待间隔（秒）"
+                                  Text="{local:Localize Key=settings.healingWaitInterval}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【1.0-30.0】传送到七天神像之后需要等待多久恢复血量"
+                                  Text="{local:Localize Key=settings.healingWaitIntervalDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -891,19 +937,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="手动导入本地脚本仓库（zip格式）"
+                                  Text="{local:Localize Key=settings.importLocalScriptRepo}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="脚本仓库无法在线更新时使用"
+                                  Text="{local:Localize Key=settings.importLocalScriptRepoDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding ImportLocalScriptsRepoZipCommand}"
-                               Content="导入" />
+                               Content="{local:Localize Key=settings.import}" />
                 </Grid>
 
             </ui:CardControl.Header>
@@ -928,12 +974,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="其他设置"
+                                  Text="{local:Localize Key=settings.otherSettings}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="设定一些其他功能的配置，失去焦点自动恢复等"
+                                  Text="{local:Localize Key=settings.otherSettingsDescription}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -951,12 +997,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="BGI界面语言"
+                                  Text="{local:Localize Key=settings.bgiUiLanguage}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="BGI UI Language"
+                                  Text="{local:Localize Key=settings.bgiUiLanguageDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -980,12 +1026,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="游戏失去焦点时候，强制恢复激活游戏窗口"
+                                  Text="{local:Localize Key=settings.autoActivateGameWindow}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="适用于调度器任务和部分独立任务，失去焦点后，将自动激活游戏窗口，开启此项后，如果想切出游戏窗口，可以先暂停任务，之后再切出"
+                                  Text="{local:Localize Key=settings.autoActivateGameWindowDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1005,12 +1051,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="调度器路径追踪任务大地图传送过程中自动领取委托"
+                                  Text="{local:Localize Key=settings.autoCollectExpeditions}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="调度器路径追踪任务中，打开大地图准备传送时，会首先检测是否存在需要领取的派遣任务，如果存在，则自动领取委托（调用一条龙领取奖励逻辑），选择领取城市后生效。"
+                                  Text="{local:Localize Key=settings.autoCollectExpeditionsDescription}"
                                   TextWrapping="Wrap" />
                     <ComboBox  MinWidth="100"
                                Grid.Row="0"
@@ -1041,12 +1087,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="调度器异常重启配置"
+                                  Text="{local:Localize Key=settings.schedulerErrorRestartConfig}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="当调度器任务异常抛出未预期错误时，累计一定次数后，自动重启bgi，以恢复功能。"
+                                  Text="{local:Localize Key=settings.schedulerErrorRestartConfigDescription}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1076,12 +1122,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="异常次数"
+                                  Text="{local:Localize Key=settings.errorCount}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="当运行调度器任务时，异常导致任务失败的计数，当达到计数时会重启bgi。"
+                                  Text="{local:Localize Key=settings.errorCountDescription}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1103,14 +1149,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="是否同时重启游戏"
+                                  Text="{local:Localize Key=settings.restartGameToo}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        重启bgi时，同时重启游戏，需开启首页启动配置：同时启动原神、自动进入游戏，此配置才会生效。
-                    </ui:TextBlock>
+                                  Text="{local:Localize Key=settings.restartGameTooDescription}"
+                                  TextWrapping="Wrap" />
                     
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1131,15 +1176,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="战斗失败算异常"
+                                  Text="{local:Localize Key=settings.combatFailureIsError}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                       在锄地脚本中，实际战斗成功次数大于等于预期战斗次数，才能成功，否则抛出异常。可以解决锄地时，应打开地图失败、切换队伍、或卡在按Z的切换界面、卡月卡等，可能导致的无限卡死。
-                       但需要确定自己的队伍练度，有无可能连续超过配置失败次数个脚本都复活超次，导致判断失败，从而触发无限重启。
-                    </ui:TextBlock>
+                                  Text="{local:Localize Key=settings.combatFailureIsErrorDescription}"
+                                  TextWrapping="Wrap" />
                     
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1160,14 +1203,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="路径未完全走完算异常"
+                                  Text="{local:Localize Key=settings.incompletePathIsError}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap">
-                        比战斗失败更严格的条件，勾选此项下，追踪文件，如果未执行完，算失败。此项勾选需要自身的追踪任务稳定性高。可以先关观察日志，打开异常情况统计下，有无连续标红超过失败次数的情况，有则不建议勾选。
-                    </ui:TextBlock>
+                                  Text="{local:Localize Key=settings.incompletePathIsErrorDescription}"
+                                  TextWrapping="Wrap" />
                     
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1196,12 +1238,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="锄地规划配置"
+                                          Text="{local:Localize Key=settings.farmingPlanConfig}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="开启后，当每日（4点开始）统计锄地超过上限（需脚本支持，勾选允许锄地统计标志，或通过追踪文件目录的控制文件，来记录各追踪文件数据），会跳过接下来的锄地任务。"
+                                          Text="{local:Localize Key=settings.farmingPlanConfigDescription}"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -1231,12 +1273,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="日精英上限"
+                                          Text="{local:Localize Key=settings.dailyEliteLimit}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="当锄地精英数量到达上限时，跳过主目标为精英的锄地脚本。"
+                                          Text="{local:Localize Key=settings.dailyEliteLimitDescription}"
                                           TextWrapping="Wrap" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
@@ -1258,12 +1300,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="日小怪上限"
+                                          Text="{local:Localize Key=settings.dailyMobLimit}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="当锄地小怪数量到达上限时，会跳过主目标为小怪的锄地脚本。"
+                                          Text="{local:Localize Key=settings.dailyMobLimitDescription}"
                                           TextWrapping="Wrap" />
                             <ui:TextBox Grid.Row="0"
                                         Grid.RowSpan="2"
@@ -1291,12 +1333,12 @@
                                         <ui:TextBlock Grid.Row="0"
                                                       Grid.Column="0"
                                                       FontTypography="Body"
-                                                      Text="结合米游社数据计算"
+                                                      Text="{local:Localize Key=settings.useMihoyoData}"
                                                       TextWrapping="Wrap" />
                                         <ui:TextBlock Grid.Row="1"
                                                       Grid.Column="0"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="使用米游社数据（大概两三小时延时），对锄地数量进行修正，由于米游社cookie在一段时间后会失效，需要重新获取，所以如果当天存在米游社的数据，则上限需按照下面配置的来，否则按照上方配置的限制来（考虑到锄地之外的杀怪，如狗粮卡时间，所以估算值可能不一样）。"
+                                                      Text="{local:Localize Key=settings.useMihoyoDataDescription}"
                                                       TextWrapping="Wrap" />
                                         <ui:ToggleSwitch Grid.Row="0"
                                                          Grid.RowSpan="2"
@@ -1326,12 +1368,12 @@
                                         <ui:TextBlock Grid.Row="0"
                                                       Grid.Column="0"
                                                       FontTypography="Body"
-                                                      Text="日精英上限"
+                                                      Text="{local:Localize Key=settings.mihoyoDailyEliteLimit}"
                                                       TextWrapping="Wrap" />
                                         <ui:TextBlock Grid.Row="1"
                                                       Grid.Column="0"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="当锄地精英数量到达上限时，跳过主目标为精英的锄地脚本。"
+                                                      Text="{local:Localize Key=settings.mihoyoDailyEliteLimitDescription}"
                                                       TextWrapping="Wrap" />
                                         <ui:TextBox Grid.Row="0"
                                                     Grid.RowSpan="2"
@@ -1353,12 +1395,12 @@
                                         <ui:TextBlock Grid.Row="0"
                                                       Grid.Column="0"
                                                       FontTypography="Body"
-                                                      Text="日小怪上限"
+                                                      Text="{local:Localize Key=settings.mihoyoDailyMobLimit}"
                                                       TextWrapping="Wrap" />
                                         <ui:TextBlock Grid.Row="1"
                                                       Grid.Column="0"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="当锄地小怪数量到达上限时，会跳过主目标为小怪的锄地脚本。"
+                                                      Text="{local:Localize Key=settings.mihoyoDailyMobLimitDescription}"
                                                       TextWrapping="Wrap" />
                                         <ui:TextBox Grid.Row="0"
                                                     Grid.RowSpan="2"
@@ -1390,12 +1432,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="米游社相关"
+                                          Text="{local:Localize Key=settings.mihoyoSettings}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="用于配置米游社相关的信息如cookie"
+                                          Text="{local:Localize Key=settings.mihoyoSettingsDescription}"
                                           TextWrapping="Wrap" />
 
                             <b:Interaction.Triggers>
@@ -1429,7 +1471,7 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="cookie"
+                                          Text="{local:Localize Key=settings.cookie}"
                                           TextWrapping="Wrap"
                                           VerticalAlignment="Center"/>
 
@@ -1438,7 +1480,7 @@
                                           Grid.RowSpan="2"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="米游社cookie"
+                                          Text="{local:Localize Key=settings.cookieDescription}"
                                           TextWrapping="Wrap"
                                           VerticalAlignment="Top"
                                           Margin="0,24,0,0"/> <!-- 增加上边距使文本向下偏移 -->
@@ -1458,7 +1500,7 @@
                             <!-- 新增帮助按钮 -->
                             <ui:Button Grid.Row="0"
                                        Grid.Column="2"
-                                       Content="?"
+                                       Content="{local:Localize Key=settings.help}"
                                        Width="50"
                                        Height="28"
                                        FontWeight="Bold"
@@ -1482,12 +1524,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="cookie与调度器日志处同步"
+                                          Text="{local:Localize Key=settings.syncCookieWithScheduler}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="开启后，当调度器日志更改，或此处更改，都会同步其cookie。"
+                                          Text="{local:Localize Key=settings.syncCookieWithSchedulerDescription}"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -1523,17 +1565,17 @@
                                   Grid.Column="0"
                                   FontTypography="Body"
                                   TextWrapping="Wrap"
-                                  Text="查看地图（开发者）" />
+                                  Text="{local:Localize Key=settings.viewMap}" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap"
-                                  Text="查看当前识别到的位置" />
+                                  Text="{local:Localize Key=settings.viewMapDescription}" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenMapViewerCommand}"
-                       Content="查看地图" />
+                       Content="{local:Localize Key=settings.viewMapButton}" />
         </ui:CardControl>-->
 
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Keyboard24}">
@@ -1548,13 +1590,13 @@
                         Grid.Column="0"
                         FontTypography="Body"
                         TextWrapping="Wrap"
-                        Text="aaaaaaa" />
+                        Text="{local:Localize Key=settings.placeholder}" />
                     <ui:TextBlock
                         Grid.Row="1"
                         Grid.Column="0"
                         Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                         TextWrapping="Wrap"
-                        Text="xxxxxxxxxxxxxxxxxxxxxxxx" />
+                        Text="{local:Localize Key=settings.placeholderDescription}" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:ToggleSwitch
@@ -1565,7 +1607,7 @@
         <!-- About Option -->
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="帮助" />
+                      Text="{local:Localize Key=settings.help}" />
                       
         <!-- Update Check Card -->
         
@@ -1583,19 +1625,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="版本更新"
+                                  Text="{local:Localize Key=settings.versionUpdate}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="检查软件是否有新版本可用"
+                                  Text="{local:Localize Key=settings.versionUpdateDescription}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,20,0"
                                Command="{Binding CheckUpdateCommand}"
-                               Content="检查更新" />
+                               Content="{local:Localize Key=settings.checkUpdate}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1610,12 +1652,12 @@
                     </Grid.ColumnDefinitions>
                     <emoji:TextBlock Grid.Row="0"
                                      Grid.Column="0"
-                                     Text="检查是否存在最新测试版"
+                                     Text="{local:Localize Key=settings.checkBetaVersion}"
                                      TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【测试版】非常不稳定，请谨慎选择更新！"
+                                  Text="{local:Localize Key=settings.betaVersionWarning}"
                                   TextWrapping="Wrap" />
 
                     <StackPanel
@@ -1626,7 +1668,7 @@
                         <ui:Button 
                                    Margin="0,0,36,0"
                                    Command="{Binding CheckUpdateAlphaCommand}"
-                                   Content="检查更新" />
+                                   Content="{local:Localize Key=settings.checkUpdate}" />
                     </StackPanel>
                 </Grid>
                 <!--<Grid Margin="16">
@@ -1640,19 +1682,19 @@
                     </Grid.ColumnDefinitions>
                     <emoji:TextBlock Grid.Row="0"
                                      Grid.Column="0"
-                                     Text="直接从 Github 获取最新测试版"
+                                     Text="{local:Localize Key=settings.getLatestBetaFromGithub}"
                                      TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="【测试版】非常不稳定，请谨慎选择更新！"
+                                  Text="{local:Localize Key=settings.betaVersionWarning}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding GotoGithubActionCommand}"
-                               Content="访问 Github" />
+                               Content="{local:Localize Key=settings.visitGithub}" />
                 </Grid>-->
             </StackPanel>
         </ui:CardExpander>
@@ -1668,18 +1710,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="关于 BetterGI"
+                                  Text="{local:Localize Key=settings.aboutBetterGI}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="查看项目、文档等信息"
+                                  Text="{local:Localize Key=settings.aboutBetterGIDescription}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding OpenAboutWindowCommand}"
-                       Content="查看" />
+                       Content="{local:Localize Key=settings.view}" />
         </ui:CardControl>
     </StackPanel>
 </Page>

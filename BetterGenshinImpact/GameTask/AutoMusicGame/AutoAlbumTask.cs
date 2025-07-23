@@ -29,10 +29,10 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
         try
         {
             AutoMusicGameTask.Init();
-            Notify.Event(NotificationEvent.AlbumStart).Success("自动音游专辑启动");
+            Notify.Event(NotificationEvent.AlbumStart).Success("notification.message.albumStart");
             Logger.LogInformation("开始自动演奏整个专辑未完成的音乐");
             await StartOneAlbum(ct);
-            Notify.Event(NotificationEvent.AlbumEnd).Success("自动音游专辑结束");
+            Notify.Event(NotificationEvent.AlbumEnd).Success("notification.message.albumEnd");
         }
         catch (NormalEndException e)
         {
@@ -41,7 +41,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
         catch (Exception e)
         {
             Logger.LogError("自动音乐专辑任务异常:{Msg}", e.Message);
-            Notify.Event(NotificationEvent.AlbumError).Error("自动音游专辑异常", e);
+            Notify.Event(NotificationEvent.AlbumError).Error("notification.error.albumExecution", e);
         }
     }
 

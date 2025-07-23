@@ -6,6 +6,7 @@
                  xmlns:dd="urn:gong-wpf-dragdrop"
                  xmlns:local="clr-namespace:BetterGenshinImpact.Model"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:sdl="http://schemas.sdl.com/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
@@ -36,7 +37,7 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontSize="16"
                                   FontTypography="BodyStrong"
-                                  Text="地图追踪设置（相关配置优先级从高到低,UI样式还有问题未解决）" />
+                                  Text="{markup:Localize Key=pathingConfig.mapTrackingSettings}" />
 
                 </StackPanel>
 
@@ -45,7 +46,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="队伍切换设置（路径中存在符合条件的动作、采集物的情况下，自动切换至对应队伍）" />
+                                      Text="{markup:Localize Key=pathingConfig.teamSwitchSettings}" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -96,9 +97,8 @@
 
                                         <ui:TextBlock Margin="10,0"
                                                       VerticalAlignment="Center"
-                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                            则切换到队伍
-                                        </ui:TextBlock>
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{markup:Localize Key=pathingConfig.thenSwitchToTeam}" />
 
 
                                         <!--  结果  -->
@@ -110,7 +110,7 @@
                                         <Button
                                             Command="{Binding DataContext.RemovePartyConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="删除" />
+                                            Content="{markup:Localize Key=pathingConfig.delete}" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -119,7 +119,7 @@
                         <!--  添加条件按钮  -->
                         <Button HorizontalAlignment="Left"
                                 Command="{Binding AddPartyConditionConfigCommand}"
-                                Content="+ 添加条件" />
+                                Content="{markup:Localize Key=pathingConfig.addCondition}" />
                     </StackPanel>
                 </ui:Card>
 
@@ -128,7 +128,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="角色设置（存在多个符合条件的角色情况下，优先使用游戏内编队编号更小的）" />
+                                      Text="{markup:Localize Key=pathingConfig.characterSettings}" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -173,9 +173,8 @@
 
                                         <ui:TextBlock Margin="10,0"
                                                       VerticalAlignment="Center"
-                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
-                                            则角色执行
-                                        </ui:TextBlock>
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{markup:Localize Key=pathingConfig.thenCharacterExecutes}" />
 
                                         <!--  结果  -->
                                         <ComboBox MinWidth="160"
@@ -188,7 +187,7 @@
                                         <Button
                                             Command="{Binding DataContext.RemoveAvatarConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="删除" />
+                                            Content="{markup:Localize Key=pathingConfig.delete}" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -197,7 +196,7 @@
                         <!--  添加条件按钮  -->
                         <Button HorizontalAlignment="Left"
                                 Command="{Binding AddAvatarConditionConfigCommand}"
-                                Content="+ 添加条件" />
+                                Content="{markup:Localize Key=pathingConfig.addCondition}" />
                     </StackPanel>
                 </ui:Card>
 
@@ -214,12 +213,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="使用小道具的间隔时间（毫秒）"
+                                          Text="{markup:Localize Key=pathingConfig.gadgetIntervalTime}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="在移动期间自动使用小道具，填0为不使用"
+                                          Text="{markup:Localize Key=pathingConfig.gadgetIntervalDescription}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -245,12 +244,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="只在传送点时恢复"
+                                          Text="{markup:Localize Key=pathingConfig.onlyRecoverAtTeleport}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="只有路径在传送点时，才会去七天神像恢复"
+                                          Text="{markup:Localize Key=pathingConfig.onlyRecoverAtTeleportDescription}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>

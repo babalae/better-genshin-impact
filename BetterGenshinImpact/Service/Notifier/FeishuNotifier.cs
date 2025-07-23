@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Service.Interface;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -40,7 +41,9 @@ public class FeishuNotifier : INotifier
     {
         if (string.IsNullOrEmpty(Endpoint))
         {
-            throw new NotifierException("Feishu webhook endpoint is not set");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuEndpointEmpty") : "Feishu webhook endpoint is not set";
+            throw new NotifierException(errorMessage);
         }
         
         try
@@ -49,7 +52,9 @@ public class FeishuNotifier : INotifier
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new NotifierException($"Feishu webhook call failed with code: {response.StatusCode}");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuWebhookFailed", response.StatusCode) : $"Feishu webhook call failed with code: {response.StatusCode}";
+                throw new NotifierException(errorMessage);
             }
         }
         catch (NotifierException)
@@ -58,7 +63,9 @@ public class FeishuNotifier : INotifier
         }
         catch (System.Exception ex)
         {
-            throw new NotifierException($"Error sending Feishu webhook: {ex.Message}");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuWebhookError", ex.Message) : $"Error sending Feishu webhook: {ex.Message}";
+            throw new NotifierException(errorMessage);
         }
     }
 
@@ -126,7 +133,9 @@ public class FeishuNotifier : INotifier
             var tokenResponseContent = await accessTokenResponse.Content.ReadAsStringAsync();
             if (!accessTokenResponse.IsSuccessStatusCode)
             {
-                throw new NotifierException($"Feishu access token call failed with code: {accessTokenResponse.StatusCode}");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuTokenFailed", accessTokenResponse.StatusCode) : $"Feishu access token call failed with code: {accessTokenResponse.StatusCode}";
+                throw new NotifierException(errorMessage);
             }
             using (JsonDocument doc = JsonDocument.Parse(tokenResponseContent))
             {
@@ -143,7 +152,9 @@ public class FeishuNotifier : INotifier
         }
         if (string.IsNullOrEmpty(tokenString))
         {
-            throw new NotifierException($"Feishu access token not found");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuTokenNotFound") : "Feishu access token not found";
+            throw new NotifierException(errorMessage);
         }
         return tokenString;
     }
@@ -169,7 +180,9 @@ public class FeishuNotifier : INotifier
             var uploadResponseString = await uploadImageResponse.Content.ReadAsStringAsync();
             if (!uploadImageResponse.IsSuccessStatusCode)
             {
-                throw new NotifierException($"Feishu upload image failed with code: {uploadImageResponse.StatusCode}");
+                var localizationService = App.GetService<ILocalizationService>();
+                var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuUploadFailed", uploadImageResponse.StatusCode) : $"Feishu upload image failed with code: {uploadImageResponse.StatusCode}";
+                throw new NotifierException(errorMessage);
             }
             using (JsonDocument doc = JsonDocument.Parse(uploadResponseString))
             {
@@ -187,7 +200,9 @@ public class FeishuNotifier : INotifier
         }
         if (string.IsNullOrEmpty(imageKey))
         {
-            throw new NotifierException($"Feishu upload image not found image key");
+            var localizationService = App.GetService<ILocalizationService>();
+            var errorMessage = localizationService != null ? localizationService.GetString("notification.error.feishuImageKeyNotFound") : "Feishu upload image not found image key";
+            throw new NotifierException(errorMessage);
         }
         return imageKey;
     }

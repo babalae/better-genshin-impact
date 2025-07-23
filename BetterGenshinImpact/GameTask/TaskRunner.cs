@@ -1,4 +1,4 @@
-ï»¿using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 
 using BetterGenshinImpact.View;
@@ -17,7 +17,7 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 namespace BetterGenshinImpact.GameTask;
 
 /// <summary>
-/// ç”¨äºä»¥ç‹¬ç«‹ä»»åŠ¡çš„æ–¹å¼æ‰§è¡Œä»»æ„æ–¹æ³•
+/// ÓÃÓÚÒÔ¶ÀÁ¢ÈÎÎñµÄ·½Ê½Ö´ĞĞÈÎÒâ·½·¨
 /// </summary>
 public class TaskRunner
 {
@@ -37,24 +37,24 @@ public class TaskRunner
     // }
     
     /// <summary>
-    /// åŠ é”å¹¶ç‹¬ç«‹è¿è¡Œä»»åŠ¡
+    /// ¼ÓËø²¢¶ÀÁ¢ÔËĞĞÈÎÎñ
     /// </summary>
     /// <param name="action"></param>
     /// <returns></returns>
     public async Task RunCurrentAsync(Func<Task> action)
     {
-        // åŠ é”
+        // ¼ÓËø
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)
         {
-            _logger.LogError("ä»»åŠ¡å¯åŠ¨å¤±è´¥ï¼šå½“å‰å­˜åœ¨æ­£åœ¨è¿è¡Œä¸­çš„ç‹¬ç«‹ä»»åŠ¡ï¼Œè¯·ä¸è¦é‡å¤æ‰§è¡Œä»»åŠ¡ï¼");
+            _logger.LogError("ÈÎÎñÆô¶¯Ê§°Ü£ºµ±Ç°´æÔÚÕıÔÚÔËĞĞÖĞµÄ¶ÀÁ¢ÈÎÎñ£¬Çë²»ÒªÖØ¸´Ö´ĞĞÈÎÎñ£¡");
             return;
         }
         try
         {
-            _logger.LogInformation("â†’ {Text}", _name + "ä»»åŠ¡å¯åŠ¨ï¼");
+            _logger.LogInformation("¡ú {Text}", _name + "ÈÎÎñÆô¶¯£¡");
 
-            // åˆå§‹åŒ–
+            // ³õÊ¼»¯
             Init();
             
             CancellationContext.Instance.Set();
@@ -64,39 +64,39 @@ public class TaskRunner
         }
         catch (NormalEndException e)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("ä»»åŠ¡æ‰‹åŠ¨å–æ¶ˆï¼Œæˆ–æ­£å¸¸ç»“æŸ");
-            _logger.LogInformation("ä»»åŠ¡ä¸­æ–­:{Msg}", e.Message);
+            Notify.Event(NotificationEvent.TaskCancel).Success("notification.message.taskCancelNormal");
+            _logger.LogInformation("ÈÎÎñÖĞ¶Ï:{Msg}", e.Message);
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
-                // è¿ç»­æ‰§è¡Œæ—¶ï¼ŒæŠ›å‡ºå¼‚å¸¸ï¼Œç»ˆæ­¢æ‰§è¡Œ
+                // Á¬ĞøÖ´ĞĞÊ±£¬Å×³öÒì³££¬ÖÕÖ¹Ö´ĞĞ
                 throw;
             }
         }
         catch (TaskCanceledException e)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("ä»»åŠ¡è¢«æ‰‹åŠ¨å–æ¶ˆ");
-            _logger.LogInformation("ä»»åŠ¡ä¸­æ–­:{Msg}", "ä»»åŠ¡è¢«å–æ¶ˆ");
+            Notify.Event(NotificationEvent.TaskCancel).Success("notification.message.taskCancelManual");
+            _logger.LogInformation("ÈÎÎñÖĞ¶Ï:{Msg}", "ÈÎÎñ±»È¡Ïû");
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
-                // è¿ç»­æ‰§è¡Œæ—¶ï¼ŒæŠ›å‡ºå¼‚å¸¸ï¼Œç»ˆæ­¢æ‰§è¡Œ
+                // Á¬ĞøÖ´ĞĞÊ±£¬Å×³öÒì³££¬ÖÕÖ¹Ö´ĞĞ
                 throw;
             }
         }
         catch (Exception e)
         {
-            Notify.Event(NotificationEvent.TaskError).Error("ä»»åŠ¡æ‰§è¡Œå¼‚å¸¸", e);
+            Notify.Event(NotificationEvent.TaskError).Error("notification.error.taskExecution", e);
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
         }
         finally
         {
             End();
-            _logger.LogInformation("â†’ {Text}", _name + "ä»»åŠ¡ç»“æŸ");
+            _logger.LogInformation("¡ú {Text}", _name + "ÈÎÎñ½áÊø");
 
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
 
-            // é‡Šæ”¾é”
+            // ÊÍ·ÅËø
             if (hasLock)
             {
                 TaskSemaphore.Release();
@@ -116,8 +116,8 @@ public class TaskRunner
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
-        // æ²¡å¯åŠ¨çš„æ—¶å€™å…ˆå¯åŠ¨
-        bool waitForMainUi = soloTask.Name != "è‡ªåŠ¨ä¸ƒåœ£å¬å”¤" && !soloTask.Name.Contains("è‡ªåŠ¨éŸ³æ¸¸") && !soloTask.Name.Contains("å¹½å¢ƒå±æˆ˜");
+        // Ã»Æô¶¯µÄÊ±ºòÏÈÆô¶¯
+        bool waitForMainUi = soloTask.Name != "×Ô¶¯ÆßÊ¥ÕÙ»½" && !soloTask.Name.Contains("×Ô¶¯ÒôÓÎ") && !soloTask.Name.Contains("ÓÄ¾³Î£Õ½");
         await ScriptService.StartGameTask(waitForMainUi);
         await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
@@ -126,15 +126,15 @@ public class TaskRunner
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Warning("è¯·å…ˆåœ¨å¯åŠ¨é¡µï¼Œå¯åŠ¨æˆªå›¾å™¨å†ä½¿ç”¨æœ¬åŠŸèƒ½"); });
-            throw new NormalEndException("è¯·å…ˆåœ¨å¯åŠ¨é¡µï¼Œå¯åŠ¨æˆªå›¾å™¨å†ä½¿ç”¨æœ¬åŠŸèƒ½");
+            UIDispatcherHelper.Invoke(() => { Toast.Warning("ÇëÏÈÔÚÆô¶¯Ò³£¬Æô¶¯½ØÍ¼Æ÷ÔÙÊ¹ÓÃ±¾¹¦ÄÜ"); });
+            throw new NormalEndException("ÇëÏÈÔÚÆô¶¯Ò³£¬Æô¶¯½ØÍ¼Æ÷ÔÙÊ¹ÓÃ±¾¹¦ÄÜ");
         }
 
-        // æ¸…ç©ºå®æ—¶ä»»åŠ¡è§¦å‘å™¨
+        // Çå¿ÕÊµÊ±ÈÎÎñ´¥·¢Æ÷
         TaskTriggerDispatcher.Instance().ClearTriggers();
 
         
-        // æ¿€æ´»åŸç¥çª—å£
+        // ¼¤»îÔ­Éñ´°¿Ú
         var maskWindow = MaskWindow.Instance();
         SystemControl.ActivateWindow();
         maskWindow.Invoke(maskWindow.Show);
@@ -147,10 +147,11 @@ public class TaskRunner
             return;
         }
         
-        // è¿˜åŸå®æ—¶ä»»åŠ¡è§¦å‘å™¨
+        // »¹Ô­ÊµÊ±ÈÎÎñ´¥·¢Æ÷
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
 
         VisionContext.Instance().DrawContent.ClearAll();
     }
 
 }
+

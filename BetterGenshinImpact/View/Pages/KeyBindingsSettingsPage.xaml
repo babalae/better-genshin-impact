@@ -5,6 +5,7 @@
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:kb="clr-namespace:BetterGenshinImpact.View.Controls.KeyBindings"
+             xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:model="clr-namespace:BetterGenshinImpact.Model"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -28,16 +29,16 @@
         <ui:TextBlock Grid.Row="0"
                       Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="按键绑定设置" />
+                      Text="{markup:Localize Key=keyBindings.title}" />
         <ui:TextBlock Grid.Row="1"
                       Margin="0,0,0,8"
                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                      Text="此处的按键设置默认对除自动拾取、钓鱼、音游、伐木外的内置功能有效，在设置中打开“启用全局按键映射”开关可对JS脚本、战斗脚本和地图追踪内包含的简易策略脚本生效。请手动设置拾取按键、星之归还按键、隐藏主界面按键。"
+                      Text="{markup:Localize Key=keyBindings.description}"
                       TextWrapping="Wrap" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
             <ui:Button Command="{Binding FetchFromRegistryCommand}"
-                       Content="从注册表读取"
+                       Content="{markup:Localize Key=keyBindings.fetchFromRegistry}"
                        Icon="{ui:SymbolIcon Notepad32}" />
         </StackPanel>
 
@@ -53,14 +54,14 @@
                 <ui:TreeListView BorderThickness="0" ItemsSource="{Binding KeyBindingSettingModels}">
                     <ui:TreeListView.Columns>
                         <GridViewColumnCollection>
-                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="动作">
+                            <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="{markup:Localize Key=keyBindings.action}">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <ui:TreeRowExpander Content="{Binding ActionName}" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>
-                            <ui:GridViewColumn Width="120" Header="按键绑定">
+                            <ui:GridViewColumn Width="120" Header="{markup:Localize Key=keyBindings.keyBinding}">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <kb:KeyBindingTextBox Padding="16,6,16,6"

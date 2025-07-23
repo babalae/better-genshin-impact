@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Model;
@@ -25,10 +26,13 @@ public partial class OneDragonTaskItem : ObservableObject
     [ObservableProperty] private OneDragonBaseViewModel? _viewModel;
 
     public Func<Task>? Action { get; private set; }
+    
+    private readonly ILocalizationService _localizationService;
 
     public OneDragonTaskItem(string name)
     {
         Name = name;
+        _localizationService = App.GetService<ILocalizationService>();
     }
 
     // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
@@ -55,13 +59,13 @@ public partial class OneDragonTaskItem : ObservableObject
 
         switch (Name)
         {
-            case "领取邮件":
+            case var name when name == _localizationService.GetString("oneDragon.task.claimMail"):
                 Action = async () =>
                 {
                     await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case "合成树脂":
+            case var name when name == _localizationService.GetString("oneDragon.task.synthesizeResin"):
                 Action = async () =>
                 {
                     try
@@ -71,34 +75,34 @@ public partial class OneDragonTaskItem : ObservableObject
                     }
                     catch (Exception e)
                     {
-                        TaskControl.Logger.LogError("合成树脂执行异常：" + e.Message);
+                        TaskControl.Logger.LogError(_localizationService.GetString("oneDragon.error.synthesizeResinException") + e.Message);
                     }
                 };
                 break;
-            case "自动秘境":
+            case var name when name == _localizationService.GetString("oneDragon.task.autoDomain"):
                 Action = async () =>
                 {
                     if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
                     {
-                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = "根据队伍自动选择";
+                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = _localizationService.GetString("oneDragon.autoFight.autoSelectByTeam");
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
                     if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
                     {
-                        TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
+                        TaskControl.Logger.LogError(_localizationService.GetString("oneDragon.error.autoDomainStrategyNotConfigured"), _localizationService.GetString("oneDragon.error.notConfigured"));
                         return;
                     }
 
                     var (partyName, domainName, sundaySelectedValue) = config.GetDomainConfig();
                     if (string.IsNullOrEmpty(domainName))
                     {
-                        TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过", "未选择");
+                        TaskControl.Logger.LogError(_localizationService.GetString("oneDragon.error.domainNotSelected"), _localizationService.GetString("oneDragon.error.notSelected"));
                         return;
                     }
                     else
                     {
-                        TaskControl.Logger.LogInformation("自动秘境任务：执行");
+                        TaskControl.Logger.LogInformation(_localizationService.GetString("oneDragon.info.autoDomainTaskExecuting"));
                     }
 
                     var autoDomainParam = new AutoDomainParam(0, path)
@@ -110,7 +114,7 @@ public partial class OneDragonTaskItem : ObservableObject
                     await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case "领取每日奖励":
+            case var name when name == _localizationService.GetString("oneDragon.task.claimDailyRewards"):
                 Action = async () =>
                 {
                     await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry,
@@ -118,7 +122,7 @@ public partial class OneDragonTaskItem : ObservableObject
                     await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case "领取尘歌壶奖励":
+            case var name when name == _localizationService.GetString("oneDragon.task.claimSereniteaPotRewards"):
                 Action = async () =>
                 {
                     await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token);

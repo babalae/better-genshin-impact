@@ -8,8 +8,9 @@
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
                  xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
                  xmlns:webview="clr-namespace:BetterGenshinImpact.View.Controls.Webview"
+                 xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  x:Name="app"
-                 Title="发现新版本"
+                 Title="{markup:Localize Key=update.newVersionFound}"
                  Width="680"
                  MinHeight="10"
                  SizeToContent="Height"
@@ -50,12 +51,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="默认更新服务器"
+                                          Text="{markup:Localize Key=update.defaultServer}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="普通用户可点此直接更新"
+                                          Text="{markup:Localize Key=update.defaultServerDescription}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -63,7 +64,7 @@
                         <ui:Button
                             Appearance="Success"
                             Icon="{ui:SymbolIcon ArrowDownload24}"
-                            Content="立即更新"
+                            Content="{markup:Localize Key=common.updateNow}"
                             Command="{Binding UpdateFromSteambirdCommand}" />
                     </StackPanel>
                 </ui:CardControl>
@@ -79,12 +80,12 @@
                             </Grid.RowDefinitions>
                             <emoji:TextBlock Grid.Row="0"
                                           Grid.Column="0"
-                                          Text="Mirror酱⚡"
+                                          Text="{markup:Localize Key=update.mirrorServer}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="Mirror酱用户可以输入CDK高速更新"
+                                          Text="{markup:Localize Key=update.mirrorServerDescription}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -93,12 +94,12 @@
                             Name="EditCdkButton"
                             Margin="0,0,8,0"
                             Icon="{ui:SymbolIcon TicketDiagonal24}"
-                            Content="修改CDK"
+                            Content="{markup:Localize Key=update.editCdk}"
                             Command="{Binding EditCdkCommand}" />
                         <ui:Button
                             Appearance="Success"
                             Icon="{ui:SymbolIcon ArrowDownload24}"
-                            Content="立即更新"
+                            Content="{markup:Localize Key=common.updateNow}"
                             Command="{Binding UpdateFromMirrorChyanCommand}" />
                     </StackPanel>
                 </ui:CardControl>
@@ -141,13 +142,13 @@
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding BackgroundUpdateCommand}"
-                           Content="后台更新"
+                           Content="{markup:Localize Key=update.backgroundUpdate}"
                            Visibility="Collapsed" />
                 <ui:Button Grid.Column="0"
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding OtherUpdateCommand}"
-                           Content="其他更新方式" />
+                           Content="{markup:Localize Key=update.otherUpdateMethods}" />
                 <!--<ui:Button Grid.Column="1"
                            MinWidth="90"
                            Margin="8,0,8,0"
@@ -159,12 +160,12 @@
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding IgnoreCommand}"
-                           Content="不再提示" />
+                           Content="{markup:Localize Key=common.dontRemindAgain}" />
                 <ui:Button Grid.Column="3"
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding CancelCommand}"
-                           Content="取消" />
+                           Content="{markup:Localize Key=common.cancel}" />
             </ui:Grid>
         </ui:Grid>
         <ui:TitleBar Title="{Binding Title, ElementName=app}"
