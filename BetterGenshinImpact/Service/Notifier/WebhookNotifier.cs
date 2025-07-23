@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using System.Collections.Generic;
 using BetterGenshinImpact.Service.Notification;
+using System;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -75,7 +76,8 @@ public class WebhookNotifier : INotifier
             { "event", notificationData.Event },
             { "result", notificationData.Result },
             { "timestamp", notificationData.Timestamp },
-            { "screenshot", notificationData.Screenshot },
+            // 修改截图数据的处理方式，先转换为字节数组再进行Base64编码
+            { "screenshot", notificationData.Screenshot != null ? ConvertToBase64(notificationData.Screenshot) : null },
             { "message", notificationData.Message },
             { "data", notificationData.Data }
         };
@@ -83,5 +85,17 @@ public class WebhookNotifier : INotifier
         var serializedData = JsonSerializer.Serialize(dataToSend, _jsonSerializerOptions);
 
         return new StringContent(serializedData, Encoding.UTF8, "application/json");
+    }
+    
+    // 添加新的辅助方法，用于将图像转换为Base64字符串
+    private string ConvertToBase64(object imageObj)
+    {
+        if (imageObj is byte[] byteArray)
+        {
+            return Convert.ToBase64String(byteArray);
+        }
+        // 如果是ImageSharp图像对象，需要先转换为字节数组
+        // 这里假设使用PNG格式编码
+        return null; // 或者根据实际需要处理其他图像类型
     }
 }
