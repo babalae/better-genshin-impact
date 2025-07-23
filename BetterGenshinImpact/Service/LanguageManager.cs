@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -22,10 +21,7 @@ public class LanguageManager : ILanguageManager, IDisposable
     private readonly object _lockObject = new object();
     private bool _disposed = false;
 
-    // Language file naming convention regex: language-region.json (e.g., en-US.json, zh-CN.json)
-    private static readonly Regex LanguageFilePattern = new Regex(
-        @"^[a-z]{2}(-[A-Z]{2})?\.json$", 
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    // All JSON files in the Languages directory are considered language files
 
     public LanguageManager(ILogger<LanguageManager> logger)
     {
@@ -54,35 +50,43 @@ public class LanguageManager : ILanguageManager, IDisposable
             }
 
             var languageFiles = Directory.GetFiles(_languagesDirectory, "*.json");
-            _logger.LogInformation("Found {Count} language files", languageFiles.Length);
+            _logger.LogInformation("Found {Count} language files in {Directory}", languageFiles.Length, _languagesDirectory);
 
             foreach (var filePath in languageFiles)
             {
+                var fileName = Path.GetFileName(filePath);
+                _logger.LogDebug("Processing language file: {FileName}", fileName);
+                
                 try
                 {
                     var languageInfo = await LoadLanguageInfoAsync(filePath);
                     if (languageInfo != null)
                     {
                         languages.Add(languageInfo);
-                        _logger.LogDebug("Loaded language: {Code} - {Name}", languageInfo.Code, languageInfo.DisplayName);
+                        _logger.LogInformation("Successfully loaded language: {Code} - {DisplayName} from {FileName}", 
+                            languageInfo.Code, languageInfo.DisplayName, fileName);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to load language info from {FileName} - returned null", fileName);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to load language file: {FilePath}", filePath);
+                    _logger.LogError(ex, "Exception while loading language file: {FilePath}", filePath);
                 }
             }
 
-            // Ensure we have at least English as fallback
-            if (!languages.Any(l => l.Code.Equals("en-US", StringComparison.OrdinalIgnoreCase)))
+            // Ensure we have at least Chinese as fallback
+            if (!languages.Any(l => l.Code.Equals("zh-CN", StringComparison.OrdinalIgnoreCase)))
             {
-                _logger.LogWarning("No English language file found, creating default");
+                _logger.LogWarning("No Chinese language file found, creating default");
                 languages.Add(new LanguageInfo
                 {
-                    Code = "en-US",
-                    DisplayName = "English",
-                    NativeName = "English",
-                    FilePath = Path.Combine(_languagesDirectory, "en-US.json"),
+                    Code = "zh-CN",
+                    DisplayName = "简体中文",
+                    NativeName = "简体中文",
+                    FilePath = Path.Combine(_languagesDirectory, "zh-CN.json"),
                     Version = "1.0.0"
                 });
             }
@@ -423,10 +427,19 @@ public class LanguageManager : ILanguageManager, IDisposable
             }
 
             var jsonContent = await File.ReadAllTextAsync(filePath);
-            var languageData = JsonSerializer.Deserialize<LanguageFileData>(jsonContent);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+            var languageData = JsonSerializer.Deserialize<LanguageFileData>(jsonContent, options);
 
             if (languageData?.Metadata != null)
             {
+                _logger.LogDebug("Loaded metadata for {FileName}: Code={Code}, DisplayName={DisplayName}, NativeName={NativeName}", 
+                    fileName, languageData.Metadata.Code, languageData.Metadata.DisplayName, languageData.Metadata.NativeName);
+
                 // Validate metadata
                 if (!ValidateLanguageMetadata(languageData.Metadata, fileName))
                 {
@@ -434,7 +447,7 @@ public class LanguageManager : ILanguageManager, IDisposable
                     return null;
                 }
 
-                return new LanguageInfo
+                var languageInfo = new LanguageInfo
                 {
                     Code = languageData.Metadata.Code ?? Path.GetFileNameWithoutExtension(filePath),
                     DisplayName = languageData.Metadata.DisplayName ?? languageData.Metadata.Code ?? "Unknown",
@@ -442,11 +455,19 @@ public class LanguageManager : ILanguageManager, IDisposable
                     FilePath = filePath,
                     Version = languageData.Metadata.Version ?? "1.0.0"
                 };
+
+                _logger.LogDebug("Created LanguageInfo: Code={Code}, DisplayName={DisplayName}, NativeName={NativeName}", 
+                    languageInfo.Code, languageInfo.DisplayName, languageInfo.NativeName);
+
+                return languageInfo;
             }
             else
             {
                 // Fallback for files without metadata
                 var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+                _logger.LogWarning("No metadata found in {FileName}, using fallback with DisplayName={DisplayName}", 
+                    fileName, fileNameWithoutExt);
+                
                 return new LanguageInfo
                 {
                     Code = fileNameWithoutExt,
@@ -566,7 +587,7 @@ public class LanguageManager : ILanguageManager, IDisposable
     /// Validates language file naming convention
     /// </summary>
     /// <param name="fileName">The file name to validate</param>
-    /// <returns>True if the file name follows the convention, false otherwise</returns>
+    /// <returns>True if the file name is a JSON file, false otherwise</returns>
     private bool ValidateLanguageFileName(string fileName)
     {
         if (string.IsNullOrEmpty(fileName))
@@ -574,7 +595,8 @@ public class LanguageManager : ILanguageManager, IDisposable
             return false;
         }
 
-        return LanguageFilePattern.IsMatch(fileName);
+        // Accept all JSON files in the Languages directory as potential language files
+        return fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -593,22 +615,20 @@ public class LanguageManager : ILanguageManager, IDisposable
         // Check if code is provided
         if (string.IsNullOrEmpty(metadata.Code))
         {
+            _logger.LogWarning("Language metadata missing code in file: {FileName}", fileName);
             return false;
         }
 
-        // Check if code matches file name (without extension)
-        var expectedCode = Path.GetFileNameWithoutExtension(fileName);
-        if (!metadata.Code.Equals(expectedCode, StringComparison.OrdinalIgnoreCase))
+        // Check if displayName is provided
+        if (string.IsNullOrEmpty(metadata.DisplayName))
         {
-            _logger.LogWarning("Language code mismatch: file={FileName}, metadata={Code}", expectedCode, metadata.Code);
+            _logger.LogWarning("Language metadata missing displayName in file: {FileName}", fileName);
             return false;
         }
 
-        // Validate language code format
-        if (!LanguageFilePattern.IsMatch(fileName))
-        {
-            return false;
-        }
+        // Log successful validation
+        _logger.LogDebug("Language metadata validated successfully for {FileName}: Code={Code}, DisplayName={DisplayName}", 
+            fileName, metadata.Code, metadata.DisplayName);
 
         return true;
     }

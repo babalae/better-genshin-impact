@@ -12,7 +12,6 @@
         "trigger.fastPickModeDescription": "打开时，将不再识别具体拾取内容，黑、白名单会失效",
         "trigger.autoSkip.selectOptionMethod": "选择选项的方式",
         "trigger.autoSkip.selectOptionMethodDescription": "后台模式下会自动切换到使用交互键",
-
         "trigger.autoHangout.selectBranch": "选择邀约分支（不支持气泡联想选择）",
         "trigger.autoHangout.selectBranchDescription": "会按照选择分支的关键词进行选项选择",
         "trigger.autoHangout.optionDelay": "选择邀约选项前的延迟（毫秒）",
@@ -1478,7 +1477,6 @@
         "task.autoRedeemCode.description": "自动使用输入的兑换码",
         "task.autoStygianOnslaught.title": "自动幽境危战",
         "task.autoStygianOnslaught.description": "在接触钥匙后的界面启动本任务 -",
-
         "oneDragon.serenitea": "尘歌壶配置",
         "oneDragon.enterPotMethod": "进壶方式选择",
         "oneDragon.purchaseDateAndItems": "购买日期和商品",
