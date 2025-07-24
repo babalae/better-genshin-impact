@@ -19,9 +19,9 @@ public class NetworkRecovery
     {
         var screenArea = CaptureToRectArea();
         var x = (int)(screenArea.Width * 0.3);
-        var y = (int)(screenArea.Height * 0.3);
-        var width = (int)(screenArea.Width * 0.5);
-        var height = (int)(screenArea.Height * 0.5);
+        var y = (int)(screenArea.Height * 0.1);
+        var width = (int)(screenArea.Width * 0.65);
+        var height = (int)(screenArea.Height * 0.85);
         
         return isOcrMatch ? RecognitionObject.OcrMatch(x, y, width, height, targetText) : 
             RecognitionObject.Ocr(x, y, width, height);
@@ -29,8 +29,6 @@ public class NetworkRecovery
     
     public static async Task Start(CancellationToken ct)
     {
-        var fightAssets = AutoFightAssets.Instance;
-        
         await NewRetry.WaitForElementDisappear(
             GetConfirmRa(true,"连接超时","连接已断开","网络错误","无法登录服务器","提示","通知"),
             screen => { 
@@ -45,7 +43,7 @@ public class NetworkRecovery
                 }
             },
             ct,
-            10,
+            5,
             1000
         );
         
@@ -73,20 +71,38 @@ public class NetworkRecovery
             ElementAssets.Instance.PaimonMenuRo,
             ()  => {  
                 using var ra = CaptureToRectArea();
-                //Enter出现
+                
+                var tips = ra.Find(ElementAssets.Instance.MiMenuRo);
+                if (tips.IsExist())
+                {
+                    tips.Click();
+                    tips.Dispose();
+                }
+                
                 var enter =
                     ra.FindMulti(GetConfirmRa());
-                var enterDone = enter.LastOrDefault(t =>
-                    Regex.IsMatch(t.Text, "确认"));
+                var enterDone = enter.FirstOrDefault(t =>
+                    Regex.IsMatch(t.Text, "^确认$")  || Regex.IsMatch(t.Text, "^取消$") || 
+                    Regex.IsMatch(t.Text, "点击进入"));
                 if (enterDone != null)
                 {
                     enterDone.Click();
                     enterDone.Dispose();
                 }
-                if (ra.Find(ElementAssets.Instance.PaimonMenuRo).IsEmpty())
+                
+                var enterG = enter.FirstOrDefault(t =>
+                    Regex.IsMatch(t.Text, "登录其他账号"));
+                if (enterG != null)
                 {
-                    GameCaptureRegion.GameRegion1080PPosClick(1100, 755); 
-                    GameCaptureRegion.GameRegion1080PPosClick(1200, 630); 
+                    enterG.ClickTo(0,-70);
+                    enterG.Dispose();
+                }                
+
+                var exit = enter.FirstOrDefault(t =>
+                    Regex.IsMatch(t.Text, "忘记密码"));
+                if (exit != null)
+                {
+                    GameCaptureRegion.GameRegion1080PPosClick(1257,258); 
                 }
             },
             ct,
@@ -95,6 +111,5 @@ public class NetworkRecovery
         );
         
         await new ReturnMainUiTask().Start(ct);
-        
     }
 }

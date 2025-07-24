@@ -44,10 +44,10 @@ public class TaskControl
                 Logger.LogWarning("网络状态检查：失败");
                 _isSuspendedByNetwork = true;
             }
-            else if (RunnerContext.Instance.IsSuspend)
+            else if (RunnerContext.Instance.IsSuspend && _isSuspendedByNetwork)
             {
                 Logger.LogWarning("网络恢复中...");
-                NetworkRecovery.Start(CancellationToken.None).Wait(10000);
+                NetworkRecovery.Start(CancellationToken.None).Wait(5000);
             }
         }
         catch (Exception ex)
