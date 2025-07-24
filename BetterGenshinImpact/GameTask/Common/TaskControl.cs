@@ -23,12 +23,13 @@ public class TaskControl
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(TaskContext.Instance().Config.OtherConfig.NetworkDetectionInterval);
     private static readonly Ping PingSender = new Ping();
-    
+    private static bool _isSuspendedByNetwork = false;
+
     private static Task CheckNetworkStatusAsync()
     {
         if (DateTime.Now - _lastCheckTime < _checkInterval || !TaskContext.Instance().Config.OtherConfig.NetworkDetectionConfig)
         {
-          return Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         _lastCheckTime = DateTime.Now;
@@ -41,6 +42,7 @@ public class TaskControl
             if (isSuspend)
             {
                 Logger.LogWarning("网络状态检查：失败");
+                _isSuspendedByNetwork = true;
             }
             else if (RunnerContext.Instance.IsSuspend)
             {
@@ -52,10 +54,15 @@ public class TaskControl
         {
             Logger.LogError(ex, "网络状态检查：错误");
             isSuspend = true;
+            _isSuspendedByNetwork = true;
         }
         finally
         {
-            RunnerContext.Instance.IsSuspend = isSuspend;
+            if (_isSuspendedByNetwork && isSuspend != RunnerContext.Instance.IsSuspend)
+            {
+                RunnerContext.Instance.IsSuspend = isSuspend;
+                _isSuspendedByNetwork = false;
+            }
         }
         return Task.CompletedTask;
     }
