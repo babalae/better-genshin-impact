@@ -98,15 +98,15 @@ public class LocalizationService : ILocalizationService, IDisposable
             if (_availableLanguages.Count == 0)
             {
                 _logger.LogWarning("No language files discovered, creating minimal language list");
-                // Create minimal language list with at least English
+                // Create minimal language list with at least Chinese
                 _availableLanguages = new List<LanguageInfo>
                 {
                     new LanguageInfo
                     {
-                        Code = "en-US",
-                        DisplayName = "English",
-                        NativeName = "English",
-                        FilePath = Path.Combine(_languageManager.LanguagesDirectory, "en-US.json"),
+                        Code = "zh-CN",
+                        DisplayName = "简体中文",
+                        NativeName = "简体中文",
+                        FilePath = Path.Combine(_languageManager.LanguagesDirectory, "zh-CN.json"),
                         Version = "1.0.0"
                     }
                 };
@@ -122,9 +122,9 @@ public class LocalizationService : ILocalizationService, IDisposable
             {
                 new LanguageInfo
                 {
-                    Code = "en-US",
-                    DisplayName = "English",
-                    NativeName = "English",
+                    Code = "zh-CN",
+                    DisplayName = "简体中文",
+                    NativeName = "简体中文",
                     FilePath = "fallback",
                     Version = "1.0.0"
                 }
@@ -139,11 +139,11 @@ public class LocalizationService : ILocalizationService, IDisposable
     {
         try
         {
-            _fallbackTranslations = await _languageManager.LoadLanguageAsync("en-US");
+            _fallbackTranslations = await _languageManager.LoadLanguageAsync("zh-CN");
             
             if (_fallbackTranslations.Count == 0)
             {
-                _logger.LogWarning("No English translations loaded, creating minimal fallback translations");
+                _logger.LogWarning("No Chinese translations loaded, creating minimal fallback translations");
                 CreateMinimalFallbackTranslations();
             }
             else
@@ -153,7 +153,7 @@ public class LocalizationService : ILocalizationService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load English fallback translations, creating minimal set");
+            _logger.LogError(ex, "Failed to load Chinese fallback translations, creating minimal set");
             CreateMinimalFallbackTranslations();
         }
     }
@@ -165,18 +165,18 @@ public class LocalizationService : ILocalizationService, IDisposable
     {
         _fallbackTranslations = new Dictionary<string, string>
         {
-            ["common.ok"] = "OK",
-            ["common.cancel"] = "Cancel",
-            ["common.save"] = "Save",
-            ["common.close"] = "Close",
-            ["common.error"] = "Error",
-            ["common.warning"] = "Warning",
-            ["common.information"] = "Information",
-            ["settings.title"] = "Settings",
-            ["settings.language"] = "Language",
-            ["error.translation_load_failed"] = "Failed to load translations",
-            ["error.language_not_available"] = "Language not available",
-            ["error.file_corrupted"] = "Language file corrupted"
+            ["common.ok"] = "确定",
+            ["common.cancel"] = "取消",
+            ["common.save"] = "保存",
+            ["common.close"] = "关闭",
+            ["common.error"] = "错误",
+            ["common.warning"] = "警告",
+            ["common.information"] = "信息",
+            ["settings.title"] = "设置",
+            ["settings.language"] = "语言",
+            ["error.translation_load_failed"] = "加载翻译失败",
+            ["error.language_not_available"] = "语言不可用",
+            ["error.file_corrupted"] = "语言文件损坏"
         };
         
         _logger.LogInformation("Created {Count} minimal fallback translations", _fallbackTranslations.Count);
@@ -192,14 +192,14 @@ public class LocalizationService : ILocalizationService, IDisposable
             _logger.LogWarning("Initializing emergency fallback mode");
             
             // Set minimal state
-            CurrentLanguage = "en-US";
+            CurrentLanguage = "zh-CN";
             _availableLanguages = new List<LanguageInfo>
             {
                 new LanguageInfo
                 {
-                    Code = "en-US",
-                    DisplayName = "English (Emergency)",
-                    NativeName = "English (Emergency)",
+                    Code = "zh-CN",
+                    DisplayName = "简体中文 (紧急)",
+                    NativeName = "简体中文 (紧急)",
                     FilePath = "emergency",
                     Version = "1.0.0"
                 }
@@ -214,7 +214,7 @@ public class LocalizationService : ILocalizationService, IDisposable
         {
             _logger.LogCritical(ex, "Even emergency fallback initialization failed - localization service may not function properly");
             // Set absolute minimal state
-            CurrentLanguage = "en-US";
+            CurrentLanguage = "zh-CN";
             _availableLanguages = new List<LanguageInfo>();
             _fallbackTranslations = new Dictionary<string, string>();
             _currentTranslations = new Dictionary<string, string>();
@@ -246,7 +246,7 @@ public class LocalizationService : ILocalizationService, IDisposable
                 }
             }
 
-            // Fallback to English
+            // Fallback to Chinese
             if (_fallbackTranslations.TryGetValue(key, out var fallbackTranslation))
             {
                 _logger.LogDebug("Using fallback translation for key: {Key} (current language: {Language})", key, CurrentLanguage);
@@ -326,8 +326,8 @@ public class LocalizationService : ILocalizationService, IDisposable
                 }
                 else
                 {
-                    _logger.LogWarning("All fallback strategies failed, using English");
-                    languageCode = "en-US";
+                    _logger.LogWarning("All fallback strategies failed, using Chinese");
+                    languageCode = "zh-CN";
                 }
             }
 
@@ -343,7 +343,7 @@ public class LocalizationService : ILocalizationService, IDisposable
                 if (_fallbackTranslations.Count > 0)
                 {
                     translations = new Dictionary<string, string>(_fallbackTranslations);
-                    languageCode = "en-US";
+                    languageCode = "zh-CN";
                     _logger.LogWarning("Using fallback translations due to empty translation set");
                 }
                 else
@@ -351,7 +351,7 @@ public class LocalizationService : ILocalizationService, IDisposable
                     // Create absolute minimal translations
                     CreateMinimalFallbackTranslations();
                     translations = new Dictionary<string, string>(_fallbackTranslations);
-                    languageCode = "en-US";
+                    languageCode = "zh-CN";
                     _logger.LogWarning("Created minimal translations due to complete translation failure");
                 }
             }
@@ -370,7 +370,7 @@ public class LocalizationService : ILocalizationService, IDisposable
         {
             _logger.LogError(ex, "Critical error setting language: {LanguageCode}, attempting recovery", languageCode);
             
-            // Attempt to recover by reverting to original language or English
+            // Attempt to recover by reverting to original language or Chinese
             await AttemptLanguageRecovery(originalLanguage, ex);
         }
     }
@@ -459,18 +459,18 @@ public class LocalizationService : ILocalizationService, IDisposable
         {
             var translations = await _languageManager.LoadLanguageAsync(languageCode);
             
-            if (translations.Count == 0 && !languageCode.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+            if (translations.Count == 0 && !languageCode.Equals("zh-CN", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogWarning("No translations loaded for {LanguageCode}, trying fallback to English", languageCode);
+                _logger.LogWarning("No translations loaded for {LanguageCode}, trying fallback to Chinese", languageCode);
                 
-                // Try to reload English fallback
-                var fallbackTranslations = await _languageManager.LoadLanguageAsync("en-US");
+                // Try to reload Chinese fallback
+                var fallbackTranslations = await _languageManager.LoadLanguageAsync("zh-CN");
                 if (fallbackTranslations.Count > 0)
                 {
                     return fallbackTranslations;
                 }
                 
-                // If even English failed, use our cached fallback
+                // If even Chinese failed, use our cached fallback
                 if (_fallbackTranslations.Count > 0)
                 {
                     _logger.LogWarning("Using cached fallback translations");
@@ -520,28 +520,28 @@ public class LocalizationService : ILocalizationService, IDisposable
                 }
             }
 
-            // Try to fall back to English
+            // Try to fall back to Chinese
             try
             {
-                var englishTranslations = await _languageManager.LoadLanguageAsync("en-US");
-                if (englishTranslations.Count > 0)
+                var chineseTranslations = await _languageManager.LoadLanguageAsync("zh-CN");
+                if (chineseTranslations.Count > 0)
                 {
-                    _currentTranslations = englishTranslations;
-                    CurrentLanguage = "en-US";
-                    _logger.LogInformation("Successfully fell back to English");
+                    _currentTranslations = chineseTranslations;
+                    CurrentLanguage = "zh-CN";
+                    _logger.LogInformation("Successfully fell back to Chinese");
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to fall back to English");
+                _logger.LogError(ex, "Failed to fall back to Chinese");
             }
 
             // Use cached fallback translations
             if (_fallbackTranslations.Count > 0)
             {
                 _currentTranslations = new Dictionary<string, string>(_fallbackTranslations);
-                CurrentLanguage = "en-US";
+                CurrentLanguage = "zh-CN";
                 _logger.LogWarning("Using cached fallback translations for recovery");
                 return;
             }
@@ -549,7 +549,7 @@ public class LocalizationService : ILocalizationService, IDisposable
             // Create minimal emergency translations
             CreateMinimalFallbackTranslations();
             _currentTranslations = new Dictionary<string, string>(_fallbackTranslations);
-            CurrentLanguage = "en-US";
+            CurrentLanguage = "zh-CN";
             _logger.LogWarning("Created minimal emergency translations for recovery");
         }
         catch (Exception recoveryEx)
@@ -558,7 +558,7 @@ public class LocalizationService : ILocalizationService, IDisposable
                 originalException.Message);
             
             // Set absolute minimal state
-            CurrentLanguage = "en-US";
+            CurrentLanguage = "zh-CN";
             _currentTranslations = new Dictionary<string, string>();
             _fallbackTranslations = new Dictionary<string, string>();
         }
@@ -621,9 +621,9 @@ public class LocalizationService : ILocalizationService, IDisposable
             return matchingLanguage.Code;
         }
 
-        // Default to English
-        _logger.LogInformation("Using default language: en-US");
-        return "en-US";
+        // Default to Chinese
+        _logger.LogInformation("Using default language: zh-CN");
+        return "zh-CN";
     }
 
     /// <summary>
@@ -668,15 +668,15 @@ public class LocalizationService : ILocalizationService, IDisposable
 
                 _logger.LogInformation("Available languages updated. New count: {Count}", _availableLanguages.Count);
 
-                // Validate that we still have at least English available
-                if (!_availableLanguages.Any(l => l.Code.Equals("en-US", StringComparison.OrdinalIgnoreCase)))
+                // Validate that we still have at least Chinese available
+                if (!_availableLanguages.Any(l => l.Code.Equals("zh-CN", StringComparison.OrdinalIgnoreCase)))
                 {
-                    _logger.LogWarning("English language no longer available after file change, adding fallback entry");
+                    _logger.LogWarning("Chinese language no longer available after file change, adding fallback entry");
                     _availableLanguages.Add(new LanguageInfo
                     {
-                        Code = "en-US",
-                        DisplayName = "English (Fallback)",
-                        NativeName = "English (Fallback)",
+                        Code = "zh-CN",
+                        DisplayName = "简体中文 (回退)",
+                        NativeName = "简体中文 (回退)",
                         FilePath = "fallback",
                         Version = "1.0.0"
                     });
@@ -695,9 +695,9 @@ public class LocalizationService : ILocalizationService, IDisposable
                 {
                     new LanguageInfo
                     {
-                        Code = "en-US",
-                        DisplayName = "English (Recovery)",
-                        NativeName = "English (Recovery)",
+                        Code = "zh-CN",
+                        DisplayName = "简体中文 (恢复)",
+                        NativeName = "简体中文 (恢复)",
                         FilePath = "recovery",
                         Version = "1.0.0"
                     }
@@ -752,19 +752,19 @@ public class LocalizationService : ILocalizationService, IDisposable
             {
                 _logger.LogWarning("Current language file deleted: {Language}, attempting graceful fallback", CurrentLanguage);
                 
-                // Try to find an alternative language or fall back to English
+                // Try to find an alternative language or fall back to Chinese
                 var fallbackLanguage = await FindBestFallbackLanguage(deletedFileName);
                 await SetLanguageAsync(fallbackLanguage);
             }
-            else if (deletedFileName.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+            else if (deletedFileName.Equals("zh-CN", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogWarning("English fallback file deleted, creating emergency fallback translations");
+                _logger.LogWarning("Chinese fallback file deleted, creating emergency fallback translations");
                 
                 // Recreate minimal fallback translations
                 CreateMinimalFallbackTranslations();
                 
-                // If current language is English, update current translations too
-                if (CurrentLanguage.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+                // If current language is Chinese, update current translations too
+                if (CurrentLanguage.Equals("zh-CN", StringComparison.OrdinalIgnoreCase))
                 {
                     _currentTranslations = new Dictionary<string, string>(_fallbackTranslations);
                     LanguageChanged?.Invoke(this, new LanguageChangedEventArgs(CurrentLanguage, CurrentLanguage));
@@ -800,13 +800,13 @@ public class LocalizationService : ILocalizationService, IDisposable
                     _logger.LogWarning("Modified language file {Language} is empty or corrupted, keeping existing translations", CurrentLanguage);
                 }
             }
-            else if (changedFileName.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+            else if (changedFileName.Equals("zh-CN", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogInformation("English fallback file modified, reloading fallback translations");
+                _logger.LogInformation("Chinese fallback file modified, reloading fallback translations");
                 
                 try
                 {
-                    var newFallbackTranslations = await _languageManager.LoadLanguageAsync("en-US");
+                    var newFallbackTranslations = await _languageManager.LoadLanguageAsync("zh-CN");
                     if (newFallbackTranslations.Count > 0)
                     {
                         _fallbackTranslations = newFallbackTranslations;
@@ -814,12 +814,12 @@ public class LocalizationService : ILocalizationService, IDisposable
                     }
                     else
                     {
-                        _logger.LogWarning("Modified English file is empty, keeping existing fallback translations");
+                        _logger.LogWarning("Modified Chinese file is empty, keeping existing fallback translations");
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error reloading English fallback file, keeping existing translations");
+                    _logger.LogError(ex, "Error reloading Chinese fallback file, keeping existing translations");
                 }
             }
         }
@@ -884,14 +884,14 @@ public class LocalizationService : ILocalizationService, IDisposable
                 return systemLanguage;
             }
 
-            // Default to English
-            _logger.LogInformation("Using English as final fallback");
-            return "en-US";
+            // Default to Chinese
+            _logger.LogInformation("Using Chinese as final fallback");
+            return "zh-CN";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finding fallback language, defaulting to English");
-            return "en-US";
+            _logger.LogError(ex, "Error finding fallback language, defaulting to Chinese");
+            return "zh-CN";
         }
     }
 

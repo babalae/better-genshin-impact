@@ -1473,6 +1473,8 @@
     "oneDragon.completionActions": "完成後操作",
     "oneDragon.actionsAfterTaskCompletion": "任務完成後執行的操作",
     "oneDragon.operationsAfterOneDragonEnd": "一條龍結束後操作",
+    "music.music.autoCompleteTitle": "【乐曲】 演奏单个乐曲",
+    "music.music.description": "进入演奏界面使用，下落模式必须选择垂落模式",
     "music.album.autoCompleteTitle": "【專輯】 全自動完成整個專輯",
     "music.album.description": "進入專輯介面使用，自動演奏未完成樂曲 -",
     "music.album.mustCanorusTitle": "【專輯】 自動演奏未達成【大音天籟】的樂曲",

@@ -40,9 +40,6 @@
         <!-- AutoMusicGame Task Module -->
         <taskControls:AutoMusicGameTaskControl DataContext="{Binding}" />
 
-        <!-- AutoAlbum Task Module -->
-        <taskControls:AutoAlbumTaskControl DataContext="{Binding}" />
-
         <!-- AutoFishing Task Module -->
         <taskControls:AutoFishingTaskControl DataContext="{Binding}" />
 

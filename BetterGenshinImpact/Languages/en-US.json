@@ -1484,6 +1484,8 @@
         "oneDragon.completionActions": "Actions After Completion",
         "oneDragon.actionsAfterTaskCompletion": "Actions to perform after task completion.",
         "oneDragon.operationsAfterOneDragonEnd": "Operations After One-Dragon Ends",
+        "music.music.autoCompleteTitle": "【乐曲】 演奏单个乐曲",
+        "music.music.description": "进入演奏界面使用，下落模式必须选择垂落模式",
         "music.album.autoCompleteTitle": "【Album】 Fully Automatic Album Completion",
         "music.album.description": "Used in the album interface, automatically plays uncompleted songs -",
         "music.album.mustCanorusTitle": "【Album】 Automatically play songs that have not achieved 【Canorus Greatness】",

@@ -214,11 +214,12 @@ public class Genshin
     }
 
     /// <summary>
-    /// 获取当前在小地图上的位置坐标
+    /// 获取当前在小地图上的位置坐标，如果缓存时间内有匹配成功的坐标优先返回缓存坐标，否则调用NavigationInstance的getPositionStable
     /// </summary>
     /// <param name="mapName">大地图名称</param>
+    /// <param name="cacheTimeMs">缓存时间，单位毫秒，默认900ms</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap(string mapName)
+    public Point2f GetPositionFromMap(string mapName, int cacheTimeMs = 900)
     {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
@@ -226,7 +227,28 @@ public class Genshin
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
-        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value.GetPositionStable(imageRegion, mapName));
+        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value.GetPositionStableByCache(imageRegion, mapName, cacheTimeMs));
+    }
+    
+    /// <summary>
+    /// 获取当前在小地图上的位置坐标, 局部匹配, 需要世界坐标, 在坐标附近匹配, 失败不进行全局匹配
+    /// </summary>
+    /// <param name="mapName">大地图名称</param>
+    /// <param name="x">世界坐标x</param>
+    /// <param name="y">世界坐标y</param>
+    /// <returns>包含X和Y坐标的Point2f结构体</returns>
+    public Point2f GetPositionFromMap(string mapName, float x, float y)
+    {
+        var imageRegion = CaptureToRectArea();
+        if (!Bv.IsInMainUi(imageRegion))
+        {
+            throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
+        }
+        var sceneMap = MapManager.GetMap(mapName);
+        var navigationInstance = LazyNavigationInstance.Value;
+        var pos = sceneMap.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(x, y));
+        navigationInstance.SetPrevPosition(pos.X, pos.Y);
+        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName));
     }
 
     #endregion 大地图操作
