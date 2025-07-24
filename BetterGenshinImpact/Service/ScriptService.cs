@@ -118,7 +118,7 @@ public partial class ScriptService : IScriptService
 
         if (!string.IsNullOrEmpty(groupName))
         {
-            var message = _localizationService?.GetString("script.groupLoadedAndStarting", groupName, list.Count) ?? $"脚本组 {groupName} 加载完成，共{list.Count}个脚本，开始执行";
+            var message = _localizationService?.GetString("script.groupLoadedAndStarting", groupName, list.Count) ?? $"Script group {groupName} loaded successfully, {list.Count} scripts total, starting execution";
             _logger.LogInformation(message);
         }
 
@@ -152,14 +152,14 @@ public partial class ScriptService : IScriptService
                     await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
                     if (project.Status != "Enabled")
                     {
-                        var message = _localizationService?.GetString("script.scriptDisabledSkipping", project.Name) ?? $"脚本 {project.Name} 状态为禁用，跳过执行";
+                        var message = _localizationService?.GetString("script.scriptDisabledSkipping", project.Name) ?? $"Script {project.Name} is disabled, skipping execution";
                         _logger.LogInformation(message);
                         continue;
                     }
 
                     if (CancellationContext.Instance.Cts.IsCancellationRequested)
                     {
-                        var message = _localizationService?.GetString("script.executionCancelled") ?? "执行被取消";
+                        var message = _localizationService?.GetString("script.executionCancelled") ?? "Execution cancelled";
                         _logger.LogInformation(message);
                         break;
                     }
@@ -206,13 +206,13 @@ public partial class ScriptService : IScriptService
                         }
                         catch (TaskCanceledException e)
                         {
-                            var message = _localizationService?.GetString("script.cancellingTask", e.Message) ?? $"取消执行任务: {e.Message}";
+                            var message = _localizationService?.GetString("script.cancellingTask", e.Message) ?? $"Cancelling task execution: {e.Message}";
                             _logger.LogInformation(message);
                             throw;
                         }
                         catch (Exception e)
                         {
-                            var errorMessage = _localizationService?.GetString("script.scriptExecutionError") ?? "执行脚本时发生异常";
+                            var errorMessage = _localizationService?.GetString("script.scriptExecutionError") ?? "An exception occurred while executing script";
                             _logger.LogDebug(e, errorMessage);
                             _logger.LogError($"{errorMessage}: {{Msg}}", e.Message);
                             if (taskProgress!=null && taskProgress.CurrentScriptGroupProjectInfo!=null )
@@ -225,7 +225,7 @@ public partial class ScriptService : IScriptService
                             stopwatch.Stop();
                             var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
                             var message = _localizationService?.GetString("script.scriptExecutionCompleted", project.Name, elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60) ?? 
-                                $"√ 脚本执行结束: {project.Name}, 耗时: {elapsedTime.Hours * 60 + elapsedTime.Minutes}分{elapsedTime.TotalSeconds % 60:0.000}秒";
+                                $"√ Script execution completed: {project.Name}, elapsed time: {elapsedTime.Hours * 60 + elapsedTime.Minutes}min {elapsedTime.TotalSeconds % 60:0.000}sec";
                             _logger.LogInformation(message);
                             _logger.LogInformation("------------------------------");
                         }
@@ -260,7 +260,7 @@ public partial class ScriptService : IScriptService
                         var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
                         if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
                         {
-                            var message = _localizationService?.GetString("script.consecutiveUnexpectedErrors") ?? "连续多次出现未预期的异常，自动重启bgi";
+                            var message = _localizationService?.GetString("script.consecutiveUnexpectedErrors") ?? "Multiple consecutive unexpected errors occurred, automatically restarting BGI";
                             _logger.LogInformation(message);
                             Notify.Event(NotificationEvent.GroupEnd).Error("notification.error.unexpectedError");
                             if (autoconfig.RestartGameTogether 
@@ -282,7 +282,7 @@ public partial class ScriptService : IScriptService
         
         if (!string.IsNullOrEmpty(groupName))
         {
-            var message = _localizationService?.GetString("script.groupExecutionCompleted", groupName) ?? $"脚本组 {groupName} 执行结束";
+            var message = _localizationService?.GetString("script.groupExecutionCompleted", groupName) ?? $"Script group {groupName} execution completed";
             _logger.LogInformation(message);
         }
 
@@ -349,29 +349,29 @@ public partial class ScriptService : IScriptService
         {
             if (project.Project == null)
             {
-                var errorMessage = _localizationService?.GetString("script.projectIsNull") ?? "Project 为空";
+                var errorMessage = _localizationService?.GetString("script.projectIsNull") ?? "Project is null";
                 throw new Exception(errorMessage);
             }
 
-            var message = _localizationService?.GetString("script.startingJsScript", project.Name) ?? $"√ 开始执行JS脚本: {project.Name}";
+            var message = _localizationService?.GetString("script.startingJsScript", project.Name) ?? $"√ Starting JS script: {project.Name}";
             _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "KeyMouse")
         {
-            var message = _localizationService?.GetString("script.startingKeyMouseScript", project.Name) ?? $"√ 开始执行键鼠脚本: {project.Name}";
+            var message = _localizationService?.GetString("script.startingKeyMouseScript", project.Name) ?? $"√ Starting key-mouse script: {project.Name}";
             _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "Pathing")
         {
-            var message = _localizationService?.GetString("script.startingPathingTask", project.Name) ?? $"√ 开始执行地图追踪任务: {project.Name}";
+            var message = _localizationService?.GetString("script.startingPathingTask", project.Name) ?? $"√ Starting pathing task: {project.Name}";
             _logger.LogInformation(message);
             await project.Run();
         }
         else if (project.Type == "Shell")
         {
-            var message = _localizationService?.GetString("script.startingShellScript", project.Name) ?? $"√ 开始执行shell: {project.Name}";
+            var message = _localizationService?.GetString("script.startingShellScript", project.Name) ?? $"√ Starting shell script: {project.Name}";
             _logger.LogInformation(message);
             await project.Run();
         }
@@ -430,8 +430,8 @@ public partial class ScriptService : IScriptService
                         {
                             first = false;
                             var localizationService = App.GetService<ILocalizationService>();
-                            var message1 = localizationService?.GetString("script.notInMainUiWaiting") ?? "当前不在游戏主界面，等待进入主界面后执行任务...";
-                            var message2 = localizationService?.GetString("script.mainUiInstructions") ?? "如果你已经在游戏内的主界面，请按下退出当前界面（ESC）或者等待30秒后将尝试自动点击空白区域，使前台任务能够正常执行！";
+                            var message1 = localizationService?.GetString("script.notInMainUiWaiting") ?? "Not currently in the game main UI, waiting to enter main UI before executing tasks...";
+                            var message2 = localizationService?.GetString("script.mainUiInstructions") ?? "If you are already in the game's main UI, please press ESC to exit the current interface or wait 30 seconds to attempt to automatically click an empty area, allowing foreground tasks to execute normally!";
                             TaskControl.Logger.LogInformation(message1);
                             TaskControl.Logger.LogInformation(message2);
                         }

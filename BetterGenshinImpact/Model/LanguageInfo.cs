@@ -34,7 +34,8 @@ public class LanguageInfo
 
     public override string ToString()
     {
-        return $"{NativeName} ({DisplayName})";
+        // Return DisplayName for ComboBox display, fallback to Code if DisplayName is empty
+        return !string.IsNullOrEmpty(DisplayName) ? DisplayName : Code;
     }
 
     public override bool Equals(object? obj)

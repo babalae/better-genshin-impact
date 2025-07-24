@@ -12,7 +12,6 @@
         "trigger.fastPickModeDescription": "打开时，将不再识别具体拾取内容，黑、白名单会失效",
         "trigger.autoSkip.selectOptionMethod": "选择选项的方式",
         "trigger.autoSkip.selectOptionMethodDescription": "后台模式下会自动切换到使用交互键",
-
         "trigger.autoHangout.selectBranch": "选择邀约分支（不支持气泡联想选择）",
         "trigger.autoHangout.selectBranchDescription": "会按照选择分支的关键词进行选项选择",
         "trigger.autoHangout.optionDelay": "选择邀约选项前的延迟（毫秒）",
@@ -1473,12 +1472,12 @@
         "task.autoFishing.pleaseText": "请",
         "task.autoFishing.downloadText": "下载",
         "task.autoFishing.torchLibraryDescription": "到本地后填入torch_cpu.dll或torch_cuda.dll的完整地址。如未生效可尝试重启BGI。",
+        
         "task.autoMusicGame.title": "自动千音雅集",
-        "task.autoMusicGame.description": "可以自动演奏单个，也可以全自动完成整个专辑 -",
+        "task.autoMusicGame.description": "可以自动演奏单个，也可以全自动完成整个专辑",
         "task.autoRedeemCode.description": "自动使用输入的兑换码",
         "task.autoStygianOnslaught.title": "自动幽境危战",
         "task.autoStygianOnslaught.description": "在接触钥匙后的界面启动本任务 -",
-
         "oneDragon.serenitea": "尘歌壶配置",
         "oneDragon.enterPotMethod": "进壶方式选择",
         "oneDragon.purchaseDateAndItems": "购买日期和商品",
@@ -1486,8 +1485,11 @@
         "oneDragon.completionActions": "完成后操作",
         "oneDragon.actionsAfterTaskCompletion": "任务完成后执行的操作",
         "oneDragon.operationsAfterOneDragonEnd": "一条龙结束后操作",
+
+        "music.music.autoCompleteTitle": "【乐曲】 演奏单个乐曲",
+        "music.music.description": "进入演奏界面使用，下落模式必须选择垂落模式",
         "music.album.autoCompleteTitle": "【专辑】 全自动完成整个专辑",
-        "music.album.description": "进入专辑界面使用，自动演奏未完成乐曲 -",
+        "music.album.description": "进入专辑界面使用，自动演奏未完成乐曲",
         "music.album.mustCanorusTitle": "【专辑】 自动演奏未达成【大音天籁】的乐曲",
         "music.album.mustCanorusDescription": "关闭时，奖励已经领取就会跳过乐曲。开启时，达成了【大音天籁】才会跳过乐曲",
         "music.album.targetDifficultyTitle": "【专辑】 自动演奏的目标难度选择",

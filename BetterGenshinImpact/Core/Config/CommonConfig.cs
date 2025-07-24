@@ -57,5 +57,5 @@ public partial class CommonConfig : ObservableObject
     /// 应用程序语言设置
     /// </summary>
     [ObservableProperty]
-    private string _language = "en-US";
+    private string _language = "zh-CN";
 }
