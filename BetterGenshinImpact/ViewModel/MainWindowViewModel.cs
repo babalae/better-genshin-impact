@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -136,6 +137,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnLoaded()
     {
+        I18NExtension.Culture = new CultureInfo("en");
+
         // 预热OCR
         await OcrPreheating();
 

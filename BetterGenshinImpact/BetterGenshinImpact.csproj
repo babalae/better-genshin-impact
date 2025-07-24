@@ -39,6 +39,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+		<PackageReference Include="Antelcat.I18N.WPF" Version="1.1.0" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets" Version="1.0.5" />
@@ -203,10 +204,22 @@
 	    <SubType>Code</SubType>
 	    <DependentUpon>WelcomeDialog.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Properties\Lang.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>Lang.resx</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>
 	  <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="Properties\Lang.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	    <LastGenOutput>Lang.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
 	</ItemGroup>
 	
 </Project>
