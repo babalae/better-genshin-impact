@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -40,6 +41,16 @@ public class TelegramNotifier : INotifier, IDisposable
     public string TelegramApiBaseUrl { get; set; }
 
     /// <summary>
+    ///     代理地址
+    /// </summary>
+    public string ProxyUrl { get; set; }
+
+    /// <summary>
+    ///     是否启用代理
+    /// </summary>
+    public bool ProxyEnabled { get; set; }
+
+    /// <summary>
     ///     通知器名称
     /// </summary>
     public string Name { get; set; } = "Telegram";
@@ -51,13 +62,45 @@ public class TelegramNotifier : INotifier, IDisposable
     /// <param name="telegramBotToken">Telegram机器人Token</param>
     /// <param name="telegramChatId">Telegram聊天ID</param>
     /// <param name="telegramApiBaseUrl">自定义Telegram API基础URL（可以只填写域名，如"xxx.xxx.xxx"），为空则使用默认URL</param>
-    public TelegramNotifier(HttpClient? httpClient = null, string telegramBotToken = "", string telegramChatId = "",
-        string telegramApiBaseUrl = "")
+    /// <param name="proxyUrl">代理地址（可选，格式：http://127.0.0.1:7890）</param>
+    /// <param name="proxyEnabled">是否启用代理</param>
+    public TelegramNotifier(
+        HttpClient? httpClient = null,
+        string telegramBotToken = "",
+        string telegramChatId = "",
+        string telegramApiBaseUrl = "",
+        string proxyUrl = "",
+        bool proxyEnabled = false)
     {
         TelegramBotToken = telegramBotToken;
         TelegramChatId = telegramChatId;
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        _ownsHttpClient = httpClient == null;
+        ProxyUrl = proxyUrl;
+        ProxyEnabled = proxyEnabled;
+
+        if (httpClient != null)
+        {
+            _httpClient = httpClient;
+            _ownsHttpClient = false;
+        }
+        else
+        {
+            var handler = new HttpClientHandler();
+            if (proxyEnabled && !string.IsNullOrEmpty(proxyUrl))
+                try
+                {
+                    handler.Proxy = new WebProxy(proxyUrl);
+                    handler.UseProxy = true;
+                }
+                catch (UriFormatException ex)
+                {
+                    // 抛出异常以通知调用者配置错误
+                    throw new NotifierException($"Invalid Telegram proxy URL format: {proxyUrl}. Details: {ex.Message}");
+                }
+
+            _httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+            _ownsHttpClient = true;
+        }
+
         TelegramApiBaseUrl = FormatApiBaseUrl(telegramApiBaseUrl);
     }
 
@@ -183,4 +226,6 @@ public class TelegramNotifier : INotifier, IDisposable
             return (false, 0, "Failed to parse API response: " + ex.Message);
         }
     }
+
+    
 }

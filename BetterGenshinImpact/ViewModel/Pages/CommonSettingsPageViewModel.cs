@@ -65,6 +65,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public AllConfig Config { get; set; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
+    
+    public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
         new string[] { "zh-Hans", "zh-Hant", "en", "fr" }

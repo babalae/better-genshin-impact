@@ -40,6 +40,15 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     [ObservableProperty] private string _xxtuiStatus = string.Empty;
 
+    [ObservableProperty] private string _discordStatus = string.Empty;
+
+    [ObservableProperty] private string[] _discordImageEncoderNames =
+    [
+        nameof(DiscordWebhookNotifier.ImageEncoderEnum.Png),
+        nameof(DiscordWebhookNotifier.ImageEncoderEnum.Jpeg),
+        nameof(DiscordWebhookNotifier.ImageEncoderEnum.WebP)
+    ];
+
     public NotificationSettingsPageViewModel(IConfigService configService, NotificationService notificationService)
     {
         Config = configService.Get();
@@ -247,6 +256,25 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         var res = await _notificationService.TestNotifierAsync<DingDingWebhook>();
 
         DingDingStatus = res.Message;
+
+        // 添加Toast提示
+        if (res.IsSuccess)
+            Toast.Success(res.Message);
+        else
+            Toast.Error(res.Message);
+
+        IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnTestDiscordWebhookNotification()
+    {
+        IsLoading = true;
+        DiscordStatus = string.Empty;
+
+        var res = await _notificationService.TestNotifierAsync<DiscordWebhookNotifier>();
+
+        DiscordStatus = res.Message;
 
         // 添加Toast提示
         if (res.IsSuccess)

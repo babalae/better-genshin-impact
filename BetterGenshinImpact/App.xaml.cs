@@ -81,9 +81,6 @@ public partial class App : Application
                 services.AddNavigationViewPageProvider();
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
-                // HTTP Server Service
-                services.AddHostedService<HttpServerService>();
-                
                 // Page resolver service
                 services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<IUpdateService, UpdateService>();
