@@ -82,6 +82,10 @@ public partial class ScriptService : IScriptService
             try
             {
                 var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, project.FolderName, project.Name));
+                if (task is null)
+                {
+                    return true;
+                }
                 string message;
                 if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
                 {
