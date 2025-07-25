@@ -71,12 +71,14 @@ public partial class TpConfig : ObservableValidator
     private string _reviveStatueOfTheSevenCountry = "须弥";  // 七天神像所在国家
     
     [ObservableProperty]
+    [property: JsonIgnore]
     private bool _isReviveInNearestStatueOfTheSeven = false; // 是否就近回复
 
     [ObservableProperty] 
     private GiTpPosition? _reviveStatueOfTheSeven;
     
     [ObservableProperty]
+    [property: JsonIgnore]
     private bool _shouldMove = false;  // 回血前是否需要移动
 
     [ObservableProperty]

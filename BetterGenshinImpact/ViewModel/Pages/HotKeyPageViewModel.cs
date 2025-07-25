@@ -34,6 +34,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.View;
 using OpenCvSharp;
 using Vanara.PInvoke;
@@ -581,8 +582,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    LowerHeadThenWalkToTask _lowerHeadThenWalkToTask = new("chest_tip.png", 20000);
-                    _lowerHeadThenWalkToTask.Start(CancellationToken.None);
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

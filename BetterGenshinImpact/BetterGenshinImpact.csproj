@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.47.2-alpha.1</Version>
+		<Version>0.47.2-alpha.3</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -49,8 +49,6 @@
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
 		<PackageReference Include="LibGit2Sharp" Version="0.31.0" />
 		<PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
-		<PackageReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
@@ -73,6 +71,7 @@
 		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Semver" Version="3.0.0" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
 		<PackageReference Include="System.Drawing.Common" Version="9.0.5" />
@@ -159,6 +158,9 @@
 		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -172,6 +174,7 @@
 
 	<ItemGroup>
 	  <Folder Include="GameTask\OneDragon\" />
+	  <Folder Include="GameTask\UseRedeemCode\Assets\1920x1080\" />
 	  <Folder Include="Resources\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />
