@@ -5,6 +5,7 @@ using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -243,11 +244,20 @@ public class GlobalMethod
     public static string[] GetAvatars()
     {
         var combatScenes = new CombatScenes().InitializeTeam(CaptureGameRegion());
-        ReadOnlyCollection<Avatar> avatars = combatScenes.GetAvatars();
+        if (combatScenes.CheckTeamInitialized())
+        {
+            var field = typeof(RunnerContext).GetField("_combatScenes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (field != null)
+            {
+                field.SetValue(RunnerContext.Instance, combatScenes);
+            }
+        }
+        var avatars = combatScenes.GetAvatars();
         return avatars.Count > 0
             ? avatars.Select(avatar => avatar.Name).ToArray()
             : [];
     }
+    
     #endregion 识图操作
 
     #region 文字输入操作
