@@ -8,6 +8,7 @@ using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -54,6 +55,10 @@ public class EngineExtend
         engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));
         engine.AddHostType("ImageRegion", typeof(ImageRegion));
         engine.AddHostType("Region", typeof(Region));
+        
+        engine.AddHostType("CombatScenes", typeof(CombatScenes));
+        engine.AddHostType("CombatScenes", typeof(Avatar));
+
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
@@ -100,6 +105,7 @@ public class EngineExtend
         engine.AddHostObject("middleButtonUp", GlobalMethod.MiddleButtonUp);
         engine.AddHostObject("verticalScroll", GlobalMethod.VerticalScroll);
         engine.AddHostObject("captureGameRegion", GlobalMethod.CaptureGameRegion);
+        engine.AddHostObject("getAvatars", GlobalMethod.GetAvatars);
         engine.AddHostObject("inputText", GlobalMethod.InputText);
 #pragma warning restore CS8974 // Converting method group to non-delegate type
     }

@@ -246,6 +246,7 @@
                                 <MenuItem Header="打开脚本仓库" Command="{Binding OpenLocalScriptRepoCommand}" />
                                 <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
                                 <MenuItem Header="任务倒序排列" Command="{Binding ReverseTaskOrderCommand}" />
+                                <MenuItem Header="导出根据控制文件修改任务" Command="{Binding ExportMergerJsonsCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
@@ -299,7 +300,7 @@
                                             Header="名称" >
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" FontSize="14">
+                                        <TextBlock Text="{Binding Name}" FontSize="14" ToolTip="{Binding FolderName}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="White" />

@@ -81,7 +81,7 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         p.ShowDialog();
         if (p.DialogResult == true)
         {
-            File.WriteAllText(path, multilineTextBox.Text);
+            File.WriteAllText(Global.Absolute(path), multilineTextBox.Text);
             GameTaskManager.RefreshTriggerConfigs();
         }
     }
@@ -117,7 +117,7 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         p.ShowDialog();
         if (p.DialogResult == true)
         {
-            File.WriteAllText(path, multilineTextBox.Text);
+            File.WriteAllText(Global.Absolute(path), multilineTextBox.Text);
             GameTaskManager.RefreshTriggerConfigs();
         }
     }

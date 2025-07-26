@@ -29,6 +29,7 @@
 
 <br/>
 
+[English](./Docs/readme_en.md) | [中文](./README.md)| [繁体中文](./Docs/readme_tcn.md)  
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
@@ -130,4 +131,4 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[1053273766](https://qm.qq.com/q/qtocsOXnIQ)
+提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[1051494685](https://qm.qq.com/q/TPQtZlgraU)

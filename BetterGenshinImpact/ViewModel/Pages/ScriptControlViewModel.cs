@@ -15,6 +15,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
@@ -132,10 +133,19 @@ public partial class ScriptControlViewModel : ViewModel
 
         GameInfo? gameInfo = null;
         var config = LogParse.LoadConfig();
+        
+        OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
+        if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(mcfg.Cookie))
+        {
+            config.Cookie = mcfg.Cookie;
+        }
+        
         if (!string.IsNullOrEmpty(config.Cookie))
         {
             config.CookieDictionary.TryGetValue(config.Cookie, out gameInfo);
         }
+
+
 
         LogParseConfig.ScriptGroupLogParseConfig? sgpc;
         if (!config.ScriptGroupLogDictionary.TryGetValue(SelectedScriptGroup.Name, out sgpc))
@@ -194,6 +204,13 @@ public partial class ScriptControlViewModel : ViewModel
         dayRangeComboBox.SelectedIndex = 0;
         stackPanel.Children.Add(dayRangeComboBox);
 
+        CheckBox mergerStatsSwitch = new CheckBox
+        {
+            Content = "合并相邻同名配置组",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stackPanel.Children.Add(mergerStatsSwitch);
+        
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox faultStatsSwitch = new CheckBox
         {
@@ -201,14 +218,21 @@ public partial class ScriptControlViewModel : ViewModel
             VerticalAlignment = VerticalAlignment.Center
         };
         stackPanel.Children.Add(faultStatsSwitch);
-
-
+        
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox hoeingStatsSwitch = new CheckBox
         {
             Content = "统计锄地摩拉怪物数",
             VerticalAlignment = VerticalAlignment.Center
         };
+        
+        CheckBox GenerateFarmingPlanData = new CheckBox
+        {
+            Content = "生成锄地规划数据",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stackPanel.Children.Add(GenerateFarmingPlanData);
+        
         //firstRow.Children.Add(toggleSwitch);
 
         // 将第一行添加到 StackPanel
@@ -301,7 +325,10 @@ public partial class ScriptControlViewModel : ViewModel
         dayRangeComboBox.SelectedValue = sgpc.DayRangeValue;
         cookieTextBox.Text = config.Cookie;
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
+        GenerateFarmingPlanData.IsChecked = sgpc.GenerateFarmingPlanData;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
+        mergerStatsSwitch.IsChecked = sgpc.MergerStatsSwitch;
+        
         hoeingDelayTextBox.Text = sgpc.HoeingDelay;
 
         MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
@@ -317,12 +344,19 @@ public partial class ScriptControlViewModel : ViewModel
             sgpc.DayRangeValue = dayRangeValue;
             sgpc.RangeValue = rangeValue;
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
+            sgpc.GenerateFarmingPlanData = GenerateFarmingPlanData.IsChecked ?? false;
             sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
+            sgpc.MergerStatsSwitch = mergerStatsSwitch.IsChecked ?? false;
             sgpc.HoeingDelay = hoeingDelayTextBox.Text;
 
             config.Cookie = cookieValue;
             config.ScriptGroupLogDictionary[SelectedScriptGroup.Name] = sgpc;
 
+            if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(cookieValue))
+            {
+                mcfg.Cookie  = cookieValue;
+            }
+            
             LogParse.WriteConfigFile(config);
 
 
@@ -511,7 +545,34 @@ public partial class ScriptControlViewModel : ViewModel
         projects.ForEach(item => SelectedScriptGroup?.Projects.Add(item));
         if (SelectedScriptGroup != null) WriteScriptGroup(SelectedScriptGroup);
     }
-
+    [RelayCommand]
+    private void ExportMergerJsons()
+    {
+        int count = 0;
+        var pathDir = Path.Combine(LogPath,"exportMergerJson",DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),"AutoPathing");
+        foreach (var scriptGroupProject in SelectedScriptGroup?.Projects ?? [])
+        {
+            if (scriptGroupProject.Type == "Pathing")
+            {
+                var mergerJson= JsonMerger.getMergePathingJson(Path.Combine(MapPathingViewModel.PathJsonPath,
+                    scriptGroupProject.FolderName, scriptGroupProject.Name));
+                string fullPath = Path.Combine(pathDir,scriptGroupProject.FolderName,scriptGroupProject.Name);
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(fullPath, mergerJson);
+                count++;
+            }
+        }
+        if (count>0)
+        {
+            Process.Start("explorer.exe", pathDir);
+        }
+    }
+    
+    
     [RelayCommand]
     public void AddScriptGroupNextFlag(ScriptGroup? item)
     {
@@ -640,18 +701,92 @@ public partial class ScriptControlViewModel : ViewModel
     private void OnAddJsScript()
     {
         var list = LoadAllJsScriptProjects();
-        var combobox = new ComboBox();
+        var stackPanel = CreateJsScriptSelectionPanel(list);
 
-        foreach (var scriptProject in list)
+        var result = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", stackPanel, new Size(500, 600));
+        if (!string.IsNullOrEmpty(result))
         {
-            combobox.Items.Add(scriptProject.FolderName + " - " + scriptProject.Manifest.Name);
+            AddSelectedJsScripts((StackPanel)stackPanel.Content);
+        }
+    }
+
+    private ScrollViewer CreateJsScriptSelectionPanel(List<ScriptProject> list)
+    {
+        var stackPanel = new StackPanel();
+        
+        var filterTextBox = new TextBox
+        {
+            Margin = new Thickness(0, 0, 0, 10),
+            PlaceholderText = "输入搜索条件...",
+        };
+        filterTextBox.TextChanged += delegate { ApplyJsScriptFilter(stackPanel, list, filterTextBox.Text); };
+        stackPanel.Children.Add(filterTextBox);
+        
+        AddJsScriptsToPanel(stackPanel, list, filterTextBox.Text);
+
+        var scrollViewer = new ScrollViewer
+        {
+            Content = stackPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Height = 435 // 固定高度
+        };
+
+        return scrollViewer;
+    }
+
+    private void ApplyJsScriptFilter(StackPanel parentPanel, List<ScriptProject> scripts, string filter)
+    {
+        if (parentPanel.Children.Count > 0)
+        {
+            List<UIElement> removeElements = new List<UIElement>();
+            foreach (UIElement parentPanelChild in parentPanel.Children)
+            {
+                if (parentPanelChild is FrameworkElement frameworkElement && frameworkElement.Name.StartsWith("dynamic_"))
+                {
+                    removeElements.Add(frameworkElement);
+                }
+            }
+
+            removeElements.ForEach(parentPanel.Children.Remove);
         }
 
-        var str = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", combobox);
-        if (!string.IsNullOrEmpty(str))
+        AddJsScriptsToPanel(parentPanel, scripts, filter);
+    }
+
+    private void AddJsScriptsToPanel(StackPanel parentPanel, List<ScriptProject> scripts, string filter)
+    {
+        foreach (var script in scripts)
         {
-            var folderName = str.Split(" - ")[0];
-            SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+            var displayText = script.FolderName + " - " + script.Manifest.Name;
+            
+            if (!string.IsNullOrEmpty(filter) && 
+                !displayText.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+                !script.FolderName.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
+                !script.Manifest.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var checkBox = new CheckBox
+            {
+                Content = displayText,
+                Tag = script.FolderName,
+                Margin = new Thickness(0, 2, 0, 2),
+                Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
+            };
+
+            parentPanel.Children.Add(checkBox);
+        }
+    }
+
+    private void AddSelectedJsScripts(StackPanel stackPanel)
+    {
+        foreach (var child in stackPanel.Children)
+        {
+            if (child is CheckBox { IsChecked: true } checkBox && checkBox.Tag is string folderName)
+            {
+                SelectedScriptGroup?.AddProject(new ScriptGroupProject(new ScriptProject(folderName)));
+            }
         }
     }
 
@@ -711,6 +846,8 @@ public partial class ScriptControlViewModel : ViewModel
             Margin = new Thickness(0, 0, 0, 10),
             PlaceholderText = "输入筛选条件...",
         };
+        // 设置文本框自动聚焦
+        filterTextBox.Loaded += (s, e) => filterTextBox.Focus();
         filterTextBox.TextChanged += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
         excludeCheckBox.Click += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
         stackPanel.Children.Add(filterTextBox);

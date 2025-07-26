@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
@@ -117,7 +117,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 如果仓库不存在，执行浅克隆操作
                     _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
-                    SimpleCloneRepository(repoUrl, repoPath, onCheckoutProgress);
+                    CloneRepository(repoUrl, repoPath, onCheckoutProgress);
 
                     // CloneRepository(repoUrl, repoPath);
                     updated = true;
@@ -141,15 +141,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
 
                     // 使用浅拉取选项
-                    // var fetchOptions = new FetchOptions
-                    // {
-                    //     Depth = 1 // 浅拉取，只获取最新的提交
-                    // };
+                    var fetchOptions = new FetchOptions();
+                    fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
 
-                    Commands.Fetch(repo, remote.Name, refSpecs, null, "拉取最新更新");
+                    Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
 
                     // 获取当前分支
-                    var branch = repo.Branches["main"] ?? repo.Branches["master"];
+                    var branch = repo.Branches["refs/heads/origin/main"] ?? repo.Branches["main"];
                     if (branch == null)
                     {
                         throw new Exception("未找到main或master分支");
@@ -213,8 +211,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     /// <param name="repoUrl"></param>
     /// <param name="repoPath"></param>
+    /// <param name="onCheckoutProgress"></param>
     /// <exception cref="Exception"></exception>
-    private void CloneRepository(string repoUrl, string repoPath)
+    private void CloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
     {
         // 1. 创建目录
         Directory.CreateDirectory(repoPath);
@@ -231,9 +230,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 4. 获取数据（使用浅克隆选项）
         var fetchOptions = new FetchOptions
         {
-            Depth = 1, // 浅克隆，只获取最新的提交
             TagFetchMode = TagFetchMode.None // 不获取标签
         };
+        fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
 
         // 5. 执行获取操作
         Commands.Fetch(repo, remote.Name, ["+refs/heads/*:refs/remotes/origin/*"], fetchOptions, "初始化拉取");
@@ -252,7 +251,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
 
         // 9. 检出分支
-        Commands.Checkout(repo, localBranch);
+        CheckoutOptions checkoutOptions = new CheckoutOptions
+        {
+            OnCheckoutProgress = onCheckoutProgress
+        };  
+        Commands.Checkout(repo, localBranch, checkoutOptions);
     }
 
     private void GitConfig(Repository repo)
@@ -404,16 +407,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         ZipFile.ExtractToDirectory(zipPath, ReposPath, true);
     }
 
-    public async Task ImportScriptFromClipboard()
+    public async Task ImportScriptFromClipboard(string clipboardText)
     {
         // 获取剪切板内容
         try
         {
-            if (Clipboard.ContainsText())
-            {
-                string clipboardText = Clipboard.GetText();
-                await ImportScriptFromUri(clipboardText, true);
-            }
+            await ImportScriptFromUri(clipboardText, true);
         }
         catch (Exception e)
         {
@@ -605,6 +604,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     File.Copy(scriptPath, destPath, true);
                 }
 
+                UpdateSubscribedScriptPaths();
                 Toast.Success("脚本订阅链接导入完成");
             }
             else
@@ -612,6 +612,48 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 Toast.Warning($"未知的脚本路径：{path}");
             }
         }
+    }
+
+    // 更新订阅脚本路径列表，移除无效路径
+    public void UpdateSubscribedScriptPaths()
+    {
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+        var validRoots = PathMapper.Keys.ToHashSet();
+
+        var allPaths = scriptConfig.SubscribedScriptPaths
+            .Distinct()
+            .OrderBy(path => path)
+            .ToList();
+
+        var pathsToKeep = new HashSet<string>();
+
+        foreach (var path in allPaths)
+        {
+            if (string.IsNullOrEmpty(path) || !path.Contains('/'))
+                continue;
+
+            var root = path.Split('/')[0];
+            if (!validRoots.Contains(root))
+                continue;
+
+            var (_, remainingPath) = GetFirstFolderAndRemainingPath(path);
+            var userPath = Path.Combine(PathMapper[root], remainingPath);
+            if (!Directory.Exists(userPath) && !File.Exists(userPath))
+                continue;
+
+            // 检查是否已被父路径覆盖
+            bool isCoveredByParent = pathsToKeep.Any(p => 
+                path.StartsWith(p + "/") || path == p);
+        
+            if (!isCoveredByParent)
+            {
+                pathsToKeep.Add(path);
+            }
+        }
+
+        scriptConfig.SubscribedScriptPaths = pathsToKeep
+            .OrderBy(path => path)
+            .ToList();
     }
 
     private void CopyDirectory(string sourceDir, string destDir)
@@ -656,6 +698,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public void OpenLocalRepoInWebView()
     {
+        UpdateSubscribedScriptPaths();
         if (_webWindow is not { IsVisible: true })
         {
             _webWindow = new WebpageWindow
@@ -668,7 +711,22 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
             _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
+            {
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+
+                // 允许内部外链使用默认浏览器打开
+                _webWindow.Panel!.WebView.CoreWebView2.NewWindowRequested += (sender, e) =>
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        UseShellExecute = true,
+                        FileName = e.Uri
+                    };
+                    Process.Start(psi);
+
+                    e.Handled = true;
+                };
+            };
             _webWindow.Show();
         }
         else

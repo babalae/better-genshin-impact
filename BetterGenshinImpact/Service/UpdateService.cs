@@ -311,8 +311,7 @@ public class UpdateService : IUpdateService
                 string md = $"# {name}{new string('\n', 2)}{body}";
 
                 md = WebUtility.HtmlEncode(md);
-                string md2html = ResourceHelper.GetString($"pack://application:,,,/Assets/Strings/md2html.html",
-                    Encoding.UTF8);
+                string md2html = File.ReadAllText(Global.Absolute(@"Assets\Strings\md2html.html"), Encoding.UTF8);
                 var html = md2html.Replace("{{content}}", md);
 
                 return html;

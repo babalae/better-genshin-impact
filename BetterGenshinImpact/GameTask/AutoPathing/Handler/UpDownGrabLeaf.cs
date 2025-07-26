@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using static BetterGenshinImpact.Core.Recognition.OpenCv.OpenCvCommonHelper;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
@@ -63,7 +64,9 @@ public class UpDownGrabLeaf : IActionHandler
                 remainingCycles--;
             }
         }
-        
+        // 失败后视角回正
+        Simulation.SendInput.Mouse.MiddleButtonClick();
+        await Delay(300, ct);
         Logger.LogError("没有找到四叶印");
     }
     
@@ -74,22 +77,17 @@ public class UpDownGrabLeaf : IActionHandler
             return false;
             
         // 第一组检测点 (原始位置)
-        var centerColor1 = captureRegion.SrcMat.At<Vec3b>(1000, 1500);
-        var tPoint1 = captureRegion.SrcMat.At<Vec3b>(1041, 1508);
-        var point987 = captureRegion.SrcMat.At<Vec3b>(987, 1500);
-        var point1010 = captureRegion.SrcMat.At<Vec3b>(1010, 1500);
+        Point[] detectPoints = { new(1500, 1000), new( 1508, 1041), new(1500, 987), new(1500, 1010) };
+        // 第二组检测点 (右移120像素)
+        Point[] detectPointsShifted1 = { new(1620, 1000), new(1628, 1041), new(1620, 987), new(1620, 1010)};
+        // 第二组检测点 (左移104像素)
+        Point[] detectPointsShifted2 = { new(1396, 1000), new(1404, 1041), new(1396, 987), new(1396, 1010)};
         
-        // 第二组检测点 (平移120像素)
-        var centerColor2 = captureRegion.SrcMat.At<Vec3b>(1000, 1620);
-        var tPoint2 = captureRegion.SrcMat.At<Vec3b>(1041, 1628);
-        var point987Shifted = captureRegion.SrcMat.At<Vec3b>(987, 1620);
-        var point1010Shifted = captureRegion.SrcMat.At<Vec3b>(1010, 1620);
-        
-        // 检测是否找到四叶印
-        var foundLeaf1 = IsWhite(centerColor1) && IsWhite(tPoint1) && IsWhite(point987) && IsWhite(point1010);
-        var foundLeaf2 = IsWhite(centerColor2) && IsWhite(tPoint2) && IsWhite(point987Shifted) && IsWhite(point1010Shifted);
-        
-        return foundLeaf1 || foundLeaf2;
+        var lower = new Scalar(245, 245, 245);
+        var upper = new Scalar(255, 255, 255);
+        return CheckPointsInRange(captureRegion.SrcMat, detectPoints, lower, upper) ||
+               CheckPointsInRange(captureRegion.SrcMat, detectPointsShifted1, lower, upper) ||
+               CheckPointsInRange(captureRegion.SrcMat, detectPointsShifted2, lower, upper);
     }
     
     private async Task InteractWithLeaf(CancellationToken ct)
@@ -117,16 +115,5 @@ public class UpDownGrabLeaf : IActionHandler
 
         await Delay(200, ct);
     }
-
-    bool IsWhite(int b, int g, int r)
-    {
-        return r is >= 245 and <= 255 &&
-               g is >= 245 and <= 255 &&
-               b is >= 245 and <= 255;
-    }
-
-    bool IsWhite(Vec3b centerColor)
-    {
-        return IsWhite(centerColor[0], centerColor[1], centerColor[2]);
-    }
+    
 }

@@ -4,6 +4,7 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition;
 
@@ -101,6 +102,20 @@ public class RecognitionObject
         {
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = mat,
+            UseMask = false, 
+        };
+        
+        return ro.InitTemplate();
+    }
+
+    public static RecognitionObject TemplateMatch(Mat mat, bool useMask, Color maskColor = default)
+    {
+        var ro = new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = mat,
+            UseMask = useMask,
+            MaskColor = maskColor == default? Color.FromArgb(0, 255, 0) : maskColor
         };
         
         return ro.InitTemplate();
@@ -152,30 +167,45 @@ public class RecognitionObject
     public Dictionary<string, string[]> ReplaceDictionary { get; set; } = [];
 
     /// <summary>
-    ///     包含匹配
+    ///     包含匹配 （用于单个确认是否存在）
     ///     多个值全匹配的情况下才算成功
     ///     复杂情况请用下面的正则匹配
     /// </summary>
     public List<string> AllContainMatchText { get; set; } = [];
 
     /// <summary>
-    ///     包含匹配
+    ///     包含匹配（用于单个确认是否存在）
     ///     一个值匹配就算成功
     /// </summary>
     public List<string> OneContainMatchText { get; set; } = [];
 
     /// <summary>
-    ///     正则匹配
+    ///     正则匹配（用于单个确认是否存在）
     ///     多个值全匹配的情况下才算成功
     /// </summary>
     public List<string> RegexMatchText { get; set; } = [];
-
+    
+    /// <summary>
+    /// 用于多个OCR结果的匹配
+    /// </summary>
+    public string Text { get; set; } = string.Empty;
+    
     public static RecognitionObject Ocr(double x, double y, double w, double h)
     {
         return new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h))
+        };
+    }
+    
+    public static RecognitionObject OcrMatch(double x, double y, double w, double h, params string[] matchTexts)
+    {
+        return new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h)),
+            OneContainMatchText = matchTexts?.ToList() ?? []
         };
     }
 

@@ -94,6 +94,14 @@
                          SelectedItem="{Binding SelectedScriptProject, Mode=TwoWay}"
                          SelectionMode="Single">
                 <b:Interaction.Triggers>
+                    <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                        <b:InvokeCommandAction Command="{Binding SetRightClickSelectionCommand}"
+                                               CommandParameter="True" />
+                    </b:EventTrigger>
+                    <b:EventTrigger EventName="ContextMenuClosing">
+                        <b:InvokeCommandAction Command="{Binding SetRightClickSelectionCommand}"
+                                               CommandParameter="False" />
+                    </b:EventTrigger>
                     <b:EventTrigger EventName="SelectionChanged">
                         <b:InvokeCommandAction Command="{Binding OpenScriptDetailDrawerCommand}"
                                                CommandParameter="{Binding ElementName=ScriptsListView, Path=SelectedItem}" />

@@ -13,6 +13,7 @@ public partial class NotificationConfig : ObservableObject
     /// 是否允许 js 发送通知
     /// </summary>
     [ObservableProperty] private bool _jsNotificationEnabled = false;
+
     /// <summary>
     /// 传"none"时，点击推送不会弹窗
     /// </summary>
@@ -142,6 +143,7 @@ public partial class NotificationConfig : ObservableObject
     ///     飞书通知地址
     /// </summary>
     [ObservableProperty] private string _feishuWebhookUrl = string.Empty;
+
     [ObservableProperty] private string _feishuAppId = string.Empty;
     [ObservableProperty] private string _feishuAppSecret = string.Empty;
 
@@ -157,6 +159,7 @@ public partial class NotificationConfig : ObservableObject
     ///     OneBot通知地址
     /// </summary>
     [ObservableProperty] private string _OneBotEndpoint = string.Empty;
+
     [ObservableProperty] private string _OneBotUserId = string.Empty;
     [ObservableProperty] private string _OneBotGroupId = string.Empty;
     [ObservableProperty] private string _OneBotToken = string.Empty;
@@ -165,6 +168,16 @@ public partial class NotificationConfig : ObservableObject
     ///     Telegram API基础URL(可选，留空使用官方API)
     /// </summary>
     [ObservableProperty] private string _telegramApiBaseUrl = string.Empty;
+
+    /// <summary>
+    ///     Telegram代理地址(可选，格式：http://127.0.0.1:7890)
+    /// </summary>
+    [ObservableProperty] private string _telegramProxyUrl = "http://127.0.0.1:10809";
+
+    /// <summary>
+    ///     是否启用Telegram代理
+    /// </summary>
+    [ObservableProperty] private bool _telegramProxyEnabled = false;
 
     /// <summary>
     ///     Telegram机器人Token
@@ -237,4 +250,30 @@ public partial class NotificationConfig : ObservableObject
     ///     信息推送通知是否启用
     /// </summary>
     [ObservableProperty] private bool _xxtuiNotificationEnabled;
+
+    /// <summary>
+    ///     Discord Webhook推送通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _discordWebhookNotificationEnabled;
+
+    /// <summary>
+    ///     Discord Webhook地址
+    /// </summary>
+    [ObservableProperty] private string _discordWebhookUrl = string.Empty;
+
+    /// <summary>
+    ///     Discord Webhook用户名
+    /// </summary>
+    [ObservableProperty] private string _discordWebhookUsername = "BetterGI·更好的原神";
+
+    /// <summary>
+    ///     Discord Webhook头像地址
+    ///     Default url from https://bettergi.com/
+    /// </summary>
+    [ObservableProperty] private string _discordWebhookAvatarUrl =
+        "https://img.alicdn.com/imgextra/i2/2042484851/O1CN01LQfLIG1lhoEZwz1Gt_!!2042484851.png";
+
+    ///     Discord Webhook 图像编码
+    /// </summary>
+    [ObservableProperty] private string _discordWebhookImageEncoder = "Jpeg";
 }

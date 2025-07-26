@@ -74,7 +74,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                         continue;
                     }
 
-                    var p2 = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(new Mat(ra.CacheGreyMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    var p2 = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(new Mat(ra.SrcMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
                     if (!p2.IsEmpty())
                     {
                         way.AddPoint(p2);

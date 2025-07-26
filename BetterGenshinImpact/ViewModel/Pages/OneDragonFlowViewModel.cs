@@ -218,9 +218,9 @@ public partial class OneDragonFlowViewModel : ViewModel
         CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
-            if (TaskList.Any(taskName => scriptGroup.Name.Contains(taskName.Name)))
+            if (TaskList.Any(taskName => scriptGroup.Name == taskName.Name))
             {
-                continue; // 不显示已经存在的配置组
+                continue; // 只有当文件名完全相同时才跳过显示
             }
             var checkBox = new CheckBox
             {
@@ -384,11 +384,13 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
 
-    [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["1", "2", "3"];
+    [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
     
-    [ObservableProperty] private List<string> _sundaySelectedValueList = ["1", "2", "3"];
+    [ObservableProperty] private List<string> _sundaySelectedValueList = ["","1", "2", "3"];
 
     [ObservableProperty] private List<string> _secretTreasureObjectList = ["布匹","须臾树脂","大英雄的经验","流浪者的经验","精锻用魔矿","摩拉","祝圣精华","祝圣油膏"];
+    
+    [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["地图传送", "尘歌壶道具"];
     
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
