@@ -36,7 +36,7 @@ public class findEnemyTask
         int endY = height;
 
         int startX = 0;
-        int endX = width;
+        int endX = (int)(width * 0.9); // 避免识别到自己血条
         // 创建一个标记矩阵，记录已处理的像素（0=未处理，1=已处理）
         Mat marked = new Mat(SrcMat.Rows, SrcMat.Cols, MatType.CV_8UC1, Scalar.All(0));
         for (int y = startY; y < endY; y += yStep)
