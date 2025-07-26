@@ -256,15 +256,12 @@ public class AutoFightTask : ISoloTask
         //所有角色是否都可被跳过
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
 
-        var ctFight = new CancellationTokenSource();
-        ct.Register(ctFight.Cancel);
-
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
             try
             {
-                while (!cts2.Token.IsCancellationRequested && !ctFight.Token.IsCancellationRequested)
+                while (!cts2.Token.IsCancellationRequested)
                 {
                     // 所有战斗角色都可以被取消
 
@@ -421,12 +418,12 @@ public class AutoFightTask : ISoloTask
         }, cts2.Token);
 
         var fightFinish = Task.Run(async () => {
-            while(!cts2.Token.IsCancellationRequested && !ctFight.Token.IsCancellationRequested) {
+            while(!cts2.Token.IsCancellationRequested) {
                 await Delay(500, cts2.Token);
                 if(await CheckFightFinishByChangeGroup())
                 {
                     Logger.LogInformation("检测到战斗结束。");
-                    ctFight.Cancel();
+                    fightEndFlag = true;
                     break;  
                 }
             }
