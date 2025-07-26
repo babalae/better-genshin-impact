@@ -191,7 +191,27 @@ public class AutoFightTask : ISoloTask
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
+    public CombatScenes GetCombatScenesWithRetry()
+    {
+        const int maxRetries = 5;
+        var retryDelayMs = 1000; // 可选：重试间隔，单位毫秒
 
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            if (combatScenes.CheckTeamInitialized())
+            {
+                return combatScenes;
+            }
+
+            if (attempt < maxRetries)
+            {
+                Thread.Sleep(retryDelayMs); // 可选：延迟再试
+            }
+        }
+
+        throw new Exception("识别队伍角色失败（已重试 5 次）");
+    }
     // 方法1：判断是否是单个数字
 
     /*public int delayTime=1500;
@@ -203,11 +223,12 @@ public class AutoFightTask : ISoloTask
         _ct = ct;
 
         LogScreenResolution();
-        var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+        var combatScenes = GetCombatScenesWithRetry();
+        /*var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
             throw new Exception("识别队伍角色失败");
-        }
+        }*/
 
 
         // var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);

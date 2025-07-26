@@ -570,9 +570,39 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         //         return;
         //     }
         // }
+        
+        //顶层目录订阅时，不会删除其下，不在订阅中的文件夹
+        List<string> newPaths = new List<string>();
+        foreach (var path in paths)
+        {
+            //顶层节点，按库中的文件夹来
+            if (path == "pathing")
+            {
+                var scriptPath = Path.Combine(repoPath, path);
+                if (Directory.Exists(scriptPath))
+                {
+                    // 获取该路径下的所有“仅第一层文件夹”
+                    string[] directories = Directory.GetDirectories(scriptPath, "*", SearchOption.TopDirectoryOnly);
+                    foreach (var dir in directories)
+                    {
+                        newPaths.Add("pathing"+"/"+Path.GetFileName(dir));
+                    }
+                }
+                else
+                {
+                    Toast.Warning($"未知的脚本路径：{path}");
+                }
+            }
+            else
+            {
+                newPaths.Add(path);
+            }
+
+        }
+
 
         // 拷贝文件
-        foreach (var path in paths)
+        foreach (var path in newPaths)
         {
             var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
             if (PathMapper.TryGetValue(first, out var userPath))

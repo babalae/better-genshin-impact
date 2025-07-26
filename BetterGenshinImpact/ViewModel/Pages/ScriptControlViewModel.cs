@@ -1734,6 +1734,10 @@ public partial class ScriptControlViewModel : ViewModel
         // 创建每个配置组的 CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
+            if (scriptGroup.Config.PathingConfig.HideOnRepeat)
+            {
+                continue;
+            }
             var checkBox = new CheckBox
             {
                 Content = scriptGroup.Name,
