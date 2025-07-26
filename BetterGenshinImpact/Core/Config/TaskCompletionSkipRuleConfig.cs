@@ -23,5 +23,8 @@ public partial class TaskCompletionSkipRuleConfig:ObservableObject
     //上一次执行间隔时间，出于精度考虑，这里使用秒为单位
     [ObservableProperty]
     private int _lastRunGapSeconds = -1;  
+    //间隔时间计算参照，开始时间(StartTime)和结束时间(EndTime)
+    [ObservableProperty]
+    private string _referencePoint = "EndTime";
     
 }

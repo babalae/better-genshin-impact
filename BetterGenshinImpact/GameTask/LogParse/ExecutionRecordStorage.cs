@@ -55,6 +55,30 @@ public class ExecutionRecordStorage
         File.WriteAllText(filePath, updatedJson);
     }
 
+    public static List<DailyExecutionRecord> GetRecentExecutionRecordsByConfig(TaskCompletionSkipRuleConfig config)
+    {
+
+        // 确定边界时间是否有效（0-23之间）
+        bool boundaryTimeEnable = config.BoundaryTime >= 0 && config.BoundaryTime <= 23;
+
+        // 默认获取最近1天的执行记录
+        int dayCount = 1;
+
+        // 如果边界时间有效，需要获取2天的记录（可能跨越边界）
+        if (boundaryTimeEnable)
+        {
+            dayCount = 2;
+        }
+
+        // 如果配置了有效的间隔秒数，根据秒数计算需要获取的天数（向上取整）
+        if (config.LastRunGapSeconds >= 0)
+        {
+            dayCount = ConvertSecondsToDaysUp(config.LastRunGapSeconds);
+        }
+
+        return GetRecentExecutionRecords(dayCount);
+    }
+
     /// <summary>
     /// 读取最近N天的执行记录
     /// </summary>
@@ -85,6 +109,15 @@ public class ExecutionRecordStorage
                 var record = JsonConvert.DeserializeObject<DailyExecutionRecord>(json);
                 results.Add(record);
             }
+        }
+        
+        //实际使用中，使用倒序，反转记录列表，变为倒序
+        results.Reverse();
+        foreach (var dailyRecord in results)
+        {
+            var records = dailyRecord.ExecutionRecords;
+            // 反转执行记录，变为倒序
+            records.Reverse();
         }
 
         return results;
@@ -138,7 +171,7 @@ public class ExecutionRecordStorage
         return targetDate >= todayStart && targetDate < todayEnd;
     }
 
-    public static bool IsSkipTask(ScriptGroupProject project, out string message)
+    public static bool IsSkipTask(ScriptGroupProject project, out string message,List<DailyExecutionRecord>? dailyRecords=null)
     {
         // 初始化消息字符串
         message = "";
@@ -156,22 +189,7 @@ public class ExecutionRecordStorage
 
         // 确定边界时间是否有效（0-23之间）
         bool boundaryTimeEnable = config.BoundaryTime >= 0 && config.BoundaryTime <= 23;
-
-        // 默认获取最近1天的执行记录
-        int dayCount = 1;
-
-        // 如果边界时间有效，需要获取2天的记录（可能跨越边界）
-        if (boundaryTimeEnable)
-        {
-            dayCount = 2;
-        }
-
-        // 如果配置了有效的间隔秒数，根据秒数计算需要获取的天数（向上取整）
-        if (config.LastRunGapSeconds >= 0)
-        {
-            dayCount = ConvertSecondsToDaysUp(config.LastRunGapSeconds);
-        }
-
+        
         // 获取项目相关信息
         var groupName = project.GroupInfo?.Name ?? "";
         var folderName = project.FolderName;
@@ -179,10 +197,8 @@ public class ExecutionRecordStorage
         var projectType = project.Type;
 
         // 获取最近指定天数的执行记录
-        List<DailyExecutionRecord> dailyRecords = GetRecentExecutionRecords(dayCount);
-
-        // 反转记录列表，变为倒序
-        dailyRecords.Reverse();
+        dailyRecords ??= GetRecentExecutionRecordsByConfig(config);
+        
 
         // 遍历每日记录
         foreach (var dailyRecord in dailyRecords)
@@ -190,21 +206,28 @@ public class ExecutionRecordStorage
             var records = dailyRecord.ExecutionRecords;
 
             // 反转执行记录，变为倒序
-            records.Reverse();
+           // records.Reverse();
 
             // 遍历每条执行记录
             foreach (var record in records)
             {
+                
                 // 跳过未成功的执行记录
                 if (!record.IsSuccessful) continue;
 
                 // 跳过类型或项目名称不匹配的记录
                 if (record.Type != projectType || record.ProjectName != projectName) continue;
 
+                var calcTime = record.EndTime;
+                if (config.ReferencePoint == "StartTime")
+                {
+                    calcTime = record.StartTime;
+                }
+                
                 // 如果配置了间隔时间，检查记录是否在时间间隔内
                 if (config.LastRunGapSeconds >= 0)
                 {
-                    double secondsSinceLastRun = (DateTime.Now - record.EndTime).TotalSeconds;
+                    double secondsSinceLastRun = (DateTime.Now - calcTime).TotalSeconds;
 
                     // 跳过超过配置间隔时间的记录
                     if (secondsSinceLastRun > config.LastRunGapSeconds) continue;
@@ -258,7 +281,7 @@ public class ExecutionRecordStorage
                     if (config.LastRunGapSeconds >= 0)
                     {
                         // 计算下次可执行时间
-                        DateTime nextExecutionTime = record.EndTime.AddSeconds(config.LastRunGapSeconds);
+                        DateTime nextExecutionTime = calcTime.AddSeconds(config.LastRunGapSeconds);
                         message += $", 需在 {nextExecutionTime:yyyy-M-d H:mm:ss} 之后才能开始执行";
                     }
                     else if (boundaryTimeEnable)

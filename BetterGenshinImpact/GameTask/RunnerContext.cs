@@ -27,7 +27,11 @@ public class RunnerContext : Singleton<RunnerContext>
     /// 暂停逻辑
     /// </summary>
     public bool IsSuspend { get; set; }
-    
+
+    /// <summary>
+    /// 优先执行配置组
+    /// </summary>
+    public bool IsPreExecution { get; set; } = false;
     /// <summary>
     /// 暂停实现
     /// </summary>
@@ -113,6 +117,7 @@ public class RunnerContext : Singleton<RunnerContext>
         SuspendableDictionary.Clear();
         AutoPickTriggerStopCount = 0;
         taskProgress = null;
+        IsPreExecution = false;
     }
 
     /// <summary>
