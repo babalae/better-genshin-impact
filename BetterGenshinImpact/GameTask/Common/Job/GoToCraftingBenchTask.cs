@@ -189,6 +189,10 @@ public class GoToCraftingBenchTask
     public async Task GoToCraftingBench(string country, CancellationToken ct)
     {
         var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"GameTask\Common\Element\Assets\Json\合成台_{country}.json"));
+        if (task == null)
+        {
+            throw new Exception("地图追踪文件加载失败");
+        }
 
         var pathingTask = new PathExecutor(ct)
         {
