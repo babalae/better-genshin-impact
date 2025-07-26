@@ -195,6 +195,10 @@ public partial class ScriptGroupProject : ObservableObject
         {
             // 加载并执行
             var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, FolderName, Name));
+            if (task == null)
+            {
+                return;
+            }
             var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
             if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
