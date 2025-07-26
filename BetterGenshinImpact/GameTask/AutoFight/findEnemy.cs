@@ -37,7 +37,8 @@ public class findEnemyTask
 
         int startX = 0;
         int endX = width;
-
+        // 创建一个标记矩阵，记录已处理的像素（0=未处理，1=已处理）
+        Mat marked = new Mat(SrcMat.Rows, SrcMat.Cols, MatType.CV_8UC1, Scalar.All(0));
         for (int y = startY; y < endY; y += yStep)
         {
             // 每行起始X偏移，实现横向离散扫描
@@ -45,6 +46,9 @@ public class findEnemyTask
 
             for (int x = xStart; x < endX; x += xStep)
             {
+                // 如果当前像素已被标记，跳过
+                if (marked.At<byte>(y, x) == 1)
+                    continue;
                 Vec3b pixel = SrcMat.At<Vec3b>(y, x);
 
                 // 检查是否在目标颜色范围内
@@ -61,10 +65,23 @@ public class findEnemyTask
                     if (regionWidth >= minWidth && regionHeight >= minHeight)
                     {
 
-                        resultPoints.Add(new Tuple<Point, Point>(topLeft, bottomRight));
+                        if (regionWidth >= minWidth && regionHeight >= minHeight)
+                        {
+                            resultPoints.Add(new Tuple<Point, Point>(topLeft, bottomRight));
 
-                        // 跳过已检测区域，直接跳到右边界
-                        x = bottomRight.X;
+                            // 标记整个区域为已处理
+                            for (int yy = topLeft.Y; yy <= bottomRight.Y; yy++)
+                            {
+                                for (int xx = topLeft.X; xx <= bottomRight.X; xx++)
+                                {
+                                    if (xx < marked.Cols && yy < marked.Rows)
+                                        marked.At<byte>(yy, xx) = 1;
+                                }
+                            }
+
+                            // 直接跳到右边界
+                            x = bottomRight.X + 1;
+                        }
                     }
                 }
             }
