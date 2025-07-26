@@ -23,28 +23,23 @@ public class TaskControl
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(TaskContext.Instance().Config.OtherConfig.NetworkDetectionInterval);
     private static readonly Ping PingSender = new Ping();
-    private static bool _isSuspendedByNetwork = false;
+    public static bool IsSuspendedByNetwork { get; set; } = false;
 
     private static Task CheckNetworkStatusAsync()
     {
-        if (DateTime.Now - _lastCheckTime < _checkInterval || !TaskContext.Instance().Config.OtherConfig.NetworkDetectionConfig)
+        if (DateTime.Now - _lastCheckTime < _checkInterval)
         {
             return Task.CompletedTask;
         }
 
         _lastCheckTime = DateTime.Now;
 
-        var isSuspend = true; 
+        var isSuspend = false; 
         try
         {
             var reply = PingSender.Send(TaskContext.Instance().Config.OtherConfig.NetworkDetectionUrl);
             isSuspend = reply.Status != IPStatus.Success;
-            if (isSuspend)
-            {
-                Logger.LogWarning("网络状态检查：失败");
-                _isSuspendedByNetwork = true;
-            }
-            else if (RunnerContext.Instance.IsSuspend && _isSuspendedByNetwork)
+            if (IsSuspendedByNetwork)
             {
                 Logger.LogWarning("网络恢复中...");
                 NetworkRecovery.Start(CancellationToken.None).Wait(5000);
@@ -54,15 +49,10 @@ public class TaskControl
         {
             Logger.LogError(ex, "网络状态检查：错误");
             isSuspend = true;
-            _isSuspendedByNetwork = true;
         }
         finally
         {
-            if (_isSuspendedByNetwork && isSuspend != RunnerContext.Instance.IsSuspend)
-            {
-                RunnerContext.Instance.IsSuspend = isSuspend;
-                _isSuspendedByNetwork = false;
-            }
+            IsSuspendedByNetwork = isSuspend;
         }
         return Task.CompletedTask;
     }
@@ -98,8 +88,8 @@ public class TaskControl
         Task.Run(CheckNetworkStatusAsync);
         var first = true;
         //此处为了记录最开始的暂停状态
-        var isSuspend = RunnerContext.Instance.IsSuspend;
-        while (RunnerContext.Instance.IsSuspend)
+        var isSuspend = RunnerContext.Instance.IsSuspend || IsSuspendedByNetwork;
+        while (RunnerContext.Instance.IsSuspend || IsSuspendedByNetwork)
         {
             if (first)
             {
@@ -116,7 +106,7 @@ public class TaskControl
                     }
                 }
 
-                Logger.LogWarning("快捷键触发暂停，等待解除");
+                Logger.LogWarning(IsSuspendedByNetwork ? "网络检测失败触发暂停，等待解除" : "快捷键触发暂停，等待解除");
                 foreach (var item in RunnerContext.Instance.SuspendableDictionary)
                 {
                     item.Value.Suspend();

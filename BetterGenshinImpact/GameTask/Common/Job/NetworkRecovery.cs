@@ -7,7 +7,8 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition;
 using System.Text.RegularExpressions;
-
+using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.GameTask.Common;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -27,8 +28,13 @@ public class NetworkRecovery
             RecognitionObject.Ocr(x, y, width, height);
     }
     
+    //完成任务标志
+    private static bool _recoveryNetworkDone = false;
+    
     public static async Task Start(CancellationToken ct)
     {
+        _recoveryNetworkDone = false;
+        
         await NewRetry.WaitForElementDisappear(
             GetConfirmRa(true,"连接超时","连接已断开","网络错误","无法登录服务器","提示","通知"),
             screen => { 
@@ -43,11 +49,11 @@ public class NetworkRecovery
                 }
             },
             ct,
-            5,
+            3,
             1000
         );
         
-        await Task.Delay(3000, ct);
+        await Task.Delay(1000, ct);
         
         await NewRetry.WaitForElementDisappear(
             GetConfirmRa(true,"连接超时","连接已断开","网络错误","无法登录服务器","提示","通知"),
@@ -63,13 +69,20 @@ public class NetworkRecovery
                 }
             },
             ct,
-            5,
+            3,
             1000
         );
         
         await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.PaimonMenuRo,
             ()  => {  
+                
+                if (_recoveryNetworkDone)
+                {
+                    return;//回到主页一次后，后续异步执行的所有操作都取消
+                }
+                IsSuspendedByNetwork = true;
+                
                 using var ra = CaptureToRectArea();
                 
                 var tips = ra.Find(ElementAssets.Instance.MiMenuRo);
@@ -94,7 +107,7 @@ public class NetworkRecovery
                     Regex.IsMatch(t.Text, "登录其他账号"));
                 if (enterG != null)
                 {
-                    enterG.ClickTo(0,-70);
+                    enterG.ClickTo(0,-enterG.Height);
                     enterG.Dispose();
                 }                
 
@@ -111,5 +124,7 @@ public class NetworkRecovery
         );
         
         await new ReturnMainUiTask().Start(ct);
+        IsSuspendedByNetwork = false;
+        _recoveryNetworkDone = true;
     }
 }
