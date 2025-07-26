@@ -20,6 +20,7 @@ using BetterGenshinImpact.Helpers;
 using Vanara;
 using Vanara.PInvoke;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -254,13 +255,16 @@ public class AutoFightTask : ISoloTask
         
         //所有角色是否都可被跳过
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
-        
+
+        var ctFight = new CancellationTokenSource();
+        ct.Register(ctFight.Cancel);
+
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
             try
             {
-                while (!cts2.Token.IsCancellationRequested)
+                while (!cts2.Token.IsCancellationRequested && !ctFight.Token.IsCancellationRequested)
                 {
                     // 所有战斗角色都可以被取消
 
@@ -387,7 +391,7 @@ public class AutoFightTask : ISoloTask
                                 {
                                     Logger.LogInformation($"{command.Name}下一个人为{combatCommands[i+1].Name}毫秒");
                                 }*/
-                                fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                                //fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
                             }
                         }
 
@@ -413,6 +417,18 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 Simulation.ReleaseAllKey();
+            }
+        }, cts2.Token);
+
+        var fightFinish = Task.Run(async () => {
+            while(!cts2.Token.IsCancellationRequested && !ctFight.Token.IsCancellationRequested) {
+                await Delay(500, cts2.Token);
+                if(await CheckFightFinishByChangeGroup())
+                {
+                    Logger.LogInformation("检测到战斗结束。");
+                    ctFight.Cancel();
+                    break;  
+                }
             }
         }, cts2.Token);
 
@@ -679,4 +695,20 @@ public class AutoFightTask : ISoloTask
     //     // 要大于 gadgetMat 的 1/2
     //     return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
     // }
+
+    /// <summary>
+    ///  通过切换队伍 检查是否自动战斗 V2 版本
+    /// </summary>
+    /// <returns></returns>
+    private async Task<bool> CheckFightFinishByChangeGroup()
+    {
+        int detectDelayTime = 100;
+        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+        await Delay(detectDelayTime, _ct);
+        var ra = CaptureToRectArea();
+        // 判断mainUI是否存在 存在则未非战斗状态
+        bool inFightStatus = Bv.IsInMainUi(ra);
+        return !inFightStatus;
+
+    }
 }
