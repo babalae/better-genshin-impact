@@ -22,7 +22,7 @@ public class QuickBuyAssets : BaseAssets<QuickBuyAssets>
             Name = "SereniteaPotCoin",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("QucikBuy", "SereniteaPotCoin.png"),
-            RegionOfInterest = new Rect((int)(1640 * AssetScale),(int)(30 * AssetScale),(int)(40 * AssetScale),(int)(40 * AssetScale)),
+            RegionOfInterest = new Rect((int)(1630 * AssetScale),(int)(30 * AssetScale),(int)(200 * AssetScale),(int)(40 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
