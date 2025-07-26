@@ -44,6 +44,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     // 小道具位置
     public Rect GadgetRect;
 
+    public RecognitionObject ChatIconRa;
+
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -272,6 +274,15 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "original_resin_top_icon.png"),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(450 * AssetScale), (int)(25 * AssetScale), (int)(265 * AssetScale), (int)(45 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        ChatIconRa = new RecognitionObject
+        {
+            Name = "ChatIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "chatIcon.png"),
+            RegionOfInterest = new Rect((int)(30 * AssetScale), CaptureRect.Height - (int)(60 * AssetScale), (int)(100 * AssetScale), (int)(60 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }

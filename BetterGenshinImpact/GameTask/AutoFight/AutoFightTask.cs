@@ -21,6 +21,7 @@ using Vanara;
 using Vanara.PInvoke;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -699,13 +700,18 @@ public class AutoFightTask : ISoloTask
     /// <returns></returns>
     private async Task<bool> CheckFightFinishByChangeGroup()
     {
+
         int detectDelayTime = 100;
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
         var ra = CaptureToRectArea();
         // 判断mainUI是否存在 存在则未非战斗状态
-        bool inFightStatus = Bv.IsInMainUi(ra);
-        return !inFightStatus;
+        bool FightFinished = false;
+        if (ra.Find(AutoFightAssets.Instance.ChatIconRa).IsExist())
+        {
+            FightFinished = !Bv.IsInMainUi(ra);
+        }
+        return FightFinished;
 
     }
 }
