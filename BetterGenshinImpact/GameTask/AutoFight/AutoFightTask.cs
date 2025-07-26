@@ -711,6 +711,11 @@ public class AutoFightTask : ISoloTask
         if (ra.Find(AutoFightAssets.Instance.ChatEnterIconRa).IsExist())
         {
             FightFinished = !Bv.IsInMainUi(ra);
+            if (FightFinished)
+            {
+                // 取消切换队伍操作
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward);
+            }
         }
         return FightFinished;
 

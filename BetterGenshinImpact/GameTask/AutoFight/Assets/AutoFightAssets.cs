@@ -288,10 +288,10 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
         ChatEnterIconRa = new RecognitionObject
         {
-            Name = "ChatIcon",
+            Name = "ChatEnterIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "chatEnterIcon.png"),
-            RegionOfInterest = new Rect((int)(30 * AssetScale), CaptureRect.Height - (int)(60 * AssetScale), (int)(150 * AssetScale), (int)(60 * AssetScale)),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(100 * AssetScale), (int)(180 * AssetScale), (int)(100 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
