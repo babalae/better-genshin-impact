@@ -76,14 +76,14 @@ public partial class PromptDialog
     {
         var inst = new PromptDialog(question, title, new TextBox(), defaultValue, config);
         inst.ShowDialog();
-        return inst.DialogResult == true ? inst.ResponseText : defaultValue;
+        return inst.DialogResult == true ? inst.ResponseText : "";
     }
 
     public static string Prompt(string question, string title, UIElement uiElement, string defaultValue = "", PromptDialogConfig? config = null)
     {
         var inst = new PromptDialog(question, title, uiElement, defaultValue, config);
         inst.ShowDialog();
-        return inst.DialogResult == true ? inst.ResponseText : defaultValue;
+        return inst.DialogResult == true ? inst.ResponseText : "";
     }
 
     public static string Prompt(string question, string title, UIElement uiElement, Size size, PromptDialogConfig? config = null)
