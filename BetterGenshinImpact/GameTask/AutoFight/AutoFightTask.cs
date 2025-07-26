@@ -51,6 +51,7 @@ public class AutoFightTask : ISoloTask
         public double CheckTime = 5;
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
+        public int FightStatusCheckTime = 500;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
@@ -420,7 +421,7 @@ public class AutoFightTask : ISoloTask
 
         var fightFinish = Task.Run(async () => {
             while(!cts2.Token.IsCancellationRequested) {
-                await Delay(500, cts2.Token);
+                await Delay(_finishDetectConfig.FightStatusCheckTime, cts2.Token);
                 if(await CheckFightFinishByChangeGroup())
                 {
                     Logger.LogInformation("检测到战斗结束。");
@@ -707,7 +708,7 @@ public class AutoFightTask : ISoloTask
         var ra = CaptureToRectArea();
         // 判断mainUI是否存在 存在则未非战斗状态
         bool FightFinished = false;
-        if (ra.Find(AutoFightAssets.Instance.ChatIconRa).IsExist())
+        if (ra.Find(AutoFightAssets.Instance.ChatEnterIconRa).IsExist())
         {
             FightFinished = !Bv.IsInMainUi(ra);
         }

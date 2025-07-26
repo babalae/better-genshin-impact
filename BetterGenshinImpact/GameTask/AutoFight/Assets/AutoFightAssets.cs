@@ -45,7 +45,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect GadgetRect;
 
     public RecognitionObject ChatIconRa;
-
+    public RecognitionObject ChatEnterIconRa;
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -283,6 +283,15 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "chatIcon.png"),
             RegionOfInterest = new Rect((int)(30 * AssetScale), CaptureRect.Height - (int)(60 * AssetScale), (int)(100 * AssetScale), (int)(60 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        ChatEnterIconRa = new RecognitionObject
+        {
+            Name = "ChatIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "chatEnterIcon.png"),
+            RegionOfInterest = new Rect((int)(30 * AssetScale), CaptureRect.Height - (int)(60 * AssetScale), (int)(150 * AssetScale), (int)(60 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
