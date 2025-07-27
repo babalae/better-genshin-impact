@@ -1,6 +1,6 @@
-using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Engine;
 
 /// <summary>
 ///     ppocr的版本配置

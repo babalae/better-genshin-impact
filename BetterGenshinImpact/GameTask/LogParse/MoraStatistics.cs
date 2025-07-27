@@ -39,7 +39,20 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 return ls.Sum(item=>item.Num)+(count>=10?"":$"({count}/10)");
             }
         }
-        
+        public string ChestReward
+        {
+            get
+            {
+                var ls = ActionItems.Where(item => item.ActionId == 39).ToList();
+                var count = ls.Count();
+                if (count == 0)
+                {
+                    return "";
+                }
+
+                return ls.Sum(item=>item.Num)+(count>=10?"":$"({count}/10)");
+            }
+        }
 
         public string LastEliteTime => EliteMonsterActionItems.MaxBy(item => item?.Time)?.Time ?? null;
         public string LastSmallTime => SmallMonsterActionItems.MaxBy(item => item?.Time)?.Time ?? null;

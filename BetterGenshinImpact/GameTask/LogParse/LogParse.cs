@@ -7,15 +7,18 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.FarmingPlan;
+using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.LogParse.LogParse.ConfigGroupEntity;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BetterGenshinImpact.GameTask.LogParse
 {
     public class LogParse
     {
         private static readonly string _configPath = Global.Absolute(@"log\logparse\config.json");
-        
+        private static readonly string _assets_dir = Global.Absolute($@"GameTask\LogParse\Assets");
         // 添加一个静态事件用于通知日志的生成状态
         public static event Action<string> HtmlGenerationStatusChanged = delegate { };
         private static void NotifyHtmlGenerationStatus(string status)
@@ -110,7 +113,12 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
                     if (configTask != null)
                     {
-
+                        
+                        if (logstr.Contains("此追踪脚本未正常走完！"))
+                        {
+                            configTask.Fault.PathingSuccessEnd = false;
+                        }
+                        
                         //前往七天神像复活
                         if (logstr.EndsWith("前往七天神像复活"))
                         {
@@ -161,6 +169,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
                         {
                             configTask.AddPick(result.Item2[1]);
                         }
+                        
                     }
                 }
 
@@ -227,12 +236,11 @@ namespace BetterGenshinImpact.GameTask.LogParse
             public DateTime? EndDate { get; set; }
 
             //配置人物列表xxx.json
-            public List<ConfigTask> ConfigTaskList { get; } = new();
-
-
-
+            public List<ConfigTask> ConfigTaskList { get; set; } = new();
+            
             public class ConfigTask
             {
+                public bool IsMerger { get; set; } = false;
                 public string Name { get; set; }
 
                 //开始日期
@@ -242,7 +250,9 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 public DateTime? EndDate { get; set; }
 
                 //拾取字典
-                public Dictionary<string, int> Picks { get; } = new();
+                public Dictionary<string, int> Picks { get; set; } = new();
+
+                
 
                 public void AddPick(string val)
                 {
@@ -258,6 +268,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
 
                 public class FaultScenario
                 {
+                    public bool PathingSuccessEnd { get; set; } = true;
                     //复活次数
                     public int ReviveCount { get; set; } = 0;
 
@@ -321,6 +332,15 @@ namespace BetterGenshinImpact.GameTask.LogParse
             result = result.OrderBy(r => r.Date).ToList();
 
             return result;
+        }
+
+        public static string TaskNameRender (string taskName, bool enable , bool success)
+        {
+            if (enable && !success)
+            {
+                return $"<span style='color:red;'>{taskName}</span>";
+            }
+            return taskName;
         }
 
         public static string ConvertSecondsToTime(double totalSeconds)
@@ -424,10 +444,18 @@ namespace BetterGenshinImpact.GameTask.LogParse
             GameInfo? gameInfo,
             LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig)
         {
+            //移除空的记录
+            configGroups.RemoveAll(group => group.ConfigTaskList == null || group.ConfigTaskList.Count == 0);
+            if (scriptGroupLogParseConfig.MergerStatsSwitch)
+            {
+                configGroups = new ConfigGroupMerger().MergeConfigGroups(configGroups);
+                configGroups.Reverse();
+            }
+            
             (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs =
             [
-                (name: "任务名称", value: task => Path.GetFileNameWithoutExtension(task.Name), sortType: "string"),
-                (name: "开始时间", value: task => task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
+                (name: "任务名称", value: task => TaskNameRender(Path.GetFileNameWithoutExtension(task.Name),scriptGroupLogParseConfig.FaultStatsSwitch,task.Fault.PathingSuccessEnd), sortType: "string"),
+                (name: "开始时间", value: task => (task.IsMerger?"<span style='color:blue'>":"")+ (task.StartDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "")+(task.IsMerger?"</span>":""), sortType: "date"),
                 (name: "结束时间", value: task => task.EndDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "", sortType: "date"),
                 (name: "任务耗时", value: task => ConvertSecondsToTime((task.EndDate - task.StartDate)?.TotalSeconds ?? 0),
                     sortType: "number")
@@ -462,7 +490,8 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 ("精英详细", ms => ms.EliteDetails, "string"),
                 ("最后精英时间", ms => ms.LastEliteTime, "date"),
                 ("总计锄地摩拉", ms => ms.TotalMoraKillingMonstersMora.ToString(), "number"),
-                ("突发事件获取摩拉", ms => ms.EmergencyBonus, "number")
+                ("突发事件获取摩拉", ms => ms.EmergencyBonus, "number"),
+                ("宝箱奖励（狗粮附带）", ms => ms.ChestReward, "number")
             };
 
             //锄地部分新曾字段
@@ -482,6 +511,8 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 )
             };
             
+            
+            
             StringBuilder html = new StringBuilder();
             //从文件解析札记数据
             NotifyHtmlGenerationStatus("正在解析札记数据...");
@@ -497,11 +528,14 @@ namespace BetterGenshinImpact.GameTask.LogParse
                         actionItem.Time = SubtractFiveSeconds(actionItem.Time, hoeingDelay);
                     }
                 }
+                
+                //  FarmingPlanData
+                
             }
             NotifyHtmlGenerationStatus("正在生成日志分析内容...");
             string htmlContent = GenerHtmlByConfigGroupEntity(configGroups, "日志分析", colConfigList.ToArray(),
                 col2Configs, actionItems,
-                msColConfigs);
+                msColConfigs,scriptGroupLogParseConfig);
 
             // 检查HTML内容大小，如果超过阈值则保存为文件
             const int maxHtmlSize = 1 * 1024 * 1024; // 1MB 阈值，可以根据实际情况调整
@@ -553,13 +587,21 @@ namespace BetterGenshinImpact.GameTask.LogParse
             return a + b;
         }
 
+        public static string LogAssertsFileContent(string fileName)
+        {
+            string filepath = Path.Combine(_assets_dir, fileName);
+            return File.ReadAllText(filepath);
+        }
+
         public static string GenerHtmlByConfigGroupEntity(
             List<ConfigGroupEntity> configGroups,
             string title,
             (string name, Func<ConfigTask, string> value, string sortType)[] colConfigs,
             (string name, Func<MoraStatistics, string> value, string sortType)[] col2Configs,
             List<ActionItem> actionItems,
-            (string name, Func<MoraStatistics, string> value, string sortType)[] msColConfigs)
+            (string name, Func<MoraStatistics, string> value, string sortType)[] msColConfigs
+            ,LogParseConfig.ScriptGroupLogParseConfig scriptGroupLogParseConfig
+            )
         {
             StringBuilder html = new StringBuilder();
 
@@ -571,371 +613,23 @@ namespace BetterGenshinImpact.GameTask.LogParse
             html.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
             html.AppendLine($"    <title>{title}</title>");
             html.AppendLine("    <style>");
-            html.AppendLine("        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background-color: #fbfaef;}");
-            html.AppendLine("        table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 20px; }");
-            html.AppendLine("        th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }");
-            html.AppendLine("        th { background-color: #3f51b5; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }");
-            html.AppendLine("        tr:nth-child(odd) { background-color: #f5fbef; }");
-            html.AppendLine("        tr:nth-child(even) { background-color: #f2faea; }");
-            html.AppendLine("        tr:hover { background-color: #cadbb8; transition: background-color 0.2s ease; }");
-            
-            // 修改排序指示器样式，确保不影响表头文本对齐
-            html.AppendLine("        th::after { content: ''; display: block; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 0; height: 0; opacity: 0; transition: opacity 0.2s ease; }");
-            html.AppendLine("        th.sort-asc::after, th.sort-desc::after { opacity: 1; }");
-            html.AppendLine("        th.sort-asc::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid white; }");
-            html.AppendLine("        th.sort-desc::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid white; }");
-            
-            // 改进的表格容器和固定表头样式
-            html.AppendLine("        .table-container { position: relative; max-height: 80vh; overflow-y: auto; border: 1px solid ##cce3e5; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }");
-            html.AppendLine("        th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }");
-            html.AppendLine("        .sticky-header { position: sticky; top: 0; z-index: 100; }");
-            html.AppendLine("        .sticky-header th { ");
-            html.AppendLine("            position: sticky; ");
-            html.AppendLine("            top: 0; ");
-            html.AppendLine("            background-color: #59a2ab; ");
-            html.AppendLine("            z-index: 100; ");
-            html.AppendLine("            border-width: 0; ");
-            html.AppendLine("            outline: 1.5px solid #cce3e5; ");
-            html.AppendLine("            text-align: center; ");
-            html.AppendLine("            vertical-align: middle; ");
-            html.AppendLine("        }");
-            html.AppendLine("        .sticky-header th:first-child { ");
-            html.AppendLine("            border-top-left-radius: 8px; ");
-            html.AppendLine("        }");
-            html.AppendLine("        .sticky-header th:last-child { ");
-            html.AppendLine("            border-top-right-radius: 8px; ");
-            html.AppendLine("        }");
-            html.AppendLine("        .sticky-header::after {");
-            html.AppendLine("            content: '';");
-            html.AppendLine("            position: absolute;");
-            html.AppendLine("            left: 0;");
-            html.AppendLine("            right: 0;");
-            html.AppendLine("            top: 0;");
-            html.AppendLine("            height: 100%;");
-            html.AppendLine("            pointer-events: none;");
-            html.AppendLine("            z-index: 99;");
-            html.AppendLine("        }");
-            html.AppendLine("        tbody tr:first-child td { border-top-color: transparent; }");
-            html.AppendLine("        tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }");
-            html.AppendLine("        tbody tr:last-child td:last-child { border-bottom-right-radius: 8px; }");
-            html.AppendLine("        .table-container table { margin-bottom: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }");
+            html.AppendLine(LogAssertsFileContent("log.css"));
             html.AppendLine("    </style>");
             html.AppendLine("    <script>");
-                        html.AppendLine(@"        
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('th').forEach(function(th) {
-        th.removeAttribute('onclick'); 
-        th.addEventListener('click', function() {
-            const table = this.closest('table');
-            const columnIndex = Array.from(this.parentNode.children).indexOf(this);
-            const sortType = this.getAttribute('data-sort-type') || 'string';
-            sortTable(table, columnIndex, sortType);
-        });
-    });
-});
-
-function getCellValue(row, columnIndex, sortType) {
-    try {
-        if (!row || !row.cells || columnIndex >= row.cells.length) {
-            return sortType === 'number' || sortType === 'date' ? 0 : '';
-        }
-        
-        const cell = row.cells[columnIndex];
-        if (!cell) return sortType === 'number' || sortType === 'date' ? 0 : '';
-        
-        // 优先使用data-sort属性值
-        const sortValue = cell.getAttribute('data-sort');
-        if (sortValue !== null) {
-            return sortType === 'number' || sortType === 'date' ? parseFloat(sortValue) : sortValue;
-        }
-        
-        const value = cell.textContent ? cell.textContent.trim() : '';
-        
-        // 根据排序类型转换值
-        if (sortType === 'number') {
-            // 提取数字部分
-            const numMatch = value.match(/[\d\.]+/);
-            return numMatch ? parseFloat(numMatch[0]) : 0;
-                } else if (sortType === 'date') {
-            // 修改日期解析逻辑，优先处理 yyyy-MM-dd 格式
-            if (!value) return 0;
-            
-            // 尝试解析 yyyy-MM-dd 格式
-            const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (dateOnlyMatch) {
-                const year = parseInt(dateOnlyMatch[1]);
-                const month = parseInt(dateOnlyMatch[2]) - 1; // 月份从0开始
-                const day = parseInt(dateOnlyMatch[3]);
-                return new Date(year, month, day).getTime();
-            }
-            
-            // 尝试解析标准日期时间格式 yyyy-MM-dd HH:mm:ss
-            const dateTimeMatch = value.match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-            if (dateTimeMatch) {
-                const year = parseInt(dateTimeMatch[1]);
-                const month = parseInt(dateTimeMatch[2]) - 1; // 月份从0开始
-                const day = parseInt(dateTimeMatch[3]);
-                const hour = parseInt(dateTimeMatch[4]);
-                const minute = parseInt(dateTimeMatch[5]);
-                const second = parseInt(dateTimeMatch[6]);
-                return new Date(year, month, day, hour, minute, second).getTime();
-            }
-            
-            // 如果无法解析，尝试直接使用Date构造函数
-            return new Date(value).getTime() || 0;
-        } else if (sortType === 'time') {
-            // 处理时间格式（小时、分钟、秒）
-            let seconds = 0;
-            if (value.includes('小时')) {
-                const hoursMatch = value.match(/(\d+)小时/);
-                if (hoursMatch) {
-                    seconds += parseInt(hoursMatch[1]) * 3600;
-                }
-            }
-            if (value.includes('分钟')) {
-                const minutesMatch = value.match(/(\d+)分钟/);
-                if (minutesMatch) {
-                    seconds += parseInt(minutesMatch[1]) * 60;
-                }
-            }
-            if (value.includes('秒')) {
-                const secondsMatch = value.match(/([\d\.]+)秒/);
-                if (secondsMatch) {
-                    seconds += parseFloat(secondsMatch[1]);
-                }
-            }
-            return seconds;
-        }
-        return value;
-    } catch (e) {
-        console.error('获取单元格值时出错:', e);
-        return sortType === 'number' || sortType === 'date' ? 0 : '';
-    }
-}
-
-function sortTable(table, columnIndex, sortType) {
-    let loadingDiv = null;
-    let loadingTimer = null;
-    
-    try {
-        if (!table) return;
-        const tbody = table.querySelector('tbody');
-        if (!tbody) return;
-        
-        // 创建排序中的提示，但不立即显示
-        loadingDiv = document.createElement('div');
-        loadingDiv.style.position = 'fixed';
-        loadingDiv.style.top = '50%';
-        loadingDiv.style.left = '50%';
-        loadingDiv.style.transform = 'translate(-50%, -50%)';
-        loadingDiv.style.padding = '20px';
-        loadingDiv.style.background = 'rgba(0,0,0,0.7)';
-        loadingDiv.style.color = 'white';
-        loadingDiv.style.borderRadius = '5px';
-        loadingDiv.style.zIndex = '1000';
-        loadingDiv.textContent = '排序中，请稍候...';
-        
-        // 设置延迟显示提示，只有排序超过500毫秒才显示
-        loadingTimer = setTimeout(function() {
-            document.body.appendChild(loadingDiv);
-        }, 1000);
-        
-        // 使用setTimeout让UI有机会更新
-        setTimeout(function() {
-            try {
-                // 保存汇总行
-                const summaryRows = Array.from(tbody.querySelectorAll('tr.ignore-sort') || []);
-                
-                // 获取所有行并创建映射
-                const allRows = Array.from(tbody.querySelectorAll('tr') || []);
-                if (!allRows.length) {
-                    clearTimeout(loadingTimer);
-                    if (loadingDiv && loadingDiv.parentNode) {
-                        document.body.removeChild(loadingDiv);
-                    }
-                    return;
-                }
-                
-                // 首先标记所有行
-                for (let i = 0; i < allRows.length; i++) {
-                    if (allRows[i]) {
-                        allRows[i].setAttribute('data-original-index', i.toString());
-                    }
-                }
-                
-                // 获取需要排序的行（排除汇总行和子行）
-                const rows = [];
-                for (let i = 0; i < allRows.length; i++) {
-                    const row = allRows[i];
-                    if (row && row.classList && 
-                        !row.classList.contains('ignore-sort') && 
-                        !row.classList.contains('sub-row')) {
-                        rows.push(row);
-                    }
-                }
-                
-                // 创建行和其对应的附属行的映射
-                const rowPairs = [];
-                for (let i = 0; i < rows.length; i++) {
-                    try {
-                        const row = rows[i];
-                        if (!row || !row.getAttribute) continue;
-                        
-                        const originalIndexStr = row.getAttribute('data-original-index');
-                        if (!originalIndexStr) continue;
-                        
-                        const originalIndex = parseInt(originalIndexStr);
-                        if (isNaN(originalIndex)) continue;
-                        
-                        // 安全地获取下一行，确保它存在
-                        let nextRow = null;
-                        if (originalIndex + 1 < allRows.length) {
-                            nextRow = allRows[originalIndex + 1];
-                        }
-                        
-                        // 安全地检查nextRow是否存在且是否有classList属性
-                        if (nextRow && nextRow.classList && 
-                            typeof nextRow.classList.contains === 'function' && 
-                            nextRow.classList.contains('sub-row')) {
-                            rowPairs.push({main: row, sub: nextRow});
-                        } else {
-                            rowPairs.push({main: row, sub: null});
-                        }
-                    } catch (e) {
-                        console.error('创建行对时出错:', e);
-                        continue;
-                    }
-                }
-        
-                // 确定排序方向
-                let sortDirection = 'asc';
-                const headerCells = table.querySelectorAll('th');
-                if (!headerCells || columnIndex >= headerCells.length) {
-                    if (loadingDiv && loadingDiv.parentNode) {
-                        document.body.removeChild(loadingDiv);
-                    }
-                    return;
-                }
-                
-                const headerCell = headerCells[columnIndex];
-                if (!headerCell || !headerCell.classList) {
-                    if (loadingDiv && loadingDiv.parentNode) {
-                        document.body.removeChild(loadingDiv);
-                    }
-                    return;
-                }
-                
-                // 如果已经按这列排序，则切换方向
-                if (headerCell.classList.contains('sort-asc')) {
-                    sortDirection = 'desc';
-                } else if (headerCell.classList.contains('sort-desc')) {
-                    sortDirection = 'asc';
-                }
-                
-                // 清除所有表头的排序指示器
-                for (let i = 0; i < headerCells.length; i++) {
-                    const th = headerCells[i];
-                    if (th && th.classList) {
-                        th.classList.remove('sort-asc', 'sort-desc');
-                    }
-                }
-                
-                // 添加新的排序指示器
-                headerCell.classList.add('sort-' + sortDirection);
-        
-                // 特殊处理耗时列
-                const isTimeColumn = headerCell.textContent && headerCell.textContent.trim() === '任务耗时';
-                const actualSortType = isTimeColumn ? 'time' : sortType;
-        
-                // 排序行对 - 使用稳定的排序算法
-                rowPairs.sort((pairA, pairB) => {
-                    try {
-                        // 确保main对象存在
-                        if (!pairA || !pairA.main || !pairB || !pairB.main) {
-                            return 0;
-                        }
-                        
-                        const valueA = getCellValue(pairA.main, columnIndex, actualSortType);
-                        const valueB = getCellValue(pairB.main, columnIndex, actualSortType);
-                        
-                        let result;
-                        if (actualSortType === 'number' || actualSortType === 'date' || actualSortType === 'time') {
-                            result = sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
-                        } else {
-                            result = sortDirection === 'asc' 
-                                ? String(valueA).localeCompare(String(valueB), 'zh-CN') 
-                                : String(valueB).localeCompare(String(valueA), 'zh-CN');
-                        }
-                        
-                        // 如果值相等，保持原始顺序（稳定排序）
-                        if (result === 0) {
-                            const indexA = parseInt(pairA.main.getAttribute('data-original-index') || '0');
-                            const indexB = parseInt(pairB.main.getAttribute('data-original-index') || '0');
-                            return indexA - indexB;
-                        }
-                        
-                        return result;
-                    } catch (e) {
-                        console.error('排序比较时出错:', e);
-                        return 0;
-                    }
-                });
-        
-                // 创建文档片段以提高性能
-                const fragment = document.createDocumentFragment();
-                
-                // 先添加排序后的数据行和附属行
-                for (let i = 0; i < rowPairs.length; i++) {
-                    const pair = rowPairs[i];
-                    // 确保main对象存在
-                    if (pair && pair.main) {
-                        fragment.appendChild(pair.main);
-                        // 确保sub对象存在
-                        if (pair.sub) {
-                            fragment.appendChild(pair.sub);
-                        }
-                    }
-                }
-                
-                // 最后添加汇总行
-                for (let i = 0; i < summaryRows.length; i++) {
-                    const row = summaryRows[i];
-                    if (row) {
-                        fragment.appendChild(row);
-                    }
-                }
-                
-                // 清空tbody
-                while (tbody.firstChild) {
-                    tbody.removeChild(tbody.firstChild);
-                }
-                
-                // 一次性添加所有行
-                tbody.appendChild(fragment);
-            } catch (error) {
-                console.error('排序过程中发生错误:', error);
-                alert('排序过程中发生错误: ' + error.message);
-            } finally {
-                // 清除定时器并移除加载提示
-                clearTimeout(loadingTimer);
-                if (loadingDiv && loadingDiv.parentNode) {
-                    document.body.removeChild(loadingDiv);
-                }
-            }
-        }, 50); // 短暂延迟让UI更新
-    } catch (error) {
-        console.error('排序初始化时发生错误:', error);
-        // 清除定时器并确保加载提示被移除
-        clearTimeout(loadingTimer);
-        if (loadingDiv && loadingDiv.parentNode) {
-            document.body.removeChild(loadingDiv);
-        }
-    }
-}");
+            html.AppendLine(LogAssertsFileContent("log.js"));
             html.AppendLine("    </script>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
-
+            if (scriptGroupLogParseConfig.GenerateFarmingPlanData)
+            {
+                DailyFarmingData dailyData =  FarmingStatsRecorder.ReadDailyFarmingData();
+                var ft = dailyData.getFinalTotalMobCount();
+                var cap = dailyData.getFinalCap();
+                // 保存更新后的数据
+                html.AppendLine($"实时锄地进度:[小怪:{ft.TotalNormalMobCount}/{cap.DailyMobCap}" +
+                                $",精英:{ft.TotalEliteMobCount}/{cap.DailyEliteCap}]"+(dailyData.EnableMiyousheStats()?"(合并米游社数据)":""));
+            }
+            
             // 修改 colspan 计算逻辑
             int colspan = colConfigs.Length;
 
@@ -984,10 +678,13 @@ function sortTable(table, columnIndex, sortType) {
             MoraStatistics allms = new MoraStatistics();
             allms.ActionItems.AddRange(actionItems);
 
-
+            
+            int groupIndex = 0;
             // 遍历每个配置组生成表格
             foreach (var group in configGroups)
             {
+                List<Dictionary<string, object>> farmingPlanJsonList = new();
+                groupIndex++;
                 TimeSpan? timeDiff = group.EndDate - group.StartDate;
                 double totalSeconds = timeDiff?.TotalSeconds ?? 0;
                 MoraStatistics groupms = allms.GetFilterMoraStatistics(item =>
@@ -1075,6 +772,36 @@ function sortTable(table, columnIndex, sortType) {
                         );
                         configTaskMs.StatisticsStart = task.StartDate;
                         configTaskMs.StatisticsEnd = task.EndDate;
+
+                        if (configTaskMs.ActionItems.Count >0)
+                        {
+                            //farmingPlanJsonList
+                            // 构建配置
+                            var fp = new Dictionary<string, object>
+                            {
+                                ["name"] = task.Name.Replace(".json",""),
+                                ["cover"] = new Dictionary<string, object>
+                                {
+                                    ["info"] = new Dictionary<string, object>(),
+                                    ["farming_info"] = new Dictionary<string, object>
+                                    {
+                                        ["normal_mob_count"] = configTaskMs.SmallMonsterStatistics,
+                                        ["elite_mob_count"] = configTaskMs.EliteGameStatistics,
+                                        ["duration_seconds"] = timeDiff.HasValue ? timeDiff.Value.TotalSeconds : 0,
+                                        ["elite_details"] = configTaskMs.EliteDetails,
+                                        ["total_mora"] = configTaskMs.TotalMoraKillingMonstersMora
+                                    }
+                                } };
+                            if (configTaskMs.EliteGameStatistics == 0)
+                            {
+                                //纯小怪给与区分怪物标志
+                                ((Dictionary<string, object>)((Dictionary<string, object>)fp["cover"])["info"])
+                                    ["enable_monster_loot_split"] = true;
+                            }
+                            farmingPlanJsonList.Add(fp);
+                        }
+                        
+    
                         foreach (var item in col2Configs)
                         {
                             html.AppendLine($"        <td>{item.value.Invoke(configTaskMs)}</td>");
@@ -1123,6 +850,28 @@ function sortTable(table, columnIndex, sortType) {
                                                                   ConcatenateStrings("，每秒摩拉", (groupms.TotalMoraKillingMonstersMora / (groupms.StatisticsEnd - groupms.StatisticsStart)?.TotalSeconds ?? 0).ToString("F2"))}");
                     html.AppendLine("    </tr>");
 
+                }
+                if (farmingPlanJsonList.Count > 0)
+                {
+                    html.AppendLine("    <tr class=\"ignore-sort\">");
+
+                    html.AppendLine(
+                        $"        <td colspan=\"{colspan}\"><div>锄地规划数据：<button onclick=\"togglePre('farmingPlan{groupIndex}', this)\">显示 JSON</button><button id=\"copyBtn\" onclick=\"copyPreContent('farmingPlan{groupIndex}')\">复制到剪贴板</button>\n<pre style=\"display:none;\" id=\"farmingPlan{groupIndex}\">");
+                    var controlMap = new Dictionary<string, object>
+                    {
+                        ["global_cover"] = new Dictionary<string, object>
+                        {
+                            ["farming_info"] = new Dictionary<string, object>
+                            {
+                                ["allow_farming_count"] = true,
+                                ["primary_target"] = ""
+                            }
+                        },
+                        ["json_list"] = farmingPlanJsonList
+                    };
+                    html.AppendLine(JsonConvert.SerializeObject(controlMap, Formatting.Indented));
+
+                    html.AppendLine(" </pre> </div></tr>");     
                 }
 
 

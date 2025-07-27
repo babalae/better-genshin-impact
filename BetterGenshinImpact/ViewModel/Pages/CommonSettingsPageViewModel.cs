@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using Windows.System;
@@ -16,11 +17,13 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Converters;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -56,11 +59,14 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _navigationService = navigationService;
         _notificationService = notificationService;
         InitializeCountries();
+        InitializeMiyousheCookie();
     }
 
     public AllConfig Config { get; set; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
+    
+    public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
         new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
@@ -97,6 +103,32 @@ public partial class CommonSettingsPageViewModel : ViewModel
             {
                 UpdateRevivePoint(SelectedCountry, SelectedArea);
             }
+        }
+    }
+    
+    [RelayCommand]
+    public void OnQuestionButtonOnClick()
+    {
+        //            Owner = this,
+        WebpageWindow cookieWin = new()
+        {
+            Title = "日志分析",
+            Width = 800,
+            Height = 600,
+
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        cookieWin.NavigateToHtml(TravelsDiaryDetailManager.generHtmlMessage());
+        cookieWin.Show();
+    }
+    private void InitializeMiyousheCookie()
+    {
+        OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
+        if (mcfg.Cookie == string.Empty&&
+            mcfg.LogSyncCookie)
+        {
+            var config = LogParse.LoadConfig();
+            mcfg.Cookie = config.Cookie;
         }
     }
 

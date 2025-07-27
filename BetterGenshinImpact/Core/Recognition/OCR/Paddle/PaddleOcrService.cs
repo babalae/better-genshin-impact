@@ -3,12 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OCR.engine;
-using BetterGenshinImpact.Core.Recognition.OCR.paddle;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
 public class PaddleOcrService : IOcrService
 {
