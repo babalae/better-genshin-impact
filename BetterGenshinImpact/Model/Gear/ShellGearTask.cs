@@ -5,16 +5,10 @@ using BetterGenshinImpact.GameTask.Shell;
 
 namespace BetterGenshinImpact.Model.Gear;
 
-public class ShellGearTask : BaseGearTask
+public class ShellGearTask(ShellConfig? shellConfig) : BaseGearTask
 {
-    public override async Task Run(params object[] configs)
+    public override async Task Run()
     {
-        ShellConfig? shellConfig = null;
-        if (configs.Length > 0)
-        {
-            shellConfig = (ShellConfig)configs[0];
-        }
-
         var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
         await task.Start(CancellationContext.Instance.Cts.Token);
     }

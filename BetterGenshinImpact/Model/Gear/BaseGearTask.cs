@@ -45,14 +45,14 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 执行任务
     /// </summary>
-    public async Task Execute(params object[] configs)
+    public async Task Execute()
     {
         var stopwatch = new Stopwatch();
         try
         {
             _logger.LogInformation("------------------------------");
             stopwatch.Start();
-            await Run(configs);
+            await Run();
         }
         catch (NormalEndException e)
         {
@@ -81,7 +81,7 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 执行任务
     /// </summary>
-    public abstract Task Run(params object[] configs);
+    public abstract Task Run();
     
     
     // /// <summary>

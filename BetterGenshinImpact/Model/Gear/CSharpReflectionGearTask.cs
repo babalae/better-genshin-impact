@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.Model.Gear;
 /// </summary>
 public class CSharpReflectionGearTask : BaseGearTask
 {
-    public override Task Run(params object[] configs)
+    public override Task Run()
     {
         throw new System.NotImplementedException();
     }

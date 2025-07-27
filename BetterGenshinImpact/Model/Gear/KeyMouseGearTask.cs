@@ -13,7 +13,7 @@ public class KeyMouseGearTask : BaseGearTask
         FilePath = path;
     }
     
-    public override async Task Run(params object[] configs)
+    public override async Task Run()
     {
         // 加载并执行
         var json = await File.ReadAllTextAsync(FilePath);

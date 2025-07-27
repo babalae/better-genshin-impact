@@ -1,32 +1,39 @@
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Model.Gear.Parameter;
 
 namespace BetterGenshinImpact.Model.Gear;
 
 public class PathingGearTask : BaseGearTask
 {
-    public PathingGearTask(string path)
-    {
-        FilePath = path;
-    }
 
-    public override async Task Run(params object[] configs)
+    private PathingGearTaskParams _params;
+
+    public PathingGearTask(PathingGearTaskParams param)
+    {
+        FilePath = param.Path;
+        _params = param;
+    }
+    
+    public override async Task Run()
     {
         // 加载并执行
-        var task = PathingTask.BuildFromFilePath(FilePath);
+        var task = PathingTask.BuildFromFilePath(_params.Path);
         var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
-        if (configs.Length > 0)
+
+        if (_params.PathingPartyConfig != null)
         {
-            pathingTask.PartyConfig = (PathingPartyConfig)configs[0];
+            pathingTask.PartyConfig = _params.PathingPartyConfig;
         }
+
         if (pathingTask.PartyConfig.AutoPickEnabled)
         {
             TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
         }
+
         await pathingTask.Pathing(task);
     }
 }

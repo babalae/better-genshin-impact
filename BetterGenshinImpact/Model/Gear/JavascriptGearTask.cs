@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Model.Gear.Parameter;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 
@@ -19,10 +20,13 @@ public class JavascriptGearTask : BaseGearTask
 
     public string FolderName { get; set; }
 
-    public JavascriptGearTask(string folderName)
+    private JavascriptGearTaskParams _params;
+
+    public JavascriptGearTask(JavascriptGearTaskParams paramsObj)
     {
-        FolderName = folderName;
-        ProjectPath = Path.Combine(Global.ScriptPath(), folderName);
+        _params = paramsObj;
+        FolderName = _params.FolderName;
+        ProjectPath = Path.Combine(Global.ScriptPath(), _params.FolderName);
         if (!Directory.Exists(ProjectPath))
         {
             throw new DirectoryNotFoundException("脚本文件夹不存在:" + ProjectPath);
@@ -38,13 +42,13 @@ public class JavascriptGearTask : BaseGearTask
         Manifest.Validate(ProjectPath);
 
         // 基础属性
-        Name = folderName;
-        FilePath = Path.Combine(Global.ScriptPath(), folderName);
+        Name = _params.FolderName;
+        FilePath = Path.Combine(Global.ScriptPath(), _params.FolderName);
     }
 
-    public override async Task Run(params object[] configs)
+    public override async Task Run()
     {
-        await ExecuteScriptAsync(configs[0], (PathingPartyConfig)configs[1]);
+        await ExecuteScriptAsync(_params.Context, _params.PathingPartyConfig);
     }
 
     // public override string ReadDetail()
