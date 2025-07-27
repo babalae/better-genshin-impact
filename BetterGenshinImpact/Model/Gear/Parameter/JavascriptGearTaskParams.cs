@@ -2,7 +2,7 @@ using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Model.Gear.Parameter;
 
-public class JavascriptGearTaskParams
+public class JavascriptGearTaskParams : BaseGearTaskParams
 {
     public string FolderName { get; set; } = string.Empty;
 
