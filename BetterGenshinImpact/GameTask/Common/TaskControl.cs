@@ -42,7 +42,10 @@ public class TaskControl
             if (IsSuspendedByNetwork)
             {
                 Logger.LogWarning("网络恢复中...");
-                NetworkRecovery.Start(CancellationToken.None).Wait(5000);
+                if (NetworkRecovery.Start(CancellationToken.None).Wait(5000))
+                {
+                    isSuspend = false;
+                }
             }
         }
         catch (Exception ex)
@@ -114,7 +117,11 @@ public class TaskControl
 
                 first = false;
             }
-            CheckNetworkStatusAsync().Wait(1000, CancellationToken.None);
+
+            if (IsSuspendedByNetwork)
+            {
+                CheckNetworkStatusAsync().Wait(1000, CancellationToken.None);
+            }
 
             Thread.Sleep(1000);
         }
