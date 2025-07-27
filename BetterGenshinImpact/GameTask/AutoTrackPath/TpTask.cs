@@ -320,7 +320,8 @@ public class TpTask(CancellationToken ct)
                 Logger.LogInformation("传送完成，返回主界面");
                 return;
             }
-
+            //增加容错，小概率情况下碰到，前面点击传送失败
+            capture.Find(_assets.TeleportButtonRo,rg=>rg.Click());
             await Delay(delayMs, ct);
         }
 

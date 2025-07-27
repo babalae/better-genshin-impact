@@ -27,7 +27,8 @@ public class RepoWebBridge
                 throw new Exception("仓库文件夹不存在，请至少成功更新一次仓库！");
             }
 
-            var localRepoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            var localRepoJsonPath = Directory
+                .GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
             if (localRepoJsonPath is null)
             {
                 throw new Exception("repo.json 仓库索引文件不存在，请至少成功更新一次仓库！");
@@ -65,12 +66,46 @@ public class RepoWebBridge
             {
                 throw new Exception("用户配置文件不存在: " + userConfigPath);
             }
+
             return await File.ReadAllTextAsync(userConfigPath);
         }
         catch (Exception e)
         {
             await MessageBox.ShowAsync(e.Message, "获取用户配置失败");
             return "";
+        }
+    }
+
+    public async Task<string> GetFile(string relPath)
+    {
+        try
+        {
+            string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
+                .Replace('/', Path.DirectorySeparatorChar);
+        
+            if (!File.Exists(filePath))
+                return "404";
+
+            // 允许返回内容的文本文件扩展名
+            string[] allowedTextExtensions = { 
+                ".txt", ".md", ".json", ".js", ".ts", 
+                ".vue", ".css", ".html", ".csv", ".xml",
+                ".yaml", ".yml", ".ini", ".config"
+            };
+
+            string ext = Path.GetExtension(filePath).ToLower();
+            
+            if (allowedTextExtensions.Contains(ext))
+            {
+                return await File.ReadAllTextAsync(filePath);
+            }
+
+            // 其他所有文件类型返回404
+            return "404";
+        }
+        catch
+        {
+            return "404";
         }
     }
 }

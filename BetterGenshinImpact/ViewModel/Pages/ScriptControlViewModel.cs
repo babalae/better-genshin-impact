@@ -846,6 +846,8 @@ public partial class ScriptControlViewModel : ViewModel
             Margin = new Thickness(0, 0, 0, 10),
             PlaceholderText = "输入筛选条件...",
         };
+        // 设置文本框自动聚焦
+        filterTextBox.Loaded += (s, e) => filterTextBox.Focus();
         filterTextBox.TextChanged += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
         excludeCheckBox.Click += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
         stackPanel.Children.Add(filterTextBox);
@@ -1723,6 +1725,10 @@ public partial class ScriptControlViewModel : ViewModel
         // 创建每个配置组的 CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
+            if (scriptGroup.Config.PathingConfig.HideOnRepeat)
+            {
+                continue;
+            }
             var checkBox = new CheckBox
             {
                 Content = scriptGroup.Name,

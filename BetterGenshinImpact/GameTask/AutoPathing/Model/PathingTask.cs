@@ -11,6 +11,9 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Model;
+using System.Linq;
+
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -58,14 +61,30 @@ public class PathingTask
 
         // 获取 FullPath 相对于 basePath 的相对路径
         var relativePath = Path.GetRelativePath(basePath, FullPath);
-
-        // 分割相对路径，获取第一个文件夹名称
-        var firstFolder = relativePath.Split(Path.DirectorySeparatorChar)[0];
-
-        return firstFolder;
+        
+        //计算一共有多少级目录
+        var level = relativePath.Count(c => c == Path.DirectorySeparatorChar);
+        
+        //获取每一级目录的名称
+        var fileNames = relativePath.Split(Path.DirectorySeparatorChar);
+        
+        // 获取ConditionDefinitions采集物列表
+        var conditionDefinition = ConditionDefinitions.Definitions["采集物"];
+        var materialList = conditionDefinition.ObjectOptions?.ToList() ?? new List<string>();
+        
+        //跳过第一个目录，i从1开始,（一级目录必定不是采集物），对比每一个采集物名称 
+        for (var i = 1; i < level; i++)
+        {
+            var materialName = fileNames[i];
+            if (materialList.Contains(materialName))
+            {
+                return materialName;
+            }
+        }
+        return null;
     }
 
-    public static PathingTask BuildFromFilePath(string filePath)
+    public static PathingTask? BuildFromFilePath(string filePath)
     {
         //var json = File.ReadAllText(filePath);
         var task = JsonSerializer.Deserialize<PathingTask>(JsonMerger.getMergePathingJson(filePath), PathRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize PathingTask");
@@ -79,7 +98,10 @@ public class PathingTask
         // 比较版本号大小 BgiVersion
         if (!string.IsNullOrWhiteSpace(task.Info.BgiVersion) && Global.IsNewVersion(task.Info.BgiVersion))
         {
-            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 脚本可能无法正常工作，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 禁止运行，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 禁止运行，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 禁止运行，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
+            return null;
         }
         return task;
     }

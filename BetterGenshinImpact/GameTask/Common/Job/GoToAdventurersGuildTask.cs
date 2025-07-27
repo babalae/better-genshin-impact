@@ -148,6 +148,10 @@ public class GoToAdventurersGuildTask
     public async Task GoToAdventurersGuild(string country, CancellationToken ct)
     {
         var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"GameTask\Common\Element\Assets\Json\冒险家协会_{country}.json"));
+        if (task == null)
+        {
+            throw new Exception("地图追踪文件加载失败");
+        }
         var pathingTask = new PathExecutor(ct)
         {
             PartyConfig = new PathingPartyConfig

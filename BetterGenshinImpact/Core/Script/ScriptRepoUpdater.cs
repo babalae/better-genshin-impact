@@ -570,9 +570,39 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         //         return;
         //     }
         // }
+        
+        //顶层目录订阅时，不会删除其下，不在订阅中的文件夹
+        List<string> newPaths = new List<string>();
+        foreach (var path in paths)
+        {
+            //顶层节点，按库中的文件夹来
+            if (path == "pathing")
+            {
+                var scriptPath = Path.Combine(repoPath, path);
+                if (Directory.Exists(scriptPath))
+                {
+                    // 获取该路径下的所有“仅第一层文件夹”
+                    string[] directories = Directory.GetDirectories(scriptPath, "*", SearchOption.TopDirectoryOnly);
+                    foreach (var dir in directories)
+                    {
+                        newPaths.Add("pathing"+"/"+Path.GetFileName(dir));
+                    }
+                }
+                else
+                {
+                    Toast.Warning($"未知的脚本路径：{path}");
+                }
+            }
+            else
+            {
+                newPaths.Add(path);
+            }
+
+        }
+
 
         // 拷贝文件
-        foreach (var path in paths)
+        foreach (var path in newPaths)
         {
             var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
             if (PathMapper.TryGetValue(first, out var userPath))
@@ -620,24 +650,38 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
         var validRoots = PathMapper.Keys.ToHashSet();
 
-        // 过滤并保留有效路径
-        scriptConfig.SubscribedScriptPaths = scriptConfig.SubscribedScriptPaths
+        var allPaths = scriptConfig.SubscribedScriptPaths
             .Distinct()
-            .Where(path =>
+            .OrderBy(path => path)
+            .ToList();
+
+        var pathsToKeep = new HashSet<string>();
+
+        foreach (var path in allPaths)
+        {
+            if (string.IsNullOrEmpty(path) || !path.Contains('/'))
+                continue;
+
+            var root = path.Split('/')[0];
+            if (!validRoots.Contains(root))
+                continue;
+
+            var (_, remainingPath) = GetFirstFolderAndRemainingPath(path);
+            var userPath = Path.Combine(PathMapper[root], remainingPath);
+            if (!Directory.Exists(userPath) && !File.Exists(userPath))
+                continue;
+
+            // 检查是否已被父路径覆盖
+            bool isCoveredByParent = pathsToKeep.Any(p => 
+                path.StartsWith(p + "/") || path == p);
+        
+            if (!isCoveredByParent)
             {
-                if (string.IsNullOrEmpty(path) || !path.Contains('/'))
-                    return false;
+                pathsToKeep.Add(path);
+            }
+        }
 
-                var root = path.Split('/')[0];
-
-                if (!validRoots.Contains(root))
-                    return false;
-
-                var (_, remainingPath) = GetFirstFolderAndRemainingPath(path);
-                var userPath = Path.Combine(PathMapper[root], remainingPath);
-
-                return Directory.Exists(userPath) || File.Exists(userPath);
-            })
+        scriptConfig.SubscribedScriptPaths = pathsToKeep
             .OrderBy(path => path)
             .ToList();
     }
@@ -684,6 +728,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public void OpenLocalRepoInWebView()
     {
+        UpdateSubscribedScriptPaths();
         if (_webWindow is not { IsVisible: true })
         {
             _webWindow = new WebpageWindow

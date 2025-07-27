@@ -17,7 +17,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     
     public new List<BaseMapLayerByTemplateMatch> Layers { get; set; } = [];
     
-    public MatchResult CurResult;
+    public MatchResult PrevSuccessResult;
     
     public struct MatchResult
     {
@@ -25,10 +25,10 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         public Point2f MapPos = new Point2f(0, 0);        // 匹配位置
         public double Confidence = 0;
 
-        public bool IsSuccess(int rank)
+        public readonly bool IsSuccess(int rank)
         {
-            var r = Math.Clamp(rank, 0, ConfidenceThresholds.Length);
-            return Confidence <= 1 && Confidence >= ConfidenceThresholds[r];
+            var index = Math.Clamp(rank, 0, ConfidenceThresholds.Length - 1);
+            return Confidence <= 1 && Confidence >= ConfidenceThresholds[index];
         }
         public MatchResult() {}
     }
@@ -51,13 +51,13 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat)
     {
+        var result= new MatchResult();
         var (miniMap, mask) = _miniMapPreprocessor.GetMiniMapAndMask(colorMiniMapMat);
         using (miniMap)
         using (mask)
         {
-            GlobalMatch(miniMap, mask);
-            Debug.WriteLine($"全局匹配, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
-            return CurResult.IsSuccess(2) ? ConvertGenshinMapCoordinatesToImageCoordinates(CurResult.MapPos) : default;
+            GlobalMatch(miniMap, mask, ref result);
+            return UpdateResult(result, 2);
         }
     }
 
@@ -70,105 +70,110 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     /// <returns></returns>
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY)
     {
+        return GetMiniMapPosition(colorMiniMapMat, prevX, prevY, 2);
+    }
+
+    public Point2f GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY, int rank)
+    {
         if (prevX <= 0 || prevY <= 0)
         {
             return GetMiniMapPosition(colorMiniMapMat);
         }
+        var curResult = new MatchResult();
         var (miniMap, mask) = _miniMapPreprocessor.GetMiniMapAndMask(colorMiniMapMat);
         using (miniMap)
         using (mask)
         {
-            LocalMatch(miniMap, mask, ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(prevX, prevY)));
-            Debug.WriteLine($"局部匹配, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
-            return CurResult.IsSuccess(2) ? ConvertGenshinMapCoordinatesToImageCoordinates(CurResult.MapPos) : default;
+            LocalMatch(miniMap, mask, ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(prevX, prevY)), ref curResult);
+            return UpdateResult(curResult, rank);
         }
     }
     
-/*
-    public SceneBaseMapByTemplateMatch FromJsonFiles(string filePath)
+    private Point2f UpdateResult(in MatchResult result, int rank)
     {
-        string json = File.ReadAllText(filePath);
-        var sceneBaseMap = JsonSerializer.Deserialize<SceneBaseMapByTemplateMatch>(json) ?? throw new Exception("Failed to deserialize JSON.");
-        sceneBaseMap.Type = SceneBaseMapByTemplateMatch.Type;
-        return sceneBaseMap;
+        if (!result.IsSuccess(rank)) return default;
+        PrevSuccessResult = result;
+        return ConvertGenshinMapCoordinatesToImageCoordinates(PrevSuccessResult.MapPos);
     }
-*/    
     
+    [Conditional("DEBUG")]
+    private static void LogMatchResult(string stage, in MatchResult result)
+    {
+        Debug.WriteLine($"{stage}: 坐标 ({result.MapPos.X:F4}, {result.MapPos.Y:F4}), 置信度 {result.Confidence:F4}");
+    }
 
     #region 模板匹配
     
-    public void GlobalMatch(Mat miniMap, Mat mask)
+    public void GlobalMatch(Mat miniMap, Mat mask, ref MatchResult result)
     {
         SpeedTimer speedTimer = new SpeedTimer("全局匹配");
         using var context = new MatchContext(miniMap, mask);
-        RoughMatchGlobal(context);
-        speedTimer.Record("全局粗匹配");
-        ExactMatch(context);
+        RoughMatchGlobal(context, ref result);
+        speedTimer.Record("全局粗匹配"); 
+        ExactMatch(context, ref result);
         speedTimer.Record("精确匹配");
         speedTimer.DebugPrint();
     }
 
     // 局部匹配：在上一次匹配位置附近进行搜索
-    public void LocalMatch(Mat miniMap, Mat mask, Point2f pos)
+    public void LocalMatch(Mat miniMap, Mat mask, Point2f pos, ref MatchResult result)
     {
         SpeedTimer speedTimer = new SpeedTimer("局部匹配");
         using var context = new MatchContext(miniMap, mask);
-        RoughMatchLocal(context, pos);
+        RoughMatchLocal(context, pos, ref result);
         speedTimer.Record("局部粗匹配");
-        ExactMatch(context);
+        ExactMatch(context, ref result);
         speedTimer.Record("精确匹配");
         speedTimer.DebugPrint();
     }
     
-    public void RoughMatchGlobal(MatchContext context)
+    public void RoughMatchGlobal(MatchContext context, ref MatchResult result)
     {
-        CurResult = default;
-        var flag = false;
         foreach (var layer in Layers)
         {
             var (tempPos, tempVal) = layer.RoughMatch(context.MaskedMiniMapRoughs, context.MaskRoughF);
             if (!context.NormalizerRough.Update(tempVal + context.TplSumSq)) continue;
-            CurResult.Layer = layer;
-            CurResult.MapPos = tempPos;
-            flag = true;
+            result.Layer = layer;
+            result.MapPos = tempPos;
         }
-        if (flag)
-        {
-            CurResult.Confidence = context.NormalizerRough.Confidence();
-            Debug.WriteLine($"粗匹配成功, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
-        }
-        Debug.WriteLine($"粗匹配失败, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
+        result.Confidence = context.NormalizerRough.Confidence();
+        LogMatchResult("全局粗匹配", result);
     }
     
-    public void RoughMatchLocal(MatchContext context, Point2f pos)
+    public void RoughMatchLocal(MatchContext context, Point2f pos, ref MatchResult result)
     {
-        if (!CurResult.MapPos.Equals(pos))
+        result.MapPos = pos;
+        if (PrevSuccessResult.MapPos.Equals(pos))
         {
-            CurResult.Layer = null;
-            CurResult.MapPos = pos;
+            result.Layer = PrevSuccessResult.Layer;
         }
-        CurResult.Confidence = 0;
-        if (CurResult.Layer != null)
+        if (result.Layer != null)
         {
-            var (tempPos, tempVal) = CurResult.Layer.RoughMatch(context.MaskedMiniMapRoughs, context.MaskRoughF, pos);
-            if (context.NormalizerRough.Update(tempVal + context.TplSumSq))
+            var (tempPos, tempVal) = result.Layer.RoughMatch(context.MaskedMiniMapRoughs, context.MaskRoughF, pos);
+            if (tempPos != default && context.NormalizerRough.Update(tempVal + context.TplSumSq))
             {
-                CurResult.MapPos = tempPos;
-                CurResult.Confidence = context.NormalizerRough.Confidence();
+                result.MapPos = tempPos;
+                result.Confidence = context.NormalizerRough.Confidence();
             }
         }
-        if (CurResult.IsSuccess(0)) return;
+
+        if (result.IsSuccess(0))
+        {
+            LogMatchResult("局部粗匹配", result);
+            return;
+        }
         
         var flag = false;
-        foreach (var layer in (CurResult.Layer == null)? Layers : Layers.Where(layer => layer != CurResult.Layer))
+        foreach (var layer in (result.Layer == null)? Layers : Layers.Where(layer => layer != PrevSuccessResult.Layer))
         {
             var (tempPos, tempVal) = layer.RoughMatch(context.MaskedMiniMapRoughs, context.MaskRoughF, pos);
-            if (!context.NormalizerRough.Update(tempVal + context.TplSumSq)) continue;
-            CurResult.Layer = layer;
-            CurResult.MapPos = tempPos;
+            if (tempPos == default || !context.NormalizerRough.Update(tempVal + context.TplSumSq)) continue;
+            result.Layer = layer;
+            result.MapPos = tempPos;
             flag = true;
         }
-        if (flag) CurResult.Confidence = context.NormalizerRough.Confidence();
+        if (flag) result.Confidence = context.NormalizerRough.Confidence();
+        LogMatchResult("局部粗匹配", result);
         //if (CurResult.IsSuccess) return;
         //RoughMatchLocalChan(context, pos);
         //if (CurResult.IsSuccess) return;
@@ -180,36 +185,36 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     /// </summary>
     /// <param name="context"></param>
     /// <param name="pos"></param>
-    public void RoughMatchLocalChan(MatchContext context, Point2f pos)
+    /// <param name="result"></param>
+    public void RoughMatchLocalChan(MatchContext context, Point2f pos, ref MatchResult result)
     {
-        CurResult = default;
+        result = default;
         var flag = false;
         foreach (var layer in Layers)
         {
             var (tempPos, tempVal) = layer.RoughMatch(context.MaskedMiniMapRoughs, context.MaskRoughF, pos, context.Channels);
             if (!context.NormalizerRoughChan.Update(tempVal + context.TplSumSqChan)) continue;
-            CurResult.Layer = layer;
-            CurResult.MapPos = tempPos;
+            result.Layer = layer;
+            result.MapPos = tempPos;
             flag = true;
         }
-        if (flag) CurResult.Confidence = context.NormalizerRough.Confidence();
+        if (flag) result.Confidence = context.NormalizerRough.Confidence();
     }
     
-    public void ExactMatch(MatchContext context)
+    public void ExactMatch(MatchContext context, ref MatchResult result)
     {
-        if (CurResult.Layer == null) return;
-        if (!CurResult.IsSuccess(2)) return;
-        var (tempPos, tempVal) = CurResult.Layer.ExactMatch(context.MiniMapExact, context.MaskExact, CurResult.MapPos);
-        if (context.NormalizerExact.Update(tempVal))
+        if (result.Layer == null || !result.IsSuccess(2)) return;
+        var (tempPos, tempVal) = result.Layer.ExactMatch(context.MiniMapExact, context.MaskExact, result.MapPos);
+        if (tempPos != default && context.NormalizerExact.Update(tempVal))
         {
-            CurResult.MapPos = tempPos;
-            CurResult.Confidence = context.NormalizerExact.Confidence();
+            result.MapPos = tempPos;
+            result.Confidence = context.NormalizerExact.Confidence();
         }
         else
         {
-            CurResult = default;
+            result.Confidence = 0;
         }
-        Debug.WriteLine($"粗匹配, 坐标 {CurResult.MapPos}, 置信度 {CurResult.Confidence}");
+        LogMatchResult("精确匹配", result);
     }
     #endregion
     
