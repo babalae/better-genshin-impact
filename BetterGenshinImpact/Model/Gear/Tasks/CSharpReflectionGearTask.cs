@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace BetterGenshinImpact.Model.Gear;
+namespace BetterGenshinImpact.Model.Gear.Tasks;
 
 /// <summary>
 /// 直接使用C#反射来执行任务的GearTask

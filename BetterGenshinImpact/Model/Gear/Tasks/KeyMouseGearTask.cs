@@ -1,10 +1,9 @@
 using System.IO;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 
-namespace BetterGenshinImpact.Model.Gear;
+namespace BetterGenshinImpact.Model.Gear.Tasks;
 
 public class KeyMouseGearTask : BaseGearTask
 {

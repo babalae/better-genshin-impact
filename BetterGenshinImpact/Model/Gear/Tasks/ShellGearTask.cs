@@ -3,7 +3,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.Shell;
 
-namespace BetterGenshinImpact.Model.Gear;
+namespace BetterGenshinImpact.Model.Gear.Tasks;
 
 public class ShellGearTask(ShellConfig? shellConfig) : BaseGearTask
 {

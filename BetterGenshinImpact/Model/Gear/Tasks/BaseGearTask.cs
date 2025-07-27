@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.Json.Serialization;
+using System.IO;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
-namespace BetterGenshinImpact.Model.Gear;
+namespace BetterGenshinImpact.Model.Gear.Tasks;
 
 /// <summary>
 /// 为了和其他Task做区分，使用Gear(齿轮)来作为前缀命名调度器内定义的任务
@@ -83,9 +84,15 @@ public abstract class BaseGearTask : ObservableObject
     /// </summary>
     public abstract Task Run();
     
+
+    public static BaseGearTask ReadFileToBaseGearTasks(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("任务文件路径不能为空", nameof(path));
+        }
+        var json = File.ReadAllText(path);
+        return JsonConvert.DeserializeObject<BaseGearTask>(json) ?? throw new InvalidOperationException("任务数据读取结果为空");
+    }
     
-    // /// <summary>
-    // /// 读取详情内容
-    // /// </summary>
-    // public abstract string ReadDetail();
 }

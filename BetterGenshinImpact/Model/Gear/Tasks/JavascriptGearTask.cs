@@ -10,7 +10,7 @@ using BetterGenshinImpact.Model.Gear.Parameter;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 
-namespace BetterGenshinImpact.Model.Gear;
+namespace BetterGenshinImpact.Model.Gear.Tasks;
 
 public class JavascriptGearTask : BaseGearTask
 {
