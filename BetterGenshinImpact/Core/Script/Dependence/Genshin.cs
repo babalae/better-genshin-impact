@@ -269,6 +269,14 @@ public class Genshin
             return false;//释放失败状态到JS，否则失败后会退出任务。
         }
     }
+    
+    /// <summary>
+    /// 清除当前调度器的队伍缓存
+    /// </summary>
+    public void ClearPartyCache()
+    {
+        RunnerContext.Instance.ClearCombatScenes();
+    }
 
 
     /// <summary>
