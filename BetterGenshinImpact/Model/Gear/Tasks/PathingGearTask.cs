@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -18,7 +19,7 @@ public class PathingGearTask : BaseGearTask
         _params = param;
     }
     
-    public override async Task Run()
+    public override async Task Run(CancellationToken ct)
     {
         // 加载并执行
         var task = PathingTask.BuildFromFilePath(_params.Path);

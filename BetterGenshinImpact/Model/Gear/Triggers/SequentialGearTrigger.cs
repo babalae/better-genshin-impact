@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model.Gear.Tasks;
 
@@ -15,7 +16,7 @@ public class SequentialGearTrigger : GearBaseTrigger
         List<BaseGearTask> list = GearTaskRefenceList.Select(gearTask => gearTask.ToGearTask()).ToList();
         foreach (var gearTask in list)
         {
-            await gearTask.Run();
+            await gearTask.Run(CancellationToken.None);
         }
     }
 }

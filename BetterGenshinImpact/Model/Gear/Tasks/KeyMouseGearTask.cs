@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
@@ -12,10 +13,10 @@ public class KeyMouseGearTask : BaseGearTask
         FilePath = path;
     }
     
-    public override async Task Run()
+    public override async Task Run(CancellationToken ct)
     {
         // 加载并执行
-        var json = await File.ReadAllTextAsync(FilePath);
-        await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
+        var json = await File.ReadAllTextAsync(FilePath, ct);
+        await KeyMouseMacroPlayer.PlayMacro(json, ct, false);
     }
 }

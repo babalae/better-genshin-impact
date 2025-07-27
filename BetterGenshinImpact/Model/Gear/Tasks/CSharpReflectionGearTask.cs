@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model.Gear.Parameter;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ public class CSharpReflectionGearTask : BaseGearTask
         _params = paramsObj;
     }
     
-    public override async Task Run()
+    public override async Task Run(CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(_params.MethodPath))
         {
@@ -65,7 +66,7 @@ public class CSharpReflectionGearTask : BaseGearTask
         _logger.LogInformation("准备执行反射调用: {MethodPath}, 参数数量: {ParamCount}", methodPath, parameters.Length);
 
         // 解析类型和方法名
-        Type targetType;
+        Type? targetType;
         string methodName;
         
         if (methodPath.Contains(':'))
@@ -88,7 +89,7 @@ public class CSharpReflectionGearTask : BaseGearTask
             var className = string.Join(".", parts2.Take(parts2.Length - 1));
             
             // 在当前程序集和已加载的程序集中查找类型
-            targetType = Type.GetType(className) ?? 
+            targetType = System.Type.GetType(className) ?? 
                         AppDomain.CurrentDomain.GetAssemblies()
                             .SelectMany(a => a.GetTypes())
                             .FirstOrDefault(t => t.FullName == className || t.Name == className);

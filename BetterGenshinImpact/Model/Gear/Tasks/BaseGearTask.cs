@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,6 +23,11 @@ public abstract class BaseGearTask : ObservableObject
     /// 任务名称
     /// </summary>
     public string Name { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 任务类型
+    /// </summary>
+    public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// 任务的文件位置，如果有
@@ -36,6 +42,7 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 父节点
     /// </summary>
+    [JsonIgnore]
     public BaseGearTask? Father { get; set; }
 
     /// <summary>
@@ -46,14 +53,14 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 执行任务
     /// </summary>
-    public async Task Execute()
+    public async Task Execute(CancellationToken ct)
     {
         var stopwatch = new Stopwatch();
         try
         {
             _logger.LogInformation("------------------------------");
             stopwatch.Start();
-            await Run();
+            await Run(ct);
         }
         catch (NormalEndException e)
         {
@@ -82,7 +89,7 @@ public abstract class BaseGearTask : ObservableObject
     /// <summary>
     /// 执行任务
     /// </summary>
-    public abstract Task Run();
+    public abstract Task Run(CancellationToken ct);
     
 
     public static BaseGearTask ReadFileToBaseGearTasks(string? path)

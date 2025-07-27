@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
@@ -20,7 +21,7 @@ public class JavascriptGearTask : BaseGearTask
 
     public string FolderName { get; set; }
 
-    private JavascriptGearTaskParams _params;
+    private readonly JavascriptGearTaskParams _params;
 
     public JavascriptGearTask(JavascriptGearTaskParams paramsObj)
     {
@@ -46,9 +47,9 @@ public class JavascriptGearTask : BaseGearTask
         FilePath = Path.Combine(Global.ScriptPath(), _params.FolderName);
     }
 
-    public override async Task Run()
+    public override async Task Run(CancellationToken ct)
     {
-        await ExecuteScriptAsync(_params.Context, _params.PathingPartyConfig);
+        await ExecuteScriptAsync(ct, _params.Context, _params.PathingPartyConfig);
     }
 
     // public override string ReadDetail()
@@ -56,7 +57,7 @@ public class JavascriptGearTask : BaseGearTask
     //     throw new NotImplementedException();
     // }
 
-    private async Task ExecuteScriptAsync(dynamic? context = null, PathingPartyConfig? partyConfig = null)
+    private async Task ExecuteScriptAsync(CancellationToken ct, dynamic? context = null, PathingPartyConfig? partyConfig = null)
     {
         // 默认值
         GlobalMethod.SetGameMetrics(1920, 1080);
