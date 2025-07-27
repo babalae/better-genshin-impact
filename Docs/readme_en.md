@@ -42,13 +42,13 @@ BetterGI · A Better Genshin Impact experience, powered by computer vision techn
     * **[Auto Hangout](https://bettergi.com/feats/timer/skip.html#%E8%87%AA%E5%8A%A8%E9%82%80%E7%BA%A6):** Automatically selects Hangout options (requires Auto Dialogue enabled).
     * **[Quick Teleport](https://bettergi.com/feats/timer/tp.html):** Auto-clicks map teleport points and initiates teleportation.
     * **[Semi-Auto Fishing](https://bettergi.com/feats/timer/fish.html):** AI-based auto-casting, auto-hook detection, and auto-catch mechanics.
-    * **[Auto Cooking](https://bettergi.com/feats/timer/cook.html):** Perfectly cooks dishes (excluding "Bountiful Year" recipes).
+    * **[Auto Cooking](https://bettergi.com/feats/timer/cook.html):** Perfectly cooks dishes (excluding "Adeptus' Temptation" recipes).
 
 * **Standalone Tasks**
     * **[Auto Genius Invokation TCG](https://bettergi.com/feats/task/tcg.html):** Automates PvE TCG challenges like character invites and weekly duels.
-    * **[Auto Woodcutting](https://bettergi.com/feats/task/felling.html):** Uses "Woodland Encounter" (<kbd>Z</kbd>) and relogs to farm wood efficiently.
+    * **[Auto Woodcutting](https://bettergi.com/feats/task/felling.html):** Uses "The Boon of the Elder Tree" (<kbd>Z</kbd>) and relogs to farm wood efficiently.
     * **[Auto Domain Runs](https://bettergi.com/feats/task/domain.html):** Fully automated domain clears, including starting, combat, and claiming rewards.
-    * **[Auto Rhythm Game](https://bettergi.com/feats/task/music.html):** Completes "Rhythm of the Realm" albums for achievements.
+    * **[Auto Rhythm Game](https://bettergi.com/feats/task/music.html):** Completes achievements for Repertoire of Myriad Melodies.
     * **[Full Auto Fishing](https://bettergi.com/feats/task/fish.html):** Fully automates fishing at designated spots, including day/night transitions.
 
 * **Full Automation**
@@ -127,4 +127,4 @@ Formatting: [CodeMaid.config](CodeMaid.config), [Settings.XamlStyler](Settings.X
 ![GPL-v3](https://www.gnu.org/graphics/gplv3-127x51.png)
 
 ## Support
-Report issues: [GitHub Issues](https://github.com/babalae/better-genshin-impact/issues)  
+Report issues: [GitHub Issues](https://github.com/babalae/better-genshin-impact/issues)

@@ -92,9 +92,20 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _autoRunEnabled = true;
     
+    //在连续执行时是否隐藏
+    [ObservableProperty]
+    private bool _hideOnRepeat = false;
+    
     //执行周期配置
     [ObservableProperty]
     private PathingPartyTaskCycleConfig _taskCycleConfig = new();
+    
+    //任务完成跳过执行配置
+    [ObservableProperty]
+    private TaskCompletionSkipRuleConfig _taskCompletionSkipRuleConfig = new();
+    //优先执行其他配置组
+    [ObservableProperty]
+    private PreExecutionPriorityConfig _preExecutionPriorityConfig = new();
 
     //启用自动战斗配置
     [ObservableProperty]
