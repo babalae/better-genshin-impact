@@ -10,8 +10,8 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  Title="更好的原神"
-                 Width="900"
-                 Height="600"
+                 Width="1050"
+                 Height="700"
                  d:Background="#D2D2D2"
                  d:DataContext="{d:DesignInstance Type=viewModel:MainWindowViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
@@ -79,6 +79,7 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+
                 <!--<ui:NavigationViewItemSeparator />-->
 
                 <ui:NavigationViewItem Content="一条龙"
@@ -94,7 +95,13 @@
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
                     <ui:NavigationViewItem.MenuItems>
-
+                        <ui:NavigationViewItem Content="任务列表"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:GearTaskListPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="TaskListLtr24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                         <!--<ui:NavigationViewItemSeparator />-->
                         <!--  ConvertRange20  -->
                         <ui:NavigationViewItem Content="调度器"

@@ -1,0 +1,290 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.GearTaskListPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:component="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Component"
+             d:DataContext="{d:DesignInstance Type=pages:GearTaskListPageViewModel}"
+             d:DesignHeight="850"
+             d:DesignWidth="1200"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <!-- 任务定义项模板 -->
+        <DataTemplate x:Key="TaskDefinitionItemTemplate" DataType="{x:Type component:GearTaskDefinitionViewModel}">
+            <Border Background="{DynamicResource CardBackground}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Margin="2"
+                    Padding="8">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    
+                    <ui:TextBlock Grid.Row="0"
+                                  FontWeight="SemiBold"
+                                  Text="{Binding Name}"
+                                  TextTrimming="CharacterEllipsis" />
+                    
+                    <ui:TextBlock Grid.Row="1"
+                                  Margin="0,4,0,0"
+                                  FontSize="12"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="{Binding Description}"
+                                  TextTrimming="CharacterEllipsis"
+                                  TextWrapping="Wrap"
+                                  MaxHeight="40" />
+                    
+                    <StackPanel Grid.Row="2"
+                                Margin="0,4,0,0"
+                                Orientation="Horizontal">
+                        <ui:TextBlock FontSize="10"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding ModifiedTime, StringFormat='修改: {0:MM-dd HH:mm}'}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- 右键菜单 -->
+        <ContextMenu x:Key="TaskNodeContextMenu">
+            <MenuItem Header="添加采集任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="采集任务">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加战斗任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="战斗任务">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加传送任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="传送任务">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加交互任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="交互任务">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="添加任务组" Command="{Binding DataContext.AddTaskGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Folder24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="删除" Command="{Binding DataContext.DeleteTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Delete24" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </UserControl.Resources>
+
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="8" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：任务定义列表 -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <ui:TextBlock Grid.Row="0"
+                          Margin="0,0,0,8"
+                          FontSize="16"
+                          FontWeight="SemiBold"
+                          Text="任务定义列表" />
+
+            <!-- 左侧工具栏 -->
+            <StackPanel Grid.Row="1"
+                        Margin="0,0,0,8"
+                        Orientation="Horizontal">
+                <ui:Button Command="{Binding AddTaskDefinitionCommand}"
+                           Content="新建"
+                           Icon="{ui:SymbolIcon Add24}"
+                           Margin="0,0,4,0" />
+                <ui:Button Command="{Binding SaveToJsonCommand}"
+                           Content="保存"
+                           Icon="{ui:SymbolIcon Save24}"
+                           Margin="0,0,4,0" />
+                <ui:Button Command="{Binding LoadFromJsonCommand}"
+                           Content="加载"
+                           Icon="{ui:SymbolIcon Open24}" />
+            </StackPanel>
+
+            <!-- 任务定义列表 -->
+            <ui:Border Grid.Row="2"
+                       Background="{DynamicResource CardBackground}"
+                       BorderBrush="{DynamicResource CardBorderBrush}"
+                       BorderThickness="1"
+                       CornerRadius="{DynamicResource ControlCornerRadius}">
+                <ListBox ItemsSource="{Binding TaskDefinitions}"
+                         SelectedItem="{Binding SelectedTaskDefinition}"
+                         ItemTemplate="{StaticResource TaskDefinitionItemTemplate}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="4">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <EventSetter Event="MouseDoubleClick" Handler="TaskDefinitionItem_MouseDoubleClick" />
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="SelectionChanged">
+                            <b:InvokeCommandAction Command="{Binding SelectTaskDefinitionCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                </ListBox>
+            </ui:Border>
+        </Grid>
+
+        <!-- 分隔线 -->
+        <GridSplitter Grid.Column="1"
+                      HorizontalAlignment="Stretch"
+                      Background="{DynamicResource CardBorderBrush}" />
+
+        <!-- 右侧：任务详情 -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <ui:TextBlock Grid.Row="0"
+                          Margin="0,0,0,8"
+                          FontSize="16"
+                          FontWeight="SemiBold"
+                          Text="{Binding SelectedTaskDefinition.Name, StringFormat='任务详情 - {0}', FallbackValue='任务详情'}" />
+
+            <!-- 右侧工具栏 -->
+            <StackPanel Grid.Row="1"
+                        Margin="0,0,0,8"
+                        Orientation="Horizontal">
+                <ui:Button Command="{Binding AddTaskNodeCommand}"
+                           Content="添加任务"
+                           Icon="{ui:SymbolIcon Add24}"
+                           Margin="0,0,4,0" />
+                <ui:Button Command="{Binding AddTaskGroupCommand}"
+                           Content="添加组"
+                           Icon="{ui:SymbolIcon Folder24}"
+                           Margin="0,0,4,0" />
+                <ComboBox ItemsSource="{Binding AvailableTaskTypes}"
+                          SelectedIndex="0"
+                          Width="120"
+                          Margin="8,0,0,0" />
+            </StackPanel>
+
+            <!-- 任务树 -->
+            <ui:Border Grid.Row="2"
+                       Background="{DynamicResource CardBackground}"
+                       BorderBrush="{DynamicResource CardBorderBrush}"
+                       BorderThickness="1"
+                       CornerRadius="{DynamicResource ControlCornerRadius}">
+                <Grid Margin="4">
+                    <ui:Grid ColumnDefinitions="*,120,80,100" Visibility="Hidden">
+                        <Grid x:Name="TreeColumnName" Grid.Column="0" />
+                        <Grid x:Name="TreeColumnType" Grid.Column="1" />
+                        <Grid x:Name="TreeColumnEnabled" Grid.Column="2" />
+                        <Grid x:Name="TreeColumnActions" Grid.Column="3" />
+                    </ui:Grid>
+                    
+                    <ui:TreeListView BorderThickness="0"
+                                     ItemsSource="{Binding CurrentTaskTree}"
+                                     SelectedItem="{Binding SelectedTaskNode}">
+                        <ui:TreeListView.Columns>
+                            <GridViewColumnCollection>
+                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnName}" Header="任务名称">
+                                    <ui:GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ui:TreeRowExpander Content="{Binding Name}">
+                                                <ui:TreeRowExpander.ContextMenu>
+                                                    <StaticResource ResourceKey="TaskNodeContextMenu" />
+                                                </ui:TreeRowExpander.ContextMenu>
+                                            </ui:TreeRowExpander>
+                                        </DataTemplate>
+                                    </ui:GridViewColumn.CellTemplate>
+                                </ui:GridViewColumn>
+                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnType}" Header="任务类型">
+                                    <ui:GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ui:TextBlock Text="{Binding TaskType}"
+                                                          VerticalAlignment="Center"
+                                                          Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                        </DataTemplate>
+                                    </ui:GridViewColumn.CellTemplate>
+                                </ui:GridViewColumn>
+                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnEnabled}" Header="启用">
+                                    <ui:GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsEnabled}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                        </DataTemplate>
+                                    </ui:GridViewColumn.CellTemplate>
+                                </ui:GridViewColumn>
+                                <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnActions}" Header="操作">
+                                    <ui:GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <ui:Button Command="{Binding DataContext.DeleteTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                           CommandParameter="{Binding}"
+                                                           Icon="{ui:SymbolIcon Delete24}"
+                                                           Appearance="Transparent"
+                                                           Padding="4"
+                                                           ToolTip="删除" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ui:GridViewColumn.CellTemplate>
+                                </ui:GridViewColumn>
+                            </GridViewColumnCollection>
+                        </ui:TreeListView.Columns>
+                        <ui:TreeListView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
+                        </ui:TreeListView.ItemTemplate>
+                    </ui:TreeListView>
+                </Grid>
+            </ui:Border>
+        </Grid>
+    </Grid>
+</UserControl>

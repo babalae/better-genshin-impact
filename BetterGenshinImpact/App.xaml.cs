@@ -110,6 +110,7 @@ public partial class App : Application
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
                 services.AddView<SchedulerPage, SchedulerViewModel>();
+                services.AddView<GearTaskListPage, GearTaskListPageViewModel>();
 
 
                 // 一条龙 ViewModels

@@ -16,7 +16,7 @@ public class GearTaskRefence
     public bool Enabled { get; set; }
 
     /// <summary>
-    /// GearTask 的文件路径
+    /// GearTaskViewModel 的文件路径
     /// </summary>
     public string GearTaskFilePath { get; set; } = string.Empty;
 
