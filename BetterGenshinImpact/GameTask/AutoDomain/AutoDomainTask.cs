@@ -67,7 +67,6 @@ public class AutoDomainTask : ISoloTask
     private readonly string skipLocalizedString;
     private readonly string leyLineDisorderLocalizedString;
     private readonly string clickanywheretocloseLocalizedString;
-    private readonly string enterString;
     private readonly string matchingChallengeString;
     private readonly string rapidformationString;
     private readonly string limitedFullyString;
@@ -94,7 +93,6 @@ public class AutoDomainTask : ISoloTask
         this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
         this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
         this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
-        this.enterString = stringLocalizer.WithCultureGet(cultureInfo, "Enter");
         this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
         this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
         this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全开");
@@ -523,11 +521,11 @@ public class AutoDomainTask : ISoloTask
         var domainTipFound = await NewRetry.WaitForAction(() =>
         {
             using var ra = CaptureToRectArea();
+            
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var ocrListLeft = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.9, ra.Width * 0.1,
-                ra.Height * 0.07));
+            var ocrListLeft = ra.Find(AutoFightAssets.Instance.AbnormalIconRa);
             return (ocrList.Any(t => t.Text.Contains(leyLineDisorderLocalizedString) || 
-                                     t.Text.Contains(clickanywheretocloseLocalizedString)) || ocrListLeft.Any(t => t.Text.Contains(enterString))); 
+                                     t.Text.Contains(clickanywheretocloseLocalizedString)))|| ocrListLeft.IsExist(); 
         }, _ct, 20, 500);
         if (!domainTipFound)
         {
@@ -551,10 +549,8 @@ public class AutoDomainTask : ISoloTask
             }
             // 检查左下角区域是否还存在目标文字，消失则继续，存在则结束
             using var leftBottom = CaptureToRectArea();
-            var leftBottomOcr = leftBottom.FindMulti(RecognitionObject.Ocr(0, leftBottom.Height * 0.9, leftBottom.Width * 0.1,
-                leftBottom.Height * 0.07));
-            return leftBottomOcr.Any(t =>
-                t.Text.Contains(enterString));
+            var leftBottomOcr = leftBottom.Find(AutoFightAssets.Instance.AbnormalIconRa);
+            return leftBottomOcr.IsExist();
         }, _ct, 20, 500);
         if (!leftBottomFound)
         {
