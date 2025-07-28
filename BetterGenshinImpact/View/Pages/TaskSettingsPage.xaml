@@ -2329,16 +2329,15 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap" Grid.ColumnSpan="2">
                         须要打开设置-启用保存截图功能，文件保存在
-                        <Hyperlink Command="{Binding GoToGridIconsFolderCommand}"
+                        <Hyperlink Command="{Binding GoToGetGridIconsFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             log/gridIcons
                         </Hyperlink>
-                        <LineBreak />
-                        以下过长的内容在pr时会搬到教程里去
-                        <LineBreak />
-                        需要漆黑的背景以降低干扰，比如渊下宫-蛇肠之路的一个锚点，将视角竖直向上看向洞顶
-                        <LineBreak />
-                        诸如提纳里的耳朵太长了，他装备的物品角标目前无法正确地和正上方的物品图标进行轮廓分割，请手动规避
+                        <LineBreak/>
+                        <Hyperlink Command="{Binding GoToGetGridIconsUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -2394,7 +2393,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用星星作为名称后缀（待开发）"
+                                  Text="使用星星作为名称后缀"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -2405,7 +2404,6 @@
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
-                                     IsEnabled="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}"
                                      IsChecked="{Binding Config.GetGridIconsConfig.StarAsSuffix, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
