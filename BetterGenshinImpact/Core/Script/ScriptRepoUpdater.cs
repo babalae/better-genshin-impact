@@ -135,12 +135,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                             .GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
                         if (oldRepoJsonPath != null)
                         {
-                            _logger.LogInformation($"找到上版repo.json: {oldRepoJsonPath}");
                             oldRepoJsonContent = File.ReadAllText(oldRepoJsonPath);
-
-
-
-                            _logger.LogInformation("已备份repo.json内容");
                         }
                     }
                     catch (Exception ex)
@@ -222,8 +217,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
                     var updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent, newRepoJsonContent);
 
-                    await File.WriteAllTextAsync(newRepoJsonPath, updatedContent);
-                    _logger.LogInformation("已标记repo.json中的更新节点");
+                    // 保存到同级目录，而不是覆盖原文件
+                    var parentDir = Path.GetDirectoryName(repoPath);
+                    var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
+                    
+                    await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
+                    _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
                 }
             }
             catch (Exception ex)
