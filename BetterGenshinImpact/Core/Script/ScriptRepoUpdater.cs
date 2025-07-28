@@ -96,7 +96,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     //     }
     // }
 
-
     public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
@@ -233,8 +232,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         return (repoPath, updated);
     }
 
-    
-
     /// <summary>
     /// 在新repo.json中添加更新标记
     /// </summary>
@@ -359,7 +356,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
-
     private static void SimpleCloneRepository(string repoUrl, string repoPath,
         CheckoutProgressHandler? onCheckoutProgress)
     {
@@ -441,7 +437,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         repo.Config.Unset("http.proxy");
         repo.Config.Unset("https.proxy");
     }
-
 
     // [Obsolete]
     // public async Task<(string, bool)> UpdateCenterRepo()
