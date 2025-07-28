@@ -127,7 +127,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 else
                 {
-                    // 仓库已经存在，先备份repo.json再执行拉取更新
                     try
                     {
                         // 检测repo.json是否存在，存在则备份
@@ -217,7 +216,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
                     var updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent, newRepoJsonContent);
 
-                    // 保存到同级目录，而不是覆盖原文件
+                    // 保存到同级目录
                     var parentDir = Path.GetDirectoryName(repoPath);
                     var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
                     
@@ -272,7 +271,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 直接在新版节点上标记更新
     /// </summary>
-    /// <param name="newNode">新版节点（会被直接修改）</param>
+    /// <param name="newNode">新版节点</param>
     /// <param name="oldNodes">老版节点数组</param>
     /// <returns>是否有更新（节点本身或子树）</returns>
     private bool MarkNodeUpdates(JObject newNode, JArray oldNodes)
@@ -302,7 +301,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         else
         {
-            // 新增节点
             newNode["hasUpdate"] = true;
             hasDirectUpdate = true;
         }
