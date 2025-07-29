@@ -1546,7 +1546,6 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     public async Task OnContinueMultiScriptGroupAsync()
     {
-        // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
 
        // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
         var stackPanel = new StackPanel();
@@ -1698,6 +1697,7 @@ public partial class ScriptControlViewModel : ViewModel
         var selectAllCheckBox = new CheckBox
         {
             Content = "全选",
+            IsThreeState = true
         };
         selectAllCheckBox.Checked += (s, e) =>
         {
@@ -1713,8 +1713,21 @@ public partial class ScriptControlViewModel : ViewModel
                 checkBox.IsChecked = false;
             }
         };
+        selectAllCheckBox.Indeterminate += (s, e) =>
+        {
+            if (checkBoxes.Values.All(cb => cb.IsChecked == true))
+            {
+                selectAllCheckBox.IsChecked = false;
+            }
+            else if (checkBoxes.Values.All(cb => cb.IsChecked == false))
+            {
+                selectAllCheckBox.IsChecked = true;
+            }
+        };
+
         stackPanel.Children.Add(loopCheckBox);
         stackPanel.Children.Add(selectAllCheckBox);
+
         // 添加分割线
         var separator = new Separator
         {
@@ -1736,6 +1749,26 @@ public partial class ScriptControlViewModel : ViewModel
             };
             checkBoxes[scriptGroup] = checkBox;
             stackPanel.Children.Add(checkBox);
+
+            checkBox.Checked += (s, e) => UpdateSelectAllCheckBoxState();
+            checkBox.Unchecked += (s, e) => UpdateSelectAllCheckBoxState();
+        }
+
+        void UpdateSelectAllCheckBoxState()
+        {
+            int checkedCount = checkBoxes.Values.Count(cb => cb.IsChecked == true);
+            if (checkedCount == 0)
+            {
+                selectAllCheckBox.IsChecked = false;
+            }
+            else if (checkedCount == checkBoxes.Count)
+            {
+                selectAllCheckBox.IsChecked = true;
+            }
+            else
+            {
+                selectAllCheckBox.IsChecked = null;
+            }
         }
 
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
@@ -1761,9 +1794,26 @@ public partial class ScriptControlViewModel : ViewModel
                 .Select(kv => kv.Key)
                 .ToList();
 
+            if (selectedGroups.Count == 0)
+            {
+                _snackbarService.Show(
+                    "未选择配置组",
+                    "请至少选择一个配置组进行执行",
+                    ControlAppearance.Caution,
+                    null,
+                    TimeSpan.FromSeconds(3)
+                );
+                return;
+            }
             await StartGroups(selectedGroups,null,loopCheckBox.IsChecked ?? false);;
         }
     }
+
+    private void SelectAllCheckBox_Indeterminate(object sender, RoutedEventArgs e)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
     {
         if( ScriptGroups.Count == 0)
