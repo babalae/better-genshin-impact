@@ -181,7 +181,7 @@
         <!-- 分隔线 -->
         <GridSplitter Grid.Column="1"
                       HorizontalAlignment="Stretch"
-                      Background="{DynamicResource CardBorderBrush}" />
+                      Background="Transparent" />
 
         <!-- 右侧：任务详情 -->
         <Grid Grid.Column="2">

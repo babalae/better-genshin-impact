@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -111,6 +111,7 @@ public partial class App : Application
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
                 services.AddView<SchedulerPage, SchedulerViewModel>();
                 services.AddView<GearTaskListPage, GearTaskListPageViewModel>();
+                services.AddView<GearTriggerPage, GearTriggerPageViewModel>();
 
 
                 // 一条龙 ViewModels

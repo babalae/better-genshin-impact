@@ -1,4 +1,4 @@
-﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.MainWindow"
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.MainWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -100,6 +100,13 @@
                                                TargetPageType="{x:Type pages:GearTaskListPage}">
                             <ui:NavigationViewItem.Icon>
                                 <ui:SymbolIcon Symbol="TaskListLtr24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="任务触发"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:GearTriggerPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Play24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                         <!--<ui:NavigationViewItemSeparator />-->
