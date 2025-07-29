@@ -288,7 +288,7 @@ public partial class ScriptService : IScriptService
                             RunnerContext.Instance.IsPreExecution = false;
                         }
 
-                        if (ShouldSkipTask(exeProject) || ShouldSkipExecutionRecordTask(project))
+                        if (ShouldSkipTask(exeProject) || ShouldSkipExecutionRecordTask(exeProject))
                         {
                             continue;
                         }
