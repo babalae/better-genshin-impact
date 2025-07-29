@@ -718,7 +718,7 @@ public class PathExecutor
         var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.MinValue;
-        int num = 0, distanceTooFarRetryCount = 0;
+        int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
@@ -823,7 +823,25 @@ public class PathExecutor
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             //执行旋转
-            _rotateTask.RotateToApproach(targetOrientation, screen);
+            var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
+            if (num > 20)
+            {
+                if (Math.Abs(diff) > 5)
+                {
+                    consecutiveRotationCountBeyondAngle++;
+                }
+                else
+                {
+                    consecutiveRotationCountBeyondAngle = 0;
+                }
+
+                if (consecutiveRotationCountBeyondAngle > 10)
+                {
+                    // 直接站定好转向
+                    await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+                }
+            }
+            
 
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
