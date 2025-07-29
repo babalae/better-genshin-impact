@@ -132,10 +132,7 @@ public sealed class RepoWebBridge
                 throw new FileNotFoundException("找不到原始 repo.json 文件");
             }
 
-            string repoDir = Path.GetDirectoryName(repoJsonPath) ?? 
-                             throw new DirectoryNotFoundException("无法确定仓库目录");
-            
-            string targetPath = Path.Combine(repoDir, "repo_updated.json");
+            string targetPath = Path.Combine(ScriptRepoUpdater.ReposPath, "repo_updated.json");
 
             File.Copy(repoJsonPath, targetPath, overwrite: true);
 
