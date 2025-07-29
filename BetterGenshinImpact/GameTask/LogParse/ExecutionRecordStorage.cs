@@ -75,7 +75,8 @@ public class ExecutionRecordStorage
         {
             dayCount = ConvertSecondsToDaysUp(config.LastRunGapSeconds);
         }
-
+        //0点时会少一天，这里直接多拿一个文件
+        dayCount++;
         return GetRecentExecutionRecords(dayCount);
     }
 

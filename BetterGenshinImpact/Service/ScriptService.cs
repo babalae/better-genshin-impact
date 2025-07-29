@@ -49,14 +49,29 @@ public partial class ScriptService : IScriptService
         // 如果输入非数字或不合法，返回 false
         return false;
     }
-    public bool ShouldSkipTask(ScriptGroupProject project)
+    
+    public bool ShouldSkipTask(ScriptGroupProject project,bool enableLogging = true)
     {
+        if (project.Status != "Enabled")
+        {
+            if(enableLogging) _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
+            return true;
+        }
 
+        if (CancellationContext.Instance.Cts.IsCancellationRequested)
+        {
+            if(enableLogging) _logger.LogInformation("执行被取消");
+            return true;
+        }
+        if (project is { SkipFlag: true })
+        {
+            return true;
+        }
         if (project.GroupInfo is { Config.PathingConfig.Enabled: true } )
         {
             if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
             {
-                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                if(enableLogging) _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
                 return true;
             }
 
@@ -66,11 +81,11 @@ public partial class ScriptService : IScriptService
                 int index = tcc.GetExecutionOrder(DateTime.Now);
                 if (index == -1)
                 {
-                    _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
+                    if(enableLogging) _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
                 }
                 else if (index != tcc.Index)
                 {
-                    _logger.LogInformation($"{project.Name}任务已经不在执行周期（当前值${index}!=配置值${tcc.Index}），将跳过此任务！");
+                    if(enableLogging) _logger.LogInformation($"{project.Name}任务已经不在执行周期（当前值${index}!=配置值${tcc.Index}），将跳过此任务！");
                     return true;
                 }
                
@@ -90,32 +105,108 @@ public partial class ScriptService : IScriptService
                 string message;
                 if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
                 {
-                    _logger.LogInformation($"{project.Name}:{message},跳过此任务！");
+                    if(enableLogging) _logger.LogInformation($"{project.Name}:{message},跳过此任务！");
                     return true;
                 }
             }
             catch (Exception e)
             {
-                TaskControl.Logger.LogError($"锄地规划统计异常：{e.Message}");
+                if(enableLogging) TaskControl.Logger.LogError($"锄地规划统计异常：{e.Message}");
             }
 
             
         }
+        return false; // 不跳过
+    }
+
+    public bool ShouldSkipExecutionRecordTask(ScriptGroupProject project,bool enableLogging = true)
+    {
         string skipMessage;
         if (ExecutionRecordStorage.IsSkipTask(project,out skipMessage))
         {
-            TaskControl.Logger.LogInformation($"{project.Name}:{skipMessage},跳过此任务！");
+            if(enableLogging) TaskControl.Logger.LogInformation($"{project.Name}:{skipMessage},跳过此任务！");
             return true;
         }
         return false; // 不跳过
     }
-    
-    
-    
-    
+
+
+
     //优先执行的配置组，统计每个project执行次数
     private readonly Dictionary<string, int> _projectExecutionCount = new();
-    
+
+    public List<ScriptGroupProject> GetPreExecuteProject(ScriptGroupProject project)
+    {
+        List<ScriptGroupProject> exeProjects = [];
+        RunnerContext.Instance.IsPreExecution = false;
+        //优先执行配置组逻辑
+        if (!RunnerContext.Instance.IsPreExecution &&
+            (project.GroupInfo?.Config.PathingConfig.Enabled ?? false) &&
+            project.GroupInfo.Config.PathingConfig.PreExecutionPriorityConfig.Enabled)
+        {
+            var preConfig = project.GroupInfo.Config.PathingConfig.PreExecutionPriorityConfig;
+            var groupNames = preConfig.GroupNames;
+
+            if (!string.IsNullOrWhiteSpace(groupNames))
+            {
+                // 解析组名集合
+                var groupNameSet = groupNames
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(name => name.Trim())
+                    .Where(name => !string.IsNullOrWhiteSpace(name));
+
+                // 获取匹配的脚本组
+                var scriptGroups = App.GetService<ScriptControlViewModel>().ScriptGroups
+                    .Where(g => groupNameSet.Contains(g.Name, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+                // 收集需要执行的项目
+                var preExecutionProjects = new List<ScriptGroupProject>();
+                foreach (var group in scriptGroups)
+                {
+                    var skipConfig = group.Config.PathingConfig.TaskCompletionSkipRuleConfig;
+                    var records = ExecutionRecordStorage.GetRecentExecutionRecordsByConfig(skipConfig);
+
+                    foreach (var p in group.Projects)
+                    {
+                        // 检查是否应该跳过任务
+                        if (ExecutionRecordStorage.IsSkipTask(p, out _, records) || ShouldSkipTask(p, false))
+                            continue;
+
+                        // 生成项目唯一标识
+                        var projectKey = $"{p.Name}|{p.FolderName}|{p.GroupInfo?.Name}";
+
+                        // 检查执行次数
+                        if (!_projectExecutionCount.TryGetValue(projectKey, out var count))
+                        {
+                            count = 0;
+                        }
+
+                        // 检查是否超过最大重试次数
+                        if (count > preConfig.MaxRetryCount)
+                            continue;
+
+                        //增加执行计数
+                        //_projectExecutionCount[projectKey] = count + 1;
+                        preExecutionProjects.Add(p);
+                    }
+                }
+
+                // 存在优先执行的项目，则优先执行
+                if (preExecutionProjects.Count > 0)
+                {
+                    _logger.LogInformation($"存在{preExecutionProjects.Count}个需优先执行的任务！");
+                    // 设置执行状态，进入优先执行任务
+                    RunnerContext.Instance.IsPreExecution = true;
+                    //重新构造需要执行的配置组
+                    exeProjects = preExecutionProjects;
+                }
+            }
+        }
+
+        return exeProjects;
+    }
+
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
         groupName ??= "默认";
@@ -173,81 +264,21 @@ public partial class ScriptService : IScriptService
                 for (int x = 0; x < list.Count; x++)
                 {
                     var project = list[x];
-                    //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
-                    List<ScriptGroupProject> exeProjects = [project];
-                    RunnerContext.Instance.IsPreExecution = false;
-                    //优先执行配置组逻辑
-                    if (!RunnerContext.Instance.IsPreExecution &&
-                        (project.GroupInfo?.Config.PathingConfig.Enabled ?? false) &&
-                        project.GroupInfo.Config.PathingConfig.PreExecutionPriorityConfig.Enabled)
+                    projectIndex++;
+                    if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.Next != null)
                     {
-                        var preConfig = project.GroupInfo.Config.PathingConfig.PreExecutionPriorityConfig;
-                        var groupNames = preConfig.GroupNames;
-
-                        if (!string.IsNullOrWhiteSpace(groupNames))
+                        if (taskProgress.Next.Index > projectIndex)
                         {
-                            // 解析组名集合
-                            var groupNameSet = groupNames
-                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                .Select(name => name.Trim())
-                                .Where(name => !string.IsNullOrWhiteSpace(name));
-
-                            // 获取匹配的脚本组
-                            var scriptGroups = App.GetService<ScriptControlViewModel>().ScriptGroups
-                                .Where(g => groupNameSet.Contains(g.Name, StringComparer.OrdinalIgnoreCase))
-                                .ToList();
-
-                            // 收集需要执行的项目
-                            var preExecutionProjects = new List<ScriptGroupProject>();
-                            foreach (var group in scriptGroups)
-                            {
-                                var skipConfig = group.Config.PathingConfig.TaskCompletionSkipRuleConfig;
-                                var records = ExecutionRecordStorage.GetRecentExecutionRecordsByConfig(skipConfig);
-
-                                foreach (var p in group.Projects)
-                                {
-                                    // 检查是否应该跳过任务
-                                    if (ExecutionRecordStorage.IsSkipTask(p, out _, records))
-                                        continue;
-
-                                    // 生成项目唯一标识
-                                    var projectKey = $"{p.Name}|{p.FolderName}|{p.GroupInfo?.Name}";
-
-                                    // 检查执行次数
-                                    if (!_projectExecutionCount.TryGetValue(projectKey, out var count))
-                                    {
-                                        count = 0;
-                                    }
-
-                                    // 检查是否超过最大重试次数
-                                    if (count > preConfig.MaxRetryCount)
-                                        continue;
-
-                                    //增加执行计数
-                                    //_projectExecutionCount[projectKey] = count + 1;
-                                    preExecutionProjects.Add(p);
-                                }
-                            }
-
-                            // 存在优先执行的项目，则优先执行
-                            if (preExecutionProjects.Count > 0)
-                            {
-   
-                                _logger.LogInformation($"存在{preExecutionProjects.Count}个需优先执行的任务！");
-                                // 设置执行状态，进入优先执行任务
-                                RunnerContext.Instance.IsPreExecution = true;
-                                //重新构造需要执行的配置组
-                                exeProjects = preExecutionProjects.Concat(new[] { project }).ToList();
-                            }
+                            continue;
                         }
-                    }
 
-                    if (!RunnerContext.Instance.IsPreExecution)
-                    {
-                        projectIndex++;
+                        taskProgress.Next = null;
                     }
                     
-
+                    //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
+                    List<ScriptGroupProject> exeProjects = GetPreExecuteProject(project);
+                    exeProjects.Add(project);
+                    
                     for (int y = 0; y < exeProjects.Count; y++)
                     {
                         var exeProject = exeProjects[y];
@@ -256,39 +287,15 @@ public partial class ScriptService : IScriptService
                         {
                             RunnerContext.Instance.IsPreExecution = false;
                         }
-                        if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.Next != null)
-                        {
-                            if (taskProgress.Next.Index > projectIndex)
-                            {
-                                continue;
-                            }
 
-                            taskProgress.Next = null;
-                        }
-
-                        if (exeProject is { SkipFlag: true })
-                        {
-                            continue;
-                        }
-
-                        if (ShouldSkipTask(exeProject))
+                        if (ShouldSkipTask(exeProject) || ShouldSkipExecutionRecordTask(project))
                         {
                             continue;
                         }
 
                         //月卡检测
                         await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
-                        if (exeProject.Status != "Enabled")
-                        {
-                            _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", exeProject.Name);
-                            continue;
-                        }
 
-                        if (CancellationContext.Instance.Cts.IsCancellationRequested)
-                        {
-                            _logger.LogInformation("执行被取消");
-                            break;
-                        }
 
                         if (fisrt )
                         {
