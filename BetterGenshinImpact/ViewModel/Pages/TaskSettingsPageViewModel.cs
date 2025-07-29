@@ -538,7 +538,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         try
         {
             SwitchGetGridIconsEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.StarAsSuffix, Config.GetGridIconsConfig.MaxNumToGet));
         }
         finally
         {
@@ -547,7 +547,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OnGoToGridIconsFolder()
+    private void OnGoToGetGridIconsFolder()
     {
         var path = Global.Absolute(@"log\gridIcons\");
         if (!Directory.Exists(path))
@@ -556,6 +556,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    private async Task OnGoToGetGridIconsUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
     }
     
     [RelayCommand]
@@ -596,7 +602,5 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
             SwitchAutoRedeemCodeEnabled = false;
         }
-        
-
     }
 }
