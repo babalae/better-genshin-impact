@@ -718,7 +718,7 @@ public class PathExecutor
         var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.MinValue;
-        var num = 0;
+        int num = 0, distanceTooFarRetryCount = 0;
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
@@ -767,11 +767,18 @@ public class PathExecutor
                 }
                 else
                 {
-                    Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，跳过路径点");
+                    distanceTooFarRetryCount++;
+                    if (distanceTooFarRetryCount > 5)
+                    {
+                        Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试多次后仍然失败，放弃此路径点！");
+                        throw new NormalEndException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
+                    }
+                    else
+                    {
+                        Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        continue;
+                    }
                 }
-
-
-                break;
             }
 
             // 非攀爬状态下，检测是否卡死（脱困触发器）
