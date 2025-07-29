@@ -1,0 +1,404 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.GearTriggerPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:component="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Component"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:GearTriggerPageViewModel}"
+             d:DesignHeight="850"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="ConsistentTabControlStyle" TargetType="TabControl"
+                   BasedOn="{StaticResource {x:Type TabControl}}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TabControl}">
+                            <Grid x:Name="templateRoot"
+                                  Background="{TemplateBinding Background}"
+                                  ClipToBounds="True"
+                                  SnapsToDevicePixels="True">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition x:Name="ColumnDefinition0" Width="Auto" />
+                                    <ColumnDefinition x:Name="ColumnDefinition1" Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="RowDefinition0" Height="Auto" />
+                                    <RowDefinition x:Name="RowDefinition1" Height="*" />
+                                </Grid.RowDefinitions>
+                                <TabPanel x:Name="headerPanel"
+                                          Grid.Column="0"
+                                          Grid.Row="0"
+                                          Background="Transparent"
+                                          IsItemsHost="True"
+                                          Panel.ZIndex="1" />
+                                <Border x:Name="contentPanel"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="2"
+                                        Grid.Row="1"
+                                        Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderThickness="0">
+                                    <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                      ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                                      Content="{TemplateBinding SelectedContent}"
+                                                      ContentStringFormat="{TemplateBinding SelectedContentStringFormat}"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="ConsistentTabItemStyle" TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Width" Value="36" />
+                <Setter Property="Height" Value="26" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TabItem}">
+                            <Grid x:Name="templateRoot"
+                                  Background="Transparent"
+                                  SnapsToDevicePixels="True">
+                                <Border x:Name="mainBorder"
+                                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                        BorderThickness="0"
+                                        CornerRadius="8,8,0,0"
+                                        Margin="0,0,1,0">
+                                    <ContentPresenter x:Name="contentPresenter"
+                                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                                      Content="{TemplateBinding Header}"
+                                                      ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      RecognizesAccessKey="True"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                </Border>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+                                    <Setter TargetName="mainBorder" Property="Background"
+                                            Value="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+                                    <Setter TargetName="mainBorder" Property="Background"
+                                            Value="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 触发器项模板 -->
+            <DataTemplate x:Key="TriggerItemTemplate" DataType="{x:Type component:GearTriggerViewModel}">
+                <ui:Card Margin="0,2,0,2" Padding="10,8,10,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Grid.Column="0"
+                                 Width="8"
+                                 Height="8"
+                                 Margin="0,0,8,0"
+                                 Fill="{DynamicResource AccentFillColorDefaultBrush}" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock VerticalAlignment="Center"
+                                       IsHitTestVisible="False"
+                                       Text="{Binding Name}"
+                                       FontWeight="Medium" />
+                            <TextBlock Text="{Binding Description}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       IsHitTestVisible="False" />
+                        </StackPanel>
+                        <ui:ToggleSwitch Grid.Column="2"
+                                         IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                    </Grid>
+                </ui:Card>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="8,0,8,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="0" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧触发器类型选择区域 -->
+        <Border Grid.Column="0"
+                Margin="0,8,0,8"
+                CornerRadius="8">
+            <Grid Margin="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TabControl Grid.Row="1" Style="{StaticResource ConsistentTabControlStyle}">
+                    <!-- 顺序触发选项卡 -->
+                    <TabItem Style="{StaticResource ConsistentTabItemStyle}">
+                        <TabItem.Header>
+                            <ui:SymbolIcon Symbol="ArrowSort24" />
+                        </TabItem.Header>
+                        <Grid>
+                            <StackPanel Margin="8">
+                                <ui:TextBlock Margin="0,0,0,8"
+                                              Text="顺序触发器"
+                                              FontWeight="SemiBold"
+                                              TextWrapping="Wrap" />
+                                
+                                <ui:ListView
+                                    ItemsSource="{Binding SequentialTriggers}"
+                                    SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                    SelectionMode="Single"
+                                    ItemTemplate="{StaticResource TriggerItemTemplate}">
+                                    <ui:ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                                        <Border x:Name="Bd"
+                                                                Padding="{TemplateBinding Padding}"
+                                                                Background="{TemplateBinding Background}"
+                                                                SnapsToDevicePixels="true">
+                                                            <ContentPresenter
+                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="false">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ui:ListView.ItemContainerStyle>
+                                </ui:ListView>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- 定时触发选项卡 -->
+                    <TabItem Style="{StaticResource ConsistentTabItemStyle}">
+                        <TabItem.Header>
+                            <ui:SymbolIcon Symbol="Clock24" />
+                        </TabItem.Header>
+                        <Grid>
+                            <StackPanel Margin="8">
+                                <ui:TextBlock Margin="0,0,0,8"
+                                              Text="定时触发器"
+                                              FontWeight="SemiBold"
+                                              TextWrapping="Wrap" />
+                                
+                                <ui:ListView
+                                    ItemsSource="{Binding TimedTriggers}"
+                                    SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                    SelectionMode="Single"
+                                    ItemTemplate="{StaticResource TriggerItemTemplate}">
+                                    <ui:ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                                        <Border x:Name="Bd"
+                                                                Padding="{TemplateBinding Padding}"
+                                                                Background="{TemplateBinding Background}"
+                                                                SnapsToDevicePixels="true">
+                                                            <ContentPresenter
+                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="false">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ui:ListView.ItemContainerStyle>
+                                </ui:ListView>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- 热键触发选项卡 -->
+                    <TabItem Style="{StaticResource ConsistentTabItemStyle}">
+                        <TabItem.Header>
+                            <ui:SymbolIcon Symbol="Keyboard24" />
+                        </TabItem.Header>
+                        <Grid>
+                            <StackPanel Margin="8">
+                                <ui:TextBlock Margin="0,0,0,8"
+                                              Text="热键触发器"
+                                              FontWeight="SemiBold"
+                                              TextWrapping="Wrap" />
+                                
+                                <ui:ListView
+                                    ItemsSource="{Binding HotkeyTriggers}"
+                                    SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                    SelectionMode="Single"
+                                    ItemTemplate="{StaticResource TriggerItemTemplate}">
+                                    <ui:ListView.ItemContainerStyle>
+                                        <Style TargetType="ListViewItem">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                                        <Border x:Name="Bd"
+                                                                Padding="{TemplateBinding Padding}"
+                                                                Background="{TemplateBinding Background}"
+                                                                SnapsToDevicePixels="true">
+                                                            <ContentPresenter
+                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsEnabled" Value="false">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ui:ListView.ItemContainerStyle>
+                                </ui:ListView>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Border>
+
+        <!-- 右侧触发器配置区域 -->
+        <Border Grid.Column="2" Margin="0,14,6,15">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 操作按钮 -->
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            Margin="0,0,0,8">
+                    <ui:Button Command="{Binding AddSequentialTriggerCommand}"
+                               Content="添加顺序触发器"
+                               Icon="{ui:SymbolIcon Add24}"
+                               Height="26"
+                               Padding="8,2,14,0"
+                               Margin="0,0,8,0"/>
+                    <ui:Button Command="{Binding AddTimedTriggerCommand}"
+                               Content="添加定时触发器"
+                               Icon="{ui:SymbolIcon Add24}"
+                               Height="26"
+                               Padding="8,2,14,0"
+                               Margin="0,0,8,0"/>
+                    <ui:Button Command="{Binding AddHotkeyTriggerCommand}"
+                               Content="添加热键触发器"
+                               Icon="{ui:SymbolIcon Add24}"
+                               Height="26"
+                               Padding="8,2,14,0"
+                               Margin="0,0,8,0"/>
+                    <ui:Button Command="{Binding DeleteTriggerCommand}"
+                               Content="删除触发器"
+                               Icon="{ui:SymbolIcon Delete24}"
+                               Height="26"
+                               Padding="8,2,14,0"
+                               IsEnabled="{Binding SelectedTrigger, Converter={StaticResource NotNullConverter}}"/>
+                </StackPanel>
+
+                <!-- 触发器配置详情 -->
+                <ui:TreeListView Grid.Row="3"
+                                 ItemsSource="{Binding TaskReferences}"
+                                 Visibility="{Binding SelectedTrigger, Converter={StaticResource NotNullConverter}}">
+                    <ui:TreeListView.Columns>
+                        <GridViewColumnCollection>
+                            <ui:GridViewColumn Header="功能" Width="200">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Header="说明" Width="300">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Description}" />
+                                    </DataTemplate>
+                                </ui:GridViewColumn.CellTemplate>
+                            </ui:GridViewColumn>
+                            <ui:GridViewColumn Header="状态" Width="80">
+                                <ui:GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ui:ToggleSwitch IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                                </DataTemplate>
+                            </ui:GridViewColumn.CellTemplate>
+                        </ui:GridViewColumn>
+                        </GridViewColumnCollection>
+                    </ui:TreeListView.Columns>
+                </ui:TreeListView>
+
+                <!-- 无选中触发器时的提示 -->
+                <StackPanel Grid.Row="3" 
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            Visibility="{Binding SelectedTrigger, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                    <ui:SymbolIcon Symbol="Settings24" FontSize="48" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="请选择一个触发器进行配置" 
+                               FontSize="16" 
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,16,0,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
