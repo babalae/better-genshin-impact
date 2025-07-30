@@ -96,7 +96,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     //     }
     // }
 
-
     public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
@@ -106,6 +105,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         var repoPath = Path.Combine(ReposPath, "bettergi-scripts-list-git");
         var updated = false;
+
+        // 备份相关变量
+        string? oldRepoJsonContent = null;
 
         await Task.Run(() =>
         {
@@ -124,7 +126,21 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 else
                 {
-                    // 仓库已经存在，执行拉取更新
+                    try
+                    {
+                        // 检测repo.json是否存在，存在则备份
+                        var oldRepoJsonPath = Directory
+                            .GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                        if (oldRepoJsonPath != null)
+                        {
+                            oldRepoJsonContent = File.ReadAllText(oldRepoJsonPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "备份repo.json失败，继续更新仓库");
+                    }
+
                     using var repo = new Repository(repoPath);
 
                     // 检查远程URL是否需要更新
@@ -187,11 +203,161 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 throw;
             }
         });
+        // 如果仓库有更新且有备份内容，则标记新repo.json中的更新节点
+        if (updated && !string.IsNullOrEmpty(oldRepoJsonContent))
+        {
+            try
+            {
+                var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
+                    .FirstOrDefault();
+                if (newRepoJsonPath != null)
+                {
+                    var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
+                    var updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent, newRepoJsonContent);
+
+                    // 保存到同级目录
+                    var parentDir = Path.GetDirectoryName(repoPath);
+                    var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
+                    
+                    await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
+                    _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "标记repo.json更新节点失败");
+            }
+        }
 
         return (repoPath, updated);
     }
 
-    private static void SimpleCloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
+    /// <summary>
+    /// 在新repo.json中添加更新标记
+    /// </summary>
+    /// <param name="oldContent">旧版repo.json内容</param>
+    /// <param name="newContent">新版repo.json内容</param>
+    /// <returns>添加了hasUpdate标记的新repo.json内容</returns>
+    private string AddUpdateMarkersToNewRepo(string oldContent, string newContent)
+    {
+        try
+        {
+            var oldJson = JObject.Parse(oldContent);
+            var newJson = JObject.Parse(newContent);
+
+            if (oldJson["indexes"] is JArray oldIndexes && newJson["indexes"] is JArray newIndexes)
+            {
+                foreach (var newIndex in newIndexes)
+                {
+                    if (newIndex is JObject newIndexObj)
+                    {
+                        MarkNodeUpdates(newIndexObj, oldIndexes);
+                    }
+                }
+            }
+
+            return newJson.ToString(Newtonsoft.Json.Formatting.Indented);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "标记repo.json更新失败，返回原内容");
+            return newContent;
+        }
+    }
+
+    /// <summary>
+    /// 直接在新版节点上标记更新
+    /// </summary>
+    /// <param name="newNode">新版节点</param>
+    /// <param name="oldNodes">老版节点数组</param>
+    /// <returns>是否有更新（节点本身或子树）</returns>
+    private bool MarkNodeUpdates(JObject newNode, JArray oldNodes)
+    {
+        var newName = newNode["name"]?.ToString();
+        if (string.IsNullOrEmpty(newName))
+            return false;
+
+        // 在老版节点中查找对应的节点
+        var oldNode = oldNodes.FirstOrDefault(n => n is JObject obj && obj["name"]?.ToString() == newName) as JObject;
+
+        bool hasDirectUpdate = false;
+        bool hasChildUpdate = false;
+
+        // 检查节点本身是否有更新
+        if (oldNode != null)
+        {
+            // 对比时间戳
+            var oldTime = ParseLastUpdated(oldNode["lastUpdated"]?.ToString());
+            var newTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
+
+            if (newTime > oldTime)
+            {
+                newNode["hasUpdate"] = true;
+                hasDirectUpdate = true;
+            }
+        }
+        else
+        {
+            newNode["hasUpdate"] = true;
+            hasDirectUpdate = true;
+        }
+
+        // 处理子节点
+        if (newNode["children"] is JArray newChildren && newChildren.Count > 0)
+        {
+            var oldChildren = oldNode?["children"] as JArray ?? new JArray();
+
+            // 遍历新版的每个子节点
+            foreach (var newChild in newChildren)
+            {
+                if (newChild is JObject newChildObj)
+                {
+                    bool childHasUpdate = MarkNodeUpdates(newChildObj, oldChildren);
+                    if (childHasUpdate)
+                    {
+                        hasChildUpdate = true;
+
+                        // 如果是叶子节点更新，父节点也标记更新
+                        var isLeafChild = newChildObj["children"] == null ||
+                                          !((JArray?)newChildObj["children"])?.Any() == true;
+                        if (isLeafChild && !hasDirectUpdate && newChildObj["hasUpdate"] != null)
+                        {
+                            newNode["hasUpdate"] = true;
+                            hasDirectUpdate = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return hasDirectUpdate || hasChildUpdate;
+    }
+
+    /// <summary>
+    /// 解析lastUpdated时间戳
+    /// </summary>
+    /// <param name="timeString">时间字符串</param>
+    /// <returns>DateTime对象</returns>
+    private DateTime ParseLastUpdated(string? timeString)
+    {
+        if (string.IsNullOrEmpty(timeString))
+            return DateTime.MinValue;
+
+        try
+        {
+            if (DateTime.TryParse(timeString, out var result))
+                return result;
+
+            return DateTime.MinValue;
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
+    }
+
+    private static void SimpleCloneRepository(string repoUrl, string repoPath,
+        CheckoutProgressHandler? onCheckoutProgress)
     {
         var options = new CloneOptions
         {
@@ -223,7 +389,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         using var repo = new Repository(repoPath);
         GitConfig(repo);
-        
+
         // 3. 添加远程源
         Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
@@ -254,7 +420,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         CheckoutOptions checkoutOptions = new CheckoutOptions
         {
             OnCheckoutProgress = onCheckoutProgress
-        };  
+        };
         Commands.Checkout(repo, localBranch, checkoutOptions);
     }
 
@@ -263,15 +429,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 设置 Git 配置
         // 1. 设置 core.longpaths 为 true
         repo.Config.Set("core.longpaths", true);
-    
+
         // 2. 添加 safe.directory *
         repo.Config.Set("safe.directory", "*");
-    
+
         // 3. 移除 http.proxy 和 https.proxy 配置
         repo.Config.Unset("http.proxy");
         repo.Config.Unset("https.proxy");
     }
-
 
     // [Obsolete]
     // public async Task<(string, bool)> UpdateCenterRepo()
@@ -570,7 +735,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         //         return;
         //     }
         // }
-        
+
         //顶层目录订阅时，不会删除其下，不在订阅中的文件夹
         List<string> newPaths = new List<string>();
         foreach (var path in paths)
@@ -585,7 +750,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     string[] directories = Directory.GetDirectories(scriptPath, "*", SearchOption.TopDirectoryOnly);
                     foreach (var dir in directories)
                     {
-                        newPaths.Add("pathing"+"/"+Path.GetFileName(dir));
+                        newPaths.Add("pathing" + "/" + Path.GetFileName(dir));
                     }
                 }
                 else
@@ -597,9 +762,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 newPaths.Add(path);
             }
-
         }
-
 
         // 拷贝文件
         foreach (var path in newPaths)
@@ -672,9 +835,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 continue;
 
             // 检查是否已被父路径覆盖
-            bool isCoveredByParent = pathsToKeep.Any(p => 
+            bool isCoveredByParent = pathsToKeep.Any(p =>
                 path.StartsWith(p + "/") || path == p);
-        
+
             if (!isCoveredByParent)
             {
                 pathsToKeep.Add(path);
