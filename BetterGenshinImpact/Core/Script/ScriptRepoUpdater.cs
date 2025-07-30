@@ -844,6 +844,108 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
         }
 
+        // 添加父节点自动订阅逻辑
+        try
+        {
+            // 获取所有可用路径
+            var allAvailablePaths = new HashSet<string>();
+            var repoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (!string.IsNullOrEmpty(repoJsonPath))
+            {
+                var jsonContent = File.ReadAllText(repoJsonPath);
+                var jsonObj = JObject.Parse(jsonContent);
+                
+                if (jsonObj["indexes"] is JArray indexes)
+                {
+                    // 递归收集所有路径
+                    void CollectPaths(JArray nodes, string currentPath)
+                    {
+                        foreach (var node in nodes)
+                        {
+                            if (node is JObject nodeObj)
+                            {
+                                var name = nodeObj["name"]?.ToString();
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    var fullPath = string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
+                                    allAvailablePaths.Add(fullPath);
+
+                                    if (nodeObj["children"] is JArray children)
+                                    {
+                                        CollectPaths(children, fullPath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    CollectPaths(indexes, "");
+                }
+            }
+
+            // 如果父节点的所有直接子节点都已被订阅，则将父节点也加入订阅
+            if (allAvailablePaths.Count > 0)
+            {
+                // 构建父子关系映射，只记录直接子节点
+                var parentChildMap = new Dictionary<string, List<string>>();
+                
+                // 遍历所有路径，找到每个节点的父节点
+                foreach (var path in allAvailablePaths)
+                {
+                    var pathParts = path.Split('/');
+                    if (pathParts.Length > 1)
+                    {
+                        var parentPath = string.Join("/", pathParts.Take(pathParts.Length - 1));
+                        if (!parentChildMap.ContainsKey(parentPath))
+                        {
+                            parentChildMap[parentPath] = new List<string>();
+                        }
+                        
+                        if (!parentChildMap[parentPath].Contains(path))
+                        {
+                            parentChildMap[parentPath].Add(path);
+                        }
+                    }
+                }
+                
+                // 递归检查父节点，直到没有新的父节点需要添加
+                bool hasNewPaths;
+                do
+                {
+                    hasNewPaths = false;
+                    var pathsToAdd = new HashSet<string>();
+                    
+                    // 检查每个父节点
+                    foreach (var kvp in parentChildMap)
+                    {
+                        var parentPath = kvp.Key;
+                        var directChildren = kvp.Value;
+                        
+                        // 检查所有直接子节点是否都已被订阅
+                        bool allDirectChildrenSubscribed = directChildren.All(child => 
+                            pathsToKeep.Contains(child));
+                        
+                        // 如果所有直接子节点都已被订阅，且父节点本身未被订阅，则添加父节点
+                        if (allDirectChildrenSubscribed && !pathsToKeep.Contains(parentPath))
+                        {
+                            pathsToAdd.Add(parentPath);
+                            hasNewPaths = true;
+                        }
+                    }
+                    
+                    // 将需要添加的父节点加入订阅列表
+                    foreach (var pathToAdd in pathsToAdd)
+                    {
+                        pathsToKeep.Add(pathToAdd);
+                    }
+                } while (hasNewPaths);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "添加父节点时发生错误");
+        }
+
         scriptConfig.SubscribedScriptPaths = pathsToKeep
             .OrderBy(path => path)
             .ToList();
