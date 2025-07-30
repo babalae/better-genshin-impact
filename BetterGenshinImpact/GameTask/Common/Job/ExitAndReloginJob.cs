@@ -82,7 +82,7 @@ public class ExitAndReloginJob
                 _assets.EnterGameRo,
                 () => GameCaptureRegion.GameRegion1080PPosClick(955, 666),
                 ct,
-                10,
+                120,
                 1000
             );
         }
@@ -111,4 +111,3 @@ public class ExitAndReloginJob
         await Delay(500, ct);
     }
 }
-
