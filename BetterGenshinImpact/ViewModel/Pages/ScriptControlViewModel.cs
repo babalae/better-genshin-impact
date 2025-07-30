@@ -83,7 +83,16 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OnAddScriptGroup()
     {
-        var str = PromptDialog.Prompt("请输入配置组名称", "新增配置组");
+        var localizationService = App.GetService<ILocalizationService>();
+
+        // 创建一个TextBox并设置自动聚焦
+        var textBox = new System.Windows.Controls.TextBox();
+        textBox.Loaded += (sender, e) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+        var str = PromptDialog.Prompt(localizationService.GetString("dialog.enterConfigGroupName"), localizationService.GetString("dialog.addConfigGroup"), textBox);
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
@@ -596,7 +605,14 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", item.Name);
+        var textBox = new System.Windows.Controls.TextBox();
+        textBox.Loaded += (sender, e) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", textBox, item.Name);
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
@@ -632,7 +648,14 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        var str = PromptDialog.Prompt("请输入配置组名称", "重命名配置组", item.Name);
+        var textBox = new System.Windows.Controls.TextBox();
+        textBox.Loaded += (sender, e) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "重命名配置组", textBox, item.Name);
         if (!string.IsNullOrEmpty(str))
         {
             if (item.Name == str)
