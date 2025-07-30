@@ -1898,5 +1898,17 @@
     "nameEn": "Dahlia",
     "skillCD": 9,
     "weapon": "1"
+  },
+  {
+    "alias": [
+      "伊涅芙",
+      "Ineffa"
+    ],
+    "burstCD": 15,
+    "id": "10000116",
+    "name": "伊涅芙",
+    "nameEn": "Ineffa",
+    "skillCD": 16,
+    "weapon": "13"
   }
 ]
