@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -83,8 +83,6 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OnAddScriptGroup()
     {
-        var localizationService = App.GetService<ILocalizationService>();
-
         // 创建一个TextBox并设置自动聚焦
         var textBox = new System.Windows.Controls.TextBox();
         textBox.Loaded += (sender, e) =>
@@ -92,7 +90,7 @@ public partial class ScriptControlViewModel : ViewModel
             textBox.Focus();
             textBox.SelectAll();
         };
-        var str = PromptDialog.Prompt(localizationService.GetString("dialog.enterConfigGroupName"), localizationService.GetString("dialog.addConfigGroup"), textBox);
+        var str = PromptDialog.Prompt("请输入配置组名称", "新增配置组", textBox);
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
