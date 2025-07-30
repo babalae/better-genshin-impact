@@ -10,6 +10,10 @@ using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
+/// <summary>
+/// 给 WebView 提供的桥接类
+/// 用于调用 C# 方法
+/// </summary>
 [ClassInterface(ClassInterfaceType.AutoDual)]
 [ComVisible(true)]
 public sealed class RepoWebBridge
