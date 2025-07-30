@@ -544,7 +544,7 @@ public class AutoFightTask : ISoloTask
             bool? result = null;
             try
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, _ct);
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime,delayTime, _ct);
             }
             catch (Exception ex)
             {

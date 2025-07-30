@@ -205,7 +205,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
     public  class AutoFightSeek
     {
-        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime, CancellationToken ct)
+        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime, CancellationToken ct)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
             int retryCount = 0;
@@ -220,7 +220,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 int numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-                logger.LogInformation("初检数量： {numLabels}", numLabels - 1);
+                logger.LogInformation("敌人初检数量： {numLabels}", numLabels - 1);
 
                 if (numLabels > 1)
                 {
@@ -263,6 +263,26 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 //     logger.LogInformation("首次检测画面内没有怪物...");
                 //     return true;
                 // }
+                if (retryCount == 0)
+                {
+                    await Delay(delayTime,ct);
+                    Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
+                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                    await Delay(detectDelayTime, ct);
+                    var ra3 = CaptureToRectArea();
+                    var b33 = ra3.SrcMat.At<Vec3b>(50, 790); // 进度条颜色
+                    var whiteTile3 = ra3.SrcMat.At<Vec3b>(50, 768); // 白块
+                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+
+                    if (IsWhite(whiteTile3.Item2, whiteTile3.Item1, whiteTile3.Item0) &&
+                        IsYellow(b33.Item2, b33.Item1, b33.Item0))
+                    {
+                        logger.LogInformation("识别到战斗结束");
+                        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                        return true;
+                    }
+                }
+                
                 logger.LogInformation("画面内没有怪物，旋转寻找...");
                 if (retryCount <= 1)
                 {
@@ -311,26 +331,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     if (height2 < 3) return null;
 
                 }
-                
-                if (retryCount == 0)
-                {
-                    Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
-                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                    await Delay(detectDelayTime, ct);
-                    var ra3 = CaptureToRectArea();
-                    var b33 = ra3.SrcMat.At<Vec3b>(50, 790); // 进度条颜色
-                    var whiteTile3 = ra3.SrcMat.At<Vec3b>(50, 768); // 白块
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
-
-                    if (IsWhite(whiteTile3.Item2, whiteTile3.Item1, whiteTile3.Item0) &&
-                        IsYellow(b33.Item2, b33.Item1, b33.Item0))
-                    {
-                        logger.LogInformation("识别到战斗结束");
-                        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                        return true;
-                    }
-                }
-
+               
                 logger.LogInformation("画面内没有怪物，尝试重新检测...");
                 retryCount++;
             }
