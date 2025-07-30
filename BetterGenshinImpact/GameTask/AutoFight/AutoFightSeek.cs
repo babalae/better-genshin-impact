@@ -205,7 +205,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
     public  class AutoFightSeek
     {
-        public static async Task<bool> SeekAndFightAsync(ILogger logger, int detectDelayTime, CancellationToken ct)
+        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime, CancellationToken ct)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
             int retryCount = 0;
@@ -237,8 +237,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     
                     if (success)
                     {
-                        
-
                         if (height < 7 && height > 2)
                         {
                             logger.LogInformation("敌人血量高度小于7且大于2，向前移动");
@@ -250,12 +248,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             }, ct);
                         }
-                        
                         mask.Dispose();
                         labels.Dispose();
                         stats.Dispose();
                         centroids.Dispose();
-                        return height < 3;
+                        return height < 3 ? (bool?)null : false;
                     }
                 }
                 //如果不用旋转判断敌人，直接跳过开队伍检测，加快战斗速度
@@ -313,9 +310,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         labels.Dispose();
                         stats.Dispose();
                         centroids.Dispose();
-                        return height2 < 3; 
+                        return height2 < 3 ? (bool?)null : false;
                     }
-                    
                 }
                 
                 if (retryCount == 0)
