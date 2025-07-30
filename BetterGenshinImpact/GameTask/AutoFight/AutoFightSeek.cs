@@ -32,7 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
             int numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2, connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
-            logger.LogInformation($"检测数量J： {numLabels2 - 1}");
+            logger.LogInformation($"检测数量： {numLabels2 - 1}");
 
             if (numLabels2 > 1)
             {
@@ -255,7 +255,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         labels.Dispose();
                         stats.Dispose();
                         centroids.Dispose();
-                        return height > 2;
+                        return height < 3;
                     }
                 }
                 //如果不用旋转判断敌人，直接跳过开队伍检测，加快战斗速度
@@ -313,13 +313,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         labels.Dispose();
                         stats.Dispose();
                         centroids.Dispose();
-                        return height2 > 2; 
+                        return height2 < 3; 
                     }
                     
                 }
-
+                
                 if (retryCount == 0)
                 {
+                    Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
                     Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
                     await Delay(detectDelayTime, ct);
                     var ra3 = CaptureToRectArea();

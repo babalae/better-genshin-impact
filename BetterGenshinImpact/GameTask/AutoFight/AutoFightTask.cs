@@ -589,13 +589,15 @@ public class AutoFightTask : ISoloTask
 
         Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-       
-        Task.Run(() =>
+
+        if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
-            Scalar bloodLower = new Scalar(255, 90, 90);
-            MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-        } ,_ct);
-        
+            Task.Run(() =>
+            {
+                Scalar bloodLower = new Scalar(255, 90, 90);
+                MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+            } ,_ct);
+        }
         
         _lastFightFlagTime = DateTime.Now;
         return false;
