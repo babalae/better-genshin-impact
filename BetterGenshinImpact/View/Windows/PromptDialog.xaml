@@ -5,60 +5,79 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Width="500"
-                 Height="210"
+                 Height="225"
                  MinWidth="400"
                  MinHeight="200"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
-                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}" 
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
-                 ResizeMode="CanMinimize"
                  SizeToContent="Width"
                  WindowBackdropType="Mica"
                  WindowStartupLocation="CenterScreen"
                  WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">
+    <!--移除了ResizeMode="CanMinimize"属性。ui:FluentWindow即使设置了这个属性，也无法简单地禁止用户调整窗口大小QAQ-->
+
+    <!--将内容部分和按钮部分分开。用户自由调整窗口大小时，按钮部分固定在底部，内容部分可以自适应滚动条-->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="1" Margin="12">
+        <!--<StackPanel Grid.Row="1" Margin="12">
             <ui:TextBlock Name="TxtQuestion" Margin="5" />
-            <!-- <ui:TextBox Name="TxtResponse" Margin="5" /> -->
+            --><!--<ui:TextBox Name="TxtResponse" Margin="5" />--><!--
             <ContentControl Name="DynamicContent" Margin="5" />
-            <Grid Margin="5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                
-                <!-- 左下角按钮 -->
-                <ui:Button Name="BtnLeftBottom"
+        </StackPanel>-->
+
+        <!--内容部分-->
+
+        <Grid Grid.Row="1" Margin="12,12,12,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <ui:TextBlock Name="TxtQuestion" Margin="5" Grid.Row="0"/>
+            <ContentControl Name="DynamicContent" Margin="5" Grid.Row="1"
+                        VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
+        </Grid>
+
+
+
+        <!--按钮部分-->
+        <Grid Grid.Row="2" Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 左下角按钮 -->
+            <ui:Button Name="BtnLeftBottom"
                            Margin="5"
                            HorizontalAlignment="Left"
                            Appearance="Success"
                            Content="左下角按钮" 
                            Grid.Column="0" />
-                
-                <!-- 原有的右侧按钮 -->
-                <StackPanel Grid.Column="1"
+
+            <!-- 原有的右侧按钮 -->
+            <StackPanel Grid.Column="1"
                             Orientation="Horizontal">
-                    <ui:Button Name="BtnOk"
+                <ui:Button Name="BtnOk"
                                Margin="5"
                                Appearance="Primary"
                                Click="BtnOkClick"
                                Content="确定"
                                IsDefault="True" />
-                    <ui:Button Name="BtnCancel"
+                <ui:Button Name="BtnCancel"
                                Margin="5"
                                Click="BtnCancelClick"
                                Content="取消"
                                IsCancel="True" />
-                </StackPanel>
-            </Grid>
-        </StackPanel>
+            </StackPanel>
+        </Grid>
 
         <ui:TitleBar Name="MyTitleBar" Grid.Row="0">
             <ui:TitleBar.Icon>

@@ -728,7 +728,7 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Height = 435 // 固定高度
+            //Height = 435 // 固定高度
         };
 
         return scrollViewer;
@@ -794,7 +794,10 @@ public partial class ScriptControlViewModel : ViewModel
     private void OnAddKmScript()
     {
         var list = LoadAllKmScripts();
-        var combobox = new ComboBox();
+        var combobox = new ComboBox
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
 
         foreach (var fileInfo in list)
         {
@@ -824,7 +827,7 @@ public partial class ScriptControlViewModel : ViewModel
         var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath);
         var stackPanel = CreatePathingScriptSelectionPanel(root.Children);
 
-        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(500, 600));
+        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(600, 720));
         if (!string.IsNullOrEmpty(result))
         {
             AddSelectedPathingScripts((StackPanel)stackPanel.Content);
@@ -857,7 +860,7 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Height = 435 // 固定高度
+            //Height = 435 // 固定高度
         };
 
         return scrollViewer;
@@ -905,7 +908,7 @@ public partial class ScriptControlViewModel : ViewModel
             parentPanel.Children.Add(filterTextBox); // 保留筛选框
             AddNodesToPanel(parentPanel, nodes, 0, filter);
         }*/
-    }
+        }
 
     private void AddNodesToPanel(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, int depth, string filter)
     {
