@@ -477,7 +477,7 @@ public class AutoFightTask : ISoloTask
             
             if (kazuha != null)
             {
-                var time = DateTime.UtcNow - kazuha.LastSkillTime;
+                var time = TimeSpan.FromSeconds(kazuha.GetSkillCdSeconds());
                 //当万叶cd大于3时，此时不再触发万叶拾取，
                 if (!(lastFightName == "枫原万叶" && time.TotalSeconds > 3))
                 {
