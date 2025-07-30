@@ -571,7 +571,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         {
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
-            Height = 340,
+            VerticalAlignment = VerticalAlignment.Stretch,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             PlaceholderText = "请在此输入兑换码，每行一条记录"
         };
