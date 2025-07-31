@@ -18,6 +18,7 @@ public class AutoFightParam : BaseTaskParam
         public string FastCheckParams = "";
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
+        public bool RotateFindEnemyEnabled = false;
     }
     
     public AutoFightParam(string path, AutoFightConfig autoFightConfig)
@@ -34,12 +35,17 @@ public class AutoFightParam : BaseTaskParam
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
+        FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
+        
+        
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
         BattleThresholdForLoot = autoFightConfig.BattleThresholdForLoot ?? BattleThresholdForLoot;
         //下面参数固定，只取自动战斗里面的
         FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
         FinishDetectConfig.BattleEndProgressBarColorTolerance = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
+        
+        
     }
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
@@ -56,6 +62,5 @@ public class AutoFightParam : BaseTaskParam
     public string ActionSchedulerByCd = "";
     public string KazuhaPartyName;
     public string OnlyPickEliteDropsMode="";
-
 
 }
