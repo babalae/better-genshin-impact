@@ -515,8 +515,6 @@ public class AutoFightTask : ISoloTask
                 }
                     
             }
-            
-
         }
 
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
@@ -546,7 +544,7 @@ public class AutoFightTask : ISoloTask
             bool? result = null;
             try
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, _ct);
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime,delayTime, _ct);
             }
             catch (Exception ex)
             {
@@ -554,12 +552,10 @@ public class AutoFightTask : ISoloTask
                 result = false;
             }
 
-            if (result == true)
+            if (result != null)
             {
-                return true;
+                return result.Value;
             }
-            
-            return false; 
         }
 
         if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
@@ -589,13 +585,15 @@ public class AutoFightTask : ISoloTask
 
         Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-       
-        Task.Run(() =>
+
+        if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
-            Scalar bloodLower = new Scalar(255, 90, 90);
-            MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
-        } ,_ct);
-        
+            Task.Run(() =>
+            {
+                Scalar bloodLower = new Scalar(255, 90, 90);
+                MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+            } ,_ct);
+        }
         
         _lastFightFlagTime = DateTime.Now;
         return false;

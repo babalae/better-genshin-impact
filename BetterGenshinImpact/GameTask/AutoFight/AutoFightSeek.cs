@@ -32,7 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
             int numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2, connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
-            logger.LogInformation($"检测数量J： {numLabels2 - 1}");
+            logger.LogInformation("检测数量：{numLabels2}", numLabels2 - 1);
 
             if (numLabels2 > 1)
             {
@@ -49,8 +49,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     int height = stats[3];
 
                     Point firstPixel = new Point(x, y);
-                    logger.LogInformation($"找到的连通对象的第一个像素坐标: ({firstPixel.X}, {firstPixel.Y})，连通对象的高度: {height}");
-
+                    logger.LogInformation("敌人位置: ({firstPixel.X}, {firstPixel.Y})，血量高度: {height}", firstPixel.X, firstPixel.Y, height);
+                    
                     if (firstPixel.X < 500 || firstPixel.X > 1200 || firstPixel.Y < 300 || firstPixel.Y > 920)
                     {
                         // 非中心区域的处理逻辑
@@ -205,7 +205,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
     public  class AutoFightSeek
     {
-        public static async Task<bool> SeekAndFightAsync(ILogger logger, int detectDelayTime, CancellationToken ct)
+        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime, CancellationToken ct)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
             int retryCount = 0;
@@ -220,26 +220,29 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 int numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-                logger.LogInformation($"检测数量首次： {numLabels - 1}");
+                logger.LogInformation("敌人初检数量： {numLabels}", numLabels - 1);
 
                 if (numLabels > 1)
                 {
-                    logger.LogInformation("首次检测画面内疑似有怪物，继续战斗...");
+                    logger.LogInformation("检测画面内疑似有怪物，继续战斗...");
                     // 获取第一个连通对象的统计信息（标签1）
                     Mat firstRow = stats.Row(1); // 获取第1行（标签1）的数据
                     int[] statsArray;
                     bool success = firstRow.GetArray(out statsArray); // 使用 out 参数来接收数组数据
                     int height = statsArray[3];
-                    logger.LogInformation($"敌人血量高度：{height}");
+                    logger.LogInformation("敌人血量高度：{height}", height);
+                    
+                    mask.Dispose();
+                    labels.Dispose();
+                    stats.Dispose();
+                    centroids.Dispose();
                     
                     // //如果不用旋转判断敌人，直接跳过开队伍检测，加快战斗速度
                     //  return height > 2;//大于2预防误判
                     
-                    if (success)
+                    if (success && height > 2)
                     {
-                        
-
-                        if (height < 7 && height > 2)
+                        if (height < 7)
                         {
                             logger.LogInformation("敌人血量高度小于7且大于2，向前移动");
                             Task.Run(() =>
@@ -250,13 +253,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             }, ct);
                         }
-                        
-                        mask.Dispose();
-                        labels.Dispose();
-                        stats.Dispose();
-                        centroids.Dispose();
-                        return height > 2;
+                        return false;
                     }
+                    if (height < 3) return null;
                 }
                 //如果不用旋转判断敌人，直接跳过开队伍检测，加快战斗速度
                 // else
@@ -264,13 +263,26 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 //     logger.LogInformation("首次检测画面内没有怪物...");
                 //     return true;
                 // }
-                
-                
-                mask.Dispose();
-                labels.Dispose();
-                stats.Dispose();
-                centroids.Dispose();
+                if (retryCount == 0)
+                {
+                    await Delay(delayTime,ct);
+                    Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
+                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                    await Delay(detectDelayTime, ct);
+                    var ra3 = CaptureToRectArea();
+                    var b33 = ra3.SrcMat.At<Vec3b>(50, 790); // 进度条颜色
+                    var whiteTile3 = ra3.SrcMat.At<Vec3b>(50, 768); // 白块
+                    Simulation.SendInput.SimulateAction(GIActions.Drop);
 
+                    if (IsWhite(whiteTile3.Item2, whiteTile3.Item1, whiteTile3.Item0) &&
+                        IsYellow(b33.Item2, b33.Item1, b33.Item0))
+                    {
+                        logger.LogInformation("识别到战斗结束");
+                        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                        return true;
+                    }
+                }
+                
                 logger.LogInformation("画面内没有怪物，旋转寻找...");
                 if (retryCount <= 1)
                 {
@@ -291,7 +303,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                  numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-                logger.LogInformation($"检测数量第 {retryCount + 1} 次： {numLabels - 1}");
+                logger.LogInformation("检测数量第 {retryCount} 次： {numLabels}", retryCount + 1, numLabels - 1);
 
                 if (numLabels > 1)
                 {
@@ -299,48 +311,32 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     int[] statsArray2;
                     bool success2 = firstRow2.GetArray(out statsArray2); // 使用 out 参数来接收数组数据
                     int height2 = statsArray2[3];
+                    logger.LogInformation("敌人血量高度：{height2}", height2);
                     
-                    if (success2)
+                    mask.Dispose();
+                    labels.Dispose();
+                    stats.Dispose();
+                    centroids.Dispose();
+                    
+                    if (success2 && height2 > 2)
                     {
-                        
-                        logger.LogInformation($"敌人血量高度：{height2}");
-                        if (height2 < 7 && height2 > 2)
+                        if (height2 < 7)
                         {
                             logger.LogInformation("画面内有找到怪物，继续战斗...");
                             Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);  
                         }
-                        mask.Dispose();
-                        labels.Dispose();
-                        stats.Dispose();
-                        centroids.Dispose();
-                        return height2 > 2; 
+                        return false; 
                     }
-                    
+
+                    if (height2 < 3) return null;
+
                 }
-
-                if (retryCount == 0)
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                    await Delay(detectDelayTime, ct);
-                    var ra3 = CaptureToRectArea();
-                    var b33 = ra3.SrcMat.At<Vec3b>(50, 790); // 进度条颜色
-                    var whiteTile3 = ra3.SrcMat.At<Vec3b>(50, 768); // 白块
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
-
-                    if (IsWhite(whiteTile3.Item2, whiteTile3.Item1, whiteTile3.Item0) &&
-                        IsYellow(b33.Item2, b33.Item1, b33.Item0))
-                    {
-                        logger.LogInformation("识别到战斗结束");
-                        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                        return true;
-                    }
-                }
-
+               
                 logger.LogInformation("画面内没有怪物，尝试重新检测...");
                 retryCount++;
             }
 
-            return false;
+            return null;
         }
         
         private static bool IsYellow(int r, int g, int b)
