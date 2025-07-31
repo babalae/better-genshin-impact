@@ -148,6 +148,11 @@ public class PaddleOcrService : IOcrService, IDisposable
             BgiOnnxModel.PaddleOcrRecV5Korean,
             OcrVersionConfig.PpOcrV5);
 
+        /// <summary>
+        /// 这边多语言部分写的比较丑陋，但是能跑。可以根据PP-OCR的语言列表来优化。
+        /// </summary>
+        /// <param name="cultureInfo"></param>
+        /// <returns></returns>
         public static PaddleOcrModelType? FromCultureInfo(CultureInfo cultureInfo)
         {
             HashSet<string> eslavLangs = new(StringComparer.OrdinalIgnoreCase)
@@ -205,7 +210,8 @@ public class PaddleOcrService : IOcrService, IDisposable
         _localRecModel = modelsRec;
 
         // 预热模型
-        using var preHeatImageMat = Cv2.ImRead(modelType.PreHeatImagePath) ?? throw new FileNotFoundException($"预热图片未找到: {modelType.PreHeatImagePath}");
+        using var preHeatImageMat = Cv2.ImRead(modelType.PreHeatImagePath) ??
+                                    throw new FileNotFoundException($"预热图片未找到: {modelType.PreHeatImagePath}");
         // Debug输出结果
         var preHeatResult = RunAll(preHeatImageMat, 1);
         Debug.WriteLine(

@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using Windows.System;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -57,6 +59,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _notificationService = notificationService;
         InitializeCountries();
         InitializeMiyousheCookie();
+        // 初始化OCR模型选择
+        SelectedPaddleOcrModelConfig = Config.OtherConfig.OcrConfig.PaddleOcrModelConfig;
     }
 
     public AllConfig Config { get; set; }
@@ -103,6 +107,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         }
     }
     
+    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } = new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
+
+    [ObservableProperty]
+    private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
+
     [RelayCommand]
     public void OnQuestionButtonOnClick()
     {
@@ -291,11 +300,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
         keyBindingsWindow.ShowDialog();
     }
 
-    [RelayCommand]
-    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
-    {
-        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
-    }
 
     [RelayCommand]
     private async Task CheckUpdateAsync()
@@ -322,5 +326,17 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         await Launcher.LaunchUriAsync(
             new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
+    }
+
+    [RelayCommand]
+    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
+    {
+        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
+    }
+    [RelayCommand]
+    private async Task OnPaddleOcrModelConfigChanged(PaddleOcrModelConfig value)
+    {
+        Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
+        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
 }

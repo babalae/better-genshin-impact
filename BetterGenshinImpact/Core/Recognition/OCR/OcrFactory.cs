@@ -40,9 +40,9 @@ public class OcrFactory : IDisposable
         var result = type switch
         {
             OcrEngineTypes.Paddle => CreatePaddleOcrInstance(),
-            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            _ => throw new ArgumentOutOfRangeException(Enum.GetName(type), type, "不支持的 OCR 引擎类型")
         };
-        _logger.LogDebug("创建了类型为 {Type} 的 OCR服务", nameof(type));
+        _logger.LogDebug("创建了类型为 {Type} 的 OCR服务", Enum.GetName(type));
         return result;
     }
 
