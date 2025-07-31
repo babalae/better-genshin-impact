@@ -911,8 +911,7 @@
 
         <!--  其他设置  -->
         <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0"
-                         IsExpanded="True">
+                         ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf141;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
@@ -1500,8 +1499,7 @@
 
                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
-                                 Icon="{ui:SymbolIcon SquareHintSparkles24}"
-                                 IsExpanded="True">
+                                 Icon="{ui:SymbolIcon SquareHintSparkles24}">
                     <ui:CardExpander.Header>
                         <Grid>
                             <Grid.RowDefinitions>
