@@ -16,9 +16,9 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
                 lock (_paddleOcrServices)
                 {
                     return new PaddleOcrService(
-                        new BgiOnnxFactory(new Core.Config.HardwareAccelerationConfig(),
-                            new FakeLogger<BgiOnnxFactory>()),
-                        PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(cultureInfoName))?? PaddleOcrService.PaddleOcrModelType.V5);
+                        new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
+                        PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(name)) ??
+                        PaddleOcrService.PaddleOcrModelType.V5);
                 }
             });
         }

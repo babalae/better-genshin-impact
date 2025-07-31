@@ -34,56 +34,56 @@ public class PaddleOcrService : IOcrService, IDisposable
         BgiOnnxModel RecognitionModel,
         OcrVersionConfig RecognitionVersion,
         Func<IReadOnlyList<string>> RecLabel,
-        Bitmap PreHeatImage
+        String PreHeatImagePath
     )
     {
-        private static readonly Bitmap OcrTestImage = new(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png"));
+        public static string TestImagePath = Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png");
 
-        private static readonly Bitmap OcrTestNumberImage =
-            new(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr_number.png"));
+        public static string TestNumberImagePath =
+            Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr_number.png");
 
-
-        private static readonly Func<IReadOnlyList<string>> DefaultRecLabelFunc = () =>
-        {
-            const string modelConfigFileName = "inference.yml";
-            var configFilePath = Path.Combine(
-                Path.GetDirectoryName(typeof(PaddleOcrModelType).Assembly.Location) ??
-                throw new InvalidOperationException("Cannot get model directory"),
-                modelConfigFileName);
-
-            if (!File.Exists(configFilePath))
-                throw new FileNotFoundException(
-                    $"PaddleOCR config file {modelConfigFileName} not found: {configFilePath}");
-
-            using var reader = new StreamReader(configFilePath);
-            var parser = new Parser(reader);
-
-            // Traverse YAML to find PostProcess:character_dict
-            while (parser.MoveNext())
+        private static readonly Func<BgiOnnxModel, IReadOnlyList<string>> DefaultRecLabelFunc =
+            recModel =>
             {
-                if (parser.Current is not YamlDotNet.Core.Events.Scalar { Value: "PostProcess" }) continue;
-                parser.MoveNext(); // Should be MappingStart
+                const string modelConfigFileName = "inference.yml";
+                var configFilePath = Path.Combine(
+                    Path.GetDirectoryName(recModel.ModalPath) ??
+                    throw new InvalidOperationException("Cannot get model directory"),
+                    modelConfigFileName);
+
+                if (!File.Exists(configFilePath))
+                    throw new FileNotFoundException(
+                        $"PaddleOCR config file {modelConfigFileName} not found: {configFilePath}");
+
+                using var reader = new StreamReader(configFilePath);
+                var parser = new Parser(reader);
+
+                // Traverse YAML to find PostProcess:character_dict
                 while (parser.MoveNext())
                 {
-                    if (parser.Current is not YamlDotNet.Core.Events.Scalar { Value: "character_dict" }) continue;
-                    parser.MoveNext(); // Should be SequenceStart
-                    var result = new List<string>();
+                    if (parser.Current is not YamlDotNet.Core.Events.Scalar { Value: "PostProcess" }) continue;
+                    parser.MoveNext(); // Should be MappingStart
                     while (parser.MoveNext())
                     {
-                        switch (parser.Current)
+                        if (parser.Current is not YamlDotNet.Core.Events.Scalar { Value: "character_dict" }) continue;
+                        parser.MoveNext(); // Should be SequenceStart
+                        var result = new List<string>();
+                        while (parser.MoveNext())
                         {
-                            case SequenceEnd:
-                                return result;
-                            case YamlDotNet.Core.Events.Scalar charScalar:
-                                result.Add(charScalar.Value);
-                                break;
+                            switch (parser.Current)
+                            {
+                                case SequenceEnd:
+                                    return result;
+                                case YamlDotNet.Core.Events.Scalar charScalar:
+                                    result.Add(charScalar.Value);
+                                    break;
+                            }
                         }
                     }
                 }
-            }
 
-            throw new InvalidOperationException("未在 YAML 的 PostProcess 部分找到 character_dict。");
-        };
+                throw new InvalidOperationException("未在 YAML 的 PostProcess 部分找到 character_dict。");
+            };
 
 
         private static PaddleOcrModelType Create(
@@ -91,7 +91,7 @@ public class PaddleOcrService : IOcrService, IDisposable
             OcrVersionConfig detectionVersion,
             BgiOnnxModel recognitionModel,
             OcrVersionConfig recognitionVersion,
-            Bitmap? preHeatImage = null,
+            String? preHeatImagePath = null,
             Func<IReadOnlyList<string>>? recLabel = null
         )
         {
@@ -100,8 +100,8 @@ public class PaddleOcrService : IOcrService, IDisposable
                 detectionVersion,
                 recognitionModel,
                 recognitionVersion,
-                recLabel ?? DefaultRecLabelFunc,
-                preHeatImage ?? OcrTestImage);
+                recLabel ?? (() => DefaultRecLabelFunc(recognitionModel)),
+                TestImagePath);
         }
 
         public (Det, Rec) Build(BgiOnnxFactory onnxFactory)
@@ -122,7 +122,7 @@ public class PaddleOcrService : IOcrService, IDisposable
             OcrVersionConfig.PpOcrV4,
             BgiOnnxModel.PaddleOcrRecV4En,
             OcrVersionConfig.PpOcrV4,
-            OcrTestNumberImage);
+            TestNumberImagePath);
 
         public static readonly PaddleOcrModelType V5 = Create(
             BgiOnnxModel.PaddleOcrDetV5,
@@ -205,7 +205,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         _localRecModel = modelsRec;
 
         // 预热模型
-        using var preHeatImageMat = modelType.PreHeatImage.ToMat();
+        using var preHeatImageMat = Cv2.ImRead(modelType.PreHeatImagePath) ?? throw new FileNotFoundException($"预热图片未找到: {modelType.PreHeatImagePath}");
         // Debug输出结果
         var preHeatResult = RunAll(preHeatImageMat, 1);
         Debug.WriteLine(

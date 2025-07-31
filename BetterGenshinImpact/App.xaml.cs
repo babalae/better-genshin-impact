@@ -129,8 +129,6 @@ public partial class App : Application
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<HutaoNamedPipe>();
-                services.AddSingleton(sp =>
-                    sp.GetRequiredService<HomePageViewModel>().Config.HardwareAccelerationConfig);
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
 
