@@ -61,6 +61,12 @@ public partial class AutoFightConfig : ObservableObject
         private bool _fastCheckEnabled = false;
         
         /// <summary>
+        /// 旋转寻找敌人位置
+        /// </summary>
+        [ObservableProperty]
+        private bool _rotateFindEnemyEnabled = false;
+        
+        /// <summary>
         /// 快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:15,白术;钟离;，如果是数字（小于等于0则不会根据时间去检查），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。
         /// </summary>
         [ObservableProperty]

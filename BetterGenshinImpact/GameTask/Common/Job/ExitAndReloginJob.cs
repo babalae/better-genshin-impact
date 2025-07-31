@@ -62,7 +62,8 @@ public class ExitAndReloginJob
         _login3rdParty.RefreshAvailabled();
         if (_login3rdParty is { Type: Login3rdParty.The3rdPartyType.Bilibili, IsAvailabled: true })
         {
-            await Delay(1, ct);
+            // await Delay(1, ct);
+            Thread.Sleep(100);
             _login3rdParty.Login(ct);
             Logger.LogInformation("退出重登启用 B 服模式");
         }
