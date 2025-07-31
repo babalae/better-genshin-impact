@@ -34,7 +34,7 @@ public class TeyvatMap : SceneBaseMap
         splitRow: GameMapRows * 2,
         splitCol: GameMapCols * 2)
     {
-        TaskControl.Logger.LogInformation("提瓦特大陆地图特征点加载中，预计耗时2秒，请等待...");
+        TaskControl.Logger.LogInformation("[SIFT]提瓦特大陆地图特征点加载中，预计耗时2秒，请等待...");
         
         Layers = BaseMapLayer.LoadLayers(this);
         var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
