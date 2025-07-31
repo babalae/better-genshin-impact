@@ -85,6 +85,7 @@
 		<PackageReference Include="WPF-UI.Tray" Version="4.0.2" />
 		<PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
+		<PackageReference Include="YamlDotNet" Version="16.3.0" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />
 	</ItemGroup>
 

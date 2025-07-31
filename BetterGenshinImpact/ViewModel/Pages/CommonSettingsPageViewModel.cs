@@ -7,7 +7,6 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using Windows.System;
@@ -19,7 +18,6 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -31,11 +29,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using Meziantou.Framework.Win32;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
 using Wpf.Ui;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -297,7 +294,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
     {
-        await OcrFactory.ChangeCulture(type.Key);
+        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
 
     [RelayCommand]

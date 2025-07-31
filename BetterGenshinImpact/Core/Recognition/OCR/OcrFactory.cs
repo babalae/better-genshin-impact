@@ -1,75 +1,107 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
-public class OcrFactory
+public class OcrFactory : IDisposable
 {
     // public static IOcrService Media = Create(OcrEngineTypes.Media);
-    private static readonly ILogger<OcrFactory> Logger = App.GetLogger<OcrFactory>();
 
-    public static IOcrService Paddle => _ocrServices.TryGetValue(OcrEngineTypes.Paddle, out var value)
-        ? value.Value
-        : CreateAndSet(OcrEngineTypes.Paddle, TaskContext.Instance().Config.OtherConfig.GameCultureInfoName).Value;
 
-    /// <summary>
-    /// 保存着OcrEngineTypes和cultureInfoName与IOcrService
-    /// </summary>
-    private static readonly ConcurrentDictionary<OcrEngineTypes, KeyValuePair<string, IOcrService>>
-        _ocrServices = new();
+    public static IOcrService Paddle => App.ServiceProvider.GetRequiredService<OcrFactory>().PaddleOcr;
+    public IOcrService PaddleOcr => _paddleOcrService ??= Create(OcrEngineTypes.Paddle);
+
+    private IOcrService? _paddleOcrService;
+    private readonly ILogger<BgiOnnxFactory> _logger;
+    private readonly OtherConfig _config;
 
     /// <summary>
-    /// 创建并设置
+    ///  OCR 工厂,不可以直接实例化,请使用 App.ServiceProvider获取实例
     /// </summary>
-    /// <param name="type">OcrEngineTypes</param>
-    /// <param name="cultureInfoName">文化名称</param>
-    /// <returns>cultureInfoName与IOcrService的pair</returns>
-    /// <exception cref="ArgumentOutOfRangeException">如果不能创建</exception>
-    private static KeyValuePair<string, IOcrService> CreateAndSet(OcrEngineTypes type, string cultureInfoName)
+    /// <param name="otherConfig"></param>
+    /// <param name="logger"></param>
+    public OcrFactory(OtherConfig otherConfig, ILogger<BgiOnnxFactory> logger)
+    {
+        _logger = logger;
+        _config = otherConfig;
+    }
+
+    /// <summary>
+    /// 创建
+    /// </summary>
+    private IOcrService Create(OcrEngineTypes type)
     {
         var result = type switch
         {
-            OcrEngineTypes.Paddle => new KeyValuePair<string, IOcrService>(cultureInfoName,
-                new PaddleOcrService(cultureInfoName, App.ServiceProvider.GetRequiredService<BgiOnnxFactory>())),
+            OcrEngineTypes.Paddle => CreatePaddleOcrInstance(),
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
-        Logger.LogDebug("为 {CultureInfoName} 创建了类型为 {Type} 的 OCR服务", result.Key, result.Value);
-        _ocrServices[type] = result;
+        _logger.LogDebug("创建了类型为 {Type} 的 OCR服务", nameof(type));
         return result;
     }
 
-    private static string? GetCultureInfoName(OcrEngineTypes type)
+    private PaddleOcrService CreatePaddleOcrInstance()
     {
-        return _ocrServices.TryGetValue(type, out KeyValuePair<string, IOcrService> value) ? value.Key : null;
+        return _config.OcrConfig.PaddleOcrModelConfig switch
+        {
+            PaddleOcrModelConfig.V5Auto =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(_config.GameCultureInfoName)) ??
+                    PaddleOcrService.PaddleOcrModelType.V5),
+            PaddleOcrModelConfig.V5 =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V5),
+            PaddleOcrModelConfig.V4 =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V4),
+            PaddleOcrModelConfig.V4En =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V4En),
+            PaddleOcrModelConfig.V5Korean =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V5Korean),
+            PaddleOcrModelConfig.V5Latin =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V5Latin),
+            PaddleOcrModelConfig.V5Eslav =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.V5Eslav),
+            _ => throw new ArgumentOutOfRangeException(nameof(_config.OcrConfig.PaddleOcrModelConfig),
+                _config.OcrConfig.PaddleOcrModelConfig, "不支持的 Paddle OCR 模型配置")
+        };
     }
 
-    public static async Task ChangeCulture(string cultureInfoName)
-    {
-        await Task.Run(() =>
-        {
-            foreach (var ocrEngineTypes in Enum.GetValues<OcrEngineTypes>())
-            {
-                try
-                {
-                    // 避免重复创建OCR服务实例
-                    if (GetCultureInfoName(ocrEngineTypes) != cultureInfoName)
-                    {
-                        CreateAndSet(ocrEngineTypes, cultureInfoName);
-                    }
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                }
-            }
 
-            GC.Collect();
-        });
+    public Task Unload()
+    {
+        if (_paddleOcrService is not IDisposable disposable) return Task.CompletedTask;
+        try
+        {
+            disposable.Dispose();
+            _paddleOcrService = null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "卸载 OCR 服务时发生错误");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        Unload().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
+    }
+
+    ~OcrFactory()
+    {
+        Dispose();
     }
 }
