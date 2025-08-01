@@ -35,6 +35,11 @@ public class PathingTask
     public PathingTaskInfo Info { get; set; } = new();
     
     /// <summary>
+    /// 路径追踪任务配置
+    /// </summary>
+    public PathingTaskConfig Config { get; set; } = new();
+    
+    /// <summary>
     /// 锄地信息
     /// </summary>
     public FarmingSession  FarmingInfo { get; set; } = new();

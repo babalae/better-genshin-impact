@@ -5,12 +5,12 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
 
 public static class MapManager
 {
-    private static readonly Dictionary<MapTypes, ISceneMap> _maps = new();
+    private static readonly Dictionary<string, ISceneMap> _maps = new();
     private static readonly object LockObject = new();
 
-    public static ISceneMap GetMap(string mapName)
+    public static ISceneMap GetMap(string mapName, string? matchingMethod = null)
     {
-        return GetMap(MapTypesExtensions.ParseFromName(mapName));
+        return GetMap(MapTypesExtensions.ParseFromName(mapName), matchingMethod);
     }
 
 
@@ -18,10 +18,18 @@ public static class MapManager
     /// 获取指定类型的地图实例
     /// </summary>
     /// <param name="mapType">地图类型</param>
+    /// <param name="matchingMethod">地图匹配方式</param>
     /// <returns>地图实例</returns>
-    public static ISceneMap GetMap(MapTypes mapType)
+    public static ISceneMap GetMap(MapTypes mapType, string? matchingMethod = null)
     {
-        if (_maps.TryGetValue(mapType, out var map))
+        if (matchingMethod == null)
+        {
+            matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        }
+        
+        string key = $"{mapType}_{matchingMethod}";
+        
+        if (_maps.TryGetValue(key, out var map))
         {
             return map;
         }
@@ -29,20 +37,20 @@ public static class MapManager
         lock (LockObject)
         {
             // 双重检查锁定
-            if (_maps.TryGetValue(mapType, out map))
+            if (_maps.TryGetValue(key, out map))
             {
                 return map;
             }
 
-            map = CreateMap(mapType);
-            _maps[mapType] = map;
+            map = CreateMap(mapType, matchingMethod);
+            _maps[key] = map;
             return map;
         }
     }
 
-    private static ISceneMap CreateMap(MapTypes mapType)
+    private static ISceneMap CreateMap(MapTypes mapType, string matchingMethod)
     {
-        if (TaskContext.Instance().Config.PathingConditionConfig.MapPathingType == "SIFT")
+        if (matchingMethod == "SIFT")
         {
             return mapType switch
             {
