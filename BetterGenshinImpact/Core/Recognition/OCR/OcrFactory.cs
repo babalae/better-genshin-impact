@@ -119,7 +119,11 @@ public class OcrFactory : IDisposable
 
     public Task Unload()
     {
-        if (_paddleOcrService is not IDisposable disposable) return Task.CompletedTask;
+        if (_paddleOcrService is not IDisposable disposable)
+        {
+            _paddleOcrService = null;
+            return Task.CompletedTask;
+        }
         try
         {
             disposable.Dispose();
