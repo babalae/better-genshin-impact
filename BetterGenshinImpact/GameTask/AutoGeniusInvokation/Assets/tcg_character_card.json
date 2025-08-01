@@ -2972,7 +2972,7 @@
                         "id": 1103,
                         "nameEn": "pyro",
                         "type": "火元素",
-                        "count": 2
+                        "count": 3
                     }
                 ]
             },
@@ -4682,6 +4682,152 @@
             {
                 "nameEn": "shadowhunt_shell",
                 "name": "追影弹",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1512,
+        "nameEn": "lan_yan",
+        "type": "character",
+        "name": "蓝砚",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "black_pheasant_strides_on_water",
+                "name": "玄鸾画水",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "swallowwisp_pinion_dance",
+                "name": "凤缕随翦舞",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "lustrous_moonrise",
+                "name": "鹍弦踏月出",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 1513,
+        "nameEn": "shikanoin_heizou",
+        "type": "character",
+        "name": "鹿野院平藏",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "fudou_style_martial_arts",
+                "name": "不动流格斗术",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "heartstopper_strike",
+                "name": "勠心拳",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "windmuster_kick",
+                "name": "聚风蹴",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "paradoxical_practice",
+                "name": "反论稽古",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -6420,7 +6566,7 @@
         "nameEn": "frost_operative",
         "type": "character",
         "name": "愚人众·霜役人",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "冰元素",
         "weapon": "其他武器",
@@ -8322,6 +8468,83 @@
             {
                 "nameEn": "spirit_of_omens_power",
                 "name": "厄灵之能",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2704,
+        "nameEn": "gluttonous_yumkasaur_mountain_king",
+        "type": "character",
+        "name": "贪食匿叶龙山王",
+        "hp": 7,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "crushing_tail_attack",
+                "name": "沉重尾击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "flying_fruit",
+                "name": "喷吐草实",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "flamegranate_conflagration",
+                "name": "榴果爆轰",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "gluttonous_rex",
+                "name": "贪食之王",
                 "skillTag": [
                     "被动技能"
                 ],
