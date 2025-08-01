@@ -1,17 +1,13 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using Microsoft.Extensions.Localization;
-using System.Globalization;
 using BetterGenshinImpact.GameTask.Model.Area;
 using System.Collections.Generic;
-using Fischless.WindowsInput;
 using OpenCvSharp;
 using System.Linq;
-using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using System.IO;
 using OpenCvSharp.Extensions;
@@ -42,7 +38,6 @@ public class GetGridIconsTask : ISoloTask
         this.starAsSuffix = starAsSuffix;
         this.maxNumToGet = maxNumToGet;
         IStringLocalizer<GetGridIconsTask> stringLocalizer = App.GetService<IStringLocalizer<GetGridIconsTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
     }
 
     public async Task Start(CancellationToken ct)
