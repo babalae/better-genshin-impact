@@ -876,38 +876,38 @@
             </StackPanel>
         </ui:CardExpander>
         
-        <!-- ~1~  新增手动导入本地脚本仓库功能  @1@ -->
-        <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}"> -->
-        <!--     <ui:CardControl.Header> -->
-        <!--         <Grid> -->
-        <!--             <Grid.RowDefinitions> -->
-        <!--                 <RowDefinition Height="Auto" /> -->
-        <!--                 <RowDefinition Height="Auto" /> -->
-        <!--             </Grid.RowDefinitions> -->
-        <!--             <Grid.ColumnDefinitions> -->
-        <!--                 <ColumnDefinition Width="*" /> -->
-        <!--                 <ColumnDefinition Width="Auto" /> -->
-        <!--             </Grid.ColumnDefinitions> -->
-        <!--             <ui:TextBlock Grid.Row="0" -->
-        <!--                           Grid.Column="0" -->
-        <!--                           FontTypography="Body" -->
-        <!--                           Text="手动导入本地脚本仓库（zip格式）" -->
-        <!--                           TextWrapping="Wrap" /> -->
-        <!--             <ui:TextBlock Grid.Row="1" -->
-        <!--                           Grid.Column="0" -->
-        <!--                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" -->
-        <!--                           Text="脚本仓库无法在线更新时使用" -->
-        <!--                           TextWrapping="Wrap" /> -->
-        <!--             <ui:Button Grid.Row="0" -->
-        <!--                        Grid.RowSpan="2" -->
-        <!--                        Grid.Column="1" -->
-        <!--                        Margin="0,0,36,0" -->
-        <!--                        Command="{Binding ImportLocalScriptsRepoZipCommand}" -->
-        <!--                        Content="导入" /> -->
-        <!--         </Grid> -->
-        <!-- -->
-        <!--     </ui:CardControl.Header> -->
-        <!-- </ui:CardControl> -->
+        <!--  新增手动导入本地脚本仓库功能  -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="手动导入本地脚本仓库（zip格式）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="脚本仓库无法在线更新时使用"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding ImportLocalScriptsRepoZipCommand}"
+                               Content="导入" />
+                </Grid>
+        
+            </ui:CardControl.Header>
+        </ui:CardControl>
 
 
         <!--  其他设置  -->
