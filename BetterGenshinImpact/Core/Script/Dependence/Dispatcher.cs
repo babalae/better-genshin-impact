@@ -9,6 +9,8 @@ using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using System.Threading;
+using Microsoft.ClearScript;  
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -131,13 +133,32 @@ public class Dispatcher
         // 根据名称执行任务
         switch (soloTask.Name)
         {
-            case "AutoGeniusInvokation":
-                if (taskSettingsPageViewModel.GetTcgStrategy(out var content))
-                {
-                    return;
-                }
-
-                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);
+            case "AutoGeniusInvokation":  
+                string content;  
+                // 检查是否有自定义策略内容  
+                if (soloTask.Config != null)  
+                {  
+                    var jsObject = (ScriptObject)soloTask.Config;  
+                    content = ScriptObjectConverter.GetValue(jsObject, "strategy", "");  
+                    if (string.IsNullOrEmpty(content))  
+                    {  
+                        // 回退到原有逻辑  
+                        if (taskSettingsPageViewModel.GetTcgStrategy(out content))  
+                        {  
+                            return;  
+                        }  
+                    }  
+                }  
+                else  
+                {  
+                    // 回退到原有逻辑  
+                    if (taskSettingsPageViewModel.GetTcgStrategy(out content))  
+                    {  
+                        return;  
+                    }  
+                }  
+                
+                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);  
                 break;
 
             case "AutoWood":
