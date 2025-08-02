@@ -7,5 +7,7 @@ public enum ProviderType
     TensorRt,
     Cuda,
     Dml,
-    Cpu
+    Cpu,
+    Dnnl,
+    OpenVino
 }

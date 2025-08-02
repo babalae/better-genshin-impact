@@ -6,8 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.Win32;
@@ -125,6 +123,27 @@ public class BgiOnnxFactory
                     {
                         testSession?.Dispose();
                     }
+
+                if (!hasGpu)
+                {
+                    // OpenVino是英特尔的OpenVINO执行提供程序
+                    // 目前来看比Dml强
+                    try
+                    {
+                        testSession = new SessionOptions();
+                        testSession.AppendExecutionProvider_OpenVINO();
+                        list.Add(ProviderType.OpenVino);
+                        hasGpu = true;
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogDebug("[init]无法加载OpenVino。可能不支持，跳过。({Err})", e.Message);
+                    }
+                    finally
+                    {
+                        testSession?.Dispose();
+                    }
+                }
 
                 if (!hasGpu && dmlDeviceId >= 0)
                     // dml效果不如tensorrt，但是比纯cuda稳定性强
@@ -358,6 +377,13 @@ public class BgiOnnxFactory
                         break;
                     case ProviderType.Cpu:
                         sessionOptions.AppendExecutionProvider_CPU();
+                        break;
+                    case ProviderType.Dnnl:
+                        sessionOptions.AppendExecutionProvider_Dnnl();
+                        break;
+                    case ProviderType.OpenVino:
+                        // Vino是英特尔的OpenVINO执行提供程序
+                        sessionOptions.AppendExecutionProvider_OpenVINO();
                         break;
                     case ProviderType.TensorRt:
                         using (var options = new OrtTensorRTProviderOptions())
