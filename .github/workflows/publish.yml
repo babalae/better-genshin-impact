@@ -100,13 +100,13 @@ jobs:
           commit_message: "Update version to ${{ needs.validate.outputs.version }}"
           branch: main
           file_pattern: BetterGenshinImpact/BetterGenshinImpact.csproj
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/BetterGenshinImpact.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+      # - name: Cache NuGet packages
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.nuget/packages
+      #     key: ${{ runner.os }}-nuget-${{ hashFiles('**/BetterGenshinImpact.csproj') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-nuget-
       - name: 🛠️ Build application
         run: dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c Release -p:PublishProfile=FolderProfile -p:Version=${{ needs.validate.outputs.version }}
         continue-on-error: true
