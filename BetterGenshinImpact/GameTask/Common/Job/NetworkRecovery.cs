@@ -29,11 +29,11 @@ public class NetworkRecovery
     }
     
     //完成任务标志
-    private static bool _recoveryNetworkDone = false;
+    public static bool RecoveryNetworkDone = false;
     
     public static async Task Start(CancellationToken ct)
     {
-        _recoveryNetworkDone = false;
+        RecoveryNetworkDone = false;
         
         await NewRetry.WaitForElementDisappear(
             GetConfirmRa(true,"连接超时","连接已断开","网络错误","无法登录服务器","提示","通知"),
@@ -77,7 +77,7 @@ public class NetworkRecovery
             ElementAssets.Instance.PaimonMenuRo,
             ()  => {  
                 
-                if (_recoveryNetworkDone)
+                if (RecoveryNetworkDone)
                 {
                     return;//回到主页一次后，后续异步执行的所有操作都取消
                 }
@@ -125,6 +125,6 @@ public class NetworkRecovery
         
         await new ReturnMainUiTask().Start(ct);
         IsSuspendedByNetwork = false;
-        _recoveryNetworkDone = true;
+        RecoveryNetworkDone = true;
     }
 }

@@ -23,6 +23,7 @@ public class TaskControl
     private static DateTime _lastCheckTime = DateTime.MinValue;
     private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(TaskContext.Instance().Config.OtherConfig.NetworkDetectionInterval);
     private static readonly Ping PingSender = new Ping();
+    
     public static bool IsSuspendedByNetwork { get; set; } = false;
 
     private static Task CheckNetworkStatusAsync()
@@ -55,7 +56,10 @@ public class TaskControl
         }
         finally
         {
-            IsSuspendedByNetwork = isSuspend;
+            if (!RunnerContext.Instance.IsSuspend)
+            {
+                IsSuspendedByNetwork = isSuspend;
+            }
         }
         return Task.CompletedTask;
     }
@@ -94,6 +98,7 @@ public class TaskControl
         var isSuspend = RunnerContext.Instance.IsSuspend || IsSuspendedByNetwork;
         while (RunnerContext.Instance.IsSuspend || IsSuspendedByNetwork)
         {
+            if (RunnerContext.Instance.IsSuspend) IsSuspendedByNetwork = false; NetworkRecovery.RecoveryNetworkDone = true;
             if (first)
             {
                 RunnerContext.Instance.StopAutoPick();
