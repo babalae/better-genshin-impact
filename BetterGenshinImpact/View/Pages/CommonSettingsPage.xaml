@@ -875,6 +875,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+        
         <!--  新增手动导入本地脚本仓库功能  -->
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
             <ui:CardControl.Header>
@@ -904,7 +905,7 @@
                                Command="{Binding ImportLocalScriptsRepoZipCommand}"
                                Content="导入" />
                 </Grid>
-
+        
             </ui:CardControl.Header>
         </ui:CardControl>
 

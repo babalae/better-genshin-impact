@@ -165,7 +165,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         {
                             logger.LogInformation("敌人在中心且高度大于6，不移动");
                         }
-                        else if (firstPixel.Y < 300)
+                        else if (firstPixel.X < 1200 && firstPixel.X > 500 && firstPixel.Y < 800 && height > 2)
                         {
                             logger.LogInformation("敌人在上方，向前移动");
                             Task.Run(() =>
@@ -175,7 +175,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             }, ct);
                         }
-                        else if (firstPixel.Y > 920)
+                        else if (firstPixel.X < 1200 && firstPixel.X > 500 && firstPixel.Y > 800 && height > 2)
                         {
                             logger.LogInformation("敌人在下方，向后移动");
                             Task.Run(() =>
@@ -187,7 +187,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         }
                         else
                         {
-                            logger.LogInformation("敌人在中心，不移动");
+                            logger.LogInformation("不移动");
                         }
                     }
                 }
@@ -220,11 +220,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 int numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-                logger.LogInformation("敌人初检数量： {numLabels}", numLabels - 1);
+                if (retryCount == 0) logger.LogInformation("敌人初检数量： {numLabels}", numLabels - 1);
 
                 if (numLabels > 1)
                 {
-                    logger.LogInformation("检测画面内疑似有怪物，继续战斗...");
+                    logger.LogInformation("检测画面内疑似有敌人，继续战斗...");
                     // 获取第一个连通对象的统计信息（标签1）
                     Mat firstRow = stats.Row(1); // 获取第1行（标签1）的数据
                     int[] statsArray;
@@ -283,7 +283,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     }
                 }
                 
-                logger.LogInformation("画面内没有怪物，旋转寻找...");
+                // logger.LogInformation("画面内没有怪物，旋转寻找...");
                 if (retryCount <= 1)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy(image.Width / 2, -image.Height / 3);
@@ -293,7 +293,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     Simulation.SendInput.Mouse.MoveMouseBy(image.Width / 2, 0);
                 }
 
-                await Task.Delay(300,ct);
+                await Task.Delay(250,ct);
 
                 image = CaptureToRectArea();
                 mask = OpenCvCommonHelper.Threshold(image.DeriveCrop(0, 0, 1500, 900).SrcMat, bloodLower);
@@ -303,10 +303,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                  numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-                logger.LogInformation("检测数量第 {retryCount} 次： {numLabels}", retryCount + 1, numLabels - 1);
+                // if (retryCount % 2 == 0) logger.LogInformation("检测敌人第 {retryCount} 次： {numLabels}", retryCount + 1, numLabels - 1);
 
                 if (numLabels > 1)
                 {
+                    logger.LogInformation("检测敌人第 {retryCount} 次： {numLabels}", retryCount + 1, numLabels - 1);
                     Mat firstRow2 = stats.Row(1); // 获取第1行（标签1）的数据
                     int[] statsArray2;
                     bool success2 = firstRow2.GetArray(out statsArray2); // 使用 out 参数来接收数组数据
@@ -322,7 +323,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     {
                         if (height2 < 7)
                         {
-                            logger.LogInformation("画面内有找到怪物，继续战斗...");
+                            logger.LogInformation("画面内有找到敌人，继续战斗...");
                             Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);  
                         }
                         return false; 
@@ -332,10 +333,10 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 }
                
-                logger.LogInformation("画面内没有怪物，尝试重新检测...");
+                // logger.LogInformation("画面内没有怪物，尝试重新检测...");
                 retryCount++;
             }
-
+            logger.LogInformation("寻找敌人：{Text}", "无");
             return null;
         }
         
