@@ -7,19 +7,19 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
 using Windows.System;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -31,11 +31,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using Meziantou.Framework.Win32;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
 using Wpf.Ui;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -60,6 +59,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _notificationService = notificationService;
         InitializeCountries();
         InitializeMiyousheCookie();
+        // 初始化OCR模型选择
+        SelectedPaddleOcrModelConfig = Config.OtherConfig.OcrConfig.PaddleOcrModelConfig;
     }
 
     public AllConfig Config { get; set; }
@@ -106,6 +107,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         }
     }
     
+    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } = new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
+
+    [ObservableProperty]
+    private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
+
     [RelayCommand]
     public void OnQuestionButtonOnClick()
     {
@@ -294,11 +300,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
         keyBindingsWindow.ShowDialog();
     }
 
-    [RelayCommand]
-    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
-    {
-        await OcrFactory.ChangeCulture(type.Key);
-    }
 
     [RelayCommand]
     private async Task CheckUpdateAsync()
@@ -325,5 +326,17 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         await Launcher.LaunchUriAsync(
             new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
+    }
+
+    [RelayCommand]
+    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
+    {
+        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
+    }
+    [RelayCommand]
+    private async Task OnPaddleOcrModelConfigChanged(PaddleOcrModelConfig value)
+    {
+        Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
+        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
 }
