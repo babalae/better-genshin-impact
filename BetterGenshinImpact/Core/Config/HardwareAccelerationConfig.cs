@@ -72,4 +72,13 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private bool _embedTensorRtCache = true;
 
     #endregion
+
+    #region OpenVINO设置
+    /// <summary>
+    /// OpenVino 设备参数。
+    /// </summary>
+    [ObservableProperty]
+    private string _openVinoDevice = "AUTO:GPU,CPU";
+
+    #endregion
 }

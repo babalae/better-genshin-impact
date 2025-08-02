@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.Win32;
@@ -39,16 +38,18 @@ public class BgiOnnxFactory
         if (string.IsNullOrWhiteSpace(config.AdditionalPath))
             AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
 
-        ProviderTypes = GetProviderType(config.InferenceDevice, CudaDeviceId, DmlDeviceId);
+
         OptimizedModel = config.OptimizedModel;
         CudaDeviceId = config.CudaDevice;
         DmlDeviceId = config.GpuDevice;
         TrtUseEmbedMode = config.EmbedTensorRtCache;
         EnableCache = config.EnableTensorRtCache;
         CpuOcr = config.CpuOcr;
-        this._logger.LogDebug(
+        OpenVinoDevice = config.OpenVinoDevice;
+        ProviderTypes = GetProviderType(config.InferenceDevice);
+        _logger.LogDebug(
             "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
-            string.Join(",", ProviderTypes.Select<ProviderType, string>(Enum.GetName)),
+            string.Join(",", ProviderTypes.Select<ProviderType, string>(Enum.GetName!)),
             config.InferenceDevice,
             OptimizedModel,
             CudaDeviceId,
@@ -83,6 +84,7 @@ public class BgiOnnxFactory
     public int CudaDeviceId { get; }
     public bool OptimizedModel { get; }
     public bool TrtUseEmbedMode { get; }
+    public string OpenVinoDevice { get; }
     public bool EnableCache { get; }
     public bool CpuOcr { get; }
 
@@ -91,12 +93,9 @@ public class BgiOnnxFactory
     ///     根据InferenceDeviceType选择Provider
     /// </summary>
     /// <param name="inferenceDeviceType">InferenceDeviceType</param>
-    /// <param name="cudaDeviceId">cuda设备id</param>
-    /// <param name="dmlDeviceId">dml设备id</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    private ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType, int cudaDeviceId,
-        int dmlDeviceId)
+    private ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType)
     {
         switch (inferenceDeviceType)
         {
@@ -106,14 +105,15 @@ public class BgiOnnxFactory
                 //只用dml不加cpu的话在很多场景下性能很差。
                 return [ProviderType.Dml, ProviderType.Cpu];
             case InferenceDeviceType.Gpu:
+            {
                 List<ProviderType> list = [];
                 SessionOptions? testSession = null;
                 var hasGpu = false;
-                if (!hasGpu && cudaDeviceId >= 0)
+                if (!hasGpu && CudaDeviceId >= 0)
                     // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
                     try
                     {
-                        testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(cudaDeviceId);
+                        testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
                         list.Add(ProviderType.TensorRt);
                         hasGpu = true;
                     }
@@ -126,12 +126,12 @@ public class BgiOnnxFactory
                         testSession?.Dispose();
                     }
 
-                if (!hasGpu && dmlDeviceId >= 0)
+                if (!hasGpu && DmlDeviceId >= 0)
                     // dml效果不如tensorrt，但是比纯cuda稳定性强
                     try
                     {
                         testSession = new SessionOptions();
-                        testSession.AppendExecutionProvider_DML(dmlDeviceId);
+                        testSession.AppendExecutionProvider_DML(DmlDeviceId);
                         list.Add(ProviderType.Dml);
                         hasGpu = true;
                     }
@@ -144,11 +144,11 @@ public class BgiOnnxFactory
                         testSession?.Dispose();
                     }
 
-                if (!hasGpu && cudaDeviceId >= 0)
+                if (!hasGpu && CudaDeviceId >= 0)
                     // cuda优先级比较低，因为跑起来并不太理想。
                     try
                     {
-                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(cudaDeviceId);
+                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
                         list.Add(ProviderType.Cuda);
                         hasGpu = true;
                     }
@@ -166,6 +166,34 @@ public class BgiOnnxFactory
                 //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
                 list.Add(ProviderType.Cpu);
                 return list.ToArray();
+            }
+
+            case InferenceDeviceType.OpenVino:
+            {
+                List<ProviderType> list = [];
+                SessionOptions? testSession = null;
+                // OpenVino是英特尔的OpenVINO执行提供程序
+                // 目前来看比Dml强
+                try
+                {
+                    
+                    testSession = new SessionOptions();
+                    testSession.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig());
+                    testSession.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
+                    list.Add(ProviderType.OpenVino);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug("[init]无法加载OpenVino。可能不支持，跳过。({Err})", e.Message);
+                }
+                finally
+                {
+                    testSession?.Dispose();
+                }
+
+                list.Add(ProviderType.Cpu);
+                return list.ToArray();
+            }
             default:
                 throw new InvalidEnumArgumentException("无效的推理设备");
         }
@@ -359,6 +387,13 @@ public class BgiOnnxFactory
                     case ProviderType.Cpu:
                         sessionOptions.AppendExecutionProvider_CPU();
                         break;
+                    case ProviderType.Dnnl:
+                        sessionOptions.AppendExecutionProvider_Dnnl();
+                        break;
+                    case ProviderType.OpenVino:
+                        sessionOptions.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig());
+                        sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
+                        break;
                     case ProviderType.TensorRt:
                         using (var options = new OrtTensorRTProviderOptions())
                         {
@@ -450,6 +485,17 @@ public class BgiOnnxFactory
         {
             ["device_id"] = CudaDeviceId.ToString()
         };
+        return result;
+    }
+    
+    private Dictionary<string, string> GetOpenVinoProviderConfig()
+    {
+        var result = new Dictionary<string, string>();
+        if (!string.IsNullOrWhiteSpace(OpenVinoDevice))
+        {
+            result["deice_type"] = OpenVinoDevice;
+        }
+        result["enable_opencl_throttling"] = "true";
         return result;
     }
 }
