@@ -164,6 +164,12 @@
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\GetGridIcons\gridIcon.onnx">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\GetGridIcons\训练集原型特征.csv">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\LogParse\Assets\log.css">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
