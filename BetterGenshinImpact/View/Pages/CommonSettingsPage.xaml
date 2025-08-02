@@ -739,7 +739,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-
+        
         <!--回血相关设置-->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
@@ -876,38 +876,39 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        <!-- 新增手动导入本地脚本仓库功能 -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
-            <ui:CardControl.Header>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="手动导入本地脚本仓库（zip格式）"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="脚本仓库无法在线更新时使用"
-                                  TextWrapping="Wrap" />
-                    <ui:Button Grid.Row="0"
-                               Grid.RowSpan="2"
-                               Grid.Column="1"
-                               Margin="0,0,36,0"
-                               Command="{Binding ImportLocalScriptsRepoZipCommand}"
-                               Content="导入" />
-                </Grid>
-
-            </ui:CardControl.Header>
-        </ui:CardControl>
+        
+        <!-- ~1~ 新增手动导入本地脚本仓库功能 @1@ --> 
+        <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}"> -->
+        <!--     <ui:CardControl.Header> -->
+        <!--         <Grid> -->
+        <!--             <Grid.RowDefinitions> -->
+        <!--                 <RowDefinition Height="Auto" /> -->
+        <!--                 <RowDefinition Height="Auto" /> -->
+        <!--             </Grid.RowDefinitions> -->
+        <!--             <Grid.ColumnDefinitions> -->
+        <!--                 <ColumnDefinition Width="*" /> -->
+        <!--                 <ColumnDefinition Width="Auto" /> -->
+        <!--             </Grid.ColumnDefinitions> -->
+        <!--             <ui:TextBlock Grid.Row="0" -->
+        <!--                           Grid.Column="0" -->
+        <!--                           FontTypography="Body" -->
+        <!--                           Text="手动导入本地脚本仓库（zip格式）" -->
+        <!--                           TextWrapping="Wrap" /> -->
+        <!--             <ui:TextBlock Grid.Row="1" -->
+        <!--                           Grid.Column="0" -->
+        <!--                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" -->
+        <!--                           Text="脚本仓库无法在线更新时使用" -->
+        <!--                           TextWrapping="Wrap" /> -->
+        <!--             <ui:Button Grid.Row="0" -->
+        <!--                        Grid.RowSpan="2" -->
+        <!--                        Grid.Column="1" -->
+        <!--                        Margin="0,0,36,0" -->
+        <!--                        Command="{Binding ImportLocalScriptsRepoZipCommand}" -->
+        <!--                        Content="导入" /> -->
+        <!--         </Grid> -->
+        <!-- -->
+        <!--     </ui:CardControl.Header> -->
+        <!-- </ui:CardControl> -->
 
 
         <!--  其他设置  -->
@@ -1373,6 +1374,218 @@
                         </StackPanel>
                     </StackPanel>
                 </ui:CardExpander>
+                
+                 <!--  假装识别相关设置  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xe533;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="队伍角色假装识别设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在新角色实装后，新BGI版本发布前，临时用于识别队伍角色的设置"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="开启队伍角色假装识别功能"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="注意本功能仅用于临时使用，请多次尝试设置，以确保识别准确"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatarEnabled, Mode=TwoWay}" />
+                </Grid>
+                
+                <StackPanel>
+                    <Grid Margin="16,-15,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      Grid.ColumnSpan="7"
+                                      Margin="0,0,10,10"
+                                      FontTypography="Body"
+                                      Text="新角色可能识别成的角色(可填3个)，填写完整角色名称 (运行自动战斗可以查看)"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Grid.ColumnSpan="7"
+                                      Margin="0,0,25,10"
+                                      FontTypography="Body"
+                                      Text="请固定新角色在队伍中的位置(建议4号位），地图追踪时不要用作行走位，置信度可填0至1，越高越容易识别为指定角色(填老角色)，识别不到请逐步提高置信度。"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="2"
+                                    Grid.Column="0"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar1Name, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBox Grid.Row="2"
+                                    Grid.Column="1"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar1Name2, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBox Grid.Row="2"
+                                    Grid.Column="2"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar1Name3, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBlock Grid.Row="2"
+                                      Grid.Column="3"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,5,0"
+                                      FontTypography="Body"
+                                      Text="置信度低于："
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="2"
+                                    Grid.Column="4"
+                                    MinWidth="70"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar1Confidence, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBlock Grid.Row="2"
+                                      Grid.Column="5"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,5,0"
+                                      FontTypography="Body"
+                                      Text="识别为："
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="2"
+                                    Grid.Column="6"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar1DisplayName, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        
+                    </Grid>
+                    
+                    <Grid Margin="16,0,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Row="1"
+                                    Grid.Column="0"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar2Name, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBox Grid.Row="1"
+                                    Grid.Column="1"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar2Name2, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBox Grid.Row="1"
+                                    Grid.Column="2"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar2Name3, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="3"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,5,0"
+                                      FontTypography="Body"
+                                      Text="置信度低于："
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="1"
+                                    Grid.Column="4"
+                                    MinWidth="70"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar2Confidence, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="5"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,5,0"
+                                      FontTypography="Body"
+                                      Text="识别为："
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="1"
+                                    Grid.Column="6"
+                                    MinWidth="80"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,10,0"
+                                    Text="{Binding Config.OtherConfig.CustomAvatarConfigOut.CustomAvatar2DisplayName, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                        
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </ui:CardExpander>
+                
                 <!--米游社相关 -->
                                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"

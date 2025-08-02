@@ -22,8 +22,39 @@ public partial class OtherConfig : ObservableObject
     
     [ObservableProperty]
     private Miyoushe _miyousheConfig = new();
-    
 
+    // 自定义角色配置
+    [ObservableProperty]
+    private CustomAvatarConfig _customAvatarConfigOut = new CustomAvatarConfig();
+    
+    public partial class CustomAvatarConfig : ObservableObject
+    {
+        //自定义角色开关
+        public  bool CustomAvatarEnabled { set; get; } = false;
+        
+        // 自定义角色1名称,初始化用于举例
+        public string CustomAvatar1Name { get; set; } = "申鹤";
+        public string CustomAvatar1Name2 { get; set; } = "甘雨";
+        public string CustomAvatar1Name3 { get; set; } = "芭芭拉";
+    
+        // 自定义角色1假装名称
+        public string CustomAvatar1DisplayName { get; set; } = "琴";
+    
+        // 自定义角色2名称
+        public string CustomAvatar2Name { get; set; } = "凯亚";
+        public string CustomAvatar2Name2 { get; set; } = string.Empty;
+        public string CustomAvatar2Name3 { get; set; } = string.Empty;
+    
+        // 自定义角色2假装名称
+        public string CustomAvatar2DisplayName { get; set; } = "夜兰";
+    
+        // 自定义置信度1
+        public double CustomAvatar1Confidence { get; set; } = 0.7;
+    
+        // 自定义置信度2
+        public double CustomAvatar2Confidence { get; set; } = 0.7;
+    }
+    
     public partial class AutoRestart : ObservableObject
     {
         [ObservableProperty]

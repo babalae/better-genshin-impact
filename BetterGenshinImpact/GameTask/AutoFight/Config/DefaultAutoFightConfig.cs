@@ -37,4 +37,22 @@ public class DefaultAutoFightConfig
 
         // return CombatAvatars.Find(x => x.Alias.Contains(alias))?.Name ?? throw new Exception($"角色名称校验失败：{alias}");
     }
+    
+    // //添加自定义角色-假装识别够用了，后续再考虑
+    // public static void AddCombatAvatar(CombatAvatar newAvatar)
+    // {
+    //     // 读取现有的 JSON 文件内容
+    //     var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoFight\Assets\combat_avatar.json"));
+    //     var combatAvatars = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CombatAvatar>>(json) ?? new List<CombatAvatar>();
+    //
+    //     // 添加新角色
+    //     combatAvatars.Add(newAvatar);
+    //
+    //     // 将更新后的角色列表序列化回 JSON 格式
+    //     var updatedJson = Newtonsoft.Json.JsonConvert.SerializeObject(combatAvatars, Newtonsoft.Json.Formatting.Indented);
+    //
+    //     // 将更新后的 JSON 写回到文件
+    //     File.WriteAllText(Global.Absolute(@"GameTask\AutoFight\Assets\combat_avatar.json"), updatedJson);
+    // }
+    
 }

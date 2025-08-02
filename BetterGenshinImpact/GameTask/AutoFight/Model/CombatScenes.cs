@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using BetterGenshinImpact.Core.Simulator;
 using Compunet.YoloSharp;
@@ -20,6 +21,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -28,6 +31,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// </summary>
 public class CombatScenes : IDisposable
 {
+    
+    public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
+    
     /// <summary>
     /// 当前配队
     /// </summary>
@@ -164,26 +170,63 @@ public class CombatScenes : IDisposable
         Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
         var topClass = result.GetTopClass();
-        if (topClass.Name.Name.StartsWith("Qin") || topClass.Name.Name.Contains("Costume"))
+        
+        if (!Config.CustomAvatarConfigOut.CustomAvatarEnabled)
         {
-            // 降低琴和衣装角色的识别率要求
-            if (topClass.Confidence < 0.51)
+            if (topClass.Name.Name.StartsWith("Qin") || topClass.Name.Name.Contains("Costume"))
             {
-                img.SaveAsPng(@"log\avatar_side_classify_error.png");
-                throw new Exception(
-                    $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
+                // 降低琴和衣装角色的识别率要求
+                if (topClass.Confidence < 0.51)
+                {
+                    img.SaveAsPng(@"log\avatar_side_classify_error.png");
+                    throw new Exception(
+                        $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
+                }
             }
+            else
+            {
+                if (topClass.Confidence < 0.7)
+                {
+                    img.SaveAsPng(@"log\avatar_side_classify_error.png");
+                    throw new Exception(
+                        $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
+                }
+            } 
         }
         else
         {
-            if (topClass.Confidence < 0.7)
+            foreach (var (customAvatarName, customAvatarDisplayName, customAvatarConfidence) in new[]
+                     {
+                         (Config.CustomAvatarConfigOut.CustomAvatar1Name, Config.CustomAvatarConfigOut.CustomAvatar1DisplayName, Config.CustomAvatarConfigOut.CustomAvatar1Confidence),
+                         (Config.CustomAvatarConfigOut.CustomAvatar1Name2, Config.CustomAvatarConfigOut.CustomAvatar1DisplayName, Config.CustomAvatarConfigOut.CustomAvatar1Confidence),
+                         (Config.CustomAvatarConfigOut.CustomAvatar1Name3, Config.CustomAvatarConfigOut.CustomAvatar1DisplayName, Config.CustomAvatarConfigOut.CustomAvatar1Confidence),
+                         (Config.CustomAvatarConfigOut.CustomAvatar2Name, Config.CustomAvatarConfigOut.CustomAvatar2DisplayName, Config.CustomAvatarConfigOut.CustomAvatar2Confidence),
+                         (Config.CustomAvatarConfigOut.CustomAvatar2Name2, Config.CustomAvatarConfigOut.CustomAvatar2DisplayName, Config.CustomAvatarConfigOut.CustomAvatar2Confidence),
+                         (Config.CustomAvatarConfigOut.CustomAvatar2Name3, Config.CustomAvatarConfigOut.CustomAvatar2DisplayName, Config.CustomAvatarConfigOut.CustomAvatar2Confidence),
+                     })
             {
-                img.SaveAsPng(@"log\avatar_side_classify_error.png");
-                throw new Exception(
-                    $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
+                if (!string.IsNullOrEmpty(customAvatarName))
+                {
+                    var customAvatarNameEn = DefaultAutoFightConfig.CombatAvatarMap[customAvatarName].NameEn;
+                    var customAvatarEn = DefaultAutoFightConfig.CombatAvatarMap[customAvatarDisplayName].NameEn;
+                    
+                    if (topClass.Name.Name.Contains(customAvatarNameEn))
+                    {
+                        Logger.LogInformation("正式版本发布支持新角色后，请关闭假装识别功能");
+                        Logger.LogInformation("{Text1} 假装识别为 {Text2}", customAvatarName, customAvatarDisplayName);
+                        return customAvatarEn;
+                    }
+
+                    if (topClass.Confidence < customAvatarConfidence)
+                    {
+                        Logger.LogInformation("正式版本发布支持新角色后，请关闭假装识别功能");
+                        Logger.LogInformation("置信度 {Text1} 低于设置的阈值 {Text2} 假装识别为 {Text3}", topClass.Confidence, customAvatarConfidence, customAvatarDisplayName);
+                        return customAvatarEn;
+                    }
+                }
             }
         }
-
+        
         return topClass.Name.Name;
     }
 
