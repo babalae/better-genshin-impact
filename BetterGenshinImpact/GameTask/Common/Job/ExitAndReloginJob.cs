@@ -18,7 +18,7 @@ public class ExitAndReloginJob
 {
     private AutoWoodAssets _assets = AutoWoodAssets.Instance;
     private readonly Login3rdParty _login3rdParty = new();
-    
+
     public async Task Start(CancellationToken ct)
     {
         Logger.LogInformation("退出至登录页面");
@@ -29,7 +29,7 @@ public class ExitAndReloginJob
             _assets.MenuBagRo,
             () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
             ct,
-            5,
+            10,
             1200
         );
 
@@ -45,10 +45,13 @@ public class ExitAndReloginJob
         // 点击确认退出并等待确认弹窗消失
         await NewRetry.WaitForElementDisappear(
             _assets.ConfirmRo,
-            screen => {  // 接收当前截图作为参数
-                screen.Find(_assets.ConfirmRo, ra => { 
-                    ra.Click(); 
-                    ra.Dispose(); 
+            screen =>
+            {
+                // 接收当前截图作为参数
+                screen.Find(_assets.ConfirmRo, ra =>
+                {
+                    ra.Click();
+                    ra.Dispose();
                 });
             },
             ct,
@@ -76,21 +79,24 @@ public class ExitAndReloginJob
             120,
             1000
         );
-        if (enterGameAppear)
-        {
-            // 点击进入游戏按钮直到它消失
-            await NewRetry.WaitForElementDisappear(
-                _assets.EnterGameRo,
-                () => GameCaptureRegion.GameRegion1080PPosClick(955, 666),
-                ct,
-                10,
-                1000
-            );
-        }
-        else
+        if (!enterGameAppear)
         {
             throw new RetryException("未检测进入游戏界面");
         }
+
+        // 点击进入游戏按钮直到它消失
+        var waitForEnterGameRoDisappear = await NewRetry.WaitForElementDisappear(
+            _assets.EnterGameRo,
+            () => GameCaptureRegion.GameRegion1080PPosClick(955, 666),
+            ct,
+            120,
+            1000
+        );
+        if (!waitForEnterGameRoDisappear)
+        {
+            throw new RetryException("未检测到进入游戏按钮消失, 可能未点击成功");
+        }
+
 
         // 等待主界面出现
         var mainUiFound = await NewRetry.WaitForElementAppear(
@@ -100,7 +106,7 @@ public class ExitAndReloginJob
             120,
             1000
         );
-        
+
         if (mainUiFound)
         {
             Logger.LogInformation("退出重新登录结束！");
@@ -109,7 +115,7 @@ public class ExitAndReloginJob
         {
             Logger.LogWarning("未检测到主界面，登录可能未完成");
         }
+
         await Delay(500, ct);
     }
 }
-
