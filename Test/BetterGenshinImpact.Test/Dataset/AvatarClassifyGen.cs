@@ -17,7 +17,7 @@ public class AvatarClassifyGen
 
     private static readonly Random Rd = new Random();
     
-    public static readonly List<string> ImgNames = ["UI_AvatarIcon_Side_Ambor.png","UI_AvatarIcon_Side_AmborCostumeWic.png"];
+    public static readonly List<string> ImgNames = ["UI_AvatarIcon_Side_BennettCostumeSummer.png","UI_AvatarIcon_Side_YelanCostumeSummer.png", "UI_AvatarIcon_Side_Ineffa.png"];
 
     public static void GenAll()
     {
