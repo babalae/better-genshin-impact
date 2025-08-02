@@ -100,13 +100,13 @@ jobs:
           commit_message: "Update version to ${{ needs.validate.outputs.version }}"
           branch: main
           file_pattern: BetterGenshinImpact/BetterGenshinImpact.csproj
-      # - name: Cache NuGet packages
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: ~/.nuget/packages
-      #     key: ${{ runner.os }}-nuget-${{ hashFiles('**/BetterGenshinImpact.csproj') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-nuget-
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/BetterGenshinImpact.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
       - name: 🛠️ Build application
         run: dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c Release -p:PublishProfile=FolderProfile -p:Version=${{ needs.validate.outputs.version }}
         continue-on-error: true
@@ -132,27 +132,27 @@ jobs:
         with:
           repository: babalae/bettergi-publish
           path: publish
-      - name: 🗜️ Extract Map
-        run: |
-            cd publish
-            # Extract zst files
-            Get-ChildItem -Filter *.zst | ForEach-Object {
-                if ($_.PSIsContainer -eq $false) {
-                    $file = $_.Name
-                    $output_file = "..\dist\BetterGI\Assets\Map\$($file -replace '.zst$', '')"
-                    & zstd -d $file -o $output_file
-                    Write-Host "$file -> $output_file"
-                }
-            }
-            # Extract zip files
-            Get-ChildItem -Filter *.zip | ForEach-Object {
-                if ($_.PSIsContainer -eq $false) {
-                    $file = $_.FullName
-                    $destination = "..\dist\BetterGI\Assets\Map"
-                    Expand-Archive -Path $file -DestinationPath $destination -Force
-                    Write-Host "$file -> $destination"
-                }
-            }
+      # - name: 🗜️ Extract Map
+      #   run: |
+      #       cd publish
+      #       # Extract zst files
+      #       Get-ChildItem -Filter *.zst | ForEach-Object {
+      #           if ($_.PSIsContainer -eq $false) {
+      #               $file = $_.Name
+      #               $output_file = "..\dist\BetterGI\Assets\Map\$($file -replace '.zst$', '')"
+      #               & zstd -d $file -o $output_file
+      #               Write-Host "$file -> $output_file"
+      #           }
+      #       }
+      #       # Extract zip files
+      #       Get-ChildItem -Filter *.zip | ForEach-Object {
+      #           if ($_.PSIsContainer -eq $false) {
+      #               $file = $_.FullName
+      #               $destination = "..\dist\BetterGI\Assets\Map"
+      #               Expand-Archive -Path $file -DestinationPath $destination -Force
+      #               Write-Host "$file -> $destination"
+      #           }
+      #       }
       # 生成更新器
       - name: 📥 Download kachina-builder release
         if: ${{ github.event.inputs.kachina-channel == 'release' }}
