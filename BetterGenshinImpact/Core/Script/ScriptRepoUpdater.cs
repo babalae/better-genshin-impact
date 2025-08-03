@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
@@ -96,7 +97,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     //     }
     // }
 
-
     public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
@@ -106,6 +106,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         var repoPath = Path.Combine(ReposPath, "bettergi-scripts-list-git");
         var updated = false;
+
+        // 备份相关变量
+        string? oldRepoJsonContent = null;
 
         await Task.Run(() =>
         {
@@ -124,7 +127,21 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 else
                 {
-                    // 仓库已经存在，执行拉取更新
+                    try
+                    {
+                        // 检测repo.json是否存在，存在则备份
+                        var oldRepoJsonPath = Directory
+                            .GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                        if (oldRepoJsonPath != null)
+                        {
+                            oldRepoJsonContent = File.ReadAllText(oldRepoJsonPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "备份repo.json失败，继续更新仓库");
+                    }
+
                     using var repo = new Repository(repoPath);
 
                     // 检查远程URL是否需要更新
@@ -187,11 +204,161 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 throw;
             }
         });
+        // 如果仓库有更新且有备份内容，则标记新repo.json中的更新节点
+        if (updated && !string.IsNullOrEmpty(oldRepoJsonContent))
+        {
+            try
+            {
+                var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
+                    .FirstOrDefault();
+                if (newRepoJsonPath != null)
+                {
+                    var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
+                    var updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent, newRepoJsonContent);
+
+                    // 保存到同级目录
+                    var parentDir = Path.GetDirectoryName(repoPath);
+                    var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
+                    
+                    await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
+                    _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "标记repo.json更新节点失败");
+            }
+        }
 
         return (repoPath, updated);
     }
 
-    private static void SimpleCloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
+    /// <summary>
+    /// 在新repo.json中添加更新标记
+    /// </summary>
+    /// <param name="oldContent">旧版repo.json内容</param>
+    /// <param name="newContent">新版repo.json内容</param>
+    /// <returns>添加了hasUpdate标记的新repo.json内容</returns>
+    private string AddUpdateMarkersToNewRepo(string oldContent, string newContent)
+    {
+        try
+        {
+            var oldJson = JObject.Parse(oldContent);
+            var newJson = JObject.Parse(newContent);
+
+            if (oldJson["indexes"] is JArray oldIndexes && newJson["indexes"] is JArray newIndexes)
+            {
+                foreach (var newIndex in newIndexes)
+                {
+                    if (newIndex is JObject newIndexObj)
+                    {
+                        MarkNodeUpdates(newIndexObj, oldIndexes);
+                    }
+                }
+            }
+
+            return newJson.ToString(Newtonsoft.Json.Formatting.Indented);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "标记repo.json更新失败，返回原内容");
+            return newContent;
+        }
+    }
+
+    /// <summary>
+    /// 直接在新版节点上标记更新
+    /// </summary>
+    /// <param name="newNode">新版节点</param>
+    /// <param name="oldNodes">老版节点数组</param>
+    /// <returns>是否有更新（节点本身或子树）</returns>
+    private bool MarkNodeUpdates(JObject newNode, JArray oldNodes)
+    {
+        var newName = newNode["name"]?.ToString();
+        if (string.IsNullOrEmpty(newName))
+            return false;
+
+        // 在老版节点中查找对应的节点
+        var oldNode = oldNodes.FirstOrDefault(n => n is JObject obj && obj["name"]?.ToString() == newName) as JObject;
+
+        bool hasDirectUpdate = false;
+        bool hasChildUpdate = false;
+
+        // 检查节点本身是否有更新
+        if (oldNode != null)
+        {
+            // 对比时间戳
+            var oldTime = ParseLastUpdated(oldNode["lastUpdated"]?.ToString());
+            var newTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
+
+            if (newTime > oldTime)
+            {
+                newNode["hasUpdate"] = true;
+                hasDirectUpdate = true;
+            }
+        }
+        else
+        {
+            newNode["hasUpdate"] = true;
+            hasDirectUpdate = true;
+        }
+
+        // 处理子节点
+        if (newNode["children"] is JArray newChildren && newChildren.Count > 0)
+        {
+            var oldChildren = oldNode?["children"] as JArray ?? new JArray();
+
+            // 遍历新版的每个子节点
+            foreach (var newChild in newChildren)
+            {
+                if (newChild is JObject newChildObj)
+                {
+                    bool childHasUpdate = MarkNodeUpdates(newChildObj, oldChildren);
+                    if (childHasUpdate)
+                    {
+                        hasChildUpdate = true;
+
+                        // 如果是叶子节点更新，父节点也标记更新
+                        var isLeafChild = newChildObj["children"] == null ||
+                                          !((JArray?)newChildObj["children"])?.Any() == true;
+                        if (isLeafChild && !hasDirectUpdate && newChildObj["hasUpdate"] != null)
+                        {
+                            newNode["hasUpdate"] = true;
+                            hasDirectUpdate = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return hasDirectUpdate || hasChildUpdate;
+    }
+
+    /// <summary>
+    /// 解析lastUpdated时间戳
+    /// </summary>
+    /// <param name="timeString">时间字符串</param>
+    /// <returns>DateTime对象</returns>
+    private DateTime ParseLastUpdated(string? timeString)
+    {
+        if (string.IsNullOrEmpty(timeString))
+            return DateTime.MinValue;
+
+        try
+        {
+            if (DateTime.TryParse(timeString, out var result))
+                return result;
+
+            return DateTime.MinValue;
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
+    }
+
+    private static void SimpleCloneRepository(string repoUrl, string repoPath,
+        CheckoutProgressHandler? onCheckoutProgress)
     {
         var options = new CloneOptions
         {
@@ -223,7 +390,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         using var repo = new Repository(repoPath);
         GitConfig(repo);
-        
+
         // 3. 添加远程源
         Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
@@ -254,7 +421,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         CheckoutOptions checkoutOptions = new CheckoutOptions
         {
             OnCheckoutProgress = onCheckoutProgress
-        };  
+        };
         Commands.Checkout(repo, localBranch, checkoutOptions);
     }
 
@@ -263,15 +430,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 设置 Git 配置
         // 1. 设置 core.longpaths 为 true
         repo.Config.Set("core.longpaths", true);
-    
+
         // 2. 添加 safe.directory *
         repo.Config.Set("safe.directory", "*");
-    
+
         // 3. 移除 http.proxy 和 https.proxy 配置
         repo.Config.Unset("http.proxy");
         repo.Config.Unset("https.proxy");
     }
-
 
     // [Obsolete]
     // public async Task<(string, bool)> UpdateCenterRepo()
@@ -570,7 +736,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         //         return;
         //     }
         // }
-        
+
         //顶层目录订阅时，不会删除其下，不在订阅中的文件夹
         List<string> newPaths = new List<string>();
         foreach (var path in paths)
@@ -585,7 +751,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     string[] directories = Directory.GetDirectories(scriptPath, "*", SearchOption.TopDirectoryOnly);
                     foreach (var dir in directories)
                     {
-                        newPaths.Add("pathing"+"/"+Path.GetFileName(dir));
+                        newPaths.Add("pathing" + "/" + Path.GetFileName(dir));
                     }
                 }
                 else
@@ -597,9 +763,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 newPaths.Add(path);
             }
-
         }
-
 
         // 拷贝文件
         foreach (var path in newPaths)
@@ -609,6 +773,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 var scriptPath = Path.Combine(repoPath, path);
                 var destPath = Path.Combine(userPath, remainingPath);
+                
+                // 备份需要保存的文件
+                List<string> backupFiles = new List<string>();
+                if (first == "js") // 只对JS脚本进行备份
+                {
+                    backupFiles = BackupScriptFiles(path, repoPath);
+                }
+                
                 if (Directory.Exists(scriptPath))
                 {
                     if (Directory.Exists(destPath))
@@ -632,6 +804,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
 
                     File.Copy(scriptPath, destPath, true);
+                }
+                
+                // 恢复备份的文件
+                if (first == "js" && backupFiles.Count > 0) // 只对JS脚本进行恢复
+                {
+                    RestoreScriptFiles(path, repoPath);
                 }
 
                 UpdateSubscribedScriptPaths();
@@ -672,13 +850,115 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 continue;
 
             // 检查是否已被父路径覆盖
-            bool isCoveredByParent = pathsToKeep.Any(p => 
+            bool isCoveredByParent = pathsToKeep.Any(p =>
                 path.StartsWith(p + "/") || path == p);
-        
+
             if (!isCoveredByParent)
             {
                 pathsToKeep.Add(path);
             }
+        }
+
+        // 添加父节点自动订阅逻辑
+        try
+        {
+            // 获取所有可用路径
+            var allAvailablePaths = new HashSet<string>();
+            var repoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (!string.IsNullOrEmpty(repoJsonPath))
+            {
+                var jsonContent = File.ReadAllText(repoJsonPath);
+                var jsonObj = JObject.Parse(jsonContent);
+                
+                if (jsonObj["indexes"] is JArray indexes)
+                {
+                    // 递归收集所有路径
+                    void CollectPaths(JArray nodes, string currentPath)
+                    {
+                        foreach (var node in nodes)
+                        {
+                            if (node is JObject nodeObj)
+                            {
+                                var name = nodeObj["name"]?.ToString();
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    var fullPath = string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
+                                    allAvailablePaths.Add(fullPath);
+
+                                    if (nodeObj["children"] is JArray children)
+                                    {
+                                        CollectPaths(children, fullPath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    CollectPaths(indexes, "");
+                }
+            }
+
+            // 如果父节点的所有直接子节点都已被订阅，则将父节点也加入订阅
+            if (allAvailablePaths.Count > 0)
+            {
+                // 构建父子关系映射，只记录直接子节点
+                var parentChildMap = new Dictionary<string, List<string>>();
+                
+                // 遍历所有路径，找到每个节点的父节点
+                foreach (var path in allAvailablePaths)
+                {
+                    var pathParts = path.Split('/');
+                    if (pathParts.Length > 1)
+                    {
+                        var parentPath = string.Join("/", pathParts.Take(pathParts.Length - 1));
+                        if (!parentChildMap.ContainsKey(parentPath))
+                        {
+                            parentChildMap[parentPath] = new List<string>();
+                        }
+                        
+                        if (!parentChildMap[parentPath].Contains(path))
+                        {
+                            parentChildMap[parentPath].Add(path);
+                        }
+                    }
+                }
+                
+                // 递归检查父节点，直到没有新的父节点需要添加
+                bool hasNewPaths;
+                do
+                {
+                    hasNewPaths = false;
+                    var pathsToAdd = new HashSet<string>();
+                    
+                    // 检查每个父节点
+                    foreach (var kvp in parentChildMap)
+                    {
+                        var parentPath = kvp.Key;
+                        var directChildren = kvp.Value;
+                        
+                        // 检查所有直接子节点是否都已被订阅
+                        bool allDirectChildrenSubscribed = directChildren.All(child => 
+                            pathsToKeep.Contains(child));
+                        
+                        // 如果所有直接子节点都已被订阅，且父节点本身未被订阅，则添加父节点
+                        if (allDirectChildrenSubscribed && !pathsToKeep.Contains(parentPath))
+                        {
+                            pathsToAdd.Add(parentPath);
+                            hasNewPaths = true;
+                        }
+                    }
+                    
+                    // 将需要添加的父节点加入订阅列表
+                    foreach (var pathToAdd in pathsToAdd)
+                    {
+                        pathsToKeep.Add(pathToAdd);
+                    }
+                } while (hasNewPaths);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "添加父节点时发生错误");
         }
 
         scriptConfig.SubscribedScriptPaths = pathsToKeep
@@ -789,6 +1069,252 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 Debug.WriteLine($"无法设置文件夹为只读: {folderPath}");
             }
+        }
+    }
+
+    /// <summary>
+    /// 根据通配符或正则表达式获取匹配的文件列表
+    /// </summary>
+    /// <param name="basePath">基础路径</param>
+    /// <param name="pattern">通配符模式或正则表达式</param>
+    /// <returns>匹配的文件路径列表</returns>
+    private List<string> GetMatchedFiles(string basePath, string pattern)
+    {
+        var matchedFiles = new List<string>();
+        
+        try
+        {
+            // 检查是否是正则表达式（以^开头或包含特殊字符）
+            bool isRegex = pattern.StartsWith("^") || pattern.Contains(".*") || pattern.Contains("\\d") || pattern.Contains("\\w");
+            
+            if (isRegex)
+            {
+                // 使用正则表达式匹配
+                var regex = new System.Text.RegularExpressions.Regex(pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var allFiles = Directory.GetFiles(basePath, "*", SearchOption.AllDirectories);
+                
+                foreach (var file in allFiles)
+                {
+                    var relativePath = Path.GetRelativePath(basePath, file);
+                    if (regex.IsMatch(relativePath))
+                    {
+                        matchedFiles.Add(file);
+                    }
+                }
+            }
+            else
+            {
+                // 使用通配符匹配
+                var searchPattern = Path.GetFileName(pattern);
+                var searchDir = Path.GetDirectoryName(pattern);
+                
+                if (string.IsNullOrEmpty(searchDir))
+                {
+                    // 只在当前目录搜索
+                    var files = Directory.GetFiles(basePath, searchPattern);
+                    matchedFiles.AddRange(files);
+                }
+                else
+                {
+                    // 在指定子目录搜索
+                    var searchPath = Path.Combine(basePath, searchDir);
+                    if (Directory.Exists(searchPath))
+                    {
+                        var files = Directory.GetFiles(searchPath, searchPattern);
+                        matchedFiles.AddRange(files);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"获取匹配文件时发生错误: {pattern}");
+        }
+        
+        return matchedFiles;
+    }
+
+    /// <summary>
+    /// 备份脚本中需要保存的文件到Temp目录
+    /// </summary>
+    /// <param name="scriptPath">脚本在中央仓库中的路径</param>
+    /// <param name="repoPath">中央仓库路径</param>
+    /// <returns>备份的文件路径列表</returns>
+    private List<string> BackupScriptFiles(string scriptPath, string repoPath)
+    {
+        var backupFiles = new List<string>();
+        var tempBackupPath = Global.Absolute("User\\Temp");
+        
+        try
+        {
+            // 确保Temp目录存在
+            if (!Directory.Exists(tempBackupPath))
+            {
+                Directory.CreateDirectory(tempBackupPath);
+            }
+
+            // 获取脚本的manifest文件路径
+            var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
+            if (!File.Exists(scriptManifestPath))
+            {
+                _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
+                return backupFiles;
+            }
+
+            // 解析manifest文件获取savedFiles
+            var manifestContent = File.ReadAllText(scriptManifestPath);
+            
+            var manifest = Manifest.FromJson(manifestContent);
+            
+            if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
+            {
+                _logger.LogInformation($"脚本 {scriptPath} 没有需要保存的文件");
+                return backupFiles;
+            }
+
+            // 获取脚本在用户目录中的路径
+            var (first, remainingPath) = GetFirstFolderAndRemainingPath(scriptPath);
+            if (!PathMapper.TryGetValue(first, out var userPath))
+            {
+                _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
+                return backupFiles;
+            }
+
+            var scriptUserPath = Path.Combine(userPath, remainingPath);
+            
+            // 备份每个需要保存的文件
+            foreach (var savedFile in manifest.SavedFiles)
+            {
+                var matchedFiles = GetMatchedFiles(scriptUserPath, savedFile);
+                foreach (var matchedFile in matchedFiles)
+                {
+                    // 创建备份文件路径，使用相对路径作为文件名以避免路径冲突
+                    var relativePath = Path.GetRelativePath(scriptUserPath, matchedFile);
+                    var backupFileName = relativePath.Replace('/', '_').Replace('\\', '_');
+                    var scriptPathSafe = scriptPath.Replace('/', '_').Replace('\\', '_');
+                    var backupFileNameFull = $"{scriptPathSafe}_{backupFileName}";
+                    var backupFilePath = Path.Combine(tempBackupPath, backupFileNameFull);
+                    
+                    try
+                    {
+                        File.Copy(matchedFile, backupFilePath, true);
+                        backupFiles.Add(backupFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"备份文件失败: {matchedFile}");
+                    }
+                }
+                
+                if (matchedFiles.Count == 0)
+                {
+                    _logger.LogWarning($"没有找到匹配的文件: {savedFile}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"备份脚本文件时发生错误: {scriptPath}");
+        }
+
+        return backupFiles;
+    }
+
+    /// <summary>
+    /// 恢复备份的文件到指定位置并清理Temp目录
+    /// </summary>
+    /// <param name="scriptPath">脚本在中央仓库中的路径</param>
+    /// <param name="repoPath">中央仓库路径</param>
+    private void RestoreScriptFiles(string scriptPath, string repoPath)
+    {
+        var tempBackupPath = Global.Absolute("User\\Temp");
+        
+        try
+        {
+            // 获取脚本的manifest文件路径
+            var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
+            if (!File.Exists(scriptManifestPath))
+            {
+                _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
+                return;
+            }
+
+            // 解析manifest文件获取savedFiles
+            var manifestContent = File.ReadAllText(scriptManifestPath);
+            var manifest = Manifest.FromJson(manifestContent);
+            
+            if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
+            {
+                _logger.LogInformation($"脚本 {scriptPath} 没有需要恢复的文件");
+                return;
+            }
+
+            // 获取脚本在用户目录中的路径
+            var (first, remainingPath) = GetFirstFolderAndRemainingPath(scriptPath);
+            if (!PathMapper.TryGetValue(first, out var userPath))
+            {
+                _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
+                return;
+            }
+
+            var scriptUserPath = Path.Combine(userPath, remainingPath);
+            
+            // 恢复每个备份的文件
+            foreach (var savedFile in manifest.SavedFiles)
+            {
+                var matchedFiles = GetMatchedFiles(scriptUserPath, savedFile);
+                foreach (var matchedFile in matchedFiles)
+                {
+                    var relativePath = Path.GetRelativePath(scriptUserPath, matchedFile);
+                    var backupFileName = relativePath.Replace('/', '_').Replace('\\', '_');
+                    var scriptPathSafe = scriptPath.Replace('/', '_').Replace('\\', '_');
+                    var backupFileNameFull = $"{scriptPathSafe}_{backupFileName}";
+                    var backupFilePath = Path.Combine(tempBackupPath, backupFileNameFull);
+                    
+                    if (File.Exists(backupFilePath))
+                    {
+                        try
+                        {
+                            // 确保目标目录存在
+                            var targetDir = Path.GetDirectoryName(matchedFile);
+                            if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                            {
+                                Directory.CreateDirectory(targetDir);
+                            }
+                            
+                            File.Copy(backupFilePath, matchedFile, true);
+                            
+                            // 删除备份文件
+                            File.Delete(backupFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"恢复文件失败: {backupFilePath} -> {matchedFile}");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"备份文件不存在: {backupFilePath}");
+                    }
+                }
+            }
+
+            // 清理Temp目录（如果为空）
+            try
+            {
+                if (Directory.Exists(tempBackupPath) && !Directory.EnumerateFileSystemEntries(tempBackupPath).Any())
+                {
+                    Directory.Delete(tempBackupPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "清理Temp目录失败");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"恢复脚本文件时发生错误: {scriptPath}");
         }
     }
 }

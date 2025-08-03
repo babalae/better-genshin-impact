@@ -286,7 +286,7 @@ public partial class ScriptService : IScriptService
 
                         if (CancellationContext.Instance.Cts.IsCancellationRequested)
                         {
-                            _logger.LogInformation("执行被取消");
+                            // _logger.LogInformation("执行被取消");
                             break;
                         }
 

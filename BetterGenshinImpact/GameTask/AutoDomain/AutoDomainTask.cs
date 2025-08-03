@@ -366,12 +366,12 @@ public class AutoDomainTask : ISoloTask
             GetConfirmRa("单人挑战"),
             () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         if (!menuFound)
         {
-            throw new Exception( "单人挑战 按键未出现，请检查是否已进入秘境页面");
+            Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
         }
         
         using var limitedFullyStringRa = CaptureToRectArea();
@@ -460,7 +460,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     ra2.Click();
                     ra2.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");//看LOG是否要显示
+                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");
                 }
                 using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
                     ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
@@ -471,8 +471,8 @@ public class AutoDomainTask : ISoloTask
                 }
             },
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         
         // 等待队伍选择界面出现
@@ -480,18 +480,19 @@ public class AutoDomainTask : ISoloTask
             ElementAssets.Instance.PartyBtnChooseView,
             () =>
             {
-                Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); //看LOG是否要显示 
+                Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); 
             },
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         if (!teamUiFound)
         {
-            throw new Exception("队伍选择界面未出现。");
+            Logger.LogWarning("队伍选择界面未出现，跳过切换队伍。");
+        }else
+        {
+            await SwitchParty(_taskParam.PartyName);
         }
-        
-        await SwitchParty(_taskParam.PartyName);//现在如果切换失败，抛出异常，停止运行，要不要继续进行？
         
         // 点击开始挑战确认并等待“开始挑战”文字消失
         var startFightFound = await NewRetry.WaitForElementDisappear(
@@ -504,12 +505,12 @@ public class AutoDomainTask : ISoloTask
                 });
             },
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         if (!startFightFound)
         {
-            throw new Exception("开始挑战按钮未出现或未能点击。");
+            Logger.LogWarning("开始挑战按钮未出现或未能点击。");
         }
         // 载入
         await Delay(1000, _ct);
@@ -529,7 +530,7 @@ public class AutoDomainTask : ISoloTask
         }, _ct, 20, 500);
         if (!domainTipFound)
         {
-            throw new Exception("秘境提示未出现或未能点击。");
+            Logger.LogWarning("秘境提示未出现或未能点击。");
         }
 
         //持续点击，直到左下角出现目标文字
@@ -554,7 +555,9 @@ public class AutoDomainTask : ISoloTask
         }, _ct, 20, 500);
         if (!leftBottomFound)
         {
-            throw new Exception("秘境提示未出现或未能点击。");
+            //尝试随意点击一下右下角
+            GameCaptureRegion.GameRegion1080PPosClick(1515,892);
+            Logger.LogWarning("秘境提示未出现或未能点击。");
         }
         
         await Delay(500, _ct);

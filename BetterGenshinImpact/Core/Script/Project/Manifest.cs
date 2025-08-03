@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,6 +23,7 @@ public class Manifest
     public string SettingsUi { get; set; } = string.Empty;
     public string[] Scripts { get; set; } = [];
     public string[] Library { get; set; } = [];
+    public string[] SavedFiles { get; set; } = [];
 
     public static Manifest FromJson(string json)
     {
