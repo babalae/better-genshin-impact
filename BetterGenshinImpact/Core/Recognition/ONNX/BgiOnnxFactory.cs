@@ -25,6 +25,7 @@ public class BgiOnnxFactory
     /// </summary>
     private readonly ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
 
+
     /// <summary>
     /// 请勿直接实例化此类
     /// </summary>
@@ -32,6 +33,7 @@ public class BgiOnnxFactory
     public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger)
     {
         _logger = logger;
+
         var config = GetConfig();
         if (config.AutoAppendCudaPath) AppendCudaPath();
 
@@ -46,6 +48,7 @@ public class BgiOnnxFactory
         EnableCache = config.EnableTensorRtCache;
         CpuOcr = config.CpuOcr;
         OpenVinoDevice = config.OpenVinoDevice;
+        OpenVinoCache = config.EnableOpenVinoCache;
         ProviderTypes = GetProviderType(config.InferenceDevice);
         _logger.LogDebug(
             "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
@@ -87,6 +90,7 @@ public class BgiOnnxFactory
     public string OpenVinoDevice { get; }
     public bool EnableCache { get; }
     public bool CpuOcr { get; }
+    public bool OpenVinoCache { get; }
 
 
     /// <summary>
@@ -176,9 +180,8 @@ public class BgiOnnxFactory
                 // 目前来看比Dml强
                 try
                 {
-                    
                     testSession = new SessionOptions();
-                    testSession.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig());
+                    testSession.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig(null));
                     testSession.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
                     list.Add(ProviderType.OpenVino);
                 }
@@ -363,12 +366,12 @@ public class BgiOnnxFactory
     ///     通过模型路径生成SessionOptions <br />
     ///     如果加载的模型文件已经是带有缓存的模型，请将cacheFolder设为null避免重复生成。
     /// </summary>
-    /// <param name="path">模型路径</param>
+    /// <param name="model">模型路径</param>
     /// <param name="genCache">是否生成缓存。有几种情况下不生成缓存:1为用户主动关闭，即enableCache为false。2为即将加载的模型文件已经是带有缓存的模型文件。</param>
     /// <param name="forcedProvider">强制使用的Provider,为空或null则不强制</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
-    protected SessionOptions CreateSessionOptions(BgiOnnxModel path, bool genCache,
+    private SessionOptions CreateSessionOptions(BgiOnnxModel model, bool genCache,
         ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
@@ -391,13 +394,14 @@ public class BgiOnnxFactory
                         sessionOptions.AppendExecutionProvider_Dnnl();
                         break;
                     case ProviderType.OpenVino:
-                        sessionOptions.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig());
+                        sessionOptions.AppendExecutionProvider("OpenVINO",
+                            GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
                         sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
                         break;
                     case ProviderType.TensorRt:
                         using (var options = new OrtTensorRTProviderOptions())
                         {
-                            options.UpdateOptions(GetTrtProviderConfig(genCache ? path.CachePath : null));
+                            options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
                             sessionOptions.AppendExecutionProvider_Tensorrt(options);
                         }
 
@@ -422,9 +426,9 @@ public class BgiOnnxFactory
 
         if (!OptimizedModel) return sessionOptions;
         if (!genCache) return sessionOptions;
-        var optPath = Path.Combine(path.CachePath, "optimized");
+        var optPath = Path.Combine(model.CachePath, "optimized");
         if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
-        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(path.ModalPath));
+        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
         return sessionOptions;
     }
 
@@ -450,7 +454,7 @@ public class BgiOnnxFactory
         {
             ["trt_engine_cache_enable"] = "1",
             ["trt_dump_ep_context_model"] = "1",
-            ["trt_ep_context_file_path"] = Global.Absolute(Path.Combine(cacheFolder, "trt")),
+            ["trt_ep_context_file_path"] = Path.Combine(cacheFolder, "trt"),
             // ["trt_ep_context_embed_mode"] = "1", // 因为yoloSharp是把模型转为嵌入式运行，不这样会爆炸
             // ["trt_engine_cache_path"] = ".\\" // 没必要了
             ["trt_timing_cache_enable"] = "1",
@@ -470,8 +474,38 @@ public class BgiOnnxFactory
         }
 
         if (!Directory.Exists(result["trt_ep_context_file_path"]))
-            Directory.CreateDirectory(result["trt_ep_context_file_path"]);
+        {
+            // 如果不存在就创建目录
+            _logger.LogDebug("[ONNX]TensorRT上下文文件路径不存在，创建目录: {Path}", result["trt_ep_context_file_path"]);
+            try
+            {
+                Directory.CreateDirectory(result["trt_ep_context_file_path"]);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("无法创建TensorRT上下文文件路径: {Path}，请检查权限。({Err})",
+                    result["trt_ep_context_file_path"], e.Message);
+                // 如果无法创建目录，就不使用缓存
+                result.Remove("trt_ep_context_file_path");
+            }
+        }
 
+        if (!Directory.Exists(result["trt_timing_cache_path"]))
+        {
+            // 如果不存在就创建目录
+            _logger.LogDebug("[ONNX]TensorRT计时缓存路径不存在，创建目录: {Path}", result["trt_timing_cache_path"]);
+            try
+            {
+                Directory.CreateDirectory(result["trt_timing_cache_path"]);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("无法创建TensorRT计时缓存路径: {Path}，请检查权限。({Err})",
+                    result["trt_timing_cache_path"], e.Message);
+                // 如果无法创建目录，就不使用缓存
+                result.Remove("trt_timing_cache_path");
+            }
+        }
         return result;
     }
 
@@ -487,14 +521,39 @@ public class BgiOnnxFactory
         };
         return result;
     }
-    
-    private Dictionary<string, string> GetOpenVinoProviderConfig()
+/// <summary>
+/// 
+/// </summary>
+/// <param name="cacheFolder"></param>
+/// <returns></returns>
+    private Dictionary<string, string> GetOpenVinoProviderConfig(string? cacheFolder)
     {
         var result = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(OpenVinoDevice))
         {
             result["deice_type"] = OpenVinoDevice;
         }
+
+        if (!string.IsNullOrWhiteSpace(cacheFolder))
+        {
+            // OpenVINO缓存目录
+            result["cache_dir"] = Path.Combine(cacheFolder, "openvino");
+            if (!Directory.Exists(result["cache_dir"]))
+            {
+                try
+                {
+                    Directory.CreateDirectory(result["cache_dir"]);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("无法创建OpenVINO缓存目录: {Path}，请检查权限。({Err})", result["cache_dir"],
+                        e.Message);
+                    // 如果无法创建目录，就不使用缓存
+                    result.Remove("cache_dir");
+                }
+            }
+        }
+
         result["enable_opencl_throttling"] = "true";
         return result;
     }
