@@ -62,11 +62,6 @@ public class AutoEatTrigger : ITaskTrigger
                     Simulation.SendInput.Keyboard.KeyPress(VK.VK_Z);
                     _lastResurrectionTime = now;
                     _logger.LogInformation("检测到复活图标，自动复活");
-                    
-                    if (_config.ShowNotification)
-                    {
-                        Notify.Event(NotificationEvent.AutoEatInfo).Success("检测到复活图标，自动复活");
-                    }
                 }
                 return;
             }
@@ -98,11 +93,6 @@ public class AutoEatTrigger : ITaskTrigger
                         _lastEatTime = now;
                         
                         _logger.LogInformation("检测到红血且Recovery可用，自动吃药");
-                        
-                        if (_config.ShowNotification)
-                        {
-                            Notify.Event(NotificationEvent.AutoEatInfo).Success("检测到红血且Recovery可用，自动吃药");
-                        }
                     }
                 }
             }

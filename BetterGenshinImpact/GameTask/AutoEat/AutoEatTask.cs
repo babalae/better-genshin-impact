@@ -38,12 +38,10 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
 
         Init();
         Logger.LogInformation("自动吃药任务启动");
-        Notify.Event(NotificationEvent.AutoEatStart).Success("自动吃药任务启动");
 
         if (!IsTakeFood())
         {
             Logger.LogWarning("未装备 \"{Tool}\"，无法启用自动吃药功能", "便携营养袋");
-            Notify.Event(NotificationEvent.TaskError).Error("未装备便携营养袋，无法启用自动吃药功能");
             return;
         }
 
@@ -59,7 +57,6 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
         finally
         {
             Logger.LogInformation("自动吃药任务结束");
-            Notify.Event(NotificationEvent.AutoEatEnd).Success("自动吃药任务结束");
         }
     }
 
@@ -92,11 +89,6 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
                         lastEatTime = now;
                         
                         Logger.LogInformation("检测到红血，自动吃药");
-                        
-                        if (_config.ShowNotification)
-                        {
-                            Notify.Event(NotificationEvent.AutoEatInfo).Success("检测到红血，自动吃药");
-                        }
                     }
                 }
 
