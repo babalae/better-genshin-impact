@@ -244,14 +244,32 @@ public class BgiOnnxFactory
             .Distinct()
 
             //确定路径是否真的存在
-            .Where(Directory.Exists)
+            .Where(d =>
+            {
+                try
+                {
+                    return Directory.Exists(d);
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            })
             .SelectMany(s =>
                 //确定需要的文件是否存在
                 filePrefix.SelectMany(se =>
-                    Directory.GetFiles(s, $"{se}*.dll").Select(Path.GetDirectoryName).WhereNotNull()))
+                {
+                    try
+                    {
+                        return Directory.GetFiles(s, $"{se}*.dll").Select(Path.GetDirectoryName).WhereNotNull();
+                    }
+                    catch (Exception)
+                    {
+                        return [];
+                    }
+                }))
             //去重
             .Distinct();
-
         AppendPath(validPaths.ToArray());
     }
 
@@ -506,6 +524,7 @@ public class BgiOnnxFactory
                 result.Remove("trt_timing_cache_path");
             }
         }
+
         return result;
     }
 
@@ -521,11 +540,12 @@ public class BgiOnnxFactory
         };
         return result;
     }
-/// <summary>
-/// 
-/// </summary>
-/// <param name="cacheFolder"></param>
-/// <returns></returns>
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="cacheFolder"></param>
+    /// <returns></returns>
     private Dictionary<string, string> GetOpenVinoProviderConfig(string? cacheFolder)
     {
         var result = new Dictionary<string, string>();

@@ -266,7 +266,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="自动添加系统CUDA环境路径 默认开启" />
+                                      Text="自动添加系统CUDA环境路径 默认关闭" />
                     </Grid>
                     <!--  _additionalPath  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
