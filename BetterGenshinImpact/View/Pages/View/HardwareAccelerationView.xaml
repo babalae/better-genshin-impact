@@ -453,6 +453,34 @@
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                    Text="{Binding Status.OpenVinoDevice, StringFormat='当前参数: {0}'}" />
                     </Grid>
+                    <!--  _enableOpenVinoCache  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="是否启用 OpenVINO 缓存(实验性)，默认关闭。" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.EnableOpenVinoCache, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="启用后会在缓存文件夹下生成对应模型缓存，以加快模型载入速度。" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.OpenVinoCache, StringFormat='当前状态: {0}'}" />
+                    </Grid>
                 </StackPanel>
             </ui:CardExpander>
         </StackPanel>
