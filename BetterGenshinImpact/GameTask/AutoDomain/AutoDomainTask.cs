@@ -667,8 +667,8 @@ public class AutoDomainTask : ISoloTask
         // var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
         combatTask.Start();
         domainEndTask.Start();
-        autoEatRecoveryHpTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
+        // autoEatRecoveryHpTask.Start();
+        return Task.WhenAll(combatTask, domainEndTask);
     }
 
     private void EndFightWait()

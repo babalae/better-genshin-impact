@@ -30,3 +30,5 @@ node_modules/
 # Rider
 .idea
 .trae
+.claude
+CLAUDE.md
