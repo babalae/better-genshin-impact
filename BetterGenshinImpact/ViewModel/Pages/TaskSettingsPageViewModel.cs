@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -25,16 +25,21 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
-using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Frozen;
 using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -80,7 +85,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private string _switchAutoDomainButtonText = "启动";
-    
+
     [ObservableProperty]
     private int _autoStygianOnslaughtRoundNum;
 
@@ -124,7 +129,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
-    
+
     [ObservableProperty]
     private OneDragonFlowViewModel? _oneDragonFlowViewModel;
 
@@ -154,6 +159,29 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private bool _switchArtifactSalvageEnabled;
 
+    [ObservableProperty]
+    private bool _switchGetGridIconsEnabled;
+    [ObservableProperty]
+    private string _switchGetGridIconsButtonText = "启动";
+    [ObservableProperty]
+    private FrozenDictionary<Enum, string> _gridNameDict = Enum.GetValues(typeof(GridScreenName))
+        .Cast<GridScreenName>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
+    [ObservableProperty]
+    private string _switchGridIconsAccuracyTestButtonText = "运行模型准确率测试";
+
+    [ObservableProperty]
+    private bool _switchAutoRedeemCodeEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoRedeemCodeButtonText = "启动";
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -168,21 +196,21 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
     }
-  
-    
+
+
     [RelayCommand]
     private async Task OnSOneDragonFlow()
-    {   
-       if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
-       {
+    {
+        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
+        {
             OneDragonFlowViewModel.OnNavigatedTo();
             if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
             {
                 Toast.Warning("未设置任务!");
                 return;
             }
-       }
-       await OneDragonFlowViewModel.OnOneKeyExecute();
+        }
+        await OneDragonFlowViewModel.OnOneKeyExecute();
     }
 
     [RelayCommand]
@@ -349,7 +377,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             .RunSoloTaskAsync(new AutoStygianOnslaughtTask(Config.AutoStygianOnslaughtConfig, path));
         SwitchAutoStygianOnslaughtEnabled = false;
     }
-    
+
     [RelayCommand]
     private async Task OnGoToAutoStygianOnslaughtUrlAsync()
     {
@@ -497,12 +525,93 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        if (!TaskContext.Instance().IsInitialized)
-        {
-            PromptDialog.Prompt("请先启动截图器！", "");    // todo 自动启动截图器
-            return;
-        }
         OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
         ocrDialog.ShowDialog();
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchGetGridIcons()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.StarAsSuffix, Config.GetGridIconsConfig.MaxNumToGet));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OnGoToGetGridIconsFolder()
+    {
+        var path = Global.Absolute(@"log\gridIcons\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    private async Task OnGoToGetGridIconsUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchGridIconsModelAccuracyTest()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new GridIconsAccuracyTestTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoRedeemCode()
+    {
+        var multilineTextBox = new TextBox
+        {
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = true,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            PlaceholderText = "请在此输入兑换码，每行一条记录"
+        };
+        var p = new PromptDialog(
+            "输入兑换码",
+            "自动使用兑换码",
+            multilineTextBox,
+            null);
+        p.Height = 500;
+        p.ShowDialog();
+        if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
+        { 
+            char[] separators = ['\r', '\n'];
+                 var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+
+                .Select(code => code.Trim())
+                .Where(code => !string.IsNullOrEmpty(code))
+                .ToList();
+
+            if (codes.Count == 0)
+            {
+                Toast.Warning("没有有效的兑换码");
+                return;
+            }
+            
+            SwitchAutoRedeemCodeEnabled = true;
+            await new TaskRunner()
+                .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
+            SwitchAutoRedeemCodeEnabled = false;
+        }
     }
 }

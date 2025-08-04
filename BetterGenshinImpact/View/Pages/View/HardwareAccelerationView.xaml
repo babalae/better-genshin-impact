@@ -266,7 +266,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="自动添加系统CUDA环境路径 默认开启" />
+                                      Text="自动添加系统CUDA环境路径 默认关闭" />
                     </Grid>
                     <!--  _additionalPath  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
@@ -385,6 +385,101 @@
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                    Text="{Binding Status.TrtUseEmbedMode, StringFormat='嵌入模式: {0}'}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+
+
+            <!--  OpenVino配置  -->
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             Icon="{ui:SymbolIcon Settings24}"
+                             IsExpanded="False">
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="OpenVino配置"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      TextWrapping="Wrap">
+                            修改后需要重启程序生效。
+                        </ui:TextBlock>
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <!--  OpenVinoDevice  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="OpenVino 设备参数" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="180"
+                                    MaxWidth="800"
+                                    Text="{Binding Config.OpenVinoDevice, Mode=TwoWay}"
+                                    TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="从“CPU”、“GPU”、“NPU”、“GPU.x”中选择，其中 x = 0,1,2 等，或者从可用的 HETERO/MULTI/AUTO 选项中选择。默认为 AUTO:GPU,CPU"
+                                      TextWrapping="Wrap" />
+                        <TextBlock Grid.Row="3"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.OpenVinoDevice, StringFormat='当前参数: {0}'}" />
+                    </Grid>
+                    <!--  _enableOpenVinoCache  -->
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16,16,16,16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="是否启用 OpenVINO 缓存(实验性)，默认关闭。" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding Config.EnableOpenVinoCache, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="启用后会在缓存文件夹下生成对应模型缓存，以加快模型载入速度。" />
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Status.OpenVinoCache, StringFormat='当前状态: {0}'}" />
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>

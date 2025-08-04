@@ -43,6 +43,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
     // 小道具位置
     public Rect GadgetRect;
+    
+    public RecognitionObject AbnormalIconRa;
 
     private AutoFightAssets()
     {
@@ -274,5 +276,14 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(450 * AssetScale), (int)(25 * AssetScale), (int)(265 * AssetScale), (int)(45 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
+        AbnormalIconRa = new RecognitionObject
+        {
+            Name = "AbnormalIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "abnormal_icon.png"),
+            RegionOfInterest = new Rect(0,(int)(CaptureRect.Height*0.08), (int)(CaptureRect.Width*0.04), (int)(CaptureRect.Height*0.07)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        
     }
 }

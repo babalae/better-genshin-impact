@@ -3,7 +3,7 @@
       {
         "id": "dfs",
         "name": "默认服务器",
-        "uri": "dfs+packed+https://steambird.cocogoat.cn/dfs/bgi/BetterGI.Install.exe"
+        "uri": "dfs+packed+https://bgi-ota.cocogoat.cn/dfs/bgi/BetterGI.Install.exe"
       },
       {
         "id": "mirrorc",

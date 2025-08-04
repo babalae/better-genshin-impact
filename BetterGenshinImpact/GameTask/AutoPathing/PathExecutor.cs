@@ -46,7 +46,9 @@ public class PathExecutor
     private readonly TrapEscaper _trapEscaper;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
-
+    public int SuccessFight = 0;
+    //路径追踪完全走完所有路径结束的标识
+    public bool SuccessEnd = false;
     private PathingPartyConfig? _partyConfig;
     private CancellationToken ct;
     private PathExecutorSuspend pathExecutorSuspend;
@@ -163,7 +165,6 @@ public class PathExecutor
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
-
             for (var i = 0; i < RetryTimes; i++)
             {
                 try
@@ -218,10 +219,15 @@ public class PathExecutor
                         }
                     }
 
+                    if (waypoints == waypointsList.Last())
+                    {
+                        SuccessEnd = true;
+                    }
                     break;
                 }
                 catch (HandledException handledException)
                 {
+                    SuccessEnd = true;
                     break;
                 }
                 catch (NormalEndException normalEndException)
@@ -266,6 +272,7 @@ public class PathExecutor
                     Simulation.SendInput.Mouse.RightButtonUp();
                 }
             }
+
         }
     }
 
@@ -711,7 +718,7 @@ public class PathExecutor
         var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.MinValue;
-        var num = 0;
+        int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
 
         // 按下w，一直走
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
@@ -760,11 +767,26 @@ public class PathExecutor
                 }
                 else
                 {
-                    Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，跳过路径点");
+                    distanceTooFarRetryCount++;
+                    if (distanceTooFarRetryCount > 5)
+                    {
+                        if (position == new Point2f())
+                        {
+                            throw new NormalEndException("重试多次后，当前点位无法被识别，放弃此路径！");
+                        }
+                        else
+                        {
+                            Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试多次后仍然失败，放弃此路径点！");
+                            throw new NormalEndException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        await Delay(50, ct);
+                        continue;
+                    }
                 }
-
-
-                break;
             }
 
             // 非攀爬状态下，检测是否卡死（脱困触发器）
@@ -801,7 +823,25 @@ public class PathExecutor
             // 旋转视角
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             //执行旋转
-            _rotateTask.RotateToApproach(targetOrientation, screen);
+            var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
+            if (num > 20)
+            {
+                if (Math.Abs(diff) > 5)
+                {
+                    consecutiveRotationCountBeyondAngle++;
+                }
+                else
+                {
+                    consecutiveRotationCountBeyondAngle = 0;
+                }
+
+                if (consecutiveRotationCountBeyondAngle > 10)
+                {
+                    // 直接站定好转向
+                    await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+                }
+            }
+            
 
             // 根据指定方式进行移动
             if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
@@ -1000,6 +1040,7 @@ public class PathExecutor
         if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
             Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Delay(300, ct);
             var screen = CaptureToRectArea();
             var position = await GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
@@ -1031,6 +1072,11 @@ public class PathExecutor
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
             await handler.RunAsync(ct, waypoint, PartyConfig);
+            //统计结束战斗的次数
+            if (waypoint.Action == ActionEnum.Fight.Code)
+            {
+                SuccessFight++;
+            }
             await Delay(1000, ct);
         }
     }

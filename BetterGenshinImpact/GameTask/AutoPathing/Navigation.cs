@@ -13,9 +13,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 public class Navigation
 {
     private static bool _isWarmUp = false;
-
-    private static float _prevX = -1;
-    private static float _prevY = -1;
+    
+    private static readonly NavigationInstance _instance = new();
 
     public static void WarmUp()
     {
@@ -30,25 +29,17 @@ public class Navigation
 
     public static void Reset()
     {
-        (_prevX, _prevY) = (-1, -1);
+        _instance.Reset();
     }
     
     public static void SetPrevPosition(float x, float y)
     {
-        (_prevX, _prevY) = (x, y);
+        _instance.SetPrevPosition(x,y);
     }
 
     public static Point2f GetPosition(ImageRegion imageRegion, string mapName)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
-        var p = MapManager.GetMap(mapName).GetMiniMapPosition(colorMat, _prevX, _prevY);
-        if (p != default)
-        {
-            (_prevX, _prevY) = (p.X, p.Y);
-        }
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
-            "SendCurrentPosition", new object(), p));
-        return p;
+        return _instance.GetPosition(imageRegion, mapName);
     }
 
     /// <summary>
@@ -59,25 +50,7 @@ public class Navigation
     /// <returns>当前位置坐标</returns>
     public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName)
     {
-        var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Instance.MimiMapRect);
-
-        // 先尝试使用局部匹配
-        var p =  MapManager.GetMap(mapName).GetMiniMapPosition(colorMat, _prevX, _prevY);
-
-        // 如果局部匹配失败，再尝试全地图匹配失败
-        if (p == new Point2f())
-        {
-            Reset();
-            p = MapManager.GetMap(mapName).GetMiniMapPosition(colorMat, _prevX, _prevY);
-        }
-        if (p != default)
-        {
-            (_prevX, _prevY) = (p.X, p.Y);
-        }
-
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(typeof(Navigation),
-            "SendCurrentPosition", new object(), p));
-        return p;
+        return _instance.GetPositionStable(imageRegion, mapName);
     }
 
     public static int GetTargetOrientation(Waypoint waypoint, Point2f position)

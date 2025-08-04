@@ -108,4 +108,34 @@ public partial class StringUtils
 
     [GeneratedRegex(@"[\u4e00-\u9fa5]")]
     private static partial Regex ChineseRegex();
+    
+    /// <summary>
+    /// 检查文本是否为纯英文
+    /// </summary>
+    /// <param name="text">需要检查的文本</param>
+    /// <returns>如果是纯英文返回true，否则返回false</returns>
+    public static bool IsPureEnglish(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return false;
+        
+        bool hasNonAsciiLetter = false;
+        bool hasAnyLetter = false;
+    
+        foreach (char c in text)
+        {
+            if (char.IsLetter(c))
+            {
+                hasAnyLetter = true;
+                if (!char.IsAscii(c))
+                {
+                    hasNonAsciiLetter = true;
+                    break;
+                }
+            }
+        }
+    
+        // 纯英文：有字母且全是ASCII字母
+        return hasAnyLetter && !hasNonAsciiLetter;
+    }
 }

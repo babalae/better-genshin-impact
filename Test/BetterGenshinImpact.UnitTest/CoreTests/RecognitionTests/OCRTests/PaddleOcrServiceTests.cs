@@ -1,11 +1,6 @@
 ﻿using OpenCvSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
 using System.Drawing;
+using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using OpenCvSharp.Extensions;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests

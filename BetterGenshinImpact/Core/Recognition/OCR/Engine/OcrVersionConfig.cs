@@ -1,6 +1,6 @@
-using BetterGenshinImpact.Core.Recognition.OCR.engine.data;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.engine;
+namespace BetterGenshinImpact.Core.Recognition.OCR.Engine;
 
 /// <summary>
 ///     ppocr的版本配置
@@ -27,6 +27,16 @@ public readonly record struct OcrVersionConfig(
 
     public static OcrVersionConfig PpOcrV4 = new(
         "PP-OCRv4",
+        OcrImgMode.BGR,
+        false,
+        new OcrNormalizeImage(
+            1.0f / 255.0f,
+            [0.485f, 0.456f, 0.406f],
+            [0.229f, 0.224f, 0.225f]
+        ), new OcrShape(3, 320, 48));
+
+    public static OcrVersionConfig PpOcrV5 = new(
+        "PP-OCRv5",
         OcrImgMode.BGR,
         false,
         new OcrNormalizeImage(

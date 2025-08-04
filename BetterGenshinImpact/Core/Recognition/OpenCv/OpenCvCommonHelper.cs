@@ -123,4 +123,46 @@ public class OpenCvCommonHelper
         Cv2.InRange(src, s, s, mask);
         return ~ mask;
     }
+    
+    /// <summary>
+    /// 检测多个点是否都在指定颜色范围内
+    /// </summary>
+    /// <param name="image">输入图像</param>
+    /// <param name="points">要检测的点集合</param>
+    /// <param name="lower">颜色下限</param>
+    /// <param name="upper">颜色上限</param>
+    /// <returns>所有点都在范围内返回 true，否则 false</returns>
+    public static bool CheckPointsInRange(Mat image, Point[] points, Scalar lower, Scalar upper)
+    {
+        if (image.Empty()) return false;
+        if (points.Length == 0) return true;
+        
+        var channels = image.Channels();
+        var isContinuous = image.IsContinuous();
+        var step = image.Step();
+        var width = image.Width;
+        var height = image.Height;
+        unsafe
+        {
+            var dataPtr = (byte*)image.Data;
+            foreach (var (x, y) in points)
+            {
+                if (x < 0 || x >= width || y < 0 || y >= height)
+                {
+                    Debug.WriteLine($"坐标({x}, {y}) 超过图片范围 ({width}, {height})");
+                    continue;
+                }
+                var index = isContinuous ? (y * width + x) * channels : y * step + x * channels;
+                for (var ch = 0; ch < channels; ch++)
+                {
+                    byte pixelValue = dataPtr[index + ch];
+                    if (pixelValue < lower[ch] || pixelValue > upper[ch])
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
 }

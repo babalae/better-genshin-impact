@@ -4,5 +4,6 @@ public enum InferenceDeviceType
 {
     Cpu,
     GpuDirectMl,
-    Gpu
+    Gpu,
+    OpenVino
 }
