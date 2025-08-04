@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -86,8 +87,9 @@ public class ClaimBattlePassRewardsTask
     private async Task<bool> ClaimAll(CancellationToken ct)
     {
         using var ra = CaptureToRectArea();
-        var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.18)));
+        var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.2)));
         var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.claimAllLocalizedString));
+        Debug.WriteLine(this.claimAllLocalizedString);
         if (wt != null)
         {
             wt.Click();
