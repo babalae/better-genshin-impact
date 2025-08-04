@@ -50,10 +50,10 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private int _cudaDevice = 0;
 
     /// <summary>
-    /// 自动附加cuda的path。一般情况下用这个就足够了。默认开启。
+    /// 自动附加cuda的path。一般情况下用这个就足够了。默认关闭。
     /// </summary>
     [ObservableProperty]
-    private bool _autoAppendCudaPath = true;
+    private bool _autoAppendCudaPath = false;
 
     #endregion
 
@@ -70,6 +70,21 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _embedTensorRtCache = true;
+
+    #endregion
+
+    #region OpenVINO设置
+    /// <summary>
+    /// OpenVino 设备参数。
+    /// </summary>
+    [ObservableProperty]
+    private string _openVinoDevice = "AUTO:GPU,CPU";
+    
+    /// <summary>
+    /// 启用 OpenVINO 缓存。默认关闭。
+    /// </summary>
+    [ObservableProperty]
+    private bool _enableOpenVinoCache = true;
 
     #endregion
 }
