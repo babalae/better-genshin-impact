@@ -32,7 +32,7 @@ public class TeyvatMapTest : SceneBaseMapByTemplateMatch
         splitRow: GameMapRows * 2,
         splitCol: GameMapCols * 2)
     {
-        TaskControl.Logger.LogInformation("[TemplateMatch]提瓦特大陆地图模板加载中，请等待...");
+        TaskControl.Logger.LogInformation("[TemplateMatch]提瓦特大陆地图模板加载中，可能耗时较久，请耐心等待...");
         
         Layers = BaseMapLayerByTemplateMatch.LoadLayers(this);
         var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
