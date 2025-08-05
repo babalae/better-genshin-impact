@@ -51,10 +51,10 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     Point firstPixel = new Point(x, y);
                     logger.LogInformation("敌人位置: ({firstPixel.X}, {firstPixel.Y})，血量高度: {height}", firstPixel.X, firstPixel.Y, height);
                     
-                    if (firstPixel.X < 500 || firstPixel.X > 1200 || firstPixel.Y < 300 || firstPixel.Y > 920)
+                    if (firstPixel.X < 580 || firstPixel.X > 1315 || firstPixel.Y > 800)
                     {
                         // 非中心区域的处理逻辑
-                        if (firstPixel.X < 500 && firstPixel.Y < 300)
+                        if (firstPixel.X < 500 && firstPixel.Y < 800)
                         {
                             // 左上区域
                             if (height <= 6)
@@ -70,7 +70,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 }, ct);
                             }
                         }
-                        else if (firstPixel.X > 1200 && firstPixel.Y < 300)
+                        else if (firstPixel.X > 1315 && firstPixel.Y < 800)
                         {
                             // 右上区域
                             if (height <= 6)
@@ -86,7 +86,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 }, ct);
                             }
                         }
-                        else if (firstPixel.X < 500 && firstPixel.Y > 920)
+                        else if (firstPixel.X < 500 && firstPixel.Y > 800)
                         {
                             // 左下区域
                             if (height <= 6)
@@ -102,7 +102,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 }, ct);
                             }
                         }
-                        else if (firstPixel.X > 1200 && firstPixel.Y > 920)
+                        else if (firstPixel.X > 1315 && firstPixel.Y > 800)
                         {
                             // 右下区域
                             if (height <= 6)
@@ -118,7 +118,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 }, ct);
                             }
                         }
-                        else if (firstPixel.Y < 300)
+                        else if (firstPixel.Y < 800)
                         {
                             // 上方区域
                             if (height <= 6)
@@ -132,7 +132,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 }, ct);
                             }
                         }
-                        else if (firstPixel.Y > 920)
+                        else if (firstPixel.Y > 800)
                         {
                             // 下方区域
                             if (height <= 6)
@@ -165,7 +165,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         {
                             logger.LogInformation("敌人在中心且高度大于6，不移动");
                         }
-                        else if (firstPixel.X < 1200 && firstPixel.X > 500 && firstPixel.Y < 800 && height > 2)
+                        else if (firstPixel.X < 1315 && firstPixel.X > 500 && firstPixel.Y < 800 && height > 2)
                         {
                             logger.LogInformation("敌人在上方，向前移动");
                             Task.Run(() =>
@@ -175,7 +175,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             }, ct);
                         }
-                        else if (firstPixel.X < 1200 && firstPixel.X > 500 && firstPixel.Y > 800 && height > 2)
+                        else if (firstPixel.X < 1315 && firstPixel.X > 500 && firstPixel.Y > 800 && height > 2)
                         {
                             logger.LogInformation("敌人在下方，向后移动");
                             Task.Run(() =>
@@ -184,6 +184,10 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                 Task.Delay(1000, ct).Wait();
                                 Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
                             }, ct);
+                        }
+                        else if (height < 3)
+                        {
+                            logger.LogInformation("敌人血量高度小于3，不移动");
                         }
                         else
                         {

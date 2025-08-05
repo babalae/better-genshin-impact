@@ -270,105 +270,6 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         return null;
     }
-
-    public async Task<string?> OnPotBuyItemAsync()
-    {
-        var stackPanel = new StackPanel
-        {
-            Orientation = Orientation.Vertical,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        var checkBoxes = new Dictionary<string, CheckBox>(); 
-        CheckBox selectedCheckBox = null;
-        
-        if (SelectedConfig.SecretTreasureObjects == null || SelectedConfig.SecretTreasureObjects.Count == 0)
-        {
-            Toast.Warning("未配置洞天百宝购买配置，请先设置");
-            SelectedConfig.SecretTreasureObjects.Add("每天重复");
-        }
-        var infoTextBlock = new TextBlock
-        {
-            Text = "日期不影响领取好感和钱币",
-            HorizontalAlignment = HorizontalAlignment.Center,
-            FontSize = 12,
-            Margin = new Thickness(0, 0, 0, 10)
-        };
-
-        stackPanel.Children.Add(infoTextBlock);
-        // 添加下拉选择框
-        var dayComboBox = new ComboBox
-        {
-            ItemsSource = new List<string> { "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日", "每天重复" },
-            SelectedItem = SelectedConfig.SecretTreasureObjects.First(),
-            FontSize = 12,
-            Margin = new Thickness(0, 0, 0, 10)
-        };
-        stackPanel.Children.Add(dayComboBox);
-        
-        foreach (var potBuyItem in SecretTreasureObjectList)
-        {
-            var checkBox = new CheckBox
-            {
-                Content = potBuyItem,
-                Tag = potBuyItem,
-                MinWidth = 180,
-                IsChecked = SelectedConfig.SecretTreasureObjects.Contains(potBuyItem) 
-            };
-            checkBoxes[potBuyItem] = checkBox; 
-            stackPanel.Children.Add(checkBox);
-        }
-        
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "洞天百宝购买选择",
-            Content = new ScrollViewer
-            {
-                Content = stackPanel,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            },
-            CloseButtonText = "关闭",
-            PrimaryButtonText = "确认",
-            Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            SizeToContent = SizeToContent.Width, // 确保弹窗根据内容自动调整大小
-            MinWidth = 200,
-            MaxHeight = 500,
-        };
-
-        var result = await uiMessageBox.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-        {
-            SelectedConfig.SecretTreasureObjects.Clear();
-            SelectedConfig.SecretTreasureObjects.Add(dayComboBox.SelectedItem.ToString());
-            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
-            foreach (var checkBox in checkBoxes.Values)
-            {
-                if (checkBox.IsChecked == true)
-                {
-                    var potBuyItem = checkBox.Tag as string;
-                    if (potBuyItem != null)
-                    {
-                        selectedItems.Add(potBuyItem);
-                        SelectedConfig.SecretTreasureObjects.Add(potBuyItem);
-                    }
-                    else
-                    {
-                        Toast.Error("加载失败");
-                    }
-                }
-            }
-            if (selectedItems.Count > 0)
-            {
-                return string.Join(",", selectedItems); // 返回所有选中的项
-            }
-            else
-            {
-                Toast.Warning("选择为空，请选择购买的宝物");
-            }
-        }
-        return null;
-    }
     
     [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
     /// <summary>
@@ -561,14 +462,6 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         WriteConfig(SelectedConfig);
-    }
-
-    [RelayCommand]
-    private async void AddPotBuyItem()
-    {
-        await OnPotBuyItemAsync();
-        SaveConfig();
-        SelectedTask = null;
     }
     
     [RelayCommand]
