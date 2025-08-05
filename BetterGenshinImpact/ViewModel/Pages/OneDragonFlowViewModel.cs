@@ -293,8 +293,6 @@ public partial class OneDragonFlowViewModel : ViewModel
     
     [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["地图传送", "尘歌壶道具"];
     
-     [ObservableProperty] private List<string> _sereniteaPotTypes = ["每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"];
-    
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
