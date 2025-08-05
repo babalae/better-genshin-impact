@@ -1110,7 +1110,7 @@
                                                           Grid.ColumnSpan="2" 
                                                           MinWidth="150"
                                                           Margin="5,5,5,5"
-                                                          ItemsSource="{Binding SereniteaPotTypes}"
+                                                          ItemsSource="{x:Static local:OneDragonFlowPage.SereniteaPotTypes}"
                                                           x:Name="SereniteaPotComboBox" />
                                                 
                                                 <Separator Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"  Margin="5,3,5,3" BorderThickness="0,1,0,0" />
@@ -1287,7 +1287,8 @@
                                                     Width="70"
                                                     Margin="15,0,5,5"
                                                     Content="确定" 
-                                                    Click="BuySereniteaPotClick"/>
+                                                    x:Name="PopupConfirmButton"
+                                                    Click="SereniteaPotTpType_Clicked"/>
                                                 <Button
                                                     Grid.Row="0"
                                                     Grid.Column="1"
@@ -1296,7 +1297,8 @@
                                                     Width="70"
                                                     Margin="5,0,5,5"
                                                     Content="取消" 
-                                                    Click="PopupCloseButtonClick"/>
+                                                    x:Name="PopupCloseButton"
+                                                    Click="SereniteaPotTpType_Clicked"/>
                                             </Grid>
                                         </StackPanel>
                                     </Border>
