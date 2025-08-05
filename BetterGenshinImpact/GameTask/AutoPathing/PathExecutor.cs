@@ -772,12 +772,12 @@ public class PathExecutor
                     {
                         if (position == new Point2f())
                         {
-                            throw new NormalEndException("重试多次后，当前点位无法被识别，放弃此路径！");
+                            throw new HandledException("重试多次后，当前点位无法被识别，放弃此路径！");
                         }
                         else
                         {
                             Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试多次后仍然失败，放弃此路径点！");
-                            throw new NormalEndException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
+                            throw new HandledException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
                         }
                     }
                     else
