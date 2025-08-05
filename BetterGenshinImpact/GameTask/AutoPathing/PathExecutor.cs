@@ -768,7 +768,7 @@ public class PathExecutor
                 else
                 {
                     distanceTooFarRetryCount++;
-                    if (distanceTooFarRetryCount > 5)
+                    if (distanceTooFarRetryCount > 50)
                     {
                         if (position == new Point2f())
                         {
@@ -782,7 +782,11 @@ public class PathExecutor
                     }
                     else
                     {
-                        Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        // 取余减少日志输出频率
+                        if (distanceTooFarRetryCount % 5 == 0)
+                        {
+                            Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        }
                         await Delay(50, ct);
                         continue;
                     }
