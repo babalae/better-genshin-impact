@@ -21,6 +21,9 @@ public class NotificationEvent(string code, string msg)
     public static readonly NotificationEvent DailyReward = new("daily.reward", "检查每日奖励领取状态");
     public static readonly NotificationEvent JsCustom = new("js.custom", "JS自定义事件");
     public static readonly NotificationEvent JsError = new("js.error", "JS运行时错误");
+    public static readonly NotificationEvent AutoEatStart = new("autoeat.start", "自动吃药启动");
+    public static readonly NotificationEvent AutoEatEnd = new("autoeat.end", "自动吃药结束");
+    public static readonly NotificationEvent AutoEatInfo = new("autoeat.info", "自动吃药信息");
     
     public string Code { get; private set; } = code;
     public string Msg { get; private set; } = msg;
