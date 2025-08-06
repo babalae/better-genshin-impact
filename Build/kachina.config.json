@@ -3,7 +3,13 @@
       {
         "id": "dfs",
         "name": "默认服务器",
-        "uri": "dfs+packed+https://bgi-ota.cocogoat.cn/dfs/bgi/BetterGI.Install.exe"
+        "uri": "dfs2+packed+http://bgi-ota.cocogoat.cn/resource/BetterGI.Install.exe"
+      },
+      {
+        "id": "dfs-alpha",
+        "name": "内测版",
+        "uri": "dfs2+packed+http://bgi-ota.cocogoat.cn/resource/BetterGI.Alpha.exe",
+        "hidden": true
       },
       {
         "id": "mirrorc",
