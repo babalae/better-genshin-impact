@@ -1541,7 +1541,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="默认使用PaddleV5并自动根据游戏语言选择(V5Auto)，如果需要使用其他模型，请在此处选择。"
+                                          Text="如果需要使用其他模型，请在此处选择。"
                                           TextWrapping="Wrap" />
                             <ComboBox Grid.Row="0"
                                       Grid.RowSpan="2"
