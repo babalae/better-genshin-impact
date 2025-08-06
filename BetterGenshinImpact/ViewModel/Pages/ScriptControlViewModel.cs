@@ -84,7 +84,10 @@ public partial class ScriptControlViewModel : ViewModel
     private void OnAddScriptGroup()
     {
         // 创建一个TextBox并设置自动聚焦
-        var textBox = new System.Windows.Controls.TextBox();
+        var textBox = new System.Windows.Controls.TextBox()
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
         textBox.Loaded += (sender, e) =>
         {
             textBox.Focus();
@@ -603,7 +606,10 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        var textBox = new System.Windows.Controls.TextBox();
+        var textBox = new System.Windows.Controls.TextBox()
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
         textBox.Loaded += (sender, e) =>
         {
             textBox.Focus();
@@ -646,7 +652,10 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        var textBox = new System.Windows.Controls.TextBox();
+        var textBox = new System.Windows.Controls.TextBox()
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
         textBox.Loaded += (sender, e) =>
         {
             textBox.Focus();
