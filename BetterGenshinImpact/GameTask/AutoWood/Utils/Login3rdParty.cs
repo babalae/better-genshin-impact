@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Helpers.Extensions;
 using System;
 using System.Diagnostics;
@@ -7,6 +7,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using BetterGenshinImpact.GameTask.Model.Area;
+using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -89,9 +91,11 @@ internal sealed class Login3rdParty
                 Debug.WriteLine("[AutoWood] Give up to check login button and don't try again.");
                 break;
             }
+
             Debug.WriteLine($"[AutoWood] Fail to check login button {failCount} time(s).");
             Sleep(500, ct);
         }
+
         Debug.WriteLine("[AutoWood] Exit while check login button.");
     }
 
@@ -101,31 +105,56 @@ internal sealed class Login3rdParty
         {
             if (Process.GetProcessesByName("YuanShen").FirstOrDefault() is Process process)
             {
-                if (GetBHWnd(process) != IntPtr.Zero)
+                // 使用新的B服登录逻辑
+                var (loginWindow, windowType) = GetBiliLoginWindow(process);
+                if (loginWindow != IntPtr.Zero)
                 {
-                    // Just for login WebUI fadein chattering
-                    Sleep(4000, ct);
-
-                    var p = TaskContext.Instance()
-                        .SystemInfo.CaptureAreaRect.GetCenterPoint()
-                        .Add(new(0, 85));
-
-                    p.Click();
-                    Debug.WriteLine("[AutoWood] Click login button for the B one");
-
-                    // Just for login WebUI fadeout chattering
-                    Sleep(3000, ct);
-
-                    if (GetBHWnd(process) != IntPtr.Zero)
+                    // if (windowType.Contains("协议"))
+                    // {
+                    //     // 点击协议窗口
+                    //     var p = TaskContext.Instance()
+                    //         .SystemInfo.CaptureAreaRect.GetCenterPoint()
+                    //         .Add(new(40, 60));
+                    //     p.Click();
+                    //     Debug.WriteLine("[AutoWood] Click protocol window for Bilibili");
+                    //     // Sleep(2000, ct);
+                    //     Thread.Sleep(3000);
+                    //
+                    //     // 检查窗口是否还存在
+                    //     var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
+                    //     if (remainingWindow == IntPtr.Zero || !remainingType.Contains("协议"))
+                    //     {
+                    //         // 协议窗口已消失，继续等待登录窗口
+                    //         return false; // 继续循环等待登录窗口
+                    //     }
+                    //
+                    //     return false; // 协议窗口仍然存在，继续尝试
+                    // }
+                    if (windowType.Contains("登录"))
                     {
+                        // 点击登录窗口
+                        var p = TaskContext.Instance()
+                            .SystemInfo.CaptureAreaRect.GetCenterPoint()
+                            .Add(new(0, 90));
                         p.Click();
-                        Debug.WriteLine("[AutoWood] Click login button for the B one [LAST CHANCE]");
-                    }
+                        Debug.WriteLine("[AutoWood] Click login window for Bilibili");
+                        // Sleep(2000, ct);
+                        Thread.Sleep(3000);
 
-                    return true;
+                        // 检查窗口是否还存在
+                        var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
+                        if (remainingWindow != IntPtr.Zero)
+                        {
+                            p.Click();
+                            Debug.WriteLine("[AutoWood] Bilibili login successful");
+                        }
+                        return true; // 登录成功
+                    }
                 }
-                return false;
+
+                return false; // 没有找到登录窗口
             }
+
             return false;
         }
         else
@@ -135,37 +164,72 @@ internal sealed class Login3rdParty
         }
     }
 
-    static nint GetBHWnd(Process process)
+    static (IntPtr windowHandle, string windowType) GetBiliLoginWindow(Process process)
     {
-        nint bHWnd = IntPtr.Zero;
+        IntPtr bHWnd = IntPtr.Zero;
+        string windowType = "";
 
-        _ = User32.EnumWindows((HWND hWnd, nint lParam) =>
+        User32.EnumWindows((hWnd, lParam) =>
         {
             try
             {
-                _ = User32.GetWindowThreadProcessId(hWnd, out uint pid);
-
-                if (pid == process.Id)
+                // 获取窗口标题
+                int titleLength = User32.GetWindowTextLength(hWnd);
+                if (titleLength > 0)
                 {
-                    int capacity = User32.GetWindowTextLength(hWnd);
-                    StringBuilder title = new(capacity + 1);
-                    _ = User32.GetWindowText(hWnd, title, title.Capacity);
+                    StringBuilder title = new StringBuilder(titleLength + 1);
+                    User32.GetWindowText(hWnd, title, title.Capacity);
 
-                    Debug.WriteLine($"[AutoWood] Enum Windows result is {title}");
-                    if (title.ToString().Contains("bilibili", StringComparison.OrdinalIgnoreCase))
+                    string titleText = title.ToString();
+
+                    // 检查是否是B服登录窗口（通过标题匹配）
+                    if (titleText.Contains("bilibili", StringComparison.OrdinalIgnoreCase))
                     {
-                        bHWnd = (nint)hWnd;
-                        return false;
+                        // 检查窗口所有者是否是原神进程
+                        var owner = User32.GetWindow(hWnd, User32.GetWindowCmd.GW_OWNER);
+                        if (owner != IntPtr.Zero)
+                        {
+                            User32.GetWindowThreadProcessId(owner, out uint ownerPid);
+                            if (ownerPid == process.Id)
+                            {
+                                // 检查窗口是否可见和启用
+                                bool isVisible = User32.IsWindowVisible(hWnd);
+                                bool isEnabled = User32.IsWindowEnabled(hWnd);
+
+                                // 检查协议窗口
+                                if (titleText.Contains("协议", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (isEnabled)
+                                    {
+                                        bHWnd = hWnd.DangerousGetHandle();
+                                        windowType = "协议";
+                                        return false;
+                                    }
+                                }
+
+                                // 检查登录窗口
+                                if (titleText.Contains("登录", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (isEnabled)
+                                    {
+                                        bHWnd = hWnd.DangerousGetHandle();
+                                        windowType = "登录";
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                ///
+                Debug.WriteLine($"[AutoWood] 枚举窗口时出错: {ex.Message}");
             }
+
             return true;
         }, IntPtr.Zero);
 
-        return bHWnd;
+        return (bHWnd, windowType);
     }
 }

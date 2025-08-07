@@ -18,9 +18,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
-using Vanara.PInvoke;
 using Microsoft.Extensions.DependencyInjection;
-
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -49,6 +47,7 @@ public class AutoFightTask : ISoloTask
         public double CheckTime = 5;
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
+        public bool RotateFindEnemyEnabled = false;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
@@ -61,6 +60,7 @@ public class AutoFightTask : ISoloTask
                 ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
             DetectDelayTime =
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
+            RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -369,8 +369,7 @@ public class AutoFightTask : ISoloTask
                             timeOutFlag = true;
                             break;
                         }
-
-                        // 通用化战斗策略
+                        
                         command.Execute(combatScenes);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
@@ -401,13 +400,9 @@ public class AutoFightTask : ISoloTask
                                 }
                                 else
                                 {
-                                    Logger.LogInformation($"延时检查为{delayTime}毫秒");
+                                    // Logger.LogInformation($"延时检查为{delayTime}毫秒");
                                 }
-
-                                /*if (i<combatCommands.Count - 1)
-                                {
-                                    Logger.LogInformation($"{command.Name}下一个人为{combatCommands[i+1].Name}毫秒");
-                                }*/
+                                
                                 fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
                             }
                         }
@@ -477,7 +472,7 @@ public class AutoFightTask : ISoloTask
             
             if (kazuha != null)
             {
-                var time = DateTime.UtcNow - kazuha.LastSkillTime;
+                var time = TimeSpan.FromSeconds(kazuha.GetSkillCdSeconds());
                 //当万叶cd大于3时，此时不再触发万叶拾取，
                 if (!(lastFightName == "枫原万叶" && time.TotalSeconds > 3))
                 {
@@ -520,8 +515,6 @@ public class AutoFightTask : ISoloTask
                 }
                     
             }
-            
-
         }
 
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
@@ -544,46 +537,38 @@ public class AutoFightTask : ISoloTask
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
-    private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
+    public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        //  YOLO 判断血条和怪物位置
-        // if (HasFightFlagByYolo(CaptureToRectArea()))
-        //  {
-        //    _lastFightFlagTime = DateTime.Now;
-        //  return false;
-        //   }
-        //
-
-        //Random random = new Random();
-        //double randomFraction = random.NextDouble();  // 生成 0 到 1 之间的随机小数
-        //此处随机数，防止固定招式下，使按L正好处于招式下，导致无法准确判断战斗结束
-        // double randomNumber = 1 + (randomFraction * (3 - 1));
-
-        // 几秒内没有检测到血条和怪物位置，则开始旋转视角重新检测
-        //if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
-        //{
-        // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
-        /**
-        Simulation.SendInput.Mouse.MiddleButtonClick();
-        await Delay(300, _ct);
-        for (var i = 0; i < 8; i++)
+        if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
-            Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * _dpi), 0);
-            await Delay(800, _ct); // 等待视角稳定
-            if (HasFightFlagByYolo(CaptureToRectArea()))
+            bool? result = null;
+            try
             {
-                _lastFightFlagTime = DateTime.Now;
-                return false;
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime,delayTime, _ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+                result = false;
+            }
+
+            if (result != null)
+            {
+                return result.Value;
             }
         }
-        **/
-        //Simulation.SendInput.SimulateAction(GIActions.Drop);//在换队前取消爬墙状态
-        await Delay(delayTime, _ct);
+
+        if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
+        
         Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
         // 最终方案确认战斗结束
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
+        
         var ra = CaptureToRectArea();
+        //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
+        // 只提取橙色
+        
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
         Simulation.SendInput.SimulateAction(GIActions.Drop);
@@ -600,14 +585,16 @@ public class AutoFightTask : ISoloTask
 
         Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-        /**
-        if (!Bv.IsInMainUi(ra))
-        {
-            // 如果不在主界面，说明异常，直接结束战斗继续下一步（地图追踪下一步会进入异常处理）
-            Logger.LogInformation("当前不在主界面，直接结束战斗！");
-            return true;
-        }**/
 
+        if (_finishDetectConfig.RotateFindEnemyEnabled)
+        {
+            Task.Run(() =>
+            {
+                Scalar bloodLower = new Scalar(255, 90, 90);
+                MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+            } ,_ct);
+        }
+        
         _lastFightFlagTime = DateTime.Now;
         return false;
     }

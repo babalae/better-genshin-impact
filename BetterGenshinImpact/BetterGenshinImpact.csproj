@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.47.2-alpha.3</Version>
+		<Version>0.47.5-alpha.1</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -40,8 +40,12 @@
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
+		
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets" Version="1.0.5" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.9" />
+		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.9" />
+		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.8" />
+		
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
@@ -60,9 +64,9 @@
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
-		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.10.0.20241108" />
-		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20241108" />
-		<PackageReference Include="OpenCvSharp4.Windows" Version="4.10.0.20241108" />
+		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
+		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
+		<PackageReference Include="OpenCvSharp4.Windows" Version="4.11.0.20250507" />
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
 		<PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
 		<PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
@@ -85,6 +89,7 @@
 		<PackageReference Include="WPF-UI.Tray" Version="4.0.2" />
 		<PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
+		<PackageReference Include="YamlDotNet" Version="16.3.0" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />
 	</ItemGroup>
 
@@ -158,11 +163,20 @@
 		<None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\QuickBuy\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\GetGridIcons\gridIcon.onnx">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\GetGridIcons\训练集原型特征.csv">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\LogParse\Assets\log.css">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>

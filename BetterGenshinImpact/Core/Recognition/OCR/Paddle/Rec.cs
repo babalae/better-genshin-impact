@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,20 +13,26 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class Rec
+public class Rec(
+    BgiOnnxModel model,
+    IReadOnlyList<string> labels,
+    OcrVersionConfig config,
+    BgiOnnxFactory bgiOnnxFactory)
+    : IDisposable
 {
-    private readonly OcrVersionConfig _config;
-    private readonly IReadOnlyList<string> _labels;
-    private readonly InferenceSession _session;
+    private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
 
-    public Rec(BgiOnnxModel model, string labelFilePath, OcrVersionConfig config, BgiOnnxFactory bgiOnnxFactory)
+    // _labels = File.ReadAllLines(labelFilePath);
+
+    public void Dispose()
     {
-        _config = config;
-        _session = bgiOnnxFactory.CreateInferenceSession(model, true);
-
-
-        _labels = File.ReadAllLines(labelFilePath);
+        lock (_session)
+        {
+            _session.Dispose();
+        }
+        GC.SuppressFinalize(this);
     }
+
 
     ~Rec()
     {
@@ -76,7 +81,7 @@ public class Rec
                 throw new ArgumentException($"src[{i}] size should not be 0, wrong input picture provided?");
         }
 
-        var modelHeight = _config.Shape.Height;
+        var modelHeight = config.Shape.Height;
         var maxWidth = (int)Math.Ceiling(srcs.Max(src =>
         {
             var size = src.Size();
@@ -160,7 +165,7 @@ public class Rec
                             if (maxIdx[1] > 0 && !(n > 0 && maxIdx[1] == lastIndex))
                             {
                                 score += (float)maxVal;
-                                sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
+                                sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], labels));
                             }
 
                             lastIndex = maxIdx[1];

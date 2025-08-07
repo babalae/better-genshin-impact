@@ -10,6 +10,10 @@ public partial class AutoStygianOnslaughtConfig : ObservableObject
     [ObservableProperty] 
     private string _strategyName = "";
     
+    // boss 名字 1~3
+    [ObservableProperty]
+    private int _bossNum = 1;
+    
     // 结束后是否自动分解圣遗物
     [ObservableProperty]
     private bool _autoArtifactSalvage = false;

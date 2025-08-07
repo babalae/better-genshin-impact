@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -54,7 +55,7 @@ public class ClaimBattlePassRewardsTask
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenBattlePassScreen); // F4 开纪行
 
         // 领取战令1
-        await Delay(500, ct);
+        await Delay(1000, ct);
         await ClaimAll(ct);
 
 
@@ -65,14 +66,14 @@ public class ClaimBattlePassRewardsTask
         await ClaimAll(ct);
 
         // 领取战令2
-        await Delay(2000, ct); // 等待升级动画
+        await Delay(2500, ct); // 等待升级动画
         // 还可能存在领取到原石的情况
         if (CaptureToRectArea().Find(ElementAssets.Instance.PrimogemRo).IsExist())
         {
             TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
         }
         GameCaptureRegion.GameRegion1080PPosClick(858, 45);
-        await Delay(500, ct);
+        await Delay(1500, ct);
         await ClaimAll(ct);
 
         // 关闭
@@ -86,13 +87,14 @@ public class ClaimBattlePassRewardsTask
     private async Task<bool> ClaimAll(CancellationToken ct)
     {
         using var ra = CaptureToRectArea();
-        var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.18)));
+        var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.2)));
         var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.claimAllLocalizedString));
+        Debug.WriteLine(this.claimAllLocalizedString);
         if (wt != null)
         {
             wt.Click();
             Logger.LogInformation("纪行：{Text}", "一键领取");
-            await Delay(500, ct);
+            await Delay(1000, ct);
             using var ra2 = CaptureToRectArea();
             if (ra2.Find(ElementAssets.Instance.PrimogemRo).IsExist())
             {

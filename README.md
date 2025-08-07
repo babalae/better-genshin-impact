@@ -46,7 +46,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [自动伐木](https://bettergi.com/feats/task/felling.html)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
   * [自动秘境](https://bettergi.com/feats/task/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
   * [自动音游](https://bettergi.com/feats/task/music.html)：一键自动完成千音雅集的专辑，快速获取成就
-  * [全自动钓鱼](https://bettergi.com/feats/task/fish.html)：在出现钓鱼F按钮的位置面向鱼塘，然后启动全自动钓鱼，启动后程序会自动完成钓鱼，并切换白天和晚上
+  * [全自动钓鱼](https://bettergi.com/feats/task/fish.html)：在出现钓鱼 <kbd>F</kbd> 按钮的位置面向鱼塘，然后启动全自动钓鱼，启动后程序会自动完成钓鱼，并切换白天和晚上
 * 全自动
   * [一条龙](https://github.com/babalae/better-genshin-impact/issues/846)：一键完成日常（使用历练点），并领取奖励
   * [自动采集/挖矿/锄地](https://bettergi.com/feats/autos/pathing.html)：通过左上角小地图的识别，完成自动采集、挖矿、锄地等功能
