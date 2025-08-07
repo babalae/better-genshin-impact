@@ -1310,7 +1310,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在接触钥匙后的界面启动本任务 -
+                        自动传送并进入幽境危战 -
                         <Hyperlink Command="{Binding GoToAutoStygianOnslaughtUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             点击查看使用教程
@@ -1376,6 +1376,37 @@
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
                     </ComboBox>
+                </Grid>
+                
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="指定刷取的战场"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="从上到下战场一、二、三"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="80"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.BossNumList}}"
+                              SelectedItem="{Binding Config.AutoStygianOnslaughtConfig.BossNum, Mode=TwoWay}">
+                    </ComboBox>
+
                 </Grid>
 
                 <Grid Margin="16">

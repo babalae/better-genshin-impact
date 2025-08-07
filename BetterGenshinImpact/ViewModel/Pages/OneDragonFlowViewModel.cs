@@ -50,7 +50,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         new("合成树脂"),
         // new ("每日委托"),
         new("自动秘境"),
-        // new ("自动锻造"),
+        new ("自动幽境危战"),
         // new ("自动刷地脉花"),
         new("领取每日奖励"),
         new ("领取尘歌壶奖励"),
@@ -83,6 +83,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             new() { Name = "领取邮件" },
             new() { Name = "合成树脂" },
             new() { Name = "自动秘境" },
+            new() { Name = "自动幽境危战" },
             new() { Name = "领取每日奖励" },
             new() {Name = "领取尘歌壶奖励" },
         };

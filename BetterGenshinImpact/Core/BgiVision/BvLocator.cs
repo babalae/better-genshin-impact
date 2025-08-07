@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ public class BvLocator
 
     public RecognitionObject RecognitionObject { get; }
 
-    public Action? RetryAction { get; set; }
+    public Action<List<Region>>? RetryAction { get; set; }
 
     public static int DefaultTimeout { get; set; } = 10000;
 
@@ -80,7 +81,15 @@ public class BvLocator
     {
         return (await WaitFor(timeout)).First().Click();
     }
-    
+
+    public async Task<Region> ClickUntilDisappears(int? timeout = null)
+    {
+        var region = (await WaitFor(timeout)).First().Click();
+        await new BvLocator(RecognitionObject, _cancellationToken)
+            .WithRetryAction(resList => { resList.First().Click(); }).WaitForDisappear();
+        return region;
+    }
+
     public async Task<Region> DoubleClick(int? timeout = null)
     {
         var list = await WaitFor(timeout);
@@ -95,9 +104,10 @@ public class BvLocator
         List<Region> results = [];
         var retryRes = await NewRetry.WaitForAction(() =>
         {
-            RetryAction?.Invoke();
             results = FindAll();
-            return results.Count > 0;
+            var b = results.Count > 0;
+            RetryAction?.Invoke(results);
+            return b;
         }, _cancellationToken, retryCount, DefaultRetryInterval);
 
         if (retryRes)
@@ -106,7 +116,23 @@ public class BvLocator
         }
         else
         {
-            throw new TimeoutException($"识别元素在 {actualTimeout}ms 后超时未出现！");
+            throw BuildTimeoutException(actualTimeout);
+        }
+    }
+
+    private TimeoutException BuildTimeoutException(int actualTimeout)
+    {
+        if (RecognitionObject.RecognitionType == RecognitionTypes.Ocr)
+        {
+            return new TimeoutException($"识别文字[{RecognitionObject.Text}]在 {actualTimeout}ms 后超时未出现！");
+        }
+        else if (RecognitionObject.RecognitionType == RecognitionTypes.TemplateMatch)
+        {
+            return new TimeoutException($"识别图像[{RecognitionObject.Name}]在 {actualTimeout}ms 后超时未出现！");
+        }
+        else
+        {
+            return new TimeoutException($"识别元素在 {actualTimeout}ms 后超时未出现！");
         }
     }
 
@@ -129,9 +155,14 @@ public class BvLocator
 
         var retryRes = await NewRetry.WaitForAction(() =>
         {
-            RetryAction?.Invoke();
             var results = FindAll();
-            return results.Count == 0;
+            var b = results.Count == 0;
+            if (!b)
+            {
+                RetryAction?.Invoke(results);
+            }
+
+            return b;
         }, _cancellationToken, retryCount, DefaultRetryInterval);
 
         if (!retryRes)
@@ -164,7 +195,15 @@ public class BvLocator
         return this;
     }
 
-    public BvLocator WithRetryAction(Action? action)
+    public BvLocator WithRoi(Func<Rect, Rect> deltaFunc)
+    {
+        var captureAreaRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var rect = deltaFunc(captureAreaRect);
+        RecognitionObject.RegionOfInterest = rect;
+        return this;
+    }
+
+    public BvLocator WithRetryAction(Action<List<Region>>? action)
     {
         RetryAction = action;
         return this;
