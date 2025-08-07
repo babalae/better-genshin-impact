@@ -173,7 +173,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         Bv.ClickWhiteConfirmButton(ra4);
-        await Delay(500, ct);
+        await Delay(1000, ct);
 
 
         // 点击分解

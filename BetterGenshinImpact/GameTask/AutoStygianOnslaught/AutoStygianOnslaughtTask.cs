@@ -147,6 +147,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
             Notify.Event(NotificationEvent.DomainReward).Success($"{Name}奖励领取");
         }
+
+        await ExitDomain(page);
     }
 
     private void Init()
@@ -608,5 +610,21 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
 
         await new AutoArtifactSalvageTask(star, false).Start(_ct);
+    }
+
+
+    private async Task ExitDomain(BvPage page)
+    {
+        await Delay(1000, _ct);
+
+        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        await Delay(1000, _ct);
+
+        await page.Locator(ElementAssets.Instance.BtnExitDoor.Value).Click();
+
+        // 等待传送完成
+        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor();
+
+        await Delay(3000, _ct);
     }
 }
