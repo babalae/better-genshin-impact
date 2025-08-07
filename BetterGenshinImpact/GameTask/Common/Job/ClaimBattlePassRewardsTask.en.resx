@@ -120,4 +120,7 @@
   <data name="一键" xml:space="preserve">
     <value>All</value>
   </data>
+  <data name="领取" xml:space="preserve">
+    <value>Claim</value>
+  </data>
 </root>
