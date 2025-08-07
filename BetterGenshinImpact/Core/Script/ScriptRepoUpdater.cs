@@ -1144,13 +1144,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         var backupFiles = new List<string>();
         var tempBackupPath = Global.Absolute("User\\Temp");
-        
+        var scriptPathSafe = scriptPath;
+        var backupScriptDir = Path.Combine(tempBackupPath, scriptPathSafe);
         try
         {
-            // 确保Temp目录存在
-            if (!Directory.Exists(tempBackupPath))
+            if (!Directory.Exists(backupScriptDir))
             {
-                Directory.CreateDirectory(tempBackupPath);
+                Directory.CreateDirectory(backupScriptDir);
             }
 
             // 获取脚本的manifest文件路径
@@ -1163,9 +1163,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             // 解析manifest文件获取savedFiles
             var manifestContent = File.ReadAllText(scriptManifestPath);
-            
             var manifest = Manifest.FromJson(manifestContent);
-            
+
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
             {
                 _logger.LogInformation($"脚本 {scriptPath} 没有需要保存的文件");
@@ -1181,34 +1180,59 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
 
             var scriptUserPath = Path.Combine(userPath, remainingPath);
-            
+
             // 备份每个需要保存的文件
-            foreach (var savedFile in manifest.SavedFiles)
+            foreach (var savedFileRaw in manifest.SavedFiles)
             {
-                var matchedFiles = GetMatchedFiles(scriptUserPath, savedFile);
-                foreach (var matchedFile in matchedFiles)
+                // 自动补全所有目录路径为以/结尾
+                var savedFile = savedFileRaw;
+                var fullPath = Path.Combine(scriptUserPath, savedFile.TrimEnd('/', '\\'));
+                bool isDir = savedFile.EndsWith("/") || Directory.Exists(fullPath);
+                if (!savedFile.EndsWith("/") && Directory.Exists(fullPath))
                 {
-                    // 创建备份文件路径，使用相对路径作为文件名以避免路径冲突
-                    var relativePath = Path.GetRelativePath(scriptUserPath, matchedFile);
-                    var backupFileName = relativePath.Replace('/', '_').Replace('\\', '_');
-                    var scriptPathSafe = scriptPath.Replace('/', '_').Replace('\\', '_');
-                    var backupFileNameFull = $"{scriptPathSafe}_{backupFileName}";
-                    var backupFilePath = Path.Combine(tempBackupPath, backupFileNameFull);
-                    
-                    try
+                    savedFile += "/";
+                    isDir = true;
+                }
+                if (isDir)
+                {
+                    var dirPath = Path.Combine(scriptUserPath, savedFile.TrimEnd('/', '\\'));
+                    if (Directory.Exists(dirPath))
                     {
-                        File.Copy(matchedFile, backupFilePath, true);
-                        backupFiles.Add(backupFilePath);
+                        var destDir = Path.Combine(backupScriptDir, savedFile.TrimEnd('/', '\\'));
+                        CopyDirectory(dirPath, destDir);
+                        backupFiles.Add(destDir);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogError(ex, $"备份文件失败: {matchedFile}");
+                        _logger.LogWarning($"需要备份的文件夹不存在: {dirPath}");
                     }
                 }
-                
-                if (matchedFiles.Count == 0)
+                else
                 {
-                    _logger.LogWarning($"没有找到匹配的文件: {savedFile}");
+                    var matchedFiles = GetMatchedFiles(scriptUserPath, savedFile);
+                    foreach (var matchedFile in matchedFiles)
+                    {
+                        var relativePath = Path.GetRelativePath(scriptUserPath, matchedFile);
+                        var backupFilePath = Path.Combine(backupScriptDir, relativePath);
+                        var backupFileDir = Path.GetDirectoryName(backupFilePath);
+                        if (!string.IsNullOrEmpty(backupFileDir) && !Directory.Exists(backupFileDir))
+                        {
+                            Directory.CreateDirectory(backupFileDir);
+                        }
+                        try
+                        {
+                            File.Copy(matchedFile, backupFilePath, true);
+                            backupFiles.Add(backupFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"备份文件失败: {matchedFile}");
+                        }
+                    }
+                    if (matchedFiles.Count == 0)
+                    {
+                        _logger.LogWarning($"没有找到匹配的文件: {savedFile}");
+                    }
                 }
             }
         }
@@ -1216,7 +1240,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             _logger.LogError(ex, $"备份脚本文件时发生错误: {scriptPath}");
         }
-
         return backupFiles;
     }
 
@@ -1228,7 +1251,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private void RestoreScriptFiles(string scriptPath, string repoPath)
     {
         var tempBackupPath = Global.Absolute("User\\Temp");
-        
+        var scriptPathSafe = scriptPath;
+        var backupScriptDir = Path.Combine(tempBackupPath, scriptPathSafe);
         try
         {
             // 获取脚本的manifest文件路径
@@ -1242,7 +1266,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 解析manifest文件获取savedFiles
             var manifestContent = File.ReadAllText(scriptManifestPath);
             var manifest = Manifest.FromJson(manifestContent);
-            
+
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
             {
                 _logger.LogInformation($"脚本 {scriptPath} 没有需要恢复的文件");
@@ -1256,60 +1280,46 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
                 return;
             }
-
             var scriptUserPath = Path.Combine(userPath, remainingPath);
-            
-            // 恢复每个备份的文件
-            foreach (var savedFile in manifest.SavedFiles)
+
+            // 还原所有备份文件
+            if (Directory.Exists(backupScriptDir))
             {
-                var matchedFiles = GetMatchedFiles(scriptUserPath, savedFile);
-                foreach (var matchedFile in matchedFiles)
+                foreach (var file in Directory.GetFiles(backupScriptDir, "*", SearchOption.AllDirectories))
                 {
-                    var relativePath = Path.GetRelativePath(scriptUserPath, matchedFile);
-                    var backupFileName = relativePath.Replace('/', '_').Replace('\\', '_');
-                    var scriptPathSafe = scriptPath.Replace('/', '_').Replace('\\', '_');
-                    var backupFileNameFull = $"{scriptPathSafe}_{backupFileName}";
-                    var backupFilePath = Path.Combine(tempBackupPath, backupFileNameFull);
-                    
-                    if (File.Exists(backupFilePath))
+                    var relativePath = Path.GetRelativePath(backupScriptDir, file);
+                    var restorePath = Path.Combine(scriptUserPath, relativePath);
+                    var restoreDir = Path.GetDirectoryName(restorePath);
+                    if (!string.IsNullOrEmpty(restoreDir) && !Directory.Exists(restoreDir))
                     {
-                        try
-                        {
-                            // 确保目标目录存在
-                            var targetDir = Path.GetDirectoryName(matchedFile);
-                            if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
-                            {
-                                Directory.CreateDirectory(targetDir);
-                            }
-                            
-                            File.Copy(backupFilePath, matchedFile, true);
-                            
-                            // 删除备份文件
-                            File.Delete(backupFilePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, $"恢复文件失败: {backupFilePath} -> {matchedFile}");
-                        }
+                        Directory.CreateDirectory(restoreDir);
                     }
-                    else
+                    try
                     {
-                        _logger.LogWarning($"备份文件不存在: {backupFilePath}");
+                        File.Copy(file, restorePath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"恢复文件失败: {file} -> {restorePath}");
                     }
                 }
             }
+            else
+            {
+                _logger.LogWarning($"备份目录不存在: {backupScriptDir}");
+            }
 
-            // 清理Temp目录（如果为空）
+            // 清理Temp目录下该脚本的备份
             try
             {
-                if (Directory.Exists(tempBackupPath) && !Directory.EnumerateFileSystemEntries(tempBackupPath).Any())
+                if (Directory.Exists(backupScriptDir))
                 {
-                    Directory.Delete(tempBackupPath);
+                    Directory.Delete(backupScriptDir, true);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "清理Temp目录失败");
+                _logger.LogWarning(ex, "清理Temp脚本备份目录失败");
             }
         }
         catch (Exception ex)
