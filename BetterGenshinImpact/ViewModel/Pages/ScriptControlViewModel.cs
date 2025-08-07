@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -83,7 +83,17 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OnAddScriptGroup()
     {
-        var str = PromptDialog.Prompt("请输入配置组名称", "新增配置组");
+        // 创建一个TextBox并设置自动聚焦
+        var textBox = new System.Windows.Controls.TextBox()
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        textBox.Loaded += (sender, e) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+        var str = PromptDialog.Prompt("请输入配置组名称", "新增配置组", textBox);
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
@@ -596,7 +606,17 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", item.Name);
+        var textBox = new System.Windows.Controls.TextBox()
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        textBox.Loaded += (sender, e) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "复制配置组", textBox, item.Name);
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
@@ -632,7 +652,17 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        var str = PromptDialog.Prompt("请输入配置组名称", "重命名配置组", item.Name);
+        var textBox = new System.Windows.Controls.TextBox()
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        textBox.Loaded += (sender, e) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+
+        var str = PromptDialog.Prompt("请输入配置组名称", "重命名配置组", textBox, item.Name);
         if (!string.IsNullOrEmpty(str))
         {
             if (item.Name == str)
@@ -728,7 +758,7 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Height = 435 // 固定高度
+            //Height = 435 // 固定高度
         };
 
         return scrollViewer;
@@ -794,7 +824,10 @@ public partial class ScriptControlViewModel : ViewModel
     private void OnAddKmScript()
     {
         var list = LoadAllKmScripts();
-        var combobox = new ComboBox();
+        var combobox = new ComboBox
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
 
         foreach (var fileInfo in list)
         {
@@ -824,7 +857,7 @@ public partial class ScriptControlViewModel : ViewModel
         var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath);
         var stackPanel = CreatePathingScriptSelectionPanel(root.Children);
 
-        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(500, 600));
+        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(600, 720));
         if (!string.IsNullOrEmpty(result))
         {
             AddSelectedPathingScripts((StackPanel)stackPanel.Content);
@@ -839,7 +872,13 @@ public partial class ScriptControlViewModel : ViewModel
             Content = "排除已选择过的目录",
             VerticalAlignment = VerticalAlignment.Center,
         };
+        CheckBox deepCheckBox = new CheckBox
+        {
+            Content = "深度搜索",
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         stackPanel.Children.Add(excludeCheckBox);
+        stackPanel.Children.Add(deepCheckBox);
 
         var filterTextBox = new TextBox
         {
@@ -848,22 +887,31 @@ public partial class ScriptControlViewModel : ViewModel
         };
         // 设置文本框自动聚焦
         filterTextBox.Loaded += (s, e) => filterTextBox.Focus();
-        filterTextBox.TextChanged += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
-        excludeCheckBox.Click += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked); };
+        filterTextBox.TextChanged += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked); };
+        excludeCheckBox.Click += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked); };
+        deepCheckBox.Click += delegate { ApplyFilter(stackPanel, list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked); };
         stackPanel.Children.Add(filterTextBox);
-        AddNodesToPanel(stackPanel, list, 0, filterTextBox.Text);
+        AddNodesToPanel(stackPanel, list, 0, filterTextBox.Text, deepCheckBox.IsChecked);
 
         var scrollViewer = new ScrollViewer
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Height = 435 // 固定高度
+            //Height = 435 // 固定高度
         };
 
         return scrollViewer;
     }
 
-    private void ApplyFilter(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? excludeSelectedFolder = false)
+    /// <summary>
+    /// 应用筛选条件并更新面板显示的文件树节点
+    /// </summary>
+    /// <param name="parentPanel">要更新的父面板</param>
+    /// <param name="nodes">要处理的文件树节点集合</param>
+    /// <param name="filter">用户输入的筛选关键词</param>
+    /// <param name="excludeSelectedFolder">是否排除已选择的文件夹</param>
+    /// <param name="isDeepSearch">是否启用深度搜索</param>
+    private void ApplyFilter(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? excludeSelectedFolder = false, bool? isDeepSearch = false)
     {
         if (parentPanel.Children.Count > 0)
         {
@@ -890,52 +938,78 @@ public partial class ScriptControlViewModel : ViewModel
                 //路径过滤
                 copiedNodes = FileTreeNodeHelper.FilterTree(copiedNodes, skipFolderNames);
                 copiedNodes = FileTreeNodeHelper.FilterEmptyNodes(copiedNodes);
-                AddNodesToPanel(parentPanel, copiedNodes, 0, filter);
+                AddNodesToPanel(parentPanel, copiedNodes, 0, filter, isDeepSearch);
             }
         }
         else
         {
-            AddNodesToPanel(parentPanel, nodes, 0, filter);
+            AddNodesToPanel(parentPanel, nodes, 0, filter, isDeepSearch);
         }
-
-
-        /*if (parentPanel.Children.Count > 0 && parentPanel.Children[1] is TextBox filterTextBox)
-        {
-            parentPanel.Children.Clear();
-            parentPanel.Children.Add(filterTextBox); // 保留筛选框
-            AddNodesToPanel(parentPanel, nodes, 0, filter);
-        }*/
     }
 
-    private void AddNodesToPanel(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, int depth, string filter)
+    /// <summary>
+    /// 递归地将文件树节点添加到面板中，支持筛选和深度控制
+    /// </summary>
+    /// <param name="parentPanel">要添加节点的父面板</param>
+    /// <param name="nodes">要处理的文件树节点集合</param>
+    /// <param name="depth">当前节点在树中的深度级别</param>
+    /// <param name="filter">用户输入的筛选关键词，为空时显示所有节点</param>
+    /// <param name="isDeepSearch">是否启用深度搜索</param>
+    /// <param name="parentMatched">当前节点的父级是否已经匹配筛选条件</param>
+    /// <returns>返回是否在当前层级找到了直接匹配的节点以用于递归</returns>
+    private bool AddNodesToPanel(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>> nodes, int depth, string filter, bool? isDeepSearch = false, bool parentMatched = false)
     {
+        bool containsDirectMatch = false;
+
         foreach (var node in nodes)
         {
-            if (depth == 0 && !string.IsNullOrEmpty(filter) && !node.FileName.Contains(filter, StringComparison.OrdinalIgnoreCase))
-            {
+            // 过滤不符合条件的节点
+            if (!ShouldShowNode(node, filter, isDeepSearch, depth, parentMatched))
                 continue;
-            }
 
             var checkBox = new CheckBox
             {
                 Content = node.FileName,
                 Tag = node.FilePath,
-                Margin = new Thickness(depth * 30, 0, 0, 0) // 根据深度计算Margin
-                ,
+                Margin = new Thickness(depth * 30, 0, 0, 0), // 根据深度计算Margin
                 Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
             };
 
             if (node.IsDirectory)
             {
                 var childPanel = new StackPanel();
-                AddNodesToPanel(childPanel, node.Children, depth + 1, filter);
+
+                // 获取父文件夹名称，用于特殊深度控制规则（因“地方特产”目录中的详细项目的深度与其他目录不同）
+                string? parentFolderName = GetParentFolderName(node);
+
+                // 获取当前节点是否匹配
+                bool nodeMatches = !string.IsNullOrEmpty(filter) && IsNodeMatched(node, filter);
+
+                // 判断是否应该处理子节点
+                // 1. 无筛选条件，总是处理
+                // 2. 有筛选条件，只有深度允许下才处理
+                bool shouldAddChildren = string.IsNullOrEmpty(filter) || depth < GetMaxDepth(isDeepSearch, parentFolderName, nodeMatches, parentMatched);
+
+                // 递归处理子节点
+                // 1. 只有在应该添加子节点时才进行递归调用
+                // 2. 传入更新的匹配状态：当前节点匹配或当前节点的父节点匹配
+                // 3. 返回值表示该节点的子树中是否包含匹配的节点
+                bool childContainsMatch = shouldAddChildren &&
+                    AddNodesToPanel(childPanel, node.Children, depth + 1, filter, isDeepSearch, nodeMatches || parentMatched);
+
+                // 如果子树中包含匹配，当前层级也标记为包含匹配
+                if (childContainsMatch)
+                    containsDirectMatch = true;
+
+                // 如果当前节点匹配，也标记为包含匹配
+                if (nodeMatches)
+                    containsDirectMatch = true;
 
                 var expander = new Expander
                 {
                     Header = checkBox,
                     Content = childPanel,
-                    IsExpanded = false // 默认不展开
-                    ,
+                    IsExpanded = ShouldExpandNode(filter, nodeMatches, parentMatched, childContainsMatch, depth, isDeepSearch, parentFolderName),
                     Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
                 };
 
@@ -947,8 +1021,175 @@ public partial class ScriptControlViewModel : ViewModel
             else
             {
                 parentPanel.Children.Add(checkBox);
+
+                // 如果是文件节点且匹配，标记为包含匹配
+                if (!string.IsNullOrEmpty(filter) && IsNodeMatched(node, filter))
+                    containsDirectMatch = true;
             }
         }
+
+        return containsDirectMatch;
+    }
+
+    /// <summary>
+    /// 该节点是否应该显示
+    /// </summary>
+    /// <param name="node">要检查的节点</param>
+    /// <param name="filter">筛选条件</param>
+    /// <param name="isDeepSearch">是否启用深度搜索</param>
+    /// <param name="currentDepth">当前深度</param>
+    /// <param name="parentMatched">父节点是否已匹配</param>
+    /// <returns>是否应该显示该节点</returns>
+    private static bool ShouldShowNode(FileTreeNode<PathingTask> node, string filter, bool? isDeepSearch = false, int currentDepth = 0, bool parentMatched = false)
+    {
+        // 如果没有筛选条件，显示所有节点
+        if (string.IsNullOrEmpty(filter))
+            return true;
+
+        // 如果该节点任意层级父节点已匹配，则忽略深度限制显示其全部子内容
+        if (parentMatched)
+            return true;
+
+        bool currentNodeMatches = IsNodeMatched(node, filter);
+
+        // 如果该节点匹配，显示该节点
+        if (currentNodeMatches)
+            return true;
+
+        // 不超过允许深度的前提下，递归目录节点，逐一判断其所有子节点是否应该显示
+        if (currentDepth >= GetMaxDepth(isDeepSearch, GetParentFolderName(node)))
+            return false;
+
+        if (node.IsDirectory && node.Children?.Any() == true)
+        {
+            foreach (var child in node.Children)
+            {
+                // 递归时，传递当前节点的匹配状态
+                // 每个子节点深度相同，所以如果递归过程中任意子节点应该显示，则当前节点也应该显示
+                if (ShouldShowNode(child, filter, isDeepSearch, currentDepth + 1, currentNodeMatches))
+                    return true; 
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 该节点是否匹配
+    /// </summary>
+    /// <param name="node">要检查的节点</param>
+    /// <param name="filter">筛选条件</param>
+    /// <returns>是否匹配</returns>
+    private static bool IsNodeMatched(FileTreeNode<PathingTask> node, string filter)
+    {
+        // 该节点名称是否匹配
+        if (node.FileName?.Contains(filter, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        // 往前追溯，该节点路径中是否至少有一段匹配
+        if (!string.IsNullOrEmpty(node.FilePath))
+        {
+            var relativePath = Path.GetRelativePath(MapPathingViewModel.PathJsonPath, node.FilePath);
+            var pathSegments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            // 处理路径段匹配，对于文件名需要去除扩展名
+            foreach (var segment in pathSegments)
+            {
+                // 如果这是最后一个段且不是目录，则去除扩展名后匹配
+                var segmentToMatch = segment;
+                if (segment == pathSegments.Last() && !node.IsDirectory)
+                {
+                    segmentToMatch = Path.GetFileNameWithoutExtension(segment);
+                }
+
+                if (segmentToMatch.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 该节点是否应该自动展开
+    /// </summary>
+    /// <param name="filter">筛选条件</param>
+    /// <param name="currentNodeMatches">当前节点是否匹配</param>
+    /// <param name="parentMatched">父节点是否已匹配</param>
+    /// <param name="childContainsMatch">子树是否包含匹配</param>
+    /// <param name="depth">当前深度</param>
+    /// <param name="isDeepSearch">是否启用深度搜索</param>
+    /// <param name="parentFolderName">父文件夹名称</param>
+    /// <returns>是否应该展开</returns>
+    private static bool ShouldExpandNode(string filter, bool currentNodeMatches, bool parentMatched, bool childContainsMatch, int depth, bool? isDeepSearch, string? parentFolderName)
+    {
+        // 如果没有筛选条件（输入框为空），所有节点都不展开
+        if (string.IsNullOrEmpty(filter))
+            return false;
+
+        // 如果该节点的父节点已匹配，子目录不再展开，便于浏览
+        if (parentMatched)
+            return false;
+
+        // 该节点的深度大于等于深度限制时，不再展开
+        if (depth >= GetMaxDepth(isDeepSearch, parentFolderName))
+            return false;
+
+        // 该节点名称直接匹配，自动展开
+        if (!string.IsNullOrEmpty(filter) && currentNodeMatches)
+            return true;
+
+        // 该节点的子树中存在至少一个匹配的节点，自动展开该节点以显示深层匹配节点
+        if (childContainsMatch)
+            return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// 获取该节点的父文件夹名称
+    /// </summary>
+    /// <param name="node">节点</param>
+    /// <returns>父文件夹名称</returns>
+    private static string? GetParentFolderName(FileTreeNode<PathingTask> node)
+    {
+        // 如果节点没有文件路径，返回 null
+        if (string.IsNullOrEmpty(node.FilePath))
+            return null;
+
+        // 获取相对于 PathJsonPath 的路径
+        var relativePath = Path.GetRelativePath(MapPathingViewModel.PathJsonPath, node.FilePath);
+        var pathSegments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        // 返回第一级目录名称
+        return pathSegments.Length > 0 ? pathSegments[0] : null;
+    }
+
+    /// <summary>
+    /// 获取允许的最大深度
+    /// </summary>
+    /// <param name="isDeepSearch">是否启用深度搜索</param>
+    /// <param name="parentFolderName">父文件夹文件名内容</param>
+    /// <param name="currentNodeMatched">当前节点是否匹配</param>
+    /// <param name="parentMatched">父节点是否已匹配</param>
+    /// <returns>允许的深度</returns>
+    private static int GetMaxDepth(bool? isDeepSearch, string? parentFolderName, bool currentNodeMatched = false, bool parentMatched = false)
+    {
+        // 如果开启深度搜索，允许全部子内容
+        if (isDeepSearch == true)
+            return int.MaxValue;
+
+        // 如果当前节点匹配或父节点已匹配，允许全部子内容
+        if (currentNodeMatched || parentMatched)
+            return int.MaxValue;
+
+        int defaultDepth = 1;
+
+        // 特殊目录的深度扩展
+        if (parentFolderName == "地方特产")
+            return defaultDepth + 1;
+
+        return defaultDepth;
     }
 
     private void SetChildCheckBoxesState(StackPanel childStackPanel, bool state)

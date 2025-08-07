@@ -132,27 +132,27 @@ jobs:
         with:
           repository: babalae/bettergi-publish
           path: publish
-      - name: 🗜️ Extract Map
-        run: |
-            cd publish
-            # Extract zst files
-            Get-ChildItem -Filter *.zst | ForEach-Object {
-                if ($_.PSIsContainer -eq $false) {
-                    $file = $_.Name
-                    $output_file = "..\dist\BetterGI\Assets\Map\$($file -replace '.zst$', '')"
-                    & zstd -d $file -o $output_file
-                    Write-Host "$file -> $output_file"
-                }
-            }
-            # Extract zip files
-            Get-ChildItem -Filter *.zip | ForEach-Object {
-                if ($_.PSIsContainer -eq $false) {
-                    $file = $_.FullName
-                    $destination = "..\dist\BetterGI\Assets\Map"
-                    Expand-Archive -Path $file -DestinationPath $destination -Force
-                    Write-Host "$file -> $destination"
-                }
-            }
+      # - name: 🗜️ Extract Map
+      #   run: |
+      #       cd publish
+      #       # Extract zst files
+      #       Get-ChildItem -Filter *.zst | ForEach-Object {
+      #           if ($_.PSIsContainer -eq $false) {
+      #               $file = $_.Name
+      #               $output_file = "..\dist\BetterGI\Assets\Map\$($file -replace '.zst$', '')"
+      #               & zstd -d $file -o $output_file
+      #               Write-Host "$file -> $output_file"
+      #           }
+      #       }
+      #       # Extract zip files
+      #       Get-ChildItem -Filter *.zip | ForEach-Object {
+      #           if ($_.PSIsContainer -eq $false) {
+      #               $file = $_.FullName
+      #               $destination = "..\dist\BetterGI\Assets\Map"
+      #               Expand-Archive -Path $file -DestinationPath $destination -Force
+      #               Write-Host "$file -> $destination"
+      #           }
+      #       }
       # 生成更新器
       - name: 📥 Download kachina-builder release
         if: ${{ github.event.inputs.kachina-channel == 'release' }}

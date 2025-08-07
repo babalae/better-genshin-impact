@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -25,6 +26,17 @@ public class PathingTaskInfo
     /// <see cref="PathingTaskType"/>
     /// </summary>
     public string Type { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 排序
+    /// 同个文件夹下的任务会根据 Order 排序进入调度器
+    /// </summary>
+    public int Order { get; set; } = 0;
+    
+    /// <summary>
+    /// 标签，用于展示
+    /// </summary>
+    public string[] Tags { get; set; } = [];
 
     /// <summary>
     /// 区分怪物拾取
@@ -34,10 +46,19 @@ public class PathingTaskInfo
     [JsonIgnore]
     public string TypeDesc => PathingTaskType.GetMsgByCode(Type);
     
-    public string MapName { get; set; } = MapTypes.Teyvat.ToString();
-
-    // 任务参数/配置
-    // 持续操作 切换某个角色 长E or 短E
-    // 持续疾跑
-    // 边跳边走
+    /// <summary>
+    /// 地图名称
+    /// </summary>
+    public string MapName { get; set; } = nameof(MapTypes.Teyvat);
+    
+    /// <summary>
+    /// 默认的地图匹配方式
+    /// SIFT 老的匹配方式
+    /// TemplateMatch 支持分层地图
+    /// </summary>
+    public string MapMatchMethod { get; set; } = "SIFT";
+    
+    
+    public List<MaterialInfo> Items { get; set; } = [];
+    
 }
