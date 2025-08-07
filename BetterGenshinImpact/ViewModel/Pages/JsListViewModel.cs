@@ -274,6 +274,23 @@ public partial class JsListViewModel : ViewModel
             mainGrid.Children.Add(contentPanel);
         }
 
+        // 添加操作按钮
+        // var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal };
+        //
+        // var runButton = new Button
+        // {
+        //     Content = "执行脚本",
+        //     Margin = new Thickness(0, 0, 10, 0)
+        // };
+        // runButton.Click += async (s, e) => await OnStartRun(script);
+        // buttonPanel.Children.Add(runButton);
+        //
+        // var openFolderButton = new Button { Content = "打开目录" };
+        // openFolderButton.Click += (s, e) => OnOpenScriptProjectFolder(script);
+        // buttonPanel.Children.Add(openFolderButton);
+
+        // panel.Children.Add(buttonPanel);
+
         return border;
     }
 
