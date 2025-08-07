@@ -124,7 +124,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
     
-    public static List<string> BossNumList = ["1", "2", "3"];
+    public static List<int> BossNumList = [1, 2, 3];
 
 
     [ObservableProperty]
