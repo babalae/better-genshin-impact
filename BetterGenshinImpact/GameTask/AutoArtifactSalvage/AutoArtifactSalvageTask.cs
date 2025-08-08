@@ -182,7 +182,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         if (salvageBtnConfirm.IsExist())
         {
             salvageBtnConfirm.Click();
-            await Delay(800, ct);
+            await Delay(1500, ct);
             // 点击确认
             using var ra6 = CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra6))
