@@ -84,7 +84,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// 启用 OpenVINO 缓存。默认关闭。
     /// </summary>
     [ObservableProperty]
-    private bool _enableOpenVinoCache = true;
+    private bool _enableOpenVinoCache = false;
 
     #endregion
 }
