@@ -25,13 +25,13 @@ public class ClaimBattlePassRewardsTask
 {
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    private readonly string claimAllLocalizedString;
+    private readonly string[] claimAllLocalizedStrings;
 
     public ClaimBattlePassRewardsTask()
     {
         IStringLocalizer<ClaimBattlePassRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimBattlePassRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.claimAllLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "一键");
+        this.claimAllLocalizedStrings = ((string[])["一键", "领取"]).Select(i => stringLocalizer.WithCultureGet(cultureInfo, i)).ToArray();
     }
 
     public async Task Start(CancellationToken ct)
@@ -88,8 +88,8 @@ public class ClaimBattlePassRewardsTask
     {
         using var ra = CaptureToRectArea();
         var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.2)));
-        var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.claimAllLocalizedString));
-        Debug.WriteLine(this.claimAllLocalizedString);
+        var wt = ocrList.FirstOrDefault(txt => this.claimAllLocalizedStrings.Any(i => Regex.IsMatch(txt.Text, i)));
+        Debug.WriteLine(this.claimAllLocalizedStrings);
         if (wt != null)
         {
             wt.Click();
