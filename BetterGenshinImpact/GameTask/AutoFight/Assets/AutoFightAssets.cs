@@ -14,6 +14,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect ERect;
     public Rect ECooldownRect;
     public Rect QRect;
+    public Rect ZCooldownRect;
     public Rect EndTipsUpperRect; // 挑战达成提示
     public Rect EndTipsRect;
     public RecognitionObject WandererIconRa;
@@ -58,6 +59,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             (int)(41 * AssetScale), (int)(18 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
+        ZCooldownRect = new Rect(CaptureRect.Width - (int)(130 * AssetScale),  (int)(814 * AssetScale),
+            (int)(60 * AssetScale), (int)(24 * AssetScale));
         // 小道具位置 1920-133,800,60,50
         GadgetRect = new Rect(CaptureRect.Width - (int)(133 * AssetScale), (int)(800 * AssetScale),
             (int)(60 * AssetScale), (int)(50 * AssetScale));
