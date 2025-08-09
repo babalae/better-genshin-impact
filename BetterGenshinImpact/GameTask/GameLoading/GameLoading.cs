@@ -562,10 +562,6 @@ public class GameLoadingTrigger : ITaskTrigger
 
     /// <summary>
     /// 将 Region 中心点映射到 1080P 坐标系并点击。
-    /// 计算方式：
-    /// - 先把 Region 相对桌面的中心坐标转换到原神捕获区域坐标系
-    /// - 再除以 ScaleTo1080PRatio 得到 1080P 下的坐标
-    /// - 用 GameRegion1080PPosClick 点击
     /// </summary>
     private void ClickRegionCenterBy1080(Region region)
     {
