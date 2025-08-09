@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+﻿using System;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
@@ -13,6 +14,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BtnBlackCancel;
     public RecognitionObject BtnOnlineYes;
     public RecognitionObject BtnOnlineNo;
+    public Lazy<RecognitionObject> BtnExitDoor;
 
     public RecognitionObject PaimonMenuRo;
     public RecognitionObject BlueTrackPoint;
@@ -111,6 +113,13 @@ public class ElementAssets : BaseAssets<ElementAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_online_no.png"),
             Use3Channels = true
         }.InitTemplate();
+        BtnExitDoor = new Lazy<RecognitionObject>(() => new RecognitionObject
+        {
+            Name = "BtnExitDoor",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_exit_door.png"),
+            DrawOnWindow = false
+        }.InitTemplate());
 
         // 派蒙菜单
         // 此图38x40 小地图210x210 小地图左上角位置 24,-15

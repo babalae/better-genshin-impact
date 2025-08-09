@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -74,16 +74,20 @@ public partial class PromptDialog
 
     public static string Prompt(string question, string title, string defaultValue = "", PromptDialogConfig? config = null)
     {
-        var inst = new PromptDialog(question, title, new TextBox(), defaultValue, config);
+        var textBox = new TextBox
+        {
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+        var inst = new PromptDialog(question, title, textBox, defaultValue, config);
         inst.ShowDialog();
-        return inst.DialogResult == true ? inst.ResponseText : defaultValue;
+        return inst.DialogResult == true ? inst.ResponseText : "";
     }
 
     public static string Prompt(string question, string title, UIElement uiElement, string defaultValue = "", PromptDialogConfig? config = null)
     {
         var inst = new PromptDialog(question, title, uiElement, defaultValue, config);
         inst.ShowDialog();
-        return inst.DialogResult == true ? inst.ResponseText : defaultValue;
+        return inst.DialogResult == true ? inst.ResponseText : "";
     }
 
     public static string Prompt(string question, string title, UIElement uiElement, Size size, PromptDialogConfig? config = null)
@@ -91,7 +95,7 @@ public partial class PromptDialog
         var inst = new PromptDialog(question, title, uiElement, "", config)
         {
             Width = size.Width,
-            Height = size.Height
+            Height = size.Height 
         };
         inst.ShowDialog();
         return inst.DialogResult == true ? inst.ResponseText : "";
@@ -115,7 +119,7 @@ public partial class PromptDialog
             }
         }
     }
-
+    
     private void BtnOkClick(object sender, RoutedEventArgs e)
     {
         DialogResult = true;

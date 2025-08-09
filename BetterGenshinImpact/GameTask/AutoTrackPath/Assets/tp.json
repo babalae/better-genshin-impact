@@ -11639,6 +11639,557 @@
                 "name": "荒废砌造坞",
                 "description": "圣遗物本",
                 "area": "安饶之野"
+            },
+            {
+                "id": "1516",
+                "gadgetId": "70550016",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -2163.3134765625,
+                    0,
+                    9282.982421875
+                ],
+                "tranPosition": [
+                    -2159.451171875,
+                    0,
+                    9281.5888671875
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "安饶之野"
+            },
+            {
+                "id": "1517",
+                "gadgetId": "70550017",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -3641.2431640625,
+                    0,
+                    11953.50390625
+                ],
+                "tranPosition": [
+                    -3639.5625,
+                    0,
+                    11956.943359375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "安饶之野"
+            },
+            {
+                "id": "1518",
+                "gadgetId": "70550018",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -2216.94921875,
+                    0,
+                    9884.2548828125
+                ],
+                "tranPosition": [
+                    -2210.521484375,
+                    0,
+                    9884.453125
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "安饶之野"
+            },
+            {
+                "id": "1519",
+                "gadgetId": "70550019",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -2804.21875,
+                    0,
+                    9644.5712890625
+                ],
+                "tranPosition": [
+                    -2810.7724609375,
+                    0,
+                    9649.404296875
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "觐山古道"
+            },
+            {
+                "id": "1520",
+                "gadgetId": "70550020",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -2866.7626953125,
+                    0,
+                    10388.3955078125
+                ],
+                "tranPosition": [
+                    -2874.271484375,
+                    0,
+                    10382.716796875
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "天火之冠"
+            },
+            {
+                "id": "1521",
+                "gadgetId": "70550021",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -3109.7431640625,
+                    0,
+                    10279.595703125
+                ],
+                "tranPosition": [
+                    -3110.966796875,
+                    0,
+                    10276.044921875
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "天火之冠"
+            },
+            {
+                "id": "1522",
+                "gadgetId": "70550022",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -3133.6318359375,
+                    0,
+                    10571.23828125
+                ],
+                "tranPosition": [
+                    -3126.810546875,
+                    0,
+                    10574.28515625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "天火之冠"
+            },
+            {
+                "id": "1600",
+                "gadgetId": "70580000",
+                "gadgetType": "TransPointSecond",
+                "type": "Goddess",
+                "position": [
+                    -157.1904296875,
+                    0,
+                    13613.736328125
+                ],
+                "tranPosition": [
+                    -159.693359375,
+                    0,
+                    13597.2431640625
+                ],
+                "country": "纳塔",
+                "name": "七天神像-火",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1601",
+                "gadgetId": "70580001",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    838.42578125,
+                    0,
+                    13728.33203125
+                ],
+                "tranPosition": [
+                    844.1767578125,
+                    0,
+                    13730.177734375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "彩彩崖"
+            },
+            {
+                "id": "1602",
+                "gadgetId": "70580002",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    663.9228515625,
+                    0,
+                    13945.7470703125
+                ],
+                "tranPosition": [
+                    673.28857421875,
+                    0,
+                    13941.0322265625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "彩彩崖"
+            },
+            {
+                "id": "1603",
+                "gadgetId": "70580003",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1118.513671875,
+                    0,
+                    14047.5615234375
+                ],
+                "tranPosition": [
+                    1127.05859375,
+                    0,
+                    14051.22265625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩"
+            },
+            {
+                "id": "1604",
+                "gadgetId": "70580004",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    766.72119140625,
+                    0,
+                    14113.724609375
+                ],
+                "tranPosition": [
+                    764.3779296875,
+                    0,
+                    14115.6162109375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "呼呼丘"
+            },
+            {
+                "id": "1605",
+                "gadgetId": "70580005",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    625.37353515625,
+                    0,
+                    14293.3671875
+                ],
+                "tranPosition": [
+                    619.828125,
+                    0,
+                    14291.0810546875
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "浪浪湾"
+            },
+            {
+                "id": "1606",
+                "gadgetId": "70580006",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    807.43505859375,
+                    0,
+                    14219.244140625
+                ],
+                "tranPosition": [
+                    802.97900390625,
+                    0,
+                    14221.96484375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "浪浪湾"
+            },
+            {
+                "id": "1607",
+                "gadgetId": "70580007",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    800.0498046875,
+                    0,
+                    14436.8095703125
+                ],
+                "tranPosition": [
+                    793.6181640625,
+                    0,
+                    14433.0478515625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "浪浪湾"
+            },
+            {
+                "id": "1608",
+                "gadgetId": "70580008",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1345.7255859375,
+                    0,
+                    15041.7822265625
+                ],
+                "tranPosition": [
+                    1344.90234375,
+                    0,
+                    15034.4228515625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "提提岛"
+            },
+            {
+                "id": "1609",
+                "gadgetId": "70580009",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1418.57177734375,
+                    0,
+                    15189.43359375
+                ],
+                "tranPosition": [
+                    1419.7529296875,
+                    0,
+                    15191.1298828125
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "提提岛"
+            },
+            {
+                "id": "1610",
+                "gadgetId": "70580010",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1607.16015625,
+                    0,
+                    15052.0634765625
+                ],
+                "tranPosition": [
+                    1603.966796875,
+                    0,
+                    15051.8232421875
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "提提岛"
+            },
+            {
+                "id": "1611",
+                "gadgetId": "70580011",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1629.70263671875,
+                    0,
+                    15200.9208984375
+                ],
+                "tranPosition": [
+                    1632.75341796875,
+                    0,
+                    15203.220703125
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "提提岛"
+            },
+            {
+                "id": "1612",
+                "gadgetId": "70580012",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -333.734375,
+                    0,
+                    13615.90234375
+                ],
+                "tranPosition": [
+                    -333.7548828125,
+                    0,
+                    13619.36328125
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1613",
+                "gadgetId": "70580013",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    379.5009765625,
+                    0,
+                    13629.6669921875
+                ],
+                "tranPosition": [
+                    380.0869140625,
+                    0,
+                    13615.119140625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1614",
+                "gadgetId": "70580014",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    327.88720703125,
+                    0,
+                    13905.501953125
+                ],
+                "tranPosition": [
+                    323.728515625,
+                    0,
+                    13914.365234375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1615",
+                "gadgetId": "70580015",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    420.9140625,
+                    0,
+                    14154.23828125
+                ],
+                "tranPosition": [
+                    424.09619140625,
+                    0,
+                    14151.6708984375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1616",
+                "gadgetId": "70580016",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    627.64013671875,
+                    0,
+                    14167.0869140625
+                ],
+                "tranPosition": [
+                    629.2802734375,
+                    0,
+                    14165.697265625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1617",
+                "gadgetId": "70580017",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    558.4404296875,
+                    0,
+                    14654.306640625
+                ],
+                "tranPosition": [
+                    555.97998046875,
+                    0,
+                    14652.7001953125
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1618",
+                "gadgetId": "70580018",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    724.61669921875,
+                    0,
+                    14733.154296875
+                ],
+                "tranPosition": [
+                    727.2392578125,
+                    0,
+                    14731.634765625
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1619",
+                "gadgetId": "70580019",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1000.1416015625,
+                    0,
+                    14637.193359375
+                ],
+                "tranPosition": [
+                    996.80810546875,
+                    0,
+                    14641.158203125
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠度假村"
+            },
+            {
+                "id": "1620",
+                "gadgetId": "70580020",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    380.193359375,
+                    0,
+                    13755.11328125
+                ],
+                "tranPosition": [
+                    386.13916015625,
+                    0,
+                    13756.9833984375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠集市"
+            },
+            {
+                "id": "1621",
+                "gadgetId": "70580021",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    470.82958984375,
+                    0,
+                    13979.1875
+                ],
+                "tranPosition": [
+                    466.79443359375,
+                    0,
+                    13975.380859375
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "悠悠集市"
             }
         ]
     },

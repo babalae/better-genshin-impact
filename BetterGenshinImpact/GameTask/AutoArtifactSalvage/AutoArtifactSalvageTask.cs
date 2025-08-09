@@ -173,7 +173,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         Bv.ClickWhiteConfirmButton(ra4);
-        await Delay(500, ct);
+        await Delay(1500, ct);
 
 
         // 点击分解
@@ -182,7 +182,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         if (salvageBtnConfirm.IsExist())
         {
             salvageBtnConfirm.Click();
-            await Delay(800, ct);
+            await Delay(1000, ct);
             // 点击确认
             using var ra6 = CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra6))

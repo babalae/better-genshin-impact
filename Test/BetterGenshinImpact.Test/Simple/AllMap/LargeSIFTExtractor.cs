@@ -19,12 +19,11 @@ public class LargeSiftExtractor
     private const int OVERLAP_SIZE = BLOCK_SIZE * 3;
 
     private readonly Feature2D _sift = SIFT.Create();
-
-
+    
     public static void Gen1024()
     {
-        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5";
-        var mainMap2048BlockMat = new Mat($@"{rootPath}\map_55_2048.png", ImreadModes.Color);
+        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8";
+        var mainMap2048BlockMat = new Mat($@"{rootPath}\map_2048.png", ImreadModes.Color);
         // 缩小 2048/1024 = 2
         var targetFilePath = $@"{rootPath}\1024_map.png";
         // opencv 缩小
@@ -37,10 +36,12 @@ public class LargeSiftExtractor
 
     public static void Gen256Sift()
     {
-        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5";
-        var mainMap2048BlockMat = new Mat($@"{rootPath}\map_55_2048.png", ImreadModes.Color);
+        Environment.SetEnvironmentVariable("OPENCV_IO_MAX_IMAGE_PIXELS", Math.Pow(2, 40).ToString("F0"));
+
+        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8";
+        var mainMap2048BlockMat = new Mat($@"{rootPath}\map_2048.png", ImreadModes.Color);
         // 缩小 2048/256 = 8
-        var targetFilePath = $@"{rootPath}\mainMap256Block.png";
+        var targetFilePath = $@"{rootPath}\Teyvat_0_256.png";
         // opencv 缩小
         var mainMap256BlockMat =
             mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 8, mainMap2048BlockMat.Height / 8));
@@ -48,16 +49,17 @@ public class LargeSiftExtractor
         mainMap256BlockMat = mainMap256BlockMat.CvtColor(ColorConversionCodes.BGR2GRAY);
         mainMap256BlockMat.SaveImage(targetFilePath);
         FeatureMatcher featureMatcher = new(new Mat(targetFilePath, ImreadModes.Grayscale),
-            new FeatureStorage("mainMap256Block", rootPath));
+            new FeatureStorage("Teyvat_0_256", rootPath));
 
         Debug.WriteLine("done!");
     }
 
     public static void GenLargeSift()
     {
+        Environment.SetEnvironmentVariable("OPENCV_IO_MAX_IMAGE_PIXELS", Math.Pow(2, 40).ToString("F0"));
         var extractor = new LargeSiftExtractor();
-        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5\map_55_2048.png",
-            @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.5\");
+        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8\map_2048.png",
+            @"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8\");
     }
 
     public void ExtractAndSaveSift(string imagePath, string outputPath)
@@ -199,8 +201,8 @@ public class LargeSiftExtractor
     private void SaveFeatures(List<KeyPoint> keypoints, Mat descriptors, string outputPath)
     {
         Debug.WriteLine($"保存 {keypoints.Count} 个关键点和描述符到 {outputPath}");
-        SaveKeyPointArray2(keypoints.ToArray(), Path.Combine(outputPath, "mainMap2048Block_SIFT.kp.bin"));
-        SaveDescMat2(descriptors, Path.Combine(outputPath, "mainMap2048Block_SIFT.mat.png"));
+        SaveKeyPointArray2(keypoints.ToArray(), Path.Combine(outputPath, "Teyvat_0_2048_SIFT.kp.bin"));
+        SaveDescMat2(descriptors, Path.Combine(outputPath, "Teyvat_0_2048_SIFT.mat.png"));
         Debug.WriteLine("特征保存成功。");
     }
 

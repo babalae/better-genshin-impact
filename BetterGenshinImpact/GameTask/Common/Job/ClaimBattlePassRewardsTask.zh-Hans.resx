@@ -120,4 +120,7 @@
   <data name="一键" xml:space="preserve">
     <value>一键</value>
   </data>
+  <data name="领取" xml:space="preserve">
+    <value>领取</value>
+  </data>
 </root>

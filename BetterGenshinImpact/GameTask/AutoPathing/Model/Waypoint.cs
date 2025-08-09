@@ -56,4 +56,9 @@ public class Waypoint
     public string? Action { get; set; }
     
     public string? ActionParams { get; set; }
+    
+    /// <summary>
+    /// 怪物、特产
+    /// </summary>
+    public List<MaterialInfo> Items { get; set; } = [];
 }
