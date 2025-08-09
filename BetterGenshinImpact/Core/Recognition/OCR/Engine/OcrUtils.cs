@@ -100,12 +100,20 @@ public static class OcrUtils
         // 租用内存并复制数据
         var total = (int)blob.Total();
         tensorMemoryOwner = MemoryPool<float>.Shared.Rent(total);
-        blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
-        // 计算输出形状
-        return new DenseTensor<float>(
-            tensorMemoryOwner.Memory[..total],
-            new[] { 1, channels, stdMat.Rows, stdMat.Cols }
-        );
+        try
+        {
+            blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
+            // 计算输出形状
+            return new DenseTensor<float>(
+                tensorMemoryOwner.Memory[..total],
+                new[] { 1, channels, stdMat.Rows, stdMat.Cols }
+            );
+        }
+        catch
+        {
+            tensorMemoryOwner.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -156,11 +164,19 @@ public static class OcrUtils
 
         var total = blob.Total();
         tensorMemoryOwner = MemoryPool<float>.Shared.Rent((int)total);
-        blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
-        return new DenseTensor<float>(
-            tensorMemoryOwner.Memory[..(int)total],
-            new[] { 1, resizedImage.Channels(), resizedImage.Rows, resizedImage.Cols }
-        );
+        try
+        {
+            blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
+            return new DenseTensor<float>(
+                tensorMemoryOwner.Memory[..(int)total],
+                new[] { 1, resizedImage.Channels(), resizedImage.Rows, resizedImage.Cols }
+            );
+        }
+        catch
+        {
+            tensorMemoryOwner.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -190,5 +206,27 @@ public static class OcrUtils
         var mat = new Mat(new Size(dimensions[3], dimensions[2]), MatType.CV_32FC1);
         denseTensor.Buffer.Span.CopyTo(mat.AsSpan<float>());
         return mat;
+    }
+
+    public static float[] CreateWeights(Dictionary<string, float> extraWeights, IReadOnlyList<string> labels)
+    {
+        var result =  new float[labels.Count + 2];
+        Array.Fill(result, 1.0f);
+        //new Mat(1, labels.Count + 2, MatType.CV_32FC1, Scalar.All(1.0));
+        var labelList = labels.ToList();
+        foreach (var (key, value) in extraWeights)
+        {
+            if (labelList.Contains(key))
+            {
+                var index = labelList.IndexOf(key) + 1;
+                if (index < result.Length)
+                {
+                    result[index] = value;
+                }
+                
+            }
+        }
+
+        return result;
     }
 }

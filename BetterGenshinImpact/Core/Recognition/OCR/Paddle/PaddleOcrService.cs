@@ -108,7 +108,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         {
             return (
                 new Det(DetectionModel, DetectionVersion, onnxFactory),
-                new Rec(RecognitionModel, RecLabel(), RecognitionVersion, onnxFactory));
+                new Rec(RecognitionModel, RecLabel(), RecognitionVersion,new Dictionary<string, float>(),0, onnxFactory));
         }
 
         public static readonly PaddleOcrModelType V4 = Create(
