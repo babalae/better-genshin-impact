@@ -1071,7 +1071,8 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code
             || waypoint.Action == ActionEnum.ExitAndRelogin.Code
-            || waypoint.Action == ActionEnum.SetTime.Code)
+            || waypoint.Action == ActionEnum.SetTime.Code
+            || waypoint.Action == ActionEnum.UseGadget.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig

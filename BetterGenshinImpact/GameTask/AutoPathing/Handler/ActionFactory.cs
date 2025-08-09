@@ -28,6 +28,7 @@ public class ActionFactory
                 "fishing" => new FishingHandler(),
                 "exit_and_relogin" => new ExitAndReloginHandler(),
                 "set_time" => new SetTimeHandler(),
+                "use_gadget" => new UseGadgetHandler(),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });
@@ -39,7 +40,7 @@ public class ActionFactory
         {
             return key switch
             {
-                "up_down_grab_leaf" => new UpDownGrabLeaf(),
+                "up_down_grab_leaf" => new UpDownGrabLeafHandler(),
                 "stop_flying" => new StopFlyingHandler(),
                 _ => throw new ArgumentException("未知的前置 action 类型")
             };
