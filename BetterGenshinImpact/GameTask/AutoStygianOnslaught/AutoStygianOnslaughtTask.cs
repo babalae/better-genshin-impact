@@ -95,6 +95,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
+            
+            await Delay(1500, _ct); // 开始的三秒计时
 
             // 队伍没初始化成功则重试
             var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
@@ -106,7 +108,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             // 0. 切换到第一个角色
             var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
-            await Delay(2950, _ct); // 开始的三秒计时
+            await Delay(1500, _ct); // 开始的三秒计时
             // 走到boss前面
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             await Delay(1200, _ct);
