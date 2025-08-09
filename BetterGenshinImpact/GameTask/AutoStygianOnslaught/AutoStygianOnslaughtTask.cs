@@ -239,7 +239,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
             .ClickUntilDisappears();
         _logger.LogInformation($"{Name}：进入秘境");
 
-        await page.Locator(ElementAssets.Instance.LeylineDisorderIconRo).WaitFor();
+        await Delay(2000, _ct);
+        await page.Locator(ElementAssets.Instance.LeylineDisorderIconRo).WaitFor(60000);
         await Delay(1000, _ct);
 
         _logger.LogInformation($"{Name}：步行前往钥匙");
