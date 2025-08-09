@@ -42,7 +42,7 @@ public class UseGadgetHandler : IActionHandler
                 Logger.LogWarning("小道具正在CD中，当前剩余时间：{Cd}秒，时间过长，可能是识别错误。跳过！", cd);
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
             }
-            else
+            else if (cd > 0)
             {
                 Logger.LogInformation("小道具正在CD中，等待CD结束 ：{Cd}秒", cd);
                 // 等待小道具CD结束
@@ -50,9 +50,13 @@ public class UseGadgetHandler : IActionHandler
                 await Delay(waitTime, ct);
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
             }
+            else
+            {
+                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+            }
         }
-
-        await Delay(1000, ct);
+        Logger.LogInformation("使用小道具");
+        await Delay(300, ct);
     }
 
     /// <summary>
