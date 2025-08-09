@@ -113,6 +113,18 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private bool _kazuhaPickupEnabled = true;
     
+    [ObservableProperty]
+    private string _guardianAvatar = " ";
+    
+    [ObservableProperty]
+    private bool _guardianCombatSkip = false;
+    
+    [ObservableProperty]
+    private bool _skipModel = false;
+    
+    [ObservableProperty]
+    private bool _guardianAvatarHold = false;
+    
     /// <summary>
     /// 战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下）
     /// </summary>
