@@ -278,7 +278,7 @@ public class AutoFightTask : ISoloTask
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
         
         //盾奶优先功能角色预处理
-        var guardianAvatar = _taskParam.GuardianAvatar == " " ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
+        var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
         
         AutoFightSeek.RotationCount= 0; // 重置旋转次数
         
