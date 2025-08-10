@@ -21,6 +21,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.AutoEat;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -166,6 +167,11 @@ public partial class AllConfig : ObservableObject
     public AutoArtifactSalvageConfig AutoArtifactSalvageConfig { get; set; } = new();
 
     /// <summary>
+    ///     自动吃药配置
+    /// </summary>
+    public AutoEatConfig AutoEatConfig { get; set; } = new();
+
+    /// <summary>
     ///     截取物品图标配置
     /// </summary>
     public GetGridIconsConfig GetGridIconsConfig { get; set; } = new();
@@ -247,6 +253,7 @@ public partial class AllConfig : ObservableObject
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoStygianOnslaughtConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;

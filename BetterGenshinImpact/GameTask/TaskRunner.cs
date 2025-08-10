@@ -133,6 +133,9 @@ public class TaskRunner
         // 清空实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();
 
+        // 重新加载基础触发器（包括自动吃药等实时功能）
+        var basicTriggers = GameTaskManager.LoadInitialTriggers();
+        TaskTriggerDispatcher.Instance().SetTriggers(basicTriggers);
         
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();

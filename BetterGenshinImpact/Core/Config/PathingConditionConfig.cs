@@ -29,6 +29,10 @@ public partial class PathingConditionConfig : ObservableObject
     // 使用小道具的间隔时间(ms)
     [ObservableProperty]
     private int _useGadgetIntervalMs = 0;
+    
+    // 启用自动吃药功能
+    [ObservableProperty]
+    private bool _autoEatEnabled = true;
 
     public static PathingConditionConfig Default => new()
     {
