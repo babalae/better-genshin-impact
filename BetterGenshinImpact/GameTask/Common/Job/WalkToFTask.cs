@@ -18,7 +18,7 @@ public class WalkToFTask
     /// <param name="timeoutMilliseconds">超时时间</param>
     /// <param name="runToF">是否冲刺</param>
     /// <returns></returns>
-    public async Task<bool> Start(CancellationToken ct, int timeoutMilliseconds = 30000, bool runToF = false)
+    public async Task<bool> Start(CancellationToken ct, bool needPress = true, bool runToF = false, int timeoutMilliseconds = 30000)
     {
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         await Delay(30, ct);
@@ -33,12 +33,18 @@ public class WalkToFTask
             bool res = await NewRetry.WaitForElementAppear(AutoPickAssets.Instance.PickRo, null, ct, timeoutMilliseconds / 100 + 1, 100);
             if (res)
             {
+                if (needPress)
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                }
+
                 Logger.LogInformation("检测到交互键");
             }
             else
             {
                 Logger.LogWarning("前往目标[F]超时！");
             }
+
             return res;
         }
         finally

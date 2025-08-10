@@ -67,7 +67,6 @@ public class AutoDomainTask : ISoloTask
     private readonly string skipLocalizedString;
     private readonly string leyLineDisorderLocalizedString;
     private readonly string clickanywheretocloseLocalizedString;
-    private readonly string enterString;
     private readonly string matchingChallengeString;
     private readonly string rapidformationString;
     private readonly string limitedFullyString;
@@ -94,7 +93,6 @@ public class AutoDomainTask : ISoloTask
         this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
         this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
         this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
-        this.enterString = stringLocalizer.WithCultureGet(cultureInfo, "Enter");
         this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
         this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
         this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全开");
@@ -271,7 +269,7 @@ public class AutoDomainTask : ISoloTask
                 if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
                 {
                         menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.FRo,
+                        AutoPickAssets.Instance.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
                         _ct,
                         20,
@@ -286,7 +284,7 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.FRo,
+                        AutoPickAssets.Instance.PickRo,
                         () =>  Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
                         _ct,
                         20,
@@ -298,7 +296,7 @@ public class AutoDomainTask : ISoloTask
                 else if ("太山府".Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.FRo,
+                        AutoPickAssets.Instance.PickRo,
                         () => { },
                     _ct,
                         20,
@@ -308,7 +306,7 @@ public class AutoDomainTask : ISoloTask
                 else
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                    AutoPickAssets.Instance.FRo,
+                    AutoPickAssets.Instance.PickRo,
                     () => Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
                     _ct,
                     20,
@@ -368,12 +366,12 @@ public class AutoDomainTask : ISoloTask
             GetConfirmRa("单人挑战"),
             () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         if (!menuFound)
         {
-            throw new Exception( "单人挑战 按键未出现，请检查是否已进入秘境页面");
+            Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
         }
         
         using var limitedFullyStringRa = CaptureToRectArea();
@@ -462,7 +460,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     ra2.Click();
                     ra2.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");//看LOG是否要显示
+                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");
                 }
                 using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
                     ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
@@ -473,8 +471,8 @@ public class AutoDomainTask : ISoloTask
                 }
             },
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         
         // 等待队伍选择界面出现
@@ -482,18 +480,19 @@ public class AutoDomainTask : ISoloTask
             ElementAssets.Instance.PartyBtnChooseView,
             () =>
             {
-                Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); //看LOG是否要显示 
+                Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); 
             },
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         if (!teamUiFound)
         {
-            throw new Exception("队伍选择界面未出现。");
+            Logger.LogWarning("队伍选择界面未出现，跳过切换队伍。");
+        }else
+        {
+            await SwitchParty(_taskParam.PartyName);
         }
-        
-        await SwitchParty(_taskParam.PartyName);//现在如果切换失败，抛出异常，停止运行，要不要继续进行？
         
         // 点击开始挑战确认并等待“开始挑战”文字消失
         var startFightFound = await NewRetry.WaitForElementDisappear(
@@ -506,12 +505,12 @@ public class AutoDomainTask : ISoloTask
                 });
             },
             _ct,
-            20,
-            500
+            10,
+            1000
         );
         if (!startFightFound)
         {
-            throw new Exception("开始挑战按钮未出现或未能点击。");
+            Logger.LogWarning("开始挑战按钮未出现或未能点击。");
         }
         // 载入
         await Delay(1000, _ct);
@@ -523,15 +522,15 @@ public class AutoDomainTask : ISoloTask
         var domainTipFound = await NewRetry.WaitForAction(() =>
         {
             using var ra = CaptureToRectArea();
+            
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.2, ra.Width, ra.Height * 0.6));
-            var ocrListLeft = ra.FindMulti(RecognitionObject.Ocr(0, ra.Height * 0.9, ra.Width * 0.1,
-                ra.Height * 0.07));
+            var ocrListLeft = ra.Find(AutoFightAssets.Instance.AbnormalIconRa);
             return (ocrList.Any(t => t.Text.Contains(leyLineDisorderLocalizedString) || 
-                                     t.Text.Contains(clickanywheretocloseLocalizedString)) || ocrListLeft.Any(t => t.Text.Contains(enterString))); 
+                                     t.Text.Contains(clickanywheretocloseLocalizedString)))|| ocrListLeft.IsExist(); 
         }, _ct, 20, 500);
         if (!domainTipFound)
         {
-            throw new Exception("秘境提示未出现或未能点击。");
+            Logger.LogWarning("秘境提示未出现或未能点击。");
         }
 
         //持续点击，直到左下角出现目标文字
@@ -551,14 +550,14 @@ public class AutoDomainTask : ISoloTask
             }
             // 检查左下角区域是否还存在目标文字，消失则继续，存在则结束
             using var leftBottom = CaptureToRectArea();
-            var leftBottomOcr = leftBottom.FindMulti(RecognitionObject.Ocr(0, leftBottom.Height * 0.9, leftBottom.Width * 0.1,
-                leftBottom.Height * 0.07));
-            return leftBottomOcr.Any(t =>
-                t.Text.Contains(enterString));
+            var leftBottomOcr = leftBottom.Find(AutoFightAssets.Instance.AbnormalIconRa);
+            return leftBottomOcr.IsExist();
         }, _ct, 20, 500);
         if (!leftBottomFound)
         {
-            throw new Exception("秘境提示未出现或未能点击。");
+            //尝试随意点击一下右下角
+            GameCaptureRegion.GameRegion1080PPosClick(1515,892);
+            Logger.LogWarning("秘境提示未出现或未能点击。");
         }
         
         await Delay(500, _ct);

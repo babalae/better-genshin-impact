@@ -18,12 +18,10 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
-using Vanara.PInvoke;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.Core.Recognition;
-
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -45,7 +43,7 @@ public class AutoFightTask : ISoloTask
 
     RecognitionObject ChatEnterIconRa = null;
 
-private class TaskFightFinishDetectConfig
+    private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
         public int DetectDelayTime = 450;
@@ -53,6 +51,7 @@ private class TaskFightFinishDetectConfig
         public double CheckTime = 5;
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
+        public bool RotateFindEnemyEnabled = false;
         public int FightStatusCheckTime = 500;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
@@ -66,6 +65,7 @@ private class TaskFightFinishDetectConfig
                 ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
             DetectDelayTime =
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
+            RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
         }
 
         public (int, int, int) BattleEndProgressBarColor { get; }
@@ -196,7 +196,27 @@ private class TaskFightFinishDetectConfig
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
     }
+    public CombatScenes GetCombatScenesWithRetry()
+    {
+        const int maxRetries = 5;
+        var retryDelayMs = 1000; // 可选：重试间隔，单位毫秒
 
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            if (combatScenes.CheckTeamInitialized())
+            {
+                return combatScenes;
+            }
+
+            if (attempt < maxRetries)
+            {
+                Thread.Sleep(retryDelayMs); // 可选：延迟再试
+            }
+        }
+
+        throw new Exception("识别队伍角色失败（已重试 5 次）");
+    }
     // 方法1：判断是否是单个数字
 
     /*public int delayTime=1500;
@@ -208,11 +228,12 @@ private class TaskFightFinishDetectConfig
         _ct = ct;
 
         LogScreenResolution();
-        var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+        var combatScenes = GetCombatScenesWithRetry();
+        /*var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
             throw new Exception("识别队伍角色失败");
-        }
+        }*/
         initChatButton(CaptureToRectArea());
 
 
@@ -354,8 +375,7 @@ private class TaskFightFinishDetectConfig
                             timeOutFlag = true;
                             break;
                         }
-
-                        // 通用化战斗策略
+                        
                         command.Execute(combatScenes);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
@@ -386,7 +406,7 @@ private class TaskFightFinishDetectConfig
                                 }
                                 else
                                 {
-                                    Logger.LogInformation($"延时检查为{delayTime}毫秒");
+                                    // Logger.LogInformation($"延时检查为{delayTime}毫秒");
                                 }
 
                                 /*if (i<combatCommands.Count - 1)
@@ -474,7 +494,7 @@ private class TaskFightFinishDetectConfig
             
             if (kazuha != null)
             {
-                var time = DateTime.UtcNow - kazuha.LastSkillTime;
+                var time = TimeSpan.FromSeconds(kazuha.GetSkillCdSeconds());
                 //当万叶cd大于3时，此时不再触发万叶拾取，
                 if (!(lastFightName == "枫原万叶" && time.TotalSeconds > 3))
                 {
@@ -517,8 +537,6 @@ private class TaskFightFinishDetectConfig
                 }
                     
             }
-            
-
         }
 
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
@@ -541,46 +559,38 @@ private class TaskFightFinishDetectConfig
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
-    private async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
+    public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
     {
-        //  YOLO 判断血条和怪物位置
-        // if (HasFightFlagByYolo(CaptureToRectArea()))
-        //  {
-        //    _lastFightFlagTime = DateTime.Now;
-        //  return false;
-        //   }
-        //
-
-        //Random random = new Random();
-        //double randomFraction = random.NextDouble();  // 生成 0 到 1 之间的随机小数
-        //此处随机数，防止固定招式下，使按L正好处于招式下，导致无法准确判断战斗结束
-        // double randomNumber = 1 + (randomFraction * (3 - 1));
-
-        // 几秒内没有检测到血条和怪物位置，则开始旋转视角重新检测
-        //if ((DateTime.Now - _lastFightFlagTime).TotalSeconds > randomNumber)
-        //{
-        // 旋转完毕后都没有检测到血条和怪物位置，则按L键确认战斗结束
-        /**
-        Simulation.SendInput.Mouse.MiddleButtonClick();
-        await Delay(300, _ct);
-        for (var i = 0; i < 8; i++)
+        if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
-            Simulation.SendInput.Mouse.MoveMouseBy((int)(500 * _dpi), 0);
-            await Delay(800, _ct); // 等待视角稳定
-            if (HasFightFlagByYolo(CaptureToRectArea()))
+            bool? result = null;
+            try
             {
-                _lastFightFlagTime = DateTime.Now;
-                return false;
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime,delayTime, _ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+                result = false;
+            }
+
+            if (result != null)
+            {
+                return result.Value;
             }
         }
-        **/
-        //Simulation.SendInput.SimulateAction(GIActions.Drop);//在换队前取消爬墙状态
-        await Delay(delayTime, _ct);
+
+        if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
+        
         Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
         // 最终方案确认战斗结束
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
+        
         var ra = CaptureToRectArea();
+        //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
+        // 只提取橙色
+        
         var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
         var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
         Simulation.SendInput.SimulateAction(GIActions.Drop);
@@ -597,14 +607,16 @@ private class TaskFightFinishDetectConfig
 
         Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-        /**
-        if (!Bv.IsInMainUi(ra))
-        {
-            // 如果不在主界面，说明异常，直接结束战斗继续下一步（地图追踪下一步会进入异常处理）
-            Logger.LogInformation("当前不在主界面，直接结束战斗！");
-            return true;
-        }**/
 
+        if (_finishDetectConfig.RotateFindEnemyEnabled)
+        {
+            Task.Run(() =>
+            {
+                Scalar bloodLower = new Scalar(255, 90, 90);
+                MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, Logger, _ct);
+            } ,_ct);
+        }
+        
         _lastFightFlagTime = DateTime.Now;
         return false;
     }
