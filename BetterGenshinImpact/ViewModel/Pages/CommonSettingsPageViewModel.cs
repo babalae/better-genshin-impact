@@ -331,12 +331,18 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
     {
-        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
+        // await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
+        await UnloadOcr();
     }
     [RelayCommand]
     private async Task OnPaddleOcrModelConfigChanged(PaddleOcrModelConfig value)
     {
         Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
+        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
+    }
+    [RelayCommand]
+    private async Task UnloadOcr()
+    {
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
 }

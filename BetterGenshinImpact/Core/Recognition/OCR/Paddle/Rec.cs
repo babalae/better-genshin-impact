@@ -16,9 +16,11 @@ public class Rec(
     BgiOnnxModel model,
     IReadOnlyList<string> labels,
     OcrVersionConfig config,
-    Dictionary<string, float>? extraWeights, // 额外的权重参数
-    float scoreThreshold, // 识别结果分数阈值，低于该值的结果将被过滤掉
-    BgiOnnxFactory bgiOnnxFactory)
+    BgiOnnxFactory bgiOnnxFactory,
+    float scoreThreshold = 0f, // 识别结果分数阈值，低于该值的结果将被过滤掉
+    Dictionary<string, float>? extraWeights = null, // 额外的权重参数
+    bool allowDuplicateChar = false // 是否允许重复字符
+)
     : IDisposable
 {
     private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
@@ -162,32 +164,32 @@ public class Rec(
                         {
                             using var weightMat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1, _weights);
                             using Mat mat = row.Mul(weightMat);
-                            var maxIdx2 = new int[2];
-                            row.MinMaxIdx(out _, out var maxVal1, [], maxIdx2);
                             mat.MinMaxIdx(out _, out maxVal, [], maxIdx);
-                            if (maxVal1 != maxVal)
-                            {
-                                var a = 1;
-                                
-                            }
                         }
                     }
 
                     chars[n] = (maxIdx[1], (float)maxVal);
                 });
-                return chars;
-            }).Select(chars =>
+                return (chars, charCount);
+            }).Select(arg =>
             {
+                var (chars, charCount) = arg;
                 float score = 0;
                 var result = new StringBuilder();
-                foreach (var (index, charScore) in chars)
+                var lastIndex = 0;
+                for (int i = 0; i < chars.Length; i++)
                 {
+                    var (index, charScore) = chars[i];
                     if (index != 0 && charScore > scoreThreshold)
                     {
-                        //todo 防止叠词词
-                        score += charScore;
-                        result.Append(OcrUtils.GetLabelByIndex(index, labels));
+                        if (allowDuplicateChar || i % charCount == 0 || index != lastIndex)
+                        {
+                            score += charScore;
+                            result.Append(OcrUtils.GetLabelByIndex(index, labels));
+                        }
                     }
+
+                    lastIndex = index;
                 }
 
                 return new OcrRecognizerResult(result.ToString(),
