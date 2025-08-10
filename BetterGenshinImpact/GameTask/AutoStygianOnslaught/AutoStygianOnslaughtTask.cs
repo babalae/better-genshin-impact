@@ -203,7 +203,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // F5 打开活动
         Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
-        await page.GetByText("活动一览").WaitFor();
+        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3,0.2)).WaitFor();
+        await Delay(500, _ct);
 
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
         {
