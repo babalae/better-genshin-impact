@@ -94,7 +94,7 @@ public partial class PathingPartyConfig : ObservableObject
     
     // 启用自动吃药功能
     [ObservableProperty]
-    private bool _autoEatEnabled = true;
+    private bool _autoEatEnabled = false;
 
     //在连续执行时是否隐藏
     [ObservableProperty]

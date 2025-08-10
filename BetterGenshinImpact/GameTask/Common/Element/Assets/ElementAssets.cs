@@ -277,7 +277,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "BtnArtifactSalvageConfirm",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage_confirm.png"),
-            RegionOfInterest = CaptureRect.CutBottom(0.1),
+            RegionOfInterest = CaptureRect.CutRightBottom(0.3,0.1),
             DrawOnWindow = false
         }.InitTemplate();
 

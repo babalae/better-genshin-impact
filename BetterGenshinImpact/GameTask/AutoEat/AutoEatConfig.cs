@@ -13,7 +13,7 @@ public partial class AutoEatConfig : ObservableObject
     /// 是否启用自动吃药
     /// </summary>
     [ObservableProperty]
-    private bool _enabled = true;
+    private bool _enabled = false;
 
     /// <summary>
     /// 是否显示吃药通知
