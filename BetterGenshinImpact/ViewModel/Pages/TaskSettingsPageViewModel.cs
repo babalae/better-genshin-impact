@@ -123,6 +123,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private List<string> _domainNameList;
 
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
+    
+    public static List<int> BossNumList = [1, 2, 3];
+
 
     [ObservableProperty]
     private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
