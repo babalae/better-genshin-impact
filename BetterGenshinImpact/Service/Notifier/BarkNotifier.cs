@@ -125,6 +125,7 @@ namespace BetterGenshinImpact.Service.Notifier
             string apiHost,
             string group,
             string sound,
+            string icon,
             BarkOptions options = null)
         {
             // 输入验证
@@ -148,6 +149,7 @@ namespace BetterGenshinImpact.Service.Notifier
             _defaultOptions = options ?? new BarkOptions();
             _defaultOptions.Group = group;
             _defaultOptions.Sound = sound;
+            _defaultOptions.Icon = icon;
 
             // 使用HttpClient进行API调用
             _httpClient = new HttpClient();
