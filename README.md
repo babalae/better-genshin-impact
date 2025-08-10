@@ -74,7 +74,8 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 > 
 > 不知道下载哪个？第一次使用？请看：[快速上手](https://bettergi.com/quickstart.html) ， 遇到问题请先看：[常见问题](https://bettergi.com/faq.html)
 
-最新编译版本可以从自动构建中获取： [![](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml/badge.svg)](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml)
+最新测试版本可以从自动构建中获取： [![](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml/badge.svg)](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml)
+或者从CNB上直接下载（速度快）：[CNB Releases](https://cnb.cool/bettergi/better-genshin-impact/-/releases)
 
 ## 使用方法
 由于图像识别比较吃性能，低配置电脑可能无法正常使用部分功能。
