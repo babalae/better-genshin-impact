@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 须弥四叶印
 /// </summary>
-public class UpDownGrabLeaf : IActionHandler
+public class UpDownGrabLeafHandler : IActionHandler
 {
     private const int InitialVerticalMovement = 1000;
     private const int MovementDirectionChangeInterval = 10;

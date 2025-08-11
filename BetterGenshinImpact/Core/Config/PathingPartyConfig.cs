@@ -92,6 +92,10 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _autoRunEnabled = true;
     
+    // 启用自动吃药功能
+    [ObservableProperty]
+    private bool _autoEatEnabled = false;
+
     //在连续执行时是否隐藏
     [ObservableProperty]
     private bool _hideOnRepeat = false;
@@ -120,7 +124,8 @@ public partial class PathingPartyConfig : ObservableObject
         return new PathingPartyConfig
         {
             OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
-            UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs
+            UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs,
+            AutoEatEnabled = pathingConditionConfig.AutoEatEnabled
         };
     }
 }

@@ -95,6 +95,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
+            
+            await Delay(1500, _ct); // 开始的三秒计时
 
             // 队伍没初始化成功则重试
             var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
@@ -106,7 +108,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             // 0. 切换到第一个角色
             var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
-            await Delay(2950, _ct); // 开始的三秒计时
+            await Delay(1500, _ct); // 开始的三秒计时
             // 走到boss前面
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             await Delay(1200, _ct);
@@ -201,7 +203,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // F5 打开活动
         Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
-        await page.GetByText("活动一览").WaitFor();
+        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3,0.2)).WaitFor();
+        await Delay(500, _ct);
 
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
         {
@@ -239,7 +242,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
             .ClickUntilDisappears();
         _logger.LogInformation($"{Name}：进入秘境");
 
-        await page.Locator(ElementAssets.Instance.LeylineDisorderIconRo).WaitFor();
+        await Delay(2000, _ct);
+        await page.Locator(ElementAssets.Instance.LeylineDisorderIconRo).WaitFor(60000);
         await Delay(1000, _ct);
 
         _logger.LogInformation($"{Name}：步行前往钥匙");

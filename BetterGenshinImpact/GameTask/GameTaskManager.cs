@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
+using BetterGenshinImpact.GameTask.AutoEat.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
@@ -45,6 +46,7 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoSkip", new AutoSkip.AutoSkipTrigger());
         TriggerDictionary.TryAdd("AutoFish", new AutoFishing.AutoFishingTrigger());
         TriggerDictionary.TryAdd("AutoCook", new AutoCook.AutoCookTrigger());
+        TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
 
         return ConvertToTriggerList();
     }
@@ -94,6 +96,10 @@ internal class GameTaskManager
                 triggerName = "AutoSkip";
                 trigger = new AutoSkip.AutoSkipTrigger();
                 break;
+            case "AutoEat":
+                triggerName = "AutoEat";
+                trigger = new AutoEat.AutoEatTrigger();
+                break;
         }
 
         if (triggerName == null || trigger == null)
@@ -114,6 +120,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("QuickTeleport")?.Init();
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
+            TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }
@@ -134,6 +141,7 @@ internal class GameTaskManager
         QuickSereniteaPotAssets.DestroyInstance();
         GameLoadingAssets.DestroyInstance();
         MapLazyAssets.DestroyInstance();
+        AutoEatAssets.DestroyInstance();
     }
 
     /// <summary>
