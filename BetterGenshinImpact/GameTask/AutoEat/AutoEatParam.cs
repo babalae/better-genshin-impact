@@ -22,6 +22,12 @@ public class AutoEatParam : BaseTaskParam
     /// </summary>
     public int EatInterval { get; set; }
 
+    /// <summary>
+    /// 食物名称
+    /// 如果传空就使用便携营养袋，否则进入背包查找对应食物并使用
+    /// </summary>
+    public string? FoodName { get; set; }
+
     public AutoEatParam()
     {
         SetDefault();
