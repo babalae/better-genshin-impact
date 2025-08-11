@@ -137,7 +137,7 @@ public class TaskControl
                     maxTotalSeconds  = autoRestartConfig.BlurSeconds;
                 }
             }
-            Logger.LogWarning($"已经过去时间{(DateTime.Now - startTime).TotalSeconds}/{maxTotalSeconds}");
+            
             // 超过限制时间直接尝试重启游戏
             if ((DateTime.Now - startTime).TotalSeconds >= maxTotalSeconds)
             {
@@ -150,10 +150,6 @@ public class TaskControl
                     SystemControl.CloseGame();
                     Thread.Sleep(2000);
                     SystemControl.RestartApplication(["--TaskProgress", taskProgress.Name]);
-                }
-                else
-                {
-                    Logger.LogError("????????");
                 }
                 break;
             }
