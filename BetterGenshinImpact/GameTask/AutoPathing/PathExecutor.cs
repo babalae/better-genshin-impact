@@ -37,6 +37,8 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -1309,9 +1311,36 @@ public class PathExecutor
             }
 
             int noDisabledUiButtonTimes = 0;
-
+            var count = 0;
+            var startTime = DateTime.Now;
+            var maxTotalSeconds = Int32.MaxValue;
+            
             while (true)
             {
+                if (count == 0)
+                {
+                    var autoRestartConfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+                    if (autoRestartConfig.Enabled && autoRestartConfig.StoryStuckSeconds > 0)
+                    {
+                        maxTotalSeconds  = autoRestartConfig.StoryStuckSeconds;
+                    }
+                }
+                // 超过限制时间直接尝试重启游戏
+                if ((DateTime.Now - startTime).TotalSeconds >= maxTotalSeconds)
+                {
+                    var taskProgress = RunnerContext.Instance.taskProgress;
+                    if (taskProgress!=null)
+                    {
+                        var errorMessage = $"{maxTotalSeconds}秒内依旧停留在剧情处，尝试重启游戏来恢复！";
+                        Logger.LogError(errorMessage);
+                        Notify.Event(NotificationEvent.GroupEnd).Error(errorMessage);
+                        CloseGame();
+                        Thread.Sleep(2000);
+                        RestartApplication(["--TaskProgress", taskProgress.Name]);
+                    }
+                    break;
+                }
+                
                 ra = CaptureToRectArea();
                 disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
                 if (disabledUiButtonRa.IsExist())
@@ -1328,6 +1357,7 @@ public class PathExecutor
                     }
                 }
 
+                count++;
                 await Delay(210, ct);
             }
         }

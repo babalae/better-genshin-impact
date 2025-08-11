@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -105,9 +107,41 @@ public class TaskControl
         }
 
         var count = 0;
+        var startTime = DateTime.Now;
+        var maxTotalSeconds = Int32.MaxValue;
+        
         //未激活则尝试恢复窗口
         while (!SystemControl.IsGenshinImpactActiveByProcess())
         {
+            if (count == 0)
+            {
+                var autoRestartConfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
+                if (autoRestartConfig.Enabled && autoRestartConfig.BlurSeconds > 0)
+                {
+                    maxTotalSeconds  = autoRestartConfig.BlurSeconds;
+                }
+            }
+            Logger.LogWarning($"已经过去时间{(DateTime.Now - startTime).TotalSeconds}/{maxTotalSeconds}");
+            // 超过限制时间直接尝试重启游戏
+            if ((DateTime.Now - startTime).TotalSeconds >= maxTotalSeconds)
+            {
+                var taskProgress = RunnerContext.Instance.taskProgress;
+                if (taskProgress!=null)
+                {
+                    var errorMessage = $"{maxTotalSeconds}秒内未恢复窗口，尝试重启游戏来恢复！";
+                    Logger.LogError(errorMessage);
+                    Notify.Event(NotificationEvent.GroupEnd).Error(errorMessage);
+                    SystemControl.CloseGame();
+                    Thread.Sleep(2000);
+                    SystemControl.RestartApplication(["--TaskProgress", taskProgress.Name]);
+                }
+                else
+                {
+                    Logger.LogError("????????");
+                }
+                break;
+            }
+            
             if (count >= 10 && count % 10 == 0)
             {
                 Logger.LogInformation("多次尝试未恢复，尝试最小化后激活窗口！");

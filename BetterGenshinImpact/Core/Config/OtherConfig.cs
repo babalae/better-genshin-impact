@@ -48,6 +48,15 @@ public partial class OtherConfig : ObservableObject
         [ObservableProperty]
         private bool _isPathingFailureExceptional = false;
         
+        //调度器任务中，失焦多少秒后未恢复重启，大于0时生效
+        [ObservableProperty]
+        private int _blurSeconds = -1;
+        
+        //调度器任务中，卡剧情多少秒后重启，大于0时生效
+        [ObservableProperty]
+        private int _storyStuckSeconds = -1;
+        
+        
     }
     
     public partial class Miyoushe : ObservableObject
