@@ -40,6 +40,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using TextBox = Wpf.Ui.Controls.TextBox;
+using BetterGenshinImpact.GameTask.AutoEat;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -123,7 +124,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private List<string> _domainNameList;
 
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
-    
+
     public static List<int> BossNumList = [1, 2, 3];
 
 
@@ -185,6 +186,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
+    [ObservableProperty]
+    private bool _switchAutoEatEnabled;
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -225,6 +229,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoDomainEnabled = false;
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
+        SwitchAutoAlbumEnabled = false;
+        SwitchAutoFishingEnabled = false;
+        SwitchArtifactSalvageEnabled = false;
+        SwitchAutoRedeemCodeEnabled = false;
+        SwitchAutoStygianOnslaughtEnabled = false;
+        SwitchGetGridIconsEnabled = false;
+        SwitchAutoEatEnabled = false;
         await Task.Delay(800);
     }
 
@@ -597,24 +608,44 @@ public partial class TaskSettingsPageViewModel : ViewModel
         p.Height = 500;
         p.ShowDialog();
         if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
-        { 
+        {
             char[] separators = ['\r', '\n'];
-                 var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+            var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
 
-                .Select(code => code.Trim())
-                .Where(code => !string.IsNullOrEmpty(code))
-                .ToList();
+           .Select(code => code.Trim())
+           .Where(code => !string.IsNullOrEmpty(code))
+           .ToList();
 
             if (codes.Count == 0)
             {
                 Toast.Warning("没有有效的兑换码");
                 return;
             }
-            
+
             SwitchAutoRedeemCodeEnabled = true;
             await new TaskRunner()
                 .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
             SwitchAutoRedeemCodeEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoEat()
+    {
+        try
+        {
+            SwitchAutoEatEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new AutoEatTask(new AutoEatParam()
+            {
+                CheckInterval = Config.AutoEatConfig.CheckInterval,
+                EatInterval = Config.AutoEatConfig.EatInterval,
+                ShowNotification = Config.AutoEatConfig.ShowNotification,
+                FoodName = Config.AutoEatConfig.PrimaryFoodName
+            }));
+        }
+        finally
+        {
+            SwitchAutoEatEnabled = false;
         }
     }
 }

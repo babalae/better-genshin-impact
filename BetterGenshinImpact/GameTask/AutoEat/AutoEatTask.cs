@@ -1,9 +1,7 @@
-using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -14,13 +12,11 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
-using Serilog.Core;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.Kernel32;
 
 namespace BetterGenshinImpact.GameTask.AutoEat;
 
@@ -51,7 +47,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
         Init();
         _logger.LogInformation("自动吃药任务启动");
 
-        if (_taskParam.FoodName == null)
+        if (String.IsNullOrWhiteSpace(_taskParam.FoodName))
         {
             if (!IsTakeFood())
             {
@@ -90,6 +86,9 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
                 string predName = result.Item1;
                 if (predName == _taskParam.FoodName)
                 {
+                    // 点击item
+                    itemRegion.Click();
+                    await Delay(300, ct);
                     // 点击确定
                     using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
                     if (ra.IsExist())
