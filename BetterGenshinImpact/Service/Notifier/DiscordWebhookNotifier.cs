@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using System.Web;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -63,19 +65,20 @@ public class DiscordWebhookNotifier : INotifier
         if (string.IsNullOrEmpty(_webhookUrl))
             throw new NotifierException("Discord webhook URL is not set");
 
-        var url = $"{_webhookUrl}?with_components=true";
+        var uriBuilder = new UriBuilder(_webhookUrl);
+        var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+        query["with_components"] = "true";
+        uriBuilder.Query = query.ToString();
+        var url = uriBuilder.ToString();
 
-        var payloadJson = new Dictionary<string, object>
-        {
-            ["flags"] = 1 << 15,
-            ["components"] = new List<object>(),
-        };
+        var payloadJson = new Dictionary<string, object> { ["flags"] = 1 << 15 };
 
         if (!string.IsNullOrWhiteSpace(_username))
             payloadJson["username"] = _username;
-
         if (!string.IsNullOrWhiteSpace(_avatarUrl))
             payloadJson["avatar_url"] = _avatarUrl;
+
+        HttpContent requestContent;
 
         var components = new List<object>
         {
@@ -87,13 +90,10 @@ public class DiscordWebhookNotifier : INotifier
             },
         };
 
-        HttpContent requestContent;
-
         if (content.Screenshot != null)
         {
             var fileName = $"screenshot.{_imageFormat}";
             payloadJson["attachments"] = new List<object> { new { id = 0, filename = fileName } };
-
             components = new List<object>
             {
                 new
@@ -108,11 +108,9 @@ public class DiscordWebhookNotifier : INotifier
                     },
                 },
             };
-
-            ((List<object>)payloadJson["components"]).Add(new { type = 17, components });
+            payloadJson["components"] = new List<object> { new { type = 17, components } };
 
             var multipart = new MultipartFormDataContent("boundary");
-
             using (var ms = new MemoryStream())
             {
                 await content.Screenshot.SaveAsync(ms, _imageEncoder);
@@ -122,13 +120,12 @@ public class DiscordWebhookNotifier : INotifier
                 );
                 multipart.Add(imageContent, "files[0]", fileName);
             }
-
             multipart.Add(JsonContent.Create(payloadJson), "payload_json");
             requestContent = multipart;
         }
         else
         {
-            ((List<object>)payloadJson["components"]).Add(new { type = 17, components });
+            payloadJson["components"] = new List<object> { new { type = 17, components } };
             requestContent = JsonContent.Create(payloadJson);
         }
 
