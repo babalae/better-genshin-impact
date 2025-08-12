@@ -184,6 +184,9 @@
 		<None Update="GameTask\LogParse\Assets\log.js">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\GameLoading\Assets\1920x1080\enter_game.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
