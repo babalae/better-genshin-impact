@@ -304,108 +304,81 @@ public class GameLoadingTrigger : ITaskTrigger
         if (isBili && !biliLoginClicked)
         {
             // B服流程：处理登录窗口
-            int failCount = 0;
-            int maxAttempts = 30;
-            
-            while (failCount < maxAttempts)
+            var process = Process.GetProcessesByName("YuanShen").FirstOrDefault();
+            var (loginWindow, windowType) = GetBiliLoginWindow(process);
+
+            if (process != null && loginWindow != IntPtr.Zero)
             {
-                var process = Process.GetProcessesByName("YuanShen").FirstOrDefault();
-                var (loginWindow, windowType) = GetBiliLoginWindow(process);
-                
-                if (process != null && loginWindow != IntPtr.Zero)
+                if (windowType.Contains("协议"))
                 {
-                    if (windowType.Contains("协议"))
+                    ImageRegion screen;
+                    try
                     {
-                        ImageRegion screen;
-                        try
-                        {
-                            screen = CaptureWindowToRectArea(loginWindow);
-                        }
-                        catch
-                        {
-                            screen = TaskControl.CaptureToRectArea();
-                        }
-
-                        var ocrList = screen.FindMulti(RecognitionObject.OcrThis);
-                        var agreeRegion = ocrList.FirstOrDefault(r =>
-                            r.Text.Contains("同意") && !r.Text.Contains("不同意"));
-                        if (agreeRegion != null)
-                        {
-                            ClickRegionCenterBy1080(agreeRegion);
-                            // 记录协议窗口点击位置
-                            var (centerDesktopX, centerDesktopY) =
-                                agreeRegion.ConvertPositionToDesktopRegion(agreeRegion.Width / 2,
-                                    agreeRegion.Height / 2);
-                            var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-                            var inCaptureX = centerDesktopX - captureRect.X;
-                            var inCaptureY = centerDesktopY - captureRect.Y;
-                            var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                            lastAgreementClickPos = (inCaptureX / scale, inCaptureY / scale);
-                            SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
-                        }
-
-                        Thread.Sleep(2000);
-
-                        // 检查窗口是否还存在
-                        var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
-                        if (remainingWindow == IntPtr.Zero || !remainingType.Contains("协议"))
-                        {
-                            // 协议窗口已消失，继续等待登录窗口
-                            failCount++;
-                            continue;
-                        }
-
-                        failCount++;
-                        continue;
+                        screen = CaptureWindowToRectArea(loginWindow);
+                    }
+                    catch
+                    {
+                        screen = TaskControl.CaptureToRectArea();
                     }
 
-                    if (windowType.Contains("登录"))
+                    var ocrList = screen.FindMulti(RecognitionObject.OcrThis);
+                    var agreeRegion = ocrList.FirstOrDefault(r =>
+                        r.Text.Contains("同意") && !r.Text.Contains("不同意"));
+                    if (agreeRegion != null)
                     {
-                        Thread.Sleep(2000);
-                        // 使用协议窗口坐标或默认坐标点击登录
-                        if (lastAgreementClickPos.HasValue)
-                        {
-                            GameCaptureRegion.GameRegion1080PPosClick(lastAgreementClickPos.Value.x1080,
-                                lastAgreementClickPos.Value.y1080);
-                        }
-                        else
-                        {
-                            GameCaptureRegion.GameRegion1080PPosClick(960, 620);
-                        }
+                        ClickRegionCenterBy1080(agreeRegion);
+                        // 记录协议窗口点击位置
+                        var (centerDesktopX, centerDesktopY) =
+                            agreeRegion.ConvertPositionToDesktopRegion(agreeRegion.Width / 2,
+                                agreeRegion.Height / 2);
+                        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+                        var inCaptureX = centerDesktopX - captureRect.X;
+                        var inCaptureY = centerDesktopY - captureRect.Y;
+                        var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+                        lastAgreementClickPos = (inCaptureX / scale, inCaptureY / scale);
+                        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+                    }
 
-                        Thread.Sleep(2000);
+                    Thread.Sleep(2000);
+                }
 
-                        // 检查窗口是否还存在
-                        var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
-                        if (remainingWindow == IntPtr.Zero)
-                        {
-                            biliLoginClicked = true;
-                            _logger.LogInformation("B服登录成功");
-                            break;
-                        }
+                if (windowType.Contains("登录"))
+                {
+                    Thread.Sleep(2000);
+                    // 使用协议窗口坐标或默认坐标点击登录
+                    if (lastAgreementClickPos.HasValue)
+                    {
+                        GameCaptureRegion.GameRegion1080PPosClick(lastAgreementClickPos.Value.x1080,
+                            lastAgreementClickPos.Value.y1080);
+                    }
+                    else
+                    {
+                        GameCaptureRegion.GameRegion1080PPosClick(960, 620);
+                    }
 
-                        failCount++;
-                        continue;
+                    Thread.Sleep(2000);
+
+                    // 检查窗口是否还存在
+                    var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
+                    if (remainingWindow == IntPtr.Zero)
+                    {
+                        biliLoginClicked = true;
                     }
                 }
-                else
-                {
-                    // 没有找到登录窗口，增加失败计数
-                    failCount++;
-                }
-
-                // 在B服登录过程中，每次循环都检查是否出现"进入游戏"按钮
-                ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
-                if (!ra.IsEmpty())
-                {
-                    _logger.LogInformation("检测到进入游戏按钮，直接点击");
-                    TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                    biliLoginClicked = true;
-                    return;
-                }
-
-                Thread.Sleep(1000);
             }
+
+            // 在B服登录过程中，每次循环都检查是否出现"进入游戏"按钮
+            ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
+            if (!ra.IsEmpty())
+            {
+                _logger.LogInformation("检测到进入游戏按钮，直接点击");
+                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                biliLoginClicked = true;
+                return;
+            }
+
+            Thread.Sleep(1000);
+
 
             // 检查是否成功登录
             if (biliLoginClicked)
@@ -414,10 +387,6 @@ public class GameLoadingTrigger : ITaskTrigger
                 Thread.Sleep(5000);
                 ClickEnterGameButton();
                 return;
-            }
-            else
-            {
-                _logger.LogWarning("B服登录处理超时，停止处理");
             }
         }
         else if (!isBili)
