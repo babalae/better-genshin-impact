@@ -640,7 +640,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 CheckInterval = Config.AutoEatConfig.CheckInterval,
                 EatInterval = Config.AutoEatConfig.EatInterval,
                 ShowNotification = Config.AutoEatConfig.ShowNotification,
-                FoodName = Config.AutoEatConfig.PrimaryFoodName
+                FoodName = Config.AutoEatConfig.TestFoodName
             }));
         }
         finally

@@ -1,14 +1,17 @@
-﻿using BetterGenshinImpact.Core.Script.Dependence.Model;
+using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.ViewModel.Pages;
-using System;
-using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
+using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.ClearScript;
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -127,7 +130,7 @@ public class Dispatcher
             // 如果没有自定义令牌，就使用全局令牌
             cancellationToken = CancellationContext.Instance.Cts.Token;
         }
-        
+
         // 根据名称执行任务
         switch (soloTask.Name)
         {
@@ -162,7 +165,40 @@ public class Dispatcher
                 await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
                     cancellationToken);
                 break;
-
+            case "AutoEat":
+                string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "foodName", null);
+                FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?) ScriptObjectConverter.GetValue<int?>((ScriptObject)soloTask.Config, "foodEffectType", null);
+                if (foodName == null)
+                {
+                    switch (foodEffectType)
+                    {
+                        case FoodEffectType.ATKBoostingDish:
+                            foodName = taskSettingsPageViewModel.Config.AutoEatConfig.DefaultAtkBoostingDishName;
+                            break;
+                        case FoodEffectType.AdventurersDish:
+                            foodName = taskSettingsPageViewModel.Config.AutoEatConfig.DefaultAdventurersDishName;
+                            break;
+                        case FoodEffectType.DEFBoostingDish:
+                            foodName = taskSettingsPageViewModel.Config.AutoEatConfig.DefaultDefBoostingDishName;
+                            break;
+                        case null:
+                            break;
+                        default:
+                            throw new NotSupportedException("JS脚本入参错误：错误的foodEffectType");
+                    }
+                }
+                else if (foodEffectType != null)
+                {
+                    throw new NotSupportedException("JS脚本入参错误：不能同时指定foodName和foodEffectType");
+                }
+                await new AutoEatTask(new AutoEatParam()
+                {
+                    CheckInterval = taskSettingsPageViewModel.Config.AutoEatConfig.CheckInterval,
+                    EatInterval = taskSettingsPageViewModel.Config.AutoEatConfig.EatInterval,
+                    ShowNotification = taskSettingsPageViewModel.Config.AutoEatConfig.ShowNotification,
+                    FoodName = foodName
+                }).Start(cancellationToken);
+                break;
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
         }

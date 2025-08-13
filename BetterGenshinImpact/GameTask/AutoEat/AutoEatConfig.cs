@@ -38,5 +38,23 @@ public partial class AutoEatConfig : ObservableObject
     /// 首选食物名称
     /// </summary>
     [ObservableProperty]
-    private string? _primaryFoodName;
+    private string? _testFoodName;
+
+    /// <summary>
+    /// 默认的攻击类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultAtkBoostingDishName;
+
+    /// <summary>
+    /// 默认的冒险类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultAdventurersDishName;
+
+    /// <summary>
+    /// 默认的防御类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultDefBoostingDishName;
 }

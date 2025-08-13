@@ -71,6 +71,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
         }
         else
         {
+            _logger.LogInformation("打开背包寻找{name}……", _taskParam.FoodName);
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenBag(GridScreenName.Food, _input, _logger, _ct);
 
@@ -80,6 +81,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
             GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.Food];
             var gridRoi = gridParams.GetRect(ra0);
             GridScreen gridScreen = new GridScreen(gridRoi, gridParams, _logger, _ct);
+            bool isAte = false;
             await foreach (ImageRegion itemRegion in gridScreen)
             {
                 var result = GridIconsAccuracyTestTask.Infer(itemRegion.SrcMat, session, prototypes);
@@ -96,8 +98,13 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
                         ra.Click();
                     }
                     _logger.LogInformation("吃了一份{name}，真香！", predName);
+                    isAte = true;
                     break;
                 }
+            }
+            if (!isAte)
+            {
+                _logger.LogInformation("没有找到{name}", _taskParam.FoodName);
             }
             await new ReturnMainUiTask().Start(ct);
         }
