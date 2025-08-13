@@ -32,7 +32,7 @@ public class BvLocator
 
     public BvLocator(RecognitionObject recognitionObject, CancellationToken cancellationToken)
     {
-        RecognitionObject = recognitionObject;
+        RecognitionObject = recognitionObject.Clone();
         _cancellationToken = cancellationToken;
     }
 
