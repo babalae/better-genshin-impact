@@ -210,9 +210,9 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
         }
-        else if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.3)).IsExist())
+        else if (page.GetByText("幽境危战").WithRoi(r => r.CutLeft(0.3)).IsExist())
         {
-            await page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.3)).Click();
+            await page.GetByText("幽境危战").WithRoi(r => r.CutLeft(0.3)).Click();
             await Delay(1500, _ct);
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
         }
