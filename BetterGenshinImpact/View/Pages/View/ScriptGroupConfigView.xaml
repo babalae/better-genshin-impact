@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -8,20 +8,20 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:ScriptGroupConfigViewModel}"
-             d:DesignHeight="850"
+             d:DesignHeight="1600"
              d:DesignWidth="800"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
     <ScrollViewer Height="800"
+                  d:DesignHeight="1600"
                   HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto">
-        <StackPanel Width="700" Margin="42,16,42,12">
+        <StackPanel Height="Auto" Width="700" Margin="42,16,42,12">
 
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon Map24}"
-                             IsExpanded="True">
+                             Icon="{ui:SymbolIcon Map24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -743,8 +743,7 @@
                 </StackPanel>
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             IsExpanded="True">
+                             ContentPadding="0">
                 <ui:CardExpander.Icon>
                     <ui:FontIcon Glyph="&#xf71d;" Style="{StaticResource FaFontIconStyle}" />
                 </ui:CardExpander.Icon>
@@ -1130,8 +1129,9 @@
                                   ItemsSource=' 1234'
                                   SelectedIndex="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
                                   SelectedItem="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
-                        
-                        <ui:TextBlock Grid.Row="0"
+                            <!--todo ItemsSource=' 1234'导致XAML设计器无法加载-->
+
+                            <ui:TextBlock Grid.Row="0"
                                       Grid.Column="2"
                                       Margin="0,0,8,0"
                                       HorizontalAlignment="Right"
@@ -1429,8 +1429,7 @@
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon FlashSettings24}"
-                             IsExpanded="True">
+                             Icon="{ui:SymbolIcon FlashSettings24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
