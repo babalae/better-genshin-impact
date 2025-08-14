@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center">
-    <a href="https://bettergi.com/"><img src="https://img.alicdn.com/imgextra/i4/2042484851/O1CN016PuRSW1lhoOl4tcHS_!!2042484851.png" width="180"></a>
+    <a href="https://bettergi.com/"><img src="https://img.alicdn.com/imgextra/i4/2042484851/O1CN016PuRSW1lhoOl4tcHS_!!2042484851.png" width="190"></a>
     <br/>
     <a href="https://bettergi.com/">BetterGI</a>
   </h1>
