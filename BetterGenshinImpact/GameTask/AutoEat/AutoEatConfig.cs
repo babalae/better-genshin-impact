@@ -35,7 +35,7 @@ public partial class AutoEatConfig : ObservableObject
     private int _eatInterval = 2000;
 
     /// <summary>
-    /// 首选食物名称
+    /// 测试食物名称
     /// </summary>
     [ObservableProperty]
     private string? _testFoodName;

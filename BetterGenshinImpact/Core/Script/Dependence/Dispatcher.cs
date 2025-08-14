@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -9,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.ClearScript;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +19,8 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Dispatcher
 {
+    private readonly ILogger<Dispatcher> _logger = App.GetLogger<Dispatcher>();
+
     private object _config = null;
 
     public Dispatcher(object config)
@@ -167,37 +171,66 @@ public class Dispatcher
                 break;
             case "AutoEat":
                 string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "foodName", null);
-                FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?) ScriptObjectConverter.GetValue<int?>((ScriptObject)soloTask.Config, "foodEffectType", null);
+                FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?)ScriptObjectConverter.GetValue<int?>((ScriptObject)soloTask.Config, "foodEffectType", null);
+
+                if (foodName != null && foodEffectType != null)
+                {
+                    throw new NotSupportedException("不能同时指定foodName和foodEffectType");
+                }
+
                 if (foodName == null)
                 {
-                    switch (foodEffectType)
+                    if (foodEffectType != null)
                     {
-                        case FoodEffectType.ATKBoostingDish:
-                            foodName = taskSettingsPageViewModel.Config.AutoEatConfig.DefaultAtkBoostingDishName;
-                            break;
-                        case FoodEffectType.AdventurersDish:
-                            foodName = taskSettingsPageViewModel.Config.AutoEatConfig.DefaultAdventurersDishName;
-                            break;
-                        case FoodEffectType.DEFBoostingDish:
-                            foodName = taskSettingsPageViewModel.Config.AutoEatConfig.DefaultDefBoostingDishName;
-                            break;
-                        case null:
-                            break;
-                        default:
-                            throw new NotSupportedException("JS脚本入参错误：错误的foodEffectType");
+                        PathingPartyConfig? pathingPartyConfig = _config as PathingPartyConfig;
+                        if (pathingPartyConfig == null)
+                        {
+                            throw new NotSupportedException("foodEffectType参数需要调度器配置，请在调度器下使用");
+                        }
+                        else
+                        {
+                            switch (foodEffectType)
+                            {
+                                case FoodEffectType.ATKBoostingDish:
+                                    foodName = pathingPartyConfig.AutoEatConfig.DefaultAtkBoostingDishName;
+                                    if (foodName == null)
+                                    {
+                                        _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的攻击类料理");
+                                        return;
+                                    }
+                                    break;
+                                case FoodEffectType.AdventurersDish:
+                                    foodName = pathingPartyConfig.AutoEatConfig.DefaultAdventurersDishName;
+                                    if (foodName == null)
+                                    {
+                                        _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的冒险类料理");
+                                        return;
+                                    }
+                                    break;
+                                case FoodEffectType.DEFBoostingDish:
+                                    foodName = pathingPartyConfig.AutoEatConfig.DefaultDefBoostingDishName;
+                                    if (foodName == null)
+                                    {
+                                        _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的防御类料理");
+                                        return;
+                                    }
+                                    break;
+                                default:
+                                    throw new NotSupportedException("JS脚本入参错误：错误的foodEffectType");
+                            }
+                        }
                     }
                 }
-                else if (foodEffectType != null)
-                {
-                    throw new NotSupportedException("JS脚本入参错误：不能同时指定foodName和foodEffectType");
-                }
+
+                var autoEatConfig = TaskContext.Instance().Config.AutoEatConfig;
                 await new AutoEatTask(new AutoEatParam()
                 {
-                    CheckInterval = taskSettingsPageViewModel.Config.AutoEatConfig.CheckInterval,
-                    EatInterval = taskSettingsPageViewModel.Config.AutoEatConfig.EatInterval,
-                    ShowNotification = taskSettingsPageViewModel.Config.AutoEatConfig.ShowNotification,
+                    CheckInterval = autoEatConfig.CheckInterval,
+                    EatInterval = autoEatConfig.EatInterval,
+                    ShowNotification = autoEatConfig.ShowNotification,
                     FoodName = foodName
                 }).Start(cancellationToken);
+
                 break;
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));

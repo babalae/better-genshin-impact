@@ -40,7 +40,6 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using TextBox = Wpf.Ui.Controls.TextBox;
-using BetterGenshinImpact.GameTask.AutoEat;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -186,9 +185,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
-    [ObservableProperty]
-    private bool _switchAutoEatEnabled;
-
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -235,7 +231,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoRedeemCodeEnabled = false;
         SwitchAutoStygianOnslaughtEnabled = false;
         SwitchGetGridIconsEnabled = false;
-        SwitchAutoEatEnabled = false;
         await Task.Delay(800);
     }
 
@@ -626,26 +621,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
             await new TaskRunner()
                 .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
             SwitchAutoRedeemCodeEnabled = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task OnSwitchAutoEat()
-    {
-        try
-        {
-            SwitchAutoEatEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new AutoEatTask(new AutoEatParam()
-            {
-                CheckInterval = Config.AutoEatConfig.CheckInterval,
-                EatInterval = Config.AutoEatConfig.EatInterval,
-                ShowNotification = Config.AutoEatConfig.ShowNotification,
-                FoodName = Config.AutoEatConfig.TestFoodName
-            }));
-        }
-        finally
-        {
-            SwitchAutoEatEnabled = false;
         }
     }
 }
