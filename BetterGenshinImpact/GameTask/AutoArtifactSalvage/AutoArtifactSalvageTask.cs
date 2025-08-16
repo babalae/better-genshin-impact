@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -35,7 +35,6 @@ public class AutoArtifactSalvageTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<AutoArtifactSalvageTask>();
     private readonly InputSimulator input = Simulation.SendInput;
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
 
     private CancellationToken ct;
 
@@ -51,7 +50,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly int? maxNumToCheck;
 
-    private bool returnToMainUi = true;
+    private readonly bool returnToMainUi = true;
 
     public AutoArtifactSalvageTask(int star, string? regularExpression = null, int? maxNumToCheck = null)
     {
@@ -75,12 +74,51 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.returnToMainUi = returnToMainUi;
     }
 
-    public async Task Start(CancellationToken ct)
+    public static async Task OpenBag(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
     {
-        this.ct = ct;
-        if (returnToMainUi)
+        RecognitionObject? recognitionObjectChecked;
+        RecognitionObject? recognitionObjectUnchecked;
+
+        switch (gridScreenName)
         {
-            await _returnMainUiTask.Start(ct);
+            case GridScreenName.Weapons:
+                recognitionObjectChecked = ElementAssets.Instance.BagWeaponChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagWeaponUnchecked;
+                break;
+            case GridScreenName.Artifacts:
+                recognitionObjectChecked = ElementAssets.Instance.BagArtifactChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagArtifactUnchecked;
+                break;
+            case GridScreenName.CharacterDevelopmentItems:
+                recognitionObjectChecked = ElementAssets.Instance.BagCharacterDevelopmentItemChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagCharacterDevelopmentItemUnchecked;
+                break;
+            case GridScreenName.Food:
+                recognitionObjectChecked = ElementAssets.Instance.BagFoodChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagFoodUnchecked;
+                break;
+            case GridScreenName.Materials:
+                recognitionObjectChecked = ElementAssets.Instance.BagMaterialChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagMaterialUnchecked;
+                break;
+            case GridScreenName.Gadget:
+                recognitionObjectChecked = ElementAssets.Instance.BagGadgetChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagGadgetUnchecked;
+                break;
+            case GridScreenName.Quest:
+                recognitionObjectChecked = ElementAssets.Instance.BagQuestChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagQuestUnchecked;
+                break;
+            case GridScreenName.PreciousItems:
+                recognitionObjectChecked = ElementAssets.Instance.BagPreciousItemChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagPreciousItemUnchecked;
+                break;
+            case GridScreenName.Furnishings:
+                recognitionObjectChecked = ElementAssets.Instance.BagFurnishingChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagFurnishingUnchecked;
+                break;
+            default:
+                throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}");
         }
 
         // B键打开背包
@@ -89,12 +127,11 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         var openBagSuccess = await NewRetry.WaitForAction(() =>
         {
-            // 选择圣遗物
             using var ra = CaptureToRectArea();
-            using var artifactBtn = ra.Find(ElementAssets.Instance.BagArtifactChecked);
+            using var artifactBtn = ra.Find(recognitionObjectChecked);
             if (artifactBtn.IsEmpty())
             {
-                using var artifactBtn2 = ra.Find(ElementAssets.Instance.BagArtifactUnchecked);
+                using var artifactBtn2 = ra.Find(recognitionObjectUnchecked);
                 if (artifactBtn2.IsExist())
                 {
                     artifactBtn2.Click();
@@ -118,12 +155,23 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         if (!openBagSuccess)
         {
-            logger.LogError("未找到背包中圣遗物菜单按钮,打开背包失败");
+            logger.LogError("未找到背包中{name}菜单按钮,打开背包失败", gridScreenName.GetDescription());
             return;
         }
 
 
         await Delay(800, ct);
+    }
+
+    public async Task Start(CancellationToken ct)
+    {
+        this.ct = ct;
+        if (returnToMainUi)
+        {
+            await new ReturnMainUiTask().Start(ct);
+        }
+
+        await OpenBag(GridScreenName.Artifacts, this.input, this.logger, this.ct);
 
         // 点击分解按钮打开分解界面
         using var ra2 = CaptureToRectArea();
@@ -217,7 +265,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
             if (returnToMainUi)
             {
-                await _returnMainUiTask.Start(ct);
+                await new ReturnMainUiTask().Start(ct);
             }
         }
     }

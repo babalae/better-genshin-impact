@@ -174,33 +174,11 @@ public partial class JsListViewModel : ViewModel
             if (!string.IsNullOrEmpty(mdFilePath))
             {
                 DrawerVm.DrawerWidth = 450;
-                // 注册抽屉关闭前事件
-                DrawerVm.SetDrawerClosingAction(args =>
-                {
-                    if (_mdWebpagePanel != null)
-                    {
-                        _mdWebpagePanel.Visibility = Visibility.Hidden;
-                    }
-                });
-                DrawerVm.setDrawerOpenedAction(async () =>
+                // 注册抽屉关闭前事件 - 简化处理，不再需要WebView2相关逻辑
+                DrawerVm.SetDrawerClosingAction(_ => { });
+                DrawerVm.setDrawerOpenedAction(() =>
                 {
                     SelectedScriptProject = null;
-                    if (_mdWebpagePanel != null)
-                    {
-                        // 等待导航完成或超时
-                        try
-                        {
-                            await WaitForNavigationCompletedWithTimeout();
-                            _mdWebpagePanel.Visibility = Visibility.Visible;
-                            _mdWebpagePanel.WebView.Focus();
-                            Debug.WriteLine("Navigation completed successfully");
-                            // 导航成功完成后执行其他操作
-                        }
-                        catch (TimeoutException)
-                        {
-                            Toast.Error("Markdown内容加载超时");
-                        }
-                    }
                 });
             }
             else
@@ -221,19 +199,6 @@ public partial class JsListViewModel : ViewModel
         }
     }
 
-    private async Task WaitForNavigationCompletedWithTimeout()
-    {
-        var completedTask = await Task.WhenAny(
-            _navigationCompletionSource!.Task,
-            Task.Delay(NavigationTimeoutMs)
-        );
-
-        if (completedTask != _navigationCompletionSource.Task)
-        {
-            throw new TimeoutException("Navigation did not complete within the timeout period");
-        }
-    }
-
     private object CreateScriptDetailContent(ScriptProject scriptProject, string? mdFilePath)
     {
         // 创建显示脚本详情的控件
@@ -242,82 +207,71 @@ public partial class JsListViewModel : ViewModel
             Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
             Padding = new Thickness(20)
         };
-        var panel = new StackPanel();
-        border.Child = panel;
 
-        // 假设scriptItem是你的脚本对象，根据实际类型进行调整
-        panel.Children.Add(new TextBlock
+        // 使用Grid替代StackPanel以实现更好的布局控制
+        var mainGrid = new Grid();
+        mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 标题行
+        mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 内容行，占满剩余空间
+
+        border.Child = mainGrid;
+
+        // 添加标题
+        var titleTextBlock = new TextBlock
         {
             Text = scriptProject.Manifest.Name,
             FontSize = 20,
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(0, 0, 0, 10)
-        });
+        };
+        Grid.SetRow(titleTextBlock, 0);
+        mainGrid.Children.Add(titleTextBlock);
 
-
-        // 如果找到md文件，使用WebpagePanel显示
+        // 如果找到md文件，使用RichTextBox显示
         if (!string.IsNullOrEmpty(mdFilePath))
         {
-            // 使用Grid作为容器来实现填充效果
-            var grid = new Grid
+            string markdown = File.ReadAllText(mdFilePath);
+            var flowDoc = MarkdownToFlowDocumentConverter.ConvertToFlowDocument(markdown);
+            var richTextBox = new RichTextBox
             {
-                Margin = new Thickness(0, 0, 0, 15)
-            };
-            
-            _mdWebpagePanel = new WebpagePanel
-            {
-                Margin = new Thickness(0),
-                Visibility = Visibility.Hidden,
+                IsReadOnly = true,
+                IsDocumentEnabled = true,
+                BorderThickness = new Thickness(0),
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Document = flowDoc,
+                Background = Brushes.Transparent,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                HorizontalAlignment = HorizontalAlignment.Stretch
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(0, 10, 0, 0)
             };
-            
-            _navigationCompletionSource = new TaskCompletionSource<bool>();
-            _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
-            {
-                // 导航完成时设置任务结果
-                _navigationCompletionSource.TrySetResult(true);
-            };
-            _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
-            
-            grid.Children.Add(_mdWebpagePanel);
-            panel.Children.Add(grid);
-            
-            // 设置Grid高度以占满剩余空间
-            panel.SizeChanged += (sender, args) =>
-            {
-                // 计算其他元素使用的高度
-                double otherElementsHeight = 0;
-                foreach (var child in panel.Children)
-                {
-                    if (child != grid)
-                    {
-                        var frameworkElement = child as FrameworkElement;
-                        if (frameworkElement != null)
-                        {
-                            otherElementsHeight += frameworkElement.ActualHeight + frameworkElement.Margin.Top + frameworkElement.Margin.Bottom;
-                        }
-                    }
-                }
-                
-                // 设置Grid高度为剩余空间
-                grid.Height = Math.Max(400, panel.ActualHeight - otherElementsHeight - 15); // 设置最小高度为400
-            };
+
+            Grid.SetRow(richTextBox, 1);
+            mainGrid.Children.Add(richTextBox);
         }
         else
         {
-            panel.Children.Add(new TextBlock
+            // 显示脚本基本信息 - 使用StackPanel包装多个TextBlock
+            var contentPanel = new StackPanel
+            {
+                Margin = new Thickness(0, 10, 0, 0),
+                VerticalAlignment = VerticalAlignment.Top
+            };
+
+            contentPanel.Children.Add(new TextBlock
             {
                 Text = $"版本: {scriptProject.Manifest.Version}",
-                Margin = new Thickness(0, 5, 0, 5)
+                Margin = new Thickness(0, 0, 0, 10)
             });
 
-            panel.Children.Add(new TextBlock
+            contentPanel.Children.Add(new TextBlock
             {
                 Text = scriptProject.Manifest.Description,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 5, 0, 15)
+                Margin = new Thickness(0, 0, 0, 15)
             });
+
+            Grid.SetRow(contentPanel, 1);
+            mainGrid.Children.Add(contentPanel);
         }
 
         // 添加操作按钮
@@ -337,14 +291,13 @@ public partial class JsListViewModel : ViewModel
 
         // panel.Children.Add(buttonPanel);
 
-
         return border;
     }
 
     private static string? FindMdFilePath(ScriptProject script)
     {
         string[] possibleMdFiles = { "README.md", "readme.md" };
-        string mdFilePath = null;
+        string? mdFilePath = null;
 
         foreach (var mdFile in possibleMdFiles)
         {

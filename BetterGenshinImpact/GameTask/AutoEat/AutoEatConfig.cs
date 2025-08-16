@@ -33,4 +33,28 @@ public partial class AutoEatConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _eatInterval = 2000;
+
+    /// <summary>
+    /// 测试食物名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _testFoodName;
+
+    /// <summary>
+    /// 默认的攻击类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultAtkBoostingDishName;
+
+    /// <summary>
+    /// 默认的冒险类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultAdventurersDishName;
+
+    /// <summary>
+    /// 默认的防御类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultDefBoostingDishName;
 }

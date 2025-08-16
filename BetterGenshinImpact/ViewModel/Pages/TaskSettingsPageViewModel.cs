@@ -123,7 +123,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private List<string> _domainNameList;
 
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
-    
+
     public static List<int> BossNumList = [1, 2, 3];
 
 
@@ -225,6 +225,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoDomainEnabled = false;
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
+        SwitchAutoAlbumEnabled = false;
+        SwitchAutoFishingEnabled = false;
+        SwitchArtifactSalvageEnabled = false;
+        SwitchAutoRedeemCodeEnabled = false;
+        SwitchAutoStygianOnslaughtEnabled = false;
+        SwitchGetGridIconsEnabled = false;
         await Task.Delay(800);
     }
 
@@ -597,20 +603,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
         p.Height = 500;
         p.ShowDialog();
         if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
-        { 
+        {
             char[] separators = ['\r', '\n'];
-                 var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+            var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
 
-                .Select(code => code.Trim())
-                .Where(code => !string.IsNullOrEmpty(code))
-                .ToList();
+           .Select(code => code.Trim())
+           .Where(code => !string.IsNullOrEmpty(code))
+           .ToList();
 
             if (codes.Count == 0)
             {
                 Toast.Warning("没有有效的兑换码");
                 return;
             }
-            
+
             SwitchAutoRedeemCodeEnabled = true;
             await new TaskRunner()
                 .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
