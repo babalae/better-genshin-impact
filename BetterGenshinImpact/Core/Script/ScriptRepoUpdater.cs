@@ -204,8 +204,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 throw;
             }
         });
-        // 如果仓库有更新且有备份内容，则标记新repo.json中的更新节点
-        if (updated && !string.IsNullOrEmpty(oldRepoJsonContent))
+        // 如果仓库有更新，则标记新repo.json中的更新节点
+        if (updated)
         {
             try
             {
@@ -214,12 +214,32 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 if (newRepoJsonPath != null)
                 {
                     var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
-                    var updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent, newRepoJsonContent);
+                    
+                    // 检查是否存在repo_update.json，如果存在则直接与它比对
+                    var parentDir = Path.GetDirectoryName(repoPath);
+                    var repoUpdateJsonPath = Path.Combine(parentDir!, "repo_update.json");
+                    string updatedContent;
+                    
+                    if (File.Exists(repoUpdateJsonPath))
+                    {
+                        try
+                        {
+                            var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
+                            updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
+                        }
+                        catch (Exception ex)
+                        {
+                            updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
+                        }
+                    }
+                    else
+                    {
+                        // 如果没有repo_update.json，则使用备份的旧内容进行比对
+                        updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
+                    }
 
                     // 保存到同级目录
-                    var parentDir = Path.GetDirectoryName(repoPath);
                     var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
-                    
                     await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
                     _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
                 }
@@ -333,6 +353,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         return hasDirectUpdate || hasChildUpdate;
     }
+
+
 
     /// <summary>
     /// 解析lastUpdated时间戳
