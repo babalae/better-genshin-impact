@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -8,20 +8,20 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:ScriptGroupConfigViewModel}"
-             d:DesignHeight="850"
+             d:DesignHeight="1600"
              d:DesignWidth="800"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
     <ScrollViewer Height="800"
+                  d:DesignHeight="1600"
                   HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto">
-        <StackPanel Width="700" Margin="42,16,42,12">
+        <StackPanel Height="Auto" Width="700" Margin="42,16,42,12">
 
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon Map24}"
-                             IsExpanded="True">
+                             Icon="{ui:SymbolIcon Map24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -743,8 +743,7 @@
                 </StackPanel>
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             IsExpanded="True">
+                             ContentPadding="0">
                 <ui:CardExpander.Icon>
                     <ui:FontIcon Glyph="&#xf71d;" Style="{StaticResource FaFontIconStyle}" />
                 </ui:CardExpander.Icon>
@@ -1130,8 +1129,9 @@
                                   ItemsSource=' 1234'
                                   SelectedIndex="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
                                   SelectedItem="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
-                        
-                        <ui:TextBlock Grid.Row="0"
+                            <!--todo ItemsSource=' 1234'导致XAML设计器无法加载-->
+
+                            <ui:TextBlock Grid.Row="0"
                                       Grid.Column="2"
                                       Margin="0,0,8,0"
                                       HorizontalAlignment="Right"
@@ -1427,10 +1427,127 @@
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>
+            <!-- 自动吃食物 -->
+            <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                <ui:CardExpander.Icon>
+                    <ui:FontIcon Glyph="&#x1F35C;" Style="{StaticResource FaFontIconStyle}" />
+                </ui:CardExpander.Icon>
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动吃食物配置"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            供JS脚本调用Buff类食物配置；食物名称会忽略“美味的”等前缀，请填不带前缀的名称
+                        </ui:TextBlock>
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="默认的攻击类料理名称"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            入参"foodEffectType":1时使用
+                        </ui:TextBlock>
+                        <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding PathingConfig.AutoEatConfig.DefaultAtkBoostingDishName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="默认的冒险类料理名称"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            入参"foodEffectType":2时使用
+                        </ui:TextBlock>
+                        <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding PathingConfig.AutoEatConfig.DefaultAdventurersDishName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="默认的防御类料理名称"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            入参"foodEffectType":3时使用
+                        </ui:TextBlock>
+                        <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding PathingConfig.AutoEatConfig.DefaultDefBoostingDishName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon FlashSettings24}"
-                             IsExpanded="True">
+                             Icon="{ui:SymbolIcon FlashSettings24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>

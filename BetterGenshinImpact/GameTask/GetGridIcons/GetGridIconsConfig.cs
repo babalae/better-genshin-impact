@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Model.GameUI;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
@@ -8,8 +8,7 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public partial class GetGridIconsConfig : ObservableObject
 {
     /// <summary>
-    /// 昼夜策略
-    /// 钓全天的鱼、还是只钓白天或夜晚的鱼
+    /// Grid界面名称
     /// </summary>
     [ObservableProperty]
     private GridScreenName _gridName = GridScreenName.Weapons;

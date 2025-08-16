@@ -782,7 +782,8 @@
                                   ItemsSource=' 1234'
                                   SelectedIndex="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
                                   SelectedItem="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
-                        
+                        <!--todo ItemsSource=' 1234'导致XAML设计器无法加载-->
+
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="2"
                                       Margin="0,0,8,0"
@@ -2395,7 +2396,7 @@
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0"
                          Visibility="{Binding Config.CommonConfig.ScreenshotEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Glyph="&#xf4bb;" Style="{StaticResource FaFontIconStyle}" />
+                <ui:FontIcon Glyph="&#x1F527;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
@@ -2580,7 +2581,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-
+        
         <!--<ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon Accessibility24}">
             <ui:CardExpander.Header>
                 <Grid>

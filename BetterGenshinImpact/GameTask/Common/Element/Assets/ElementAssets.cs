@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -35,8 +35,24 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject Keyreduce;
     public RecognitionObject Keyincrease;
 
+    public RecognitionObject BagWeaponUnchecked;
+    public RecognitionObject BagWeaponChecked;
     public RecognitionObject BagArtifactUnchecked;
     public RecognitionObject BagArtifactChecked;
+    public RecognitionObject BagCharacterDevelopmentItemUnchecked;
+    public RecognitionObject BagCharacterDevelopmentItemChecked;
+    public RecognitionObject BagFoodUnchecked;
+    public RecognitionObject BagFoodChecked;
+    public RecognitionObject BagMaterialUnchecked;
+    public RecognitionObject BagMaterialChecked;
+    public RecognitionObject BagGadgetUnchecked;
+    public RecognitionObject BagGadgetChecked;
+    public RecognitionObject BagQuestUnchecked;
+    public RecognitionObject BagQuestChecked;
+    public RecognitionObject BagPreciousItemUnchecked;
+    public RecognitionObject BagPreciousItemChecked;
+    public RecognitionObject BagFurnishingUnchecked;
+    public RecognitionObject BagFurnishingChecked;
     public RecognitionObject BtnArtifactSalvage;
     public RecognitionObject BtnArtifactSalvageConfirm;
 
@@ -245,7 +261,26 @@ public class ElementAssets : BaseAssets<ElementAssets>
             DrawOnWindow = false
         }.InitTemplate();
 
-        // 分解圣遗物
+        // 背包武器
+        BagWeaponUnchecked = new RecognitionObject
+        {
+            Name = "BagWeaponUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_weapon_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagWeaponChecked = new RecognitionObject
+        {
+            Name = "BagWeaponChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_weapon_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包圣遗物
         BagArtifactUnchecked = new RecognitionObject
         {
             Name = "BagArtifactUnchecked",
@@ -264,6 +299,141 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Threshold = 0.8,
             DrawOnWindow = false
         }.InitTemplate();
+        // 背包养成道具
+        BagCharacterDevelopmentItemUnchecked = new RecognitionObject
+        {
+            Name = "BagCharacterDevelopmentItemUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_characterdevelopmentitem_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagCharacterDevelopmentItemChecked = new RecognitionObject
+        {
+            Name = "BagCharacterDevelopmentItemChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_characterdevelopmentitem_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包食物
+        BagFoodUnchecked = new RecognitionObject
+        {
+            Name = "BagFoodUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_food_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagFoodChecked = new RecognitionObject
+        {
+            Name = "BagFoodChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_food_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包材料
+        BagMaterialUnchecked = new RecognitionObject
+        {
+            Name = "BagMaterialUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_material_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagMaterialChecked = new RecognitionObject
+        {
+            Name = "BagMaterialChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_material_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包小道具
+        BagGadgetUnchecked = new RecognitionObject
+        {
+            Name = "BagGadgetUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_gadget_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagGadgetChecked = new RecognitionObject
+        {
+            Name = "BagGadgetChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_gadget_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包任务
+        BagQuestUnchecked = new RecognitionObject
+        {
+            Name = "BagQuestUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_quest_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagQuestChecked = new RecognitionObject
+        {
+            Name = "BagQuestChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_quest_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包贵重道具
+        BagPreciousItemUnchecked = new RecognitionObject
+        {
+            Name = "BagPreciousItemUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_preciousitem_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagPreciousItemChecked = new RecognitionObject
+        {
+            Name = "BagPreciousItemChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_preciousitem_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+        // 背包摆设
+        BagFurnishingUnchecked = new RecognitionObject
+        {
+            Name = "BagFurnishingUnchecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_furnishing_unchecked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.87,
+            DrawOnWindow = false
+        }.InitTemplate();
+        BagFurnishingChecked = new RecognitionObject
+        {
+            Name = "BagFurnishingChecked",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "bag_furnishing_checked.png"),
+            RegionOfInterest = CaptureRect.CutTop(0.1),
+            Threshold = 0.8,
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 分解圣遗物
         BtnArtifactSalvage = new RecognitionObject
         {
             Name = "BtnArtifactSalvage",

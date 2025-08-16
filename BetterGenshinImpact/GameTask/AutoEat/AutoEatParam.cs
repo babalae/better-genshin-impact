@@ -22,16 +22,9 @@ public class AutoEatParam : BaseTaskParam
     /// </summary>
     public int EatInterval { get; set; }
 
-    public AutoEatParam()
-    {
-        SetDefault();
-    }
-
-    public void SetDefault()
-    {
-        var config = TaskContext.Instance().Config.AutoEatConfig;
-        ShowNotification = config.ShowNotification;
-        CheckInterval = config.CheckInterval;
-        EatInterval = config.EatInterval;
-    }
+    /// <summary>
+    /// 食物名称
+    /// 如果传空就使用便携营养袋，否则进入背包查找对应食物并使用
+    /// </summary>
+    public string? FoodName { get; set; }
 }
