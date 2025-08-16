@@ -875,7 +875,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        
+
         <!--  新增手动导入本地脚本仓库功能  -->
         <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
             <ui:CardControl.Header>
@@ -905,14 +905,13 @@
                                Command="{Binding ImportLocalScriptsRepoZipCommand}"
                                Content="导入" />
                 </Grid>
-        
+
             </ui:CardControl.Header>
         </ui:CardControl>
 
 
         <!--  其他设置  -->
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf141;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
@@ -1557,6 +1556,41 @@
                                 </b:Interaction.Triggers>
                             </ComboBox>
                         </Grid>
+                        <!--  叠词词(允许更多重复)是否开启  -->
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="叠词词"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="(PaddleOCR)允许更多重复。默认关闭。注意：开启后可能会导致误识别。"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,36,0"
+                                             IsChecked="{Binding Config.OtherConfig.OcrConfig.AllowMoreDuplicate, Mode=TwoWay}">
+                                <b:Interaction.Triggers>
+                                    <b:EventTrigger EventName="Unchecked">
+                                        <b:InvokeCommandAction Command="{Binding ReloadOcrCommand}" />
+                                    </b:EventTrigger>
+                                    <b:EventTrigger EventName="Checked">
+                                        <b:InvokeCommandAction Command="{Binding ReloadOcrCommand}" />
+                                    </b:EventTrigger>
+                                </b:Interaction.Triggers>
+                            </ui:ToggleSwitch>
+                        </Grid>
 
 
                     </StackPanel>
@@ -1740,4 +1774,3 @@
         </ui:CardControl>
     </StackPanel>
 </Page>
-
