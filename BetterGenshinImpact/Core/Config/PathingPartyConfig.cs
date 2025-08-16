@@ -1,9 +1,10 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoEat;
+using BetterGenshinImpact.GameTask.AutoFight;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -95,6 +96,13 @@ public partial class PathingPartyConfig : ObservableObject
     // 启用自动吃药功能
     [ObservableProperty]
     private bool _autoEatEnabled = false;
+
+    /// <summary>
+    /// 自动吃食物配置
+    /// 供JS脚本使用
+    /// </summary>
+    [ObservableProperty]
+    private AutoEatConfig _autoEatConfig = new();
 
     //在连续执行时是否隐藏
     [ObservableProperty]

@@ -1,17 +1,21 @@
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.WindowsInput;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using Microsoft.Extensions.Localization;
-using BetterGenshinImpact.GameTask.Model.Area;
-using System.Collections.Generic;
-using OpenCvSharp;
-using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using System.IO;
-using OpenCvSharp.Extensions;
-using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.GameTask.GetGridIcons;
 
@@ -21,6 +25,7 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public class GetGridIconsTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
+    private readonly InputSimulator input = Simulation.SendInput;
 
     private CancellationToken ct;
 
@@ -37,12 +42,30 @@ public class GetGridIconsTask : ISoloTask
         this.gridScreenName = gridScreenName;
         this.starAsSuffix = starAsSuffix;
         this.maxNumToGet = maxNumToGet;
-        IStringLocalizer<GetGridIconsTask> stringLocalizer = App.GetService<IStringLocalizer<GetGridIconsTask>>() ?? throw new NullReferenceException();
     }
 
     public async Task Start(CancellationToken ct)
     {
         this.ct = ct;
+
+        switch (this.gridScreenName)
+        {
+            case GridScreenName.Weapons:
+            case GridScreenName.Artifacts:
+            case GridScreenName.CharacterDevelopmentItems:
+            case GridScreenName.Food:
+            case GridScreenName.Materials:
+            case GridScreenName.Gadget:
+            case GridScreenName.Quest:
+            case GridScreenName.PreciousItems:
+            case GridScreenName.Furnishings:
+                await new ReturnMainUiTask().Start(ct);
+                await AutoArtifactSalvageTask.OpenBag(this.gridScreenName, this.input, this.logger, this.ct);
+                break;
+            default:
+                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                break;
+        }
 
         using var ra0 = CaptureToRectArea();
         GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];

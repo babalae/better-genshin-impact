@@ -1,13 +1,19 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Service.Notification;
-using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
+using Microsoft.ML.OnnxRuntime;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -24,6 +30,8 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
 
     private readonly AutoEatParam _taskParam;
     private readonly AutoEatConfig _config;
+    private readonly ILogger _logger = App.GetLogger<AutoEatTask>();
+    private readonly InputSimulator _input = Simulation.SendInput;
     private CancellationToken _ct;
 
     public AutoEatTask(AutoEatParam taskParam)
@@ -37,33 +45,75 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
         _ct = ct;
 
         Init();
-        Logger.LogInformation("自动吃药任务启动");
+        _logger.LogInformation("自动吃药任务启动");
 
-        if (!IsTakeFood())
+        if (String.IsNullOrWhiteSpace(_taskParam.FoodName))
         {
-            Logger.LogWarning("未装备 \"{Tool}\"，无法启用自动吃药功能", "便携营养袋");
-            return;
-        }
+            if (!IsTakeFood())
+            {
+                _logger.LogWarning("未装备 \"{Tool}\"，无法启用自动吃药功能", "便携营养袋");
+                return;
+            }
 
-        try
-        {
-            await AutoEatLoop();
+            try
+            {
+                await AutoEatLoop();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "自动吃药任务发生异常");
+                throw;
+            }
+            finally
+            {
+                _logger.LogInformation("自动吃药任务结束");
+            }
         }
-        catch (Exception e)
+        else
         {
-            Logger.LogError(e, "自动吃药任务发生异常");
-            throw;
-        }
-        finally
-        {
-            Logger.LogInformation("自动吃药任务结束");
+            _logger.LogInformation("打开背包寻找{name}……", _taskParam.FoodName);
+            await new ReturnMainUiTask().Start(ct);
+            await AutoArtifactSalvageTask.OpenBag(GridScreenName.Food, _input, _logger, _ct);
+
+            using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
+
+            using var ra0 = CaptureToRectArea();
+            GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.Food];
+            var gridRoi = gridParams.GetRect(ra0);
+            GridScreen gridScreen = new GridScreen(gridRoi, gridParams, _logger, _ct);
+            bool isAte = false;
+            await foreach (ImageRegion itemRegion in gridScreen)
+            {
+                var result = GridIconsAccuracyTestTask.Infer(itemRegion.SrcMat, session, prototypes);
+                string predName = result.Item1;
+                if (predName == _taskParam.FoodName)
+                {
+                    // 点击item
+                    itemRegion.Click();
+                    await Delay(300, ct);
+                    // 点击确定
+                    using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
+                    if (ra.IsExist())
+                    {
+                        ra.Click();
+                    }
+                    _logger.LogInformation("吃了一份{name}，真香！", predName);
+                    isAte = true;
+                    break;
+                }
+            }
+            if (!isAte)
+            {
+                _logger.LogInformation("没有找到{name}", _taskParam.FoodName);
+            }
+            await new ReturnMainUiTask().Start(ct);
         }
     }
 
     private void Init()
     {
-        Logger.LogInformation("→ {Text} 检测间隔: {Interval}ms", "自动吃药，", _config.CheckInterval);
-        Logger.LogInformation("→ {Text} 吃药间隔: {Interval}ms", "自动吃药，", _config.EatInterval);
+        _logger.LogInformation("→ {Text} 检测间隔: {Interval}ms", "自动吃药，", _config.CheckInterval);
+        _logger.LogInformation("→ {Text} 吃药间隔: {Interval}ms", "自动吃药，", _config.EatInterval);
     }
 
     /// <summary>
@@ -87,8 +137,8 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
                         // 模拟按键 "Z" 使用便携营养袋
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                         lastEatTime = now;
-                        
-                        Logger.LogInformation("检测到红血，自动吃药");
+
+                        _logger.LogInformation("检测到红血，自动吃药");
                     }
                 }
 
@@ -101,7 +151,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
             }
             catch (Exception e)
             {
-                Logger.LogDebug(e, "自动吃药检测时发生异常");
+                _logger.LogDebug(e, "自动吃药检测时发生异常");
                 await Delay(1000, _ct); // 异常时稍作等待
             }
         }
@@ -124,7 +174,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "检测便携营养袋时发生异常");
+            _logger.LogDebug(e, "检测便携营养袋时发生异常");
             return false;
         }
     }
