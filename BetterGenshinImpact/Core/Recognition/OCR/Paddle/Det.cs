@@ -8,16 +8,10 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class Det
+public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgiOnnxFactory)
+    : IDisposable
 {
-    private readonly OcrVersionConfig _config;
-    private readonly InferenceSession _session;
-
-    public Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgiOnnxFactory)
-    {
-        _config = config;
-        _session = bgiOnnxFactory.CreateInferenceSession(model, true);
-    }
+    private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
 
     /// <summary>Gets or sets the maximum size for resizing the input image.</summary>
     public int? MaxSize { get; set; } = 960;
@@ -43,6 +37,15 @@ public class Det
         {
             _session.Dispose();
         }
+    }
+
+    public void Dispose()
+    {
+        lock (_session)
+        {
+            _session.Dispose();
+        }
+        GC.SuppressFinalize(this);
     }
 
     public RotatedRect[] Run(Mat src)
@@ -113,8 +116,8 @@ public class Det
 
         using (var _ = padded)
         {
-            var inputTensor = OcrUtils.NormalizeToTensorDnn(padded, _config.NormalizeImage.Scale,
-                _config.NormalizeImage.Mean, _config.NormalizeImage.Std, out var owner);
+            var inputTensor = OcrUtils.NormalizeToTensorDnn(padded, config.NormalizeImage.Scale,
+                config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
             using (owner)
             {
                 lock (_session)

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -124,6 +124,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
 
+    public static List<int> BossNumList = [1, 2, 3];
+
+
     [ObservableProperty]
     private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
 
@@ -172,8 +175,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .GetField(e.ToString())?
                 .GetCustomAttribute<DescriptionAttribute>()?
                 .Description ?? e.ToString());
-    
-    
+
+    [ObservableProperty]
+    private string _switchGridIconsAccuracyTestButtonText = "运行模型准确率测试";
+
     [ObservableProperty]
     private bool _switchAutoRedeemCodeEnabled;
 
@@ -220,6 +225,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoDomainEnabled = false;
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
+        SwitchAutoAlbumEnabled = false;
+        SwitchAutoFishingEnabled = false;
+        SwitchArtifactSalvageEnabled = false;
+        SwitchAutoRedeemCodeEnabled = false;
+        SwitchAutoStygianOnslaughtEnabled = false;
+        SwitchGetGridIconsEnabled = false;
         await Task.Delay(800);
     }
 
@@ -523,11 +534,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        if (!TaskContext.Instance().IsInitialized)
-        {
-            PromptDialog.Prompt("请先启动截图器！", "");    // todo 自动启动截图器
-            return;
-        }
         OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
         ocrDialog.ShowDialog();
     }
@@ -563,7 +569,21 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
     }
-    
+
+    [RelayCommand]
+    private async Task OnSwitchGridIconsModelAccuracyTest()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new GridIconsAccuracyTestTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
     [RelayCommand]
     private async Task OnSwitchAutoRedeemCode()
     {
@@ -583,20 +603,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
         p.Height = 500;
         p.ShowDialog();
         if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
-        { 
+        {
             char[] separators = ['\r', '\n'];
-                 var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+            var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
 
-                .Select(code => code.Trim())
-                .Where(code => !string.IsNullOrEmpty(code))
-                .ToList();
+           .Select(code => code.Trim())
+           .Where(code => !string.IsNullOrEmpty(code))
+           .ToList();
 
             if (codes.Count == 0)
             {
                 Toast.Warning("没有有效的兑换码");
                 return;
             }
-            
+
             SwitchAutoRedeemCodeEnabled = true;
             await new TaskRunner()
                 .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));

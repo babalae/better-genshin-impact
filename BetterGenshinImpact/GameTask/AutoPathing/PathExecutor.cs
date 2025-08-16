@@ -768,21 +768,25 @@ public class PathExecutor
                 else
                 {
                     distanceTooFarRetryCount++;
-                    if (distanceTooFarRetryCount > 5)
+                    if (distanceTooFarRetryCount > 50)
                     {
                         if (position == new Point2f())
                         {
-                            throw new NormalEndException("重试多次后，当前点位无法被识别，放弃此路径！");
+                            throw new HandledException("重试多次后，当前点位无法被识别，放弃此路径！");
                         }
                         else
                         {
                             Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试多次后仍然失败，放弃此路径点！");
-                            throw new NormalEndException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
+                            throw new HandledException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
                         }
                     }
                     else
                     {
-                        Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        // 取余减少日志输出频率
+                        if (distanceTooFarRetryCount % 5 == 0)
+                        {
+                            Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        }
                         await Delay(50, ct);
                         continue;
                     }
@@ -1067,7 +1071,8 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code
             || waypoint.Action == ActionEnum.ExitAndRelogin.Code
-            || waypoint.Action == ActionEnum.SetTime.Code)
+            || waypoint.Action == ActionEnum.SetTime.Code
+            || waypoint.Action == ActionEnum.UseGadget.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig

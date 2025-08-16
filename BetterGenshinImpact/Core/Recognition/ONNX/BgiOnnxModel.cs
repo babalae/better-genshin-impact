@@ -51,34 +51,52 @@ public class BgiOnnxModel
         Register("BgiAvatarSide", @"Assets\Model\Common\avatar_side_classify_sim.onnx");
 
     /// <summary>
-    /// paddleOCR V4 简体中文 检测模型
+    /// paddleOCR V4 检测模型
     /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrChDet =
-        Register("ch_PP-OCRv4_det", @"Assets\Model\PaddleOCR\ch_PP-OCRv4_det\slim_model.onnx");
+    public static readonly BgiOnnxModel PaddleOcrDetV4 =
+        Register("PpOcrDetV4", @"Assets\Model\PaddleOCR\Det\V4\PP-OCRv4_mobile_det_infer\slim.onnx");
 
     /// <summary>
-    /// paddleOCR V4 简体中文 识别模型
+    /// paddleOCR V5 检测模型
     /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrChRec =
-        Register("ch_PP-OCRv4_rec", @"Assets\Model\PaddleOCR\ch_PP-OCRv4_rec\slim_model.onnx");
+    public static readonly BgiOnnxModel PaddleOcrDetV5 =
+        Register("PpOcrDetV5", @"Assets\Model\PaddleOCR\Det\V5\PP-OCRv5_mobile_det_infer\slim.onnx");
 
     /// <summary>
-    /// paddleOCR V3 繁体中文 识别模型
+    /// paddleOCR V4 识别模型
     /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrChtRec =
-        Register("chinese_cht_PP-OCRv3_rec", @"Assets\Model\PaddleOCR\chinese_cht_PP-OCRv3_rec_infer\slim_model.onnx");
+    public static readonly BgiOnnxModel PaddleOcrRecV4 =
+        Register("PpOcrRecV4", @"Assets\Model\PaddleOCR\Rec\V4\PP-OCRv4_mobile_rec_infer\slim.onnx");
 
     /// <summary>
-    /// paddleOCR V3 英文 检测模型
+    /// paddleOCR V4 英文/数字 识别模型
     /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrEnDet =
-        Register("en_PP-OCRv3_det", @"Assets\Model\PaddleOCR\en_PP-OCRv3_det_infer\slim_model.onnx");
+    public static readonly BgiOnnxModel PaddleOcrRecV4En =
+        Register("PpOcrRecV4En", @"Assets\Model\PaddleOCR\Rec\V4\en_PP-OCRv4_mobile_rec_infer\slim.onnx");
 
     /// <summary>
-    /// paddleOCR V3 拉丁文 识别模型
+    /// paddleOCR V5 识别模型
     /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrLatinRec =
-        Register("latin_PP-OCRv3_rec", @"Assets\Model\PaddleOCR\latin_PP-OCRv3_rec_infer\slim_model.onnx");
+    public static readonly BgiOnnxModel PaddleOcrRecV5 =
+        Register("PpOcrRecV5", @"Assets\Model\PaddleOCR\Rec\V5\PP-OCRv5_mobile_rec_infer\slim.onnx");
+
+    /// <summary>
+    /// paddleOCR V5 拉丁文 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrRecV5Latin =
+        Register("PpOcrRecV5Latin", @"Assets\Model\PaddleOCR\Rec\V5\latin_PP-OCRv5_mobile_rec_infer\slim.onnx");
+
+    /// <summary>
+    /// paddleOCR V5 斯拉夫文 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrRecV5Eslav =
+        Register("PpOcrRecV5Eslav", @"Assets\Model\PaddleOCR\Rec\V5\eslav_PP-OCRv5_mobile_rec_infer\slim.onnx");
+
+    /// <summary>
+    /// paddleOCR V5 韩文 识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel PaddleOcrRecV5Korean =
+        Register("PpOcrRecV5Korean", @"Assets\Model\PaddleOCR\Rec\V5\korean_PP-OCRv5_mobile_rec_infer\slim.onnx");
 
     #endregion
 

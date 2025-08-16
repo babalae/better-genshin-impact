@@ -104,7 +104,7 @@ public class Genshin
     /// <param name="x">目标X坐标</param>
     /// <param name="y">目标Y坐标</param>
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null</param>
-    public async Task MoveMapTo(int x, int y, string? forceCountry = null)
+    public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         await tpTask.CheckInBigMapUi();

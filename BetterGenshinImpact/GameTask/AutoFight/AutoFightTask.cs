@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
@@ -38,6 +39,7 @@ public class AutoFightTask : ISoloTask
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
 
+    public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
 
     private class TaskFightFinishDetectConfig
     {
@@ -203,13 +205,12 @@ public class AutoFightTask : ISoloTask
             {
                 return combatScenes;
             }
-
+        
             if (attempt < maxRetries)
             {
                 Thread.Sleep(retryDelayMs); // 可选：延迟再试
             }
         }
-
         throw new Exception("识别队伍角色失败（已重试 5 次）");
     }
     // 方法1：判断是否是单个数字
@@ -276,6 +277,11 @@ public class AutoFightTask : ISoloTask
         //所有角色是否都可被跳过
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
         
+        //盾奶优先功能角色预处理
+        var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
+        
+        AutoFightSeek.RotationCount= 0; // 重置旋转次数
+        
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -304,17 +310,24 @@ public class AutoFightTask : ISoloTask
                     var skipFightName = "";
 
                     #endregion
-
+                    
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
-
+                        var lastCommand = i == 0 ? command : combatCommands[i - 1];
+                        
+                        #region 盾奶位技能优先功能
+                        
+                        var skipModel = _taskParam.SkipModel? (guardianAvatar != null) : (guardianAvatar != null && lastFightName != command.Name);
+                        if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,_taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct);
                         var avatar = combatScenes.SelectAvatar(command.Name);
-                        if (avatar is null)
+                        
+                        #endregion
+                        
+                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && _taskParam.GuardianCombatSkip))
                         {
                             continue;
                         }
-
 
                         #region 每个命令的跳过战斗判定
 
@@ -362,9 +375,9 @@ public class AutoFightTask : ISoloTask
 
                         #endregion
 
-                        if (timeoutStopwatch.Elapsed > fightTimeout)
+                        if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
                         {
-                            Logger.LogInformation("战斗超时结束");
+                            Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                             fightEndFlag = true;
                             timeOutFlag = true;
                             break;
@@ -544,14 +557,17 @@ public class AutoFightTask : ISoloTask
             bool? result = null;
             try
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime,delayTime, _ct);
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
                 result = false;
             }
-
+            
+            AutoFightSeek.RotationCount = (result == null) ? 
+                AutoFightSeek.RotationCount + 1 :  0;
+            
             if (result != null)
             {
                 return result.Value;

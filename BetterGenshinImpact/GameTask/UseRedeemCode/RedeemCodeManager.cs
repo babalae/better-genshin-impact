@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Helpers.Security;
 using BetterGenshinImpact.View.Windows;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
@@ -11,8 +12,16 @@ namespace BetterGenshinImpact.GameTask.UseRedeemCode;
 
 public class RedeemCodeManager
 {
+    public static HashSet<string> CancelClipboardHash { get; } = [];
+    
     public static async Task ImportFromClipboard(string clipboardText)
     {
+        var md5Hash = MD5Helper.ComputeMD5(clipboardText);
+        if (CancelClipboardHash.Contains(md5Hash))
+        {
+            return;
+        }
+        
         var codes = ExtractAllCodes(clipboardText);
         if (codes.Count == 0)
         {
@@ -36,6 +45,11 @@ public class RedeemCodeManager
 
         if (p.DialogResult != true)
         {
+            if (CancelClipboardHash.Count > 10)
+            {
+                CancelClipboardHash.Clear();
+            }
+            CancelClipboardHash.Add(md5Hash);
             return;
         }
 
