@@ -302,19 +302,6 @@ public class LimitedFile(string rootPath)
     }
     
     /// <summary>
-    /// 异步写入图片到文件（默认PNG格式）
-    /// </summary>
-    /// <param name="path">文件路径</param>
-    /// <param name="mat">OpenCV Mat对象</param>
-    /// <returns>是否写入成功</returns>
-    public async Task<bool> WriteImage(string path, Mat mat)
-    {
-        return await Task.Run(() => WriteImageSync(path, mat));
-    }
-    
-
-    
-    /// <summary>
     /// 确保图片路径有正确的扩展名，如果没有则自动追加.png
     /// </summary>
     /// <param name="path">文件路径</param>
