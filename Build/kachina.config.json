@@ -1,40 +1,61 @@
 {
-    "source": [
-      {
-        "id": "dfs",
-        "name": "默认服务器",
-        "uri": "dfs2+packed+http://bgi-ota.cocogoat.cn/resource/BetterGI.Install.exe"
-      },
-      {
-        "id": "dfs-alpha",
-        "name": "内测版",
-        "uri": "dfs2+packed+http://bgi-ota.cocogoat.cn/resource/BetterGI.Alpha.exe",
-        "hidden": true
-      },
-      {
-        "id": "mirrorc",
-        "name": "Mirror酱",
-        "uri": "mirrorc://BGI?os=win&arch=x64"
-      },
-      {
-        "id": "mirrorc-alpha",
-        "name": "Mirror酱 Alpha",
-        "uri": "mirrorc://BGI?channel=alpha&os=win&arch=x64",
-        "hidden": true
-      }
-    ],
-    "appName": "BetterGI",
-    "publisher": "babalae",
-    "regName": "BetterGI",
-    "exeName": "BetterGI.exe",
-    "uninstallName": "BetterGI.uninst.exe",
-    "updaterName": "BetterGI.update.exe",
-    "programFilesPath": "BetterGI",
-    "title": "BetterGI",
-    "description": "更好的原神，免费且开源",
-    "windowTitle": "BetterGI 安装程序",
-    "userDataPath": ["${INSTALL_PATH}/User"],
-    "extraUninstallPath": ["${INSTALL_PATH}/log"],
-    "uacStrategy": "prefer-admin",
-    "runtimes": ["Microsoft.DotNet.DesktopRuntime.8", "Microsoft.VCRedist.2015+.x64"]
+  "source": [
+    {
+      "id": "dfs",
+      "name": "Steambird",
+      "uri": "dfs2+packed+https://bgi-ota.cocogoat.cn/resource/BetterGI.Install.exe",
+      "icon": "<svg viewBox=\"0 0 48 48\"><g fill=\"none\"><path stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"4\" d=\"m9 14-5 6.07S5.85 27.035 11 32c9.89 9.533 24.334 3.303 30-1 5.357-4.37 2.717-5.332 1-5l-5 1c9.065-14.301 6.575-15.828 4-15l-9 4c-5.769 3.177-8.5 1.5-10 0l-3-3c-4.5-4-8.97-.16-10 1\"/><circle cx=\"14\" cy=\"20\" r=\"2\" fill=\"currentColor\"/></g></svg>"
+    },
+    {
+      "id": "dfs-alpha",
+      "name": "测试版",
+      "uri": "dfs2+packed+https://bgi-ota.cocogoat.cn/resource/BetterGI.Alpha.exe",
+      "hidden": true
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "uri": "https://github.com/babalae/better-genshin-impact/releases/download/${version}/BetterGI.Install.${version}.exe",
+      "icon": "<svg viewBox=\"0 0 24 24\"><path d=\"M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.193 10.193 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11Z\"></path></svg>"
+    },
+    {
+      "id": "cnb",
+      "name": "CNB.cool",
+      "uri": "plugin-github+https://cnb.cool/bettergi/better-genshin-impact/-/releases/download/v${version}/BetterGI.Install.${version}.exe#versionRegex=v([0-9]%2B\\.[0-9]%2B\\.[0-9]%2B)&cacheTime=5",
+      "icon": "<svg style=\"padding:2\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path d=\"M11.529 1.871a.37.37 0 0 0-.106-.396A4.72 4.72 0 0 0 8.67.34C7.071.224 6.081.652 5.581.97a.37.37 0 0 0-.026.604L9.627 4.74a.661.661 0 0 0 1.032-.309l.87-2.559ZM1.49 11.266a.465.465 0 0 0-.188.511c.155.557.617 1.715 1.926 2.769 1.31 1.053 2.86 1.167 3.522 1.15a.463.463 0 0 0 .43-.324l2.61-8.261c.189-.597-.48-1.097-.998-.748L1.49 11.266Zm1.908-8.718a.463.463 0 0 0-.392.024A5.308 5.308 0 0 0 .647 5.309C.155 6.592.328 8.011.463 8.705a.371.371 0 0 0 .5.273L8.794 5.92a.661.661 0 0 0 .003-1.23l-5.4-2.142Zm11.619 5.92a.371.371 0 0 0 .575-.252c.104-.717.194-1.965-.221-2.907-.553-1.254-1.492-2.028-1.938-2.342a.371.371 0 0 0-.46.025l-1.977 1.753a.66.66 0 0 0 .068 1.042l3.953 2.682ZM9.494 15.16a.371.371 0 0 0 .41.402c.75-.08 2.288-.378 3.44-1.48a5.644 5.644 0 0 0 1.594-2.85.464.464 0 0 0-.094-.388L11.39 6.58a.661.661 0 0 0-1.173.359l-.722 8.222Z\"/></svg>"
+    },
+    {
+      "id": "mirrorc",
+      "name": "Mirror酱",
+      "uri": "mirrorc://BGI?os=win&arch=x64",
+      "icon": "<svg viewBox=\"0 0 24 24\"><g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" color=\"currentColor\"><path d=\"M19.745 13a7 7 0 1 0-12.072-1\"/><path d=\"M12 5.5c.167.815.4 1.667 2 2.556m0 0c1.6-.89 1.833-1.741 2-2.556m-2 2.556V12.5m2-2.667h-4M3 14h2.395c.294 0 .584.066.847.194l2.042.988c.263.127.553.193.848.193h1.042c1.008 0 1.826.791 1.826 1.767 0 .04-.027.074-.066.085l-2.541.703a1.95 1.95 0 0 1-1.368-.124L5.842 16.75M12 16.5l4.593-1.411a1.985 1.985 0 0 1 2.204.753c.369.51.219 1.242-.319 1.552l-7.515 4.337a2 2 0 0 1-1.568.187L3 20.02\"/></g></svg>"
+    },
+    {
+      "id": "mirrorc-alpha",
+      "name": "Mirror酱 Alpha",
+      "uri": "mirrorc://BGI?channel=alpha&os=win&arch=x64",
+      "hidden": true
+    }
+  ],
+  "appName": "BetterGI",
+  "publisher": "babalae",
+  "regName": "BetterGI",
+  "exeName": "BetterGI.exe",
+  "uninstallName": "BetterGI.uninst.exe",
+  "updaterName": "BetterGI.update.exe",
+  "programFilesPath": "BetterGI",
+  "title": "BetterGI",
+  "description": "更好的原神，免费且开源",
+  "windowTitle": "BetterGI 安装程序",
+  "userDataPath": [
+    "${INSTALL_PATH}/User"
+  ],
+  "extraUninstallPath": [
+    "${INSTALL_PATH}/log"
+  ],
+  "uacStrategy": "prefer-admin",
+  "runtimes": [
+    "Microsoft.DotNet.DesktopRuntime.8",
+    "Microsoft.VCRedist.2015+.x64"
+  ]
 }
