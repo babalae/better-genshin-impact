@@ -16,6 +16,11 @@ public class RedeemCodeManager
     
     public static async Task ImportFromClipboard(string clipboardText)
     {
+        if (!TaskContext.Instance().Config.AutoRedeemCodeConfig.ClipboardListenerEnabled)
+        {
+            return;
+        }
+        
         var md5Hash = MD5Helper.ComputeMD5(clipboardText);
         if (CancelClipboardHash.Contains(md5Hash))
         {
