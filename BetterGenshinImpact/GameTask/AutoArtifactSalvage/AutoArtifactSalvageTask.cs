@@ -52,13 +52,15 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly bool returnToMainUi = true;
 
+    private readonly CultureInfo cultureInfo;
+
     public AutoArtifactSalvageTask(int star, string? regularExpression = null, int? maxNumToCheck = null)
     {
         this.star = star;
         this.regularExpression = regularExpression;
         this.maxNumToCheck = maxNumToCheck;
         IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
         numOfStarLocalizedString =
         [
@@ -291,9 +293,9 @@ public class AutoArtifactSalvageTask : ISoloTask
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
                     using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.24), (int)(ra1.Width * 0.29)));
-                    string affixes = GetArtifactAffixes(card.SrcMat, OcrFactory.Paddle);
+                    GetArtifactStat(card.SrcMat, OcrFactory.Paddle, this.cultureInfo, out string allText);
 
-                    if (IsMatchRegularExpression(affixes, regularExpression, out string msg))
+                    if (IsMatchRegularExpression(allText, regularExpression, out string msg))
                     {
                         logger.LogInformation(message: msg);
                     }
@@ -336,10 +338,137 @@ public class AutoArtifactSalvageTask : ISoloTask
         return match.Success;
     }
 
-    public static string GetArtifactAffixes(Mat src, IOcrService ocrService)
+    public static ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, CultureInfo cultureInfo, out string allText)
     {
         var ocrResult = ocrService.OcrResult(src);
-        return ocrResult.Text;
+        allText = ocrResult.Text;
+        var lines = ocrResult.Text.Split('\n');
+        string percentStr = "%";
+
+        #region 主词条
+        var defaultMainAffix = ArtifactAffix.DefaultStrDic.Select(kvp => kvp.Value).Distinct();
+        string mainAffixTypeLine = lines.Single(l => defaultMainAffix.Contains(l));
+        ArtifactAffixType mainAffixType = ArtifactAffix.DefaultStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
+        string mainAffixValueLine = lines.Select(l =>
+        {
+            string pattern = @"^(\d+\.?\d*)(%?)$";
+            pattern = pattern.Replace("%", percentStr);   // 这样一行一行写只是为了IDE能保持正则字符串高亮
+            Match match = Regex.Match(l, pattern);
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+            else
+            {
+                return null;
+            }
+        }).Where(l => l != null).Cast<string>().Single();
+        if (!float.TryParse(mainAffixValueLine, NumberStyles.Any, cultureInfo, out float value))
+        {
+            throw new Exception($"未识别的主词条数值：{mainAffixValueLine}");
+        }
+        ArtifactAffix mainAffix = new ArtifactAffix(mainAffixType, value);
+        #endregion
+
+        #region 副词条
+        ArtifactAffix[] minorAffixes = lines.Select(l =>
+        {
+            string pattern = @"^•([^+]+)\+(\d+\.?\d*)(%?)$";
+            pattern = pattern.Replace("%", percentStr);
+            Match match = Regex.Match(l, pattern);
+            if (match.Success)
+            {
+                ArtifactAffixType artifactAffixType;
+                var dic = ArtifactAffix.DefaultStrDic;
+
+                if (match.Groups[1].Value == dic[ArtifactAffixType.ATK])
+                {
+                    if (String.IsNullOrEmpty(match.Groups[3].Value))
+                    {
+                        artifactAffixType = ArtifactAffixType.ATK;
+                    }
+                    else
+                    {
+                        artifactAffixType = ArtifactAffixType.ATKPercent;
+                    }
+                }
+                else if (match.Groups[1].Value == dic[ArtifactAffixType.DEF])
+                {
+                    if (String.IsNullOrEmpty(match.Groups[3].Value))
+                    {
+                        artifactAffixType = ArtifactAffixType.DEF;
+                    }
+                    else
+                    {
+                        artifactAffixType = ArtifactAffixType.DEFPercent;
+                    }
+                }
+                else if (match.Groups[1].Value == dic[ArtifactAffixType.HP])
+                {
+                    if (String.IsNullOrEmpty(match.Groups[3].Value))
+                    {
+                        artifactAffixType = ArtifactAffixType.HP;
+                    }
+                    else
+                    {
+                        artifactAffixType = ArtifactAffixType.HPPercent;
+                    }
+                }
+                else if (match.Groups[1].Value == dic[ArtifactAffixType.CRITRate])
+                {
+                    artifactAffixType = ArtifactAffixType.CRITRate;
+                }
+                else if (match.Groups[1].Value == dic[ArtifactAffixType.CRITDMG])
+                {
+                    artifactAffixType = ArtifactAffixType.CRITDMG;
+                }
+                else if (match.Groups[1].Value == dic[ArtifactAffixType.ElementalMastery])
+                {
+                    artifactAffixType = ArtifactAffixType.ElementalMastery;
+                }
+                else if (match.Groups[1].Value == dic[ArtifactAffixType.EnergyRecharge])
+                {
+                    artifactAffixType = ArtifactAffixType.EnergyRecharge;
+                }
+                else
+                {
+                    throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
+                }
+
+                if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float value))
+                {
+                    throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
+                }
+                return new ArtifactAffix(artifactAffixType, value);
+            }
+            else
+            {
+                return null;
+            }
+        }).Where(a => a != null).Cast<ArtifactAffix>().ToArray();
+        #endregion
+
+        #region 等级
+        string levelLine = lines.Select(l =>
+        {
+            string pattern = @"^\+(\d*)$";
+            Match match = Regex.Match(l, pattern);
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+            else
+            {
+                return null;
+            }
+        }).Where(l => l != null).Cast<string>().Single();
+        if (!int.TryParse(levelLine, out int level) || level < 0 || level > 20)
+        {
+            throw new Exception($"未识别的等级：{levelLine}");
+        }
+        #endregion
+
+        return new ArtifactStat(mainAffix, minorAffixes, level);
     }
 
     public static ArtifactStatus GetArtifactStatus(Mat src)
