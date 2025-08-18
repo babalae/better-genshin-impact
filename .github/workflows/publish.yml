@@ -446,7 +446,7 @@ jobs:
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
   cnb_uploading:
-    if: github.repository_owner == 'babalae'
+    if: github.repository_owner == 'babalae' && false
     needs: [validate, build_dist, build_installer]
     runs-on: ubuntu-latest
     steps:
