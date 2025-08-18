@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.ComponentModel;
@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using Windows.System;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Win32;
@@ -24,6 +25,17 @@ public partial class CheckUpdateWindow : FluentWindow
     [ObservableProperty] private bool showUpdateStatus = false;
 
     [ObservableProperty] private string updateStatusMessage = string.Empty;
+
+    [ObservableProperty] private bool showOtherUpdateTip = false;
+
+    [ObservableProperty] private string selectedGitSource = "Github";
+
+    public string GitSourceDescription => SelectedGitSource == "CNB" ? "直接从 CNB 下载并更新" : "直接从 Github 下载并更新";
+
+    partial void OnSelectedGitSourceChanged(string value)
+    {
+        OnPropertyChanged(nameof(GitSourceDescription));
+    }
 
     private UpdateOption _option;
 
@@ -51,30 +63,62 @@ public partial class CheckUpdateWindow : FluentWindow
             UpdateStatusMessageGrid.Height = 0;
             ShowUpdateStatus = false;
             
-            // 删除前两行
-            MyGrid.RowDefinitions.RemoveAt(0);
-            MyGrid.RowDefinitions.RemoveAt(0);
+            // 隐藏开源渠道和Steambird服务卡片
+            GitSourceCard.Visibility = Visibility.Collapsed;
+            SteambirdCard.Visibility = Visibility.Collapsed;
             
-            // 注意：删除行定义后，需要调整剩余元素的 Grid.Row 属性
-            foreach (FrameworkElement child in MyGrid.Children)
-            {
-                int currentRow = System.Windows.Controls.Grid.GetRow(child);
-                if (currentRow > 1) // 如果元素在第三行或之后
-                {
-                    Grid.SetRow(child, currentRow - 2); // 行号减2
-                }
-            }
-            
-            if (ServerPanel.Children.Count > 0)
-            {
-                ServerPanel.Children.RemoveAt(0);
-            }
+            // // 删除前几行
+            // MyGrid.RowDefinitions.RemoveAt(0);
+            // MyGrid.RowDefinitions.RemoveAt(0);
+            //
+            // // 注意：删除行定义后，需要调整剩余元素的 Grid.Row 属性
+            // foreach (FrameworkElement child in MyGrid.Children)
+            // {
+            //     int currentRow = System.Windows.Controls.Grid.GetRow(child);
+            //     if (currentRow > 1) // 如果元素在第三行或之后
+            //     {
+            //         Grid.SetRow(child, currentRow - 2); // 行号减2
+            //     }
+            // }
+            //
+            // if (ServerPanel.Children.Count > 0)
+            // {
+            //     ServerPanel.Children.RemoveAt(0);
+            // }
             SizeToContent = SizeToContent.Height; // 设置高度为自动
             UpdateLayout();
         }
 
 
         Closing += OnClosing;
+        
+        // 延迟显示气泡提示
+        if (option.Channel != UpdateChannel.Alpha)
+        {
+            var showTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(0.8)
+            };
+            showTimer.Tick += (s, e) =>
+            {
+                showTimer.Stop();
+                ShowOtherUpdateTip = true;
+            
+                // 5秒后自动消失
+                var hideTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(6)
+                };
+                hideTimer.Tick += (s2, e2) =>
+                {
+                    hideTimer.Stop();
+                    ShowOtherUpdateTip = false;
+                };
+                hideTimer.Start();
+            };
+            showTimer.Start();
+        }
+
     }
 
     protected void OnClosing(object? sender, CancelEventArgs e)
@@ -117,6 +161,13 @@ public partial class CheckUpdateWindow : FluentWindow
         }
     }
 
+    [RelayCommand]
+    private async Task UpdateFromGitHostPlatformAsync()
+    {
+        string source = SelectedGitSource == "CNB" ? "cnb" : "github";
+        await RunUpdaterAsync($"-I --source {source}");
+    }
+    
 
     [RelayCommand]
     private async Task UpdateFromSteambirdAsync()
@@ -188,6 +239,11 @@ public partial class CheckUpdateWindow : FluentWindow
     private void EditCdk()
     {
         MirrorChyanHelper.EditCdk();
+    }
+
+    private void OnCloseTipClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        ShowOtherUpdateTip = false;
     }
 
     public enum CheckUpdateWindowButton

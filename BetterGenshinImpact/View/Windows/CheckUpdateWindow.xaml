@@ -37,9 +37,9 @@
             </ui:Grid>
             <!-- 新增：多渠道更新方式卡片 -->
             <StackPanel Name="ServerPanel" Grid.Row="2" Margin="12,0,12,0">
-                <ui:CardControl Name="DefaultCard" Margin="0,0,0,8">
+                <ui:CardControl Name="GitSourceCard" Margin="0,0,0,4" Padding="12,12">
                     <ui:CardControl.Icon>
-                        <ui:FontIcon Glyph="&#xf4ba;" Style="{StaticResource FaFontIconStyle}" />
+                        <ui:FontIcon Glyph="&#xe13b;" Style="{StaticResource FaFontIconStyle}" />
                     </ui:CardControl.Icon>
                     <ui:CardControl.Header>
                         <Grid>
@@ -50,8 +50,45 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="默认更新服务器"
+                                          Text="开源渠道"
                                           TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{Binding GitSourceDescription}"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardControl.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox x:Name="GitSourceComboBox"
+                                  SelectedValue="{Binding SelectedGitSource}"
+                                  SelectedValuePath="Content"
+                                  Margin="0,0,8,0"
+                                  MinWidth="80">
+                            <ComboBoxItem Content="Github" />
+                            <ComboBoxItem Content="CNB" />
+                        </ComboBox>
+                        <ui:Button
+                            Appearance="Success"
+                            Icon="{ui:SymbolIcon ArrowDownload24}"
+                            Content="立即更新"
+                            Command="{Binding UpdateFromGitHostPlatformCommand}" />
+                    </StackPanel>
+                </ui:CardControl>
+                <ui:CardControl Name="SteambirdCard" Margin="0,0,0,4" Padding="12,12">
+                    <ui:CardControl.Icon>
+                        <ui:FontIcon Glyph="&#xf4ba;" Style="{StaticResource FaFontIconStyle}" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <emoji:TextBlock Grid.Row="0"
+                                             Grid.Column="0"
+                                             Text="Steambird 服务 🆓"
+                                             TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -67,7 +104,7 @@
                             Command="{Binding UpdateFromSteambirdCommand}" />
                     </StackPanel>
                 </ui:CardControl>
-                <ui:CardControl Margin="0,0,0,8">
+                <ui:CardControl Margin="0,0,0,4" Padding="12,12">
                     <ui:CardControl.Icon>
                         <ui:FontIcon Glyph="&#xf0c2;" Style="{StaticResource FaFontIconStyle}" />
                     </ui:CardControl.Icon>
@@ -79,7 +116,7 @@
                             </Grid.RowDefinitions>
                             <emoji:TextBlock Grid.Row="0"
                                           Grid.Column="0"
-                                          Text="Mirror酱⚡"
+                                          Text="Mirror酱服务 ⚡"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
@@ -96,7 +133,6 @@
                             Content="修改CDK"
                             Command="{Binding EditCdkCommand}" />
                         <ui:Button
-                            Appearance="Success"
                             Icon="{ui:SymbolIcon ArrowDownload24}"
                             Content="立即更新"
                             Command="{Binding UpdateFromMirrorChyanCommand}" />
@@ -143,11 +179,50 @@
                            Command="{Binding BackgroundUpdateCommand}"
                            Content="后台更新"
                            Visibility="Collapsed" />
-                <ui:Button Grid.Column="0"
-                           MinWidth="90"
-                           Margin="8,0,8,0"
-                           Command="{Binding OtherUpdateCommand}"
-                           Content="其他更新方式" />
+                <Grid Grid.Column="0">
+                    <ui:Button x:Name="OtherUpdateButton"
+                               Icon="{ui:SymbolIcon Globe24}"
+                               Appearance="Primary"
+                               MinWidth="90"
+                               Margin="8,0,8,0"
+                               Command="{Binding OtherUpdateCommand}"
+                               Content="手动下载" />
+                    <!-- 气泡提示 -->
+                    <Popup x:Name="OtherUpdateTipPopup"
+                            IsOpen="{Binding ShowOtherUpdateTip}"
+                            PlacementTarget="{Binding ElementName=OtherUpdateButton}"
+                            Placement="Top"
+                            HorizontalOffset="0"
+                            VerticalOffset="-3"
+                            AllowsTransparency="True"
+                            PopupAnimation="Fade">
+                         <Grid>
+                             <Border Background="#FF4A4A4A"
+                                     CornerRadius="8"
+                                     Padding="12,8"
+                                     MaxWidth="200"
+                                     MouseLeftButtonDown="OnCloseTipClick"
+                                     Cursor="Hand">
+                                 <Border.Effect>
+                                     <DropShadowEffect Color="Black" 
+                                                       Opacity="0.3" 
+                                                       ShadowDepth="2" 
+                                                       BlurRadius="8"/>
+                                 </Border.Effect>
+                                 <emoji:TextBlock Text="💡 如果上方更新渠道无法正常更新，可以点击此按钮手动下载安装包进行更新"
+                                                  Foreground="#FFE6E6E6"
+                                                  TextWrapping="Wrap"
+                                                  FontSize="12"/>
+                             </Border>
+                             <!-- 小三角形指示器 -->
+                             <Polygon Points="0,0 10,0 5,8"
+                                      Fill="#FF4A4A4A"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Bottom"
+                                      Margin="0,0,0,-8"/>
+                         </Grid>
+                     </Popup>
+                </Grid>
                 <!--<ui:Button Grid.Column="1"
                            MinWidth="90"
                            Margin="8,0,8,0"
