@@ -527,14 +527,14 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchArtifactSalvageEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.RegularExpression, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
+            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.JavaScript, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
         SwitchArtifactSalvageEnabled = false;
     }
 
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
         ocrDialog.ShowDialog();
     }
 

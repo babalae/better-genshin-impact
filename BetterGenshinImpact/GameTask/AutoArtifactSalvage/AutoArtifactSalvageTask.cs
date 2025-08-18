@@ -1,30 +1,32 @@
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.WindowsInput;
+using Microsoft.ClearScript;
+using Microsoft.ClearScript.V8;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using BetterGenshinImpact.Core.Simulator.Extensions;
-using Microsoft.Extensions.Localization;
-using System.Globalization;
-using BetterGenshinImpact.Helpers;
-using System.Text.RegularExpressions;
-using BetterGenshinImpact.GameTask.Model.Area;
-using System.Collections.Generic;
-using Fischless.WindowsInput;
-using OpenCvSharp;
-using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
@@ -46,7 +48,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly string[] numOfStarLocalizedString;
 
-    private readonly string? regularExpression;
+    private readonly string? javaScript;
 
     private readonly int? maxNumToCheck;
 
@@ -54,10 +56,10 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly CultureInfo cultureInfo;
 
-    public AutoArtifactSalvageTask(int star, string? regularExpression = null, int? maxNumToCheck = null)
+    public AutoArtifactSalvageTask(int star, string? javaScript = null, int? maxNumToCheck = null)
     {
         this.star = star;
-        this.regularExpression = regularExpression;
+        this.javaScript = javaScript;
         this.maxNumToCheck = maxNumToCheck;
         IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
         this.cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
@@ -239,7 +241,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 logger.LogInformation("完成{Star}星圣遗物快速分解", star);
                 await Delay(400, ct);
-                if (regularExpression != null)
+                if (javaScript != null)
                 {
                     input.Mouse.LeftButtonClick();
                     await Delay(1000, ct);
@@ -256,9 +258,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         // 分解5星
-        if (regularExpression != null)
+        if (javaScript != null)
         {
-            await Salvage5Star(this.regularExpression, this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空"));
+            await Salvage5Star(this.javaScript, this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空"));
             logger.LogInformation("筛选完毕，请复查并手动分解");
         }
         else
@@ -272,7 +274,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
     }
 
-    private async Task Salvage5Star(string regularExpression, int maxNumToCheck)
+    private async Task Salvage5Star(string javaScript, int maxNumToCheck)
     {
         int count = maxNumToCheck;
 
@@ -293,11 +295,11 @@ public class AutoArtifactSalvageTask : ISoloTask
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
                     using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.24), (int)(ra1.Width * 0.29)));
-                    GetArtifactStat(card.SrcMat, OcrFactory.Paddle, this.cultureInfo, out string allText);
+                    ArtifactStat artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, this.cultureInfo, out string allText);
 
-                    if (IsMatchRegularExpression(allText, regularExpression, out string msg))
+                    if (IsMatchJavaScript(artifact, javaScript))
                     {
-                        logger.LogInformation(message: msg);
+                        // logger.LogInformation(message: msg);
                     }
                     else
                     {
@@ -313,6 +315,45 @@ public class AutoArtifactSalvageTask : ISoloTask
                     break;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// 是否匹配JavaScript的计算结果
+    /// </summary>
+    /// <param name="artifact">作为JS入参，JS使用“ArtifactStat”获取</param>
+    /// <param name="javaScript"></param>
+    /// <param name="engine">由调用者控制生命周期</param>
+    /// <returns>是否匹配。取JS的“Output”作为出参</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="Exception"></exception>
+    public static bool IsMatchJavaScript(ArtifactStat artifact, string javaScript)
+    {
+        using V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.DisableGlobalMembers);
+        try
+        {
+            // 传入输入参数
+            engine.Script.ArtifactStat = artifact;
+
+            // 执行JavaScript代码
+            engine.Execute(javaScript);
+
+            // 检查是否有输出
+            if (!engine.Script.propertyIsEnumerable("Output"))
+            {
+                throw new InvalidOperationException("JavaScript没有设置Output输出");
+            }
+
+            if (engine.Script.Output is not bool)
+            {
+                throw new InvalidOperationException("JavaScript的Output输出不是布尔类型");
+            }
+
+            return (bool)engine.Script.Output;
+        }
+        catch (ScriptEngineException ex)
+        {
+            throw new Exception($"JavaScript execution error: {ex.Message}", ex);
         }
     }
 
@@ -345,6 +386,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         var lines = ocrResult.Text.Split('\n');
         string percentStr = "%";
 
+        // 名称
+        string name = lines[0];
+
         #region 主词条
         var defaultMainAffix = ArtifactAffix.DefaultStrDic.Select(kvp => kvp.Value).Distinct();
         string mainAffixTypeLine = lines.Single(l => defaultMainAffix.Contains(l));
@@ -373,7 +417,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = lines.Select(l =>
         {
-            string pattern = @"^•([^+]+)\+(\d+\.?\d*)(%?)$";
+            string pattern = @"^[•·]?([^+]+)\+(\d+\.?\d*)(%?)$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)
@@ -468,7 +512,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
         #endregion
 
-        return new ArtifactStat(mainAffix, minorAffixes, level);
+        return new ArtifactStat(name, mainAffix, minorAffixes, level);
     }
 
     public static ArtifactStatus GetArtifactStatus(Mat src)

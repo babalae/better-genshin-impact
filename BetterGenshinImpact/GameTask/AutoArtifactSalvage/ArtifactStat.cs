@@ -5,12 +5,18 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
     /// </summary>
     public class ArtifactStat
     {
-        public ArtifactStat(ArtifactAffix mainAffix, ArtifactAffix[] minorAffix, int level)
+        public ArtifactStat(string name, ArtifactAffix mainAffix, ArtifactAffix[] minorAffix, int level)
         {
+            Name = name;
             MainAffix = mainAffix;
             MinorAffixes = minorAffix;
             Level = level;
         }
+
+        /// <summary>
+        /// 名称
+        /// </summary>
+        public string Name { get; private set; }
 
         /// <summary>
         /// 主词条

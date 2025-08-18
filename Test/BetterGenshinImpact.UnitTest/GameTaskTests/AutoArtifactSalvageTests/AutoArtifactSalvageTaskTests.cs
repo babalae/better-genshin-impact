@@ -88,7 +88,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         [InlineData(@"ArtifactAffixes.png", @"攻击力\+[\d]*\n", false)]
         [InlineData(@"ArtifactAffixes.png", @"防御力\+[\d.]*%\n", false)]
         [InlineData(@"ArtifactAffixes.png", @"防御力\+[\d]*\n")]
-        public void GetArtifactAffixes_RegexPatternShouldBeRight(string screenshot, string pattern, bool isMatch = true)
+        public void GetArtifactStat_RegexPatternShouldBeRight(string screenshot, string pattern, bool isMatch = true)
         {
             //
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
@@ -118,7 +118,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         /// <param name="screenshot"></param>
         [Theory]
         [InlineData(@"ArtifactAffixes.png")]
-        public void GetArtifactAffixes_AffixesShouldBeRight(string screenshot)
+        public void GetArtifactStat_AffixesShouldBeRight(string screenshot)
         {
             //
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
@@ -128,6 +128,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             ArtifactStat artifact = GetArtifactStat(mat, paddle.Get(), cultureInfo, out string _);
 
             //
+            Assert.Equal("异种的期许", artifact.Name);
             Assert.True(artifact.MainAffix.Type == ArtifactAffixType.HP);
             Assert.True(artifact.MainAffix.Value == 717f);
             Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.ElementalMastery && a.Value == 16f);
@@ -135,6 +136,32 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.ATKPercent && a.Value == 5.8f);
             Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.DEF && a.Value == 23f);
             Assert.True(artifact.Level == 0);
+        }
+
+        [Theory]
+        [InlineData(@"ArtifactAffixes.png", @"(async function (artifact) {
+                    var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
+                    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
+                    Output = hasATK && hasDEF;
+                })(ArtifactStat);", false)]
+        [InlineData(@"ArtifactAffixes.png", @"(async function (artifact) {
+                    var level = artifact.Level;
+                    var hasATKPercent = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATKPercent');
+                    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
+                    Output = level == 0 && hasATKPercent && hasDEF;
+                })(ArtifactStat);", true)]
+        public void IsMatchJavaScript_JSShouldBeRight(string screenshot, string js, bool expected)
+        {
+            //
+            CultureInfo cultureInfo = new CultureInfo("zh-Hans");
+
+            //
+            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
+            ArtifactStat artifact = GetArtifactStat(mat, paddle.Get(), cultureInfo, out string _);
+            bool result = IsMatchJavaScript(artifact, js);
+
+            //
+            Assert.Equal(expected, result);
         }
     }
 }

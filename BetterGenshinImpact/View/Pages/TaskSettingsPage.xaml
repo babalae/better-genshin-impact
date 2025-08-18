@@ -779,7 +779,6 @@
                                   HorizontalContentAlignment="Center"
                                   VerticalContentAlignment="Center"
                                   Margin="10,0,10,0"
-                                  ItemsSource=' 1234'
                                   SelectedIndex="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
                                   SelectedItem="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
                         <!--todo ItemsSource=' 1234'导致XAML设计器无法加载-->
@@ -2343,7 +2342,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="正则表达式"
+                                  Text="JavaScript"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -2356,7 +2355,7 @@
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.AutoArtifactSalvageConfig.RegularExpression, Mode=TwoWay}"
+                                Text="{Binding Config.AutoArtifactSalvageConfig.JavaScript, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
                 </Grid>
                 <Grid Margin="16">
