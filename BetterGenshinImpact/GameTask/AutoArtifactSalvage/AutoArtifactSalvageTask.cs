@@ -303,7 +303,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                     }
                     else
                     {
-                        itemRegion.Click();
+                        itemRegion.Click(); // 反选取消
                         await Delay(100, ct);
                     }
                 }
