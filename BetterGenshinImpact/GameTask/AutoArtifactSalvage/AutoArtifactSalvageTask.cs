@@ -425,7 +425,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 ArtifactAffixType artifactAffixType;
                 var dic = ArtifactAffix.DefaultStrDic;
 
-                if (match.Groups[1].Value == dic[ArtifactAffixType.ATK])
+                if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
                 {
                     if (String.IsNullOrEmpty(match.Groups[3].Value))
                     {
@@ -436,7 +436,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         artifactAffixType = ArtifactAffixType.ATKPercent;
                     }
                 }
-                else if (match.Groups[1].Value == dic[ArtifactAffixType.DEF])
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.DEF]))
                 {
                     if (String.IsNullOrEmpty(match.Groups[3].Value))
                     {
@@ -447,7 +447,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         artifactAffixType = ArtifactAffixType.DEFPercent;
                     }
                 }
-                else if (match.Groups[1].Value == dic[ArtifactAffixType.HP])
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.HP]))
                 {
                     if (String.IsNullOrEmpty(match.Groups[3].Value))
                     {
@@ -458,19 +458,19 @@ public class AutoArtifactSalvageTask : ISoloTask
                         artifactAffixType = ArtifactAffixType.HPPercent;
                     }
                 }
-                else if (match.Groups[1].Value == dic[ArtifactAffixType.CRITRate])
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITRate]))
                 {
                     artifactAffixType = ArtifactAffixType.CRITRate;
                 }
-                else if (match.Groups[1].Value == dic[ArtifactAffixType.CRITDMG])
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITDMG]))
                 {
                     artifactAffixType = ArtifactAffixType.CRITDMG;
                 }
-                else if (match.Groups[1].Value == dic[ArtifactAffixType.ElementalMastery])
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ElementalMastery]))
                 {
                     artifactAffixType = ArtifactAffixType.ElementalMastery;
                 }
-                else if (match.Groups[1].Value == dic[ArtifactAffixType.EnergyRecharge])
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.EnergyRecharge]))
                 {
                     artifactAffixType = ArtifactAffixType.EnergyRecharge;
                 }
