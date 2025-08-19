@@ -19,6 +19,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -427,7 +428,20 @@ public class Avatar
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
-            var cd = AfterUseSkill(region);
+            
+            var attemptCount = 0;
+            double cd = 0;
+            while (attemptCount < 2) 
+            {
+                if (attemptCount != 0) region = CaptureToRectArea();//第一次不用截图
+                cd = AfterUseSkill(region);
+                if (cd > 0)
+                {
+                    break;
+                }
+                attemptCount++;
+                Thread.Sleep(100);
+            }
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
@@ -885,6 +899,31 @@ public class Avatar
                 break;
             default:
                 Simulation.SendInput.Keyboard.KeyUp(vk);
+                if (Name == "枫原万叶" && vk == User32.VK.VK_E)
+                {
+                    Thread.Sleep(200);
+                    var attemptCount = 0;
+                    double cd = 0;
+                    while (attemptCount < 2)
+                    {
+                        var region = CaptureToRectArea();
+                        cd = AfterUseSkill(region);
+                        if (cd > 0)
+                        {
+                            break;
+                        }
+                        attemptCount++;
+                        Thread.Sleep(100);
+                    }
+                    if (cd > 0)
+                    {
+                        Logger.LogInformation("{Name} 元素战技，cd:{Cd} 秒", Name,
+                            Math.Round(cd, 2));
+                    }else
+                    {
+                        Logger.LogWarning("{Name} cd未正确计算", Name);
+                    }
+                }
                 break;
         }
     }
