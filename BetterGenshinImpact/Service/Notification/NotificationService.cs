@@ -208,7 +208,8 @@ public class NotificationService : IHostedService, IDisposable
                 _notificationConfig.BarkDeviceKeys,
                 _notificationConfig.BarkApiEndpoint,
                 _notificationConfig.BarkGroup,
-                _notificationConfig.BarkSound
+                _notificationConfig.BarkSound,
+                _notificationConfig.BarkIcon
             ));
         }
     }

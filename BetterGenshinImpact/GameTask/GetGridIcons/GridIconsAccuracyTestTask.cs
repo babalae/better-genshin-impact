@@ -1,6 +1,11 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -21,6 +26,7 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public class GridIconsAccuracyTestTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
+    private readonly InputSimulator input = Simulation.SendInput;
 
     private CancellationToken ct;
 
@@ -36,25 +42,28 @@ public class GridIconsAccuracyTestTask : ISoloTask
         this.maxNumToTest = maxNumToTest;
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 加载图标识别模型
+    /// </summary>
+    /// <param name="prototypes">原型向量</param>
+    /// <returns>推理会话</returns>
+    /// <exception cref="Exception"></exception>
+    public static InferenceSession LoadModel(out Dictionary<string, float[]> prototypes)
     {
-        this.ct = ct;
-
         #region 加载model
-        using var session = new InferenceSession(@".\GameTask\GetGridIcons\gridIcon.onnx"); // todo 所有数据炼好后放到onnx统一存放的位置去
+        var session = new InferenceSession(@".\GameTask\GetGridIcons\gridIcon.onnx"); // todo 所有数据炼好后放到onnx统一存放的位置去
 
         var metadata = session.ModelMetadata;
 
         if (!metadata.CustomMetadataMap.TryGetValue("prefix_list", out string? prefixListJson))
         {
-            logger.LogError("模型文件缺少prefix_list");
-            return;
+            throw new Exception("模型文件缺少prefix_list");
         }
         List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
         #endregion
         #region 加载原型向量
         var allLines = File.ReadLines(@".\GameTask\GetGridIcons\训练集原型特征.csv").Skip(1);    // 跳过首行列名
-        Dictionary<string, float[]> prototypes = new Dictionary<string, float[]>();
+        prototypes = new Dictionary<string, float[]>();
         foreach (string line in allLines)
         {
             var columns = line.Split(",").ToArray();
@@ -65,6 +74,33 @@ public class GridIconsAccuracyTestTask : ISoloTask
             prototypes.Add(columns[0], flatData);
         }
         #endregion
+        return session;
+    }
+
+    public async Task Start(CancellationToken ct)
+    {
+        this.ct = ct;
+
+        switch (this.gridScreenName)
+        {
+            case GridScreenName.Weapons:
+            case GridScreenName.Artifacts:
+            case GridScreenName.CharacterDevelopmentItems:
+            case GridScreenName.Food:
+            case GridScreenName.Materials:
+            case GridScreenName.Gadget:
+            case GridScreenName.Quest:
+            case GridScreenName.PreciousItems:
+            case GridScreenName.Furnishings:
+                await new ReturnMainUiTask().Start(ct);
+                await AutoArtifactSalvageTask.OpenBag(this.gridScreenName, this.input, this.logger, this.ct);
+                break;
+            default:
+                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                break;
+        }
+
+        using InferenceSession session = LoadModel(out Dictionary<string, float[]> prototypes);
 
         using var ra0 = CaptureToRectArea();
         GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
@@ -89,6 +125,8 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
             await Task.WhenAll(task1, task2);
             (string, int) result = task2.Result;
+            string predName = result.Item1;
+            int predStarNum = result.Item2;
 
             // 用CV方法得到的结果
             using var ra1 = CaptureToRectArea();
@@ -101,14 +139,14 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
             // 统计结果
             total_count++;
-            if (itemName.Contains(result.Item1) && result.Item2 == itemStarNum)
+            if (itemName.Contains(predName) && predStarNum == itemStarNum)
             {
                 total_acc++;
-                logger.LogInformation($"{result.Item1}|{result.Item2}星，✔，正确率{total_acc / total_count:0.00}");
+                logger.LogInformation($"{predName}|{predStarNum}星，✔，正确率{total_acc / total_count:0.00}");
             }
             else
             {
-                logger.LogInformation($"{result.Item1}|{result.Item2}星，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+                logger.LogInformation($"{predName}|{predStarNum}星，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
             }
 
             count--;

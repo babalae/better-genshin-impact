@@ -214,6 +214,11 @@ public class AutoDomainTask : ISoloTask
     private void Init()
     {
         LogScreenResolution();
+        if (_config.AutoEat)
+        {
+            TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null);
+        }
+        
         if (_config.SpecifyResinUse)
         {
             Logger.LogInformation("→ {Text} 指定使用树脂", "自动秘境，");
@@ -269,7 +274,7 @@ public class AutoDomainTask : ISoloTask
                 if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
                 {
                         menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.FRo,
+                        AutoPickAssets.Instance.PickRo,
                         () => Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
                         _ct,
                         20,
@@ -284,7 +289,7 @@ public class AutoDomainTask : ISoloTask
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.FRo,
+                        AutoPickAssets.Instance.PickRo,
                         () =>  Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
                         _ct,
                         20,
@@ -296,7 +301,7 @@ public class AutoDomainTask : ISoloTask
                 else if ("太山府".Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                        AutoPickAssets.Instance.FRo,
+                        AutoPickAssets.Instance.PickRo,
                         () => { },
                     _ct,
                         20,
@@ -306,7 +311,7 @@ public class AutoDomainTask : ISoloTask
                 else
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
-                    AutoPickAssets.Instance.FRo,
+                    AutoPickAssets.Instance.PickRo,
                     () => Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
                     _ct,
                     20,
@@ -667,11 +672,11 @@ public class AutoDomainTask : ISoloTask
         // 对局结束检测
         var domainEndTask = DomainEndDetectionTask(cts);
         // 自动吃药
-        var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
+        // var autoEatRecoveryHpTask = AutoEatRecoveryHpTask(cts.Token);
         combatTask.Start();
         domainEndTask.Start();
-        autoEatRecoveryHpTask.Start();
-        return Task.WhenAll(combatTask, domainEndTask, autoEatRecoveryHpTask);
+        // autoEatRecoveryHpTask.Start();
+        return Task.WhenAll(combatTask, domainEndTask);
     }
 
     private void EndFightWait()
@@ -749,7 +754,7 @@ public class AutoDomainTask : ISoloTask
 
             if (!IsTakeFood())
             {
-                Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
+                 Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
                 return;
             }
 

@@ -132,7 +132,6 @@ public class TaskRunner
 
         // 清空实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();
-
         
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();
@@ -148,6 +147,7 @@ public class TaskRunner
         }
         
         // 还原实时任务触发器
+        TaskTriggerDispatcher.Instance().ClearTriggers();
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
 
         VisionContext.Instance().DrawContent.ClearAll();

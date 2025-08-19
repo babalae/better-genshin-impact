@@ -45,7 +45,10 @@ public class AutoFightParam : BaseTaskParam
         FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
         FinishDetectConfig.BattleEndProgressBarColorTolerance = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
         
-        
+        GuardianAvatar = autoFightConfig.GuardianAvatar;
+        GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
+        SkipModel = autoFightConfig.SkipModel;
+        GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
     }
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
@@ -62,5 +65,8 @@ public class AutoFightParam : BaseTaskParam
     public string ActionSchedulerByCd = "";
     public string KazuhaPartyName;
     public string OnlyPickEliteDropsMode="";
-
+    public string GuardianAvatar { get; set; } = " ";
+    public bool GuardianCombatSkip { get; set; } = false;
+    public bool SkipModel = false;
+    public bool GuardianAvatarHold = false;
 }
