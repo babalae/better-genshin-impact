@@ -2,11 +2,6 @@
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
-
-
-
-
-
 public class AutoFightParam : BaseTaskParam
 {
     public  class FightFinishDetectConfig 
@@ -49,6 +44,9 @@ public class AutoFightParam : BaseTaskParam
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
         SkipModel = autoFightConfig.SkipModel;
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
+        
+        BurstEnabled = autoFightConfig.BurstEnabled;
+        IsFirstCheck = autoFightConfig.IsFirstCheck;
     }
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
@@ -69,4 +67,6 @@ public class AutoFightParam : BaseTaskParam
     public bool GuardianCombatSkip { get; set; } = false;
     public bool SkipModel = false;
     public bool GuardianAvatarHold = false;
+    public bool BurstEnabled { get; set; } = false;
+    public bool IsFirstCheck { get; set; } = true;
 }

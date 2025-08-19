@@ -2,6 +2,9 @@
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using System;
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 
@@ -11,6 +14,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect TeamRect;
     public List<Rect> AvatarSideIconRectList; // 侧边栏角色头像 非联机状态下
     public List<Rect> AvatarIndexRectList; // 侧边栏角色头像对应的白色块 非联机状态下
+    public List<Rect> AvatarQRectListMap; // 角色头像对应的Q技能图标 
+    
     public Rect ERect;
     public Rect ECooldownRect;
     public Rect QRect;
@@ -46,6 +51,22 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect GadgetRect;
     
     public RecognitionObject AbnormalIconRa;
+    
+    // 定义7种元素要检测的Q技能颜色，每种元素两种颜色
+    public static readonly Dictionary<ElementalType, List<Scalar>> Colors = new Dictionary<ElementalType, List<Scalar>> {
+        { ElementalType.Cryo, new List<Scalar> { new Scalar(117, 212, 233), new Scalar(176, 255, 255) } }, // 冰 √ 
+        { ElementalType.Anemo, new List<Scalar> { new Scalar(47, 189, 147), new Scalar(172, 255, 239) } }, // 风 待确定优化 1 √ 
+        { ElementalType.Geo, new List<Scalar> { new Scalar(226, 147, 21), new Scalar(255, 218, 121) } }, // 岩 待确定优化 1 √ 
+        { ElementalType.Dendro, new List<Scalar> { new Scalar(111, 179, 30), new Scalar(219, 255, 136) } }, // 草 待确定优化 1 √ 
+        { ElementalType.Electro, new List<Scalar> { new Scalar(158, 100, 235), new Scalar(244, 205, 255) } }, // 雷 待确定优化 1  new Scalar(158, 100, 235), new Scalar(244, 205, 255)
+        { ElementalType.Hydro, new List<Scalar> { new Scalar(21, 149, 252), new Scalar(123, 245, 255) } }, // 水 待确定优化 1 √ 
+        { ElementalType.Pyro, new List<Scalar> { new Scalar(222, 88, 60), new Scalar(255, 185, 170) } } ,// 火 待确定优化 1 √ 
+        { ElementalType.Omni, new List<Scalar> { new Scalar(0, 0, 0), new Scalar(0, 0, 0) } } // 无效果
+    };
+    //1 1959,466
+    //2 1959,562
+    //3 1961,666
+    //4 1959,754
 
     private AutoFightAssets()
     {
@@ -76,6 +97,14 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(352 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(448 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(544 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+        ];
+        
+        AvatarQRectListMap =
+        [
+            new Rect(CaptureRect.Width - (int)(330 * AssetScale), (int)(228 * AssetScale), (int)(62 * AssetScale), (int)(70 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(330 * AssetScale), (int)(328 * AssetScale), (int)(62 * AssetScale), (int)(70 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(330 * AssetScale), (int)(428 * AssetScale), (int)(62 * AssetScale), (int)(70 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(330 * AssetScale), (int)(518 * AssetScale), (int)(62 * AssetScale), (int)(70 * AssetScale)),
         ];
 
         AvatarSideIconRectList =
@@ -289,4 +318,135 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         }.InitTemplate();
         
     }
+    
+    //参考元素收集，新建立角色的元素相关信息类，后续可以扩展元素相关战斗策略
+    public class ElementalAvatar(string name, ElementalType elementalType, bool normalAttack, bool elementalSkill, bool elementalBurst)
+    {
+        public string Name { get; set; } = name;
+        
+        public ElementalType ElementalType { get; set; } = elementalType;
+        
+        public bool NormalAttack { get; set; } = normalAttack;
+
+        public bool ElementalSkill { get; set; } = elementalSkill;
+        
+        public bool ElementalBurst { get; set; } = elementalBurst;
+
+        public DateTime LastUseSkillTime { get; set; } = DateTime.MinValue;
+        
+        public DateTime LastUseBurstTime { get; set; } = DateTime.MinValue;
+    }
+    
+    //全角色元素列表
+     public static List<ElementalAvatar> Lists { get; set; } =
+    [
+        // 水
+        new ElementalAvatar("芭芭拉", ElementalType.Hydro, true, true, true),
+        new ElementalAvatar("莫娜", ElementalType.Hydro, true, false, true),
+        new ElementalAvatar("珊瑚宫心海", ElementalType.Hydro, true, true, true),
+        new ElementalAvatar("玛拉妮", ElementalType.Hydro, true, false, true),
+        new ElementalAvatar("那维莱特", ElementalType.Hydro, true, true, true),
+        new ElementalAvatar("芙宁娜", ElementalType.Hydro, true, false, true),
+        new ElementalAvatar("妮露", ElementalType.Hydro, false, true, true),
+        new ElementalAvatar("坎蒂斯", ElementalType.Hydro, false, true, true),
+        new ElementalAvatar("行秋", ElementalType.Hydro, false, true, true),
+        new ElementalAvatar("神里绫人", ElementalType.Hydro, false, true, true),
+        new ElementalAvatar("塔利雅", ElementalType.Hydro, false, true, true),
+        new ElementalAvatar("希格雯", ElementalType.Hydro, false, true, true),
+        new ElementalAvatar("夜兰", ElementalType.Hydro, false, false, true),
+        new ElementalAvatar("达达利亚", ElementalType.Hydro, false, false, true),
+        // 雷
+        new ElementalAvatar("丽莎", ElementalType.Electro, true, true, true),
+        new ElementalAvatar("八重神子", ElementalType.Electro, true, false, true),
+        new ElementalAvatar("瓦雷莎", ElementalType.Electro, true, false, true),
+        new ElementalAvatar("雷电将军", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("久岐忍", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("北斗", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("菲谢尔", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("雷泽", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("伊涅芙", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("伊安珊", ElementalType.Electro, false, false, true),
+        new ElementalAvatar("欧洛伦", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("克洛琳德", ElementalType.Electro, false, false, true),
+        new ElementalAvatar("赛索斯", ElementalType.Electro, false, false, true),
+        new ElementalAvatar("赛诺", ElementalType.Electro, false, false, true),
+        new ElementalAvatar("多莉", ElementalType.Electro, false, true, true),
+        new ElementalAvatar("九条裟罗", ElementalType.Electro, false, false, true),
+        new ElementalAvatar("刻晴", ElementalType.Electro, false, false, true),
+        // 风
+        new ElementalAvatar("砂糖", ElementalType.Anemo, true, true, true),
+        new ElementalAvatar("鹿野院平藏", ElementalType.Anemo, true, true, true),
+        new ElementalAvatar("流浪者", ElementalType.Anemo, true, false, true),
+        new ElementalAvatar("闲云", ElementalType.Anemo, true, false, true),
+        new ElementalAvatar("蓝砚", ElementalType.Anemo, true, false, true),
+        new ElementalAvatar("枫原万叶", ElementalType.Anemo, false, true, true),
+        new ElementalAvatar("珐露珊", ElementalType.Anemo, false, true, true),
+        new ElementalAvatar("琳妮特", ElementalType.Anemo, false, true, true),
+        new ElementalAvatar("温迪", ElementalType.Anemo, false, true, true),
+        new ElementalAvatar("琴", ElementalType.Anemo, false, true, true),
+        new ElementalAvatar("早柚", ElementalType.Anemo, false, true, true),
+        new ElementalAvatar("伊法", ElementalType.Anemo, true, false, true),
+        new ElementalAvatar("梦见月瑞希", ElementalType.Anemo, true, false, true),
+        new ElementalAvatar("恰斯卡", ElementalType.Anemo, false, false, true),
+        new ElementalAvatar("魈", ElementalType.Anemo, false, false, true),
+        // 火
+        new ElementalAvatar("烟绯", ElementalType.Pyro, true, true, true),
+        new ElementalAvatar("迪卢克", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("可莉", ElementalType.Pyro, true, true, true),
+        new ElementalAvatar("班尼特", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("香菱", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("托马", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("胡桃", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("迪希雅", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("夏沃蕾", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("辛焱", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("林尼", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("宵宫", ElementalType.Pyro, false, true, true),
+        new ElementalAvatar("玛薇卡", ElementalType.Pyro, false, false, true),
+        new ElementalAvatar("阿蕾奇诺", ElementalType.Pyro, false, false, true),
+        new ElementalAvatar("嘉明", ElementalType.Pyro, false, false, true),
+        new ElementalAvatar("安柏", ElementalType.Pyro, false, false, true),
+        // 草
+        new ElementalAvatar("基尼奇", ElementalType.Dendro, false, false, true),
+        new ElementalAvatar("艾梅莉埃", ElementalType.Dendro, false, true, true),
+        new ElementalAvatar("绮良良", ElementalType.Dendro, false, true, true),
+        new ElementalAvatar("白术", ElementalType.Dendro, true, true, true),
+        new ElementalAvatar("卡维", ElementalType.Dendro, false, true, true),
+        new ElementalAvatar("艾尔海森", ElementalType.Dendro, false, false, true),
+        new ElementalAvatar("瑶瑶", ElementalType.Dendro, false, false, true),
+        new ElementalAvatar("纳西妲", ElementalType.Dendro, true, true, true),
+        new ElementalAvatar("提纳里", ElementalType.Dendro, false, true, true),
+        new ElementalAvatar("柯莱", ElementalType.Dendro, false, true, true),
+        // 岩
+        new ElementalAvatar("希诺宁", ElementalType.Geo, false, false, true),
+        new ElementalAvatar("卡齐娜", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("千织", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("钟离", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("娜维娅", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("云堇", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("荒泷一斗", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("五郎", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("阿贝多", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("诺艾尔", ElementalType.Geo, false, true, true),
+        new ElementalAvatar("凝光", ElementalType.Geo, true, true, true),
+        // 冰
+        new ElementalAvatar("茜特菈莉", ElementalType.Cryo, true, true, true),
+        new ElementalAvatar("丝柯克", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("爱可菲", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("夏洛蒂", ElementalType.Cryo, true, true, true),
+        new ElementalAvatar("莱欧斯利", ElementalType.Cryo, true, false, true),
+        new ElementalAvatar("菲米尼", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("米卡", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("莱依拉", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("申鹤", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("埃洛伊", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("神里绫华", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("优菈", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("罗莎莉亚", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("甘雨", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("迪奥娜", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("七七", ElementalType.Cryo, false, true, true),
+        new ElementalAvatar("重云", ElementalType.Cryo, false, false, true),
+        new ElementalAvatar("凯亚", ElementalType.Cryo, false, true, true),
+    ];
 }

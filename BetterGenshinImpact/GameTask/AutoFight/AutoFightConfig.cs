@@ -3,10 +3,6 @@ using System;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
-
-
-
-
 /// <summary>
 /// 自动战斗配置
 /// </summary>
@@ -125,12 +121,17 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private bool _guardianAvatarHold = false;
     
+     [ObservableProperty]
+     private bool _burstEnabled = false;
+     
     /// <summary>
     /// 战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下）
     /// </summary>
     [ObservableProperty]
     private string _kazuhaPartyName = "";
     
+    [ObservableProperty]
+    private bool _isFirstCheck = false;
 
     /// <summary>
     /// 战斗超时，单位秒
