@@ -898,8 +898,8 @@ public class Avatar
                     Thread.Sleep(200);
                     double cd = 0;
                     var cooldownDetected = false;
-    
-                    for (var attempt = 0; attempt < 2; attempt++)
+
+                    for (var attempt = 0; attempt < 2 && !cooldownDetected; attempt++)
                     {
                         var region = CaptureToRectArea();
                         cd = AfterUseSkill(region);
@@ -907,10 +907,8 @@ public class Avatar
                         if (cd > 0)
                         {
                             cooldownDetected = true;
-                            break;
                         }
-        
-                        if (attempt < 2 - 1)
+                        else if (attempt < 1) 
                         {
                             Thread.Sleep(100);
                         }
