@@ -537,3 +537,26 @@ jobs:
           
           # 执行上传
           python cnb_release.py cnb_config.json
+
+  cnb_trigger:
+    if: github.repository_owner == 'babalae'
+    needs: [validate, build_dist, build_installer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Trigger CNB Build
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          python .github/workflows/cnb_trigger.py "$CNB_TOKEN"
