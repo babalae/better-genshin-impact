@@ -4,7 +4,7 @@ main:
     - docker:
         image: python:3.11
       imports:
-        - cnb.cool/bettergi/secret/-/blob/main/env.yml
+        - https://cnb.cool/bettergi/secret/-/blob/main/env.yml
       stages:
         - name: 下载构建物并上传
           script: |
