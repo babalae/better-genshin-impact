@@ -460,7 +460,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
   
       - uses: actions/download-artifact@v4
         with:
@@ -553,7 +553,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r .github/workflows/requirements.txt
       
       - name: Trigger CNB Build
         env:
