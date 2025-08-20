@@ -1,6 +1,6 @@
 main:
   # 自定义按钮可触发的事件
-  web_trigger_one:
+  push:
     - docker:
         image: python:3.11
       imports:
