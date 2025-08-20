@@ -446,7 +446,7 @@ jobs:
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
   cnb_uploading:
-    if: github.repository_owner == 'babalae'
+    if: github.repository_owner == 'babalae' && false
     needs: [validate, build_dist, build_installer]
     runs-on: ubuntu-latest
     steps:
@@ -460,7 +460,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install -r requirements.txt
   
       - uses: actions/download-artifact@v4
         with:
@@ -553,7 +553,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install -r requirements.txt
       
       - name: Trigger CNB Build
         env:
