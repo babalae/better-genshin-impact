@@ -1,10 +1,10 @@
 main:
   # 自定义按钮可触发的事件
   web_trigger_one:
-    - imports:
-        - cnb.cool/bettergi/secret/-/blob/main/env.yml
-      docker:
+    - docker:
         image: python:3.11
+      imports:
+        - cnb.cool/bettergi/secret/-/blob/main/env.yml
       stages:
         - name: 下载构建物并上传
           script: |
