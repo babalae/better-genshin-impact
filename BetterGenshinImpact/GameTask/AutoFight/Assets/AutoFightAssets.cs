@@ -47,6 +47,13 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     
     public RecognitionObject AbnormalIconRa;
 
+    // 经验图标
+    public RecognitionObject Experience60Ra;
+    public RecognitionObject Experience59Ra;
+    public RecognitionObject Experience58Ra;
+    public RecognitionObject Experience57Ra;
+
+    
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -286,6 +293,46 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "abnormal_icon.png"),
             RegionOfInterest = new Rect(0,(int)(CaptureRect.Height*0.08), (int)(CaptureRect.Width*0.04), (int)(CaptureRect.Height*0.07)),
             DrawOnWindow = false
+        }.InitTemplate();
+        Experience60Ra = new RecognitionObject
+        {
+            Name = "Experience_60",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_60.png"),
+            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
+            DrawOnWindow = true,
+            UseMask = true,
+            Threshold = 0.85,
+        }.InitTemplate();
+        Experience59Ra = new RecognitionObject
+        {
+            Name = "Experience_59",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_59.png"),
+            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
+            DrawOnWindow = true,
+            UseMask = true,
+            Threshold = 0.85,
+        }.InitTemplate();
+        Experience58Ra = new RecognitionObject
+        {
+            Name = "Experience_58",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_58.png"),
+            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
+            DrawOnWindow = true,
+            UseMask = true,
+            Threshold = 0.85,
+        }.InitTemplate();
+        Experience57Ra = new RecognitionObject
+        {
+            Name = "Experience_57",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_57.png"),
+            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
+            DrawOnWindow = true,
+            UseMask = true,
+            Threshold = 0.85,
         }.InitTemplate();
         
     }
