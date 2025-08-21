@@ -587,9 +587,10 @@ jobs:
       
       - name: Upload to Steambird
         env:
+          TUS_USER: "bgi"
           TUS_PASS: ${{ secrets.TUS_PASS }}
         run: |
           wget https://uploads.steambird.pub/upload.sh
           chmod +x upload.sh
-          TUS_USER="bgi" TUS_PASS="$TUS_PASS" ./upload.sh https://uploads.steambird.pub/dav/bgi/ upload_files/BetterGI.Install.*.exe
+          ./upload.sh https://uploads.steambird.pub/dav/bgi/ upload_files/BetterGI.Install.*.exe
 
