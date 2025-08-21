@@ -586,6 +586,8 @@ jobs:
           ls -la upload_files/
       
       - name: Upload to Steambird
+        env:
+          TUS_PASS: ${{ secrets.TUS_PASS }}
         run: |
           wget https://uploads.steambird.pub/upload.sh
           chmod +x upload.sh
