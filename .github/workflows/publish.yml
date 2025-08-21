@@ -559,4 +559,5 @@ jobs:
         env:
           CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
         run: |
-          python .github/workflows/cnb_trigger.py "$CNB_TOKEN"
+          python .github/workflows/cnb_trigger.py "$CNB_TOKEN" --runid ${{ github.run_id }}
+
