@@ -973,50 +973,75 @@
                                     </Grid>
                                 </Grid>
                                 
-                                <Grid Margin="16,0,16,16">
+                                  <Grid Margin="16,0,16,16">
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto"  />
                                     </Grid.ColumnDefinitions>
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
                                                   Text="旋转寻找敌人位置（实验性功能）"
+                                                  Margin="0,0,5,0"
+                                                  HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center"
                                                   TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="1"
+                                                  FontTypography="Body"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  FontSize="9"
+                                                  Text="旋转速度(建议单次360°左右)："
+                                                  Margin="5,8,0,0"
+                                                  HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center"
+                                                  TextWrapping="Wrap" />
+                                    <Slider Grid.Row="0"
+                                            Grid.Column="2"
+                                            Minimum="1"
+                                            Maximum="13"
+                                            Value="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotaryFactor, Mode=TwoWay}"
+                                            Margin="5,0,5,0"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
                                     <ui:TextBlock Grid.Row="1"
                                                   Grid.Column="0"
-                                                  Grid.RowSpan="3"
+                                                  Grid.ColumnSpan="3"
+                                                  Grid.RowSpan="2"
                                                   HorizontalAlignment="Stretch"
                                                   VerticalAlignment="Stretch"
                                                   Margin="0,0,5,0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 在打开队伍界面检测战斗结束前，会先检测画面中如果存在敌人，再判断是否需要靠近敌人，并跳过检测战斗结束，如画面内没敌人，则旋转寻找敌人。 (尝试面敌：开战寻敌，战斗尝试面向敌人)"
+                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测画面中如果存在敌人，再判断是否需要靠近敌人，如画面内没敌人，则旋转寻找敌人。(尝试面敌：开战寻敌，战斗尝试面向敌人)"
                                                   TextWrapping="Wrap" />
                                     <ui:ToggleSwitch Grid.Row="1"
-                                                     Grid.Column="1"
+                                                     Grid.Column="3"
                                                      Grid.RowSpan="1"
                                                      Margin="10,0,36,0"
                                                      IsChecked="{Binding  PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}" />
                                     <ui:ToggleSwitch Grid.Row="2"
-                                                     Grid.Column="1"
-                                                     Grid.RowSpan="2"
+                                                     Grid.Column="3"
+                                                     Grid.RowSpan="1"
                                                      Margin="10,0,36,0"
                                                      IsEnabled="{Binding PathingConfig.AutoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled, Mode=TwoWay}"
-                                                     IsChecked="{Binding  PathingConfig.AutoFightConfig.IsFirstCheck, Mode=TwoWay}" />
-                                    <ui:TextBlock Grid.Row="3"
-                                                  Grid.Column="1"
+                                                     IsChecked="{Binding  PathingConfig.AutoFightConfig.FinishDetectConfig.IsFirstCheck, Mode=TwoWay}" />
+                                    <ui:TextBlock Grid.Row="2"
+                                                  Grid.Column="3"
                                                   Grid.RowSpan="1"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
                                                   FontSize="8"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Margin="0,0,25,-26"
+                                                  Margin="0,0,25,-45"
                                                   FontTypography="Body"
                                                   Text="尝试面敌"
                                                   TextWrapping="Wrap" />

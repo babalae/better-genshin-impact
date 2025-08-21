@@ -11,8 +11,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using System;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using System.Linq;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
-
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFight
 {
@@ -223,12 +222,23 @@ namespace BetterGenshinImpact.GameTask.AutoFight
     {
         public static int RotationCount = 0;
         
-        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false)
+        private static readonly Dictionary<int, int> RotaryFactorMapping = new Dictionary<int, int> //旋转因子映射表
+        {
+            { 1, 100 }, { 2, 90 }, { 3, 80}, { 4, 70 }, { 5, 60}, { 6,45 },
+            { 7, 30 }, { 8, 15 }, { 9, 6 }, { 10, 1 }, { 11,-10 }, { 12,-20 }, { 13, -30 }
+        };
+        
+        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false,int rotaryFactor = 6)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
+            
+            var adjustedX = RotaryFactorMapping[rotaryFactor];
+            
+            Logger.LogInformation("开始寻找敌人 {Text} ...",adjustedX);
+            
             int retryCount = isEndCheck? 1 : 0;
 
-            while (retryCount < 27)
+            while (retryCount < 27-(int)(adjustedX / 10))
             {
                 var image = CaptureToRectArea();
                 Mat mask = OpenCvCommonHelper.Threshold(image.DeriveCrop(0, 0, 1500, 900).SrcMat, bloodLower);
@@ -326,7 +336,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     Simulation.SendInput.Mouse.MoveMouseBy(image.Width / 6, 0);
                 }
 
-                await Task.Delay(50,ct);
+                await Task.Delay(50+(int)(adjustedX/10),ct);
 
                 image = CaptureToRectArea();
                 mask = OpenCvCommonHelper.Threshold(image.DeriveCrop(0, 0, 1500, 900).SrcMat, bloodLower);
@@ -562,7 +572,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         {
             int attempt = 0;
 
-            if (guardianCombatSkip && guardianAvatar.IsSkillReady())
+            if (guardianAvatar.IsSkillReady())
             {
                 while (attempt < retryCount)
                 {

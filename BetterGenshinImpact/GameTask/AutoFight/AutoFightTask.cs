@@ -334,7 +334,7 @@ public class AutoFightTask : ISoloTask
 
                         if (i == 0 && _taskParam.IsFirstCheck)
                         {
-                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct,true);
+                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct,true,_taskParam.RotaryFactor);
                         }
                         
                         #endregion
@@ -572,7 +572,7 @@ public class AutoFightTask : ISoloTask
             bool? result = null;
             try
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct,false,_taskParam.RotaryFactor);
             }
             catch (Exception ex)
             {

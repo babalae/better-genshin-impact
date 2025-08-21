@@ -79,7 +79,18 @@ public partial class AutoFightConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private string _beforeDetectDelay = "";
-
+        
+        /// <summary>
+        /// 旋转寻找敌人位置的旋转因子，默认为5，越大越快。
+        /// </summary>
+        [ObservableProperty]
+        private int _rotaryFactor = 10;
+        
+        /// <summary>
+        /// 是否是第一次检查和面敌。
+        /// </summary>
+        [ObservableProperty]
+        private bool _isFirstCheck = false;
     }
     /// <summary>
     /// 战斗结束相关配置
@@ -129,9 +140,6 @@ public partial class AutoFightConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _kazuhaPartyName = "";
-    
-    [ObservableProperty]
-    private bool _isFirstCheck = false;
 
     /// <summary>
     /// 战斗超时，单位秒
