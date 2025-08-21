@@ -225,6 +225,10 @@ def extract_version_from_filename(filename: str) -> Optional[str]:
     Returns:
         版本号或None
     """
+    # 去除扩展名
+    import os
+    filename_without_ext = os.path.splitext(filename)[0]
+    
     # 匹配版本号模式，如 v1.2.3, 1.2.3-alpha.1 等
     patterns = [
         r'v?([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)',
@@ -232,7 +236,7 @@ def extract_version_from_filename(filename: str) -> Optional[str]:
     ]
     
     for pattern in patterns:
-        match = re.search(pattern, filename)
+        match = re.search(pattern, filename_without_ext)
         if match:
             return match.group(1)
     
