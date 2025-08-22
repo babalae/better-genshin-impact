@@ -234,7 +234,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             
             var adjustedX = RotaryFactorMapping[rotaryFactor];
             
-            Logger.LogInformation("开始寻找敌人 {Text} ...",adjustedX);
+            // Logger.LogInformation("开始寻找敌人 {Text} ...",adjustedX);
             
             int retryCount = isEndCheck? 1 : 0;
 
