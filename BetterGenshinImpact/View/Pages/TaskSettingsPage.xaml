@@ -2291,7 +2291,11 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        指定匹配表达式逐一筛选分解，支持5星圣遗物
+                        指定匹配表达式逐一筛选分解，支持5星圣遗物 -
+                        <Hyperlink Command="{Binding GoToArtifactSalvageUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -2343,20 +2347,28 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="正则表达式"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        JavaScript - 
+                        <Hyperlink Command="{Binding GoToArtifactSalvageUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            点击查看使用教程
+                        </Hyperlink>
+                    </ui:TextBlock>
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="只要满足的圣遗物都会被选中"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        只要满足的圣遗物都会被选中
+                        <LineBreak/>
+                        JS接受ArtifactStat作为入参；应对Output赋值一个布尔值作为返回
+                    </ui:TextBlock>
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
-                                Text="{Binding Config.AutoArtifactSalvageConfig.RegularExpression, Mode=TwoWay}"
+                                Text="{Binding Config.AutoArtifactSalvageConfig.JavaScript, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
                 </Grid>
                 <Grid Margin="16">
