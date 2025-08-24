@@ -95,6 +95,7 @@ public class RecognitionObject
         if (UseMask && TemplateImageMat != null && MaskMat == null) MaskMat = OpenCvCommonHelper.CreateMask(TemplateImageMat, MaskColor.ToScalar());
         return this;
     }
+
     
     public static RecognitionObject TemplateMatch(Mat mat)
     {
@@ -224,4 +225,49 @@ public class RecognitionObject
     };
 
     #endregion OCR文字识别
+    
+    
+    
+    /// <summary>
+    /// 克隆当前 RecognitionObject 实例
+    /// </summary>
+    /// <returns>克隆的 RecognitionObject 实例</returns>
+    public RecognitionObject Clone()
+    {
+        var cloned = new RecognitionObject
+        {
+            RecognitionType = this.RecognitionType,
+            RegionOfInterest = this.RegionOfInterest,
+            Name = this.Name,
+            
+            // 模板匹配相关属性
+            TemplateImageMat = this.TemplateImageMat, // 注意：Mat 是引用类型，克隆后仍然指向同一内存
+            TemplateImageGreyMat = this.TemplateImageGreyMat, // 注意：Mat 是引用类型，克隆后仍然指向同一内存
+            Threshold = this.Threshold,
+            Use3Channels = this.Use3Channels,
+            TemplateMatchMode = this.TemplateMatchMode,
+            UseMask = this.UseMask,
+            MaskColor = this.MaskColor,
+            MaskMat = this.MaskMat, // 注意：Mat 是引用类型，克隆后仍然指向同一内存
+            DrawOnWindow = this.DrawOnWindow,
+            DrawOnWindowPen = new Pen(this.DrawOnWindowPen.Color, this.DrawOnWindowPen.Width),
+            MaxMatchCount = this.MaxMatchCount,
+            
+            // 颜色匹配相关属性
+            ColorConversionCode = this.ColorConversionCode,
+            LowerColor = this.LowerColor,
+            UpperColor = this.UpperColor,
+            MatchCount = this.MatchCount,
+            
+            // OCR相关属性
+            OcrEngine = this.OcrEngine,
+            ReplaceDictionary = this.ReplaceDictionary,  // 不克隆字典，因为字典通常是不可变的
+            AllContainMatchText = this.AllContainMatchText, // 不克隆
+            OneContainMatchText = this.OneContainMatchText, // 不克隆
+            RegexMatchText = this.RegexMatchText, // 不克隆
+            Text = this.Text
+        };
+        
+        return cloned;
+    }
 }

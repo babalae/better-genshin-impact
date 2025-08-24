@@ -1,4 +1,4 @@
-﻿using Microsoft.ClearScript;
+using Microsoft.ClearScript;
 using System;
 using System.Reflection;
 
@@ -45,7 +45,7 @@ public class ScriptObjectConverter
         if (source[propertyName] is not Undefined && source[propertyName] != null)
         {
             object value = source.GetProperty(propertyName);
-            return (T)Convert.ChangeType(value, typeof(T));
+            return (T)value;
         }
         return defaultValue;
     }

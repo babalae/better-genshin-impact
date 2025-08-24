@@ -25,8 +25,8 @@ public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
         {
             Name = "EnterGame",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "exit_welcome.png"),
-            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height - CaptureRect.Height / 2),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "enter_game.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 3, CaptureRect.Height / 2, CaptureRect.Width / 3, CaptureRect.Height - CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 

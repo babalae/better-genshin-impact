@@ -203,15 +203,16 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // F5 打开活动
         Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
-        await page.GetByText("活动一览").WaitFor();
+        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3,0.2)).WaitFor();
+        await Delay(500, _ct);
 
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
         {
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
         }
-        else if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.3)).IsExist())
+        else if (page.GetByText("幽境危战").WithRoi(r => r.CutLeft(0.3)).IsExist())
         {
-            await page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.3)).Click();
+            await page.GetByText("幽境危战").WithRoi(r => r.CutLeft(0.3)).Click();
             await Delay(1500, _ct);
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
         }
@@ -612,7 +613,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(star, false).Start(_ct);
+        await new AutoArtifactSalvageTask(star).Start(_ct);
     }
 
 

@@ -60,6 +60,7 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             {
                 PickRo = LoadCustomPickKey(keyName);
                 PickVk = User32Helper.ToVk(keyName);
+                TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract = (Core.Config.KeyId)(int)PickVk;
                 ChatPickRo = LoadCustomChatPickKey(keyName);
             }
             catch (Exception e)

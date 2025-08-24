@@ -115,7 +115,15 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonClick(0x0001);
                 break;
             default:
-                Simulation.SendInput.Keyboard.KeyPress(vk);
+                if (InputBuilder.IsExtendedKey(vk))
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(false, vk);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(vk);
+                }
+                
                 break;
         }
     }

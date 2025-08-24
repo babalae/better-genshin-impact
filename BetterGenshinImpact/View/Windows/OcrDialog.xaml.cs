@@ -1,8 +1,9 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers.Extensions;
+using System.Globalization;
 using System.Windows;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -13,14 +14,14 @@ public partial class OcrDialog
     private readonly double yRatio;
     private readonly double widthRatio;
     private readonly double heightRatio;
-    private readonly string? regularExpression;
-    public OcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? regularExpression = null)
+    private readonly string? javaScript;
+    public OcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? javaScript = null)
     {
         this.xRatio = xRatio;
         this.yRatio = yRatio;
         this.widthRatio = widthRatio;
         this.heightRatio = heightRatio;
-        this.regularExpression = regularExpression;
+        this.javaScript = javaScript;
 
         InitializeComponent();
 
@@ -36,11 +37,12 @@ public partial class OcrDialog
 
         this.Screenshot.Source = bitmapImage;
 
-        this.TxtRecognized.Text = OcrFactory.Paddle.OcrResult(card.SrcMat).Text;
-        if (this.regularExpression != null)
+        ArtifactStat artifact = AutoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName), out string allText);
+        this.TxtRecognized.Text = allText;
+        if (this.javaScript != null)
         {
-            AutoArtifactSalvageTask.IsMatchRegularExpression(this.TxtRecognized.Text, this.regularExpression, out string msg);
-            this.RegexResult.Text = msg;
+            bool isMatch = AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
+            this.RegexResult.Text = isMatch ? "匹配" : "不匹配";
         }
         this.UpdateLayout();
     }

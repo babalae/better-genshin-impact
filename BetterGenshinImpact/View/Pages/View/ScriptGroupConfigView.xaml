@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.View.ScriptGroupConfigView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -8,20 +8,20 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:ScriptGroupConfigViewModel}"
-             d:DesignHeight="850"
+             d:DesignHeight="1600"
              d:DesignWidth="800"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
     <ScrollViewer Height="800"
+                  d:DesignHeight="1600"
                   HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto">
-        <StackPanel Width="700" Margin="42,16,42,12">
+        <StackPanel Height="Auto" Width="700" Margin="42,16,42,12">
 
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon Map24}"
-                             IsExpanded="True">
+                             Icon="{ui:SymbolIcon Map24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -74,6 +74,30 @@
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
                                          IsChecked="{Binding PathingConfig.AutoPickEnabled}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="是否开启自动吃药"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="检测到红血状态时自动使用便携营养袋"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         IsChecked="{Binding PathingConfig.AutoEatEnabled}" />
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
@@ -719,8 +743,7 @@
                 </StackPanel>
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             IsExpanded="True">
+                             ContentPadding="0">
                 <ui:CardExpander.Icon>
                     <ui:FontIcon Glyph="&#xf71d;" Style="{StaticResource FaFontIconStyle}" />
                 </ui:CardExpander.Icon>
@@ -839,6 +862,7 @@
                     </Grid>
                     <Grid Margin="16">
 
+                        <!-- 自动检测战斗结束 -->
                         <ui:CardExpander Margin="0,0,36,12"
                                          ContentPadding="0"
                                          IsExpanded="False">
@@ -968,7 +992,7 @@
                                                   HorizontalAlignment="Stretch"
                                                   VerticalAlignment="Stretch"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="(建议配合开启“更快检测结束战斗”使用) 在打开队伍界面检测战斗结束前，会先检测画面中如果存在敌人，再判断是否需要移动靠近敌人，并跳过检测战斗结束，如果画面内没有敌人，则进行旋转寻找敌人。"
+                                                  Text="(建议设1秒左右“更快检测结束战斗”配合使用) 在打开队伍界面检测战斗结束前，会先检测画面中如果存在敌人，再判断是否需要移动靠近敌人，并跳过检测战斗结束，如果画面内没有敌人，则进行旋转寻找敌人。"
                                                   TextWrapping="Wrap" />
                                     <ui:ToggleSwitch Grid.Row="0"
                                                      Grid.RowSpan="2"
@@ -1030,8 +1054,181 @@
 
                             </StackPanel>
                         </ui:CardExpander>
-
                     </Grid>
+                    
+                    <!-- 盾奶位角色优先释放技能 -->
+                    <ui:CardExpander Margin="16,0,52,12"
+                                 ContentPadding="0"
+                                 IsExpanded="False">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="盾奶位角色优先释放技能"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="战斗过程实时检测和释放盾奶位角E战技（空选为关闭此功能）"
+                                          TextWrapping="Wrap" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                        
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.Resources>
+                            <Style x:Key="GuardianVisibilityStyle" TargetType="FrameworkElement">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Resources>
+                        
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="盾奶位角色在队伍中的位置"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="实时检测盾奶位战技CD"
+                                      TextWrapping="Wrap" />
+                        
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="80"
+                                  HorizontalContentAlignment="Center"
+                                  VerticalContentAlignment="Center"
+                                  Margin="10,0,10,0"
+                                  ItemsSource=' 1234'
+                                  SelectedIndex="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
+                                  SelectedItem="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
+                            <!--todo ItemsSource=' 1234'导致XAML设计器无法加载-->
+
+                            <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="2"
+                                      Margin="0,0,8,0"
+                                      HorizontalAlignment="Right"
+                                      FontTypography="Body"
+                                      Text="禁用该角色的战斗策略"
+                                      TextWrapping="Wrap"
+                                      Style="{StaticResource GuardianVisibilityStyle}"/>
+
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="2"
+                                      Margin="0,0,10,0"
+                                      HorizontalAlignment="Right"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="只释放盾奶技能(E战技)"
+                                      TextWrapping="Wrap"
+                                      Style="{StaticResource GuardianVisibilityStyle}"/>
+
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="3"
+                                         Margin="0,0,36,0"
+                                         IsChecked="{Binding PathingConfig.AutoFightConfig.GuardianCombatSkip, Mode=TwoWay}">
+                            
+                            <ui:ToggleSwitch.Style>
+                                <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:ToggleSwitch.Style>
+                        </ui:ToggleSwitch>
+                        
+                        <ui:TextBlock Grid.Row="2"
+                                      Grid.Column="0" 
+                                      Grid.ColumnSpan="3"
+                                      Margin="0,10,10,0"
+                                      FontTypography="Body"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center"
+                                      Text="检测盾奶位CD时机，禁用:切角色前 / 启用:每个攻击命令前(可能会乱轴)"
+                                      TextWrapping="Wrap" 
+                                      Style="{StaticResource GuardianVisibilityStyle}"/>
+                        
+                        <ui:ToggleSwitch Grid.Row="2"
+                                         Grid.Column="3"
+                                         Margin="0,10,36,0" 
+                                         VerticalAlignment="Center"
+                                         IsChecked="{Binding PathingConfig.AutoFightConfig.SkipModel, Mode=TwoWay}">
+                            
+                            <ui:ToggleSwitch.Style>
+                                <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:ToggleSwitch.Style>
+                        </ui:ToggleSwitch>
+                        
+                        <ui:TextBlock Grid.Row="3"
+                                      Grid.Column="0" 
+                                      Grid.ColumnSpan="3"
+                                      Margin="0,10,10,0"
+                                      FontTypography="Body"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center"
+                                      Text="检测盾奶位战技短按或长按，禁用:短按 / 启用:长按"
+                                      TextWrapping="Wrap" 
+                                      Style="{StaticResource GuardianVisibilityStyle}"/>
+                        
+                        <ui:ToggleSwitch Grid.Row="3"
+                                         Grid.Column="3"
+                                         Margin="0,10,36,0" 
+                                         VerticalAlignment="Center"
+                                         IsChecked="{Binding PathingConfig.AutoFightConfig.GuardianAvatarHold,Mode=TwoWay}">
+                            
+                            <ui:ToggleSwitch.Style>
+                                <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:ToggleSwitch.Style>
+                        </ui:ToggleSwitch>
+                        
+                        
+                    </Grid>
+                </ui:CardExpander>
+                    
                     <Grid Margin="16,10,52,0">
 
                         <ui:CardExpander Margin="0,0,0,12"
@@ -1230,10 +1427,127 @@
                     </Grid>
                 </StackPanel>
             </ui:CardExpander>
+            <!-- 自动吃食物 -->
+            <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                <ui:CardExpander.Icon>
+                    <ui:FontIcon Glyph="&#x1F35C;" Style="{StaticResource FaFontIconStyle}" />
+                </ui:CardExpander.Icon>
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动吃食物配置"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            供JS脚本调用Buff类食物配置；食物名称会忽略“美味的”等前缀，请填不带前缀的名称
+                        </ui:TextBlock>
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="默认的攻击类料理名称"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            入参"foodEffectType":1时使用
+                        </ui:TextBlock>
+                        <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding PathingConfig.AutoEatConfig.DefaultAtkBoostingDishName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="默认的冒险类料理名称"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            入参"foodEffectType":2时使用
+                        </ui:TextBlock>
+                        <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding PathingConfig.AutoEatConfig.DefaultAdventurersDishName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="默认的防御类料理名称"
+                                  TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                            入参"foodEffectType":3时使用
+                        </ui:TextBlock>
+                        <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding PathingConfig.AutoEatConfig.DefaultDefBoostingDishName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon FlashSettings24}"
-                             IsExpanded="True">
+                             Icon="{ui:SymbolIcon FlashSettings24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>

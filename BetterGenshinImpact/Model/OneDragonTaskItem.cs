@@ -120,7 +120,7 @@ public partial class OneDragonTaskItem : ObservableObject
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
+                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
                     {
                         TaskControl.Logger.LogError("自动幽境危战战斗策略{Msg}，跳过", "未配置");
                         return;
