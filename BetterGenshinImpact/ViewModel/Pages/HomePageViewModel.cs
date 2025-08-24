@@ -3,11 +3,17 @@ using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Webview;
+using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -26,13 +32,10 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Windows.System;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.Model;
-using BetterGenshinImpact.View.Pages.View;
-using BetterGenshinImpact.ViewModel.Pages.View;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -410,26 +413,88 @@ public partial class HomePageViewModel : ViewModel
         }
     }
 
+    //[RelayCommand]
+    //private void OnOpenGameCommandLineDocument()
+    //{
+    //    string md = File.ReadAllText(Global.Absolute(@"Assets\Strings\gicli.md"), Encoding.UTF8);
+
+    //    md = WebUtility.HtmlEncode(md);
+    //    string md2html = File.ReadAllText(Global.Absolute(@"Assets\Strings\md2html.html"), Encoding.UTF8);
+    //    var html = md2html.Replace("{{content}}", md);
+
+    //    WebpageWindow win = new()
+    //    {
+    //        Title = "启动参数说明",
+    //        Width = 800,
+    //        Height = 600,
+    //        Owner = Application.Current.MainWindow,
+    //        WindowStartupLocation = WindowStartupLocation.CenterOwner
+    //    };
+
+    //    win.NavigateToHtml(html);
+    //    win.ShowDialog();
+    //}
+
     [RelayCommand]
     private void OnOpenGameCommandLineDocument()
     {
         string md = File.ReadAllText(Global.Absolute(@"Assets\Strings\gicli.md"), Encoding.UTF8);
 
-        md = WebUtility.HtmlEncode(md);
-        string md2html = File.ReadAllText(Global.Absolute(@"Assets\Strings\md2html.html"), Encoding.UTF8);
-        var html = md2html.Replace("{{content}}", md);
+        var flowDoc = MarkdownToFlowDocumentConverter.ConvertToFlowDocument(md);
 
-        WebpageWindow win = new()
+        // 创建 RichTextBox 来显示内容
+        var richTextBox = new System.Windows.Controls.RichTextBox
+        {
+            IsReadOnly = true,
+            IsDocumentEnabled = true,
+            BorderThickness = new Thickness(0),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Document = flowDoc,
+            Background = Brushes.Transparent,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Margin = new Thickness(12, 0, 12, 12)
+        };
+
+        // 创建两行的 Grid 容器
+        var grid = new System.Windows.Controls.Grid();
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // TitleBar 行
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 内容行
+
+        // 创建 TitleBar
+        var titleBar = new TitleBar
         {
             Title = "启动参数说明",
+            Icon = new ImageIcon 
+            { 
+                Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute)) 
+            },
+        };
+        System.Windows.Controls.Grid.SetRow(titleBar, 0);
+        grid.Children.Add(titleBar);
+
+        // 将 RichTextBox 添加到第二行
+        System.Windows.Controls.Grid.SetRow(richTextBox, 1);
+        grid.Children.Add(richTextBox);
+
+        // 创建 FluentWindow 来显示内容
+        var dialogWindow = new FluentWindow
+        {
+            Content = grid,
             Width = 800,
             Height = 600,
             Owner = Application.Current.MainWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            SizeToContent = SizeToContent.Manual,
+            WindowBackdropType = WindowBackdropType.Mica,
+            ExtendsContentIntoTitleBar = true,
         };
-
-        win.NavigateToHtml(html);
-        win.ShowDialog();
+        dialogWindow.SourceInitialized += (s, e) =>
+        {
+            WindowHelper.TryApplySystemBackdrop(dialogWindow);
+        };
+        dialogWindow.ShowDialog();
     }
 
     [RelayCommand]

@@ -257,9 +257,12 @@ public partial class MapPathingViewModel : ViewModel
         // 创建显示路径任务详情的控件
         var border = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
-            Padding = new Thickness(20)
+            //Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
+            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(8),
         };
+        border.SetResourceReference(Border.BackgroundProperty, "ApplicationBackgroundBrush");
+
 
         var mainGrid = new Grid();
         mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 标题行

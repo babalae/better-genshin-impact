@@ -49,9 +49,9 @@
                         <ui:TextBlock FontTypography="Subtitle"
                                       Opacity="0.8"
                                       Text="更好的原神，免费且开源" />
-                        <ui:TextBlock FontTypography="BodyStrong" Opacity="0.6">
+                        <ui:TextBlock FontTypography="BodyStrong" Opacity="0.5">
                             <Hyperlink Command="{Binding GoToWikiUrlCommand}"
-                                       Foreground="#B7FFFFFF"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        TextDecorations="None">
                                 <Run>点击查看文档与教程</Run>
                                 <Run FontFamily="{StaticResource FluentSystemIcons}" FontWeight="Light">&#xEE7A;</Run>
