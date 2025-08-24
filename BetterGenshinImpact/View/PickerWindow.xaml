@@ -1,19 +1,25 @@
-﻿<Window x:Class="BetterGenshinImpact.View.PickerWindow"
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.PickerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:view="clr-namespace:BetterGenshinImpact.View"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+        ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         Title="选择捕获窗口"
         Width="800"
         Height="450"
+        ExtendsContentIntoTitleBar="True"
         WindowStartupLocation="CenterScreen"
-        Background="#FF1E1E1E">
+        Loaded="Window_Loaded"
+        PreviewKeyDown="FluentWindow_PreviewKeyDown">
 
-    <Window.Resources>
+    <ui:FluentWindow.Resources>
         <!-- ListBoxItem Fluent UI 样式 -->
         <Style TargetType="ListBoxItem">
             <Setter Property="Margin" Value="8,4" />
             <Setter Property="Padding" Value="12" />
             <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -24,7 +30,7 @@
                                 BorderBrush="Transparent">
                             <Grid>
                                 <Border x:Name="SelectionBackground"
-                                        Background="#30FFFFFF"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
                                         CornerRadius="8"
                                         Opacity="0"/>
                                 <ContentPresenter />
@@ -33,29 +39,29 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="SelectionBackground" Property="Opacity" Value="0.1" />
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#20FFFFFF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="SelectionBackground" Property="Opacity" Value="0.2" />
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#40FFFFFF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-    </Window.Resources>
+    </ui:FluentWindow.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 标题区域 -->
         <Border Grid.Row="0" 
-                Background="#FF252525"
-                Padding="24,20">
+                Padding="24,36,24,20">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -65,76 +71,63 @@
                 <TextBlock Text="选择捕获窗口" 
                          FontSize="24" 
                          FontWeight="SemiBold"
-                         Foreground="#FFFFFF"/>
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
 
                 <TextBlock Grid.Row="1"
                          Text="双击选中要捕获的窗口" 
                          Margin="0,8,0,0"
-                         Foreground="#99FFFFFF"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                          FontSize="14"/>
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1"
-              PanningMode="VerticalOnly"
-              ScrollViewer.VerticalScrollBarVisibility="Auto"
-              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <!--内容区域-->
+        <Border Grid.Row="1"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                CornerRadius="8"
+                Margin="15,0">
             <ListBox x:Name="WindowList"
              Background="Transparent"
              BorderThickness="0"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              MouseDoubleClick="WindowsOnMouseDoubleClick"
              VirtualizingPanel.IsVirtualizing="True"
              VirtualizingPanel.VirtualizationMode="Recycling"
-             ScrollViewer.CanContentScroll="False">
+             ScrollViewer.CanContentScroll="False"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Padding" Value="0"/>
                         <Setter Property="Margin" Value="4"/>
                         <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
                                     <Border x:Name="Border" 
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                BorderThickness="1"
-                                BorderBrush="Transparent">
-                                        <ContentPresenter/>
+                                            Background="{TemplateBinding Background}"
+                                            CornerRadius="8"
+                                            BorderThickness="1"
+                                            BorderBrush="Transparent">
+                                        <ContentPresenter />
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Trigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ColorAnimation Storyboard.TargetName="Border"
-                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                          To="#22FFFFFF"
-                                                          Duration="0:0:0.2">
-                                                            <ColorAnimation.EasingFunction>
-                                                                <ExponentialEase EasingMode="EaseOut"/>
-                                                            </ColorAnimation.EasingFunction>
-                                                        </ColorAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.EnterActions>
-                                            <Trigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ColorAnimation Storyboard.TargetName="Border"
-                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                          To="#00000000"
-                                                          Duration="0:0:0.2">
-                                                            <ColorAnimation.EasingFunction>
-                                                                <ExponentialEase EasingMode="EaseOut"/>
-                                                            </ColorAnimation.EasingFunction>
-                                                        </ColorAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </Trigger.ExitActions>
+                                            <Setter TargetName="Border" Property="Background">
+                                                <Setter.Value>
+                                                    <SolidColorBrush Color="{DynamicResource ControlFillColorSecondary}" Opacity="0.5"/>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Border" Property="Background" Value="#33FFFFFF"/>
-                                            <Setter TargetName="Border" Property="BorderBrush" Value="#44FFFFFF"/>
+                                            <Setter TargetName="Border" Property="Background">
+                                                <Setter.Value>
+                                                    <SolidColorBrush Color="{DynamicResource ControlFillColorSecondary}" Opacity="0.7"/>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -144,7 +137,7 @@
                 </ListBox.ItemContainerStyle>
 
                 <ListBox.ItemTemplate>
-                    <DataTemplate DataType="{x:Type view:PickerWindow+CapturableWindow}">
+                    <DataTemplate DataType="{x:Type view:CapturableWindow}">
                         <Grid Margin="12,8" Height="48">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -153,32 +146,43 @@
 
                             <!-- 内容层 -->
                             <Border Grid.Column="0" 
-                        Width="40" 
-                        Height="40"
-                        Background="#22FFFFFF"
-                        CornerRadius="4"
-                        Margin="0,0,12,0">
+                    Width="40" 
+                    Height="40"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    CornerRadius="4"
+                    Margin="0,0,12,0">
                                 <Image Width="24" 
-                           Height="24" 
-                           Source="{Binding Icon}"
-                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                       Height="24" 
+                                       Source="{Binding Icon}"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Border>
 
                             <StackPanel Grid.Column="1" 
-                            VerticalAlignment="Center">
+                                        VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Name}" 
-                             FontSize="14" 
-                             FontWeight="SemiBold"
-                             Foreground="#FFFFFF"/>
+                                           FontSize="14" 
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                                 <TextBlock Text="{Binding ProcessName}" 
-                             FontSize="12" 
-                             Foreground="#99FFFFFF"
-                             Margin="0,4,0,0"/>
+                                           FontSize="12" 
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Margin="0,4,0,0"/>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-        </ScrollViewer>
+        </Border>
+
+
+        <!-- 底部操作区域 -->
+        <Grid Grid.Row="2" Margin="12">
+            <ui:Button
+                   Name="cancelButton"
+                   HorizontalAlignment="Right"
+                   Width="100"
+                   Margin="5"
+                   Click="cancelButton_Click">取消</ui:Button>
+        </Grid>
     </Grid>
-</Window>
+</ui:FluentWindow>

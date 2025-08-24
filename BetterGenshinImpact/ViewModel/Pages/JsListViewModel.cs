@@ -204,9 +204,12 @@ public partial class JsListViewModel : ViewModel
         // 创建显示脚本详情的控件
         var border = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
-            Padding = new Thickness(20)
+            //Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
+            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(8)
         };
+        border.SetResourceReference(Border.BackgroundProperty, "ApplicationBackgroundBrush");
+
 
         // 使用Grid替代StackPanel以实现更好的布局控制
         var mainGrid = new Grid();
