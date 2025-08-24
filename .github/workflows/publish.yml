@@ -21,6 +21,11 @@ on:
         description: '创建 GitHub Release 草稿'
         required: true
         default: false
+      upload-to-steambird:
+        type: boolean
+        description: '上传到 Steambird'
+        required: true
+        default: false
 
 jobs:
   # Add validation job to check version format
@@ -446,7 +451,7 @@ jobs:
           upload_token: ${{ secrets.MirrorChyanUploadToken }}
 
   cnb_uploading:
-    if: github.repository_owner == 'babalae'
+    if: github.repository_owner == 'babalae' && false
     needs: [validate, build_dist, build_installer]
     runs-on: ubuntu-latest
     steps:
@@ -460,7 +465,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install -r .github/workflows/requirements.txt
   
       - uses: actions/download-artifact@v4
         with:
@@ -537,3 +542,55 @@ jobs:
           
           # 执行上传
           python cnb_release.py cnb_config.json
+
+  cnb_trigger:
+    if: github.repository_owner == 'babalae'
+    needs: [validate, build_dist, build_installer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .github/workflows/requirements.txt
+      
+      - name: Trigger CNB Build
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          python .github/workflows/cnb_trigger.py "$CNB_TOKEN" --runid ${{ github.run_id }}
+
+  upload_to_steambird:
+    if: ${{ inputs.upload-to-steambird && github.repository_owner == 'babalae' }}
+    needs: [validate, build_dist, build_installer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+  
+      - name: Prepare files for upload
+        run: |
+          mkdir -p upload_files
+          # 只复制 7z 文件和 Install.exe 文件
+          find artifacts -name "*.7z" -exec cp {} upload_files/ \;
+          find artifacts -name "BetterGI.Install.*.exe" -exec cp {} upload_files/ \;
+          echo "📦 准备上传的文件:"
+          ls -la upload_files/
+      
+      - name: Upload to Steambird
+        env:
+          TUS_USER: "bgi"
+          TUS_PASS: ${{ secrets.TUS_PASS }}
+        run: |
+          wget https://uploads.steambird.pub/upload.sh
+          chmod +x upload.sh
+          ./upload.sh https://uploads.steambird.pub/dav/bgi/ upload_files/BetterGI.Install.*.exe
+

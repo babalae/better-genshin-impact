@@ -1,0 +1,5 @@
+branch:
+  - buttons:
+      - name: 触发上传
+        description: 上传测试版或者正式版
+        event: web_trigger_one

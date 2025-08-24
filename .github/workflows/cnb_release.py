@@ -1,3 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+CNB Release Uploader 
+
+依赖:
+- requests
+- tqdm
+
+安装依赖:
+pip install requests tqdm
+"""
+
 import os
 import json
 import requests
@@ -6,6 +19,7 @@ import sys
 import argparse
 from typing import List, Dict, Optional
 from pathlib import Path
+from tqdm import tqdm
 
 
 class CNBReleaseUploader:
@@ -103,13 +117,14 @@ class CNBReleaseUploader:
                 print(f"   响应内容: {e.response.text}")
             return None
 
-    def upload_asset(self, upload_url: str, file_path: str) -> bool:
+    def upload_asset(self, upload_url: str, file_path: str, show_progress: bool = True) -> bool:
         """
         上传asset文件
 
         Args:
             upload_url: 上传URL
             file_path: 本地文件路径
+            show_progress: 是否显示上传进度条
 
         Returns:
             是否上传成功
@@ -123,9 +138,44 @@ class CNBReleaseUploader:
             'Authorization': f'Bearer {self.token}',
         }
 
+        file_size = os.path.getsize(file_path)
+        file_name = os.path.basename(file_path)
+
         try:
             with open(file_path, 'rb') as file:
-                response = requests.put(upload_url, headers=upload_headers, data=file)
+                if show_progress and file_size > 0:
+                    # 创建进度条
+                    progress_bar = tqdm(
+                        total=file_size,
+                        unit='B',
+                        unit_scale=True,
+                        unit_divisor=1024,
+                        desc=f"📤 上传 {file_name}",
+                        ncols=80,
+                        bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'
+                    )
+                    
+                    # 创建一个包装器来更新进度条
+                    class ProgressFileWrapper:
+                        def __init__(self, file_obj, progress_bar):
+                            self.file_obj = file_obj
+                            self.progress_bar = progress_bar
+                            
+                        def read(self, size=-1):
+                            data = self.file_obj.read(size)
+                            if data:
+                                self.progress_bar.update(len(data))
+                            return data
+                            
+                        def __getattr__(self, name):
+                            return getattr(self.file_obj, name)
+                    
+                    wrapped_file = ProgressFileWrapper(file, progress_bar)
+                    response = requests.put(upload_url, headers=upload_headers, data=wrapped_file)
+                    progress_bar.close()
+                else:
+                    response = requests.put(upload_url, headers=upload_headers, data=file)
+                    
                 response.raise_for_status()
 
             print(f"📤 上传到 {upload_url} 返回结果: {response.status_code}")
@@ -177,7 +227,7 @@ class CNBReleaseUploader:
             return False
 
     def upload_multiple_assets(self, project_path: str, release_id: str,
-                               asset_files: List[str], overwrite: bool = True) -> List[bool]:
+                               asset_files: List[str], overwrite: bool = True, show_progress: bool = True) -> List[bool]:
         """
         上传多个assets
 
@@ -186,6 +236,7 @@ class CNBReleaseUploader:
             release_id: release ID
             asset_files: asset文件路径列表
             overwrite: 是否覆盖现有文件
+            show_progress: 是否显示进度条
 
         Returns:
             每个文件的上传结果列表
@@ -193,6 +244,18 @@ class CNBReleaseUploader:
         results = []
 
         print(f"\n📦 开始上传 {len(asset_files)} 个文件到release {release_id}...")
+        
+        # 计算总文件大小用于整体进度显示
+        total_size = 0
+        valid_files = []
+        for file_path in asset_files:
+            if os.path.exists(file_path):
+                total_size += os.path.getsize(file_path)
+                valid_files.append(file_path)
+        
+        if show_progress and valid_files:
+            print(f"📊 总计 {len(valid_files)} 个有效文件，总大小: {total_size / 1024 / 1024:.2f} MB")
+            print("" + "=" * 60)
 
         for i, file_path in enumerate(asset_files, 1):
             if not os.path.exists(file_path):
@@ -216,7 +279,7 @@ class CNBReleaseUploader:
                 continue
 
             # 2. 上传文件
-            upload_success = self.upload_asset(upload_info['upload_url'], file_path)
+            upload_success = self.upload_asset(upload_info['upload_url'], file_path, show_progress)
             time.sleep(1)
 
             # 3. 验证上传（如果有验证URL）
@@ -299,6 +362,7 @@ def main():
     parser = argparse.ArgumentParser(description='CNB Release Uploader - JSON配置版本')
     parser.add_argument('config', help='JSON配置字符串或JSON配置文件路径')
     parser.add_argument('--dry-run', action='store_true', help='只验证配置，不执行上传')
+    parser.add_argument('--no-progress', action='store_true', help='禁用上传进度条显示')
 
     args = parser.parse_args()
 
@@ -346,8 +410,9 @@ def main():
         asset_files = config.get('asset_files', [])
         if asset_files:
             overwrite = config.get('overwrite', True)
+            show_progress = not args.no_progress  # 默认显示进度条，除非指定 --no-progress
             results = uploader.upload_multiple_assets(
-                config['project_path'], release_id, asset_files, overwrite
+                config['project_path'], release_id, asset_files, overwrite, show_progress
             )
 
             # 3. 显示结果
