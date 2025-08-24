@@ -49,6 +49,7 @@ public class AutoFightParam : BaseTaskParam
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
         SkipModel = autoFightConfig.SkipModel;
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
+        ExpKazuhaPickup = autoFightConfig.ExpKazuhaPickup;
     }
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
@@ -69,4 +70,5 @@ public class AutoFightParam : BaseTaskParam
     public bool GuardianCombatSkip { get; set; } = false;
     public bool SkipModel = false;
     public bool GuardianAvatarHold = false;
+    public bool ExpKazuhaPickup  { get; set; } = false;
 }
