@@ -381,9 +381,12 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     public static ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, CultureInfo cultureInfo, out string allText)
     {
+        // 右上角抹黑避免干扰ocr
+        Mat upperRightRoi = src.SubMat(new Rect(src.Width * 2 / 3, 0, src.Width / 3, src.Height / 2)).SetTo(0);
+
         var ocrResult = ocrService.OcrResult(src);
-        allText = ocrResult.Text;
-        var lines = ocrResult.Text.Split('\n');
+        allText = string.Join("\n", ocrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
+        var lines = allText.Split('\n');
         string percentStr = "%";
 
         // 名称
@@ -400,6 +403,18 @@ public class AutoArtifactSalvageTask : ISoloTask
             Match match = Regex.Match(l, pattern);
             if (match.Success)
             {
+                if (mainAffixType == ArtifactAffixType.ATK && !String.IsNullOrEmpty(match.Groups[2].Value))
+                {
+                    mainAffixType = ArtifactAffixType.ATKPercent;
+                }
+                if (mainAffixType == ArtifactAffixType.DEF && !String.IsNullOrEmpty(match.Groups[2].Value))
+                {
+                    mainAffixType = ArtifactAffixType.DEFPercent;
+                }
+                if (mainAffixType == ArtifactAffixType.HP && !String.IsNullOrEmpty(match.Groups[2].Value))
+                {
+                    mainAffixType = ArtifactAffixType.HPPercent;
+                }
                 return match.Groups[1].Value;
             }
             else
