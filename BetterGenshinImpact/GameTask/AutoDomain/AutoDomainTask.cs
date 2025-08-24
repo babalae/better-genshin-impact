@@ -214,6 +214,11 @@ public class AutoDomainTask : ISoloTask
     private void Init()
     {
         LogScreenResolution();
+        if (_config.AutoEat)
+        {
+            TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null);
+        }
+        
         if (_config.SpecifyResinUse)
         {
             Logger.LogInformation("→ {Text} 指定使用树脂", "自动秘境，");
@@ -749,7 +754,7 @@ public class AutoDomainTask : ISoloTask
 
             if (!IsTakeFood())
             {
-                Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
+                 Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
                 return;
             }
 

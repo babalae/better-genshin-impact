@@ -31,6 +31,8 @@ public class AutoEatTrigger : ITaskTrigger
     private DateTime _lastResurrectionTime = DateTime.MinValue;
     private DateTime _lastEatTime = DateTime.MinValue;
     private bool _recoveryDetected = false;
+    
+    private DateTime _prevExecute = DateTime.MinValue;
 
     public AutoEatTrigger()
     {
@@ -44,27 +46,16 @@ public class AutoEatTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
-        if (!IsEnabled)
+        if ((DateTime.Now - _prevExecute).TotalMilliseconds <= _config.CheckInterval)
+        {
             return;
+        }
+        _prevExecute = DateTime.Now;
 
         try
         {
-            using var ra = TaskControl.CaptureToRectArea();
+            var ra = content.CaptureRectArea;
             var now = DateTime.Now;
-
-            // 优先检测复活图标，添加2秒CD
-            if (CheckResurrection(ra))
-            {
-                // 检查复活CD（2秒）
-                if ((now - _lastResurrectionTime).TotalSeconds >= 2)
-                {
-                    // 按z键复活
-                    Simulation.SendInput.Keyboard.KeyPress(VK.VK_Z);
-                    _lastResurrectionTime = now;
-                    _logger.LogInformation("检测到复活图标，自动复活");
-                }
-                return;
-            }
 
             // 检测角色是否红血
             if (Bv.CurrentAvatarIsLowHp(ra))
@@ -92,8 +83,21 @@ public class AutoEatTrigger : ITaskTrigger
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                         _lastEatTime = now;
                         
-                        _logger.LogInformation("检测到红血且Recovery可用，自动吃药");
+                        _logger.LogInformation("检测到红血且不在CD，自动吃药");
                     }
+                }
+            }
+            
+            // 检测复活图标，添加2秒CD
+            if (CheckResurrection(ra))
+            {
+                // 检查复活CD（2秒）
+                if ((now - _lastResurrectionTime).TotalSeconds >= 2)
+                {
+                    // 按z键复活
+                    Simulation.SendInput.Keyboard.KeyPress(VK.VK_Z);
+                    _lastResurrectionTime = now;
+                    _logger.LogInformation("检测到复活图标，自动复活");
                 }
             }
         }
