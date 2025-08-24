@@ -20,6 +20,8 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -34,7 +36,6 @@ public class CombatScenes : IDisposable
     private Avatar[] Avatars { set; get; } = [];
 
     public int AvatarCount => Avatars.Length;
-
 
     private readonly BgiYoloPredictor _predictor =
         App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
@@ -236,11 +237,13 @@ public class CombatScenes : IDisposable
         for (var i = 0; i < namesCount; i++)
         {
             var nameRect = nameRects?[i] ?? default;
+            var elementConfig = AutoFightAssets.Lists.FirstOrDefault(x => x.Name == names[i]);
             // 根据手动写的出招表来优化CD
             var cd = Avatar.ParseActionSchedulerByCd(names[i], cdConfig);
             avatars[i] = new Avatar(this, names[i], i + 1, nameRect, cd ?? -1)
             {
-                IndexRect = avatarIndexRectList[i]
+                IndexRect = avatarIndexRectList[i],
+                ElementType = elementConfig?.ElementalType ?? ElementalType.Omni
             };
         }
 

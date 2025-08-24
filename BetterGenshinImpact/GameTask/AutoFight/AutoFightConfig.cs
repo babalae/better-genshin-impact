@@ -3,10 +3,6 @@ using System;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
-
-
-
-
 /// <summary>
 /// 自动战斗配置
 /// </summary>
@@ -83,7 +79,18 @@ public partial class AutoFightConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private string _beforeDetectDelay = "";
-
+        
+        /// <summary>
+        /// 旋转寻找敌人位置的旋转因子，默认为5，越大越快。
+        /// </summary>
+        [ObservableProperty]
+        private int _rotaryFactor = 10;
+        
+        /// <summary>
+        /// 是否是第一次检查和面敌。
+        /// </summary>
+        [ObservableProperty]
+        private bool _isFirstCheck = false;
     }
     /// <summary>
     /// 战斗结束相关配置
@@ -125,12 +132,14 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private bool _guardianAvatarHold = false;
     
+     [ObservableProperty]
+     private bool _burstEnabled = false;
+     
     /// <summary>
     /// 战斗结束后，如果不存在万叶，则切换至存在万叶的队伍（基于开启万叶拾取情况下）
     /// </summary>
     [ObservableProperty]
     private string _kazuhaPartyName = "";
-    
 
     /// <summary>
     /// 战斗超时，单位秒
