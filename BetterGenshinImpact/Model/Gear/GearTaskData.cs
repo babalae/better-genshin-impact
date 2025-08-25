@@ -21,6 +21,9 @@ public class GearTaskDefinitionData
     [JsonProperty("modified_time")]
     public DateTime ModifiedTime { get; set; } = DateTime.Now;
 
+    [JsonProperty("order")]
+    public int Order { get; set; } = 0;
+
     [JsonProperty("root_task")]
     public GearTaskData? RootTask { get; set; }
 }

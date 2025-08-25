@@ -156,6 +156,7 @@
                          BorderThickness="0"
                          dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"
+                         dd:DragDrop.DropHandler="{Binding}"
                          dd:DragDrop.UseDefaultDragAdorner="True"
                          Padding="4">
                     <ListBox.ItemContainerStyle>

@@ -24,6 +24,9 @@ public partial class GearTaskDefinitionViewModel : ObservableObject
     [ObservableProperty]
     private DateTime _modifiedTime = DateTime.Now;
 
+    [ObservableProperty]
+    private int _order = 0;
+
     /// <summary>
     /// 任务根节点
     /// </summary>

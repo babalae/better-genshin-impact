@@ -13,6 +13,7 @@ using BetterGenshinImpact.ViewModel.Pages.Component;
 using BetterGenshinImpact.Service;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
+using GongSolutions.Wpf.DragDrop;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -72,6 +73,9 @@ public partial class GearTaskListPageViewModel : ViewModel
         
         // 监听集合变化，实现自动保存
         TaskDefinitions.CollectionChanged += OnTaskDefinitionsChanged;
+        
+        // 监听当前任务树的集合变化，用于拖拽后自动保存
+        CurrentTaskTree.CollectionChanged += OnCurrentTaskTreeChanged;
     }
 
     /// <summary>
@@ -81,6 +85,26 @@ public partial class GearTaskListPageViewModel : ViewModel
     {
         // 当集合发生变化时，可以在这里处理自动保存等逻辑
         // 例如：保存到配置文件等
+    }
+    
+    /// <summary>
+    /// 当前任务树集合变化时的处理（用于拖拽后自动保存）
+    /// </summary>
+    private async void OnCurrentTaskTreeChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (SelectedTaskDefinition != null)
+        {
+            try
+            {
+                SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+                await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+                _logger.LogInformation("任务树根级别结构变化，已自动保存任务定义 '{TaskName}'", SelectedTaskDefinition.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", SelectedTaskDefinition.Name);
+            }
+        }
     }
 
     /// <summary>
@@ -93,7 +117,10 @@ public partial class GearTaskListPageViewModel : ViewModel
             // 从 JSON 文件加载任务定义
             var loadedTasks = await _storageService.LoadAllTaskDefinitionsAsync();
             
-            foreach (var task in loadedTasks)
+            // 按order字段排序
+            var sortedTasks = loadedTasks.OrderBy(t => t.Order).ToList();
+            
+            foreach (var task in sortedTasks)
             {
                 TaskDefinitions.Add(task);
                 // 为每个任务定义设置属性变化监听
@@ -178,6 +205,8 @@ public partial class GearTaskListPageViewModel : ViewModel
     private async Task AddTaskDefinition()
     {
         var newTask = new GearTaskDefinitionViewModel($"新任务组 {TaskDefinitions.Count + 1}", "新创建的任务组");
+        // 设置新任务的order为当前最大值+1
+        newTask.Order = TaskDefinitions.Count > 0 ? TaskDefinitions.Max(t => t.Order) + 1 : 0;
         TaskDefinitions.Add(newTask);
         SetupTaskDefinitionPropertyChanged(newTask);
         SelectedTaskDefinition = newTask;
@@ -438,7 +467,7 @@ public partial class GearTaskListPageViewModel : ViewModel
         }
         
         // 监听子任务集合变化
-        task.Children.CollectionChanged += (sender, e) =>
+        task.Children.CollectionChanged += async (sender, e) =>
         {
             if (e.NewItems != null)
             {
@@ -446,6 +475,18 @@ public partial class GearTaskListPageViewModel : ViewModel
                 {
                     SetupTaskPropertyChangeListener(newTask, parentDefinition);
                 }
+            }
+            
+            // 任何集合变化都触发保存（包括拖拽重排序）
+            try
+            {
+                parentDefinition.ModifiedTime = DateTime.Now;
+                await _storageService.SaveTaskDefinitionAsync(parentDefinition);
+                _logger.LogInformation("任务树结构变化，已自动保存任务定义 '{TaskName}'", parentDefinition.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", parentDefinition.Name);
             }
         };
     }
