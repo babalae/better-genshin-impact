@@ -164,7 +164,7 @@ internal sealed class Login3rdParty
                         }
                         else
                         {
-                            GameCaptureRegion.GameRegion1080PPosClick(960, 620);
+                            GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                             Debug.WriteLine("[AutoWood] Click login window for Bilibili");
                         }
 

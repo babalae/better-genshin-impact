@@ -353,7 +353,7 @@ public class GameLoadingTrigger : ITaskTrigger
                     }
                     else
                     {
-                        GameCaptureRegion.GameRegion1080PPosClick(960, 620);
+                        GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                     }
 
                     Thread.Sleep(2000);
@@ -385,15 +385,9 @@ public class GameLoadingTrigger : ITaskTrigger
             {
                 _logger.LogInformation("B服登录完成，等待后尝试点击进入游戏");
                 Thread.Sleep(5000);
-                ClickEnterGameButton();
+                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                 return;
             }
-        }
-        else if (!isBili)
-        {
-            // 官服流程：直接点击进入游戏按钮
-            ClickEnterGameButton();
-            return;
         }
 
         var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
@@ -484,11 +478,6 @@ public class GameLoadingTrigger : ITaskTrigger
         }, IntPtr.Zero);
 
         return (bHWnd, windowType);
-    }
-
-    private void ClickEnterGameButton()
-    {
-        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
     }
 
     private ImageRegion CaptureWindowToRectArea(IntPtr hWnd)
