@@ -226,19 +226,22 @@ public class GearTaskStorageService
     /// <returns></returns>
     private GearTaskData ConvertTaskToData(GearTaskViewModel viewModel)
     {
+        var children = viewModel.Children.Select(ConvertTaskToData).ToList();
+        
         return new GearTaskData
         {
             Name = viewModel.Name,
             Description = viewModel.Description,
             TaskType = viewModel.TaskType,
             IsEnabled = viewModel.IsEnabled,
-            IsDirectory = viewModel.IsDirectory,
+            // 当 Children 存在值的情况下，IsDirectory 必定为 true
+            IsDirectory = children.Count > 0 || viewModel.IsDirectory,
             Parameters = viewModel.Parameters,
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,
             Priority = viewModel.Priority,
             Tags = viewModel.Tags,
-            Children = viewModel.Children.Select(ConvertTaskToData).ToList()
+            Children = children
         };
     }
 
