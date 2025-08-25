@@ -3,6 +3,8 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers.Extensions;
+using OpenCvSharp;
+using System;
 using System.Globalization;
 using System.Windows;
 
@@ -15,6 +17,8 @@ public partial class OcrDialog
     private readonly double widthRatio;
     private readonly double heightRatio;
     private readonly string? javaScript;
+    private readonly AutoArtifactSalvageTask autoArtifactSalvageTask;
+
     public OcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? javaScript = null)
     {
         this.xRatio = xRatio;
@@ -22,6 +26,7 @@ public partial class OcrDialog
         this.widthRatio = widthRatio;
         this.heightRatio = heightRatio;
         this.javaScript = javaScript;
+        this.autoArtifactSalvageTask = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName)));
 
         InitializeComponent();
 
@@ -33,11 +38,12 @@ public partial class OcrDialog
     {
         using var ra = TaskControl.CaptureToRectArea();
         using var card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
+        //Cv2.ImWrite($"{DateTime.Now.ToString("yyyyMMddHHmm")}_GetArtifactStat.png", card.SrcMat);
         var bitmapImage = card.SrcMat.ToWriteableBitmap();
 
         this.Screenshot.Source = bitmapImage;
 
-        ArtifactStat artifact = AutoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName), out string allText);
+        ArtifactStat artifact = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
         this.TxtRecognized.Text = allText;
         if (this.javaScript != null)
         {

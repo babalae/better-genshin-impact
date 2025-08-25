@@ -1,5 +1,3 @@
-﻿
-using BetterGenshinImpact.GameTask.AutoFishing;
 using System.Globalization;
 using System.Threading;
 

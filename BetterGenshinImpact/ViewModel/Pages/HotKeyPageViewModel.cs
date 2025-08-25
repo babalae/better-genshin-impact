@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
@@ -533,7 +533,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 if (pathRecording)
                 {
                     Task.Run(() => { pathRecorder.AddWaypoint(); });
-                    
+
                 }
             }
         ));
@@ -583,7 +583,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
-                    Task.Run(async () => { await new AutoArtifactSalvageTask(4).Start(new CancellationToken()); });
+                    Task.Run(async () => { await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star: 4, null, null, null)).Start(new CancellationToken()); });
 
                 }
             ));

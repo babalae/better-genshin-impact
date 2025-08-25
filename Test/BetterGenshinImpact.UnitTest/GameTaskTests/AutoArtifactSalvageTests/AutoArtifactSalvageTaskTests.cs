@@ -94,10 +94,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo));
             string result = PaddleResultDic.GetOrAdd(screenshot, screenshot_ =>
             {
                 using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot_}");
-                GetArtifactStat(mat, paddle.Get(), cultureInfo, out string allText);
+                sut.GetArtifactStat(mat, paddle.Get(), out string allText);
                 return allText;
             });
 
@@ -112,30 +113,55 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             }
         }
 
+        public static IEnumerable<object[]> GetArtifactStatTestData
+        {
+            get
+            {
+                yield return new object[] { "ArtifactAffixes.png", new ArtifactStat("异种的期许", new ArtifactAffix(ArtifactAffixType.HP, 717f), [
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 16f),
+                    new ArtifactAffix(ArtifactAffixType.EnergyRecharge, 6.5f),
+                    new ArtifactAffix(ArtifactAffixType.ATKPercent, 5.8f),
+                    new ArtifactAffix(ArtifactAffixType.DEF, 23f)
+                ], 0), new CultureInfo("zh-Hans") };
+                yield return new object[] { "202508242224_GetArtifactStat.png", new ArtifactStat("裁判的时刻", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
+                    new ArtifactAffix(ArtifactAffixType.ATK, 16f),
+                    new ArtifactAffix(ArtifactAffixType.CRITDMG, 7.8f),
+                    new ArtifactAffix(ArtifactAffixType.DEF, 19),
+                    new ArtifactAffix(ArtifactAffixType.CRITRate, 2.7f)
+                ], 0), new CultureInfo("zh-Hans") };
+                yield return new object[] { "202508252004_GetArtifactStat.png", new ArtifactStat("Deep Gallery's Bestowed Banquet", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
+                    new ArtifactAffix(ArtifactAffixType.HP, 239),
+                    new ArtifactAffix(ArtifactAffixType.ATK, 18),
+                    new ArtifactAffix(ArtifactAffixType.HPPercent, 4.1f)
+                ], 0), new CultureInfo("en") }; // ocr失败的用例，名称错行了
+                // todo: 更多测试用例
+            }
+        }
+
         /// <summary>
         /// 测试获取分解圣遗物界面右侧圣遗物的各种结构化信息，结果应正确
         /// </summary>
         /// <param name="screenshot"></param>
         [Theory]
-        [InlineData(@"ArtifactAffixes.png")]
-        public void GetArtifactStat_AffixesShouldBeRight(string screenshot)
+        [MemberData(nameof(GetArtifactStatTestData))]
+        public void GetArtifactStat_AffixesShouldBeRight(string screenshot, ArtifactStat expectedArtifactStat, CultureInfo cultureInfo)
         {
             //
-            CultureInfo cultureInfo = new CultureInfo("zh-Hans");
-
-            //
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
-            ArtifactStat artifact = GetArtifactStat(mat, paddle.Get(), cultureInfo, out string _);
 
             //
-            Assert.Equal("异种的期许", artifact.Name);
-            Assert.True(artifact.MainAffix.Type == ArtifactAffixType.HP);
-            Assert.True(artifact.MainAffix.Value == 717f);
-            Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.ElementalMastery && a.Value == 16f);
-            Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.EnergyRecharge && a.Value == 6.5f);
-            Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.ATKPercent && a.Value == 5.8f);
-            Assert.Contains(artifact.MinorAffixes, a => a.Type == ArtifactAffixType.DEF && a.Value == 23f);
-            Assert.True(artifact.Level == 0);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo));
+            ArtifactStat result = sut.GetArtifactStat(mat, paddle.Get(cultureInfo.Name), out string _);
+
+            //
+            Assert.Equal(expectedArtifactStat.Name, result.Name);
+            Assert.Equal(expectedArtifactStat.MainAffix.Type, result.MainAffix.Type);
+            Assert.Equal(expectedArtifactStat.MainAffix.Value, result.MainAffix.Value);
+            foreach (ArtifactAffix expectedArtifactAffix in expectedArtifactStat.MinorAffixes)
+            {
+                Assert.Contains(result.MinorAffixes, a => a.Type == expectedArtifactAffix.Type && a.Value == expectedArtifactAffix.Value);
+            }
+            Assert.True(result.Level == expectedArtifactStat.Level);
         }
 
         [Theory]
@@ -153,11 +179,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         public void IsMatchJavaScript_JSShouldBeRight(string screenshot, string js, bool expected)
         {
             //
+            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
-            ArtifactStat artifact = GetArtifactStat(mat, paddle.Get(), cultureInfo, out string _);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo));
+            ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), out string _);
             bool result = IsMatchJavaScript(artifact, js);
 
             //

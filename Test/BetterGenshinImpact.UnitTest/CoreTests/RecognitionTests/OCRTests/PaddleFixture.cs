@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using System.Collections.Concurrent;
 using System.Globalization;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;

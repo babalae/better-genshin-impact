@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -129,7 +129,55 @@
   <data name="4星圣遗物" xml:space="preserve">
     <value>Artéfact.*4★?</value>
   </data>
+  <data name="元素充能效率" xml:space="preserve">
+    <value>Recharge d'énergie</value>
+  </data>
+  <data name="元素精通" xml:space="preserve">
+    <value>Maîtrise élémentaire</value>
+  </data>
+  <data name="冰元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Cryo</value>
+  </data>
+  <data name="岩元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Géo</value>
+  </data>
   <data name="快速选择" xml:space="preserve">
     <value>Sélection.*rapide</value>
+  </data>
+  <data name="攻击力" xml:space="preserve">
+    <value>ATQ</value>
+  </data>
+  <data name="暴击伤害" xml:space="preserve">
+    <value>DGT CRIT</value>
+  </data>
+  <data name="暴击率" xml:space="preserve">
+    <value>Taux CRIT</value>
+  </data>
+  <data name="水元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Hydro</value>
+  </data>
+  <data name="治疗加成" xml:space="preserve">
+    <value>Bonus de soins</value>
+  </data>
+  <data name="火元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Pyro</value>
+  </data>
+  <data name="物理伤害加成" xml:space="preserve">
+    <value>Bonus de DGT physiques</value>
+  </data>
+  <data name="生命值" xml:space="preserve">
+    <value>PV</value>
+  </data>
+  <data name="草元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Dendro</value>
+  </data>
+  <data name="防御力" xml:space="preserve">
+    <value>DÉF</value>
+  </data>
+  <data name="雷元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Électro</value>
+  </data>
+  <data name="风元素伤害加成" xml:space="preserve">
+    <value>Bonus de DGT Anémo</value>
   </data>
 </root>
