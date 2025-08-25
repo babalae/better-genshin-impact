@@ -7,6 +7,7 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:component="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Component"
+             xmlns:dd="urn:gong-wpf-dragdrop"
              d:DataContext="{d:DesignInstance Type=pages:GearTaskListPageViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="1200"
@@ -153,6 +154,9 @@
                          ItemTemplate="{StaticResource TaskDefinitionItemTemplate}"
                          Background="Transparent"
                          BorderThickness="0"
+                         dd:DragDrop.IsDragSource="True"
+                         dd:DragDrop.IsDropTarget="True"
+                         dd:DragDrop.UseDefaultDragAdorner="True"
                          Padding="4">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
@@ -231,7 +235,11 @@
                     
                     <ui:TreeListView BorderThickness="0"
                                      ItemsSource="{Binding CurrentTaskTree}"
-                                     SelectedItem="{Binding SelectedTaskNode}">
+                                     SelectedItem="{Binding SelectedTaskNode}"
+                                     dd:DragDrop.IsDragSource="True"
+                                     dd:DragDrop.IsDropTarget="True"
+                                     dd:DragDrop.UseDefaultDragAdorner="True"
+                                     >
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
                                 <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnName}" Header="任务名称">

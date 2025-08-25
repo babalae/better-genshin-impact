@@ -10,6 +10,9 @@ using System.Windows;
 using System.Linq;
 using System;
 using BetterGenshinImpact.ViewModel.Pages.Component;
+using BetterGenshinImpact.Service;
+using System.Threading.Tasks;
+using System.Collections.Specialized;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -19,6 +22,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class GearTaskListPageViewModel : ViewModel
 {
     private readonly ILogger<GearTaskListPageViewModel> _logger;
+    private readonly GearTaskStorageService _storageService;
 
     /// <summary>
     /// 任务定义列表（左侧）
@@ -60,18 +64,61 @@ public partial class GearTaskListPageViewModel : ViewModel
         "组合任务"
     };
 
-    public GearTaskListPageViewModel(ILogger<GearTaskListPageViewModel> logger)
+    public GearTaskListPageViewModel(ILogger<GearTaskListPageViewModel> logger, GearTaskStorageService storageService)
     {
         _logger = logger;
+        _storageService = storageService;
         InitializeData();
+        
+        // 监听集合变化，实现自动保存
+        TaskDefinitions.CollectionChanged += OnTaskDefinitionsChanged;
+    }
+
+    /// <summary>
+    /// 任务定义集合变化时的处理
+    /// </summary>
+    private async void OnTaskDefinitionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // 当集合发生变化时，可以在这里处理自动保存等逻辑
+        // 例如：保存到配置文件等
     }
 
     /// <summary>
     /// 初始化数据
     /// </summary>
-    private void InitializeData()
+    private async void InitializeData()
     {
-        // 创建示例数据
+        try
+        {
+            // 从 JSON 文件加载任务定义
+            var loadedTasks = await _storageService.LoadAllTaskDefinitionsAsync();
+            
+            foreach (var task in loadedTasks)
+            {
+                TaskDefinitions.Add(task);
+                // 为每个任务定义设置属性变化监听
+                SetupTaskDefinitionPropertyChanged(task);
+            }
+            
+            // 如果没有加载到任何任务，创建一个示例任务
+            if (TaskDefinitions.Count == 0)
+            {
+                await CreateSampleTaskAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化任务数据时发生错误");
+            // 发生错误时创建示例任务
+            await CreateSampleTaskAsync();
+        }
+    }
+    
+    /// <summary>
+    /// 创建示例任务
+    /// </summary>
+    private async Task CreateSampleTaskAsync()
+    {
         var sampleTask = new GearTaskDefinitionViewModel("示例任务组", "这是一个示例任务组");
         if (sampleTask.RootTask != null)
         {
@@ -85,6 +132,10 @@ public partial class GearTaskListPageViewModel : ViewModel
         }
         
         TaskDefinitions.Add(sampleTask);
+        SetupTaskDefinitionPropertyChanged(sampleTask);
+        
+        // 保存示例任务到文件
+        await _storageService.SaveTaskDefinitionAsync(sampleTask);
     }
 
     /// <summary>
@@ -124,18 +175,22 @@ public partial class GearTaskListPageViewModel : ViewModel
     /// 添加新的任务定义
     /// </summary>
     [RelayCommand]
-    private void AddTaskDefinition()
+    private async Task AddTaskDefinition()
     {
         var newTask = new GearTaskDefinitionViewModel($"新任务组 {TaskDefinitions.Count + 1}", "新创建的任务组");
         TaskDefinitions.Add(newTask);
+        SetupTaskDefinitionPropertyChanged(newTask);
         SelectedTaskDefinition = newTask;
+        
+        // 自动保存到文件
+        await _storageService.SaveTaskDefinitionAsync(newTask);
     }
 
     /// <summary>
     /// 删除任务定义
     /// </summary>
     [RelayCommand]
-    private void DeleteTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
+    private async Task DeleteTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
     {
         if (taskDefinition == null) return;
         
@@ -144,11 +199,15 @@ public partial class GearTaskListPageViewModel : ViewModel
         
         if (result == MessageBoxResult.Yes)
         {
+            var taskName = taskDefinition.Name;
             TaskDefinitions.Remove(taskDefinition);
             if (SelectedTaskDefinition == taskDefinition)
             {
                 SelectedTaskDefinition = TaskDefinitions.FirstOrDefault();
             }
+            
+            // 删除对应的 JSON 文件
+            await _storageService.DeleteTaskDefinitionAsync(taskName);
         }
     }
 
@@ -156,21 +215,25 @@ public partial class GearTaskListPageViewModel : ViewModel
     /// 重命名任务定义
     /// </summary>
     [RelayCommand]
-    private void RenameTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
+    private async Task RenameTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
     {
         if (taskDefinition == null) return;
         
         // 这里可以弹出重命名对话框，暂时简单处理
         var newName = "新名称"; // 简化处理，实际应该弹出输入框
         
-        if (!string.IsNullOrWhiteSpace(newName))
+        if (!string.IsNullOrWhiteSpace(newName) && newName != taskDefinition.Name)
         {
+            var oldName = taskDefinition.Name;
             taskDefinition.Name = newName;
             taskDefinition.ModifiedTime = DateTime.Now;
             if (taskDefinition.RootTask != null)
             {
                 taskDefinition.RootTask.Name = newName;
             }
+            
+            // 重命名对应的 JSON 文件
+            await _storageService.RenameTaskDefinitionAsync(oldName, newName);
         }
     }
 
@@ -178,7 +241,7 @@ public partial class GearTaskListPageViewModel : ViewModel
     /// 添加任务节点
     /// </summary>
     [RelayCommand]
-    private void AddTaskNode(string? taskType = null)
+    private async Task AddTaskNode(string? taskType = null)
     {
         if (SelectedTaskDefinition?.RootTask == null) return;
 
@@ -198,13 +261,16 @@ public partial class GearTaskListPageViewModel : ViewModel
         }
 
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+        
+        // 自动保存到文件
+        await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
     }
 
     /// <summary>
     /// 添加任务组
     /// </summary>
     [RelayCommand]
-    private void AddTaskGroup()
+    private async Task AddTaskGroup()
     {
         if (SelectedTaskDefinition?.RootTask == null) return;
 
@@ -223,13 +289,16 @@ public partial class GearTaskListPageViewModel : ViewModel
         }
 
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+        
+        // 自动保存到文件
+        await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
     }
 
     /// <summary>
     /// 删除任务节点
     /// </summary>
     [RelayCommand]
-    private void DeleteTaskNode(GearTaskViewModel? taskNode)
+    private async Task DeleteTaskNode(GearTaskViewModel? taskNode)
     {
         if (taskNode == null || SelectedTaskDefinition?.RootTask == null) return;
 
@@ -240,6 +309,9 @@ public partial class GearTaskListPageViewModel : ViewModel
         {
             RemoveTaskFromTree(SelectedTaskDefinition.RootTask, taskNode);
             SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+            
+            // 自动保存到文件
+            await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
         }
     }
 
@@ -266,46 +338,115 @@ public partial class GearTaskListPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 保存到JSON（预留功能）
+    /// 保存所有任务定义到JSON文件
     /// </summary>
     [RelayCommand]
-    private void SaveToJson()
+    private async Task SaveToJson()
     {
         try
         {
-            var json = JsonSerializer.Serialize(TaskDefinitions, new JsonSerializerOptions
+            foreach (var taskDefinition in TaskDefinitions)
             {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            });
-            
-            // 这里可以保存到配置文件
-            _logger.LogInformation("任务定义已序列化为JSON: {Json}", json);
+                await _storageService.SaveTaskDefinitionAsync(taskDefinition);
+            }
+            _logger.LogInformation("所有任务定义已保存到JSON文件");
             MessageBox.Show("保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "保存任务定义到JSON时发生错误");
+            _logger.LogError(ex, "保存任务定义到JSON文件时发生错误");
             MessageBox.Show($"保存失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     /// <summary>
-    /// 从JSON加载（预留功能）
+    /// 从JSON文件重新加载所有任务定义
     /// </summary>
     [RelayCommand]
-    private void LoadFromJson()
+    private async Task LoadFromJson()
     {
         try
         {
-            // 这里可以从配置文件加载
-            _logger.LogInformation("从JSON加载任务定义功能待实现");
-            MessageBox.Show("加载功能待实现！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            TaskDefinitions.Clear();
+            var loadedTasks = await _storageService.LoadAllTaskDefinitionsAsync();
+            
+            foreach (var task in loadedTasks)
+            {
+                TaskDefinitions.Add(task);
+                SetupTaskDefinitionPropertyChanged(task);
+            }
+            
+            _logger.LogInformation("从JSON文件重新加载了 {Count} 个任务定义", loadedTasks.Count);
+            MessageBox.Show($"加载成功！共加载 {loadedTasks.Count} 个任务定义", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "从JSON加载任务定义时发生错误");
+            _logger.LogError(ex, "从JSON文件加载任务定义时发生错误");
             MessageBox.Show($"加载失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    /// <summary>
+    /// 为任务定义设置属性变化监听器，实现自动保存
+    /// </summary>
+    private void SetupTaskDefinitionPropertyChanged(GearTaskDefinitionViewModel taskDefinition)
+    {
+        taskDefinition.PropertyChanged += async (sender, e) =>
+        {
+            if (sender is GearTaskDefinitionViewModel task)
+            {
+                try
+                {
+                    await _storageService.SaveTaskDefinitionAsync(task);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", task.Name);
+                }
+            }
+        };
+        
+        // 为根任务及其所有子任务设置监听器
+        if (taskDefinition.RootTask != null)
+        {
+            SetupTaskPropertyChangeListener(taskDefinition.RootTask, taskDefinition);
+        }
+    }
+
+    /// <summary>
+    /// 递归为任务及其子任务设置属性变化监听器
+    /// </summary>
+    private void SetupTaskPropertyChangeListener(GearTaskViewModel task, GearTaskDefinitionViewModel parentDefinition)
+    {
+        task.PropertyChanged += async (sender, e) =>
+        {
+            try
+            {
+                parentDefinition.ModifiedTime = DateTime.Now;
+                await _storageService.SaveTaskDefinitionAsync(parentDefinition);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", parentDefinition.Name);
+            }
+        };
+        
+        // 为子任务设置监听器
+        foreach (var child in task.Children)
+        {
+            SetupTaskPropertyChangeListener(child, parentDefinition);
+        }
+        
+        // 监听子任务集合变化
+        task.Children.CollectionChanged += (sender, e) =>
+        {
+            if (e.NewItems != null)
+            {
+                foreach (GearTaskViewModel newTask in e.NewItems)
+                {
+                    SetupTaskPropertyChangeListener(newTask, parentDefinition);
+                }
+            }
+        };
     }
 }
