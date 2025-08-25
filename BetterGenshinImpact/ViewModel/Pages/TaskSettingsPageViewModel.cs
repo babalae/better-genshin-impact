@@ -26,6 +26,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -524,7 +525,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchArtifactSalvageEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.JavaScript, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
+            .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
+                int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
+                Config.AutoArtifactSalvageConfig.JavaScript,
+                Config.AutoArtifactSalvageConfig.MaxNumToCheck,
+                new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName))));
         SwitchArtifactSalvageEnabled = false;
     }
 
@@ -537,7 +542,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.112, 0.274, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
         ocrDialog.ShowDialog();
     }
 

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -129,7 +129,55 @@
   <data name="4星圣遗物" xml:space="preserve">
     <value>4-Star.*Artifacts</value>
   </data>
+  <data name="元素充能效率" xml:space="preserve">
+    <value>Energy Recharge</value>
+  </data>
+  <data name="元素精通" xml:space="preserve">
+    <value>Elemental Mastery</value>
+  </data>
+  <data name="冰元素伤害加成" xml:space="preserve">
+    <value>Cryo DMG Bonus</value>
+  </data>
+  <data name="岩元素伤害加成" xml:space="preserve">
+    <value>Geo DMG Bonus</value>
+  </data>
   <data name="快速选择" xml:space="preserve">
     <value>Quick.*Select</value>
+  </data>
+  <data name="攻击力" xml:space="preserve">
+    <value>ATK</value>
+  </data>
+  <data name="暴击伤害" xml:space="preserve">
+    <value>CRIT DMG</value>
+  </data>
+  <data name="暴击率" xml:space="preserve">
+    <value>CRIT Rate</value>
+  </data>
+  <data name="水元素伤害加成" xml:space="preserve">
+    <value>Hydro DMG Bonus</value>
+  </data>
+  <data name="治疗加成" xml:space="preserve">
+    <value>Healing Bonus</value>
+  </data>
+  <data name="火元素伤害加成" xml:space="preserve">
+    <value>Pyro DMG Bonus</value>
+  </data>
+  <data name="物理伤害加成" xml:space="preserve">
+    <value>Physical DMG Bonus</value>
+  </data>
+  <data name="生命值" xml:space="preserve">
+    <value>HP</value>
+  </data>
+  <data name="草元素伤害加成" xml:space="preserve">
+    <value>Dendro DMG Bonus</value>
+  </data>
+  <data name="防御力" xml:space="preserve">
+    <value>DEF</value>
+  </data>
+  <data name="雷元素伤害加成" xml:space="preserve">
+    <value>Electro DMG Bonus</value>
+  </data>
+  <data name="风元素伤害加成" xml:space="preserve">
+    <value>Anemo DMG Bonus</value>
   </data>
 </root>

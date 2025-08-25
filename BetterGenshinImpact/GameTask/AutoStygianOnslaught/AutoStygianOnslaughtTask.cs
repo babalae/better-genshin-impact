@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -95,7 +95,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
-            
+
             await Delay(1500, _ct); // 开始的三秒计时
 
             // 队伍没初始化成功则重试
@@ -203,7 +203,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // F5 打开活动
         Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
-        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3,0.2)).WaitFor();
+        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3, 0.2)).WaitFor();
         await Delay(500, _ct);
 
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
@@ -613,7 +613,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(star).Start(_ct);
+        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, maxNumToCheck: null, cultureInfo: null)).Start(_ct);
     }
 
 

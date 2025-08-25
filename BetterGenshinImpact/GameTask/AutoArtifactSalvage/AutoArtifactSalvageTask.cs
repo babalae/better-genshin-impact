@@ -18,6 +18,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -54,15 +55,17 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly bool returnToMainUi = true;
 
-    private readonly CultureInfo cultureInfo;
+    private readonly CultureInfo? cultureInfo;
 
-    public AutoArtifactSalvageTask(int star, string? javaScript = null, int? maxNumToCheck = null)
+    private readonly FrozenDictionary<ArtifactAffixType, string> artifactAffixStrDic;
+
+    public AutoArtifactSalvageTask(AutoArtifactSalvageTaskParam param)
     {
-        this.star = star;
-        this.javaScript = javaScript;
-        this.maxNumToCheck = maxNumToCheck;
+        this.star = param.Star;
+        this.javaScript = param.JavaScript;
+        this.maxNumToCheck = param.MaxNumToCheck;
         IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
-        this.cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.cultureInfo = param.GameCultureInfo;
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
         numOfStarLocalizedString =
         [
@@ -71,11 +74,8 @@ public class AutoArtifactSalvageTask : ISoloTask
             stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
         ];
-    }
 
-    public AutoArtifactSalvageTask(int star, bool returnToMainUi) : this(star)
-    {
-        this.returnToMainUi = returnToMainUi;
+        artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
     public static async Task OpenBag(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
@@ -294,8 +294,8 @@ public class AutoArtifactSalvageTask : ISoloTask
                 using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridRoi.X, gridRoi.Y));
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
-                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.24), (int)(ra1.Width * 0.29)));
-                    ArtifactStat artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, this.cultureInfo, out string allText);
+                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.274), (int)(ra1.Height * 0.50)));
+                    ArtifactStat artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
 
                     if (IsMatchJavaScript(artifact, javaScript))
                     {
@@ -379,10 +379,10 @@ public class AutoArtifactSalvageTask : ISoloTask
         return match.Success;
     }
 
-    public static ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, CultureInfo cultureInfo, out string allText)
+    public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
-        // 右上角抹黑避免干扰ocr
-        Mat upperRightRoi = src.SubMat(new Rect(src.Width * 2 / 3, 0, src.Width / 3, src.Height / 2)).SetTo(0);
+        // 图标的地方抹黑避免干扰ocr
+        Mat upperRightRoi = src.SubMat(new Rect(src.Width * 2 / 3, src.Height / 9, src.Width / 3, src.Height / 2)).SetTo(0);
 
         var ocrResult = ocrService.OcrResult(src);
         allText = string.Join("\n", ocrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
@@ -393,9 +393,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         string name = lines[0];
 
         #region 主词条
-        var defaultMainAffix = ArtifactAffix.DefaultStrDic.Select(kvp => kvp.Value).Distinct();
+        var defaultMainAffix = this.artifactAffixStrDic.Select(kvp => kvp.Value).Distinct();
         string mainAffixTypeLine = lines.Single(l => defaultMainAffix.Contains(l));
-        ArtifactAffixType mainAffixType = ArtifactAffix.DefaultStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
+        ArtifactAffixType mainAffixType = this.artifactAffixStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
         string mainAffixValueLine = lines.Select(l =>
         {
             string pattern = @"^(\d+\.?\d*)(%?)$";
@@ -422,7 +422,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 return null;
             }
         }).Where(l => l != null).Cast<string>().Single();
-        if (!float.TryParse(mainAffixValueLine, NumberStyles.Any, cultureInfo, out float value))
+        if (!float.TryParse(mainAffixValueLine, NumberStyles.Any, this.cultureInfo, out float value))
         {
             throw new Exception($"未识别的主词条数值：{mainAffixValueLine}");
         }
@@ -432,13 +432,13 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = lines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+]+)\+(\d+\.?\d*)(%?)$";
+            string pattern = @"^[•·]?([^+:：]+)\+(\d+\.?\d*)(%?)$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)
             {
                 ArtifactAffixType artifactAffixType;
-                var dic = ArtifactAffix.DefaultStrDic;
+                var dic = this.artifactAffixStrDic;
 
                 if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
                 {

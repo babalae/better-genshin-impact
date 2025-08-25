@@ -94,10 +94,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo));
             string result = PaddleResultDic.GetOrAdd(screenshot, screenshot_ =>
             {
                 using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot_}");
-                GetArtifactStat(mat, paddle.Get(), cultureInfo, out string allText);
+                sut.GetArtifactStat(mat, paddle.Get(), out string allText);
                 return allText;
             });
 
@@ -121,13 +122,19 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
                     new ArtifactAffix(ArtifactAffixType.EnergyRecharge, 6.5f),
                     new ArtifactAffix(ArtifactAffixType.ATKPercent, 5.8f),
                     new ArtifactAffix(ArtifactAffixType.DEF, 23f)
-                ], 0) };
+                ], 0), new CultureInfo("zh-Hans") };
                 yield return new object[] { "202508242224_GetArtifactStat.png", new ArtifactStat("裁判的时刻", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
                     new ArtifactAffix(ArtifactAffixType.ATK, 16f),
                     new ArtifactAffix(ArtifactAffixType.CRITDMG, 7.8f),
                     new ArtifactAffix(ArtifactAffixType.DEF, 19),
                     new ArtifactAffix(ArtifactAffixType.CRITRate, 2.7f)
-                ], 0) };
+                ], 0), new CultureInfo("zh-Hans") };
+                yield return new object[] { "202508252004_GetArtifactStat.png", new ArtifactStat("Deep Gallery's Bestowed Banquet", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
+                    new ArtifactAffix(ArtifactAffixType.HP, 239),
+                    new ArtifactAffix(ArtifactAffixType.ATK, 18),
+                    new ArtifactAffix(ArtifactAffixType.HPPercent, 4.1f)
+                ], 0), new CultureInfo("en") }; // ocr失败的用例，名称错行了
+                // todo: 更多测试用例
             }
         }
 
@@ -137,14 +144,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         /// <param name="screenshot"></param>
         [Theory]
         [MemberData(nameof(GetArtifactStatTestData))]
-        public void GetArtifactStat_AffixesShouldBeRight(string screenshot, ArtifactStat expectedArtifactStat)
+        public void GetArtifactStat_AffixesShouldBeRight(string screenshot, ArtifactStat expectedArtifactStat, CultureInfo cultureInfo)
         {
             //
-            CultureInfo cultureInfo = new CultureInfo("zh-Hans");
+            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
 
             //
-            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
-            ArtifactStat result = GetArtifactStat(mat, paddle.Get(), cultureInfo, out string _);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo));
+            ArtifactStat result = sut.GetArtifactStat(mat, paddle.Get(cultureInfo.Name), out string _);
 
             //
             Assert.Equal(expectedArtifactStat.Name, result.Name);
@@ -172,11 +179,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         public void IsMatchJavaScript_JSShouldBeRight(string screenshot, string js, bool expected)
         {
             //
+            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
-            ArtifactStat artifact = GetArtifactStat(mat, paddle.Get(), cultureInfo, out string _);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo));
+            ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), out string _);
             bool result = IsMatchJavaScript(artifact, js);
 
             //
