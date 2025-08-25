@@ -8,12 +8,11 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
 {
     // JavaScript
     [ObservableProperty]
-    private string _javaScript = 
-        @"(async function (artifact) {
-            var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
-            var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
-            Output = hasATK && hasDEF;
-        })(ArtifactStat);";
+    private string _javaScript = @"(async function (artifact) {
+    var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
+    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
+    Output = hasATK && hasDEF;
+})(ArtifactStat);";
 
     // 正则表达式
     [Obsolete]

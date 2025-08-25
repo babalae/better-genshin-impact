@@ -2339,10 +2339,11 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -2359,12 +2360,17 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
                         只要满足的圣遗物都会被选中
-                        <LineBreak/>
-                        JS接受ArtifactStat作为入参；应对Output赋值一个布尔值作为返回
                     </ui:TextBlock>
-                    <ui:TextBox Grid.Row="0"
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Content="从脚本仓库复制"
+                               Command="{Binding CopyArtifactSalvageJavaScriptFromRepositoryCommand}" />
+                    <ui:TextBox Grid.Row="2"
                                 Grid.RowSpan="2"
-                                Grid.Column="1"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
                                 MinWidth="180"
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
