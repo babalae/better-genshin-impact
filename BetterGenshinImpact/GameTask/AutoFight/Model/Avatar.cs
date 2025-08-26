@@ -20,6 +20,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -72,6 +73,9 @@ public class Avatar
     /// 名字右边的编号位置
     /// </summary>
     public Rect IndexRect { get; set; }
+    
+    //角色所属元素
+    public ElementalType ElementType { get; set; }
 
     /// <summary>
     /// 任务取消令牌
