@@ -541,7 +541,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.112, 0.274, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
         ocrDialog.ShowDialog();
     }
 

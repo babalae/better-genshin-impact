@@ -295,7 +295,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridRoi.X, gridRoi.Y));
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
-                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.274), (int)(ra1.Height * 0.50)));
+                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
                     ArtifactStat artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
 
                     if (IsMatchJavaScript(artifact, javaScript))
@@ -402,7 +402,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
         var levelAndMinorAffixLines = levelAndMinorAffixText.Split('\n');
 
-        allText = String.Concat(nameOcrResult.Text, typeOcrResult.Text, mainAffixText, levelAndMinorAffixText);
+        allText = String.Join('\n', nameOcrResult.Text, typeOcrResult.Text, mainAffixText, levelAndMinorAffixText);
 
         string percentStr = "%";
 
@@ -411,7 +411,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         #region 主词条
         var defaultMainAffix = this.artifactAffixStrDic.Select(kvp => kvp.Value).Distinct();
-        string mainAffixTypeLine = mainAffixLines.Single(l => defaultMainAffix.Contains(l));
+        string mainAffixTypeLine = mainAffixLines.SingleOrDefault(l => defaultMainAffix.Contains(l)) ?? throw new Exception($"未找到主词条对应的行：\n{mainAffixText}");
         ArtifactAffixType mainAffixType = this.artifactAffixStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
         string mainAffixValueLine = mainAffixLines.Select(l =>
         {
@@ -438,7 +438,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 return null;
             }
-        }).Where(l => l != null).Cast<string>().Single();
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到主词条数值对应的行：\n{mainAffixText}");
         if (!float.TryParse(mainAffixValueLine, NumberStyles.Any, this.cultureInfo, out float value))
         {
             throw new Exception($"未识别的主词条数值：{mainAffixValueLine}");
@@ -449,7 +449,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+]+)\+(\d+\.?\d*)(%?)$";
+            string pattern = @"^[•·]?([^+:：]+)\+(\d+\.?\d*)(%?)$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)

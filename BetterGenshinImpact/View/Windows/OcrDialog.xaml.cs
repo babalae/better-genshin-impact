@@ -6,7 +6,9 @@ using BetterGenshinImpact.Helpers.Extensions;
 using OpenCvSharp;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -43,12 +45,40 @@ public partial class OcrDialog
 
         this.Screenshot.Source = bitmapImage;
 
-        ArtifactStat artifact = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
-        this.TxtRecognized.Text = allText;
-        if (this.javaScript != null)
+        try
         {
-            bool isMatch = AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
-            this.RegexResult.Text = isMatch ? "匹配" : "不匹配";
+            ArtifactStat artifact = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+
+            this.TxtRecognized.Text = allText;
+            if (this.javaScript != null)
+            {
+                bool isMatch = AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
+                this.RegexResult.Text = isMatch ? "匹配" : "不匹配";
+            }
+        }
+        catch (Exception e)
+        {
+            var multilineTextBox = new TextBox
+            {
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Text = e.ToString(),
+                IsReadOnly = true
+            };
+            var p = new PromptDialog($"出错了：{e.Message}\r\n\r\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）", $"异常处理", multilineTextBox, null);
+            p.Height = 600;
+            p.MaxWidth = 800;
+            p.ShowDialog();
+
+            if (p.DialogResult == true)
+            {
+                string directory = Path.Combine(AppContext.BaseDirectory, "log/autoArtifactSalvageException");
+                Directory.CreateDirectory(directory);
+                string filePath = Path.Combine(directory, $"{DateTime.Now.ToString("yyyyMMddHHmmss")}_GetArtifactStat.png");
+                Cv2.ImWrite(filePath, card.SrcMat);
+            }
+
+            throw;
         }
         this.UpdateLayout();
     }
