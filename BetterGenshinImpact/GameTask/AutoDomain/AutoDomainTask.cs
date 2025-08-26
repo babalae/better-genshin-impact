@@ -18,8 +18,6 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +27,6 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.Kernel32;
 using static Vanara.PInvoke.User32;
@@ -1315,6 +1312,6 @@ public class AutoDomainTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, maxNumToCheck: null, cultureInfo: null)).Start(_ct);
+        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, maxNumToCheck: null)).Start(_ct);
     }
 }

@@ -36,7 +36,7 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 /// </summary>
 public class AutoArtifactSalvageTask : ISoloTask
 {
-    private readonly ILogger logger = App.GetLogger<AutoArtifactSalvageTask>();
+    private readonly ILogger logger;
     private readonly InputSimulator input = Simulation.SendInput;
 
     private CancellationToken ct;
@@ -59,12 +59,13 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly FrozenDictionary<ArtifactAffixType, string> artifactAffixStrDic;
 
-    public AutoArtifactSalvageTask(AutoArtifactSalvageTaskParam param)
+    public AutoArtifactSalvageTask(AutoArtifactSalvageTaskParam param, ILogger? logger = null)
     {
         this.star = param.Star;
         this.javaScript = param.JavaScript;
         this.maxNumToCheck = param.MaxNumToCheck;
-        IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
+        this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
+        var stringLocalizer = param.StringLocalizer ?? App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
         this.cultureInfo = param.GameCultureInfo;
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
         numOfStarLocalizedString =

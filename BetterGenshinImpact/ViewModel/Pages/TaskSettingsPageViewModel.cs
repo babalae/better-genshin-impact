@@ -26,7 +26,6 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -528,8 +527,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
             .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
                 int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
                 Config.AutoArtifactSalvageConfig.JavaScript,
-                Config.AutoArtifactSalvageConfig.MaxNumToCheck,
-                new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName))));
+                Config.AutoArtifactSalvageConfig.MaxNumToCheck
+                )));
         SwitchArtifactSalvageEnabled = false;
     }
 

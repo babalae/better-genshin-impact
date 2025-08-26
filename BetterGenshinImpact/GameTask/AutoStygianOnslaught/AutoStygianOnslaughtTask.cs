@@ -1,24 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoDomain.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -29,6 +19,12 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -613,7 +609,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, maxNumToCheck: null, cultureInfo: null)).Start(_ct);
+        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, maxNumToCheck: null)).Start(_ct);
     }
 
 
