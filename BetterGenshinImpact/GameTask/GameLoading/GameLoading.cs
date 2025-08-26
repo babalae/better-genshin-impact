@@ -249,7 +249,7 @@ public class GameLoadingTrigger : ITaskTrigger
         // 成功进入游戏判断    
         if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
-            _logger.LogInformation("进游戏了");
+            _logger.LogInformation("已进入游戏");
             IsEnabled = false;
             return;
         }
