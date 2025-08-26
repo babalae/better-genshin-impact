@@ -37,6 +37,8 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public bool IsExclusive => false;
 
+    public bool IsClickedOpenDoor = false;
+
     public bool IsBackgroundRunning => true;
 
     private readonly GameLoadingAssets _assets;
@@ -244,9 +246,10 @@ public class GameLoadingTrigger : ITaskTrigger
             IsEnabled = false;
             return;
         }
-
-        if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea))
+        // 成功进入游戏判断    
+        if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
+            _logger.LogInformation("进游戏了");
             IsEnabled = false;
             return;
         }
@@ -290,13 +293,14 @@ public class GameLoadingTrigger : ITaskTrigger
             }
         }
 
-        // 官服流程：点击进入游戏按钮（作为外层包装）
+        // 点击进入游戏按钮
         var ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
 
         if (!ra.IsEmpty())
         {
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             biliLoginClicked = true;
+            IsClickedOpenDoor = true;
             return;
         }
 
@@ -353,7 +357,7 @@ public class GameLoadingTrigger : ITaskTrigger
                     }
                     else
                     {
-                        GameCaptureRegion.GameRegion1080PPosClick(960, 630);
+                        GameCaptureRegion.GameRegion1080PPosClick(960, 635);
                     }
 
                     Thread.Sleep(2000);
@@ -362,32 +366,17 @@ public class GameLoadingTrigger : ITaskTrigger
                     var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
                     if (remainingWindow == IntPtr.Zero)
                     {
+                        _logger.LogInformation("B服登录完成，准备进入游戏");
                         biliLoginClicked = true;
                     }
                 }
             }
+        }
 
-            // 在B服登录过程中，每次循环都检查是否出现"进入游戏"按钮
-            ra = content.CaptureRectArea.Find(_assets.EnterGameRo);
-            if (!ra.IsEmpty())
-            {
-                _logger.LogInformation("检测到进入游戏按钮，直接点击");
-                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                biliLoginClicked = true;
-                return;
-            }
-
-            Thread.Sleep(1000);
-
-
-            // 检查是否成功登录
-            if (biliLoginClicked)
-            {
-                _logger.LogInformation("B服登录完成，等待后尝试点击进入游戏");
-                Thread.Sleep(5000);
-                TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                return;
-            }
+        //点击过开门的情况下，保持点击一个位置以防止秘境内贴脸提示
+        if (IsClickedOpenDoor)
+        {
+            GameCaptureRegion.GameRegion1080PPosClick(960, 900);
         }
 
         var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
