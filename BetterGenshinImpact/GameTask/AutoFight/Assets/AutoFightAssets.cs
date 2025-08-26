@@ -48,13 +48,11 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public RecognitionObject AbnormalIconRa;
 
     // 经验图标
-    public RecognitionObject Experience60Ra;
-    public RecognitionObject Experience59Ra;
-    public RecognitionObject Experience58Ra;
-    public RecognitionObject Experience57Ra;
-
+    public RecognitionObject ExperienceRa;
     
-    private AutoFightAssets()
+    private  Vanara.PInvoke.RECT _gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+    
+    public AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
             (int)((355 - 85) * AssetScale), (int)(465 * AssetScale));
@@ -294,46 +292,34 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RegionOfInterest = new Rect(0,(int)(CaptureRect.Height*0.08), (int)(CaptureRect.Width*0.04), (int)(CaptureRect.Height*0.07)),
             DrawOnWindow = false
         }.InitTemplate();
-        Experience60Ra = new RecognitionObject
-        {
-            Name = "Experience_60",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_60.png"),
-            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
-            DrawOnWindow = true,
-            UseMask = true,
-            Threshold = 0.85,
-        }.InitTemplate();
-        Experience59Ra = new RecognitionObject
-        {
-            Name = "Experience_59",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_59.png"),
-            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
-            DrawOnWindow = true,
-            UseMask = true,
-            Threshold = 0.85,
-        }.InitTemplate();
-        Experience58Ra = new RecognitionObject
-        {
-            Name = "Experience_58",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_58.png"),
-            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
-            DrawOnWindow = true,
-            UseMask = true,
-            Threshold = 0.85,
-        }.InitTemplate();
-        Experience57Ra = new RecognitionObject
-        {
-            Name = "Experience_57",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_57.png"),
-            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
-            DrawOnWindow = true,
-            UseMask = true,
-            Threshold = 0.85,
-        }.InitTemplate();
-        
     }
+    
+    public RecognitionObject InitializeRecognitionObject(int experience)
+    {
+        var size = "1080";
+        var threshold = 0.85;
+        
+        if (_gameScreenSize.Width > 2560)
+        {
+            threshold =0.7;
+            size = "4K";
+        }
+        else if (_gameScreenSize.Width > 1080)
+        {
+            threshold =0.7;
+        }
+        
+        ExperienceRa = new RecognitionObject
+        {
+            Name = experience.ToString(),
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_"+experience+size+".png"),
+            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
+            UseMask = true,
+            Threshold = threshold,
+            DrawOnWindow = true
+        }.InitTemplate();
+        return  ExperienceRa;
+    }  
+    
 }
