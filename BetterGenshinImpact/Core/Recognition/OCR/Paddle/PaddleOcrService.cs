@@ -201,6 +201,43 @@ public class PaddleOcrService : IOcrService, IDisposable
 
             return null;
         }
+        
+        /// <summary>
+        /// 中英文优先使用V4模型，其他语言使用V5模型
+        /// </summary>
+        /// <param name="cultureInfo"></param>
+        /// <returns></returns>
+        public static PaddleOcrModelType? FromCultureInfoV4(CultureInfo cultureInfo)
+        {
+            var v5 = FromCultureInfo(cultureInfo);
+            // 如果用的是v5, 那么优先用V4的细分模型
+            if (v5 == V5)
+            {
+                List<string> names =
+                [
+                    cultureInfo.EnglishName.ToLowerInvariant(), cultureInfo.Name.ToLowerInvariant(),
+                    cultureInfo.ThreeLetterISOLanguageName.ToLowerInvariant(),
+                    cultureInfo.TwoLetterISOLanguageName.ToLowerInvariant()
+                ];
+                foreach (var name in names)
+                {
+                    if (name.Equals("en"))
+                    {
+                        return V4En;
+                    }
+                    else if (name.Equals("zh-hant") || name.Equals("zh-tw") || name.Equals("zh-hk"))
+                    {
+                        return V5;
+                    }
+                }
+
+                return V4;
+            }
+            else
+            {
+                return v5;
+            }
+        }
     }
 
     public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType)
