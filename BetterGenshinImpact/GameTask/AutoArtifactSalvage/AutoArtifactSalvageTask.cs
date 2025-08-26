@@ -382,22 +382,38 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
-        // 图标的地方抹黑避免干扰ocr
-        Mat upperRightRoi = src.SubMat(new Rect(src.Width * 2 / 3, src.Height / 9, src.Width / 3, src.Height / 2)).SetTo(0);
+        Mat nameRoi = src.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
+        //Cv2.ImShow("name", nameRoi);
+        Mat typeRoi = src.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
+        Mat mainAffixRoi = src.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
+        //Cv2.ImShow("mainAffix", mainAffixRoi);
+        Mat levelAndMinorAffixRoi = src.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
+        //Cv2.ImShow("levelAndMinorAffixRoi", levelAndMinorAffixRoi);
+        //Cv2.WaitKey();
 
-        var ocrResult = ocrService.OcrResult(src);
-        allText = string.Join("\n", ocrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
-        var lines = allText.Split('\n');
+        var nameOcrResult = ocrService.OcrResult(nameRoi);
+        var typeOcrResult = ocrService.OcrResult(typeRoi);
+        var mainAffixOcrResult = ocrService.OcrResult(mainAffixRoi);
+        string mainAffixText = string.Join("\n", mainAffixOcrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
+        var mainAffixLines = mainAffixText.Split('\n');
+        var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoi);
+        string levelAndMinorAffixText = string.Join("\n", levelAndMinorAffixOcrResult.Regions.Where(r => r.Score > 0.5)
+            .Where(r => r.Rect.BoundingRect().Left < levelAndMinorAffixRoi.Width * 0.1) // 一定是贴着左边的，排除套装效果文字也存在类似+15%的情况
+            .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
+        var levelAndMinorAffixLines = levelAndMinorAffixText.Split('\n');
+
+        allText = String.Concat(nameOcrResult.Text, typeOcrResult.Text, mainAffixText, levelAndMinorAffixText);
+
         string percentStr = "%";
 
         // 名称
-        string name = lines[0];
+        string name = nameOcrResult.Text;
 
         #region 主词条
         var defaultMainAffix = this.artifactAffixStrDic.Select(kvp => kvp.Value).Distinct();
-        string mainAffixTypeLine = lines.Single(l => defaultMainAffix.Contains(l));
+        string mainAffixTypeLine = mainAffixLines.Single(l => defaultMainAffix.Contains(l));
         ArtifactAffixType mainAffixType = this.artifactAffixStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
-        string mainAffixValueLine = lines.Select(l =>
+        string mainAffixValueLine = mainAffixLines.Select(l =>
         {
             string pattern = @"^(\d+\.?\d*)(%?)$";
             pattern = pattern.Replace("%", percentStr);   // 这样一行一行写只是为了IDE能保持正则字符串高亮
@@ -431,9 +447,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         #endregion
 
         #region 副词条
-        ArtifactAffix[] minorAffixes = lines.Select(l =>
+        ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+:：]+)\+(\d+\.?\d*)(%?)$";
+            string pattern = @"^[•·]?([^+]+)\+(\d+\.?\d*)(%?)$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)
@@ -509,7 +525,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #endregion
 
         #region 等级
-        string levelLine = lines.Select(l =>
+        string levelLine = levelAndMinorAffixLines.Select(l =>
         {
             string pattern = @"^\+(\d*)$";
             Match match = Regex.Match(l, pattern);

@@ -137,7 +137,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
                     new ArtifactAffix(ArtifactAffixType.HP, 239),
                     new ArtifactAffix(ArtifactAffixType.ATK, 18),
                     new ArtifactAffix(ArtifactAffixType.HPPercent, 4.1f)
-                ], 0), new CultureInfo("en") }; // ocr失败的用例，名称错行了
+                ], 0), new CultureInfo("en") };
                 // todo: 更多测试用例
             }
         }
