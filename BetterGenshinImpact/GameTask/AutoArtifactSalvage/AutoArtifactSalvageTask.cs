@@ -382,18 +382,25 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
-        Mat nameRoi = src.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
+        using Mat gray = src.CvtColor(ColorConversionCodes.BGR2GRAY);
+        Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
+
+        Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
         //Cv2.ImShow("name", nameRoi);
-        Mat typeRoi = src.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
-        Mat mainAffixRoi = src.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
-        //Cv2.ImShow("mainAffix", mainAffixRoi);
-        Mat levelAndMinorAffixRoi = src.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
+        Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
+        #region 主词条 去除背景干扰
+        Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
+        using Mat mainAffixRoiBottomHat = mainAffixRoi.MorphologyEx(MorphTypes.TopHat, hatKernel);
+        using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
+        //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
+        #endregion
+        Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
         //Cv2.ImShow("levelAndMinorAffixRoi", levelAndMinorAffixRoi);
         //Cv2.WaitKey();
 
         var nameOcrResult = ocrService.OcrResult(nameRoi);
         var typeOcrResult = ocrService.OcrResult(typeRoi);
-        var mainAffixOcrResult = ocrService.OcrResult(mainAffixRoi);
+        var mainAffixOcrResult = ocrService.OcrResult(mainAffixRoiThreshold);
         string mainAffixText = string.Join("\n", mainAffixOcrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
         var mainAffixLines = mainAffixText.Split('\n');
         var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoi);
@@ -449,7 +456,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+:：]+)\+(\d+\.?\d*)(%?)$";
+            string pattern = @"^[•·]?([^+:：]+)\+(.*?)(%?)$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)
@@ -537,7 +544,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 return null;
             }
-        }).Where(l => l != null).Cast<string>().Single();
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到等级对应的行：\n{levelAndMinorAffixText}");
         if (!int.TryParse(levelLine, out int level) || level < 0 || level > 20)
         {
             throw new Exception($"未识别的等级：{levelLine}");

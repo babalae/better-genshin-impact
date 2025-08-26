@@ -138,7 +138,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
                     new ArtifactAffix(ArtifactAffixType.ATK, 18),
                     new ArtifactAffix(ArtifactAffixType.HPPercent, 4.1f)
                 ], 0), new CultureInfo("en") };
-                // todo: 更多测试用例
+                yield return new object[] { "20250827000123_GetArtifactStat.png", new ArtifactStat("Pacte distant des galeries profondes", new ArtifactAffix(ArtifactAffixType.ATK, 47), [
+                    new ArtifactAffix(ArtifactAffixType.DEFPercent, 7.3f),
+                    new ArtifactAffix(ArtifactAffixType.DEF, 16),
+                    new ArtifactAffix(ArtifactAffixType.HPPercent, 5.3f)
+                ], 0), new CultureInfo("fr") };
+                yield return new object[] { "20250827000246_GetArtifactStat.png", new ArtifactStat("Reckoning of the Xenogenic", new ArtifactAffix(ArtifactAffixType.HP, 717f), [
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 16),
+                    new ArtifactAffix(ArtifactAffixType.EnergyRecharge, 6.5f),
+                    new ArtifactAffix(ArtifactAffixType.ATKPercent, 5.8f),
+                    new ArtifactAffix(ArtifactAffixType.DEF, 23)
+                ], 0), new CultureInfo("en") };
             }
         }
 
@@ -152,6 +162,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         {
             //
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
+
+            /*
+            using var gray = mat.CvtColor(ColorConversionCodes.BGR2GRAY);
+            using Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15));
+            using var bottomHat = gray.MorphologyEx(MorphTypes.TopHat, kernel);
+            Cv2.ImShow("bottomHat", bottomHat);
+            Mat threshold = new Mat();
+            var otsu = Cv2.Threshold(bottomHat, threshold, 30, 255, ThresholdTypes.Binary);
+            Cv2.ImShow($"thres = {otsu}", threshold);
+            Cv2.WaitKey();
+            */
 
             //
             AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
