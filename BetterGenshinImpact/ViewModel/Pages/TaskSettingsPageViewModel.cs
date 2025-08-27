@@ -160,6 +160,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchArtifactSalvageEnabled;
 
     [ObservableProperty]
+    private FrozenDictionary<Enum, string> _recognitionFailurePolicyDict = Enum.GetValues(typeof(RecognitionFailurePolicy))
+        .Cast<RecognitionFailurePolicy>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
+    [ObservableProperty]
     private bool _switchGetGridIconsEnabled;
     [ObservableProperty]
     private string _switchGetGridIconsButtonText = "启动";
@@ -527,7 +537,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
             .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
                 int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
                 Config.AutoArtifactSalvageConfig.JavaScript,
-                Config.AutoArtifactSalvageConfig.MaxNumToCheck
+                Config.AutoArtifactSalvageConfig.MaxNumToCheck,
+                Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy
                 )));
         SwitchArtifactSalvageEnabled = false;
     }

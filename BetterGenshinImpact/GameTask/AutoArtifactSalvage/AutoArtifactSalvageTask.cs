@@ -53,6 +53,8 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly int? maxNumToCheck;
 
+    private readonly RecognitionFailurePolicy? recognitionFailurePolicy;
+
     private readonly bool returnToMainUi = true;
 
     private readonly CultureInfo? cultureInfo;
@@ -64,6 +66,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.star = param.Star;
         this.javaScript = param.JavaScript;
         this.maxNumToCheck = param.MaxNumToCheck;
+        this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
         this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
         var stringLocalizer = param.StringLocalizer ?? App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
         this.cultureInfo = param.GameCultureInfo;
@@ -261,7 +264,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         // 分解5星
         if (javaScript != null)
         {
-            await Salvage5Star(this.javaScript, this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空"));
+            await Salvage5Star();
             logger.LogInformation("筛选完毕，请复查并手动分解");
         }
         else
@@ -275,9 +278,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
     }
 
-    private async Task Salvage5Star(string javaScript, int maxNumToCheck)
+    private async Task Salvage5Star()
     {
-        int count = maxNumToCheck;
+        string javaScript = this.javaScript ?? throw new ArgumentException($"{nameof(this.javaScript)}不能为空");
+        int count = this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空");
+        RecognitionFailurePolicy recognitionFailurePolicy = this.recognitionFailurePolicy ?? throw new ArgumentException($"{nameof(this.recognitionFailurePolicy)}不能为空");
 
         using var ra0 = CaptureToRectArea();
         GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.ArtifactSalvage];
@@ -296,7 +301,27 @@ public class AutoArtifactSalvageTask : ISoloTask
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
                     using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
-                    ArtifactStat artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+
+                    ArtifactStat artifact;
+                    try
+                    {
+                        artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+                    }
+                    catch (Exception e)
+                    {
+                        if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
+                        {
+                            logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
+
+                            itemRegion.Click(); // 反选取消
+                            await Delay(100, ct);
+                            continue;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
 
                     if (IsMatchJavaScript(artifact, javaScript))
                     {
@@ -388,14 +413,19 @@ public class AutoArtifactSalvageTask : ISoloTask
         Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
         //Cv2.ImShow("name", nameRoi);
         Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
-        #region 主词条 去除背景干扰
+        #region 主词条预处理 去除背景干扰
         Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
         using Mat mainAffixRoiBottomHat = mainAffixRoi.MorphologyEx(MorphTypes.TopHat, hatKernel);
         using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
         //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
         #endregion
+        #region 副词条预处理 最大化字体分离
         Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
-        //Cv2.ImShow("levelAndMinorAffixRoi", levelAndMinorAffixRoi);
+        using Mat levelAndMinorAffixRoiThreshold = new Mat();
+        double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+        //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
+        //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);
+        #endregion
         //Cv2.WaitKey();
 
         var nameOcrResult = ocrService.OcrResult(nameRoi);
@@ -403,7 +433,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         var mainAffixOcrResult = ocrService.OcrResult(mainAffixRoiThreshold);
         string mainAffixText = string.Join("\n", mainAffixOcrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
         var mainAffixLines = mainAffixText.Split('\n');
-        var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoi);
+        var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoiThreshold);
         string levelAndMinorAffixText = string.Join("\n", levelAndMinorAffixOcrResult.Regions.Where(r => r.Score > 0.5)
             .Where(r => r.Rect.BoundingRect().Left < levelAndMinorAffixRoi.Width * 0.1) // 一定是贴着左边的，排除套装效果文字也存在类似+15%的情况
             .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
@@ -422,7 +452,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         ArtifactAffixType mainAffixType = this.artifactAffixStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
         string mainAffixValueLine = mainAffixLines.Select(l =>
         {
-            string pattern = @"^(\d+\.?\d*)(%?)$";
+            string pattern = @"^([\d., ]*)(%?)$";
             pattern = pattern.Replace("%", percentStr);   // 这样一行一行写只是为了IDE能保持正则字符串高亮
             Match match = Regex.Match(l, pattern);
             if (match.Success)
@@ -456,7 +486,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+:：]+)\+(.*?)(%?)$";
+            string pattern = @"^[•·]?([^+:：]+)\+([\d., ]*)(%?)$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)

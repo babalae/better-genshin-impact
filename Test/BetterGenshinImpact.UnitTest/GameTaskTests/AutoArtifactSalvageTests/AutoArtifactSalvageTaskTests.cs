@@ -98,7 +98,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
             string result = PaddleResultDic.GetOrAdd(screenshot, screenshot_ =>
             {
                 using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot_}");
@@ -149,6 +149,23 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
                     new ArtifactAffix(ArtifactAffixType.ATKPercent, 5.8f),
                     new ArtifactAffix(ArtifactAffixType.DEF, 23)
                 ], 0), new CultureInfo("en") };
+                yield return new object[] { "20250827151043_GetArtifactStat.png", new ArtifactStat("Couronne de laurier", new ArtifactAffix(ArtifactAffixType.ATKPercent, 7.0f), [
+                    new ArtifactAffix(ArtifactAffixType.CRITDMG, 5.4f),
+                    new ArtifactAffix(ArtifactAffixType.DEFPercent, 7.3f),
+                    new ArtifactAffix(ArtifactAffixType.DEF, 16),
+                    new ArtifactAffix(ArtifactAffixType.HPPercent, 5.8f)
+                ], 0), new CultureInfo("fr") };
+                yield return new object[] { "20250827163340_GetArtifactStat.png", new ArtifactStat("Couronne de Watatsumi", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
+                    new ArtifactAffix(ArtifactAffixType.HP, 299),
+                    new ArtifactAffix(ArtifactAffixType.EnergyRecharge, 4.5f),
+                    new ArtifactAffix(ArtifactAffixType.CRITDMG, 6.2f),
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23)
+                ], 0), new CultureInfo("fr") }; // 一个百里挑一的识别失败的例子，i accent circonflexe ​​被识别为了 i
+                yield return new object[] { "20250827204545_GetArtifactStat.png", new ArtifactStat("Agitation de la nuit dorée", new ArtifactAffix(ArtifactAffixType.GeoDMGBonus, 7.0f), [
+                    new ArtifactAffix(ArtifactAffixType.HP, 269),
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23),
+                    new ArtifactAffix(ArtifactAffixType.CRITRate, 3.1f)
+                ], 0), new CultureInfo("fr") };
             }
         }
 
@@ -175,7 +192,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             */
 
             //
-            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
             ArtifactStat result = sut.GetArtifactStat(mat, paddle.Get(cultureInfo.Name), out string _);
 
             //
@@ -184,7 +201,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             Assert.Equal(expectedArtifactStat.MainAffix.Value, result.MainAffix.Value);
             foreach (ArtifactAffix expectedArtifactAffix in expectedArtifactStat.MinorAffixes)
             {
-                Assert.Contains(result.MinorAffixes, a => a.Type == expectedArtifactAffix.Type && a.Value == expectedArtifactAffix.Value);
+                Assert.Contains(result.MinorAffixes, a =>
+                a.Type == expectedArtifactAffix.Type && a.Value == expectedArtifactAffix.Value);
             }
             Assert.True(result.Level == expectedArtifactStat.Level);
         }
@@ -208,7 +226,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
             ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), out string _);
             bool result = IsMatchJavaScript(artifact, js);
 

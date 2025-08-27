@@ -27,4 +27,8 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
     // 最多检查多少个圣遗物
     [ObservableProperty]
     private int _maxNumToCheck = 100;
+
+    // 单次识别失败政策
+    [ObservableProperty]
+    private RecognitionFailurePolicy _recognitionFailurePolicy = RecognitionFailurePolicy.Skip;
 }
