@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
 {
     /// <summary>
@@ -34,5 +36,24 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
         public int Level { get; private set; }
 
         // PS：圣遗物的种类和品质在点击查看之前就可以通过识别图标获悉，所以不必在此模型类中获取
+
+        /// <summary>
+        /// 生成一个手工拼接的成员结构示意字符串
+        /// </summary>
+        /// <returns></returns>
+        public string ToStructuredString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("Properties").Append('\n');
+            sb.Append("├─").Append("Name: ").Append(this.Name).Append('\n');
+            sb.Append("├─").Append("MainAffix: ").Append(this.MainAffix.Type).Append(", ").Append(this.MainAffix.Value).Append('\n');
+            sb.Append("├─").Append("MinorAffixes: ").Append('\n');
+            for (int i = 0; i < this.MinorAffixes.Length; i++)
+            {
+                sb.Append('│').Append('\t').Append(i == this.MinorAffixes.Length - 1 ? "└─" : "├─").Append($"[{i}]: ").Append(this.MinorAffixes[i].Type).Append(", ").Append(this.MinorAffixes[i].Value).Append('\n');
+            }
+            sb.Append("└─").Append("Level: ").Append(this.Level);
+            return sb.ToString();
+        }
     }
 }

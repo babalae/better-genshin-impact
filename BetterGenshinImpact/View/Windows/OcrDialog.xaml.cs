@@ -50,6 +50,7 @@ public partial class OcrDialog
             ArtifactStat artifact = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
 
             this.TxtRecognized.Text = allText;
+            this.ModelStructure.Text = artifact.ToStructuredString();
             if (this.javaScript != null)
             {
                 bool isMatch = AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
