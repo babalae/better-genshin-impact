@@ -101,7 +101,7 @@ public partial class OtherConfig : ObservableObject
         ///     PaddleOCR模型配置
         /// </summary>
         [ObservableProperty]
-        private PaddleOcrModelConfig _paddleOcrModelConfig = PaddleOcrModelConfig.V4;
+        private PaddleOcrModelConfig _paddleOcrModelConfig = PaddleOcrModelConfig.V4Auto;
     }
     
     //public partial class OtherConfig : ObservableObject
