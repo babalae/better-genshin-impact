@@ -385,14 +385,14 @@ public class GameLoadingTrigger : ITaskTrigger
             {
                 _logger.LogInformation("B服登录完成，等待后尝试点击进入游戏");
                 Thread.Sleep(5000);
-                ClickEnterGameButton();
+                ClickEnterGameButton(content.CaptureRectArea);
                 return;
             }
         }
         else if (!isBili)
         {
             // 官服流程：直接点击进入游戏按钮
-            ClickEnterGameButton();
+            ClickEnterGameButton(content.CaptureRectArea);
             return;
         }
 
@@ -486,9 +486,13 @@ public class GameLoadingTrigger : ITaskTrigger
         return (bHWnd, windowType);
     }
 
-    private void ClickEnterGameButton()
+    private void ClickEnterGameButton(ImageRegion region)
     {
-        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+        var ra = region.Find(_assets.EnterGameRo);
+        if (!ra.IsEmpty())
+        {
+            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+        }
     }
 
     private ImageRegion CaptureWindowToRectArea(IntPtr hWnd)

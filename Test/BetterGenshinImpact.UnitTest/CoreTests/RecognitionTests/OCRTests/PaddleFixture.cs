@@ -17,8 +17,8 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
                 {
                     return new PaddleOcrService(
                         new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
-                        PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(name)) ??
-                        PaddleOcrService.PaddleOcrModelType.V5);
+                        PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(new CultureInfo(name)) ??
+                        PaddleOcrService.PaddleOcrModelType.V4);
                 }
             });
         }
