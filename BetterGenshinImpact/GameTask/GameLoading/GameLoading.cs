@@ -1,29 +1,19 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
-using BetterGenshinImpact.Genshin.Paths;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading.Channels;
 using Microsoft.Win32;
-using System.Windows.Documents;
 using System.Linq;
 using System.Threading;
-using System.Runtime.InteropServices;
 using System.Text;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Helpers.Extensions;
 using Vanara.PInvoke;
-using BetterGenshinImpact.Core.Recognition;
-using Fischless.GameCapture;
-using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.GameLoading;
 
@@ -37,7 +27,8 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public bool IsExclusive => false;
 
-    public bool IsClickedOpenDoor = false;
+    public bool IsBiliJudged = false;
+    public bool IsBili = false;
 
     public bool IsBackgroundRunning => true;
 
@@ -254,36 +245,39 @@ public class GameLoadingTrigger : ITaskTrigger
             return;
         }
 
-        // B服判断逻辑
-        bool isBili = false;
-        try
+        // B服判断
+        if (!IsBiliJudged)
         {
-            var exePath = _config.InstallPath;
-            if (!string.IsNullOrEmpty(exePath))
+            try
             {
-                var configIni = Path.Combine(Path.GetDirectoryName(exePath)!, "config.ini");
-                if (File.Exists(configIni))
+                var exePath = _config.InstallPath;
+                if (!string.IsNullOrEmpty(exePath))
                 {
-                    var lines = File.ReadAllLines(configIni);
-                    foreach (var line in lines)
+                    var configIni = Path.Combine(Path.GetDirectoryName(exePath)!, "config.ini");
+                    if (File.Exists(configIni))
                     {
-                        var kv = line.Trim();
-                        if (kv.StartsWith("channel=") && kv.EndsWith("14"))
+                        var lines = File.ReadAllLines(configIni);
+                        foreach (var line in lines)
                         {
-                            isBili = true;
-                            break;
+                            var kv = line.Trim();
+                            if (kv.StartsWith("channel=") && kv.EndsWith("14"))
+                            {
+                                IsBili = true;
+                                break;
+                            }
                         }
                     }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            TaskControl.Logger.LogWarning("B服判断异常: " + ex.Message);
+            catch (Exception ex)
+            {
+                TaskControl.Logger.LogWarning("B服判断异常: " + ex.Message);
+            }
+            IsBiliJudged = true;
         }
 
         // 官服流程：先识别并点击顶号或切号的后一次“进入游戏”弹窗按钮
-        if (!isBili)
+        if (!IsBili)
         {
             var extraEnterGameBtn = content.CaptureRectArea.Find(_assets.ChooseEnterGameRo);
             if (!extraEnterGameBtn.IsEmpty())
@@ -300,12 +294,11 @@ public class GameLoadingTrigger : ITaskTrigger
         {
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             biliLoginClicked = true;
-            IsClickedOpenDoor = true;
             return;
         }
 
         // 只有在"进入游戏"按钮未出现时，才进行B服登录处理
-        if (isBili && !biliLoginClicked)
+        if (IsBili && !biliLoginClicked)
         {
             // B服流程：处理登录窗口
             var process = Process.GetProcessesByName("YuanShen").FirstOrDefault();
@@ -315,51 +308,13 @@ public class GameLoadingTrigger : ITaskTrigger
             {
                 if (windowType.Contains("协议"))
                 {
-                    ImageRegion screen;
-                    try
-                    {
-                        screen = CaptureWindowToRectArea(loginWindow);
-                    }
-                    catch
-                    {
-                        screen = TaskControl.CaptureToRectArea();
-                    }
-
-                    var ocrList = screen.FindMulti(RecognitionObject.OcrThis);
-                    var agreeRegion = ocrList.FirstOrDefault(r =>
-                        r.Text.Contains("同意") && !r.Text.Contains("不同意"));
-                    if (agreeRegion != null)
-                    {
-                        ClickRegionCenterBy1080(agreeRegion);
-                        // 记录协议窗口点击位置
-                        var (centerDesktopX, centerDesktopY) =
-                            agreeRegion.ConvertPositionToDesktopRegion(agreeRegion.Width / 2,
-                                agreeRegion.Height / 2);
-                        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-                        var inCaptureX = centerDesktopX - captureRect.X;
-                        var inCaptureY = centerDesktopY - captureRect.Y;
-                        var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                        lastAgreementClickPos = (inCaptureX / scale, inCaptureY / scale);
-                        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
-                    }
-
-                    Thread.Sleep(2000);
+                    GameCaptureRegion.GameRegion1080PPosClick(1030, 615);
                 }
 
                 if (windowType.Contains("登录"))
                 {
                     Thread.Sleep(2000);
-                    // 使用协议窗口坐标或默认坐标点击登录
-                    if (lastAgreementClickPos.HasValue)
-                    {
-                        GameCaptureRegion.GameRegion1080PPosClick(lastAgreementClickPos.Value.x1080,
-                            lastAgreementClickPos.Value.y1080);
-                    }
-                    else
-                    {
-                        GameCaptureRegion.GameRegion1080PPosClick(960, 635);
-                    }
-
+                    GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                     Thread.Sleep(2000);
 
                     // 检查窗口是否还存在
@@ -367,16 +322,14 @@ public class GameLoadingTrigger : ITaskTrigger
                     if (remainingWindow == IntPtr.Zero)
                     {
                         _logger.LogInformation("B服登录完成，准备进入游戏");
+                        // 添加延时确保窗口完全消失
+                        Thread.Sleep(2000);
+                        // 点击屏幕尝试找回焦点
+                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                         biliLoginClicked = true;
                     }
                 }
             }
-        }
-
-        //点击过开门的情况下，保持点击一个位置以防止秘境内贴脸提示
-        if (IsClickedOpenDoor)
-        {
-            GameCaptureRegion.GameRegion1080PPosClick(960, 900);
         }
 
         var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
@@ -467,104 +420,5 @@ public class GameLoadingTrigger : ITaskTrigger
         }, IntPtr.Zero);
 
         return (bHWnd, windowType);
-    }
-
-    private ImageRegion CaptureWindowToRectArea(IntPtr hWnd)
-    {
-        if (hWnd == IntPtr.Zero)
-        {
-            throw new ArgumentException("无效的窗口句柄", nameof(hWnd));
-        }
-
-        // BitBlt 方式
-        try
-        {
-            using var bitblt = GameCaptureFactory.Create(CaptureModes.BitBlt);
-            bitblt.Start(hWnd, new Dictionary<string, object> { { "autoFixWin11BitBlt", true } });
-            var img = GrabOneFrame(bitblt);
-            if (img == null) throw new Exception("BitBlt 无帧");
-            _logger.LogDebug("BitBlt 捕获窗口成功，尺寸 {W}x{H}", img.Width, img.Height);
-            return BuildWindowClientRegion(hWnd, img);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning("BitBlt 捕获失败: {Msg}", e.Message);
-        }
-
-        // DwmSharedSurface方式
-        try
-        {
-            using var dwm = GameCaptureFactory.Create(CaptureModes.DwmGetDxSharedSurface);
-            dwm.Start(hWnd);
-            var img = GrabOneFrame(dwm);
-            if (img == null) throw new Exception("Dwm 无帧");
-            _logger.LogDebug("DwmSharedSurface 捕获窗口成功，尺寸 {W}x{H}", img.Width, img.Height);
-            return BuildWindowClientRegion(hWnd, img);
-        }
-        catch (Exception e)
-        {
-            _logger.LogDebug("DwmSharedSurface 捕获失败，准备回退: {Msg}", e.Message);
-        }
-
-        // 全部失败，抛出异常由调用方回退到游戏截图
-        throw new Exception("针对句柄的窗口截图失败");
-    }
-
-    private ImageRegion BuildWindowClientRegion(IntPtr hWnd, Mat img)
-    {
-        // 以窗口客户区的屏幕坐标为锚点，构造相对桌面的区域，使 Region.Click 映射到正确位置
-        if (!User32.GetClientRect(hWnd, out var clientRect))
-        {
-            // 回退：用窗口矩形
-            User32.GetWindowRect(hWnd, out var wr);
-            return TaskContext.Instance().SystemInfo.DesktopRectArea.Derive(img, wr.left, wr.top);
-        }
-
-        POINT pt = default;
-        User32.ClientToScreen(hWnd, ref pt);
-        return TaskContext.Instance().SystemInfo.DesktopRectArea.Derive(img, pt.X, pt.Y);
-    }
-
-    private Mat? GrabOneFrame(IGameCapture capture, int retry = 8, int delayMs = 40)
-    {
-        for (int i = 0; i < retry; i++)
-        {
-            var img = capture.Capture();
-            if (img != null)
-            {
-                return img;
-            }
-
-            Thread.Sleep(delayMs);
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// 将 Region 中心点映射到 1080P 坐标系并点击。
-    /// </summary>
-    private void ClickRegionCenterBy1080(Region region)
-    {
-        // 计算区域中心的桌面坐标
-        var (centerDesktopX, centerDesktopY) =
-            region.ConvertPositionToDesktopRegion(region.Width / 2, region.Height / 2);
-
-        // 转换到游戏捕获区域坐标
-        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var inCaptureX = centerDesktopX - captureRect.X;
-        var inCaptureY = centerDesktopY - captureRect.Y;
-        if (inCaptureX < 0 || inCaptureY < 0)
-        {
-            // 不在游戏捕获区域内，直接回退为桌面点击
-            DesktopRegion.DesktopRegionClick(centerDesktopX, centerDesktopY);
-            return;
-        }
-
-        // 映射为 1080P 坐标
-        var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-        var x1080 = inCaptureX / scale;
-        var y1080 = inCaptureY / scale;
-        GameCaptureRegion.GameRegion1080PPosClick(x1080, y1080);
     }
 };

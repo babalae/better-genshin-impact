@@ -9,7 +9,6 @@ public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
     public RecognitionObject ChooseEnterGameRo;
     public RecognitionObject EnterGameRo;
     public RecognitionObject WelkinMoonRo;
-    public RecognitionObject InDomainRo;
 
     private GameLoadingAssets()
     {
@@ -37,15 +36,6 @@ public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "welkin_moon_logo.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height / 2),
-            DrawOnWindow = false
-        }.InitTemplate();
-        
-        InDomainRo = new RecognitionObject
-        {
-            Name = "InDomain",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "in_domain.png"),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 4),
             DrawOnWindow = false
         }.InitTemplate();
     }

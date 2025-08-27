@@ -67,7 +67,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInDomain(ImageRegion captureRa)
     {
-        using var matchRegion = captureRa.Find(GameLoadingAssets.Instance.InDomainRo);
+        using var matchRegion = captureRa.Find(ElementAssets.Instance.InDomainRo);
         if (matchRegion.IsEmpty())
         {
             return false;
