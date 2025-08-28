@@ -419,11 +419,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
         //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
         #endregion
-        #region 副词条预处理 最大化字体分离
+        #region 副词条预处理 还是不处理效果最好……
         Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
-        using Mat levelAndMinorAffixRoiThreshold = new Mat();
-        double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-        //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
+        //using Mat levelAndMinorAffixRoiThreshold = new Mat();
+        //double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+        // //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
         //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);
         #endregion
         //Cv2.WaitKey();
@@ -433,7 +433,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         var mainAffixOcrResult = ocrService.OcrResult(mainAffixRoiThreshold);
         string mainAffixText = string.Join("\n", mainAffixOcrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
         var mainAffixLines = mainAffixText.Split('\n');
-        var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoiThreshold);
+        var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoi);
         string levelAndMinorAffixText = string.Join("\n", levelAndMinorAffixOcrResult.Regions.Where(r => r.Score > 0.5)
             .Where(r => r.Rect.BoundingRect().Left < levelAndMinorAffixRoi.Width * 0.1) // 一定是贴着左边的，排除套装效果文字也存在类似+15%的情况
             .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));

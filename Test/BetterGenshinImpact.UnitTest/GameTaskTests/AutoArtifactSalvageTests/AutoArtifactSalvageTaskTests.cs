@@ -154,18 +154,29 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
                     new ArtifactAffix(ArtifactAffixType.DEFPercent, 7.3f),
                     new ArtifactAffix(ArtifactAffixType.DEF, 16),
                     new ArtifactAffix(ArtifactAffixType.HPPercent, 5.8f)
-                ], 0), new CultureInfo("fr") };
+                ], 0), new CultureInfo("fr") }; // 一个百里挑一的识别失败的例子
                 yield return new object[] { "20250827163340_GetArtifactStat.png", new ArtifactStat("Couronne de Watatsumi", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
                     new ArtifactAffix(ArtifactAffixType.HP, 299),
                     new ArtifactAffix(ArtifactAffixType.EnergyRecharge, 4.5f),
                     new ArtifactAffix(ArtifactAffixType.CRITDMG, 6.2f),
                     new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23)
-                ], 0), new CultureInfo("fr") }; // 一个百里挑一的识别失败的例子，i accent circonflexe ​​被识别为了 i
+                ], 0), new CultureInfo("fr") };
                 yield return new object[] { "20250827204545_GetArtifactStat.png", new ArtifactStat("Agitation de la nuit dorée", new ArtifactAffix(ArtifactAffixType.GeoDMGBonus, 7.0f), [
                     new ArtifactAffix(ArtifactAffixType.HP, 269),
                     new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23),
                     new ArtifactAffix(ArtifactAffixType.CRITRate, 3.1f)
                 ], 0), new CultureInfo("fr") };
+                yield return new object[] { "20250828084843_GetArtifactStat.png", new ArtifactStat("異種的期許",  new ArtifactAffix(ArtifactAffixType.HP, 717f), [
+                    new ArtifactAffix(ArtifactAffixType.DEFPercent, 7.3f),
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23),
+                    new ArtifactAffix(ArtifactAffixType.ATKPercent, 4.1f)
+                ], 0), new CultureInfo("zh-Hant") };
+                yield return new object[] { "20250828093344_GetArtifactStat.png", new ArtifactStat("黃金時代的先聲",new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
+                    new ArtifactAffix(ArtifactAffixType.DEF, 19),
+                    new ArtifactAffix(ArtifactAffixType.CRITDMG, 7.8f),
+                    new ArtifactAffix(ArtifactAffixType.ATK, 18),
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23)
+                ], 0), new CultureInfo("zh-Hant") };
             }
         }
 
