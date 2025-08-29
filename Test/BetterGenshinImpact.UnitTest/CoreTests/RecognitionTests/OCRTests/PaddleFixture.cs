@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using System.Collections.Concurrent;
 using System.Globalization;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
@@ -17,8 +17,8 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
                 {
                     return new PaddleOcrService(
                         new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
-                        PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(new CultureInfo(name)) ??
-                        PaddleOcrService.PaddleOcrModelType.V4);
+                        PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(name)) ??
+                        PaddleOcrService.PaddleOcrModelType.V5);
                 }
             });
         }
