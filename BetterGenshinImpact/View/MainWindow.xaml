@@ -191,8 +191,7 @@
                                Command="{Binding SwitchBackdropCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Blur24}"
-                               ToolTip="切换深浅主题背景和毛玻璃效果"
-                               Visibility="{Binding IsWin11Later, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}" />
+                               ToolTip="切换深浅主题或背景样式" />
                     <ui:Button Width="46"
                                Height="32"
                                Background="Transparent"

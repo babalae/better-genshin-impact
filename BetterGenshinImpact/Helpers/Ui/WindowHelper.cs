@@ -24,12 +24,12 @@ public class WindowHelper
         switch (themeType)
         {
             case ThemeType.DarkNone:
-                window.Background = new SolidColorBrush(Colors.Transparent);
+                window.Background = new SolidColorBrush(Color.FromArgb(255, 32, 32, 32));
                 WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.None);
                 break;
 
             case ThemeType.LightNone:
-                window.Background = new SolidColorBrush(Colors.Transparent);
+                window.Background = new SolidColorBrush(Color.FromArgb(255, 243, 243, 243));
                 WindowBackdrop.ApplyBackdrop(window, WindowBackdropType.None);
                 break;
 
