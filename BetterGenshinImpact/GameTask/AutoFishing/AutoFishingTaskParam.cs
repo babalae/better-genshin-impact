@@ -1,18 +1,19 @@
-﻿using BetterGenshinImpact.GameTask.Model;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers;
 using Microsoft.ClearScript;
+using Microsoft.Extensions.Localization;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 using TorchSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
-    public class AutoFishingTaskParam : BaseTaskParam
+    public class AutoFishingTaskParam : BaseTaskParam<AutoFishingTask>
     {
-        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, CultureInfo? cultureInfo, bool useTorch) : base(cultureInfo)
+        public AutoFishingTaskParam(int wholeProcessTimeoutSeconds, int throwRodTimeOutTimeoutSeconds, FishingTimePolicy fishingTimePolicy, bool saveScreenshotOnKeyTick, bool useTorch, CultureInfo? cultureInfo, IStringLocalizer<AutoFishingTask>? stringLocalizer) : base(cultureInfo, stringLocalizer)
         {
             WholeProcessTimeoutSeconds = wholeProcessTimeoutSeconds;
             ThrowRodTimeOutTimeoutSeconds = throwRodTimeOutTimeoutSeconds;
@@ -63,7 +64,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 useTorch = false;
             }
 
-            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, null, useTorch);
+            return new AutoFishingTaskParam(wholeProcessTimeoutSeconds, throwRodTimeOutTimeoutSeconds, fishingTimePolicy, saveScreenshotOnKeyTick, useTorch, null, null);
         }
 
         /// <summary>
@@ -89,7 +90,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 useTorch = false;
             }
-            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, cultureInfo, useTorch);
+            return new AutoFishingTaskParam(config.WholeProcessTimeoutSeconds, config.AutoThrowRodTimeOut, config.FishingTimePolicy, saveScreenshotOnKeyTick, useTorch, cultureInfo, null);
         }
     }
 }

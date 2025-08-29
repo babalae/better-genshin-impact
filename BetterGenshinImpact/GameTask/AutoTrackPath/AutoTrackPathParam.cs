@@ -1,8 +1,10 @@
-﻿using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model;
+using System;
 using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
-public class AutoTrackPathParam : BaseTaskParam
+[Obsolete]
+public class AutoTrackPathParam
 {
 }
