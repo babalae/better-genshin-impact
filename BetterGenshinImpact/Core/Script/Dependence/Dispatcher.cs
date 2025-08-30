@@ -13,8 +13,6 @@ using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
-using Microsoft.ClearScript;  
-using BetterGenshinImpact.Helpers;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -23,7 +21,7 @@ public class Dispatcher
 {
     private readonly ILogger<Dispatcher> _logger = App.GetLogger<Dispatcher>();
 
-    private object _config = null;
+    private readonly object _config;
 
     public Dispatcher(object config)
     {
@@ -111,7 +109,7 @@ public class Dispatcher
     /// <param name="customCt">自定义取消令牌，允许从JS控制任务取消</param>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentException"></exception>
-    public async Task RunTask(SoloTask soloTask, CancellationToken? customCt = null)
+    public async Task<object?> RunTask(SoloTask soloTask, CancellationToken? customCt = null)
     {
         if (soloTask == null)
         {
@@ -140,56 +138,56 @@ public class Dispatcher
         // 根据名称执行任务
         switch (soloTask.Name)
         {
-            case "AutoGeniusInvokation":  
-                string content;  
+            case "AutoGeniusInvokation":
+                string content;
                 // 检查是否有自定义策略内容  
-                if (soloTask.Config != null)  
-                {  
-                    var jsObject = (ScriptObject)soloTask.Config;  
-                    content = ScriptObjectConverter.GetValue(jsObject, "strategy", "");  
-                    if (string.IsNullOrEmpty(content))  
-                    {  
+                if (soloTask.Config != null)
+                {
+                    var jsObject = (ScriptObject)soloTask.Config;
+                    content = ScriptObjectConverter.GetValue(jsObject, "strategy", "");
+                    if (string.IsNullOrEmpty(content))
+                    {
                         // 回退到原有逻辑  
-                        if (taskSettingsPageViewModel.GetTcgStrategy(out content))  
-                        {  
-                            return;  
-                        }  
-                    }  
-                }  
-                else  
-                {  
+                        if (taskSettingsPageViewModel.GetTcgStrategy(out content))
+                        {
+                            return null;
+                        }
+                    }
+                }
+                else
+                {
                     // 回退到原有逻辑  
-                    if (taskSettingsPageViewModel.GetTcgStrategy(out content))  
-                    {  
-                        return;  
-                    }  
-                }  
-                
-                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);  
-                break;
+                    if (taskSettingsPageViewModel.GetTcgStrategy(out content))
+                    {
+                        return null;
+                    }
+                }
+
+                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);
+                return null;
 
             case "AutoWood":
                 await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
                     taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(cancellationToken);
-                break;
+                return null;
 
             case "AutoFight":
                 await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);
-                break;
+                return null;
 
             case "AutoDomain":
                 if (taskSettingsPageViewModel.GetFightStrategy(out var path))
                 {
-                    return;
+                    return null;
                 }
 
                 await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
-                break;
+                return null;
 
             case "AutoFishing":
                 await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
                     cancellationToken);
-                break;
+                return null;
             case "AutoEat":
                 string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "foodName", null);
                 FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?)ScriptObjectConverter.GetValue<int?>((ScriptObject)soloTask.Config, "foodEffectType", null);
@@ -217,7 +215,7 @@ public class Dispatcher
                                     if (foodName == null)
                                     {
                                         _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的攻击类料理");
-                                        return;
+                                        return null;
                                     }
                                     break;
                                 case FoodEffectType.AdventurersDish:
@@ -225,7 +223,7 @@ public class Dispatcher
                                     if (foodName == null)
                                     {
                                         _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的冒险类料理");
-                                        return;
+                                        return null;
                                     }
                                     break;
                                 case FoodEffectType.DEFBoostingDish:
@@ -233,7 +231,7 @@ public class Dispatcher
                                     if (foodName == null)
                                     {
                                         _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的防御类料理");
-                                        return;
+                                        return null;
                                     }
                                     break;
                                 default:
@@ -244,15 +242,13 @@ public class Dispatcher
                 }
 
                 var autoEatConfig = TaskContext.Instance().Config.AutoEatConfig;
-                await new AutoEatTask(new AutoEatParam()
+                return await new AutoEatTask(new AutoEatParam()
                 {
                     CheckInterval = autoEatConfig.CheckInterval,
                     EatInterval = autoEatConfig.EatInterval,
                     ShowNotification = autoEatConfig.ShowNotification,
                     FoodName = foodName
                 }).Start(cancellationToken);
-
-                break;
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
         }
