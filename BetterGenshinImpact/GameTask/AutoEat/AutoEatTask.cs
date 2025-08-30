@@ -43,7 +43,6 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
     async Task ISoloTask.Start(CancellationToken ct)
     {
         await Start(ct);
-        return;
     }
 
     public async Task<int?> Start(CancellationToken ct)
