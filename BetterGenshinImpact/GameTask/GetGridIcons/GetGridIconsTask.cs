@@ -60,7 +60,7 @@ public class GetGridIconsTask : ISoloTask
             case GridScreenName.PreciousItems:
             case GridScreenName.Furnishings:
                 await new ReturnMainUiTask().Start(ct);
-                await AutoArtifactSalvageTask.OpenBag(this.gridScreenName, this.input, this.logger, this.ct);
+                await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());

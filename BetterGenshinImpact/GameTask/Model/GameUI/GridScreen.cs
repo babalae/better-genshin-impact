@@ -1,5 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
@@ -153,20 +152,51 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <param name="numbers">传入的Y列表</param>
             /// <param name="threshold"></param>
             /// <returns>外层是各行从上到下，内层是一行从左到右</returns>
-            static List<List<ImageRegion>> ClusterRows(IEnumerable<ImageRegion> regions, int threshold)
+            public static List<List<T>> ClusterRows<T>(IEnumerable<T> regions, int threshold)
             {
-                // 先对Y排序，便于聚簇
-                var sortedRegions = regions.OrderBy(r => r.Y).ToList();
+                static int getX(T t)
+                {
+                    if (t is ImageRegion imageRegion)
+                    {
+                        return imageRegion.X;
+                    }
+                    else if (t is Rect rect)
+                    {
+                        return rect.X;
+                    }
+                    else
+                    {
+                        throw new NotSupportedException();
+                    }
+                }
+                static int getY(T t)
+                {
+                    if (t is ImageRegion imageRegion)
+                    {
+                        return imageRegion.Y;
+                    }
+                    else if (t is Rect rect)
+                    {
+                        return rect.Y;
+                    }
+                    else
+                    {
+                        throw new NotSupportedException();
+                    }
+                }
 
-                List<List<ImageRegion>> clusters = new List<List<ImageRegion>>();
+                // 先对Y排序，便于聚簇
+                var sortedRegions = regions.OrderBy(getY).ToList();
+
+                List<List<T>> clusters = new List<List<T>>();
 
                 if (sortedRegions.Count == 0)
                     return clusters;
 
                 // 初始化第一个聚簇
-                List<ImageRegion> currentCluster = new List<ImageRegion> { };
+                List<T> currentCluster = new List<T> { };
 
-                foreach (ImageRegion r in sortedRegions)
+                foreach (T r in sortedRegions)
                 {
                     if (currentCluster.Count <= 0)
                     {
@@ -174,23 +204,23 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                         continue;
                     }
 
-                    ImageRegion lastInCluster = currentCluster.Last();
+                    T lastInCluster = currentCluster.Last();
 
                     // 如果当前数字与聚簇中最后一个数字的差值小于阈值，则加入当前聚簇
-                    if (r.Y - lastInCluster.Y <= threshold)
+                    if (getY(r) - getY(lastInCluster) <= threshold)
                     {
                         currentCluster.Add(r);
                     }
                     else
                     {
                         // 否则，创建一个新的聚簇
-                        clusters.Add(currentCluster.OrderBy(r => r.X).ToList());
-                        currentCluster = new List<ImageRegion> { r };
+                        clusters.Add(currentCluster.OrderBy(getX).ToList());
+                        currentCluster = new List<T> { r };
                     }
                 }
 
                 // 添加最后一个聚簇
-                clusters.Add(currentCluster.OrderBy(r => r.X).ToList());
+                clusters.Add(currentCluster.OrderBy(getX).ToList());
 
                 return clusters;
             }
@@ -294,9 +324,9 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <summary>
             /// 背包界面的背景是把打开界面之前的画面进行了模糊+黑白渐变滤镜+左上角水印叠加处理
             /// 放任五彩斑斓的输入，并且允许点击高亮的话处理起来就复杂了
-            /// 所以这个Alpha版方法留在这里只是想说明：
+            /// <para>所以这个Alpha版方法留在这里只是想说明：
             /// 越是琢磨算法，就越会发现传统算法的能力是有极限的
-            /// 既然是游戏画面，不如在输入的时候就尽量获得没有噪声的画面
+            /// 既然是游戏画面，不如在输入的时候就尽量获得没有噪声的画面</para>
             /// </summary>
             /// <param name="src"></param>
             /// <returns></returns>
