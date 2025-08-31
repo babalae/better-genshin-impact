@@ -1,3 +1,10 @@
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -5,12 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -54,6 +55,11 @@ public partial class ScriptRepoWindow
         DataContext = this;
         Config.PropertyChanged += OnConfigPropertyChanged;
         PropertyChanged += OnPropertyChanged;
+        SourceInitialized += (s, e) =>
+        {
+            // 应用系统背景
+            WindowHelper.TryApplySystemBackdrop(this);
+        };
     }
 
     private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -62,6 +68,11 @@ public partial class ScriptRepoWindow
         if (e.PropertyName == nameof(SelectedRepoChannel))
         {
             OnSelectedRepoChannelChanged();
+        }
+        // 监听IsUpdating变化以调整窗口高度
+        else if (e.PropertyName == nameof(IsUpdating))
+        {
+            OnIsUpdatingChanged();
         }
     }
 
@@ -77,6 +88,16 @@ public partial class ScriptRepoWindow
         {
             OnConfigSelectedRepoUrlChanged();
         }
+    }
+
+    private void OnIsUpdatingChanged()
+    {
+        // 当IsUpdating状态变化时，强制重新计算窗口大小
+        Dispatcher.BeginInvoke(() =>
+        {
+            InvalidateMeasure();
+            UpdateLayout();
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private void InitializeRepoChannels()

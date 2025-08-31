@@ -1,19 +1,43 @@
-﻿using BetterGenshinImpact.Helpers.DpiAwareness;
+﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Helpers.Ui;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using Vanara.PInvoke;
 using System.Windows.Media;
-using System.Collections.Generic;
 using System.Windows.Media.Imaging;
+using TorchSharp.Data;
+using Vanara.PInvoke;
+using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.View;
 
-public partial class PickerWindow : Window
+public class CapturableWindow
+{
+    public IntPtr Handle { get; }
+    public string Name { get; }
+    public string ProcessName { get; }
+    public ImageSource? Icon { get; }
+
+    public CapturableWindow(IntPtr handle, string name, string processName, ImageSource? icon)
+    {
+        Handle = handle;
+        Name = name;
+        ProcessName = processName;
+        Icon = icon;
+    }
+}
+
+public partial class PickerWindow : FluentWindow
 {
     private bool _isSelected;
     private readonly bool _captureTest;
@@ -26,28 +50,33 @@ public partial class PickerWindow : Window
     {
         InitializeComponent();
         this.InitializeDpiAwareness();
-        Loaded += OnLoaded;
-        _captureTest = captureTest;
-    }
 
-    public class CapturableWindow(IntPtr handle, string name, string processName, ImageSource? icon)
-    {
-        public IntPtr Handle { get; } = handle;
-        public string Name { get; } = name;
-        public string ProcessName { get; } = processName;
-        public ImageSource? Icon { get; } = icon;
+        // 应用当前主题
+        WindowHelper.TryApplySystemBackdrop(this);
+
+        Loaded += OnLoaded;
+        MouseLeftButtonDown += PickerWindow_MouseLeftButtonDown;
+        _captureTest = captureTest;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         FindWindows();
     }
+    private void PickerWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // 当用户按住鼠标左键时，允许拖拽窗口
+        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed)
+        {
+            this.DragMove();
+        }
+    }
 
     public bool PickCaptureTarget(IntPtr hWnd, out IntPtr pickedWindow)
     {
         new WindowInteropHelper(this).Owner = hWnd;
         ShowDialog();
-        if(!_isSelected)
+        if (!_isSelected)
         {
             pickedWindow = IntPtr.Zero;
             return false;
@@ -63,7 +92,7 @@ public partial class PickerWindow : Window
 
         User32.EnumWindows((hWnd, lParam) =>
         {
-            if (!User32.IsWindowVisible(hWnd) || wih.Handle == hWnd)
+            if (!User32.IsWindowVisible(hWnd) || wih.Handle == (IntPtr)hWnd)
                 return true;
 
             var exStyle = User32.GetWindowLong<User32.WindowStylesEx>(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
@@ -78,7 +107,7 @@ public partial class PickerWindow : Window
             _ = User32.GetWindowThreadProcessId(hWnd, out var processId);
             var process = Process.GetProcessById((int)processId);
 
-            // 获取窗口图标
+            // 获取窗口图标 - 转换 HWND 为 IntPtr
             var icon = GetWindowIcon((IntPtr)hWnd);
 
             windows.Add(new CapturableWindow((IntPtr)hWnd, title.ToString(), process.ProcessName, icon));
@@ -135,10 +164,10 @@ public partial class PickerWindow : Window
     private static bool IsGenshinWindow(CapturableWindow window)
     {
         return window is
-            {Name: "原神", ProcessName: "YuanShen"} or
-            {Name: "云·原神", ProcessName: "Genshin Impact Cloud Game"} or
-            {Name: "Genshin Impact", ProcessName: "GenshinImpact"} or
-            {Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud"};
+        { Name: "原神", ProcessName: "YuanShen" } or
+        { Name: "云·原神", ProcessName: "Genshin Impact Cloud Game" } or
+        { Name: "Genshin Impact", ProcessName: "GenshinImpact" } or
+        { Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud" };
     }
 
     private static bool AskIsThisGenshinImpact(CapturableWindow window)
@@ -150,10 +179,10 @@ public partial class PickerWindow : Window
             当前选择的窗口：{window.Name} ({window.ProcessName})
             """,
             "确认选择",
-            MessageBoxButton.YesNo,
-            MessageBoxResult.No
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxResult.No
         );
-        return res == MessageBoxResult.Yes;
+        return res == System.Windows.MessageBoxResult.Yes;
     }
 
     private void WindowsOnMouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -170,6 +199,27 @@ public partial class PickerWindow : Window
             }
         }
         _isSelected = true;
+        Close();
+    }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        WindowHelper.TryApplySystemBackdrop(this);
+        FindWindows();
+    }
+
+    private void FluentWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            _isSelected = false;
+            Close();
+        }
+    }
+
+    private void cancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        _isSelected = false;
         Close();
     }
 }

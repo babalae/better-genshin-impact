@@ -14,8 +14,8 @@ namespace BetterGenshinImpact.Helpers;
 
 /// <summary>
 /// Markdown To FlowDocument的转换器
-/// 支持显示：分割线、图片、多级标题、表格、任务列表、多级无序列表、多级有序列表、普通段落、粗斜体、粗体、斜体、删除线、下划线和超链接
-/// 不支持显示：代码块、代码行、脚注、引用、HTML标签、数学公式
+/// 支持显示：分割线、图片、多级标题、表格、任务列表、多级无序列表、多级有序列表、普通段落、粗斜体、粗体、斜体、删除线、下划线、内联代码和超链接
+/// 不支持显示：代码块、脚注、引用、HTML标签、数学公式
 /// </summary>
 public static class MarkdownToFlowDocumentConverter
 {
@@ -40,7 +40,12 @@ public static class MarkdownToFlowDocumentConverter
 
             if (string.IsNullOrWhiteSpace(line))
             {
-                doc.Blocks.Add(new Paragraph());
+                // 为空行创建一个较小间距的段落，减少空行占用的垂直空间
+                doc.Blocks.Add(new Paragraph()
+                {
+                    Margin = new Thickness(0, 0, 0, 0),
+                    FontSize = 6
+                });
                 continue;
             }
 
@@ -137,7 +142,7 @@ public static class MarkdownToFlowDocumentConverter
                     FontSize = 24 - (level - 1) * 2,
                     Margin = new Thickness(0, 10, 0, 5)
                 };
-                // 标题支持粗体、斜体、删除线、下划线和超链接格式
+                // 标题支持粗体、斜体、删除线、下划线、内联代码和超链接格式
                 AddInlinesWithFormatting(para.Inlines, text);
                 doc.Blocks.Add(para);
                 continue;
@@ -193,7 +198,7 @@ public static class MarkdownToFlowDocumentConverter
                 string taskSymbol = isCompleted ? "✅ " : "❎ ";
                 para.Inlines.Add(new Run(taskSymbol) { FontWeight = FontWeights.Bold });
 
-                // 处理任务内容，支持粗体、斜体、删除线、下划线和超链接
+                // 处理任务内容，支持粗体、斜体、删除线、下划线、内联代码和超链接
                 AddInlinesWithFormatting(para.Inlines, taskContent);
                 doc.Blocks.Add(para);
                 continue;
@@ -211,7 +216,7 @@ public static class MarkdownToFlowDocumentConverter
                 string bullet = GetUnorderedListBullet(unorderedIndentLevel);
                 para.Inlines.Add(new Run(bullet + " ") { FontWeight = FontWeights.Bold });
 
-                // 处理列表项内容，支持粗体、斜体、删除线、下划线和超链接
+                // 处理列表项内容，支持粗体、斜体、删除线、下划线、内联代码和超链接
                 AddInlinesWithFormatting(para.Inlines, unorderedContent);
                 doc.Blocks.Add(para);
                 continue;
@@ -228,18 +233,18 @@ public static class MarkdownToFlowDocumentConverter
                 // 添加序号前缀
                 para.Inlines.Add(new Run(numberPrefix + " ") { FontWeight = FontWeights.Bold });
 
-                // 处理有序列表内容，支持粗体、斜体、删除线、下划线和超链接
+                // 处理有序列表内容，支持粗体、斜体、删除线、下划线、内联代码和超链接
                 AddInlinesWithFormatting(para.Inlines, orderedContent);
                 doc.Blocks.Add(para);
                 continue;
             }
 
-            // 普通段落，支持粗体、斜体、删除线、下划线和超链接
+            // 普通段落，支持粗体、斜体、删除线、下划线、内联代码和超链接
             var paragraph = new Paragraph
             {
                 Margin = new Thickness(0, 2, 0, 2)
             };
-            // 处理普通段落，支持粗体、斜体、删除线、下划线和超链接
+            // 处理普通段落，支持粗体、斜体、删除线、下划线、内联代码和超链接
             AddInlinesWithFormatting(paragraph.Inlines, line);
             doc.Blocks.Add(paragraph);
         }
@@ -835,7 +840,7 @@ public static class MarkdownToFlowDocumentConverter
 
     //文本处理
     /// <summary>
-    /// 处理文本格式（粗体、斜体、粗斜体、删除线、下划线、图片、超链接等）
+    /// 处理文本格式（粗体、斜体、粗斜体、删除线、下划线、内联代码、图片、超链接等）
     /// </summary>
     /// <param name="inlines">内联集合</param>
     /// <param name="text">要处理的文本</param>
@@ -888,12 +893,14 @@ public static class MarkdownToFlowDocumentConverter
         const string ESCAPED_UNDERSCORE = "\x00ESCAPED_UNDERSCORE\x00";
         const string ESCAPED_TILDE = "\x00ESCAPED_TILDE\x00";
         const string ESCAPED_BACKSLASH = "\x00ESCAPED_BACKSLASH\x00";
+        const string ESCAPED_BACKTICK = "\x00ESCAPED_BACKTICK\x00";
 
         var result = text
             .Replace(@"\*", ESCAPED_ASTERISK)
             .Replace(@"\_", ESCAPED_UNDERSCORE)
             .Replace(@"\~", ESCAPED_TILDE)
-            .Replace(@"\\", ESCAPED_BACKSLASH);
+            .Replace(@"\\", ESCAPED_BACKSLASH)
+            .Replace(@"\`", ESCAPED_BACKTICK);
 
         return result;
     }
@@ -909,12 +916,14 @@ public static class MarkdownToFlowDocumentConverter
         const string ESCAPED_UNDERSCORE = "\x00ESCAPED_UNDERSCORE\x00";
         const string ESCAPED_TILDE = "\x00ESCAPED_TILDE\x00";
         const string ESCAPED_BACKSLASH = "\x00ESCAPED_BACKSLASH\x00";
+        const string ESCAPED_BACKTICK = "\x00ESCAPED_BACKTICK\x00";
 
         return text
             .Replace(ESCAPED_ASTERISK, "*")
             .Replace(ESCAPED_UNDERSCORE, "_")
             .Replace(ESCAPED_TILDE, "~")
-            .Replace(ESCAPED_BACKSLASH, "\\");
+            .Replace(ESCAPED_BACKSLASH, "\\")
+            .Replace(ESCAPED_BACKTICK, "`");
     }
 
     /// <summary>
@@ -930,6 +939,7 @@ public static class MarkdownToFlowDocumentConverter
         int italicIndex = text.IndexOf('*', startIndex);
         int strikethroughIndex = text.IndexOf("~~", startIndex, StringComparison.Ordinal);
         int underlineIndex = text.IndexOf("__", startIndex, StringComparison.Ordinal);
+        int inlineCodeIndex = text.IndexOf('`', startIndex);
         int imageIndex = text.IndexOf("![", startIndex, StringComparison.Ordinal);
         int autoLinkIndex = text.IndexOf("<http", startIndex, StringComparison.OrdinalIgnoreCase);
         int linkIndex = text.IndexOf('[', startIndex);
@@ -967,7 +977,7 @@ public static class MarkdownToFlowDocumentConverter
         }
 
         // 收集所有有效的格式标记位置
-        var indices = new[] { boldItalicIndex, boldIndex, italicIndex, strikethroughIndex, underlineIndex, imageIndex, autoLinkIndex, linkIndex }
+        var indices = new[] { boldItalicIndex, boldIndex, italicIndex, strikethroughIndex, underlineIndex, inlineCodeIndex, imageIndex, autoLinkIndex, linkIndex }
             .Where(i => i != -1)
             .ToArray();
 
@@ -1124,7 +1134,55 @@ public static class MarkdownToFlowDocumentConverter
                 }
             }
         }
+        // 内联代码处理 `code`
+        else if (text[markIndex] == '`')
+        {
+            int codeEndIndex = text.IndexOf('`', markIndex + 1);
+            if (codeEndIndex != -1)
+            {
+                string codeText = text[(markIndex + 1)..codeEndIndex];
+                if (!string.IsNullOrEmpty(codeText)) // 允许空代码，但不允许null
+                {
+                    // 创建包含内联代码的容器，用于添加间距
+                    var codeContainer = new InlineUIContainer();
 
+                    // 创建边框元素来提供间距和背景
+                    var border = new Border
+                    {
+                        Background = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)),
+                        CornerRadius = new CornerRadius(3),
+                        Padding = new Thickness(4, 2, 4, 2),
+                        Margin = new Thickness(2, 0, 2, 0),
+                        Cursor = System.Windows.Input.Cursors.Hand,
+                        ToolTip = "单击复制代码",
+                        Child = new TextBlock
+                        {
+                            Text = RestoreEscapeCharacters(codeText),
+                            FontFamily = new FontFamily("Consolas, 宋体, monospace"),
+                            VerticalAlignment = VerticalAlignment.Center
+                        }
+                    };
+                    // 添加单击复制功能
+                    border.MouseDown += (sender, e) =>
+                    {
+                        try
+                        {
+                            Clipboard.SetText(RestoreEscapeCharacters(codeText));
+                            MessageBox.Show("代码已复制到剪贴板！", "复制成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"复制代码失败: {ex.Message}");
+                            border.ToolTip = "复制失败";
+                        }
+                    };
+
+                    codeContainer.Child = border;
+                    inlines.Add(codeContainer);
+                    return codeEndIndex + 1;
+                }
+            }
+        }
         // 如果格式处理失败，作为普通文本处理
         AddTextWithHyperlinks(inlines, text[markIndex].ToString());
         return markIndex + 1;

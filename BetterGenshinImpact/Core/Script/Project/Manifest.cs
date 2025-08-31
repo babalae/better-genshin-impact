@@ -7,6 +7,8 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
+using System.Text.Json.Serialization;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -76,5 +78,22 @@ public class Manifest
         }
 
         return settingItems;
+    }
+
+    [JsonIgnore]
+    public string ShortDescription
+    {
+        get
+        {
+            var lines = this.Description.Split('\n');
+            if (lines.Length > 6)
+            {
+                return String.Join('\n', lines.Take(6).Append("……"));
+            }
+            else
+            {
+                return this.Description;
+            }
+        }
     }
 }

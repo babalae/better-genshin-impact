@@ -1,12 +1,14 @@
-﻿using BetterGenshinImpact.Service.Notifier.Exception;
-using BetterGenshinImpact.Service.Notifier.Interface;
-using System.Net.Http;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Service.Notification.Model;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Threading.Tasks;
+using System.Web;
+using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Service.Notifier.Exception;
+using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -17,7 +19,8 @@ namespace BetterGenshinImpact.Service.Notifier;
 
 public class DiscordWebhookNotifier : INotifier
 {
-    private static readonly ILogger<DiscordWebhookNotifier> Logger = App.GetLogger<DiscordWebhookNotifier>();
+    private static readonly ILogger<DiscordWebhookNotifier> Logger =
+        App.GetLogger<DiscordWebhookNotifier>();
 
     private readonly HttpClient _httpClient;
     private readonly string _webhookUrl;
@@ -30,11 +33,16 @@ public class DiscordWebhookNotifier : INotifier
     {
         Png,
         Jpeg,
-        WebP
+        WebP,
     }
 
-    public DiscordWebhookNotifier(HttpClient httpClient, string webhookUrl, string username, string avatarUrl,
-        string imageFormat)
+    public DiscordWebhookNotifier(
+        HttpClient httpClient,
+        string webhookUrl,
+        string username,
+        string avatarUrl,
+        string imageFormat
+    )
     {
         _httpClient = httpClient;
         _webhookUrl = webhookUrl;
@@ -45,7 +53,7 @@ public class DiscordWebhookNotifier : INotifier
         {
             nameof(ImageEncoderEnum.Png) => new PngEncoder(),
             nameof(ImageEncoderEnum.WebP) => new WebpEncoder(),
-            _ => new JpegEncoder()
+            _ => new JpegEncoder(),
         };
     }
 
@@ -54,43 +62,40 @@ public class DiscordWebhookNotifier : INotifier
     public async Task SendAsync(BaseNotificationData content)
     {
         // ref: https://discord.com/developers/docs/resources/webhook#execute-webhook
-        if (string.IsNullOrEmpty(_webhookUrl)) throw new NotifierException("Discord webhook URL is not set");
+        if (string.IsNullOrEmpty(_webhookUrl))
+            throw new NotifierException("Discord webhook URL is not set");
 
-        var url = $"{_webhookUrl}?with_components=true";
-        var data = new MultipartFormDataContent("boundary");
+        var uriBuilder = new UriBuilder(_webhookUrl);
+        var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+        query["with_components"] = "true";
+        uriBuilder.Query = query.ToString();
+        var url = uriBuilder.ToString();
 
-        var payloadJson = new
+        var payloadJson = new Dictionary<string, object> { ["flags"] = 1 << 15 };
+
+        if (!string.IsNullOrWhiteSpace(_username))
+            payloadJson["username"] = _username;
+        if (!string.IsNullOrWhiteSpace(_avatarUrl))
+            payloadJson["avatar_url"] = _avatarUrl;
+
+        HttpContent requestContent;
+
+        var components = new List<object>
         {
-            flags = 1 << 15,
-            components = new List<object>(),
-            username = _username,
-            avatar_url = _avatarUrl,
-            attachments = new List<object>(),
-        };
-
-        var components = new List<object>([
+            new { type = 10, content = content.Message },
             new
             {
                 type = 10,
-                content = content.Message
+                content = $"-# {content.Event} | {content.Result}\n-# {content.Timestamp}",
             },
-            new
-            {
-                type = 10,
-                content = $"-# {content.Event} | {content.Result}\n-# {content.Timestamp}"
-            }
-        ]);
+        };
 
         if (content.Screenshot != null)
         {
             var fileName = $"screenshot.{_imageFormat}";
-            ;
-            payloadJson.attachments.Add(new
+            payloadJson["attachments"] = new List<object> { new { id = 0, filename = fileName } };
+            components = new List<object>
             {
-                id = 0,
-                filename = fileName,
-            });
-            components = new List<object>([
                 new
                 {
                     type = 9,
@@ -98,33 +103,35 @@ public class DiscordWebhookNotifier : INotifier
                     accessory = new
                     {
                         type = 11,
-                        media = new { url = $"attachment://screenshot.{_imageFormat}" },
-                        description = "Screenshot"
-                    }
-                }
-            ]);
+                        media = new { url = $"attachment://{fileName}" },
+                        description = "Screenshot",
+                    },
+                },
+            };
+            payloadJson["components"] = new List<object> { new { type = 17, components } };
 
+            var multipart = new MultipartFormDataContent("boundary");
             using (var ms = new MemoryStream())
             {
                 await content.Screenshot.SaveAsync(ms, _imageEncoder);
                 var imageContent = new ByteArrayContent(ms.ToArray());
-                imageContent.Headers.ContentType =
-                    MediaTypeHeaderValue.Parse($"image/{_imageFormat}");
-                data.Add(imageContent, "files[0]", fileName);
+                imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse(
+                    $"image/{_imageFormat}"
+                );
+                multipart.Add(imageContent, "files[0]", fileName);
             }
+            multipart.Add(JsonContent.Create(payloadJson), "payload_json");
+            requestContent = multipart;
         }
-
-        payloadJson.components.Add(new
+        else
         {
-            type = 17,
-            components
-        });
-
-        data.Add(JsonContent.Create(payloadJson), "payload_json");
+            payloadJson["components"] = new List<object> { new { type = 17, components } };
+            requestContent = JsonContent.Create(payloadJson);
+        }
 
         try
         {
-            var response = await _httpClient.PostAsync(url, data);
+            var response = await _httpClient.PostAsync(url, requestContent);
             response.EnsureSuccessStatusCode();
         }
         catch (System.Exception ex)
