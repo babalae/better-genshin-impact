@@ -1,30 +1,33 @@
-﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.WindowsInput;
+using Microsoft.ClearScript;
+using Microsoft.ClearScript.V8;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using BetterGenshinImpact.Core.Simulator.Extensions;
-using Microsoft.Extensions.Localization;
-using System.Globalization;
-using BetterGenshinImpact.Helpers;
-using System.Text.RegularExpressions;
-using BetterGenshinImpact.GameTask.Model.Area;
-using System.Collections.Generic;
-using Fischless.WindowsInput;
-using OpenCvSharp;
-using System.Linq;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Model.GameUI;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
@@ -33,9 +36,8 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 /// </summary>
 public class AutoArtifactSalvageTask : ISoloTask
 {
-    private readonly ILogger logger = App.GetLogger<AutoArtifactSalvageTask>();
+    private readonly ILogger logger;
     private readonly InputSimulator input = Simulation.SendInput;
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
 
     private CancellationToken ct;
 
@@ -47,19 +49,27 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly string[] numOfStarLocalizedString;
 
-    private readonly string? regularExpression;
+    private readonly string? javaScript;
 
     private readonly int? maxNumToCheck;
 
-    private bool returnToMainUi = true;
+    private readonly RecognitionFailurePolicy? recognitionFailurePolicy;
 
-    public AutoArtifactSalvageTask(int star, string? regularExpression = null, int? maxNumToCheck = null)
+    private readonly bool returnToMainUi = true;
+
+    private readonly CultureInfo? cultureInfo;
+
+    private readonly FrozenDictionary<ArtifactAffixType, string> artifactAffixStrDic;
+
+    public AutoArtifactSalvageTask(AutoArtifactSalvageTaskParam param, ILogger? logger = null)
     {
-        this.star = star;
-        this.regularExpression = regularExpression;
-        this.maxNumToCheck = maxNumToCheck;
-        IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer = App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        this.star = param.Star;
+        this.javaScript = param.JavaScript;
+        this.maxNumToCheck = param.MaxNumToCheck;
+        this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
+        this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
+        var stringLocalizer = param.StringLocalizer ?? App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
+        this.cultureInfo = param.GameCultureInfo;
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
         numOfStarLocalizedString =
         [
@@ -68,19 +78,55 @@ public class AutoArtifactSalvageTask : ISoloTask
             stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
             stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
         ];
+
+        artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
-    public AutoArtifactSalvageTask(int star, bool returnToMainUi) : this(star)
+    public static async Task OpenBag(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
     {
-        this.returnToMainUi = returnToMainUi;
-    }
+        RecognitionObject? recognitionObjectChecked;
+        RecognitionObject? recognitionObjectUnchecked;
 
-    public async Task Start(CancellationToken ct)
-    {
-        this.ct = ct;
-        if (returnToMainUi)
+        switch (gridScreenName)
         {
-            await _returnMainUiTask.Start(ct);
+            case GridScreenName.Weapons:
+                recognitionObjectChecked = ElementAssets.Instance.BagWeaponChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagWeaponUnchecked;
+                break;
+            case GridScreenName.Artifacts:
+                recognitionObjectChecked = ElementAssets.Instance.BagArtifactChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagArtifactUnchecked;
+                break;
+            case GridScreenName.CharacterDevelopmentItems:
+                recognitionObjectChecked = ElementAssets.Instance.BagCharacterDevelopmentItemChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagCharacterDevelopmentItemUnchecked;
+                break;
+            case GridScreenName.Food:
+                recognitionObjectChecked = ElementAssets.Instance.BagFoodChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagFoodUnchecked;
+                break;
+            case GridScreenName.Materials:
+                recognitionObjectChecked = ElementAssets.Instance.BagMaterialChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagMaterialUnchecked;
+                break;
+            case GridScreenName.Gadget:
+                recognitionObjectChecked = ElementAssets.Instance.BagGadgetChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagGadgetUnchecked;
+                break;
+            case GridScreenName.Quest:
+                recognitionObjectChecked = ElementAssets.Instance.BagQuestChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagQuestUnchecked;
+                break;
+            case GridScreenName.PreciousItems:
+                recognitionObjectChecked = ElementAssets.Instance.BagPreciousItemChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagPreciousItemUnchecked;
+                break;
+            case GridScreenName.Furnishings:
+                recognitionObjectChecked = ElementAssets.Instance.BagFurnishingChecked;
+                recognitionObjectUnchecked = ElementAssets.Instance.BagFurnishingUnchecked;
+                break;
+            default:
+                throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}");
         }
 
         // B键打开背包
@@ -89,12 +135,11 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         var openBagSuccess = await NewRetry.WaitForAction(() =>
         {
-            // 选择圣遗物
             using var ra = CaptureToRectArea();
-            using var artifactBtn = ra.Find(ElementAssets.Instance.BagArtifactChecked);
+            using var artifactBtn = ra.Find(recognitionObjectChecked);
             if (artifactBtn.IsEmpty())
             {
-                using var artifactBtn2 = ra.Find(ElementAssets.Instance.BagArtifactUnchecked);
+                using var artifactBtn2 = ra.Find(recognitionObjectUnchecked);
                 if (artifactBtn2.IsExist())
                 {
                     artifactBtn2.Click();
@@ -118,12 +163,23 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         if (!openBagSuccess)
         {
-            logger.LogError("未找到背包中圣遗物菜单按钮,打开背包失败");
+            logger.LogError("未找到背包中{name}菜单按钮,打开背包失败", gridScreenName.GetDescription());
             return;
         }
 
 
         await Delay(800, ct);
+    }
+
+    public async Task Start(CancellationToken ct)
+    {
+        this.ct = ct;
+        if (returnToMainUi)
+        {
+            await new ReturnMainUiTask().Start(ct);
+        }
+
+        await OpenBag(GridScreenName.Artifacts, this.input, this.logger, this.ct);
 
         // 点击分解按钮打开分解界面
         using var ra2 = CaptureToRectArea();
@@ -189,7 +245,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 logger.LogInformation("完成{Star}星圣遗物快速分解", star);
                 await Delay(400, ct);
-                if (regularExpression != null)
+                if (javaScript != null)
                 {
                     input.Mouse.LeftButtonClick();
                     await Delay(1000, ct);
@@ -206,9 +262,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         // 分解5星
-        if (regularExpression != null)
+        if (javaScript != null)
         {
-            await Salvage5Star(this.regularExpression, this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空"));
+            await Salvage5Star();
             logger.LogInformation("筛选完毕，请复查并手动分解");
         }
         else
@@ -217,14 +273,16 @@ public class AutoArtifactSalvageTask : ISoloTask
 
             if (returnToMainUi)
             {
-                await _returnMainUiTask.Start(ct);
+                await new ReturnMainUiTask().Start(ct);
             }
         }
     }
 
-    private async Task Salvage5Star(string regularExpression, int maxNumToCheck)
+    private async Task Salvage5Star()
     {
-        int count = maxNumToCheck;
+        string javaScript = this.javaScript ?? throw new ArgumentException($"{nameof(this.javaScript)}不能为空");
+        int count = this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空");
+        RecognitionFailurePolicy recognitionFailurePolicy = this.recognitionFailurePolicy ?? throw new ArgumentException($"{nameof(this.recognitionFailurePolicy)}不能为空");
 
         using var ra0 = CaptureToRectArea();
         GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.ArtifactSalvage];
@@ -242,16 +300,36 @@ public class AutoArtifactSalvageTask : ISoloTask
                 using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridRoi.X, gridRoi.Y));
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
-                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Width * 0.055), (int)(ra1.Width * 0.24), (int)(ra1.Width * 0.29)));
-                    string affixes = GetArtifactAffixes(card.SrcMat, OcrFactory.Paddle);
+                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
 
-                    if (IsMatchRegularExpression(affixes, regularExpression, out string msg))
+                    ArtifactStat artifact;
+                    try
                     {
-                        logger.LogInformation(message: msg);
+                        artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+                    }
+                    catch (Exception e)
+                    {
+                        if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
+                        {
+                            logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
+
+                            itemRegion.Click(); // 反选取消
+                            await Delay(100, ct);
+                            continue;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+
+                    if (IsMatchJavaScript(artifact, javaScript))
+                    {
+                        // logger.LogInformation(message: msg);
                     }
                     else
                     {
-                        itemRegion.Click();
+                        itemRegion.Click(); // 反选取消
                         await Delay(100, ct);
                     }
                 }
@@ -263,6 +341,45 @@ public class AutoArtifactSalvageTask : ISoloTask
                     break;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// 是否匹配JavaScript的计算结果
+    /// </summary>
+    /// <param name="artifact">作为JS入参，JS使用“ArtifactStat”获取</param>
+    /// <param name="javaScript"></param>
+    /// <param name="engine">由调用者控制生命周期</param>
+    /// <returns>是否匹配。取JS的“Output”作为出参</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="Exception"></exception>
+    public static bool IsMatchJavaScript(ArtifactStat artifact, string javaScript)
+    {
+        using V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.DisableGlobalMembers);
+        try
+        {
+            // 传入输入参数
+            engine.Script.ArtifactStat = artifact;
+
+            // 执行JavaScript代码
+            engine.Execute(javaScript);
+
+            // 检查是否有输出
+            if (!engine.Script.propertyIsEnumerable("Output"))
+            {
+                throw new InvalidOperationException("JavaScript没有设置Output输出");
+            }
+
+            if (engine.Script.Output is not bool)
+            {
+                throw new InvalidOperationException("JavaScript的Output输出不是布尔类型");
+            }
+
+            return (bool)engine.Script.Output;
+        }
+        catch (ScriptEngineException ex)
+        {
+            throw new Exception($"JavaScript execution error: {ex.Message}", ex);
         }
     }
 
@@ -288,10 +405,183 @@ public class AutoArtifactSalvageTask : ISoloTask
         return match.Success;
     }
 
-    public static string GetArtifactAffixes(Mat src, IOcrService ocrService)
+    public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
-        var ocrResult = ocrService.OcrResult(src);
-        return ocrResult.Text;
+        using Mat gray = src.CvtColor(ColorConversionCodes.BGR2GRAY);
+        Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
+
+        Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
+        //Cv2.ImShow("name", nameRoi);
+        Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
+        #region 主词条预处理 去除背景干扰
+        Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
+        using Mat mainAffixRoiBottomHat = mainAffixRoi.MorphologyEx(MorphTypes.TopHat, hatKernel);
+        using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
+        //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
+        #endregion
+        #region 副词条预处理 还是不处理效果最好……
+        Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
+        //using Mat levelAndMinorAffixRoiThreshold = new Mat();
+        //double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+        // //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
+        //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);
+        #endregion
+        //Cv2.WaitKey();
+
+        var nameOcrResult = ocrService.OcrResult(nameRoi);
+        var typeOcrResult = ocrService.OcrResult(typeRoi);
+        var mainAffixOcrResult = ocrService.OcrResult(mainAffixRoiThreshold);
+        string mainAffixText = string.Join("\n", mainAffixOcrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
+        var mainAffixLines = mainAffixText.Split('\n');
+        var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoi);
+        string levelAndMinorAffixText = string.Join("\n", levelAndMinorAffixOcrResult.Regions.Where(r => r.Score > 0.5)
+            .Where(r => r.Rect.BoundingRect().Left < levelAndMinorAffixRoi.Width * 0.1) // 一定是贴着左边的，排除套装效果文字也存在类似+15%的情况
+            .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
+        var levelAndMinorAffixLines = levelAndMinorAffixText.Split('\n');
+
+        allText = String.Join('\n', nameOcrResult.Text, typeOcrResult.Text, mainAffixText, levelAndMinorAffixText);
+
+        string percentStr = "%";
+
+        // 名称
+        string name = nameOcrResult.Text;
+
+        #region 主词条
+        var defaultMainAffix = this.artifactAffixStrDic.Select(kvp => kvp.Value).Distinct();
+        string mainAffixTypeLine = mainAffixLines.SingleOrDefault(l => defaultMainAffix.Contains(l)) ?? throw new Exception($"未找到主词条对应的行：\n{mainAffixText}");
+        ArtifactAffixType mainAffixType = this.artifactAffixStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
+        string mainAffixValueLine = mainAffixLines.Select(l =>
+        {
+            string pattern = @"^([\d., ]*)(%?)$";
+            pattern = pattern.Replace("%", percentStr);   // 这样一行一行写只是为了IDE能保持正则字符串高亮
+            Match match = Regex.Match(l, pattern);
+            if (match.Success)
+            {
+                if (mainAffixType == ArtifactAffixType.ATK && !String.IsNullOrEmpty(match.Groups[2].Value))
+                {
+                    mainAffixType = ArtifactAffixType.ATKPercent;
+                }
+                if (mainAffixType == ArtifactAffixType.DEF && !String.IsNullOrEmpty(match.Groups[2].Value))
+                {
+                    mainAffixType = ArtifactAffixType.DEFPercent;
+                }
+                if (mainAffixType == ArtifactAffixType.HP && !String.IsNullOrEmpty(match.Groups[2].Value))
+                {
+                    mainAffixType = ArtifactAffixType.HPPercent;
+                }
+                return match.Groups[1].Value;
+            }
+            else
+            {
+                return null;
+            }
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到主词条数值对应的行：\n{mainAffixText}");
+        if (!float.TryParse(mainAffixValueLine, NumberStyles.Any, this.cultureInfo, out float value))
+        {
+            throw new Exception($"未识别的主词条数值：{mainAffixValueLine}");
+        }
+        ArtifactAffix mainAffix = new ArtifactAffix(mainAffixType, value);
+        #endregion
+
+        #region 副词条
+        ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
+        {
+            string pattern = @"^[•·]?([^+:：]+)\+([\d., ]*)(%?)$";
+            pattern = pattern.Replace("%", percentStr);
+            Match match = Regex.Match(l, pattern);
+            if (match.Success)
+            {
+                ArtifactAffixType artifactAffixType;
+                var dic = this.artifactAffixStrDic;
+
+                if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
+                {
+                    if (String.IsNullOrEmpty(match.Groups[3].Value))
+                    {
+                        artifactAffixType = ArtifactAffixType.ATK;
+                    }
+                    else
+                    {
+                        artifactAffixType = ArtifactAffixType.ATKPercent;
+                    }
+                }
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.DEF]))
+                {
+                    if (String.IsNullOrEmpty(match.Groups[3].Value))
+                    {
+                        artifactAffixType = ArtifactAffixType.DEF;
+                    }
+                    else
+                    {
+                        artifactAffixType = ArtifactAffixType.DEFPercent;
+                    }
+                }
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.HP]))
+                {
+                    if (String.IsNullOrEmpty(match.Groups[3].Value))
+                    {
+                        artifactAffixType = ArtifactAffixType.HP;
+                    }
+                    else
+                    {
+                        artifactAffixType = ArtifactAffixType.HPPercent;
+                    }
+                }
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITRate]))
+                {
+                    artifactAffixType = ArtifactAffixType.CRITRate;
+                }
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITDMG]))
+                {
+                    artifactAffixType = ArtifactAffixType.CRITDMG;
+                }
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ElementalMastery]))
+                {
+                    artifactAffixType = ArtifactAffixType.ElementalMastery;
+                }
+                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.EnergyRecharge]))
+                {
+                    artifactAffixType = ArtifactAffixType.EnergyRecharge;
+                }
+                else
+                {
+                    throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
+                }
+
+                if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float value))
+                {
+                    throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
+                }
+                return new ArtifactAffix(artifactAffixType, value);
+            }
+            else
+            {
+                return null;
+            }
+        }).Where(a => a != null).Cast<ArtifactAffix>().ToArray();
+        #endregion
+
+        #region 等级
+        string levelLine = levelAndMinorAffixLines.Select(l =>
+        {
+            string pattern = @"^\+(\d*)$";
+            Match match = Regex.Match(l, pattern);
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+            else
+            {
+                return null;
+            }
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到等级对应的行：\n{levelAndMinorAffixText}");
+        if (!int.TryParse(levelLine, out int level) || level < 0 || level > 20)
+        {
+            throw new Exception($"未识别的等级：{levelLine}");
+        }
+        #endregion
+
+        return new ArtifactStat(name, mainAffix, minorAffixes, level);
     }
 
     public static ArtifactStatus GetArtifactStatus(Mat src)

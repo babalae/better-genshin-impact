@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -7,21 +7,21 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 
 
-public class AutoFightParam : BaseTaskParam
+public class AutoFightParam : BaseTaskParam<AutoFightTask>
 {
-    public  class FightFinishDetectConfig 
+    public class FightFinishDetectConfig
     {
-        public string BattleEndProgressBarColor { get; set; }= "";
+        public string BattleEndProgressBarColor { get; set; } = "";
 
-        public string BattleEndProgressBarColorTolerance { get; set; }= "";
+        public string BattleEndProgressBarColorTolerance { get; set; } = "";
         public bool FastCheckEnabled = false;
         public string FastCheckParams = "";
         public string CheckEndDelay = "";
         public string BeforeDetectDelay = "";
         public bool RotateFindEnemyEnabled = false;
     }
-    
-    public AutoFightParam(string path, AutoFightConfig autoFightConfig)
+
+    public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
     {
         CombatStrategyPath = path;
         Timeout = autoFightConfig.Timeout;
@@ -30,21 +30,21 @@ public class AutoFightParam : BaseTaskParam
         PickDropsAfterFightSeconds = autoFightConfig.PickDropsAfterFightSeconds;
         KazuhaPickupEnabled = autoFightConfig.KazuhaPickupEnabled;
         ActionSchedulerByCd = autoFightConfig.ActionSchedulerByCd;
-       
+
         FinishDetectConfig.FastCheckEnabled = autoFightConfig.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.FastCheckParams = autoFightConfig.FinishDetectConfig.FastCheckParams;
         FinishDetectConfig.CheckEndDelay = autoFightConfig.FinishDetectConfig.CheckEndDelay;
         FinishDetectConfig.BeforeDetectDelay = autoFightConfig.FinishDetectConfig.BeforeDetectDelay;
         FinishDetectConfig.RotateFindEnemyEnabled = autoFightConfig.FinishDetectConfig.RotateFindEnemyEnabled;
-        
-        
+
+
         KazuhaPartyName = autoFightConfig.KazuhaPartyName;
         OnlyPickEliteDropsMode = autoFightConfig.OnlyPickEliteDropsMode;
         BattleThresholdForLoot = autoFightConfig.BattleThresholdForLoot ?? BattleThresholdForLoot;
         //下面参数固定，只取自动战斗里面的
         FinishDetectConfig.BattleEndProgressBarColor = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor;
         FinishDetectConfig.BattleEndProgressBarColorTolerance = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance;
-        
+
         GuardianAvatar = autoFightConfig.GuardianAvatar;
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
         SkipModel = autoFightConfig.SkipModel;
@@ -64,7 +64,7 @@ public class AutoFightParam : BaseTaskParam
     public bool KazuhaPickupEnabled = true;
     public string ActionSchedulerByCd = "";
     public string KazuhaPartyName;
-    public string OnlyPickEliteDropsMode="";
+    public string OnlyPickEliteDropsMode = "";
     public string GuardianAvatar { get; set; } = " ";
     public bool GuardianCombatSkip { get; set; } = false;
     public bool SkipModel = false;

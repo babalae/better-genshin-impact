@@ -120,7 +120,7 @@ public class LimitedFile(string rootPath)
     /// <summary>
     /// 允许的文件扩展名白名单
     /// </summary>
-    private readonly string[] _allowedExtensions = [".txt", ".json", ".log", ".csv", ".xml", ".html", ".css"];
+    private readonly string[] _allowedExtensions = [".txt", ".json", ".log", ".csv", ".xml", ".html", ".css", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"];
     
     /// <summary>
     /// 最大允许的文件大小（字节）
@@ -264,5 +264,79 @@ public class LimitedFile(string rootPath)
             callbackFunc(ex.ToString(), null);
             return false;
         }
+    }
+    
+    /// <summary>
+    /// 同步写入图片到文件（默认PNG格式）
+    /// </summary>
+    /// <param name="path">文件路径</param>
+    /// <param name="mat">OpenCV Mat对象</param>
+    /// <returns>是否写入成功</returns>
+    public bool WriteImageSync(string path, Mat mat)
+    {
+        try
+        {
+            // 自动追加.png后缀
+            path = EnsureImageExtension(path);
+            path = NormalizePath(path);
+            if (!IsValidImagePath(path))
+            {
+                return false;
+            }
+
+            // 确保目录存在
+            string? directoryPath = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            // 使用OpenCV保存图片（默认PNG格式）
+            Cv2.ImWrite(path, mat);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// 确保图片路径有正确的扩展名，如果没有则自动追加.png
+    /// </summary>
+    /// <param name="path">文件路径</param>
+    /// <returns>带有正确扩展名的路径</returns>
+    private string EnsureImageExtension(string path)
+    {
+        string extension = Path.GetExtension(path).ToLower();
+        string[] imageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"];
+        
+        // 如果已经有图片扩展名，直接返回
+        if (Array.Exists(imageExtensions, ext => ext == extension))
+        {
+            return path;
+        }
+        
+        // 如果没有扩展名，自动追加.png
+        return path + ".png";
+    }
+    
+    /// <summary>
+    /// 验证图片路径是否合法
+    /// </summary>
+    /// <param name="path">文件路径</param>
+    /// <returns>是否合法</returns>
+    private bool IsValidImagePath(string path)
+    {
+        // 验证文件扩展名
+        string extension = Path.GetExtension(path).ToLower();
+        string[] imageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp"];
+        
+        if (!Array.Exists(imageExtensions, ext => ext == extension))
+        {
+            return false;
+        }
+        
+        return true;
     }
 }

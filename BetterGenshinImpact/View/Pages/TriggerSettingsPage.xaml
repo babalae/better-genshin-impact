@@ -689,18 +689,43 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="显示通知"
+                                  Text="触发时间间隔（毫秒）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="是否在吃药时显示通知消息"
+                                  Text="多少时间检查一次是否红血或需要复活"
                                   TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoEatConfig.CheckInterval, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="吃药时间间隔（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="防止频繁吃药"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.AutoEatConfig.ShowNotification, Mode=TwoWay}" />
+                                     Text="{Binding Config.AutoEatConfig.EatInterval, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

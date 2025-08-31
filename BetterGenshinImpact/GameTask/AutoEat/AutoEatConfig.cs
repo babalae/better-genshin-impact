@@ -25,12 +25,36 @@ public partial class AutoEatConfig : ObservableObject
     /// 检测间隔时间（毫秒）
     /// </summary>
     [ObservableProperty]
-    private int _checkInterval = 500;
+    private int _checkInterval = 150;
 
     /// <summary>
     /// 吃药间隔时间（毫秒）
     /// 防止频繁吃药
     /// </summary>
     [ObservableProperty]
-    private int _eatInterval = 2000;
+    private int _eatInterval = 1000;
+
+    /// <summary>
+    /// 测试食物名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _testFoodName;
+
+    /// <summary>
+    /// 默认的攻击类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultAtkBoostingDishName = "炸萝卜丸子";
+
+    /// <summary>
+    /// 默认的冒险类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultAdventurersDishName;
+
+    /// <summary>
+    /// 默认的防御类料理名称
+    /// </summary>
+    [ObservableProperty]
+    private string? _defaultDefBoostingDishName;
 }

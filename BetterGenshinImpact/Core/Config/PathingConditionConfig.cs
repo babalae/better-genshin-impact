@@ -32,7 +32,7 @@ public partial class PathingConditionConfig : ObservableObject
     
     // 启用自动吃药功能
     [ObservableProperty]
-    private bool _autoEatEnabled = true;
+    private bool _autoEatEnabled = false;
 
     public static PathingConditionConfig Default => new()
     {

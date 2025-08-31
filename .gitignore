@@ -24,6 +24,7 @@ bld/
 Tmp/
 /packages/
 node_modules/
+github_actions_cache/
 
 *.zip
 
@@ -32,3 +33,5 @@ node_modules/
 .trae
 .claude
 CLAUDE.md
+
+__pycache__/

@@ -102,9 +102,16 @@ public class GoToCraftingBenchTask
                 {
                     // 图像下方就是脆弱树脂数量
                     var countArea = ra.DeriveCrop(fragileResinCountRa.X, fragileResinCountRa.Y + fragileResinCountRa.Height,
-                        fragileResinCountRa.Width, fragileResinCountRa.Height/3);
-                    var count = OcrFactory.Paddle.Ocr(countArea.CacheGreyMat);
-                    fragileResinCount = StringUtils.TryParseInt(count);
+                        fragileResinCountRa.Width, fragileResinCountRa.Height);
+                    var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcMat);
+                    // Logger.LogInformation("识别原粹树脂数量：{Count}", count);
+                    var match = System.Text.RegularExpressions.Regex.Match(count, @"(\d+)\s*[/17]\s*(4|40)");
+                    if (match.Success)
+                    {
+                        var numericPart = match.Groups[1].Value;
+                        fragileResinCount = StringUtils.TryParseInt(numericPart);
+                        Logger.LogInformation("提取到的原粹树脂数量：{fragileResinCount}", fragileResinCount);
+                    }
                 }
                 var condensedResinCountRa = ra.Find(ElementAssets.Instance.CondensedResinCount);
                 if (!condensedResinCountRa.IsEmpty())

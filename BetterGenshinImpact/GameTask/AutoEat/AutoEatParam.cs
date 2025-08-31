@@ -1,12 +1,18 @@
 using BetterGenshinImpact.GameTask.Model;
+using Microsoft.Extensions.Localization;
+using System.Globalization;
 
 namespace BetterGenshinImpact.GameTask.AutoEat;
 
 /// <summary>
 /// 自动吃药任务参数
 /// </summary>
-public class AutoEatParam : BaseTaskParam
+public class AutoEatParam : BaseTaskParam<AutoEatTask>
 {
+    public AutoEatParam() : base(null, null)
+    {
+    }
+
     /// <summary>
     /// 是否显示通知
     /// </summary>
@@ -22,16 +28,9 @@ public class AutoEatParam : BaseTaskParam
     /// </summary>
     public int EatInterval { get; set; }
 
-    public AutoEatParam()
-    {
-        SetDefault();
-    }
-
-    public void SetDefault()
-    {
-        var config = TaskContext.Instance().Config.AutoEatConfig;
-        ShowNotification = config.ShowNotification;
-        CheckInterval = config.CheckInterval;
-        EatInterval = config.EatInterval;
-    }
+    /// <summary>
+    /// 食物名称
+    /// 如果传空就使用便携营养袋，否则进入背包查找对应食物并使用
+    /// </summary>
+    public string? FoodName { get; set; }
 }
