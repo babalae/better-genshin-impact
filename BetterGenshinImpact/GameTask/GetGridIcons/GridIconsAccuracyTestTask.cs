@@ -158,7 +158,6 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
     }
 
-    // todo: 单元测试
     public static (string, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
     {
         using Mat resized = mat.Resize(new Size(125, 153));
