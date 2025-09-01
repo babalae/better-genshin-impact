@@ -93,7 +93,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
             case GridScreenName.PreciousItems:
             case GridScreenName.Furnishings:
                 await new ReturnMainUiTask().Start(ct);
-                await AutoArtifactSalvageTask.OpenBag(this.gridScreenName, this.input, this.logger, this.ct);
+                await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
@@ -158,7 +158,6 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
     }
 
-    // todo: 单元测试
     public static (string, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
     {
         using Mat resized = mat.Resize(new Size(125, 153));
