@@ -160,8 +160,8 @@ public class GetGridIconsTask : ISoloTask
                         {
                             double scale = TaskContext.Instance().SystemInfo.AssetScale;
                             double width = 60;
-                            double height = 59; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
-                            Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 240 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
+                            double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
+                            Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
                             Mat crop = itemRegion.SrcMat.SubMat(iconRect);
                             using Mat resize = crop.Resize(new Size(125, 125));
                             resize.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
