@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
@@ -143,12 +144,51 @@ public class GetGridIconsTask : ISoloTask
             itemRegion.Click();
             await Delay(300, ct);
 
-            using var ra1 = CaptureToRectArea();
-            using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
-            var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
-            var flower = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains("套装包含")).Skip(1).FirstOrDefault();
-            string itemName = string.Concat(flower.Text?.Where(c => c >= '\u4e00' && c <= '\u9fa5'/* 排除名称前的花形符号 */) ?? "")?.Trim() ?? string.Empty;
-            string fileName = itemName == string.Empty ? $"识别失败{nameRegion.GetHashCode()}" : itemName;
+            static bool tryGetFlower(out string flowerName)
+            {
+                using var ra1 = CaptureToRectArea();
+                using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
+                var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
+
+                var flowerWithGlyph = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains("套装包含")).Skip(1).FirstOrDefault();
+                if (flowerWithGlyph == default)
+                {
+                    nameRegion.Move();
+                    flowerName = string.Empty;
+                    return false;
+                }
+                // 可能带有花形符号
+                Rect flowerWithGlyphRect = flowerWithGlyph.Rect.BoundingRect();
+                // 费解的是，原图识别没问题，但为了排除名称前的花形符号，无论裁切还是不裁切只是将符号涂白，都会把一些花名识别出旧体字
+                // 花形符号往往还被识别为空格，导致无法用识别框位置来区分
+
+                // 截取没有符号的区域再识别一次
+                Rect flowerWithoutGlyph = new Rect((int)(ra1.Width * 0.028), (int)(flowerWithGlyphRect.Y - flowerWithGlyphRect.Height * 0), (int)(ra1.Width * 0.228), (int)(flowerWithGlyphRect.Height * 1));
+                Mat roi = nameRegion.SrcMat.SubMat(flowerWithoutGlyph);
+                var whiteOcrResult = OcrFactory.Paddle.OcrResult(roi);
+                flowerName = whiteOcrResult.Text;
+                // 所以只好识别两次，Trim后根据字数取原截图OCR的结果……
+                flowerName = flowerWithGlyph.Text.Trim().Substring(flowerWithGlyph.Text.Trim().Length - flowerName.Trim().Length);
+                return true;
+            }
+
+            if (!tryGetFlower(out string flowerName))
+            {
+                await TaskControl.Delay(100, this.ct);
+                for (int i = 0; i < 5; i++)
+                {
+                    this.input.Mouse.VerticalScroll(-2);
+                    await TaskControl.Delay(40, this.ct);
+                }
+                await TaskControl.Delay(300, this.ct);
+                if (!tryGetFlower(out flowerName))
+                {
+                    throw new Exception("尝试获取生之花失败");
+                    //flowerName = $"识别失败{nameRegion.GetHashCode()}";
+                }
+            }
+
+            string fileName = flowerName;
             if (fileNames.Add(fileName))
             {
                 string filePath = Path.Combine(directory, $"{fileName}.png");
