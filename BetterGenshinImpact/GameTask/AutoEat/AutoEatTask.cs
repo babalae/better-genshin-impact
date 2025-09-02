@@ -84,10 +84,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
-            using var ra0 = CaptureToRectArea();
-            GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.Food];
-            var gridRoi = gridParams.GetRect(ra0);
-            GridScreen gridScreen = new GridScreen(gridRoi, gridParams, _logger, _ct);
+            GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
             int? count = null;
             await foreach (ImageRegion itemRegion in gridScreen)
             {
@@ -113,6 +110,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 
                     await Delay(300, ct);
                     // 点击确定
+                    using var ra0 = CaptureToRectArea();
                     using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
                     if (ra.IsExist())
                     {

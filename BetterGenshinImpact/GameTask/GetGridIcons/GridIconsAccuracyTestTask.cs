@@ -102,15 +102,11 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
         using InferenceSession session = LoadModel(out Dictionary<string, float[]> prototypes);
 
-        using var ra0 = CaptureToRectArea();
-        GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
-        Rect gridRoi = gridParams.GetRect(ra0);
-
         int count = this.maxNumToTest ?? int.MaxValue;
         double total_acc = 0.0;
         double total_count = 0;
 
-        GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct);
+        GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             itemRegion.Click();

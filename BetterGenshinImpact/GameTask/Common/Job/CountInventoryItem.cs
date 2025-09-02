@@ -42,9 +42,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
             using var ra = TaskControl.CaptureToRectArea();
-            GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
-            var gridRoi = gridParams.GetRect(ra);
-            GridScreen gridScreen = new GridScreen(gridRoi, gridParams, logger, ct);
+            GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
             int? count = null;
             await foreach (ImageRegion itemRegion in gridScreen)
             {

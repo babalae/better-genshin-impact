@@ -48,6 +48,10 @@ public class GetGridIconsTask : ISoloTask
     {
         this.ct = ct;
 
+        int count = this.maxNumToGet ?? int.MaxValue;
+        string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", DateTime.Now.ToString("yyyyMMddHHmmss"));
+        Directory.CreateDirectory(directory);
+
         switch (this.gridScreenName)
         {
             case GridScreenName.Weapons:
@@ -62,21 +66,21 @@ public class GetGridIconsTask : ISoloTask
                 await new ReturnMainUiTask().Start(ct);
                 await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
+            case GridScreenName.ArtifactSetFilter:
+                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                await GetArtifactSetFilterGridIcons(count, directory);
+                return;
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
                 break;
         }
 
-        using var ra0 = CaptureToRectArea();
-        GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
-        Rect gridRoi = gridParams.GetRect(ra0);
+        await GetInventoryGridIcons(count, directory);
+    }
 
-        int count = this.maxNumToGet ?? int.MaxValue;
-
-        string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", DateTime.Now.ToString("yyyyMMddHHmmss"));
-        Directory.CreateDirectory(directory);
-
-        GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct);
+    private async Task GetInventoryGridIcons(int count, string directory)
+    {
+        GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         HashSet<string> fileNames = new HashSet<string>();
         await foreach (ImageRegion itemRegion in gridScreen)
         {
@@ -105,6 +109,62 @@ public class GetGridIconsTask : ISoloTask
                         using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
                             itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        logger.LogInformation("图片保存成功：{Text}", fileName);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e, "图片保存失败：{Text}", fileName);
+                    }
+                });
+                saveThread.IsBackground = true; // 设置为后台线程
+                saveThread.Start();
+            }
+            else
+            {
+                logger.LogInformation("重复的物品：{Text}", fileName);
+            }
+
+            count--;
+            if (count <= 0)
+            {
+                logger.LogInformation("检查次数已耗尽");
+                break;
+            }
+        }
+    }
+
+    private async Task GetArtifactSetFilterGridIcons(int count, string directory)
+    {
+        ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
+        HashSet<string> fileNames = new HashSet<string>();
+        await foreach (ImageRegion itemRegion in gridScreen)
+        {
+            itemRegion.Click();
+            await Delay(300, ct);
+
+            using var ra1 = CaptureToRectArea();
+            using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
+            var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
+            var flower = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains("套装包含")).Skip(1).FirstOrDefault();
+            string itemName = string.Concat(flower.Text?.Where(c => c >= '\u4e00' && c <= '\u9fa5'/* 排除名称前的花形符号 */) ?? "")?.Trim() ?? string.Empty;
+            string fileName = itemName == string.Empty ? $"识别失败{nameRegion.GetHashCode()}" : itemName;
+            if (fileNames.Add(fileName))
+            {
+                string filePath = Path.Combine(directory, $"{fileName}.png");
+                Thread saveThread = new Thread(() =>
+                {
+                    try
+                    {
+                        using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            double scale = TaskContext.Instance().SystemInfo.AssetScale;
+                            double width = 60;
+                            double height = 59; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
+                            Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 240 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
+                            Mat crop = itemRegion.SrcMat.SubMat(iconRect);
+                            using Mat resize = crop.Resize(new Size(125, 125));
+                            resize.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                         }
                         logger.LogInformation("图片保存成功：{Text}", fileName);
                     }

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
-    public static class GridExtensions
+    public static class GridScreenExtensions
     {
         /// <summary>
         /// 获取GridItem图标底部的文字

@@ -284,10 +284,8 @@ public class AutoArtifactSalvageTask : ISoloTask
         int count = this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空");
         RecognitionFailurePolicy recognitionFailurePolicy = this.recognitionFailurePolicy ?? throw new ArgumentException($"{nameof(this.recognitionFailurePolicy)}不能为空");
 
-        using var ra0 = CaptureToRectArea();
-        GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.ArtifactSalvage];
-        Rect gridRoi = gridParams.GetRect(ra0);
-        GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
+        GridParams gridParams = GridParams.Templates[GridScreenName.ArtifactSalvage];
+        GridScreen gridScreen = new GridScreen(gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             Rect gridRect = itemRegion.ToRect();
@@ -297,7 +295,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 await Delay(300, ct);
 
                 using var ra1 = CaptureToRectArea();
-                using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridRoi.X, gridRoi.Y));
+                using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridParams.Roi.X, gridParams.Roi.Y));
                 if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                 {
                     using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
