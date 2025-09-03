@@ -59,6 +59,45 @@ public static partial class Bv
 
         return false;
     }
+    
+    /// <summary>
+    /// 是否在秘境中
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInDomain(ImageRegion captureRa)
+    {
+        using var matchRegion = captureRa.Find(ElementAssets.Instance.InDomainRo);
+        if (matchRegion.IsEmpty())
+        {
+            return false;
+        }
+
+        bool IsWhite(int r, int g, int b)
+        {
+            return (r >= 240 && r <= 255) &&
+                   (g >= 240 && g <= 255) &&
+                   (b >= 240 && b <= 255);
+        }
+
+        // 若全部为白色则视为不在秘境中
+        var samplePoints = new[]
+        {
+            new Point(matchRegion.X + matchRegion.Width / 2, matchRegion.Y + matchRegion.Height / 2),
+            new Point(matchRegion.X + matchRegion.Width / 4, matchRegion.Y + matchRegion.Height / 4),
+            new Point(matchRegion.X + matchRegion.Width * 3 / 4, matchRegion.Y + matchRegion.Height / 4),
+            new Point(matchRegion.X + matchRegion.Width / 4, matchRegion.Y + matchRegion.Height * 3 / 4),
+            new Point(matchRegion.X + matchRegion.Width * 3 / 4, matchRegion.Y + matchRegion.Height * 3 / 4)
+        };
+
+        bool allWhite = samplePoints.All(pt =>
+        {
+            var v = captureRa.SrcMat.At<Vec3b>(pt.Y, pt.X);
+            return IsWhite(v.Item2, v.Item1, v.Item0);
+        });
+
+        return !allWhite && !IsInRevivePrompt(captureRa);
+    }
 
     /// <summary>
     /// 在任意可以关闭的UI界面（识别关闭按钮）
