@@ -14,7 +14,7 @@ using static BetterGenshinImpact.GameTask.AutoArtifactSalvage.AutoArtifactSalvag
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
 {
     [Collection("Init Collection")]
-    public partial class AutoArtifactSalvageTaskTests
+    public class AutoArtifactSalvageTaskTests
     {
         private readonly PaddleFixture paddle;
         private readonly IStringLocalizer<AutoArtifactSalvageTask> stringLocalizer;

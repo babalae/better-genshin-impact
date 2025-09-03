@@ -82,7 +82,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
-    public static async Task OpenBag(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
+    public static async Task OpenInventory(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
     {
         RecognitionObject? recognitionObjectChecked;
         RecognitionObject? recognitionObjectUnchecked;
@@ -179,7 +179,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             await new ReturnMainUiTask().Start(ct);
         }
 
-        await OpenBag(GridScreenName.Artifacts, this.input, this.logger, this.ct);
+        await OpenInventory(GridScreenName.Artifacts, this.input, this.logger, this.ct);
 
         // 点击分解按钮打开分解界面
         using var ra2 = CaptureToRectArea();

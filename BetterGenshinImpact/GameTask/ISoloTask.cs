@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask;
@@ -19,4 +19,14 @@ public interface ISoloTask
     /// <param name="ct">取消Token</param>
     /// <returns></returns>
     Task Start(CancellationToken ct);
+}
+
+public interface ISoloTask<T> : ISoloTask
+{
+    /// <summary>
+    /// 启动独立任务
+    /// </summary>
+    /// <param name="ct">取消Token</param>
+    /// <returns></returns>
+    new Task<T> Start(CancellationToken ct);
 }
