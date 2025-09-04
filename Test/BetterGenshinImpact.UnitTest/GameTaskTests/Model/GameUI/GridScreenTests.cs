@@ -101,7 +101,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
 
             //
             var gridItems = GridScreen.GridEnumerator.GetGridItems(mat, columns, findContoursAlpha: true);
-            var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 5);
+            var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 10);
 
             var result = new List<string>();
             foreach (var row in rows)

@@ -116,7 +116,8 @@ public class GridIconsAccuracyTestTask : ISoloTask
             // 用模型推理得到的结果
             Task<(string, int)> task2 = Task.Run(() =>
             {
-                return Infer(itemRegion.SrcMat, session, prototypes);
+                using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                return Infer(icon, session, prototypes);
             }, ct);
 
             await Task.WhenAll(task1, task2);
@@ -154,10 +155,21 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
     }
 
+    /// <summary>
+    /// 请自行裁剪缩放到125*125尺寸
+    /// </summary>
+    /// <param name="mat"></param>
+    /// <param name="session"></param>
+    /// <param name="prototypes"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
     public static (string, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
     {
-        using Mat resized = mat.Resize(new Size(125, 153));
-        using Mat rgb = resized.CvtColor(ColorConversionCodes.BGR2RGB);
+        if (mat.Size().Width != 125 || mat.Size().Height != 125)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mat), "输入图像尺寸应为125*125");
+        }
+        using Mat rgb = mat.CvtColor(ColorConversionCodes.BGR2RGB);
         var tensor = new DenseTensor<float>(new[] { 1, 3, rgb.Height, rgb.Width });  // todo 放到BgiOnnxFactory那边去做个Mat->NamedOnnxValue的通用方法？
         for (int y = 0; y < rgb.Height; y++)
         {
@@ -168,7 +180,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
                 tensor[0, 2, y, x] = rgb.At<Vec3b>(y, x)[2] / 255f;
             }
         }
-        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", tensor) };
+        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input_image", tensor) };
         using var results = session.Run(inputs);
         float[] feature_matrix = results[0].AsEnumerable<float>().ToArray();
         string? pred_name = null;

@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -88,7 +89,8 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             int? count = null;
             await foreach (ImageRegion itemRegion in gridScreen)
             {
-                var result = GridIconsAccuracyTestTask.Infer(itemRegion.SrcMat, session, prototypes);
+                using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                 string predName = result.Item1;
                 if (predName == _taskParam.FoodName)
                 {
