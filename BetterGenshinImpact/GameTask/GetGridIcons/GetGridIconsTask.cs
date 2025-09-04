@@ -50,7 +50,7 @@ public class GetGridIconsTask : ISoloTask
         this.ct = ct;
 
         int count = this.maxNumToGet ?? int.MaxValue;
-        string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", DateTime.Now.ToString("yyyyMMddHHmmss"));
+        string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", $"{this.gridScreenName}{DateTime.Now:yyyyMMddHHmmss}");
         Directory.CreateDirectory(directory);
 
         switch (this.gridScreenName)
