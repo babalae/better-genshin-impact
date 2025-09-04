@@ -51,7 +51,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     public static InferenceSession LoadModel(out Dictionary<string, float[]> prototypes)
     {
         #region 加载model
-        var session = new InferenceSession(@".\GameTask\GetGridIcons\gridIcon.onnx"); // todo 所有数据炼好后放到onnx统一存放的位置去
+        var session = new InferenceSession(@".\Assets\Model\Item\gridIcon.onnx");
 
         var metadata = session.ModelMetadata;
 
@@ -62,7 +62,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
         #endregion
         #region 加载原型向量
-        var allLines = File.ReadLines(@".\GameTask\GetGridIcons\训练集原型特征.csv").Skip(1);    // 跳过首行列名
+        var allLines = File.ReadLines(@".\Assets\Model\Item\items.csv").Skip(1);    // 跳过首行列名
         prototypes = new Dictionary<string, float[]>();
         foreach (string line in allLines)
         {
