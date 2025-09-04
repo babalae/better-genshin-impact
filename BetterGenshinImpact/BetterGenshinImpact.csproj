@@ -43,7 +43,7 @@
 		
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.9" />
-		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.9" />
+		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.10" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.8" />
 		
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
@@ -175,12 +175,6 @@
 		</None>
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\GetGridIcons\gridIcon.onnx">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\GetGridIcons\训练集原型特征.csv">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\LogParse\Assets\log.css">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>

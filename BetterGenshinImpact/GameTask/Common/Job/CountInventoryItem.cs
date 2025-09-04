@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -42,13 +43,12 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
             using var ra = TaskControl.CaptureToRectArea();
-            GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
-            var gridRoi = gridParams.GetRect(ra);
-            GridScreen gridScreen = new GridScreen(gridRoi, gridParams, logger, ct);
+            GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
             int? count = null;
             await foreach (ImageRegion itemRegion in gridScreen)
             {
-                var result = GridIconsAccuracyTestTask.Infer(itemRegion.SrcMat, session, prototypes);
+                using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                 string predName = result.Item1;
                 if (predName == this.foodName)
                 {

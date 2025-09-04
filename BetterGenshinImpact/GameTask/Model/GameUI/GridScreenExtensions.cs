@@ -6,7 +6,7 @@ using System.Text;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
-    public static class GridExtensions
+    public static class GridScreenExtensions
     {
         /// <summary>
         /// 获取GridItem图标底部的文字
@@ -18,6 +18,17 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             Mat subMat = mat.SubMat(mat.Height * 128 / 153, mat.Height * 150 / 153, mat.Width * 5 / 125, mat.Width * 120 / 125);
             using Mat resize = subMat.Resize(new Size(subMat.Width * 2, subMat.Height * 2));
             return ocrService.Ocr(resize);
+        }
+
+        /// <summary>
+        /// 截取Grid图标中图案的部分
+        /// </summary>
+        /// <param name="mat"></param>
+        /// <returns></returns>
+        public static Mat GetGridIcon(this Mat mat)
+        {
+            using Mat resized = mat.Resize(new Size(125, 153));
+            return resized.SubMat(0, 125, 0, 125).Clone();
         }
     }
 }

@@ -70,9 +70,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
             cropped.CopyTo(pos);
 
             //
-            bool result1 = GridScreen.GridEnumerator.IsScrolling(mat, scrolled, out Point2d shift, upperThreshold: 0.99);
-            bool result2 = GridScreen.GridEnumerator.IsScrolling(mat, mat, out Point2d _);
-            bool result3 = GridScreen.GridEnumerator.IsScrolling(mat, black, out Point2d _);
+            bool result1 = GridScroller.IsScrolling(mat, scrolled, out Point2d shift, upperThreshold: 0.99);
+            bool result2 = GridScroller.IsScrolling(mat, mat, out Point2d _);
+            bool result3 = GridScroller.IsScrolling(mat, black, out Point2d _);
 
             //
             Assert.True(result1);
@@ -101,7 +101,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
 
             //
             var gridItems = GridScreen.GridEnumerator.GetGridItems(mat, columns, findContoursAlpha: true);
-            var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 5);
+            var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 10);
 
             var result = new List<string>();
             foreach (var row in rows)
