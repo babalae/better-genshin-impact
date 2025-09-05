@@ -14,6 +14,10 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
     Output = hasATK && hasDEF;
 })(ArtifactStat);";
 
+    // JavaScript
+    [ObservableProperty]
+    private string _artifactSetFilter = "";
+
     // 正则表达式
     [Obsolete]
     [ObservableProperty]

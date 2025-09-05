@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
@@ -16,6 +17,7 @@ using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
 using System;
 using System.Collections.Frozen;
@@ -51,6 +53,8 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly string? javaScript;
 
+    private readonly string? artifactSetFilter;
+
     private readonly int? maxNumToCheck;
 
     private readonly RecognitionFailurePolicy? recognitionFailurePolicy;
@@ -65,6 +69,7 @@ public class AutoArtifactSalvageTask : ISoloTask
     {
         this.star = param.Star;
         this.javaScript = param.JavaScript;
+        this.artifactSetFilter = param.ArtifactSetFilter;
         this.maxNumToCheck = param.MaxNumToCheck;
         this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
         this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
@@ -229,6 +234,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         Bv.ClickWhiteConfirmButton(ra4);
+        using var quickSelectConfirmBtn = ra4.Find(ElementAssets.Instance.BtnWhiteConfirm);
+        if (quickSelectConfirmBtn.IsExist())
+        {
+            quickSelectConfirmBtn.Click();
+        }
         await Delay(1500, ct);
 
 
@@ -264,6 +274,35 @@ public class AutoArtifactSalvageTask : ISoloTask
         // 分解5星
         if (javaScript != null)
         {
+            // 其实是点击筛选按钮……快速选择确认的这个按钮正好和筛选按钮位置重合，摆烂直接用了
+            quickSelectConfirmBtn.Click();
+            await Delay(400, ct);
+            // 点击所属套装
+            ra5.ClickTo(315, 205);
+            await Delay(1000, ct);
+            // 遍历套装Grid勾选套装
+            using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
+            ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
+            await foreach (ImageRegion itemRegion in gridScreen)
+            {
+                using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
+                (string predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
+                if (this.artifactSetFilter != null && this.artifactSetFilter.Contains(predName))
+                {
+                    itemRegion.Click();
+                    await Delay(100, ct);
+                }
+            }
+            // 点击确认筛选
+            using var confirmFilterBtnRegion = CaptureToRectArea();
+            Bv.ClickWhiteConfirmButton(confirmFilterBtnRegion);
+            await Delay(1500, ct);
+            // 点击确认
+            using var confirmBtnRegion = CaptureToRectArea();
+            Bv.ClickWhiteConfirmButton(confirmBtnRegion);
+            await Delay(600, ct);
+
+            // 逐一点选查看面板筛选
             await Salvage5Star();
             logger.LogInformation("筛选完毕，请复查并手动分解");
         }

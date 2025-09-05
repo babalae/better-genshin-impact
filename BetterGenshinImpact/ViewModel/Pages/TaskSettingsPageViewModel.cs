@@ -537,6 +537,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
                 int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
                 Config.AutoArtifactSalvageConfig.JavaScript,
+                Config.AutoArtifactSalvageConfig.ArtifactSetFilter,
                 Config.AutoArtifactSalvageConfig.MaxNumToCheck,
                 Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy
                 )));
