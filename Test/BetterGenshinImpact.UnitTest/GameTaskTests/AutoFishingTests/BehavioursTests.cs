@@ -2,7 +2,9 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
+using BetterGenshinImpact.UnitTest.GameTaskTests.GetGridIconsTests;
 using Microsoft.Extensions.Localization;
+using Microsoft.ML.OnnxRuntime;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -15,12 +17,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
         private readonly PaddleFixture paddle; 
         private readonly IStringLocalizer<AutoFishingTask> stringLocalizer;
+        private readonly InferenceSession session;
+        private readonly Dictionary<string, float[]> prototypes;
 
-        public BehavioursTests(PaddleFixture paddle, TorchFixture torch, LocalizationFixture localization)
+
+        public BehavioursTests(PaddleFixture paddle, TorchFixture torch, LocalizationFixture localization, GridIconModelFixture iconModel)
         {
             this.paddle = paddle;
             this.useTorch = torch.UseTorch;
             this.stringLocalizer = localization.CreateStringLocalizer<AutoFishingTask>();
+            this.session = iconModel.modelLoader.Value.session;
+            this.prototypes = iconModel.modelLoader.Value.prototypes;
         }
 
         private IOcrService OcrService => paddle.Get();

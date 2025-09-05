@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -225,9 +226,9 @@ public class GetGridIconsTask : ISoloTask
         }
     }
 
-    internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion)
+    internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion, ISystemInfo? systemInfo = null)
     {
-        double scale = TaskContext.Instance().SystemInfo.AssetScale;
+        double scale = (systemInfo ?? TaskContext.Instance().SystemInfo).AssetScale;
         double width = 60;
         double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
         Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
