@@ -2389,6 +2389,38 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        按套装筛选
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        利用游戏自带的筛选功能先行筛选
+                        <LineBreak/>
+                        一般填写套装内生之花名，可填入多个名称；留空则不用
+                    </ui:TextBlock>
+                    <ui:TextBox Grid.Row="1"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="400"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoArtifactSalvageConfig.ArtifactSetFilter, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="需要快速分解圣遗物的最高星级"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"

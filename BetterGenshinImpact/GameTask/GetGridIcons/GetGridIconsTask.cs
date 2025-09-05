@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -198,13 +199,8 @@ public class GetGridIconsTask : ISoloTask
                     {
                         using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
-                            double scale = TaskContext.Instance().SystemInfo.AssetScale;
-                            double width = 60;
-                            double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
-                            Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
-                            Mat crop = itemRegion.SrcMat.SubMat(iconRect);
-                            using Mat resize = crop.Resize(new Size(125, 125));
-                            resize.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                            using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion);
+                            img125.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                         }
                         logger.LogInformation("图片保存成功：{Text}", fileName);
                     }
@@ -228,6 +224,16 @@ public class GetGridIconsTask : ISoloTask
                 break;
             }
         }
+    }
+
+    internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion, ISystemInfo? systemInfo = null)
+    {
+        double scale = (systemInfo ?? TaskContext.Instance().SystemInfo).AssetScale;
+        double width = 60;
+        double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
+        Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
+        Mat crop = itemRegion.SrcMat.SubMat(iconRect);
+        return crop.Resize(new Size(125, 125));
     }
 
     /// <summary>

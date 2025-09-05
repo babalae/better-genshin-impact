@@ -1,8 +1,9 @@
-﻿using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BehaviourTree;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
+using BetterGenshinImpact.GameTask.AutoFishing.Model;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
@@ -38,10 +39,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         }
 
         [Theory]
-        [InlineData("20250225101257889_GetFishpond_Succeeded.png", new string[] { "fruit paste bait", "fruit paste bait", "redrot bait", "redrot bait" }, new string[] { "false worm bait", "false worm bait", "fake fly bait", "fake fly bait" })]
+        [InlineData("20250225101257889_GetFishpond_Succeeded.png", new BaitType[] { BaitType.FruitPasteBait, BaitType.FruitPasteBait, BaitType.RedrotBait, BaitType.RedrotBait }, new BaitType[] { BaitType.FalseWormBait, BaitType.FalseWormBait, BaitType.FakeFlyBait, BaitType.FakeFlyBait })]
         /// 测试鱼的鱼饵均在失败列表中且被忽略，结果为运行中
         /// </summary>
-        public void GetFishpondTest_AllIgnored_ShouldBeRunning(string screenshot1080p, IEnumerable<string> chooseBaitfailures, IEnumerable<string> throwRodNoTargetFishfailures)
+        public void GetFishpondTest_AllIgnored_ShouldBeRunning(string screenshot1080p, IEnumerable<BaitType> chooseBaitfailures, IEnumerable<BaitType> throwRodNoTargetFishfailures)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");

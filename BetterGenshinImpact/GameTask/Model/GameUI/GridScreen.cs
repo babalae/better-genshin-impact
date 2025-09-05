@@ -215,7 +215,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                         {
                             return false;
                         }
-                        return Math.Abs((float)r.Width / r.Height - 0.8) < 0.05; // 按形状筛选
+                        return Math.Abs((float)r.Width / r.Height - 0.81) < 0.05; // 按形状筛选
                     }).ToArray();
 
                 IEnumerable<Rect> boxes = contours.Select(Cv2.BoundingRect);
