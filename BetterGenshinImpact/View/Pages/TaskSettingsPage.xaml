@@ -2398,13 +2398,13 @@
                                   TextWrapping="Wrap">
                         利用游戏自带的筛选功能先行筛选
                         <LineBreak/>
-                        一般填写套装内生之花名，可填入多个名称
+                        一般填写套装内生之花名，可填入多个名称；留空则不用
                     </ui:TextBlock>
-                    <ui:TextBox Grid.Row="0"
+                    <ui:TextBox Grid.Row="1"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="180"
-                                MaxWidth="800"
+                                MaxWidth="400"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.AutoArtifactSalvageConfig.ArtifactSetFilter, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
