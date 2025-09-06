@@ -17,6 +17,7 @@ using GongSolutions.Wpf.DragDrop;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -345,7 +346,11 @@ public partial class GearTaskListPageViewModel : ViewModel
     [RelayCommand]
     private async Task AddTaskNode(string? taskType = null)
     {
-        if (SelectedTaskDefinition?.RootTask == null) return;
+        if (SelectedTaskDefinition?.RootTask == null)
+        {
+            Toast.Warning("请先选择一个任务定义");
+            return;
+        }
 
         var newTask = new GearTaskViewModel($"新任务 {DateTime.Now:HHmmss}")
         {
@@ -373,7 +378,11 @@ public partial class GearTaskListPageViewModel : ViewModel
     [RelayCommand]
     private async Task AddTaskGroup()
     {
-        if (SelectedTaskDefinition?.RootTask == null) return;
+        if (SelectedTaskDefinition?.RootTask == null)
+        {
+            Toast.Warning("请先选择一个任务定义");
+            return;
+        }
 
         var newGroup = new GearTaskViewModel($"新任务组 {DateTime.Now:HHmmss}", true)
         {
