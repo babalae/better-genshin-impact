@@ -9,12 +9,14 @@ using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Navigation;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -441,5 +443,27 @@ public partial class ScriptRepoWindow
             UpdateProgressValue = 100;
             UpdateProgressText = "导入完成";
         });
+    }
+
+    /// <summary>
+    /// 处理超链接点击事件
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = e.Uri.AbsoluteUri,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"无法打开链接: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        e.Handled = true;
     }
 }

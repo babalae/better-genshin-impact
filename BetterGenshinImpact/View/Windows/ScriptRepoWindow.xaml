@@ -188,6 +188,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <ui:TextBlock Grid.Row="0"
@@ -202,7 +203,17 @@
                                           TextWrapping="Wrap"
                                           Text="请选择包含脚本仓库内容的zip压缩包文件进行导入。" />
 
-                            <ui:Button Grid.Row="2"
+                            <ui:TextBlock Grid.Row="2"
+                                          Margin="0,0,0,12"
+                                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                          TextWrapping="Wrap">
+                                <Run Text="可以从这里获取zip：" />
+                                <Hyperlink NavigateUri="https://bettergi.com/feats/autos/srepo.html" RequestNavigate="Hyperlink_RequestNavigate">
+                                    <Run Text="脚本仓库文档" />
+                                </Hyperlink>
+                            </ui:TextBlock>
+
+                            <ui:Button Grid.Row="3"
                                        Command="{Binding ImportLocalScriptsRepoZipCommand}"
                                        Content="选择zip文件导入"
                                        Icon="{ui:SymbolIcon FolderZip24}"
