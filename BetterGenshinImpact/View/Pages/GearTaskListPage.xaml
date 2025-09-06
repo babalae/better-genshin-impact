@@ -8,6 +8,7 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:component="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Component"
              xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              d:DataContext="{d:DesignInstance Type=pages:GearTaskListPageViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="1200"
@@ -245,6 +246,7 @@
                                      dd:DragDrop.IsDropTarget="True"
                                      dd:DragDrop.UseDefaultDragAdorner="True"
                                      dd:DragDrop.UseDefaultEffectDataTemplate="True"
+                                     ContextMenu="{StaticResource TaskNodeContextMenu}"
                                      Visibility="{Binding SelectedTaskDefinition, Converter={StaticResource NullToVisibilityConverter}}">
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
@@ -252,9 +254,6 @@
                                     <ui:GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <ui:TreeRowExpander Content="{Binding Name}">
-                                                <ui:TreeRowExpander.ContextMenu>
-                                                    <StaticResource ResourceKey="TaskNodeContextMenu" />
-                                                </ui:TreeRowExpander.ContextMenu>
                                             </ui:TreeRowExpander>
                                         </DataTemplate>
                                     </ui:GridViewColumn.CellTemplate>
