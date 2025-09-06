@@ -4,6 +4,22 @@ using System;
 namespace BetterGenshinImpact.GameTask.AutoPick
 {
     /// <summary>
+    /// 拾取模式枚举
+    /// </summary>
+    public enum AutoPickMode
+    {
+        /// <summary>
+        /// 黑白名单混合模式（默认）
+        /// </summary>
+        Mixed,
+        
+        /// <summary>
+        /// 纯白名单模式
+        /// </summary>
+        WhitelistOnly
+    }
+
+    /// <summary>
     /// 非16:9分辨率下可能无法正常工作
     /// </summary>
     [Serializable]
@@ -57,5 +73,9 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         // 白名单启用状态
         [ObservableProperty]
         private bool _whiteListEnabled= false;
+        
+        // 拾取模式
+        [ObservableProperty]
+        private AutoPickMode _pickMode = AutoPickMode.Mixed;
     }
 }

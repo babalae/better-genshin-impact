@@ -26,6 +26,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
     [ObservableProperty] private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
 
+    [ObservableProperty] private string[] _autoPickModeNames = ["黑白名单混合模式", "纯白名单模式"];
+
     [ObservableProperty] private List<string> _pickButtonNames;
 
     public AllConfig Config { get; set; }

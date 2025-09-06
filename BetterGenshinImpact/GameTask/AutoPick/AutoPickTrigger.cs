@@ -289,6 +289,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
+            // 检查白名单
             if (config.WhiteListEnabled && (_whiteList.Contains(text) || _whiteList.Contains(simpleText)))
             {
                 LogPick(content, text);
@@ -298,27 +299,37 @@ public partial class AutoPickTrigger : ITaskTrigger
 
             speedTimer.Record("白名单判断");
 
-            if (isExcludeIcon)
+            // 根据拾取模式处理
+            if (config.PickMode == AutoPickMode.WhitelistOnly)
             {
-                //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
+                // 纯白名单模式：只有在白名单中的物品才会被拾取
                 return;
             }
-
-            // 如果黑名单中有通配符*，表示仅支持白名单自动拾取，不认识的选项都不拾取
-            if (config.BlackListEnabled && _blackList.Contains("*"))
+            else
             {
-                return;
+                // 混合模式（默认）：保持原有逻辑
+                if (isExcludeIcon)
+                {
+                    //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
+                    return;
+                }
+
+                // 如果黑名单中有通配符*，表示仅支持白名单自动拾取，不认识的选项都不拾取
+                if (config.BlackListEnabled && _blackList.Contains("*"))
+                {
+                    return;
+                }
+
+                if (config.BlackListEnabled && (_blackList.Contains(text) || _blackList.Contains(simpleText)))
+                {
+                    return;
+                }
+
+                speedTimer.Record("黑名单判断");
+
+                LogPick(content, text);
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             }
-
-            if (config.BlackListEnabled && (_blackList.Contains(text) || _blackList.Contains(simpleText)))
-            {
-                return;
-            }
-
-            speedTimer.Record("黑名单判断");
-
-            LogPick(content, text);
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
         }
 
         speedTimer.DebugPrint();
