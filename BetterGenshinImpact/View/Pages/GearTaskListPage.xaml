@@ -236,8 +236,8 @@
                     </ui:Grid>
                     
                     <ui:TreeListView BorderThickness="0"
-                                     ItemsSource="{Binding CurrentTaskTree}"
-                                     SelectedItem="{Binding SelectedTaskNode}"
+                                     ItemsSource="{Binding CurrentTaskTreeRoot.Children}"
+                                     SelectedItem="{Binding SelectedTaskNode, Mode=TwoWay}"
                                      dd:DragDrop.IsDragSource="True"
                                      dd:DragDrop.IsDropTarget="True"
                                      dd:DragDrop.UseDefaultDragAdorner="True"

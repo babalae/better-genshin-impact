@@ -38,10 +38,10 @@ public partial class GearTaskListPageViewModel : ViewModel
     private GearTaskDefinitionViewModel? _selectedTaskDefinition;
 
     /// <summary>
-    /// 当前任务树（右侧）
+    /// 当前任务树根节点（右侧）
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<GearTaskViewModel> _currentTaskTree = new();
+    private GearTaskViewModel _currentTaskTreeRoot = new();
 
     /// <summary>
     /// 当前选中的任务节点
@@ -74,8 +74,8 @@ public partial class GearTaskListPageViewModel : ViewModel
         // 监听集合变化，实现自动保存
         TaskDefinitions.CollectionChanged += OnTaskDefinitionsChanged;
         
-        // 监听当前任务树的集合变化，用于拖拽后自动保存
-        CurrentTaskTree.CollectionChanged += OnCurrentTaskTreeChanged;
+        // 监听当前任务树根节点的子集合变化，用于拖拽后自动保存
+        CurrentTaskTreeRoot.Children.CollectionChanged += OnCurrentTaskTreeChanged;
     }
 
     /// <summary>
@@ -182,11 +182,21 @@ public partial class GearTaskListPageViewModel : ViewModel
             value.IsSelected = true;
         }
         
-        CurrentTaskTree.Clear();
+        // 先解除之前的事件绑定
+        CurrentTaskTreeRoot.Children.CollectionChanged -= OnCurrentTaskTreeChanged;
+        
+        // 设置当前任务树根节点
         if (value?.RootTask != null)
         {
-            CurrentTaskTree.Add(value.RootTask);
+            CurrentTaskTreeRoot = value.RootTask;
         }
+        else
+        {
+            CurrentTaskTreeRoot = new GearTaskViewModel();
+        }
+        
+        // 重新绑定事件
+        CurrentTaskTreeRoot.Children.CollectionChanged += OnCurrentTaskTreeChanged;
     }
 
     /// <summary>
@@ -280,14 +290,13 @@ public partial class GearTaskListPageViewModel : ViewModel
             Description = "新创建的任务"
         };
 
-        if (SelectedTaskNode != null)
-        {
-            SelectedTaskNode.AddChild(newTask);
-        }
-        else
-        {
-            SelectedTaskDefinition.RootTask.AddChild(newTask);
-        }
+        // 如果有选中的节点，则在选中节点下新增
+        // 如果未选择节点，则在根节点下直接新增
+        var targetParent = SelectedTaskNode ?? SelectedTaskDefinition.RootTask;
+        targetParent.AddChild(newTask);
+        
+        // 展开父节点
+        targetParent.IsExpanded = true;
 
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
         
@@ -308,14 +317,13 @@ public partial class GearTaskListPageViewModel : ViewModel
             Description = "新创建的任务组"
         };
 
-        if (SelectedTaskNode != null)
-        {
-            SelectedTaskNode.AddChild(newGroup);
-        }
-        else
-        {
-            SelectedTaskDefinition.RootTask.AddChild(newGroup);
-        }
+        // 如果有选中的节点，则在选中节点下新增
+        // 如果未选择节点，则在根节点下直接新增
+        var targetParent = SelectedTaskNode ?? SelectedTaskDefinition.RootTask;
+        targetParent.AddChild(newGroup);
+        
+        // 展开父节点
+        targetParent.IsExpanded = true;
 
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
         
@@ -490,4 +498,9 @@ public partial class GearTaskListPageViewModel : ViewModel
             }
         };
     }
+
+    /// <summary>
+    /// 刷新当前任务树显示
+    /// </summary>
+
 }
