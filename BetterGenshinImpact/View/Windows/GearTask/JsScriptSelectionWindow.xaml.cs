@@ -1,8 +1,9 @@
 using System.Windows;
-using BetterGenshinImpact.ViewModel.Windows;
+using BetterGenshinImpact.ViewModel.Windows.GearTask;
 using Wpf.Ui.Controls;
+using JsScriptSelectionViewModel = BetterGenshinImpact.ViewModel.Windows.GearTask.JsScriptSelectionViewModel;
 
-namespace BetterGenshinImpact.View.Windows;
+namespace BetterGenshinImpact.View.Windows.GearTask;
 
 public partial class JsScriptSelectionWindow : FluentWindow
 {

@@ -1,9 +1,9 @@
 using System;
 using System.Windows;
 using BetterGenshinImpact.Helpers.Ui;
-using BetterGenshinImpact.ViewModel.Windows;
+using AddTaskNodeDialogViewModel = BetterGenshinImpact.ViewModel.Windows.GearTask.AddTaskNodeDialogViewModel;
 
-namespace BetterGenshinImpact.View.Windows;
+namespace BetterGenshinImpact.View.Windows.GearTask;
 
 public partial class AddTaskNodeDialog
 {

@@ -1,16 +1,14 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 
-namespace BetterGenshinImpact.ViewModel.Windows;
+namespace BetterGenshinImpact.ViewModel.Windows.GearTask;
 
 public partial class JsScriptSelectionViewModel : ViewModel
 {

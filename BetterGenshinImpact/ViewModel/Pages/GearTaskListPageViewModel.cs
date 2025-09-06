@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Windows;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.View.Windows.GearTask;
 using BetterGenshinImpact.ViewModel.Windows;
 using Wpf.Ui.Violeta.Controls;
 

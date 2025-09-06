@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace BetterGenshinImpact.ViewModel.Windows;
+namespace BetterGenshinImpact.ViewModel.Windows.GearTask;
 
 public partial class AddTaskNodeDialogViewModel : ObservableValidator
 {
