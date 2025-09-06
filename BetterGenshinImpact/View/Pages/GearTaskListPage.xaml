@@ -71,22 +71,27 @@
 
         <!-- 右键菜单 -->
         <ContextMenu x:Key="TaskNodeContextMenu">
-            <MenuItem Header="添加采集任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="采集任务">
+            <MenuItem Header="添加JS脚本" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="Javascript">
                 <MenuItem.Icon>
                     <ui:SymbolIcon Symbol="Add24" />
                 </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="添加战斗任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="战斗任务">
+            <MenuItem Header="添加地图追踪任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="Pathing">
                 <MenuItem.Icon>
                     <ui:SymbolIcon Symbol="Add24" />
                 </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="添加传送任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="传送任务">
+            <MenuItem Header="添加键鼠脚本" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="KeyMouse">
                 <MenuItem.Icon>
                     <ui:SymbolIcon Symbol="Add24" />
                 </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="添加交互任务" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="交互任务">
+            <MenuItem Header="添加Shell" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="Shell">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Add24" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="添加C#方法" Command="{Binding DataContext.AddTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="CSharp">
                 <MenuItem.Icon>
                     <ui:SymbolIcon Symbol="Add24" />
                 </MenuItem.Icon>
