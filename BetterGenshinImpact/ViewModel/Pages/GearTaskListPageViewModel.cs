@@ -86,8 +86,31 @@ public partial class GearTaskListPageViewModel : ViewModel
     /// </summary>
     private async void OnTaskDefinitionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // 当集合发生变化时，可以在这里处理自动保存等逻辑
-        // 例如：保存到配置文件等
+        // 当集合发生变化时（包括拖拽重排序），更新Order属性并保存
+        try
+        {
+            // 更新所有任务定义的Order属性以反映当前顺序
+            for (int i = 0; i < TaskDefinitions.Count; i++)
+            {
+                if (TaskDefinitions[i].Order != i)
+                {
+                    TaskDefinitions[i].Order = i;
+                    TaskDefinitions[i].ModifiedTime = DateTime.Now;
+                }
+            }
+            
+            // 保存所有受影响的任务定义
+            foreach (var taskDef in TaskDefinitions)
+            {
+                await _storageService.SaveTaskDefinitionAsync(taskDef);
+            }
+            
+            _logger.LogInformation("任务定义列表顺序已更新并保存");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "保存任务定义列表顺序时发生错误");
+        }
     }
     
     /// <summary>
