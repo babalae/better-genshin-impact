@@ -1,11 +1,7 @@
 using System.Collections.ObjectModel;
-using System.Text.Json;
-using BetterGenshinImpact.Model;
-using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using System.IO;
 using System.Windows;
 using System.Linq;
 using System;
@@ -13,10 +9,8 @@ using BetterGenshinImpact.ViewModel.Pages.Component;
 using BetterGenshinImpact.Service;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
-using GongSolutions.Wpf.DragDrop;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Windows;
-using Microsoft.Extensions.DependencyInjection;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -52,23 +46,7 @@ public partial class GearTaskListPageViewModel : ViewModel
     /// </summary>
     [ObservableProperty]
     private GearTaskViewModel? _selectedTaskNode;
-
-    /// <summary>
-    /// 可用的任务类型
-    /// </summary>
-    public ObservableCollection<string> AvailableTaskTypes { get; } = new()
-    {
-        "采集任务",
-        "战斗任务",
-        "传送任务",
-        "交互任务",
-        "等待任务",
-        "脚本任务",
-        "条件任务",
-        "循环任务",
-        "组合任务"
-    };
-
+    
     public GearTaskListPageViewModel(ILogger<GearTaskListPageViewModel> logger, GearTaskStorageService storageService)
     {
         _logger = logger;
@@ -354,7 +332,7 @@ public partial class GearTaskListPageViewModel : ViewModel
 
         var newTask = new GearTaskViewModel($"新任务 {DateTime.Now:HHmmss}")
         {
-            TaskType = taskType ?? AvailableTaskTypes.First(),
+            TaskType = "任务类型",
             Description = "新创建的任务"
         };
 

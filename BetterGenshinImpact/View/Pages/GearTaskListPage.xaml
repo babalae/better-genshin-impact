@@ -221,10 +221,6 @@
                            Content="添加组"
                            Icon="{ui:SymbolIcon Folder24}"
                            Margin="0,0,4,0" />
-                <ComboBox ItemsSource="{Binding AvailableTaskTypes}"
-                          SelectedIndex="0"
-                          Width="120"
-                          Margin="8,0,0,0" />
             </StackPanel>
 
             <!-- 任务树 -->
