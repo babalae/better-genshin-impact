@@ -249,7 +249,7 @@
                                      dd:DragDrop.IsDropTarget="True"
                                      dd:DragDrop.UseDefaultDragAdorner="True"
                                      dd:DragDrop.UseDefaultEffectDataTemplate="True"
-                                     >
+                                     Visibility="{Binding SelectedTaskDefinition, Converter={StaticResource NullToVisibilityConverter}}">
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
                                 <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnName}" Header="任务名称">
@@ -301,6 +301,18 @@
                             <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
                         </ui:TreeListView.ItemTemplate>
                     </ui:TreeListView>
+                    
+                    <!-- 无选中任务定义时的提示 -->
+                     <StackPanel HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Visibility="{Binding SelectedTaskDefinition, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                         <ui:SymbolIcon Symbol="Settings24" FontSize="48" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                         <TextBlock Text="请选择一个任务定义进行配置"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,16,0,0" />
+                     </StackPanel>
                 </Grid>
             </ui:Border>
         </Grid>
