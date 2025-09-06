@@ -111,7 +111,6 @@ public class GridIconsAccuracyTestTask : ISoloTask
         {
             itemRegion.Click();
             Task task1 = Delay(300, ct);
-            var sadf = task1.Status;
 
             // 用模型推理得到的结果
             Task<(string, int)> task2 = Task.Run(() =>
@@ -161,7 +160,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     /// <param name="mat"></param>
     /// <param name="session"></param>
     /// <param name="prototypes"></param>
-    /// <returns></returns>
+    /// <returns>(预测名称, 预测星级)</returns>
     /// <exception cref="Exception"></exception>
     public static (string, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
     {

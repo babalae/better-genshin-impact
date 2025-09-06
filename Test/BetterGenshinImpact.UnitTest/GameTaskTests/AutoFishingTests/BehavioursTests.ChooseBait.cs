@@ -1,4 +1,4 @@
-﻿using BehaviourTree;
+using BehaviourTree;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
     {
         [Theory]
         [InlineData(@"20250225101300361_ChooseBait_Succeeded.png", new string[] { "medaka", "butterflyfish", "butterflyfish", "pufferfish" })]
-        [InlineData(@"20250226161354285_ChooseBait_Succeeded.png", new string[] { "medaka", "medaka" })]
+        [InlineData(@"20250226161354285_ChooseBait_Succeeded.png", new string[] { "medaka", "medaka" })]    // todo 更新用例
         [InlineData(@"202503160917566615@900p.png", new string[] { "pufferfish" })]
         /// <summary>
         /// 测试各种选取鱼饵，结果为成功
@@ -35,7 +35,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             };
 
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator());
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), this.session, this.prototypes);
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
@@ -69,11 +69,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider(dateTime);
 
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), this.session, this.prototypes, fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.True(blackboard.chooseBaitUIOpening);
             Assert.Equal(BehaviourStatus.Running, actual);
 
@@ -84,7 +84,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.False(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.NotNull(blackboard.selectedBait);
             Assert.True(blackboard.chooseBaitUIOpening);
             Assert.Equal(BehaviourStatus.Running, actual);
 
@@ -95,7 +95,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.False(blackboard.chooseBaitUIOpening);
             Assert.Equal(BehaviourStatus.Failed, actual);
         }
@@ -124,15 +124,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             #region 第1次失败
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), this.session, this.prototypes, fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
             fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(3));
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "fake fly bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == BaitType.FakeFlyBait));
             #endregion
 
             #region 第2次失败
@@ -146,9 +146,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "fake fly bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == BaitType.FakeFlyBait).Count());
             Assert.False(blackboard.abort);
             #endregion
 
@@ -165,9 +165,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == BaitType.SpinelgrainBait));
             #endregion
 
             #region sunfish受到遮挡，medaka再次出现，第4次成功，并钓起medaka
@@ -183,9 +183,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.False(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.NotNull(blackboard.selectedBait);    // todo 更新用例
             Assert.Equal(BehaviourStatus.Succeeded, actual);
-            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == BaitType.SpinelgrainBait));
             #endregion
 
             #region sunfish再次出现，第5次失败
@@ -201,9 +201,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == BaitType.SpinelgrainBait).Count());
             #endregion
         }
 
@@ -230,15 +230,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             #region 第1次失败
             //
-            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), fakeTimeProvider);
+            ChooseBait sut = new ChooseBait("-", blackboard, new FakeLogger(), false, systemInfo, new FakeInputSimulator(), this.session, this.prototypes, fakeTimeProvider);
             BehaviourStatus actual = sut.Tick(imageRegion);
             fakeTimeProvider.SetUtcNow(dateTime.AddSeconds(3));
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "fake fly bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == BaitType.FakeFlyBait));
             #endregion
 
             #region koi受到遮挡，第2次失败
@@ -254,9 +254,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait"));
+            Assert.Single(blackboard.chooseBaitFailures.Where(f => f == BaitType.SpinelgrainBait));
             Assert.False(blackboard.abort);
             #endregion
 
@@ -273,9 +273,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "fake fly bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == BaitType.FakeFlyBait).Count());
             #endregion
 
             #region 第4次失败
@@ -291,9 +291,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
             actual = sut.Tick(imageRegion);
 
             //
-            Assert.True(String.IsNullOrEmpty(blackboard.selectedBaitName));
+            Assert.Null(blackboard.selectedBait);
             Assert.Equal(BehaviourStatus.Failed, actual);
-            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == "spinelgrain bait").Count());
+            Assert.Equal(2, blackboard.chooseBaitFailures.Where(f => f == BaitType.SpinelgrainBait).Count());
             #endregion
         }
     }

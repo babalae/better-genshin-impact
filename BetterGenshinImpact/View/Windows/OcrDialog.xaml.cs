@@ -28,7 +28,7 @@ public partial class OcrDialog
         this.widthRatio = widthRatio;
         this.heightRatio = heightRatio;
         this.javaScript = javaScript;
-        this.autoArtifactSalvageTask = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName)));
+        this.autoArtifactSalvageTask = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, null, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName)));
 
         InitializeComponent();
 
