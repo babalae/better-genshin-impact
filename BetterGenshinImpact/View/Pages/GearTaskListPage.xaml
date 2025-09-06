@@ -227,11 +227,12 @@
                        BorderThickness="1"
                        CornerRadius="{DynamicResource ControlCornerRadius}">
                 <Grid Margin="4">
-                    <ui:Grid ColumnDefinitions="*,120,80,100" Visibility="Hidden">
+                    <ui:Grid ColumnDefinitions="*,120,80,100,20" Visibility="Hidden">
                         <Grid x:Name="TreeColumnName" Grid.Column="0" />
                         <Grid x:Name="TreeColumnType" Grid.Column="1" />
                         <Grid x:Name="TreeColumnEnabled" Grid.Column="2" />
                         <Grid x:Name="TreeColumnActions" Grid.Column="3" />
+                        <Grid x:Name="TreeColumnSpace" Grid.Column="3" />
                     </ui:Grid>
                     
                     <ui:TreeListView BorderThickness="0"
@@ -240,6 +241,7 @@
                                      dd:DragDrop.IsDragSource="True"
                                      dd:DragDrop.IsDropTarget="True"
                                      dd:DragDrop.UseDefaultDragAdorner="True"
+                                     dd:DragDrop.UseDefaultEffectDataTemplate="True"
                                      >
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
