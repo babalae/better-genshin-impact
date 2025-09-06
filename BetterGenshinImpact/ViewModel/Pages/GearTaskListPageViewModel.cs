@@ -337,31 +337,7 @@ public partial class GearTaskListPageViewModel : ViewModel
         await DeleteTaskDefinition(SelectedTaskDefinition);
     }
 
-    /// <summary>
-    /// 重命名任务定义
-    /// </summary>
-    [RelayCommand]
-    private async Task RenameTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
-    {
-        if (taskDefinition == null) return;
-        
-        // 这里可以弹出重命名对话框，暂时简单处理
-        var newName = "新名称"; // 简化处理，实际应该弹出输入框
-        
-        if (!string.IsNullOrWhiteSpace(newName) && newName != taskDefinition.Name)
-        {
-            var oldName = taskDefinition.Name;
-            taskDefinition.Name = newName;
-            taskDefinition.ModifiedTime = DateTime.Now;
-            if (taskDefinition.RootTask != null)
-            {
-                taskDefinition.RootTask.Name = newName;
-            }
-            
-            // 重命名对应的 JSON 文件
-            await _storageService.RenameTaskDefinitionAsync(oldName, newName);
-        }
-    }
+
 
     /// <summary>
     /// 添加任务节点

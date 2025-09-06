@@ -169,37 +169,7 @@ public class GearTaskStorageService
         }
     }
 
-    /// <summary>
-    /// 重命名任务定义文件
-    /// </summary>
-    /// <param name="oldName">旧名称</param>
-    /// <param name="newName">新名称</param>
-    /// <returns></returns>
-    public async Task RenameTaskDefinitionAsync(string oldName, string newName)
-    {
-        try
-        {
-            var oldFileName = GetSafeFileName(oldName) + ".json";
-            var newFileName = GetSafeFileName(newName) + ".json";
-            var oldFilePath = Path.Combine(_taskStoragePath, oldFileName);
-            var newFilePath = Path.Combine(_taskStoragePath, newFileName);
-            
-            if (File.Exists(oldFilePath))
-            {
-                await Task.Run(() => File.Move(oldFilePath, newFilePath));
-                _logger.LogInformation("任务定义文件已重命名: {OldPath} -> {NewPath}", oldFilePath, newFilePath);
-            }
-            else
-            {
-                _logger.LogWarning("要重命名的任务定义文件不存在: {FilePath}", oldFilePath);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "重命名任务定义 '{OldName}' -> '{NewName}' 时发生错误", oldName, newName);
-            throw;
-        }
-    }
+
 
     /// <summary>
     /// 将 ViewModel 转换为数据模型

@@ -173,7 +173,7 @@
                             <Setter Property="Margin" Value="0" />
                             <Setter Property="Background" Value="Transparent" />
                             <Setter Property="BorderThickness" Value="0" />
-                            <EventSetter Event="MouseDoubleClick" Handler="TaskDefinitionItem_MouseDoubleClick" />
+
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter Property="Background" Value="Transparent" />

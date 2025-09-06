@@ -19,15 +19,5 @@ public partial class GearTaskListPage : UserControl
         InitializeComponent();
     }
 
-    /// <summary>
-    /// 任务定义项双击事件
-    /// </summary>
-    private void TaskDefinitionItem_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is ListBoxItem item && item.DataContext is GearTaskDefinitionViewModel taskDefinition)
-        {
-            // 双击重命名
-            ViewModel.RenameTaskDefinitionCommand.Execute(taskDefinition);
-        }
-    }
+
 }
