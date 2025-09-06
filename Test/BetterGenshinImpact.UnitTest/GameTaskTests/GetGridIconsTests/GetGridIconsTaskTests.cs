@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.GetGridIcons;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.GetGridIconsTests
 {
-    public class GetGridIconsTaskTest
+    public class GetGridIconsTaskTests
     {
         [Theory]
         [InlineData(@"AutoArtifactSalvage\ArtifactAffixes.png", 5)]

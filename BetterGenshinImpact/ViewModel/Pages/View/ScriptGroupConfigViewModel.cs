@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using Windows.System;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
@@ -95,5 +96,11 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     private void OnAutoFightEnabledChecked()
     {
         PathingConfig.Enabled = true;
+    }
+
+    [RelayCommand]
+    private async Task OnGoToAutoEatUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/dev/js/dispatcher.html#autoeat-自动吃食物"));
     }
 }

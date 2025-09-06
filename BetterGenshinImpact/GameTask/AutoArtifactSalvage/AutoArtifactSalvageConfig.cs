@@ -8,12 +8,15 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
 {
     // JavaScript
     [ObservableProperty]
-    private string _javaScript = 
-        @"(async function (artifact) {
-            var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
-            var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
-            Output = hasATK && hasDEF;
-        })(ArtifactStat);";
+    private string _javaScript = @"(async function (artifact) {
+    var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
+    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
+    Output = hasATK && hasDEF;
+})(ArtifactStat);";
+
+    // JavaScript
+    [ObservableProperty]
+    private string _artifactSetFilter = "";
 
     // 正则表达式
     [Obsolete]
@@ -28,4 +31,8 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
     // 最多检查多少个圣遗物
     [ObservableProperty]
     private int _maxNumToCheck = 100;
+
+    // 单次识别失败政策
+    [ObservableProperty]
+    private RecognitionFailurePolicy _recognitionFailurePolicy = RecognitionFailurePolicy.Skip;
 }

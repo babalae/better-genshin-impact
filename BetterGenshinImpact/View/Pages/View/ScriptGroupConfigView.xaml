@@ -1445,8 +1445,14 @@
                         <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动吃食物配置"
-                                  TextWrapping="Wrap" />
+                                  Text=""
+                                  TextWrapping="Wrap">
+                            自动吃食物配置 -
+                            <Hyperlink Command="{Binding GoToAutoEatUrlCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                                点击查看调用方法
+                            </Hyperlink>
+                        </ui:TextBlock>
                         <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"

@@ -51,7 +51,7 @@ public partial class ScriptControlViewModel : ViewModel
     private readonly ILogger<ScriptControlViewModel> _logger = App.GetLogger<ScriptControlViewModel>();
 
     private readonly IScriptService _scriptService;
-    
+
     /// <summary>
     /// 配置组配置
     /// </summary>
@@ -143,13 +143,13 @@ public partial class ScriptControlViewModel : ViewModel
 
         GameInfo? gameInfo = null;
         var config = LogParse.LoadConfig();
-        
+
         OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
         if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(mcfg.Cookie))
         {
             config.Cookie = mcfg.Cookie;
         }
-        
+
         if (!string.IsNullOrEmpty(config.Cookie))
         {
             config.CookieDictionary.TryGetValue(config.Cookie, out gameInfo);
@@ -220,7 +220,7 @@ public partial class ScriptControlViewModel : ViewModel
             VerticalAlignment = VerticalAlignment.Center
         };
         stackPanel.Children.Add(mergerStatsSwitch);
-        
+
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox faultStatsSwitch = new CheckBox
         {
@@ -228,21 +228,21 @@ public partial class ScriptControlViewModel : ViewModel
             VerticalAlignment = VerticalAlignment.Center
         };
         stackPanel.Children.Add(faultStatsSwitch);
-        
+
         // 开关控件：ToggleButton 或 CheckBox
         CheckBox hoeingStatsSwitch = new CheckBox
         {
             Content = "统计锄地摩拉怪物数",
             VerticalAlignment = VerticalAlignment.Center
         };
-        
+
         CheckBox GenerateFarmingPlanData = new CheckBox
         {
             Content = "生成锄地规划数据",
             VerticalAlignment = VerticalAlignment.Center
         };
         stackPanel.Children.Add(GenerateFarmingPlanData);
-        
+
         //firstRow.Children.Add(toggleSwitch);
 
         // 将第一行添加到 StackPanel
@@ -338,7 +338,7 @@ public partial class ScriptControlViewModel : ViewModel
         GenerateFarmingPlanData.IsChecked = sgpc.GenerateFarmingPlanData;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
         mergerStatsSwitch.IsChecked = sgpc.MergerStatsSwitch;
-        
+
         hoeingDelayTextBox.Text = sgpc.HoeingDelay;
 
         MessageBoxResult result = await uiMessageBox.ShowDialogAsync();
@@ -364,9 +364,9 @@ public partial class ScriptControlViewModel : ViewModel
 
             if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(cookieValue))
             {
-                mcfg.Cookie  = cookieValue;
+                mcfg.Cookie = cookieValue;
             }
-            
+
             LogParse.WriteConfigFile(config);
 
 
@@ -383,7 +383,7 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Toast.Information(status, time:5000);
+                    Toast.Information(status, time: 5000);
                 });
             }
 
@@ -465,7 +465,7 @@ public partial class ScriptControlViewModel : ViewModel
                     // 生成HTML并加载
                     win.NavigateToHtml(LogParse.GenerHtmlByConfigGroupEntity(configGroupEntities,
                     hoeingStats ? realGameInfo : null, sgpc));
-                win.ShowDialog();
+                    win.ShowDialog();
                     // 取消订阅事件
                     LogParse.HtmlGenerationStatusChanged -= OnHtmlGenerationStatusChanged;
 
@@ -559,14 +559,14 @@ public partial class ScriptControlViewModel : ViewModel
     private void ExportMergerJsons()
     {
         int count = 0;
-        var pathDir = Path.Combine(LogPath,"exportMergerJson",DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),"AutoPathing");
+        var pathDir = Path.Combine(LogPath, "exportMergerJson", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), "AutoPathing");
         foreach (var scriptGroupProject in SelectedScriptGroup?.Projects ?? [])
         {
             if (scriptGroupProject.Type == "Pathing")
             {
-                var mergerJson= JsonMerger.getMergePathingJson(Path.Combine(MapPathingViewModel.PathJsonPath,
+                var mergerJson = JsonMerger.getMergePathingJson(Path.Combine(MapPathingViewModel.PathJsonPath,
                     scriptGroupProject.FolderName, scriptGroupProject.Name));
-                string fullPath = Path.Combine(pathDir,scriptGroupProject.FolderName,scriptGroupProject.Name);
+                string fullPath = Path.Combine(pathDir, scriptGroupProject.FolderName, scriptGroupProject.Name);
                 string dir = Path.GetDirectoryName(fullPath);
                 if (!Directory.Exists(dir))
                 {
@@ -576,13 +576,13 @@ public partial class ScriptControlViewModel : ViewModel
                 count++;
             }
         }
-        if (count>0)
+        if (count > 0)
         {
             Process.Start("explorer.exe", pathDir);
         }
     }
-    
-    
+
+
     [RelayCommand]
     public void AddScriptGroupNextFlag(ScriptGroup? item)
     {
@@ -591,7 +591,7 @@ public partial class ScriptControlViewModel : ViewModel
             scriptGroup.NextFlag = false;
         }
 
-        if (item!=null)
+        if (item != null)
         {
             item.NextFlag = true;
             TaskContext.Instance().Config.NextScriptGroupName = item.Name;
@@ -731,7 +731,7 @@ public partial class ScriptControlViewModel : ViewModel
     private void OnAddJsScript()
     {
         var list = LoadAllJsScriptProjects();
-        var stackPanel = CreateJsScriptSelectionPanel(list);
+        var stackPanel = CreateJsScriptSelectionPanel(list, typeof(CheckBox));
 
         var result = PromptDialog.Prompt("请选择需要添加的JS脚本", "请选择需要添加的JS脚本", stackPanel, new Size(500, 600));
         if (!string.IsNullOrEmpty(result))
@@ -740,19 +740,19 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private ScrollViewer CreateJsScriptSelectionPanel(List<ScriptProject> list)
+    internal static ScrollViewer CreateJsScriptSelectionPanel(List<ScriptProject> list, Type selectType)
     {
         var stackPanel = new StackPanel();
-        
+
         var filterTextBox = new TextBox
         {
             Margin = new Thickness(0, 0, 0, 10),
             PlaceholderText = "输入搜索条件...",
         };
-        filterTextBox.TextChanged += delegate { ApplyJsScriptFilter(stackPanel, list, filterTextBox.Text); };
+        filterTextBox.TextChanged += delegate { ApplyJsScriptFilter(stackPanel, list, filterTextBox.Text, selectType); };
         stackPanel.Children.Add(filterTextBox);
-        
-        AddJsScriptsToPanel(stackPanel, list, filterTextBox.Text);
+
+        AddJsScriptsToPanel(stackPanel, list, filterTextBox.Text, selectType);
 
         var scrollViewer = new ScrollViewer
         {
@@ -764,7 +764,7 @@ public partial class ScriptControlViewModel : ViewModel
         return scrollViewer;
     }
 
-    private void ApplyJsScriptFilter(StackPanel parentPanel, List<ScriptProject> scripts, string filter)
+    private static void ApplyJsScriptFilter(StackPanel parentPanel, List<ScriptProject> scripts, string filter, Type selectType)
     {
         if (parentPanel.Children.Count > 0)
         {
@@ -780,16 +780,16 @@ public partial class ScriptControlViewModel : ViewModel
             removeElements.ForEach(parentPanel.Children.Remove);
         }
 
-        AddJsScriptsToPanel(parentPanel, scripts, filter);
+        AddJsScriptsToPanel(parentPanel, scripts, filter, selectType);
     }
 
-    private void AddJsScriptsToPanel(StackPanel parentPanel, List<ScriptProject> scripts, string filter)
+    private static void AddJsScriptsToPanel(StackPanel parentPanel, List<ScriptProject> scripts, string filter, Type selectType)
     {
         foreach (var script in scripts)
         {
             var displayText = script.FolderName + " - " + script.Manifest.Name;
-            
-            if (!string.IsNullOrEmpty(filter) && 
+
+            if (!string.IsNullOrEmpty(filter) &&
                 !displayText.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
                 !script.FolderName.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
                 !script.Manifest.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
@@ -797,15 +797,33 @@ public partial class ScriptControlViewModel : ViewModel
                 continue;
             }
 
-            var checkBox = new CheckBox
+            if (selectType == typeof(CheckBox))
             {
-                Content = displayText,
-                Tag = script.FolderName,
-                Margin = new Thickness(0, 2, 0, 2),
-                Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
-            };
-
-            parentPanel.Children.Add(checkBox);
+                var checkBox = new CheckBox
+                {
+                    Content = displayText,
+                    Tag = script.FolderName,
+                    Margin = new Thickness(0, 2, 0, 2),
+                    Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
+                };
+                parentPanel.Children.Add(checkBox);
+            }
+            else if (selectType == typeof(RadioButton))
+            {
+                var radioButton = new RadioButton
+                {
+                    Content = displayText,
+                    Tag = script.FolderName,
+                    Margin = new Thickness(0, 2, 0, 2),
+                    Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_"),
+                    GroupName = "JsScriptsRadioButtonGroup"
+                };
+                parentPanel.Children.Add(radioButton);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException();
+            }
         }
     }
 
@@ -844,7 +862,7 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     private void OnAddShell()
     {
-        var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点","请输入需要执行的shell");
+        var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点", "请输入需要执行的shell");
         if (!string.IsNullOrEmpty(str))
         {
             SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildShellProject(str));
@@ -1067,7 +1085,7 @@ public partial class ScriptControlViewModel : ViewModel
                 // 递归时，传递当前节点的匹配状态
                 // 每个子节点深度相同，所以如果递归过程中任意子节点应该显示，则当前节点也应该显示
                 if (ShouldShowNode(child, filter, isDeepSearch, currentDepth + 1, currentNodeMatches))
-                    return true; 
+                    return true;
             }
         }
 
@@ -1248,7 +1266,7 @@ public partial class ScriptControlViewModel : ViewModel
     //     return result;
     // }
 
-    private List<ScriptProject> LoadAllJsScriptProjects()
+    internal static List<ScriptProject> LoadAllJsScriptProjects()
     {
         var path = Global.ScriptPath();
         Directory.CreateDirectory(path);
@@ -1394,13 +1412,13 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    public  async void OnDeleteScriptByFolder(ScriptGroupProject? item)
+    public async void OnDeleteScriptByFolder(ScriptGroupProject? item)
     {
         if (item == null)
         {
             return;
-        } 
-        
+        }
+
         if (SelectedScriptGroup != null)
         {
             var toBeDeletedProjects = SelectedScriptGroup.Projects
@@ -1411,7 +1429,7 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 SelectedScriptGroup.Projects.Remove(project);
             }
-            
+
             _snackbarService.Show(
                 "脚本配置移除成功",
                 $"已移除 {item.FolderName} 下的所有关联配置",
@@ -1657,13 +1675,13 @@ public partial class ScriptControlViewModel : ViewModel
         RunnerContext.Instance.Reset();
 
         TaskProgress taskProgress = new()
-            {
-                ScriptGroupNames = [SelectedScriptGroup.Name]
-            };
+        {
+            ScriptGroupNames = [SelectedScriptGroup.Name]
+        };
         RunnerContext.Instance.taskProgress = taskProgress;
         taskProgress.CurrentScriptGroupName = SelectedScriptGroup.Name;
         TaskProgressManager.SaveTaskProgress(taskProgress);
-        await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name,taskProgress);
+        await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, taskProgress);
     }
 
     [RelayCommand]
@@ -1737,7 +1755,7 @@ public partial class ScriptControlViewModel : ViewModel
     {
         SetTaskContextNextFlag(group);
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
-        if (group.Projects.Where(g=>g.NextFlag ?? false).Count() > 0)
+        if (group.Projects.Where(g => g.NextFlag ?? false).Count() > 0)
         {
             bool start = false;
             foreach (var item in group.Projects)
@@ -1780,17 +1798,17 @@ public partial class ScriptControlViewModel : ViewModel
 
             return ls;
         }
-        
-        return group.Projects.Select(g=>g).ToList();
+
+        return group.Projects.Select(g => g).ToList();
     }
 
     [RelayCommand]
     public async Task OnContinueMultiScriptGroupAsync()
     {
 
-       // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
+        // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
         var stackPanel = new StackPanel();
-        
+
 
         // 添加分割线
         var separator = new Separator
@@ -1800,21 +1818,21 @@ public partial class ScriptControlViewModel : ViewModel
         stackPanel.Children.Add(separator);
 
         List<TaskProgress> taskProgresses = TaskProgressManager.LoadAllTaskProgress();
-        var checkBox = new ComboBox();;
+        var checkBox = new ComboBox(); ;
         stackPanel.Children.Add(checkBox);
-        ObservableCollection<KeyValuePair<string, string>>  kvs=new ObservableCollection<KeyValuePair<string, string>>();
+        ObservableCollection<KeyValuePair<string, string>> kvs = new ObservableCollection<KeyValuePair<string, string>>();
         foreach (var taskProgress in taskProgresses)
         {
-            var name = taskProgress.Name+"_"+taskProgress.CurrentScriptGroupName+"_";
+            var name = taskProgress.Name + "_" + taskProgress.CurrentScriptGroupName + "_";
             if (taskProgress.Loop)
             {
-                name += "循环("+taskProgress.LoopCount+")_";
+                name += "循环(" + taskProgress.LoopCount + ")_";
             }
-            if (taskProgress.CurrentScriptGroupProjectInfo!=null)
+            if (taskProgress.CurrentScriptGroupProjectInfo != null)
             {
-                name = name +taskProgress.CurrentScriptGroupProjectInfo.Index+ "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
+                name = name + taskProgress.CurrentScriptGroupProjectInfo.Index + "_" + taskProgress.CurrentScriptGroupProjectInfo.Name;
             }
-            kvs.Add(new KeyValuePair<string, string>(taskProgress.Name,name));
+            kvs.Add(new KeyValuePair<string, string>(taskProgress.Name, name));
         }
 
         checkBox.SelectedValuePath = "Key";
@@ -1822,7 +1840,7 @@ public partial class ScriptControlViewModel : ViewModel
         checkBox.ItemsSource = kvs;
         checkBox.SelectedIndex = 0;
         //SelectedValuePath="Key"
-       // DisplayMemberPath="Value"
+        // DisplayMemberPath="Value"
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = "选择需要继续执行的进度记录",
@@ -1831,7 +1849,8 @@ public partial class ScriptControlViewModel : ViewModel
                 Content = stackPanel,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 Height = 300 // 设置固定高度
-                ,Width = 600
+                ,
+                Width = 600
             },
             CloseButtonText = "关闭",
             PrimaryButtonText = "确认执行",
@@ -1842,7 +1861,7 @@ public partial class ScriptControlViewModel : ViewModel
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == MessageBoxResult.Primary)
         {
-            
+
             /*var selectedGroups = checkBoxes
                 .Where(kv => kv.Value.IsChecked == true)
                 .Select(kv => kv.Key)
@@ -1857,7 +1876,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    public async Task OnContinueTaskProgressAsync(string name,List<TaskProgress>? taskProgresses = null)
+    public async Task OnContinueTaskProgressAsync(string name, List<TaskProgress>? taskProgresses = null)
     {
         if (taskProgresses == null)
         {
@@ -1873,24 +1892,24 @@ public partial class ScriptControlViewModel : ViewModel
         }
         else
         {
-            taskProgress=taskProgresses.FirstOrDefault(t=>t.Name  == name);
+            taskProgress = taskProgresses.FirstOrDefault(t => t.Name == name);
         }
 
-        
-        
-        if (taskProgress!=null)
+
+
+        if (taskProgress != null)
         {
             //await StartGroups(selectedGroups);
             //taskProgress.Next
             var sg = ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList();
-            TaskProgressManager.GenerNextProjectInfo(taskProgress,sg);
-            if (taskProgress.Next==null)
+            TaskProgressManager.GenerNextProjectInfo(taskProgress, sg);
+            if (taskProgress.Next == null)
             {
-                _logger.LogWarning("无法定位到下一个要执行的项目：next为空（"+taskProgress.Name+")");
+                _logger.LogWarning("无法定位到下一个要执行的项目：next为空（" + taskProgress.Name + ")");
             }
             else
             {
-                await StartGroups(sg,taskProgress);
+                await StartGroups(sg, taskProgress);
             }
 
         }
@@ -1927,13 +1946,13 @@ public partial class ScriptControlViewModel : ViewModel
         var stackPanel = new StackPanel();
         var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
 
-        
+
         var loopCheckBox = new CheckBox
         {
             Content = "循环",
         };
-        
-        
+
+
         // 创建全选按钮
         var selectAllCheckBox = new CheckBox
         {
@@ -2046,7 +2065,7 @@ public partial class ScriptControlViewModel : ViewModel
                 );
                 return;
             }
-            await StartGroups(selectedGroups,null,loopCheckBox.IsChecked ?? false);;
+            await StartGroups(selectedGroups, null, loopCheckBox.IsChecked ?? false);
         }
     }
 
@@ -2057,7 +2076,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
     {
-        if( ScriptGroups.Count == 0)
+        if (ScriptGroups.Count == 0)
         {
             ReadScriptGroup();
         }
@@ -2085,7 +2104,7 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    public async Task StartGroups(List<ScriptGroup> scriptGroups,TaskProgress? taskProgress = null,bool loop = false)
+    public async Task StartGroups(List<ScriptGroup> scriptGroups, TaskProgress? taskProgress = null, bool loop = false)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
         try
@@ -2096,7 +2115,8 @@ public partial class ScriptControlViewModel : ViewModel
                 taskProgress = new()
                 {
                     ScriptGroupNames = scriptGroups.Select(x => x.Name).ToList()
-                    ,Loop = loop
+                    ,
+                    Loop = loop
                 };
             }
 
@@ -2104,16 +2124,16 @@ public partial class ScriptControlViewModel : ViewModel
             var sg = GetNextScriptGroups(scriptGroups);
             foreach (var scriptGroup in sg)
             {
-                if (taskProgress.Next!=null)
+                if (taskProgress.Next != null)
                 {
-                    if (scriptGroup.Name!=taskProgress.Next.GroupName)
+                    if (scriptGroup.Name != taskProgress.Next.GroupName)
                     {
                         continue;
                     }
                 }
                 taskProgress.CurrentScriptGroupName = scriptGroup.Name;
                 TaskProgressManager.SaveTaskProgress(taskProgress);
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name,taskProgress);
+                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress);
                 await Task.Delay(2000);
             }
 
@@ -2133,7 +2153,7 @@ public partial class ScriptControlViewModel : ViewModel
                     taskProgress.EndTime = DateTime.Now;
                     TaskProgressManager.SaveTaskProgress(taskProgress);
                 }
-               
+
             }
         }
         catch (Exception e)
