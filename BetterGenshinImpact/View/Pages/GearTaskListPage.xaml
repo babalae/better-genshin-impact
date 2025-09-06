@@ -214,10 +214,17 @@
             <StackPanel Grid.Row="1"
                         Margin="0,0,0,8"
                         Orientation="Horizontal">
-                <ui:Button Command="{Binding AddTaskNodeCommand}"
-                           Content="添加任务"
-                           Icon="{ui:SymbolIcon Add24}"
-                           Margin="0,0,4,0" />
+                <ui:DropDownButton Content="添加任务" Icon="{ui:SymbolIcon Add24}">
+                    <ui:DropDownButton.Flyout>
+                        <ContextMenu> 
+                            <MenuItem Header="JS脚本" Command="{Binding AddTaskNodeCommand}" />
+                            <MenuItem Header="地图追踪任务" Command="{Binding AddTaskNodeCommand}" />
+                            <MenuItem Header="键鼠脚本" Command="{Binding AddTaskNodeCommand}" />
+                            <MenuItem Header="Shell" Command="{Binding AddTaskNodeCommand}" />
+                            <MenuItem Header="C#方法" Command="{Binding AddTaskNodeCommand}" />
+                        </ContextMenu>
+                    </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
                 <ui:Button Command="{Binding AddTaskGroupCommand}"
                            Content="添加组"
                            Icon="{ui:SymbolIcon Folder24}"
