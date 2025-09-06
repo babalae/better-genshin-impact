@@ -175,6 +175,12 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         await Delay(800, ct);
     }
+    
+    public static async Task OpenInventoryWithGuard(GridScreenName gridScreenName, InputSimulator input, ILogger logger, CancellationToken ct)
+    {
+        await OpenInventory(gridScreenName, input, logger, ct); // 先走原 OpenInventory 逻辑
+        BetterGenshinImpact.GameTask.AutoArtifactSalvage.InventoryDialogGuard.Start(logger, ct);
+    }
 
     public async Task Start(CancellationToken ct)
     {
@@ -184,7 +190,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             await new ReturnMainUiTask().Start(ct);
         }
 
-        await OpenInventory(GridScreenName.Artifacts, this.input, this.logger, this.ct);
+        await OpenInventoryWithGuard(GridScreenName.Artifacts, this.input, this.logger, this.ct);
 
         // 点击分解按钮打开分解界面
         using var ra2 = CaptureToRectArea();
