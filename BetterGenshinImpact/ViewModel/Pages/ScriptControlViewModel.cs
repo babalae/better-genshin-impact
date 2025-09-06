@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -871,173 +872,247 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OnAddPathing()
+    private async Task OnAddPathing()
     {
-        var root = FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath);
-        var stackPanel = CreatePathingScriptSelectionPanel(root.Children);
-
-        var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(600, 720));
-        if (!string.IsNullOrEmpty(result))
+        try
         {
-            AddSelectedPathingScripts((StackPanel)stackPanel.Content);
+            // 在后台线程中加载数据
+            var root = await Task.Run(() => FileTreeNodeHelper.LoadDirectory<PathingTask>(MapPathingViewModel.PathJsonPath));
+
+            // 异步创建选择面板
+            var stackPanel = await CreatePathingScriptSelectionPanelAsync(root.Children);
+
+            // 显示选择对话框
+            var result = PromptDialog.Prompt("请选择需要添加的地图追踪任务", "请选择需要添加的地图追踪任务", stackPanel, new Size(600, 720));
+
+            if (!string.IsNullOrEmpty(result))
+            {
+                AddSelectedPathingScripts((StackPanel)stackPanel.Content);
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"加载地图追踪任务失败: {ex.Message}");
+            _logger.LogError(ex, "加载地图追踪任务时发生错误");
         }
     }
 
-    // 存储已创建的UI元素
+    // 添加防抖计时器字段
+    private DispatcherTimer? _debounceTimer;
+    private const int DebounceDelayMs = 300;
+
+    // 存储路径与UI元素的映射
     private readonly Dictionary<string, FrameworkElement> _nodeUIElements = [];
 
     /// <summary>
-    /// 创建地图追踪任务选择面板
+    /// 异步创建地图追踪任务选择面板
     /// </summary>
-    private ScrollViewer CreatePathingScriptSelectionPanel(IEnumerable<FileTreeNode<PathingTask>> list)
+    private async Task<ScrollViewer> CreatePathingScriptSelectionPanelAsync(IEnumerable<FileTreeNode<PathingTask>> list)
     {
         var stackPanel = new StackPanel();
-        CheckBox excludeCheckBox = new CheckBox
+        CheckBox excludeCheckBox = new()
         {
             Content = "排除已选择过的目录",
             VerticalAlignment = VerticalAlignment.Center,
         };
-        CheckBox deepCheckBox = new CheckBox
+        CheckBox deepCheckBox = new()
         {
             Content = "深度搜索",
             VerticalAlignment = VerticalAlignment.Center,
         };
-        stackPanel.Children.Add(excludeCheckBox);
-        stackPanel.Children.Add(deepCheckBox);
-
-        var filterTextBox = new TextBox
+        TextBox filterTextBox = new()
         {
             Margin = new Thickness(0, 0, 0, 10),
             PlaceholderText = "输入筛选条件...",
         };
-        // 设置文本框自动聚焦
-        filterTextBox.Loaded += (s, e) => filterTextBox.Focus();
 
-
-        filterTextBox.TextChanged += delegate 
+        // 初始化防抖计时器
+        _debounceTimer = new DispatcherTimer
         {
-            ApplyFilterToExistingNodes(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked);
+            Interval = TimeSpan.FromMilliseconds(DebounceDelayMs)
         };
+
         excludeCheckBox.Click += delegate
-        { 
-            ApplyFilterToExistingNodes(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked); 
+        {
+            _ = ApplyFilterToExistingNodesAsync(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked);
         };
-        deepCheckBox.Click += delegate 
-        { 
-            ApplyFilterToExistingNodes(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked); 
+        deepCheckBox.Click += delegate
+        {
+            _ = ApplyFilterToExistingNodesAsync(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked);
         };
-        
+        filterTextBox.TextChanged += delegate
+        {
+            _debounceTimer.Stop();
+
+            // 设置计时器回调
+            _debounceTimer.Tick -= OnDebounceTimerTick;
+            _debounceTimer.Tick += OnDebounceTimerTick;
+
+            _debounceTimer.Start();
+            void OnDebounceTimerTick(object? sender, EventArgs e)
+            {
+                _debounceTimer.Stop();
+                _debounceTimer.Tick -= OnDebounceTimerTick;
+                _ = ApplyFilterToExistingNodesAsync(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked);
+            }
+        };
+
+        stackPanel.Children.Add(excludeCheckBox);
+        stackPanel.Children.Add(deepCheckBox);
         stackPanel.Children.Add(filterTextBox);
 
-        // 一次性构建完整的UI树，初始状态下仅显示顶层节点
-        BuildCompleteUITree(stackPanel, list, 0);
+        // 异步构建UI树
+        await BuildCompleteUITreeAsync(stackPanel, list, 0);
+
+        filterTextBox.Focus();
 
         var scrollViewer = new ScrollViewer
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            //Height = 435 // 固定高度
         };
 
         return scrollViewer;
     }
 
     /// <summary>
-    /// 一次性构建完整的UI树
+    /// 异步构建完整的UI树
     /// </summary>
-    /// <param name="parentPanel">构建内容的父容器</parm>
+    /// <param name="parentPanel">构建内容的父容器</param>
     /// <param name="nodes">要构建的节点集合</param>
     /// <param name="depth">构建的深度</param>
-    private void BuildCompleteUITree(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>>? nodes, int depth)
+    private async Task BuildCompleteUITreeAsync(StackPanel parentPanel, IEnumerable<FileTreeNode<PathingTask>>? nodes, int depth)
     {
         if (nodes == null)
             return;
-        foreach (var node in nodes)
+
+        var nodeList = nodes.ToList();
+
+        for (int i = 0; i < nodeList.Count; i += 1)
         {
-            var checkBox = new CheckBox
+            var batch = nodeList.Skip(i).Take(1);
+
+            // 在UI线程中创建UI元素并添加到面板
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                Content = node.FileName,
-                Tag = node.FilePath,
-                Margin = new Thickness(depth * 30, 0, 0, 0),
-                Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
+                foreach (var node in batch)
+                {
+                    var element = CreateUIElementForNode(node, depth);
+                    parentPanel.Children.Add(element);
+
+                    // 如果是目录且有子节点，递归构建子节点
+                    if (node.IsDirectory && node.Children?.Any() == true && element is Expander expander)
+                    {
+                        if (expander.Content is StackPanel childPanel)
+                        {
+                            await BuildCompleteUITreeAsync(childPanel, node.Children, depth + 1);
+                        }
+                    }
+                }
+            }, DispatcherPriority.Background);
+
+            // 让出控制权，避免长时间阻塞UI线程
+            await Task.Delay(1);
+        }
+    }
+    
+    /// <summary>
+    /// 为单个节点创建UI元素
+    /// </summary>
+    /// <param name="node">文件树节点</param>
+    /// <param name="depth">节点深度</param>
+    /// <returns>创建的UI元素</returns>
+    private FrameworkElement CreateUIElementForNode(FileTreeNode<PathingTask> node, int depth)
+    {
+        var checkBox = new CheckBox
+        {
+            Content = node.FileName,
+            Tag = node.FilePath,
+            Margin = new Thickness(depth * 30, 0, 0, 0),
+            Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_")
+        };
+
+        // 存储路径与UI元素的映射
+        if (!string.IsNullOrEmpty(node.FilePath))
+            _nodeUIElements[node.FilePath] = checkBox;
+
+        if (node.IsDirectory)
+        {
+            // 如果父节点没有任何子内容，则不可勾选
+            if (node.Children == null || node.Children.Count == 0)
+                checkBox.IsEnabled = false;
+
+            var childPanel = new StackPanel();
+            checkBox.IsThreeState = true;
+            var expander = new Expander
+            {
+                Header = checkBox,
+                Content = childPanel,
+                IsExpanded = false,
+                Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_"),
+                Visibility = Visibility.Visible
             };
 
             // 存储路径与UI元素的映射
             if (!string.IsNullOrEmpty(node.FilePath))
-                _nodeUIElements[node.FilePath] = node.IsDirectory ? checkBox : checkBox;
-
-            if (node.IsDirectory)
             {
-                // 如果父节点没有任何子内容，则不可勾选
-                if (node.Children == null || node.Children.Count == 0)
-                    checkBox.IsEnabled = false;
-
-                var childPanel = new StackPanel();
-
-                // 递归构建子节点
-                BuildCompleteUITree(childPanel, node.Children, depth + 1);
-
-                checkBox.IsThreeState = true;
-                var expander = new Expander
-                {
-                    Header = checkBox,
-                    Content = childPanel,
-                    IsExpanded = false,
-                    Name = "dynamic_" + Guid.NewGuid().ToString().Replace("-", "_"),
-                    Visibility = Visibility.Visible
-                };
-
-                // 存储路径与UI元素的映射
-                if (!string.IsNullOrEmpty(node.FilePath))
-                    _nodeUIElements[node.FilePath + "_expander"] = expander;
-
-                // 修改事件处理：用户点击时只在全选和全不选之间切换
-                checkBox.Click += (s, e) => HandleDirectoryCheckBoxClick(checkBox, childPanel);
-
-                parentPanel.Children.Add(expander);
+                _nodeUIElements[node.FilePath + "_expander"] = expander;
             }
-            else
-            {
-                // 为文件复选框添加状态改变事件，用于更新父级状态
-                checkBox.Checked += (s, e) => UpdateParentCheckBoxState(checkBox);
-                checkBox.Unchecked += (s, e) => UpdateParentCheckBoxState(checkBox);
 
-                parentPanel.Children.Add(checkBox);
-            }
+            // 修改事件处理：用户点击时只在全选和全不选之间切换
+            checkBox.Click += (s, e) => HandleDirectoryCheckBoxClick(checkBox, childPanel);
+
+            return expander;
+        }
+        else
+        {
+            // 为文件复选框添加状态改变事件，用于更新父级状态
+            checkBox.Checked += (s, e) => UpdateParentCheckBoxState(checkBox);
+            checkBox.Unchecked += (s, e) => UpdateParentCheckBoxState(checkBox);
+
+            return checkBox;
         }
     }
 
     /// <summary>
-    /// 应用筛选到已存在的节点，控制它们的可见性和展开状态
-    /// </summary>
+    /// 异步应用筛选到已存在的节点
     /// <param name="nodes">要筛选的节点集合</param>
     /// <param name="filter">用户输入的筛选关键词</param>
-    /// <param name="excludeSelectedFolder">是否排除已选择过的目录</param>
-    /// <param name="isDeepSearch">是否启用深度搜索</param>
-    private void ApplyFilterToExistingNodes(IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? excludeSelectedFolder = false, bool? isDeepSearch = false)
+    /// <param name="excludeSelectedFolder">排除选择的目录</param>
+    /// <param name="isDeepSearch">深度搜索功能</param>
+    /// </summary>
+    private async Task ApplyFilterToExistingNodesAsync(IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? excludeSelectedFolder = false, bool? isDeepSearch = false)
     {
-        IEnumerable<FileTreeNode<PathingTask>> filteredNodes = nodes;
-
-        // 如果启用排除已选择过的目录，先过滤掉这些目录
-        if (excludeSelectedFolder ?? false)
+        var filteredResult = await Task.Run(() =>
         {
-            List<string> skipFolderNames = SelectedScriptGroup?.Projects.ToList().Select(item => item.FolderName).Distinct().ToList() ?? [];
-            string jsonString = JsonSerializer.Serialize(nodes);
-            var copiedNodes = JsonSerializer.Deserialize<ObservableCollection<FileTreeNode<PathingTask>>>(jsonString);
-            if (copiedNodes != null)
+            IEnumerable<FileTreeNode<PathingTask>> filteredNodes = nodes;
+
+            // 如果启用排除已选择过的目录，先过滤掉这些目录
+            if (excludeSelectedFolder ?? false)
             {
-                copiedNodes = FileTreeNodeHelper.FilterTree(copiedNodes, skipFolderNames);
-                copiedNodes = FileTreeNodeHelper.FilterEmptyNodes(copiedNodes);
-                filteredNodes = copiedNodes;
+                List<string> skipFolderNames = SelectedScriptGroup?.Projects.ToList().Select(item => item.FolderName).Distinct().ToList() ?? [];
+                string jsonString = JsonSerializer.Serialize(nodes);
+                var copiedNodes = JsonSerializer.Deserialize<ObservableCollection<FileTreeNode<PathingTask>>>(jsonString);
+                if (copiedNodes != null)
+                {
+                    copiedNodes = FileTreeNodeHelper.FilterTree(copiedNodes, skipFolderNames);
+                    copiedNodes = FileTreeNodeHelper.FilterEmptyNodes(copiedNodes);
+                    filteredNodes = copiedNodes;
+                }
             }
-        }
 
-        // 重置所有节点的可见性
-        foreach (var element in _nodeUIElements.Values)
-            element.Visibility = Visibility.Collapsed;
+            return filteredNodes;
+        });
 
-        // 更新节点可见性和展开状态
-        UpdateNodesVisibility(filteredNodes, filter, isDeepSearch);
+        // 在UI线程中更新可见性
+        await Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            // 重置所有节点的可见性
+            foreach (var element in _nodeUIElements.Values)
+                element.Visibility = Visibility.Collapsed;
+
+            UpdateNodesVisibility(filteredResult, filter, isDeepSearch);
+        }, DispatcherPriority.Background);
     }
 
     /// <summary>
@@ -1048,50 +1123,9 @@ public partial class ScriptControlViewModel : ViewModel
     /// <param name="isDeepSearch">是否启用深度搜索</param>
     /// <param name="depth">当前节点在树中的深度级别</param>
     /// <param name="parentMatched">当前节点的父级是否已经匹配筛选条件</param>
-    private void UpdateNodesVisibility(IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? isDeepSearch, int depth = 0, bool parentMatched = false)
-    {
-        foreach (var node in nodes)
-        {
-            if (string.IsNullOrEmpty(node.FilePath))
-                continue;
-
-            bool nodeMatches = !string.IsNullOrEmpty(filter) && IsNodeMatched(node, filter);
-            bool shouldShow = ShouldShowNode(node, filter, isDeepSearch, depth, parentMatched);
-
-            // 更新节点可见性
-            if (_nodeUIElements.TryGetValue(node.FilePath, out var element))
-                element.Visibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
-
-            // 如果是目录节点，递归处理子节点并更新展开状态
-            if (node.IsDirectory && _nodeUIElements.TryGetValue(node.FilePath + "_expander", out var expanderElement) && expanderElement is Expander expander)
-            {
-                if (shouldShow)
-                {
-                    // 递归处理子节点
-                    bool childContainsMatch = UpdateChildNodesVisibility(node.Children, filter, isDeepSearch, depth + 1, nodeMatches || parentMatched);
-
-                    // 更新展开状态
-                    expander.IsExpanded = ShouldExpandNode(filter, nodeMatches, parentMatched, childContainsMatch, depth, isDeepSearch, GetParentFolderName(node));
-                    expander.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    expander.Visibility = Visibility.Collapsed;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 更新子节点的可见性并返回是否有匹配的子节点
-    /// </summary>
-    /// <param name="nodes">要处理的文件树节点集合</param>
-    /// <param name="filter">用户输入的筛选关键词</param>
-    /// <param name="isDeepSearch">是否启用深度搜索</param>
-    /// <param name="depth">当前节点在树中的深度级别</param>
-    /// <param name="parentMatched">当前节点的父级是否已经匹配筛选条件</param>
-    /// <returns>子节点中是否包含匹配的节点</returns>
-    private bool UpdateChildNodesVisibility(IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? isDeepSearch, int depth, bool parentMatched)
+    /// <param name="returnMatchStatus">是否返回匹配状态（用于子节点处理）</param>
+    /// <returns>returnMatchStatus则返回是否包含匹配的节点</returns>
+    private bool UpdateNodesVisibility(IEnumerable<FileTreeNode<PathingTask>> nodes, string filter, bool? isDeepSearch, int depth = 0, bool parentMatched = false, bool returnMatchStatus = false)
     {
         bool containsMatch = false;
 
@@ -1107,24 +1141,28 @@ public partial class ScriptControlViewModel : ViewModel
             if (_nodeUIElements.TryGetValue(node.FilePath, out var element))
             {
                 element.Visibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
-                if (shouldShow && nodeMatches)
+                if (shouldShow && nodeMatches && returnMatchStatus)
                     containsMatch = true;
             }
 
-            // 如果是目录节点，递归处理
-            if (node.IsDirectory && shouldShow)
+            // 如果是目录节点，递归处理子节点并更新展开状态
+            if (node.IsDirectory && _nodeUIElements.TryGetValue(node.FilePath + "_expander", out var expanderElement) && expanderElement is Expander expander)
             {
-                if (_nodeUIElements.TryGetValue(node.FilePath + "_expander", out var expanderElement) && expanderElement is Expander expander)
+                if (shouldShow)
                 {
-                    bool childContainsMatch = UpdateChildNodesVisibility(node.Children, filter, isDeepSearch, depth + 1, nodeMatches || parentMatched);
+                    // 递归处理子节点，传入returnMatchStatus = true来获取子节点匹配状态
+                    bool childContainsMatch = UpdateNodesVisibility(node.Children, filter, isDeepSearch, depth + 1, nodeMatches || parentMatched, true);
 
-                    // 如果子节点包含匹配，当前层级也标记为包含匹配
-                    if (childContainsMatch)
+                    // 如果子节点包含匹配且需要返回匹配状态，当前层级也标记为包含匹配
+                    if (childContainsMatch && returnMatchStatus)
                         containsMatch = true;
 
-                    // 更新展开状态
                     expander.IsExpanded = ShouldExpandNode(filter, nodeMatches, parentMatched, childContainsMatch, depth, isDeepSearch, GetParentFolderName(node));
                     expander.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    expander.Visibility = Visibility.Collapsed;
                 }
             }
         }
@@ -1165,8 +1203,7 @@ public partial class ScriptControlViewModel : ViewModel
         {
             foreach (var child in node.Children)
             {
-                // 递归时，传递当前节点的匹配状态
-                // 每个子节点深度相同，所以如果递归过程中任意子节点应该显示，则当前节点也应该显示
+                // 递归时，传递当前节点的匹配状态，任意当前深度的节点应该显示，则当前节点也应该显示
                 if (ShouldShowNode(child, filter, isDeepSearch, currentDepth + 1, currentNodeMatches))
                     return true;
             }
@@ -1294,33 +1331,27 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     /// <summary>
-    /// 处理目录复选框点击事件，用户点击时只在全选和全不选之间切换
+    /// 处理目录复选框点击事件
     /// </summary>
     /// <param name="checkBox">被点击的目录复选框</param>
     /// <param name="childPanel">子面板</param>
     private void HandleDirectoryCheckBoxClick(CheckBox checkBox, StackPanel childPanel)
     {
-        // 获取所有子复选框的状态
         var childCheckBoxes = GetAllChildCheckBoxes(childPanel);
 
         // 判断目标状态：如果所有子项都已选中，则全不选；否则全选
         bool allChildrenChecked = childCheckBoxes.Count > 0 && childCheckBoxes.All(cb => cb.IsChecked == true);
         bool targetState = !allChildrenChecked;
 
-        // 设置当前复选框状态
         checkBox.IsChecked = targetState;
-
-        // 设置所有子项状态
         SetChildCheckBoxesState(childPanel, targetState);
-
-        // 更新父级复选框状态
         UpdateParentCheckBoxState(checkBox);
     }
 
     /// <summary>
-    /// 获取面板中所有的子复选框（递归获取）
+    /// 递归获取面板中所有的子复选框
     /// </summary>
-    /// <param name="panel">面板</param>
+    /// <param name="panel">获取的面板</param>
     /// <returns>所有子复选框列表</returns>
     private List<CheckBox> GetAllChildCheckBoxes(StackPanel panel)
     {
@@ -1370,20 +1401,11 @@ public partial class ScriptControlViewModel : ViewModel
 
         // 设置父级复选框状态
         if (checkedCount == siblingCheckBoxes.Count)
-        {
-            // 全部选中
             parentCheckBox.IsChecked = true;
-        }
         else if (uncheckedCount == siblingCheckBoxes.Count)
-        {
-            // 全部未选中
             parentCheckBox.IsChecked = false;
-        }
         else
-        {
-            // 部分选中或混合状态
-            parentCheckBox.IsChecked = null; // 不确定状态
-        }
+            parentCheckBox.IsChecked = null;
 
         // 递归更新上级父级
         UpdateParentCheckBoxState(parentCheckBox);
