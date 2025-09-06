@@ -75,15 +75,35 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     public void OnGetExecutionOrder()
     {
-        var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder(DateTime.Now);
-        if (index == -1)
+        var cfg = _pathingConfig.TaskCycleConfig;
+        int todayOrder = cfg.GetExecutionOrder(DateTime.Now);
+
+        if (todayOrder == -1)
         {
             Toast.Error("计算失败，请检查参数！");
+            return;
+        }
+
+        int diff = (cfg.Index - todayOrder + cfg.Cycle) % cfg.Cycle;
+        int distance = diff == 0 ? 1 : diff + 1;
+        int daysUntil = diff == 0 ? cfg.Cycle : diff;
+
+        // 显示友好的执行顺序信息
+        string message;
+        if (distance == 1)
+        {
+            message = $"当前应执行序号为：{todayOrder} 的任务，" +
+                      $"当前任务周期内序号：{distance}，" +
+                      $"目标序号：{cfg.Index} —— 今天即可执行！";
         }
         else
         {
-            Toast.Success("当前执行序号为："+index);
+            message = $"当前应执行序号为：{todayOrder} 的任务，" +
+                      $"当前任务周期内序号：{distance}，" +
+                      $"目标序号：{cfg.Index}，距今还有 {daysUntil} 天";
         }
+
+        Toast.Success(message);
     }
 
     [RelayCommand]
