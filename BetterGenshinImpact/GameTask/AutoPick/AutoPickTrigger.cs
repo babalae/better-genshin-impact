@@ -304,6 +304,12 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
+            // 如果黑名单中有通配符*，表示仅支持白名单自动拾取，不认识的选项都不拾取
+            if (config.BlackListEnabled && _blackList.Contains("*"))
+            {
+                return;
+            }
+
             if (config.BlackListEnabled && (_blackList.Contains(text) || _blackList.Contains(simpleText)))
             {
                 return;
