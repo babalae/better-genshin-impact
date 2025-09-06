@@ -17,9 +17,11 @@ using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -114,6 +116,8 @@ public partial class App : Application
                 services.AddView<SchedulerPage, SchedulerViewModel>();
                 services.AddView<GearTaskListPage, GearTaskListPageViewModel>();
                 services.AddView<GearTriggerPage, GearTriggerPageViewModel>();
+                services.AddTransient<TaskDefinitionEditWindow>();
+                services.AddTransient<TaskDefinitionEditWindowViewModel>();
 
 
                 // 一条龙 ViewModels

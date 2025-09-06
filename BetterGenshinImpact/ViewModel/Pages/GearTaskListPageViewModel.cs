@@ -14,6 +14,9 @@ using BetterGenshinImpact.Service;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
 using GongSolutions.Wpf.DragDrop;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Windows;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -214,15 +217,31 @@ public partial class GearTaskListPageViewModel : ViewModel
     [RelayCommand]
     private async Task AddTaskDefinition()
     {
-        var newTask = new GearTaskDefinitionViewModel($"新任务组 {TaskDefinitions.Count + 1}", "新创建的任务组");
-        // 设置新任务的order为当前最大值+1
-        newTask.Order = TaskDefinitions.Count > 0 ? TaskDefinitions.Max(t => t.Order) + 1 : 0;
-        TaskDefinitions.Add(newTask);
-        SetupTaskDefinitionPropertyChanged(newTask);
-        SelectedTaskDefinition = newTask;
+        var editViewModel = App.GetService<TaskDefinitionEditWindowViewModel>();
+        if (editViewModel == null) return;
         
-        // 自动保存到文件
-        await _storageService.SaveTaskDefinitionAsync(newTask);
+        editViewModel.Name = $"新任务组{TaskDefinitions.Count + 1}";
+        editViewModel.Description = "";
+        
+        var editWindow = App.GetService<TaskDefinitionEditWindow>();
+        if (editWindow == null) return;
+        
+        editWindow.ViewModel.Name = editViewModel.Name;
+        editWindow.ViewModel.Description = editViewModel.Description;
+        editWindow.Owner = Application.Current.MainWindow;
+        
+        if (editWindow.ShowDialog() == true)
+        {
+            var newTask = new GearTaskDefinitionViewModel(editWindow.ViewModel.Name, editWindow.ViewModel.Description);
+            // 设置新任务的order为当前最大值+1
+            newTask.Order = TaskDefinitions.Count > 0 ? TaskDefinitions.Max(t => t.Order) + 1 : 0;
+            TaskDefinitions.Add(newTask);
+            SetupTaskDefinitionPropertyChanged(newTask);
+            SelectedTaskDefinition = newTask;
+            
+            // 自动保存到文件
+            await _storageService.SaveTaskDefinitionAsync(newTask);
+        }
     }
 
     /// <summary>
@@ -248,6 +267,51 @@ public partial class GearTaskListPageViewModel : ViewModel
             // 删除对应的 JSON 文件
             await _storageService.DeleteTaskDefinitionAsync(taskName);
         }
+    }
+
+    /// <summary>
+    /// 编辑选中的任务定义
+    /// </summary>
+    [RelayCommand]
+    private async Task EditSelectedTaskDefinition()
+    {
+        if (SelectedTaskDefinition == null) return;
+        
+        var editViewModel = App.GetService<TaskDefinitionEditWindowViewModel>();
+        if (editViewModel == null) return;
+        
+        editViewModel.Name = SelectedTaskDefinition.Name;
+        editViewModel.Description = SelectedTaskDefinition.Description;
+        
+        var editWindow = App.GetService<TaskDefinitionEditWindow>();
+        if (editWindow == null) return;
+        
+        editWindow.ViewModel.Name = editViewModel.Name;
+        editWindow.ViewModel.Description = editViewModel.Description;
+        editWindow.Owner = Application.Current.MainWindow;
+        
+        if (editWindow.ShowDialog() == true)
+        {
+            SelectedTaskDefinition.Name = editWindow.ViewModel.Name;
+            SelectedTaskDefinition.Description = editWindow.ViewModel.Description;
+            SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+            
+            // 自动保存到文件
+            await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+            
+            _logger.LogInformation("编辑了任务定义: {Name}", SelectedTaskDefinition.Name);
+        }
+    }
+
+    /// <summary>
+    /// 删除选中的任务定义
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteSelectedTaskDefinition()
+    {
+        if (SelectedTaskDefinition == null) return;
+        
+        await DeleteTaskDefinition(SelectedTaskDefinition);
     }
 
     /// <summary>
@@ -375,32 +439,9 @@ public partial class GearTaskListPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 保存所有任务定义到JSON文件
+    /// 从JSON文件重新加载所有任务定义（内部使用）
     /// </summary>
-    [RelayCommand]
-    private async Task SaveToJson()
-    {
-        try
-        {
-            foreach (var taskDefinition in TaskDefinitions)
-            {
-                await _storageService.SaveTaskDefinitionAsync(taskDefinition);
-            }
-            _logger.LogInformation("所有任务定义已保存到JSON文件");
-            MessageBox.Show("保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "保存任务定义到JSON文件时发生错误");
-            MessageBox.Show($"保存失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    /// <summary>
-    /// 从JSON文件重新加载所有任务定义
-    /// </summary>
-    [RelayCommand]
-    private async Task LoadFromJson()
+    private async Task LoadFromJsonInternal()
     {
         try
         {
@@ -414,12 +455,10 @@ public partial class GearTaskListPageViewModel : ViewModel
             }
             
             _logger.LogInformation("从JSON文件重新加载了 {Count} 个任务定义", loadedTasks.Count);
-            MessageBox.Show($"加载成功！共加载 {loadedTasks.Count} 个任务定义", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "从JSON文件加载任务定义时发生错误");
-            MessageBox.Show($"加载失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

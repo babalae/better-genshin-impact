@@ -134,13 +134,6 @@
                            Content="新建"
                            Icon="{ui:SymbolIcon Add24}"
                            Margin="0,0,4,0" />
-                <ui:Button Command="{Binding SaveToJsonCommand}"
-                           Content="保存"
-                           Icon="{ui:SymbolIcon Save24}"
-                           Margin="0,0,4,0" />
-                <ui:Button Command="{Binding LoadFromJsonCommand}"
-                           Content="加载"
-                           Icon="{ui:SymbolIcon Open24}" />
             </StackPanel>
 
             <!-- 任务定义列表 -->
@@ -159,6 +152,20 @@
                          dd:DragDrop.DropHandler="{Binding}"
                          dd:DragDrop.UseDefaultDragAdorner="True"
                          Padding="4">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="新增任务定义"
+                                      Command="{Binding AddTaskDefinitionCommand}"
+                                      Icon="{ui:SymbolIcon Add24}" />
+                            <Separator />
+                            <MenuItem Header="编辑选中项"
+                                      Command="{Binding EditSelectedTaskDefinitionCommand}"
+                                      Icon="{ui:SymbolIcon Edit24}" />
+                            <MenuItem Header="删除选中项"
+                                      Command="{Binding DeleteSelectedTaskDefinitionCommand}"
+                                      Icon="{ui:SymbolIcon Delete24}" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
