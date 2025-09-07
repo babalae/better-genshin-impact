@@ -8,8 +8,8 @@
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
                  xmlns:gearTask="clr-namespace:BetterGenshinImpact.ViewModel.Windows.GearTask"
                  Title="选择JS脚本"
-                 Width="900"
-                 Height="600"
+                 Width="950"
+                 Height="650"
                  MinWidth="800"
                  MinHeight="500"
                  Background="#202020"
@@ -39,7 +39,7 @@
         <!-- 主内容区域 -->
         <Grid Grid.Row="1" Margin="4">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="320" />
                 <ColumnDefinition Width="5" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
@@ -63,13 +63,13 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        
+
                         <TextBlock Grid.Column="0"
                                    Text="JS脚本列表"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center" />
-                        
+
                         <ui:Button Grid.Column="1"
                                    Command="{Binding RefreshScriptsCommand}"
                                    Content="刷新"
@@ -78,17 +78,16 @@
                     </Grid>
 
                     <!-- 脚本列表 -->
-                    <ScrollViewer Grid.Row="1" 
-                                  Margin="8,0,8,8"
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="4,0,4,8"
                                   VerticalScrollBarVisibility="Auto">
                         <ListBox ItemsSource="{Binding JsScripts}"
                                  SelectedItem="{Binding SelectedScript}"
-                                 Background="Transparent"
-                                 BorderThickness="0">
+                                 BorderThickness="0"
+                                 Padding="0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Padding="8"
-                                            Margin="2"
                                             Background="Transparent"
                                             BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
                                             BorderThickness="1"
@@ -99,24 +98,33 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
-                                            
+
                                             <TextBlock Grid.Row="0"
                                                        Text="{Binding Manifest.Name}"
                                                        FontWeight="SemiBold"
-                                                       TextWrapping="Wrap" />
-                                            
+                                                       TextWrapping="NoWrap"
+                                                       MaxWidth="260"
+                                                       HorizontalAlignment="Left"
+                                                       />
+
                                             <TextBlock Grid.Row="1"
                                                        Text="{Binding FolderName}"
                                                        FontSize="12"
                                                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                       Margin="0,2,0,4" />
-                                            
+                                                       Margin="0,2,0,4" 
+                                                       MaxWidth="260"
+                                                       HorizontalAlignment="Left"
+                                                       />
+
                                             <TextBlock Grid.Row="2"
                                                        Text="{Binding Description}"
                                                        FontSize="11"
                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                       TextWrapping="Wrap"
-                                                       MaxHeight="60" />
+                                                       TextWrapping="NoWrap"
+                                                       HorizontalAlignment="Left"
+                                                       MaxHeight="60" 
+                                                       MaxWidth="260"
+                                                       />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -176,7 +184,7 @@
                                          FontFamily="Consolas, 'Courier New', monospace" />
                             </ScrollViewer>
                         </TabItem>
-                        
+
                         <TabItem Header="main.js">
                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                           Padding="8">

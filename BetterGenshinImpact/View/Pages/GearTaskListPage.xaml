@@ -55,7 +55,9 @@
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   Text="{Binding Description}"
                                   TextTrimming="CharacterEllipsis"
-                                  TextWrapping="Wrap"
+                                  TextWrapping="NoWrap"
+                                  HorizontalAlignment="Left"
+                                  MaxWidth="280"
                                   MaxHeight="40" />
                     
                     <StackPanel Grid.Row="2"
