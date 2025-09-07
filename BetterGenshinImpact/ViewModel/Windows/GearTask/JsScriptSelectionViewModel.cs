@@ -227,6 +227,6 @@ public class JsScriptInfo
     public string FolderPath { get; set; } = string.Empty;
     public Manifest Manifest { get; set; } = new();
     
-    public string DisplayName => $"{FolderName} - {Manifest.Name}";
+    public string DisplayName => $"{Manifest.Name}（{FolderName}）";
     public string Description => Manifest.ShortDescription;
 }
