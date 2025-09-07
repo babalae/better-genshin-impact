@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -8,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.ViewModel.Windows.GearTask;
+using BetterGenshinImpact.ViewModel.Pages.Component;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Wpf.Ui.Controls;
@@ -27,14 +29,19 @@ public partial class PathingTaskSelectionWindow : FluentWindow
     public PathingTaskSelectionViewModel ViewModel { get; }
 
     /// <summary>
-    /// 选中的地图追踪任务
+    /// 选中的任务
     /// </summary>
-    public PathingTaskInfo? SelectedTask => ViewModel.SelectedTask;
+    public PathingTaskInfo? SelectedTask { get; private set; }
 
     /// <summary>
     /// 对话框结果
     /// </summary>
     public bool DialogResult { get; private set; }
+
+    /// <summary>
+    /// 添加的任务列表
+    /// </summary>
+    public List<GearTaskViewModel> AddedTasks { get; private set; } = new();
 
     /// <summary>
     /// 目录到符号图标的转换器
@@ -49,6 +56,20 @@ public partial class PathingTaskSelectionWindow : FluentWindow
         
         // 绑定TreeView的选中项变化事件
         TaskTreeView.SelectedItemChanged += OnTreeViewSelectedItemChanged;
+        
+        // 订阅任务添加事件
+        ViewModel.OnTaskAdded += OnTaskAdded;
+    }
+    
+    /// <summary>
+    /// 任务添加事件处理
+    /// </summary>
+    private void OnTaskAdded(List<GearTaskViewModel> tasks)
+    {
+        AddedTasks.AddRange(tasks);
+        
+        // 添加任务后自动关闭窗口
+        CloseWithResult();
     }
     
     /// <summary>
@@ -63,16 +84,11 @@ public partial class PathingTaskSelectionWindow : FluentWindow
     }
 
     /// <summary>
-    /// 确定按钮点击事件
+    /// 任务添加完成后关闭窗口
     /// </summary>
-    private void OnConfirmClick(object sender, RoutedEventArgs e)
+    public void CloseWithResult()
     {
-        if (ViewModel.SelectedTask == null)
-        {
-            Toast.Warning("请选择一个地图追踪任务");
-            return;
-        }
-
+        SelectedTask = ViewModel.SelectedTask;
         DialogResult = true;
         Close();
     }
@@ -105,6 +121,29 @@ public class DirectoryToSymbolConverter : IValueConverter
 }
 
 /// <summary>
+/// 布尔值到可见性的转换器（支持参数反转）
+/// </summary>
+public class BooleanToVisibilityParameterConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue)
+        {
+            bool invert = parameter?.ToString() == "Invert";
+            if (invert)
+                boolValue = !boolValue;
+            return boolValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+        return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
 /// 布尔值到可见性的反向转换器
 /// </summary>
 public class BooleanToVisibilityInvertConverter : IValueConverter
@@ -116,6 +155,28 @@ public class BooleanToVisibilityInvertConverter : IValueConverter
             return boolValue ? Visibility.Collapsed : Visibility.Visible;
         }
         return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// 空值到可见性的转换器
+/// </summary>
+public class NullToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        bool invert = parameter?.ToString() == "Invert";
+        bool isNull = value == null;
+        
+        if (invert)
+            isNull = !isNull;
+            
+        return isNull ? Visibility.Collapsed : Visibility.Visible;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

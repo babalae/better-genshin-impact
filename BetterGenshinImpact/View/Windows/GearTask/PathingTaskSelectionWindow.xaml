@@ -20,6 +20,8 @@
 
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <local:BooleanToVisibilityParameterConverter x:Key="BooleanToVisibilityParameterConverter" />
+        <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <Style x:Key="IconImageStyle" TargetType="Image">
             <Setter Property="Width" Value="16" />
             <Setter Property="Height" Value="16" />
@@ -47,7 +49,6 @@
             </Grid.RowDefinitions>
 
 
-
             <!-- 主内容区域 -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
@@ -68,47 +69,48 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        
+
                         <!-- 搜索框 -->
                         <ui:TextBox Grid.Row="0"
                                     Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
                                     PlaceholderText="搜索地图追踪任务..."
                                     Icon="{ui:SymbolIcon Search24}"
                                     Margin="0,0,0,8" />
-                        
+
                         <!-- TreeView -->
                         <TreeView Grid.Row="1"
                                   ItemsSource="{Binding FilteredPathingTasks}"
                                   Background="Transparent"
                                   BorderThickness="0"
                                   x:Name="TaskTreeView">
-                        <TreeView.ItemTemplate>
-                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                <Grid Margin="4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
+                            <TreeView.ItemTemplate>
+                                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                    <Grid Margin="4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                                    <!-- 图标 -->
-                                    <Grid Grid.Column="0" Width="20" Height="20" Margin="0,0,8,0"
-                                          VerticalAlignment="Center">
-                                        <!-- WPF图标 -->
-                                        <ui:SymbolIcon Symbol="{Binding IsDirectory, Converter={x:Static local:PathingTaskSelectionWindow.DirectoryToSymbolConverter}}"
-                                                       FontSize="16"
-                                                       VerticalAlignment="Center"
-                                                       Visibility="{Binding UseSystemIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <!-- 图标 -->
+                                        <Grid Grid.Column="0" Width="20" Height="20" Margin="0,0,8,0"
+                                              VerticalAlignment="Center">
+                                            <!-- WPF图标 -->
+                                            <ui:SymbolIcon
+                                                Symbol="{Binding IsDirectory, Converter={x:Static local:PathingTaskSelectionWindow.DirectoryToSymbolConverter}}"
+                                                FontSize="16"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding UseSystemIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </Grid>
+
+                                        <!-- 任务信息 -->
+                                        <StackPanel Grid.Column="1">
+                                            <ui:TextBlock Text="{Binding Name}"
+                                                          FontWeight="Medium"
+                                                          TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
                                     </Grid>
-
-                                    <!-- 任务信息 -->
-                                    <StackPanel Grid.Column="1">
-                                        <ui:TextBlock Text="{Binding Name}"
-                                                      FontWeight="Medium"
-                                                      TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                </Grid>
-                            </HierarchicalDataTemplate>
-                        </TreeView.ItemTemplate>
+                                </HierarchicalDataTemplate>
+                            </TreeView.ItemTemplate>
                         </TreeView>
                     </Grid>
                 </ui:Border>
@@ -174,20 +176,69 @@
                 </ui:Border>
             </Grid>
 
-            <!-- 底部按钮 -->
-            <StackPanel Grid.Row="2"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Margin="0,12,0,0">
-                <ui:Button Content="确定"
-                           Appearance="Primary"
-                           Click="OnConfirmClick"
-                           Margin="0,0,8,0"
-                           MinWidth="80" />
-                <ui:Button Content="取消"
-                           Click="OnCancelClick"
-                           MinWidth="80" />
-            </StackPanel>
+            <!-- 底部区域 -->
+            <Grid Grid.Row="2" Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 左侧：任务导入方式开关 -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:TextBlock Text="任务导入方式：" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ui:ToggleSwitch IsChecked="{Binding IsGroupImportMode}"
+                                     OnContent="按组引用"
+                                     OffContent="逐个添加"
+                                     VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- 右侧：动态按钮 -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- 按组引用模式的按钮 -->
+                    <ui:Button Content="添加选中目录"
+                               Appearance="Primary"
+                               Command="{Binding AddFolderTaskCommand}"
+                               Margin="0,0,8,0"
+                               MinWidth="120"
+                               Visibility="{Binding IsGroupImportMode, Converter={StaticResource BooleanToVisibilityParameterConverter}}" />
+
+                    <!-- 添加文件夹引用，保持目录结构 -->
+                    <ui:Button Content="保持目录结构添加"
+                               Command="{Binding AddFolderTasksWithStructureCommand}"
+                               Margin="0,0,8,0"
+                               MinWidth="180"
+                               Appearance="Primary"
+                               Visibility="{Binding IsGroupImportMode, Converter={StaticResource BooleanToVisibilityParameterConverter}}" />
+
+                    <!-- 添加目录下所有文件，不要目录结构 -->
+                    <ui:Button Content="添加目录下所有文件任务"
+                               Appearance="Primary"
+                               Command="{Binding AddAllFileTasksCommand}"
+                               Margin="0,0,8,0"
+                               MinWidth="160"
+                               Visibility="{Binding IsGroupImportMode, Converter={StaticResource BooleanToVisibilityParameterConverter}, ConverterParameter=Invert}" />
+
+
+                    <!-- 保持目录结构添加所有目录下文件 -->
+                    <ui:Button Command="{Binding AddFileTasksWithStructureCommand}"
+                               Margin="0,0,8,0"
+                               MinWidth="180"
+                               Appearance="Primary"
+                               Visibility="{Binding IsGroupImportMode, Converter={StaticResource BooleanToVisibilityParameterConverter}, ConverterParameter=Invert}">
+                        <ui:Button.Content>
+                            <ui:TextBlock>
+                                <Run Text="保持目录结构添加所有文件任务" />
+                                <Run Text="{Binding SelectedDirectoryTaskCount}" />
+                                <Run Text="个任务" />
+                            </ui:TextBlock>
+                        </ui:Button.Content>
+                    </ui:Button>
+
+                    <ui:Button Content="取消"
+                               Click="OnCancelClick"
+                               MinWidth="80" />
+                </StackPanel>
+            </Grid>
         </Grid>
     </Grid>
 </ui:FluentWindow>
