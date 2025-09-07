@@ -56,7 +56,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BagFurnishingChecked;
     public RecognitionObject BtnArtifactSalvage;
     public RecognitionObject BtnArtifactSalvageConfirm;
-    public RecognitionObject InventoryIcon;
 
     public RecognitionObject BtnClaimEncounterPointsRewards;
     public RecognitionObject PrimogemRo;
@@ -460,17 +459,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage_confirm.png"),
             RegionOfInterest = CaptureRect.CutRightBottom(0.3,0.1),
-            DrawOnWindow = false
-        }.InitTemplate();
-        
-        // 背包界面的背包
-        InventoryIcon = new RecognitionObject
-        {
-            Name = "InventoryIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateMatchMode = TemplateMatchModes.CCoeffNormed,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "inventory.png"),
-            RegionOfInterest = CaptureRect.CutTop(0.1),
             DrawOnWindow = false
         }.InitTemplate();
 

@@ -73,7 +73,7 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
                         using var ra = TaskControl.CaptureToRectArea();
 
                         // 离开背包 → 自停
-                        if (!IsInInventory())
+                        if (!IsInInventory(ra))
                         {
                             _logger.LogInformation("背包过期弹窗守护:检测到当前不在背包界面，背包过期弹窗守护自动关闭");
                             break;
@@ -174,54 +174,29 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
         }
         
         // 判断当前是否在背包界面
-        private static bool IsInInventory()
+        private static bool IsInInventory(ImageRegion ra)
         {
             try
-            {
-                var icon = ElementAssets.Instance.InventoryIcon;
-                var sceneMat = TaskControl.CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
-                
-                // 获取模板图
-                var template = icon.Use3Channels ? icon.TemplateImageMat : icon.TemplateImageGreyMat;
+            {   
+                // 易扩展
+                var icons = new[]
+                {
+                    ElementAssets.Instance.BagArtifactUnchecked,
+                    ElementAssets.Instance.BagArtifactChecked
+                };
 
-                // 灰度化截图
-                Mat sceneGray = sceneMat.Channels() == 1 ? sceneMat : new Mat();
-                if (sceneMat.Channels() == 3)
-                    Cv2.CvtColor(sceneMat, sceneGray, ColorConversionCodes.BGR2GRAY);
-                else if (sceneMat.Channels() == 4)
-                    Cv2.CvtColor(sceneMat, sceneGray, ColorConversionCodes.BGRA2GRAY);
-
-                // 灰度化模板图
-                Mat templateGray = template.Channels() == 1 ? template : new Mat();
-                if (template.Channels() == 3)
-                    Cv2.CvtColor(template, templateGray, ColorConversionCodes.BGR2GRAY);
-                else if (template.Channels() == 4)
-                    Cv2.CvtColor(template, templateGray, ColorConversionCodes.BGRA2GRAY);
-                
-                // 截取截图上方10%的区域（用于限制匹配区域）
-                int cropHeight = (int)(sceneGray.Height * 0.1);
-                sceneGray = new Mat(sceneGray, new OpenCvSharp.Rect(0, 0, sceneGray.Width, cropHeight));
-                
-                // 获取 ROI 区域
-                OpenCvSharp.Rect roi = icon.RegionOfInterest;
-                bool hasRoi = roi.Width > 0 && roi.Height > 0 &&
-                              roi.X >= 0 && roi.Y >= 0 &&
-                              roi.X + roi.Width <= sceneGray.Width &&
-                              roi.Y + roi.Height <= sceneGray.Height;
-
-                Mat roiScene = hasRoi ? new Mat(sceneGray, roi) : sceneGray;
-
-                // 模板匹配
-                Mat result = new Mat();
-                Cv2.MatchTemplate(roiScene, templateGray, result, TemplateMatchModes.CCoeffNormed);
-                Cv2.MinMaxLoc(result, out double minVal, out double maxVal, out OpenCvSharp.Point minLoc, out OpenCvSharp.Point maxLoc);
-
-
-                // 判断是否匹配成功
-                bool matched = maxVal >= icon.Threshold;
-                return matched;
+                foreach (var icon in icons)
+                {
+                    if (ra.Find(icon).IsExist())
+                        return true;
+                }
             }
-            catch { return false; }
+            catch
+            {
+                // 忽略识别异常
+            }
+
+            return false;
         }
     }
 }
