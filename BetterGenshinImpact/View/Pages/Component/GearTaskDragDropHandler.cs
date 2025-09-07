@@ -26,16 +26,37 @@ public class GearTaskDragDropHandler : IDropTarget
             return;
         }
 
-        // 如果目标是任务节点（非任务组），不允许拖拽到其下
-        if (targetItem != null && !targetItem.IsDirectory)
+        // 如果目标是任务组，允许拖拽到其下
+        if (targetItem != null && targetItem.IsDirectory)
         {
-            dropInfo.Effects = DragDropEffects.None;
+            dropInfo.Effects = DragDropEffects.Move;
+            dropInfo.DropTargetAdorner = DropTargetAdorners.Highlight;
             return;
         }
 
-        // 如果是拖拽到根节点或任务组，允许拖拽
-        dropInfo.Effects = DragDropEffects.Move;
-        dropInfo.DropTargetAdorner = DropTargetAdorners.Highlight;
+        // 如果目标是任务节点（非任务组），允许在同级之间调整顺序
+        if (targetItem != null && !targetItem.IsDirectory)
+        {
+            // 检查插入位置，允许在节点之间插入
+            if (dropInfo.InsertPosition.HasFlag(RelativeInsertPosition.BeforeTargetItem) ||
+                dropInfo.InsertPosition.HasFlag(RelativeInsertPosition.AfterTargetItem))
+            {
+                dropInfo.Effects = DragDropEffects.Move;
+                dropInfo.DropTargetAdorner = DropTargetAdorners.Insert;
+                return;
+            }
+        }
+
+        // 如果是拖拽到根节点，允许拖拽
+        if (targetItem == null)
+        {
+            dropInfo.Effects = DragDropEffects.Move;
+            dropInfo.DropTargetAdorner = DropTargetAdorners.Insert;
+            return;
+        }
+
+        // 其他情况不允许拖拽
+        dropInfo.Effects = DragDropEffects.None;
     }
 
     public void Drop(IDropInfo dropInfo)
@@ -50,13 +71,30 @@ public class GearTaskDragDropHandler : IDropTarget
             return;
         }
 
-        // 如果目标是任务节点（非任务组），不执行拖拽
-        if (targetItem != null && !targetItem.IsDirectory)
+        // 如果目标是任务组，允许拖拽到其下
+        if (targetItem != null && targetItem.IsDirectory)
         {
+            GongSolutions.Wpf.DragDrop.DragDrop.DefaultDropHandler.Drop(dropInfo);
             return;
         }
 
-        // 执行默认的拖拽行为
-        GongSolutions.Wpf.DragDrop.DragDrop.DefaultDropHandler.Drop(dropInfo);
+        // 如果目标是任务节点（非任务组），允许在同级之间调整顺序
+        if (targetItem != null && !targetItem.IsDirectory)
+        {
+            // 检查插入位置，允许在节点之间插入
+            if (dropInfo.InsertPosition.HasFlag(RelativeInsertPosition.BeforeTargetItem) ||
+                dropInfo.InsertPosition.HasFlag(RelativeInsertPosition.AfterTargetItem))
+            {
+                GongSolutions.Wpf.DragDrop.DragDrop.DefaultDropHandler.Drop(dropInfo);
+                return;
+            }
+        }
+
+        // 如果是拖拽到根节点，允许拖拽
+        if (targetItem == null)
+        {
+            GongSolutions.Wpf.DragDrop.DragDrop.DefaultDropHandler.Drop(dropInfo);
+            return;
+        }
     }
 }
