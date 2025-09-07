@@ -1,5 +1,6 @@
 ﻿using System;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -14,6 +15,9 @@ public partial class OtherConfig : ObservableObject
     //自动领取派遣任务城市
     [ObservableProperty]
     private string _autoFetchDispatchAdventurersGuildCountry = "无";
+    // CN server default
+    [ObservableProperty]
+    private ServerResetTime _serverResetTime = new(DayOfWeek.Sunday, 20);
     [ObservableProperty]
     private AutoRestart _autoRestartConfig = new();
     //锄地规划
