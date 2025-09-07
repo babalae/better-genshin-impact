@@ -152,9 +152,6 @@ public partial class PathingTaskSelectionViewModel : ViewModel
                 // 设置图标
                 SetTaskIcon(taskInfo);
                 
-                // 加载README内容
-                LoadReadmeContent(taskInfo);
-                
                 // 递归加载子目录到当前任务的Children集合中
                 LoadDirectChildrenFromDirectory(dir, rootPath, taskInfo.Children);
                 
@@ -173,9 +170,6 @@ public partial class PathingTaskSelectionViewModel : ViewModel
                     
                     // 设置图标
                     SetTaskIcon(taskInfo);
-                    
-                    // 加载JSON内容
-                    LoadJsonContent(taskInfo);
                     
                     parentCollection.Add(taskInfo);
                 }
@@ -207,13 +201,13 @@ public partial class PathingTaskSelectionViewModel : ViewModel
     }
 
     /// <summary>
-    /// 加载README内容
+    /// 为显示加载README内容（按需加载）
     /// </summary>
-    private void LoadReadmeContent(PathingTaskInfo taskInfo)
+    private void LoadReadmeContentForDisplay(PathingTaskInfo taskInfo)
     {
         try
         {
-            if (taskInfo.IsDirectory)
+            if (taskInfo.IsDirectory && string.IsNullOrEmpty(taskInfo.ReadmeContent))
             {
                 var readmePath = Path.Combine(taskInfo.FullPath, "README.md");
                 if (File.Exists(readmePath))
@@ -225,17 +219,18 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         catch (Exception ex)
         {
             _logger.LogError(ex, $"加载README内容失败: {taskInfo.FullPath}");
+            taskInfo.ReadmeContent = "README加载失败";
         }
     }
 
     /// <summary>
-    /// 加载JSON内容
+    /// 为显示加载JSON内容（按需加载）
     /// </summary>
-    private void LoadJsonContent(PathingTaskInfo taskInfo)
+    private void LoadJsonContentForDisplay(PathingTaskInfo taskInfo)
     {
         try
         {
-            if (!taskInfo.IsDirectory && taskInfo.FullPath.EndsWith(".json"))
+            if (!taskInfo.IsDirectory && taskInfo.FullPath.EndsWith(".json") && string.IsNullOrEmpty(taskInfo.JsonContent))
             {
                 var jsonContent = File.ReadAllText(taskInfo.FullPath);
                 // 格式化JSON
@@ -330,12 +325,16 @@ public partial class PathingTaskSelectionViewModel : ViewModel
 
         if (value.IsDirectory)
         {
-            DisplayContent = value.ReadmeContent;
+            // 动态加载README内容
+            LoadReadmeContentForDisplay(value);
+            DisplayContent = value.ReadmeContent ?? string.Empty;
             DisplayContentType = "README";
         }
         else
         {
-            DisplayContent = value.JsonContent;
+            // 动态加载JSON内容
+            LoadJsonContentForDisplay(value);
+            DisplayContent = value.JsonContent ?? string.Empty;
             DisplayContentType = "JSON";
         }
     }
