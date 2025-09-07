@@ -182,7 +182,8 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
                 var icons = new[]
                 {
                     ElementAssets.Instance.BagArtifactUnchecked,
-                    ElementAssets.Instance.BagArtifactChecked
+                    ElementAssets.Instance.BagArtifactChecked,
+                    ElementAssets.Instance.BagPreciousItemUnchecked
                 };
 
                 foreach (var icon in icons)
