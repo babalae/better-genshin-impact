@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,7 +9,7 @@ namespace BetterGenshinImpact.Model;
 /// <summary>
 /// A custom converter for the ServerResetTime struct to handle JSON serialization.
 /// </summary>
-public class ServerResetTimeConverter : JsonConverter<ServerResetTime>
+public class ServerResetTimeJsonConverter : JsonConverter<ServerResetTime>
 {
     /// <summary>
     /// Reads a JSON string and converts it to a ServerResetTime struct.
@@ -41,11 +42,61 @@ public class ServerResetTimeConverter : JsonConverter<ServerResetTime>
 }
 
 /// <summary>
+/// A custom converter for the ServerResetTime struct to handle WPF data binding conversions.
+/// </summary>
+public class ServerResetTimeTypeConverter : TypeConverter
+{
+    /// <summary>
+    /// Indicates whether this converter can convert an object of the given type to the type of this converter.
+    /// </summary>
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
+    {
+        return sourceType == typeof(string);
+    }
+
+    /// <summary>
+    /// Converts the given value to the type of this converter.
+    /// </summary>
+    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
+    {
+        if (value is string stringValue)
+        {
+            return ServerResetTime.Parse(stringValue);
+        }
+
+        return base.ConvertFrom(context, culture, value);
+    }
+
+    /// <summary>
+    /// Indicates whether this converter can convert the object to the specified type.
+    /// </summary>
+    public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
+    {
+        return destinationType == typeof(string);
+    }
+
+    /// <summary>
+    /// Converts the given value to the specified type.
+    /// </summary>
+    public override object? ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value,
+        Type destinationType)
+    {
+        if (destinationType == typeof(string) && value is ServerResetTime resetTime)
+        {
+            return resetTime.ToString();
+        }
+
+        return base.ConvertTo(context, culture, value, destinationType);
+    }
+}
+
+/// <summary>
 /// Represents a server reset time with day of week and hour components.
 /// Used to configure regional server reset times in UTC.
 /// </summary>
 [Serializable]
-[JsonConverter(typeof(ServerResetTimeConverter))]
+[JsonConverter(typeof(ServerResetTimeJsonConverter))]
+[TypeConverter(typeof(ServerResetTimeTypeConverter))]
 public readonly record struct ServerResetTime
 {
     /// <summary>
