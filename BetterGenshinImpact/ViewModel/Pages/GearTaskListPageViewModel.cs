@@ -339,7 +339,9 @@ public partial class GearTaskListPageViewModel : ViewModel
                 Owner = Application.Current.MainWindow
             };
 
-            if (jsSelectionWindow.ShowDialog() == true && jsSelectionWindow.ViewModel.SelectedScript != null)
+            jsSelectionWindow.ShowDialog();
+            
+            if (jsSelectionWindow.DialogResult && jsSelectionWindow.ViewModel.SelectedScript != null)
             {
                 var selectedScript = jsSelectionWindow.ViewModel.SelectedScript;
                 newTask = new GearTaskViewModel(selectedScript.DisplayName)
