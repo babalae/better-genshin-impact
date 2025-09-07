@@ -36,11 +36,11 @@ public class GearTaskData
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("description")]
-    public string Description { get; set; } = string.Empty;
-
     [JsonProperty("task_type")]
     public string TaskType { get; set; } = string.Empty;
+    
+    [JsonProperty("path")]
+    public string Path { get; set; } = string.Empty;
 
     [JsonProperty("is_enabled")]
     public bool IsEnabled { get; set; } = true;
@@ -59,10 +59,7 @@ public class GearTaskData
 
     [JsonProperty("priority")]
     public int Priority { get; set; } = 0;
-
-    [JsonProperty("tags")]
-    public string Tags { get; set; } = string.Empty;
-
+    
     [JsonProperty("children")]
     public List<GearTaskData> Children { get; set; } = new();
 }

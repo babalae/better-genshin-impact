@@ -252,7 +252,6 @@ public partial class GearTaskExecutor : ObservableObject
         var taskData = new GearTaskData
         {
             Name = viewModel.Name,
-            Description = viewModel.Description,
             TaskType = viewModel.TaskType,
             IsEnabled = viewModel.IsEnabled,
             IsDirectory = viewModel.IsDirectory,
@@ -260,7 +259,6 @@ public partial class GearTaskExecutor : ObservableObject
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,
             Priority = viewModel.Priority,
-            Tags = viewModel.Tags ?? string.Empty
         };
 
         // 递归转换子任务

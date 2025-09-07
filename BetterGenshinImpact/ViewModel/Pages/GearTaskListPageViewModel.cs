@@ -151,12 +151,12 @@ public partial class GearTaskListPageViewModel : ViewModel
         var sampleTask = new GearTaskDefinitionViewModel("示例任务组", "这是一个示例任务组");
         if (sampleTask.RootTask != null)
         {
-            sampleTask.RootTask.AddChild(new GearTaskViewModel("采集任务1") { TaskType = "采集任务", Description = "采集莲花" });
-            sampleTask.RootTask.AddChild(new GearTaskViewModel("战斗任务1") { TaskType = "战斗任务", Description = "击败史莱姆" });
+            sampleTask.RootTask.AddChild(new GearTaskViewModel("采集任务1") { TaskType = "采集任务" });
+            sampleTask.RootTask.AddChild(new GearTaskViewModel("战斗任务1") { TaskType = "战斗任务" });
 
             var subGroup = new GearTaskViewModel("子任务组", true);
-            subGroup.AddChild(new GearTaskViewModel("传送任务1") { TaskType = "传送任务", Description = "传送到蒙德" });
-            subGroup.AddChild(new GearTaskViewModel("交互任务1") { TaskType = "交互任务", Description = "与NPC对话" });
+            subGroup.AddChild(new GearTaskViewModel("传送任务1") { TaskType = "传送任务" });
+            subGroup.AddChild(new GearTaskViewModel("交互任务1") { TaskType = "交互任务" });
             sampleTask.RootTask.AddChild(subGroup);
         }
 
@@ -350,10 +350,10 @@ public partial class GearTaskListPageViewModel : ViewModel
             if (jsSelectionWindow.DialogResult && jsSelectionWindow.ViewModel.SelectedScript != null)
             {
                 var selectedScript = jsSelectionWindow.ViewModel.SelectedScript;
-                newTask = new GearTaskViewModel(selectedScript.DisplayName)
+                newTask = new GearTaskViewModel(selectedScript.Manifest.Name)
                 {
                     TaskType = "Javascript",
-                    Description = selectedScript.Description ?? "JS脚本任务"
+                    Path = @$"{{jsUserFolder}}\{selectedScript.FolderName}\"
                 };
             }
             else
@@ -373,7 +373,6 @@ public partial class GearTaskListPageViewModel : ViewModel
             newTask = new GearTaskViewModel(dialogResult.TaskName)
             {
                 TaskType = dialogResult.TaskType,
-                Description = dialogResult.TaskDescription
             };
         }
 
@@ -419,10 +418,7 @@ public partial class GearTaskListPageViewModel : ViewModel
             return; // 用户取消了操作
         }
 
-        var newGroup = new GearTaskViewModel(groupName, true)
-        {
-            Description = "新创建的任务组"
-        };
+        var newGroup = new GearTaskViewModel(groupName, true);
 
         // 如果有选中的节点，则在选中节点下新增
         // 如果未选择节点，则在根节点下直接新增

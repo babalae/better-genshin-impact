@@ -201,7 +201,6 @@ public class GearTaskStorageService
         return new GearTaskData
         {
             Name = viewModel.Name,
-            Description = viewModel.Description,
             TaskType = viewModel.TaskType,
             IsEnabled = viewModel.IsEnabled,
             // 当 Children 存在值的情况下，IsDirectory 必定为 true
@@ -210,7 +209,6 @@ public class GearTaskStorageService
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,
             Priority = viewModel.Priority,
-            Tags = viewModel.Tags,
             Children = children
         };
     }
@@ -245,7 +243,7 @@ public class GearTaskStorageService
         var viewModel = new GearTaskViewModel
         {
             Name = data.Name,
-            Description = data.Description,
+            Path = data.Path,
             TaskType = data.TaskType,
             IsEnabled = data.IsEnabled,
             IsDirectory = data.IsDirectory,
@@ -253,7 +251,6 @@ public class GearTaskStorageService
             CreatedTime = data.CreatedTime,
             ModifiedTime = data.ModifiedTime,
             Priority = data.Priority,
-            Tags = data.Tags
         };
         
         // 递归转换子任务

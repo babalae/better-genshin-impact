@@ -12,6 +12,9 @@ public partial class GearTaskViewModel : ObservableObject
 {
     [ObservableProperty]
     private string _name = string.Empty;
+    
+    [ObservableProperty]
+    private string _path = string.Empty;
 
     [ObservableProperty]
     private string _description = string.Empty;
@@ -149,6 +152,7 @@ public partial class GearTaskViewModel : ObservableObject
         var clone = new GearTaskViewModel
         {
             Name = Name,
+            Path = Path,
             Description = Description,
             TaskType = TaskType,
             IsEnabled = IsEnabled,
