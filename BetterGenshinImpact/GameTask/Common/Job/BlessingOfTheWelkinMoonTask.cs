@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -15,13 +16,14 @@ public class BlessingOfTheWelkinMoonTask
 {
     public string Name => "自动点击空月祝福";
 
+    private readonly ServerResetTime _serverResetTime = TaskContext.Instance().Config.OtherConfig.ServerResetTime;
 
     public async Task Start(CancellationToken ct)
     {
         try
         {
             // 4点全程触发
-            if (DateTime.Now.Hour == 4)
+            if (_serverResetTime.IsCurrentResetHour())
             {
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))

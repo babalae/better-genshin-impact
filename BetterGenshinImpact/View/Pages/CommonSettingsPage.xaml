@@ -1052,7 +1052,6 @@
                               Margin="0,0,36,0"
                               IsEditable="True"
                               ItemsSource="{Binding ServerResetTimeOptions}"
-                              SelectedValue="{Binding Config.OtherConfig.ServerResetTime}"
                               Text="{Binding Config.OtherConfig.ServerResetTime, Converter={StaticResource StringToServerResetTimeConverter}, UpdateSourceTrigger=LostFocus}"/>
                 </Grid>
                 <ui:CardExpander Margin="0,0,0,12"

@@ -81,7 +81,9 @@ public readonly record struct ServerResetTime
     /// <returns>True if the time matches the reset time; otherwise, false.</returns>
     public bool IsResetTime(DateTime time)
     {
-        return time.DayOfWeek == DayOfWeek && time.Hour == Hour;
+        // Ensure the reference time is in UTC for consistency
+        var now = time.ToUniversalTime();
+        return now.DayOfWeek == DayOfWeek && now.Hour == Hour;
     }
 
     /// <summary>
@@ -94,21 +96,45 @@ public readonly record struct ServerResetTime
     }
 
     /// <summary>
-    /// Returns the server day of week for the given UTC time based on the stored reset day and hour.
+    /// Determines whether the hour of the specified time matches this reset time's hour.
+    /// </summary>
+    /// <param name="time">The time to check (should be in UTC).</param>
+    /// <returns>True if the hour matches the reset time's hour; otherwise, false.</returns>
+    public bool IsResetHour(DateTime time)
+    {
+        // Ensure the reference time is in UTC for consistency
+        var now = time.ToUniversalTime();
+        return now.Hour == Hour;
+    }
+
+    /// <summary>
+    /// Determines whether the current UTC hour matches this reset time's hour.
+    /// </summary>
+    /// <returns>True if current time's hour matches the reset time's hour; otherwise, false.</returns>
+    public bool IsCurrentResetHour()
+    {
+        return IsResetHour(DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Returns the current day of the week for the given UTC time based on the stored reset day
+    /// and hour, from the perspective of the game server.
     /// </summary>
     /// <param name="referenceTime">The UTC time to evaluate.</param>
     /// <returns>The DayOfWeek representing the server's adjusted day.</returns>
     private DayOfWeek GetServerDayOfWeek(DateTime referenceTime)
     {
-        // Ensure the reference time is in UTC for consistency
         var now = referenceTime.ToUniversalTime();
-        var dayDifference = ((int)now.DayOfWeek - (int)DayOfWeek + 7) % 7;
-        var resetDateTime = referenceTime.Date.AddHours(Hour).AddDays(-dayDifference);
+        var resetToday = new DateTime(now.Year, now.Month, now.Day, Hour, 0, 0, DateTimeKind.Utc);
 
-        if (referenceTime < resetDateTime)
-            return (DayOfWeek)(((int)referenceTime.DayOfWeek - 1 + 7) % 7);
+        // If today's reset has not yet occurred, the server day is yesterday.
+        if (now < resetToday)
+        {
+            return (DayOfWeek)(((int)now.DayOfWeek - 1 + 7) % 7);
+        }
 
-        return referenceTime.DayOfWeek;
+        // Otherwise, it's the current day.
+        return now.DayOfWeek;
     }
 
     /// <summary>
@@ -270,14 +296,14 @@ public readonly record struct ServerResetTime
         // Ensure the reference time is in UTC for consistency
         var now = referenceTime.ToUniversalTime();
 
-        // Start from the reference date at the reset hour
-        var nextReset = new DateTime(now.Year, now.Month, now.Day, Hour, 0, 0, DateTimeKind.Utc);
+        // Calculate how many days to add to reach the next reset day
+        var daysToAdd = ((int)DayOfWeek - (int)now.DayOfWeek + 7) % 7;
 
-        // Calculate how many days to add to get to the correct DayOfWeek
-        var daysToAdd = ((int)DayOfWeek - (int)nextReset.DayOfWeek + 7) % 7;
-        nextReset = nextReset.AddDays(daysToAdd);
+        // If today is the reset day but the reset hour has already passed, we need to wait until next week
+        var nextResetDate = now.Date.AddDays(daysToAdd);
+        var nextReset = new DateTime(nextResetDate.Year, nextResetDate.Month, nextResetDate.Day, Hour, 0, 0,
+            DateTimeKind.Utc);
 
-        // If the calculated date is not strictly in the future, add one week
         if (nextReset <= now)
             nextReset = nextReset.AddDays(7);
 
@@ -319,13 +345,13 @@ public readonly record struct ServerResetTime
 
         var dayOfWeek = dayPart switch
         {
-            "sun" or "sunday" => DayOfWeek.Sunday,
-            "mon" or "monday" => DayOfWeek.Monday,
-            "tue" or "tuesday" => DayOfWeek.Tuesday,
-            "wed" or "wednesday" => DayOfWeek.Wednesday,
-            "thu" or "thursday" => DayOfWeek.Thursday,
-            "fri" or "friday" => DayOfWeek.Friday,
-            "sat" or "saturday" => DayOfWeek.Saturday,
+            "mo" or "mon" or "monday" => DayOfWeek.Monday,
+            "tu" or "tue" or "tuesday" => DayOfWeek.Tuesday,
+            "we" or "wed" or "wednesday" => DayOfWeek.Wednesday,
+            "th" or "thu" or "thursday" => DayOfWeek.Thursday,
+            "fr" or "fri" or "friday" => DayOfWeek.Friday,
+            "sa" or "sat" or "saturday" => DayOfWeek.Saturday,
+            "su" or "sun" or "sunday" => DayOfWeek.Sunday,
             _ => throw new FormatException(
                 $"Invalid day format: {dayPart}. Expected English abbreviation like 'sun', 'mon', etc.")
         };
