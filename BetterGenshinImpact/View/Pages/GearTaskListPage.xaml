@@ -264,6 +264,11 @@
                                      dd:DragDrop.UseDefaultEffectDataTemplate="True"
                                      ContextMenu="{StaticResource TaskNodeContextMenu}"
                                      Visibility="{Binding SelectedTaskDefinition, Converter={StaticResource NullToVisibilityConverter}}">
+                        <ui:TreeListView.ItemContainerStyle>
+                            <Style TargetType="ui:TreeListViewItem"  BasedOn="{StaticResource DefaultTreeListViewItemStyle}">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            </Style>
+                        </ui:TreeListView.ItemContainerStyle>
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
                                 <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnName}" Header="任务名称">

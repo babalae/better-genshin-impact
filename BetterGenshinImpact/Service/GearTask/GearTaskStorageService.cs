@@ -201,10 +201,12 @@ public class GearTaskStorageService
         return new GearTaskData
         {
             Name = viewModel.Name,
+            Path = viewModel.Path,
             TaskType = viewModel.TaskType,
             IsEnabled = viewModel.IsEnabled,
             // 当 Children 存在值的情况下，IsDirectory 必定为 true
             IsDirectory = children.Count > 0 || viewModel.IsDirectory,
+            IsExpanded = viewModel.IsExpanded,
             Parameters = viewModel.Parameters,
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,
@@ -247,6 +249,7 @@ public class GearTaskStorageService
             TaskType = data.TaskType,
             IsEnabled = data.IsEnabled,
             IsDirectory = data.IsDirectory,
+            IsExpanded = data.IsExpanded,
             Parameters = data.Parameters,
             CreatedTime = data.CreatedTime,
             ModifiedTime = data.ModifiedTime,

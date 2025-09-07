@@ -48,6 +48,9 @@ public class GearTaskData
     [JsonProperty("is_directory")]
     public bool IsDirectory { get; set; } = false;
 
+    [JsonProperty("is_expanded")]
+    public bool IsExpanded { get; set; } = false;
+
     [JsonProperty("parameters")]
     public string Parameters { get; set; } = "{}";
 
