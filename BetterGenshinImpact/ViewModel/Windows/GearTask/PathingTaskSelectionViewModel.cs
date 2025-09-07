@@ -71,7 +71,7 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         LoadPathingTasks();
     }
 
-    public Action<List<GearTaskViewModel>>? OnTaskAdded { get; set; }
+    public Action<GearTaskViewModel?>? OnTaskAdded { get; set; }
 
     // /// <summary>
     // /// 加载图标字典
@@ -415,7 +415,7 @@ public partial class PathingTaskSelectionViewModel : ViewModel
             };
 
             // 触发添加事件或通过其他方式返回给调用方
-            OnTaskAdded?.Invoke([gearTaskViewModel]);
+            OnTaskAdded?.Invoke(gearTaskViewModel);
         }
     }
 
@@ -427,8 +427,8 @@ public partial class PathingTaskSelectionViewModel : ViewModel
     {
         if (SelectedTask?.IsDirectory == true)
         {
-            var tasks = GetAllFolderTasksInDirectoryWithStructure(SelectedTask);
-            OnTaskAdded?.Invoke(tasks);
+            var task = GetAllFolderTasksInDirectoryWithStructure(SelectedTask);
+            OnTaskAdded?.Invoke(task);
         }
     }
 
@@ -440,23 +440,29 @@ public partial class PathingTaskSelectionViewModel : ViewModel
     {
         if (SelectedTask?.IsDirectory == true)
         {
+            var rootGearTaskViewModel = new GearTaskViewModel
+            {
+                Name = SelectedTask.Name,
+                IsDirectory = true
+            };
+            
             // 逐个添加：添加目录下所有JSON文件作为独立任务
             var taskInfos = GetAllJsonFilesInDirectory(SelectedTask);
-            var tasks = new List<GearTaskViewModel>();
             foreach (var taskInfo in taskInfos)
             {
                 var gearTaskViewModel = new GearTaskViewModel
                 {
                     Name = Path.GetFileNameWithoutExtension(taskInfo.Name),
+                    TaskType = "Pathing",
                     Path = @$"{{pathingRepoFolder}}\{taskInfo.RelativePath}\",
                     IsDirectory = false
                 };
-                tasks.Add(gearTaskViewModel);
+                rootGearTaskViewModel.Children.Add(gearTaskViewModel);
             }
 
-            if (tasks.Count > 0)
+            if (rootGearTaskViewModel.Children.Count > 0)
             {
-                OnTaskAdded?.Invoke(tasks);
+                OnTaskAdded?.Invoke(rootGearTaskViewModel);
             }
         }
     }
@@ -470,8 +476,8 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         if (SelectedTask?.IsDirectory == true)
         {
             // 保持目录结构添加所有子任务
-            var tasks = GetAllFileTasksInDirectoryWithStructure(SelectedTask);
-            OnTaskAdded?.Invoke(tasks);
+            var task = GetAllFileTasksInDirectoryWithStructure(SelectedTask);
+            OnTaskAdded?.Invoke(task);
         }
     }
 
@@ -504,88 +510,88 @@ public partial class PathingTaskSelectionViewModel : ViewModel
     /// <summary>
     /// 获取目录下所有json文件任务并保持结构
     /// </summary>
-    private List<GearTaskViewModel> GetAllFileTasksInDirectoryWithStructure(PathingTaskInfo directory)
+    private GearTaskViewModel? GetAllFileTasksInDirectoryWithStructure(PathingTaskInfo node)
     {
-        var tasks = new List<GearTaskViewModel>();
-
-        if (directory.Children is { Count: > 0 })
+        if (node.IsDirectory)
         {
-            foreach (var child in directory.Children)
+            // 添加子目录作为组
+            var groupTask = new GearTaskViewModel
             {
-                if (child.IsDirectory)
-                {
-                    // 添加子目录作为组
-                    var groupTask = new GearTaskViewModel
-                    {
-                        Name = child.Name,
-                        IsDirectory = true
-                    };
-                    tasks.Add(groupTask);
+                Name = node.Name,
+                IsDirectory = true
+            };
 
-                    // 递归添加子任务
-                    tasks.AddRange(GetAllFileTasksInDirectoryWithStructure(child));
-                }
-                else if (child.FullPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            foreach (var pathingTaskInfo in node.Children)
+            {
+                var gearTask = GetAllFileTasksInDirectoryWithStructure(pathingTaskInfo);
+                if (gearTask != null)
                 {
-                    // 添加JSON文件作为任务
-                    var fileTask = new GearTaskViewModel
-                    {
-                        Name = Path.GetFileNameWithoutExtension(child.Name),
-                        Path = @$"{{pathingRepoFolder}}\{child.RelativePath}\",
-                        IsDirectory = false
-                    };
-                    tasks.Add(fileTask);
+                    groupTask.Children.Add(gearTask);
                 }
             }
+
+            return groupTask;
+        }
+        else if (node.FullPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            // 添加JSON文件作为任务
+            var fileTask = new GearTaskViewModel
+            {
+                Name = Path.GetFileNameWithoutExtension(node.Name),
+                TaskType = "Pathing",
+                Path = @$"{{pathingRepoFolder}}\{node.RelativePath}\",
+                IsDirectory = false
+            };
+            return fileTask;
         }
 
-        return tasks;
+        return null;
     }
 
 
     /// <summary>
     /// 获取目录下所有文件夹任务并保持结构
     /// </summary>
-    private List<GearTaskViewModel> GetAllFolderTasksInDirectoryWithStructure(PathingTaskInfo directory)
+    private GearTaskViewModel? GetAllFolderTasksInDirectoryWithStructure(PathingTaskInfo directory)
     {
-        var tasks = new List<GearTaskViewModel>();
-
         if (directory.Children is { Count: > 0 })
         {
-            foreach (var child in directory.Children)
+            // 判断 directory 的子节点是否是文件
+            var hasJsonFile = directory.Children.Any(grandChild => !grandChild.IsDirectory && grandChild.FullPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+            if (hasJsonFile)
             {
-                if (child.IsDirectory)
+                // 添加子目录作为任务
+                var groupTask = new GearTaskViewModel
                 {
-                    // 判断 child 的子节点是否是文件
-                    var hasJsonFile = child.Children.Any(grandChild => !grandChild.IsDirectory && grandChild.FullPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
-                    if (hasJsonFile)
+                    Name = directory.Name,
+                    TaskType = "Pathing",
+                    Path = @$"{{pathingRepoFolder}}\{directory.RelativePath}\",
+                    IsDirectory = false
+                };
+                return groupTask;
+            }
+            else
+            {
+                // 添加子目录作为组
+                var groupTask = new GearTaskViewModel
+                {
+                    Name = directory.Name,
+                    IsDirectory = true
+                };
+                foreach (var pathingTaskInfo in directory.Children)
+                {
+                    var gearTask = GetAllFolderTasksInDirectoryWithStructure(pathingTaskInfo);
+                    if (gearTask != null)
                     {
-                        // 添加子目录作为任务
-                        var groupTask = new GearTaskViewModel
-                        {
-                            Name = child.Name,
-                            TaskType = "Pathing",
-                            Path = @$"{{pathingRepoFolder}}\{child.RelativePath}\",
-                            IsDirectory = false
-                        };
-                        tasks.Add(groupTask);
-                    }
-                    else
-                    {
-                        // 添加子目录作为组
-                        var groupTask = new GearTaskViewModel
-                        {
-                            Name = child.Name,
-                            IsDirectory = true
-                        };
-                        tasks.Add(groupTask);
-                        // 递归添加子任务
-                        tasks.AddRange(GetAllFolderTasksInDirectoryWithStructure(child));
+                        groupTask.Children.Add(gearTask);
                     }
                 }
+                return groupTask;
             }
         }
-
-        return tasks;
+        else
+        {
+            return null;
+        }
     }
 }

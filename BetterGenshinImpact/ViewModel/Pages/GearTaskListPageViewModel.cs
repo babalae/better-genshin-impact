@@ -371,14 +371,9 @@ public partial class GearTaskListPageViewModel : ViewModel
 
             pathingSelectionWindow.ShowDialog();
             
-            if (pathingSelectionWindow.DialogResult && pathingSelectionWindow.SelectedTask != null)
+            if (pathingSelectionWindow.DialogResult && pathingSelectionWindow.SelectedGearTask != null)
             {
-                var selectedTask = pathingSelectionWindow.SelectedTask;
-                newTask = new GearTaskViewModel(selectedTask.Name)
-                {
-                    TaskType = "Pathing",
-                    Path = selectedTask.RelativePath
-                };
+                newTask = pathingSelectionWindow.SelectedGearTask;
             }
             else
             {

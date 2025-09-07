@@ -32,16 +32,17 @@ public partial class PathingTaskSelectionWindow : FluentWindow
     /// 选中的任务
     /// </summary>
     public PathingTaskInfo? SelectedTask { get; private set; }
+    
+    /// <summary>
+    /// 选中的任务
+    /// </summary>
+    public GearTaskViewModel? SelectedGearTask { get; private set; }
+
 
     /// <summary>
     /// 对话框结果
     /// </summary>
     public bool DialogResult { get; private set; }
-
-    /// <summary>
-    /// 添加的任务列表
-    /// </summary>
-    public List<GearTaskViewModel> AddedTasks { get; private set; } = new();
 
     /// <summary>
     /// 目录到符号图标的转换器
@@ -64,10 +65,10 @@ public partial class PathingTaskSelectionWindow : FluentWindow
     /// <summary>
     /// 任务添加事件处理
     /// </summary>
-    private void OnTaskAdded(List<GearTaskViewModel> tasks)
+    private void OnTaskAdded(GearTaskViewModel? task)
     {
-        AddedTasks.AddRange(tasks);
-        
+        SelectedGearTask = task;
+
         // 添加任务后自动关闭窗口
         CloseWithResult();
     }
@@ -185,101 +186,101 @@ public class NullToVisibilityConverter : IValueConverter
     }
 }
 
-/// <summary>
-/// 字符串到ImageSource的转换器，处理空字符串情况，支持WebP格式
-/// </summary>
-public class StringToImageSourceConverter : IValueConverter
-{
-    private static readonly HttpClient HttpClient = new();
-
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is string url && !string.IsNullOrEmpty(url))
-        {
-            try
-            {
-                // 检查是否为WebP格式或其他需要特殊处理的格式
-                if (url.Contains(".webp", StringComparison.OrdinalIgnoreCase))
-                {
-                    return LoadWebPImage(url);
-                }
-                else
-                {
-                    // 对于其他格式，使用原有的BitmapImage
-                    return new BitmapImage(new Uri(url));
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e);
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private static BitmapSource? LoadWebPImage(string url)
-    {
-        try
-        {
-            byte[] imageData;
-            
-            if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                // 从网络加载
-                imageData = HttpClient.GetByteArrayAsync(url).Result;
-            }
-            else
-            {
-                // 从本地文件加载
-                imageData = File.ReadAllBytes(url);
-            }
-
-            using var image = Image.Load<Rgba32>(imageData);
-            
-            // 转换为WPF可用的BitmapSource
-            var bitmap = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgra32, null);
-            
-            bitmap.Lock();
-            try
-            {
-                var backBuffer = bitmap.BackBuffer;
-                var stride = bitmap.BackBufferStride;
-                
-                image.ProcessPixelRows(accessor =>
-                {
-                    for (int y = 0; y < accessor.Height; y++)
-                    {
-                        var pixelRow = accessor.GetRowSpan(y);
-                        var targetPtr = backBuffer + y * stride;
-                        
-                        for (int x = 0; x < pixelRow.Length; x++)
-                        {
-                            var pixel = pixelRow[x];
-                            // 转换RGBA到BGRA
-                            var bgra = (pixel.A << 24) | (pixel.R << 16) | (pixel.G << 8) | pixel.B;
-                            System.Runtime.InteropServices.Marshal.WriteInt32(targetPtr + x * 4, bgra);
-                        }
-                    }
-                });
-            }
-            finally
-            {
-                bitmap.AddDirtyRect(new Int32Rect(0, 0, image.Width, image.Height));
-                bitmap.Unlock();
-            }
-            
-            return bitmap;
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine($"Failed to load WebP image: {e}");
-            return null;
-        }
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
-}
+// /// <summary>
+// /// 字符串到ImageSource的转换器，处理空字符串情况，支持WebP格式
+// /// </summary>
+// public class StringToImageSourceConverter : IValueConverter
+// {
+//     private static readonly HttpClient HttpClient = new();
+//
+//     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+//     {
+//         if (value is string url && !string.IsNullOrEmpty(url))
+//         {
+//             try
+//             {
+//                 // 检查是否为WebP格式或其他需要特殊处理的格式
+//                 if (url.Contains(".webp", StringComparison.OrdinalIgnoreCase))
+//                 {
+//                     return LoadWebPImage(url);
+//                 }
+//                 else
+//                 {
+//                     // 对于其他格式，使用原有的BitmapImage
+//                     return new BitmapImage(new Uri(url));
+//                 }
+//             }
+//             catch (Exception e)
+//             {
+//                 Debug.WriteLine(e);
+//                 return null;
+//             }
+//         }
+//         return null;
+//     }
+//
+//     private static BitmapSource? LoadWebPImage(string url)
+//     {
+//         try
+//         {
+//             byte[] imageData;
+//             
+//             if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+//             {
+//                 // 从网络加载
+//                 imageData = HttpClient.GetByteArrayAsync(url).Result;
+//             }
+//             else
+//             {
+//                 // 从本地文件加载
+//                 imageData = File.ReadAllBytes(url);
+//             }
+//
+//             using var image = Image.Load<Rgba32>(imageData);
+//             
+//             // 转换为WPF可用的BitmapSource
+//             var bitmap = new WriteableBitmap(image.Width, image.Height, 96, 96, PixelFormats.Bgra32, null);
+//             
+//             bitmap.Lock();
+//             try
+//             {
+//                 var backBuffer = bitmap.BackBuffer;
+//                 var stride = bitmap.BackBufferStride;
+//                 
+//                 image.ProcessPixelRows(accessor =>
+//                 {
+//                     for (int y = 0; y < accessor.Height; y++)
+//                     {
+//                         var pixelRow = accessor.GetRowSpan(y);
+//                         var targetPtr = backBuffer + y * stride;
+//                         
+//                         for (int x = 0; x < pixelRow.Length; x++)
+//                         {
+//                             var pixel = pixelRow[x];
+//                             // 转换RGBA到BGRA
+//                             var bgra = (pixel.A << 24) | (pixel.R << 16) | (pixel.G << 8) | pixel.B;
+//                             System.Runtime.InteropServices.Marshal.WriteInt32(targetPtr + x * 4, bgra);
+//                         }
+//                     }
+//                 });
+//             }
+//             finally
+//             {
+//                 bitmap.AddDirtyRect(new Int32Rect(0, 0, image.Width, image.Height));
+//                 bitmap.Unlock();
+//             }
+//             
+//             return bitmap;
+//         }
+//         catch (Exception e)
+//         {
+//             Debug.WriteLine($"Failed to load WebP image: {e}");
+//             return null;
+//         }
+//     }
+//
+//     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+//     {
+//         throw new NotImplementedException();
+//     }
+// }
