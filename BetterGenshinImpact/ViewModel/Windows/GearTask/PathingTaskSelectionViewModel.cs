@@ -47,11 +47,7 @@ public partial class PathingTaskSelectionViewModel : ViewModel
     [ObservableProperty]
     private string _searchKeyword = string.Empty;
 
-    /// <summary>
-    /// 显示模式：true=显示到文件级别，false=仅显示文件夹
-    /// </summary>
-    [ObservableProperty]
-    private bool _showFilesMode = true;
+
 
     /// <summary>
     /// 右侧显示的内容
@@ -158,21 +154,18 @@ public partial class PathingTaskSelectionViewModel : ViewModel
                 parentCollection.Add(taskInfo);
             }
 
-            // 如果是显示文件模式，加载JSON文件
-            if (ShowFilesMode)
+            // 加载JSON文件（默认展示到文件级别）
+            foreach (var file in Directory.GetFiles(directoryPath, "*.json"))
             {
-                foreach (var file in Directory.GetFiles(directoryPath, "*.json"))
+                var taskInfo = new PathingTaskInfo(file, rootPath)
                 {
-                    var taskInfo = new PathingTaskInfo(file, rootPath)
-                    {
-                        IsDirectory = false
-                    };
-                    
-                    // 设置图标
-                    SetTaskIcon(taskInfo);
-                    
-                    parentCollection.Add(taskInfo);
-                }
+                    IsDirectory = false
+                };
+                
+                // 设置图标
+                SetTaskIcon(taskInfo);
+                
+                parentCollection.Add(taskInfo);
             }
         }
         catch (Exception ex)
@@ -272,8 +265,8 @@ public partial class PathingTaskSelectionViewModel : ViewModel
                              task.Name.Contains(SearchKeyword, StringComparison.OrdinalIgnoreCase) ||
                              task.RelativePath.Contains(SearchKeyword, StringComparison.OrdinalIgnoreCase);
 
-        // 根据显示模式过滤
-        bool modeMatches = ShowFilesMode || task.IsDirectory;
+        // 始终显示文件和目录（默认展示到文件级别）
+        bool modeMatches = true;
 
         // 创建新的任务对象用于显示
         var filteredTask = new PathingTaskInfo
@@ -347,29 +340,5 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         FilterTasks();
     }
 
-    /// <summary>
-    /// 当显示模式改变时
-    /// </summary>
-    partial void OnShowFilesModeChanged(bool value)
-    {
-        LoadPathingTasks();
-    }
 
-    /// <summary>
-    /// 刷新任务列表
-    /// </summary>
-    [RelayCommand]
-    private void RefreshTasks()
-    {
-        LoadPathingTasks();
-    }
-
-    /// <summary>
-    /// 切换显示模式
-    /// </summary>
-    [RelayCommand]
-    private void ToggleShowMode()
-    {
-        ShowFilesMode = !ShowFilesMode;
-    }
 }

@@ -77,9 +77,6 @@ public partial class PathingTaskSelectionWindow : FluentWindow
         Close();
     }
 
-    /// <summary>
-    /// 取消按钮点击事件
-    /// </summary>
     private void OnCancelClick(object sender, RoutedEventArgs e)
     {
         DialogResult = false;

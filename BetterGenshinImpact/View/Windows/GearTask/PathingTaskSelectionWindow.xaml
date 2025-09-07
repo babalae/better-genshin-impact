@@ -46,17 +46,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- 工具栏 -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                <ui:Button Content="刷新"
-                           Icon="{ui:SymbolIcon ArrowSync24}"
-                           Command="{Binding RefreshTasksCommand}"
-                           Margin="0,0,8,0" />
-                <ToggleButton Content="显示文件"
-                              IsChecked="{Binding ShowFilesMode}"
-                              Command="{Binding ToggleShowModeCommand}"
-                              Margin="0,0,8,0" />
-            </StackPanel>
+
 
             <!-- 主内容区域 -->
             <Grid Grid.Row="1">
@@ -101,10 +91,12 @@
                                     </Grid.ColumnDefinitions>
 
                                     <!-- 图标 -->
-                                    <Grid Grid.Column="0" Width="20" Height="20" Margin="0,0,8,0">
+                                    <Grid Grid.Column="0" Width="20" Height="20" Margin="0,0,8,0"
+                                          VerticalAlignment="Center">
                                         <!-- WPF图标 -->
                                         <ui:SymbolIcon Symbol="{Binding IsDirectory, Converter={x:Static local:PathingTaskSelectionWindow.DirectoryToSymbolConverter}}"
                                                        FontSize="16"
+                                                       VerticalAlignment="Center"
                                                        Visibility="{Binding UseSystemIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </Grid>
 
