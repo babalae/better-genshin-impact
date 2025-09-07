@@ -260,8 +260,8 @@ public class Dispatcher
                         throw new NullReferenceException($"{nameof(soloTask.Config)}为空");
                     }
                     GridScreenName gridScreenName = ScriptObjectConverter.GetValue<GridScreenName?>((ScriptObject)soloTask.Config, "gridScreenName", null) ?? throw new Exception("gridScreenName为空或错误");
-                    string foodName = ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "foodName", null) ?? throw new Exception("foodName为空");
-                    return await new CountInventoryItem(gridScreenName, foodName).Start(cancellationToken);
+                    string itemName = ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "itemName", null) ?? throw new Exception("itemName为空");
+                    return await new CountInventoryItem(gridScreenName, itemName).Start(cancellationToken);
                 }
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
