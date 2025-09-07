@@ -50,6 +50,17 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private string _selectedCountry = string.Empty;
     [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    
+    // These values are calculated based on each region's 4 AM Monday reset time in UTC.
+    [ObservableProperty] private List<ServerResetTime> _serverResetTimeOptions =
+    [
+        // 4 AM GMT+8 (CN) -> 20 PM Sunday UTC
+        new(DayOfWeek.Sunday, 20),
+        // 4 AM GMT+1 (Europe) -> 3 AM Monday UTC
+        new(DayOfWeek.Monday, 3),
+        // 4 AM GMT-5 (America) -> 9 AM Monday UTC
+        new(DayOfWeek.Monday, 9)
+    ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)

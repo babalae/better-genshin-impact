@@ -1,13 +1,51 @@
 ﻿using System;
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Model;
+
+/// <summary>
+/// A custom converter for the ServerResetTime struct to handle JSON serialization.
+/// </summary>
+public class ServerResetTimeConverter : JsonConverter<ServerResetTime>
+{
+    /// <summary>
+    /// Reads a JSON string and converts it to a ServerResetTime struct.
+    /// </summary>
+    /// <param name="reader">The Utf8JsonReader to read from.</param>
+    /// <param name="typeToConvert">The type of object to convert.</param>
+    /// <param name="options">The JsonSerializerOptions.</param>
+    /// <returns>The deserialized ServerResetTime struct.</returns>
+    public override ServerResetTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+        {
+            throw new JsonException("ServerResetTime expected to be a string.");
+        }
+
+        var value = reader.GetString();
+        return ServerResetTime.Parse(value!);
+    }
+
+    /// <summary>
+    /// Writes a ServerResetTime struct to a JSON string.
+    /// </summary>
+    /// <param name="writer">The Utf8JsonWriter to write to.</param>
+    /// <param name="value">The ServerResetTime struct to serialize.</param>
+    /// <param name="options">The JsonSerializerOptions.</param>
+    public override void Write(Utf8JsonWriter writer, ServerResetTime value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.ToString());
+    }
+}
 
 /// <summary>
 /// Represents a server reset time with day of week and hour components.
 /// Used to configure regional server reset times in UTC.
 /// </summary>
 [Serializable]
+[JsonConverter(typeof(ServerResetTimeConverter))]
 public readonly record struct ServerResetTime
 {
     /// <summary>
