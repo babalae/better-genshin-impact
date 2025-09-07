@@ -325,6 +325,12 @@ public partial class GearTaskListPageViewModel : ViewModel
             Toast.Warning("请先选择一个任务定义");
             return;
         }
+        // 检查选中的节点是否为任务组，任务节点下不允许添加任务节点
+        if (SelectedTaskNode != null && !SelectedTaskNode.IsDirectory)
+        {
+            Toast.Warning("只有任务组下能够添加任务！");
+            return;
+        }
 
         // 如果没有指定任务类型，默认为Javascript
         taskType ??= "Javascript";
@@ -371,6 +377,8 @@ public partial class GearTaskListPageViewModel : ViewModel
             };
         }
 
+
+
         // 如果有选中的节点，则在选中节点下新增
         // 如果未选择节点，则在根节点下直接新增
         var targetParent = SelectedTaskNode ?? SelectedTaskDefinition.RootTask;
@@ -397,7 +405,21 @@ public partial class GearTaskListPageViewModel : ViewModel
             return;
         }
 
-        var newGroup = new GearTaskViewModel($"新任务组 {DateTime.Now:HHmmss}", true)
+        // 检查选中的节点是否为任务组，任务节点下不允许添加任务组
+        if (SelectedTaskNode != null && !SelectedTaskNode.IsDirectory)
+        {
+            Toast.Warning("任务节点下不允许添加任务组，只有任务组下能够添加任务组");
+            return;
+        }
+
+        // 弹出对话框输入任务组名称
+        var groupName = PromptDialog.Prompt("请输入任务组名称:", "添加任务组", $"新任务组{DateTime.Now:HHmmss}");
+        if (string.IsNullOrWhiteSpace(groupName))
+        {
+            return; // 用户取消了操作
+        }
+
+        var newGroup = new GearTaskViewModel(groupName, true)
         {
             Description = "新创建的任务组"
         };
