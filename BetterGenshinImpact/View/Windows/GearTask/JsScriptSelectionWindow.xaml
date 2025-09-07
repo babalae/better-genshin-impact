@@ -53,6 +53,7 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
@@ -77,11 +78,18 @@
                                    Padding="8,4" />
                     </Grid>
 
+                    <!-- 搜索框 -->
+                    <ui:TextBox Grid.Row="1"
+                                Margin="12,0,12,8"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="搜索脚本名称或描述..."
+                                ClearButtonEnabled="True" />
+
                     <!-- 脚本列表 -->
-                    <ScrollViewer Grid.Row="1"
+                    <ScrollViewer Grid.Row="2"
                                   Margin="4,0,4,8"
                                   VerticalScrollBarVisibility="Auto">
-                        <ListBox ItemsSource="{Binding JsScripts}"
+                        <ListBox ItemsSource="{Binding FilteredJsScripts}"
                                  SelectedItem="{Binding SelectedScript}"
                                  BorderThickness="0"
                                  Padding="0">

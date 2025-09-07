@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
@@ -18,7 +19,13 @@ public partial class JsScriptSelectionViewModel : ViewModel
     private ObservableCollection<JsScriptInfo> _jsScripts = [];
 
     [ObservableProperty]
+    private ObservableCollection<JsScriptInfo> _filteredJsScripts = [];
+
+    [ObservableProperty]
     private JsScriptInfo? _selectedScript;
+
+    [ObservableProperty]
+    private string _searchText = string.Empty;
 
     [ObservableProperty]
     private string _readmeContent = string.Empty;
@@ -75,6 +82,8 @@ public partial class JsScriptSelectionViewModel : ViewModel
             }
 
             JsScripts = scripts;
+            ApplyFilter();
+            SelectFirstScript();
         }
         catch (Exception ex)
         {
@@ -167,6 +176,41 @@ public partial class JsScriptSelectionViewModel : ViewModel
         {
             _logger.LogError(ex, "加载main.js失败");
             MainJsContent = $"加载main.js失败: {ex.Message}";
+        }
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        ApplyFilter();
+        SelectFirstScript();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            FilteredJsScripts = new ObservableCollection<JsScriptInfo>(JsScripts);
+        }
+        else
+        {
+            var filtered = JsScripts.Where(script => 
+                script.FolderName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                script.Manifest.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                script.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+            FilteredJsScripts = new ObservableCollection<JsScriptInfo>(filtered);
+        }
+    }
+
+    private void SelectFirstScript()
+    {
+        if (FilteredJsScripts.Count > 0)
+        {
+            SelectedScript = FilteredJsScripts[0];
+        }
+        else
+        {
+            SelectedScript = null;
         }
     }
 
