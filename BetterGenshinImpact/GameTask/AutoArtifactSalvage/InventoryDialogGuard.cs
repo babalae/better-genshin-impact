@@ -176,27 +176,18 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
         // 判断当前是否在背包界面
         private static bool IsInInventory(ImageRegion ra)
         {
-            try
-            {   
-                // 易扩展
-                var icons = new[]
-                {
-                    ElementAssets.Instance.BagArtifactUnchecked,
-                    ElementAssets.Instance.BagArtifactChecked,
-                    ElementAssets.Instance.BagPreciousItemUnchecked
-                };
-
-                foreach (var icon in icons)
-                {
-                    if (ra.Find(icon).IsExist())
-                        return true;
-                }
-            }
-            catch
+            var icons = new[]
             {
-                // 忽略识别异常
-            }
+                ElementAssets.Instance.BagArtifactUnchecked,
+                ElementAssets.Instance.BagArtifactChecked,
+                ElementAssets.Instance.BagPreciousItemUnchecked
+            };
 
+            foreach (var icon in icons)
+            {
+                if (ra.Find(icon).IsExist()) 
+                    return true;
+            }
             return false;
         }
     }
