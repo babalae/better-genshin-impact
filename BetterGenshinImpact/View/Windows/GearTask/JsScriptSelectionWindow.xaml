@@ -112,17 +112,15 @@
                                                        FontWeight="SemiBold"
                                                        TextWrapping="NoWrap"
                                                        MaxWidth="260"
-                                                       HorizontalAlignment="Left"
-                                                       />
+                                                       HorizontalAlignment="Left" />
 
                                             <TextBlock Grid.Row="1"
                                                        Text="{Binding FolderName}"
                                                        FontSize="12"
                                                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                       Margin="0,2,0,4" 
+                                                       Margin="0,2,0,4"
                                                        MaxWidth="260"
-                                                       HorizontalAlignment="Left"
-                                                       />
+                                                       HorizontalAlignment="Left" />
 
                                             <TextBlock Grid.Row="2"
                                                        Text="{Binding Description}"
@@ -130,9 +128,8 @@
                                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                        TextWrapping="NoWrap"
                                                        HorizontalAlignment="Left"
-                                                       MaxHeight="60" 
-                                                       MaxWidth="260"
-                                                       />
+                                                       MaxHeight="60"
+                                                       MaxWidth="260" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -175,7 +172,6 @@
                     <!-- TabControl -->
                     <TabControl Grid.Row="1"
                                 Margin="8"
-                                Background="Transparent"
                                 BorderThickness="0"
                                 SelectedIndex="{Binding SelectedTabIndex}">
                         <TabItem Header="README.md">
@@ -187,7 +183,6 @@
                                          AcceptsReturn="True"
                                          VerticalScrollBarVisibility="Disabled"
                                          HorizontalScrollBarVisibility="Disabled"
-                                         Background="Transparent"
                                          BorderThickness="0"
                                          FontFamily="Consolas, 'Courier New', monospace" />
                             </ScrollViewer>
@@ -202,7 +197,6 @@
                                          AcceptsReturn="True"
                                          VerticalScrollBarVisibility="Disabled"
                                          HorizontalScrollBarVisibility="Disabled"
-                                         Background="Transparent"
                                          BorderThickness="0"
                                          FontFamily="Consolas, 'Courier New', monospace" />
                             </ScrollViewer>
