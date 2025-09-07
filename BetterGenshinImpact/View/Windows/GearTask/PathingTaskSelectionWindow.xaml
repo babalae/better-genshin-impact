@@ -146,14 +146,14 @@
                                       Text="{Binding DisplayContentType, StringFormat={}{0} 内容}"
                                       FontWeight="SemiBold"
                                       Margin="12,12,12,8"
-                                      Visibility="{Binding SelectedTask, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                      Visibility="{Binding SelectedTask, Converter={StaticResource NullToVisibilityConverter}}" />
 
                         <!-- 详情内容 -->
                         <ScrollViewer Grid.Row="1"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Auto"
                                       Margin="12,0,12,12"
-                                      Visibility="{Binding SelectedTask, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                      Visibility="{Binding SelectedTask, Converter={StaticResource NullToVisibilityConverter}}">
                             <ui:TextBox Text="{Binding DisplayContent}"
                                         IsReadOnly="True"
                                         TextWrapping="Wrap"
@@ -169,7 +169,7 @@
                         <StackPanel Grid.Row="1"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Visibility="{Binding SelectedTask, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
+                                    Visibility="{Binding SelectedTask, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
                             <ui:SymbolIcon Symbol="Cursor24"
                                            FontSize="48"
                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
