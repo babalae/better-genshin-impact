@@ -19,8 +19,23 @@ public partial class GearTaskViewModel : ObservableObject
     [ObservableProperty]
     private string _taskType = string.Empty;
 
-    [ObservableProperty]
     private bool _isEnabled = true;
+    
+    /// <summary>
+    /// 是否启用，支持父子节点联动
+    /// </summary>
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (SetProperty(ref _isEnabled, value))
+            {
+                // 当父节点状态改变时，同步更新所有子节点
+                UpdateChildrenEnabledState(value);
+            }
+        }
+    }
 
     [ObservableProperty]
     private bool _isDirectory = false;
@@ -105,6 +120,23 @@ public partial class GearTaskViewModel : ObservableObject
             {
                 yield return grandChild;
             }
+        }
+    }
+
+    /// <summary>
+    /// 更新所有子节点的启用状态
+    /// </summary>
+    /// <param name="enabled">启用状态</param>
+    private void UpdateChildrenEnabledState(bool enabled)
+    {
+        foreach (var child in Children)
+        {
+            // 直接设置私有字段，避免触发递归更新
+            child._isEnabled = enabled;
+            child.OnPropertyChanged(nameof(IsEnabled));
+            
+            // 递归更新子节点的子节点
+            child.UpdateChildrenEnabledState(enabled);
         }
     }
 
