@@ -1,0 +1,201 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.GearTask.PathingTaskSelectionWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:local="clr-namespace:BetterGenshinImpact.View.Windows.GearTask"
+                 xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Windows.GearTask"
+                 mc:Ignorable="d"
+                 Title="选择地图追踪任务"
+                 Height="800"
+                 Width="1100"
+                 MinHeight="500"
+                 MinWidth="700"
+                 WindowStartupLocation="CenterOwner"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 d:DataContext="{d:DesignInstance Type=vm:PathingTaskSelectionViewModel}">
+
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="IconImageStyle" TargetType="Image">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <ui:TitleBar Grid.Row="0"
+                     Title="选择地图追踪任务"
+                     Icon="{ui:SymbolIcon Navigation24}" />
+
+        <!-- 主内容区域 -->
+        <Grid Grid.Row="1" Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 工具栏 -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                <ui:Button Content="刷新"
+                           Icon="{ui:SymbolIcon ArrowSync24}"
+                           Command="{Binding RefreshTasksCommand}"
+                           Margin="0,0,8,0" />
+                <ToggleButton Content="显示文件"
+                              IsChecked="{Binding ShowFilesMode}"
+                              Command="{Binding ToggleShowModeCommand}"
+                              Margin="0,0,8,0" />
+            </StackPanel>
+
+            <!-- 主内容区域 -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="4*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 左侧任务列表 -->
+                <ui:Border Grid.Column="0"
+                           Background="{DynamicResource CardBackground}"
+                           BorderBrush="{DynamicResource CardBorderBrush}"
+                           BorderThickness="1"
+                           CornerRadius="{DynamicResource ControlCornerRadius}"
+                           Padding="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <!-- 搜索框 -->
+                        <ui:TextBox Grid.Row="0"
+                                    Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="搜索地图追踪任务..."
+                                    Icon="{ui:SymbolIcon Search24}"
+                                    Margin="0,0,0,8" />
+                        
+                        <!-- TreeView -->
+                        <TreeView Grid.Row="1"
+                                  ItemsSource="{Binding FilteredPathingTasks}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  x:Name="TaskTreeView">
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <Grid Margin="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 图标 -->
+                                    <Grid Grid.Column="0" Width="20" Height="20" Margin="0,0,8,0">
+                                        <!-- WPF图标 -->
+                                        <ui:SymbolIcon Symbol="{Binding IsDirectory, Converter={x:Static local:PathingTaskSelectionWindow.DirectoryToSymbolConverter}}"
+                                                       FontSize="16"
+                                                       Visibility="{Binding UseSystemIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+
+                                    <!-- 任务信息 -->
+                                    <StackPanel Grid.Column="1">
+                                        <ui:TextBlock Text="{Binding Name}"
+                                                      FontWeight="Medium"
+                                                      TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                        </TreeView>
+                    </Grid>
+                </ui:Border>
+
+                <!-- 分隔线 -->
+                <GridSplitter Grid.Column="1"
+                              Width="8"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch"
+                              Background="Transparent"
+                              ResizeBehavior="PreviousAndNext" />
+
+                <!-- 右侧详情区域 -->
+                <ui:Border Grid.Column="2"
+                           Background="{DynamicResource CardBackground}"
+                           BorderBrush="{DynamicResource CardBorderBrush}"
+                           BorderThickness="1"
+                           CornerRadius="{DynamicResource ControlCornerRadius}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- 详情标题 -->
+                        <ui:TextBlock Grid.Row="0"
+                                      Text="{Binding DisplayContentType, StringFormat={}{0} 内容}"
+                                      FontWeight="SemiBold"
+                                      Margin="12,12,12,8"
+                                      Visibility="{Binding SelectedTask, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <!-- 详情内容 -->
+                        <ScrollViewer Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      Margin="12,0,12,12"
+                                      Visibility="{Binding SelectedTask, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBox Text="{Binding DisplayContent}"
+                                        IsReadOnly="True"
+                                        TextWrapping="Wrap"
+                                        AcceptsReturn="True"
+                                        VerticalScrollBarVisibility="Disabled"
+                                        HorizontalScrollBarVisibility="Disabled"
+                                        BorderThickness="0"
+                                        Background="Transparent"
+                                        FontFamily="Consolas" />
+                        </ScrollViewer>
+
+                        <!-- 空状态提示 -->
+                        <StackPanel Grid.Row="1"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding SelectedTask, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
+                            <ui:SymbolIcon Symbol="Cursor24"
+                                           FontSize="48"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Margin="0,0,0,12" />
+                            <ui:TextBlock Text="请选择一个地图追踪任务查看详情"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </ui:Border>
+            </Grid>
+
+            <!-- 底部按钮 -->
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="0,12,0,0">
+                <ui:Button Content="确定"
+                           Appearance="Primary"
+                           Click="OnConfirmClick"
+                           Margin="0,0,8,0"
+                           MinWidth="80" />
+                <ui:Button Content="取消"
+                           Click="OnCancelClick"
+                           MinWidth="80" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

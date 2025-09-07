@@ -361,6 +361,30 @@ public partial class GearTaskListPageViewModel : ViewModel
                 return; // 用户取消了操作
             }
         }
+        // 如果是地图追踪类型，使用地图追踪任务选择窗口
+        else if (taskType == "Pathing")
+        {
+            var pathingSelectionWindow = new PathingTaskSelectionWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            pathingSelectionWindow.ShowDialog();
+            
+            if (pathingSelectionWindow.DialogResult && pathingSelectionWindow.SelectedTask != null)
+            {
+                var selectedTask = pathingSelectionWindow.SelectedTask;
+                newTask = new GearTaskViewModel(selectedTask.Name)
+                {
+                    TaskType = "Pathing",
+                    Path = selectedTask.RelativePath
+                };
+            }
+            else
+            {
+                return; // 用户取消了操作
+            }
+        }
         else
         {
             // 其他类型使用原有的对话框

@@ -38,7 +38,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     // 仓储临时目录 用于下载与解压
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
-
+    
     // // 中央仓库信息地址
     // public static readonly List<string> CenterRepoInfoUrls =
     // [

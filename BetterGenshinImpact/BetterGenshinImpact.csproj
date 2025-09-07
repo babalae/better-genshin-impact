@@ -35,6 +35,7 @@
 		<Resource Include="Resources\Images\*.png" />
 		<Resource Include="Resources\Images\*.ico" />
 		<Resource Include="Resources\Fonts\*.ttf" />
+		<Resource Include="Resources\Json\*.json" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -80,6 +81,7 @@
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 		<PackageReference Include="System.Drawing.Common" Version="9.0.5" />
 		<PackageReference Include="System.IO.Hashing" Version="9.0.4" />
 		<PackageReference Include="TorchSharp" Version="0.105.0" />
@@ -194,7 +196,6 @@
 	<ItemGroup>
 	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="GameTask\UseRedeemCode\Assets\1920x1080\" />
-	  <Folder Include="Resources\" />
 	  <Folder Include="Service\Notification\Builder\" />
 	  <Folder Include="User\AutoPathing\" />
 	</ItemGroup>
