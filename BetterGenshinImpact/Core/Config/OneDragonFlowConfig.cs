@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -120,7 +121,8 @@ public partial class OneDragonFlowConfig : ObservableObject
     {
         if (WeeklyDomainEnabled)
         {
-            var dayOfWeek = (DateTime.Now.Hour >= 4 ? DateTime.Today : DateTime.Today.AddDays(-1)).DayOfWeek;
+            // var dayOfWeek = (DateTime.Now.Hour >= 4 ? DateTime.Today : DateTime.Today.AddDays(-1)).DayOfWeek;
+            var dayOfWeek = TaskContext.Instance().Config.OtherConfig.ServerResetTime.GetDayOfWeek();
             return dayOfWeek switch
             {
                 DayOfWeek.Monday => (MondayPartyName, MondayDomainName,SundaySelectedValue),

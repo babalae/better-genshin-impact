@@ -55,12 +55,13 @@ public class ServerResetTimeTests
         // Arrange: Sunday 7PM UTC (before CN reset at 8PM UTC)
         // Server still considers it Saturday
         var time = new DateTime(2024, 1, 7, 19, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Sunday, time.DayOfWeek); // Input is Sunday UTC
 
         // Act
         var result = _cnServerReset.GetDayOfWeek(time);
 
         // Assert
-        Assert.Equal(DayOfWeek.Saturday, result);
+        Assert.Equal(DayOfWeek.Saturday, result); // But server sees it as Saturday
     }
 
     [Fact]
@@ -69,12 +70,13 @@ public class ServerResetTimeTests
         // Arrange: Sunday 9PM UTC (after CN reset at 8PM UTC)
         // Server considers it Sunday
         var time = new DateTime(2024, 1, 7, 21, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Sunday, time.DayOfWeek); // Input is Sunday UTC
 
         // Act
         var result = _cnServerReset.GetDayOfWeek(time);
 
         // Assert
-        Assert.Equal(DayOfWeek.Sunday, result);
+        Assert.Equal(DayOfWeek.Sunday, result); // Server also sees it as Sunday
     }
 
     [Fact]
@@ -83,12 +85,13 @@ public class ServerResetTimeTests
         // Arrange: Monday 8AM UTC (before NA reset at 9AM UTC)
         // Server still considers it Sunday
         var time = new DateTime(2024, 1, 8, 8, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Monday, time.DayOfWeek); // Input is Monday UTC
 
         // Act
         var result = _naServerReset.GetDayOfWeek(time);
 
         // Assert
-        Assert.Equal(DayOfWeek.Sunday, result);
+        Assert.Equal(DayOfWeek.Sunday, result); // But server sees it as Sunday
     }
 
     [Fact]
@@ -97,12 +100,13 @@ public class ServerResetTimeTests
         // Arrange: Monday 10AM UTC (after NA reset at 9AM UTC)
         // Server considers it Monday
         var time = new DateTime(2024, 1, 8, 10, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Monday, time.DayOfWeek); // Input is Monday UTC
 
         // Act
         var result = _naServerReset.GetDayOfWeek(time);
 
         // Assert
-        Assert.Equal(DayOfWeek.Monday, result);
+        Assert.Equal(DayOfWeek.Monday, result); // Server also sees it as Monday
     }
 
     [Fact]
@@ -136,12 +140,14 @@ public class ServerResetTimeTests
     {
         // Arrange: Sunday 6PM UTC (before CN weekly reset at 8PM UTC)
         var time = new DateTime(2024, 1, 7, 18, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Sunday, time.DayOfWeek); // Input is Sunday
 
         // Act
         var result = _cnServerReset.GetNextWeeklyResetTime(time);
 
         // Assert: Should return same Sunday at 8PM UTC
         Assert.Equal(new DateTime(2024, 1, 7, 20, 0, 0, DateTimeKind.Utc), result);
+        Assert.Equal(DayOfWeek.Sunday, result.DayOfWeek); // Result is also Sunday
     }
 
     [Fact]
@@ -149,12 +155,14 @@ public class ServerResetTimeTests
     {
         // Arrange: Sunday 9PM UTC (after CN weekly reset at 8PM UTC)
         var time = new DateTime(2024, 1, 7, 21, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Sunday, time.DayOfWeek); // Input is Sunday
 
         // Act
         var result = _cnServerReset.GetNextWeeklyResetTime(time);
 
         // Assert: Should return next Sunday at 8PM UTC
         Assert.Equal(new DateTime(2024, 1, 14, 20, 0, 0, DateTimeKind.Utc), result);
+        Assert.Equal(DayOfWeek.Sunday, result.DayOfWeek); // Result is also Sunday (next week)
     }
 
     [Fact]
@@ -188,12 +196,14 @@ public class ServerResetTimeTests
     {
         // Arrange: Wednesday 12PM UTC (mid-week, CN reset is Sunday)
         var time = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Wednesday, time.DayOfWeek); // Input is Wednesday
 
         // Act
         var result = _cnServerReset.GetNextWeeklyResetTime(time);
 
         // Assert: Should return next Sunday at 8PM UTC
         Assert.Equal(new DateTime(2024, 1, 14, 20, 0, 0, DateTimeKind.Utc), result);
+        Assert.Equal(DayOfWeek.Sunday, result.DayOfWeek); // Result is Sunday
     }
 
     [Fact]
@@ -201,12 +211,14 @@ public class ServerResetTimeTests
     {
         // Arrange: Friday 12PM UTC (NA reset is Monday)
         var time = new DateTime(2024, 1, 12, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Friday, time.DayOfWeek); // Input is Friday
 
         // Act
         var result = _naServerReset.GetNextWeeklyResetTime(time);
 
         // Assert: Should return next Monday at 9AM UTC
         Assert.Equal(new DateTime(2024, 1, 15, 9, 0, 0, DateTimeKind.Utc), result);
+        Assert.Equal(DayOfWeek.Monday, result.DayOfWeek); // Result is Monday
     }
 
     [Fact]
@@ -214,11 +226,13 @@ public class ServerResetTimeTests
     {
         // Arrange: Exactly at CN reset time (Sunday 8PM UTC)
         var time = new DateTime(2024, 1, 7, 20, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(DayOfWeek.Sunday, time.DayOfWeek); // Input is Sunday
 
         // Act
         var result = _cnServerReset.GetNextWeeklyResetTime(time);
 
         // Assert: Should return next week's reset (since current time is exactly at reset)
         Assert.Equal(new DateTime(2024, 1, 14, 20, 0, 0, DateTimeKind.Utc), result);
+        Assert.Equal(DayOfWeek.Sunday, result.DayOfWeek); // Result is also Sunday (next week)
     }
 }

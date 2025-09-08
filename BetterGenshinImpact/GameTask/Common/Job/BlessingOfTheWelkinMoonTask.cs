@@ -16,14 +16,13 @@ public class BlessingOfTheWelkinMoonTask
 {
     public string Name => "自动点击空月祝福";
 
-    private readonly ServerResetTime _serverResetTime = TaskContext.Instance().Config.OtherConfig.ServerResetTime;
-
     public async Task Start(CancellationToken ct)
     {
         try
         {
             // 4点全程触发
-            if (_serverResetTime.IsCurrentResetHour())
+            // if (DateTime.Now.Hour == 4)
+            if (TaskContext.Instance().Config.OtherConfig.ServerResetTime.IsResetHour())
             {
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
