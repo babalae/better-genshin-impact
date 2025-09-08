@@ -18,7 +18,7 @@ public partial class OtherConfig : ObservableObject
     // Server reset time configuration in UTC.
     // Defaults to CN server time: Sunday 20:00 UTC (which is Monday 04:00 GMT+8)
     [ObservableProperty]
-    private ServerResetTime _serverResetTime = new(DayOfWeek.Sunday, 20);
+    private ServerResetTime _serverResetTime = ServerResetTime.Default;
     [ObservableProperty]
     private AutoRestart _autoRestartConfig = new();
     //锄地规划

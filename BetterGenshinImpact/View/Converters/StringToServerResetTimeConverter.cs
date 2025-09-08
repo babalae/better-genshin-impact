@@ -32,7 +32,7 @@ public class StringToServerResetTimeConverter : IValueConverter
         if (value is not string stringValue)
         {
             // Default CN server reset time
-            return new ServerResetTime(DayOfWeek.Sunday, 20);
+            return ServerResetTime.Default;
         }
 
         try
@@ -42,7 +42,7 @@ public class StringToServerResetTimeConverter : IValueConverter
         catch
         {
             // Returns a default value on parsing failure
-            return new ServerResetTime(DayOfWeek.Sunday, 20);
+            return ServerResetTime.Default;
         }
 
         return Binding.DoNothing;

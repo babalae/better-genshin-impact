@@ -20,13 +20,21 @@ public class ServerResetTimeJsonConverter : JsonConverter<ServerResetTime>
     /// <returns>The deserialized ServerResetTime struct.</returns>
     public override ServerResetTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType != JsonTokenType.String)
+        try
         {
-            throw new JsonException("ServerResetTime expected to be a string.");
-        }
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("ServerResetTime expected to be a string.");
+            }
 
-        var value = reader.GetString();
-        return ServerResetTime.Parse(value!);
+            var value = reader.GetString();
+            return ServerResetTime.Parse(value!);
+        }
+        catch (Exception)
+        {
+            // Do not throw on obscured advanced option
+            return ServerResetTime.Default;
+        }
     }
 
     /// <summary>
@@ -58,6 +66,15 @@ public readonly record struct ServerResetTime
     /// the hour (in UTC) when the reset occurs (0-23).
     /// </summary>
     public int Hour { get; init; }
+
+    /// <summary>
+    /// The default server reset time, CN/Asia/SAR server, 4 AM GMT+8 -> 20 PM Sunday UTC
+    /// </summary>
+    public static readonly ServerResetTime Default = new()
+    {
+        DayOfWeek = DayOfWeek.Sunday,
+        Hour = 20
+    };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServerResetTime"/> struct.
