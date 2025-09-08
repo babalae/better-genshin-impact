@@ -1902,7 +1902,9 @@
   {
     "alias": [
       "伊涅芙",
-      "Ineffa"
+      "Ineffa",
+      "机器人",
+      "机娘"
     ],
     "burstCD": 15,
     "id": "10000116",
@@ -1910,5 +1912,42 @@
     "nameEn": "Ineffa",
     "skillCD": 16,
     "weapon": "13"
+  },
+  {
+    "alias": [
+      "菈乌玛",
+      "Lauma"
+    ],
+    "burstCD": 15,
+    "id": "10000119",
+    "name": "菈乌玛",
+    "nameEn": "Lauma",
+    "skillCD": 12,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "菲林斯",
+      "Flins"
+    ],
+    "burstCD": 20,
+    "id": "10000120",
+    "name": "菲林斯",
+    "nameEn": "Flins",
+    "skillCD": 6,
+    "skillHoldCD": 16,
+    "weapon": "13"
+  },
+  {
+    "alias": [
+      "爱诺",
+      "Aino"
+    ],
+    "burstCD": 13.5,
+    "id": "10000121",
+    "name": "爱诺",
+    "nameEn": "Aino",
+    "skillCD": 10,
+    "weapon": "11"
   }
 ]
