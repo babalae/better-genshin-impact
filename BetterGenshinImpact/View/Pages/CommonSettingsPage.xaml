@@ -1055,34 +1055,6 @@
                               SelectedValuePath="Item1"
                               DisplayMemberPath="Item2" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="Weekly server reset time (in UTC)"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Select the server's weekly reset time, which affects functions that rely on daily and weekly server reset, such as weapon/character talent material domain, serenitea pot purchase or welkin auto click. You can enter a custom time (e.g., mon;9)."
-                                  TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              MinWidth="100"
-                              Margin="0,0,36,0"
-                              IsEditable="True"
-                              ItemsSource="{Binding ServerResetTimeOptions}"
-                              Text="{Binding Config.OtherConfig.ServerResetTime, Converter={StaticResource StringToServerResetTimeConverter}, UpdateSourceTrigger=LostFocus}"/>
-                </Grid>
                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">

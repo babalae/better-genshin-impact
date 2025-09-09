@@ -15,10 +15,6 @@ public partial class OtherConfig : ObservableObject
     //自动领取派遣任务城市
     [ObservableProperty]
     private string _autoFetchDispatchAdventurersGuildCountry = "无";
-    // Server reset time configuration in UTC.
-    // Defaults to CN server time: Sunday 20:00 UTC (which is Monday 04:00 GMT+8)
-    [ObservableProperty]
-    private ServerResetTime _serverResetTime = ServerResetTime.Default;
     //日历服务器
     [ObservableProperty]
     private TimeSpan _serverTimeZoneOffset = TimeSpan.FromHours(8);
