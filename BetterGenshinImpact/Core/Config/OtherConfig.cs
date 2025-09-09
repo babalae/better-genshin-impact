@@ -19,6 +19,9 @@ public partial class OtherConfig : ObservableObject
     // Defaults to CN server time: Sunday 20:00 UTC (which is Monday 04:00 GMT+8)
     [ObservableProperty]
     private ServerResetTime _serverResetTime = ServerResetTime.Default;
+    //日历服务器
+    [ObservableProperty]
+    private TimeSpan _serverTimeZoneOffset = TimeSpan.FromHours(8);
     [ObservableProperty]
     private AutoRestart _autoRestartConfig = new();
     //锄地规划

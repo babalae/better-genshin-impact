@@ -61,6 +61,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
         // 4 AM GMT-5 (America) -> 9 AM Monday UTC
         new(DayOfWeek.Monday, 9)
     ];
+    
+    [ObservableProperty] private List<Tuple<TimeSpan, string>> _serverTimeZones =
+    [
+        Tuple.Create(TimeSpan.FromHours(8), "其他 UTC+08"),
+        Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
+        Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
+    ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)
