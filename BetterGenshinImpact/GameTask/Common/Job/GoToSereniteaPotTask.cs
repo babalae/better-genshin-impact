@@ -455,12 +455,13 @@ internal class GoToSereniteaPotTask
         }
         // DateTime now = DateTime.Now;
         // DayOfWeek currentDayOfWeek = now.Hour >= 4 ? now.DayOfWeek : now.AddDays(-1).DayOfWeek;
+        DateTimeOffset serverTime = TimeZoneHelper.GetServerTimeNow();
+        DayOfWeek currentDayOfWeek = serverTime.Hour >= 4 ? serverTime.DayOfWeek : serverTime.AddDays(-1).DayOfWeek;
         DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
         if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
         {
             // 对比当前日期的星期几与配置中的星期几
-            // if (configDayOfWeek.HasValue && currentDayOfWeek == configDayOfWeek.Value || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
-            if (configDayOfWeek.HasValue && TaskContext.Instance().Config.OtherConfig.ServerResetTime.IsDayOfWeek(configDayOfWeek.Value) || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
+            if (configDayOfWeek.HasValue && currentDayOfWeek == configDayOfWeek.Value || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
             {
                 var shopOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanShopString, ct);
                 if (shopOption == TalkOptionRes.FoundAndClick)

@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -22,7 +23,7 @@ public class BlessingOfTheWelkinMoonTask
         {
             // 4点全程触发
             // if (DateTime.Now.Hour == 4)
-            if (TaskContext.Instance().Config.OtherConfig.ServerResetTime.IsResetHour())
+            if (TimeZoneHelper.GetServerTimeNow().Hour == 4)
             {
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
