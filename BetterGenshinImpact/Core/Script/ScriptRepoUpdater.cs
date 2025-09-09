@@ -113,6 +113,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         await Task.Run(() =>
         {
+            Repository? repo = null;
             try
             {
                 GlobalSettings.SetOwnerValidation(false);
@@ -151,7 +152,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         return;
                     }
 
-                    using var repo = new Repository(repoPath);
+                    repo = new Repository(repoPath);
 
                     // 检查远程URL是否需要更新
                     var origin = repo.Network.Remotes["origin"];
@@ -159,6 +160,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         // 远程URL已更改，需要删除重新克隆
                         _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}，将重新克隆");
+                        repo?.Dispose();
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                         return;
@@ -170,7 +172,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     var fetchOptions = new FetchOptions
                     {
-                        ProxyOptions = { ProxyType = ProxyType.None }
+                        ProxyOptions = { ProxyType = ProxyType.None },
+                        Depth = 1 // 浅拉取，只获取最新的提交
                     };
 
                     Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
@@ -198,6 +201,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha[..7]} -> 远程 {remoteCommitSha[..7]}，将重新克隆");
 
                         // commit不一致，删除本地仓库重新克隆
+                        repo?.Dispose();
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                     }
@@ -207,7 +211,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 _logger.LogError(ex, "Git仓库更新失败");
                 UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
+                repo?.Dispose();
                 CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+            }
+            finally
+            {
+                repo?.Dispose();
             }
         });
 
