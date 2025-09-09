@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.View.Drawable;
@@ -66,6 +67,10 @@ public class SetTimeTask
             GameCaptureRegion.GameRegion1080PPosClick(45, 715);
             await Delay(400, ct);
             await _returnMainUiTask.Start(ct);
+            if (!Bv.IsInMainUi(CaptureToRectArea()))
+            {
+                await _returnMainUiTask.Start(ct);
+            }
         }
         else
         {
