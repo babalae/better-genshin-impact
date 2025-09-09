@@ -136,11 +136,21 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         // B键打开背包
         input.SimulateAction(GIActions.OpenInventory);
-        await Delay(1000, ct);
+        await Delay(1200, ct);
 
         var openBagSuccess = await NewRetry.WaitForAction(() =>
         {
             using var ra = CaptureToRectArea();
+            
+            // 判断是否在提示对话框（物品过期提示）
+            if (Bv.IsInPromptDialog(ra))
+            {
+                // 如果存在物品过期提示，则点击确认按钮
+                Bv.ClickWhiteConfirmButton(ra.DeriveCrop(0, 0, ra.Width, ra.Height - ra.Height / 0.2));
+                Sleep(300, ct);
+                return false;
+            }
+            
             using var artifactBtn = ra.Find(recognitionObjectChecked);
             if (artifactBtn.IsEmpty())
             {
