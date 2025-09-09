@@ -67,18 +67,16 @@ public class SetTimeTask
             GameCaptureRegion.GameRegion1080PPosClick(45, 715);
             await Delay(400, ct);
             await _returnMainUiTask.Start(ct);
-            if (!Bv.IsInMainUi(CaptureToRectArea()))
+            // 跳过动画不总能成功
+            if (Bv.IsInMainUi(CaptureToRectArea()))
             {
-                await _returnMainUiTask.Start(ct);
+                return;
             }
         }
-        else
-        {
-            await Delay(3000, ct);
-            // 出现X的时候代表时间切换成功
-            await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
-            await _returnMainUiTask.Start(ct);
-        }
+        await Delay(3000, ct);
+        // 出现X的时候代表时间切换成功
+        await NewRetry.WaitForAction(() => CaptureToRectArea().Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist(), ct, 25);
+        await _returnMainUiTask.Start(ct);
     }
 
     // 取消动画函数
