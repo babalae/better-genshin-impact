@@ -11,6 +11,7 @@ using System.Threading;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
+using BetterGenshinImpact.Helpers.Extensions;
 
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -272,6 +273,17 @@ public static partial class Bv
     public static async Task<bool> WaitAndSkipForTalkUi(CancellationToken ct, int retryTimes = 5)
     {
         return await NewRetry.WaitForAction(() => IsInTalkUi(TaskControl.CaptureToRectArea()), ct, retryTimes, 500);
+    }
+    
+    /// <summary>
+    /// 是否存在提示框/确认框
+    /// 黑白款都能识别
+    /// </summary>
+    /// <param name="captureRa"></param>
+    /// <returns></returns>
+    public static bool IsInPromptDialog(ImageRegion captureRa)
+    {
+        return captureRa.Find(ElementAssets.Instance.PromptDialogLeftBottomStar).IsExist();
     }
 }
 

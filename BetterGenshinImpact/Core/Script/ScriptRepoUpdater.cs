@@ -113,6 +113,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         await Task.Run(() =>
         {
+            Repository? repo = null;
             try
             {
                 GlobalSettings.SetOwnerValidation(false);
@@ -151,7 +152,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         return;
                     }
 
-                    using var repo = new Repository(repoPath);
+                    repo = new Repository(repoPath);
 
                     // 检查远程URL是否需要更新
                     var origin = repo.Network.Remotes["origin"];
@@ -159,6 +160,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         // 远程URL已更改，需要删除重新克隆
                         _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}，将重新克隆");
+                        repo?.Dispose();
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                         return;
@@ -170,7 +172,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     var fetchOptions = new FetchOptions
                     {
-                        ProxyOptions = { ProxyType = ProxyType.None }
+                        ProxyOptions = { ProxyType = ProxyType.None },
+                        Depth = 1 // 浅拉取，只获取最新的提交
                     };
 
                     Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
@@ -198,6 +201,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha[..7]} -> 远程 {remoteCommitSha[..7]}，将重新克隆");
 
                         // commit不一致，删除本地仓库重新克隆
+                        repo?.Dispose();
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                     }
@@ -207,54 +211,48 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 _logger.LogError(ex, "Git仓库更新失败");
                 UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
+                repo?.Dispose();
                 CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+            }
+            finally
+            {
+                repo?.Dispose();
             }
         });
 
-        // 如果仓库有更新，则标记新repo.json中的更新节点
-        if (updated)
+        // 标记新repo.json中的更新节点
+        try
         {
-            try
+            var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
+                .FirstOrDefault();
+            if (newRepoJsonPath != null)
             {
-                var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
-                    .FirstOrDefault();
-                if (newRepoJsonPath != null)
+                var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
+
+                // 检查是否存在repo_update.json，如果存在则直接与它比对
+                var repoUpdateJsonPath = Path.Combine(ReposPath, "repo_updated.json");
+                string updatedContent;
+
+                if (File.Exists(repoUpdateJsonPath))
                 {
-                    var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
-
-                    // 检查是否存在repo_update.json，如果存在则直接与它比对
-                    var parentDir = Path.GetDirectoryName(repoPath);
-                    var repoUpdateJsonPath = Path.Combine(parentDir!, "repo_update.json");
-                    string updatedContent;
-
-                    if (File.Exists(repoUpdateJsonPath))
-                    {
-                        try
-                        {
-                            var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
-                            updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
-                        }
-                        catch (Exception ex)
-                        {
-                            updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
-                        }
-                    }
-                    else
-                    {
-                        // 如果没有repo_update.json，则使用备份的旧内容进行比对
-                        updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
-                    }
-
-                    // 保存到同级目录
-                    var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
-                    await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
-                    _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
+                    var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
+                    updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
                 }
+                else
+                {
+                    // 如果没有repo_update.json，则使用备份的旧内容进行比对
+                    updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
+                }
+
+                // 保存到同级目录
+                var updatedRepoJsonPath = Path.Combine(ReposPath, "repo_updated.json");
+                await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
+                _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "标记repo.json更新节点失败");
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "标记repo.json更新节点失败");
         }
 
         return (repoPath, updated);
@@ -314,6 +312,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 检查节点本身是否有更新
         if (oldNode != null)
         {
+            // 若历史上已标记，则保留该标记
+            if (IsTruthy(oldNode["hasUpdate"]) || IsTruthy(oldNode["hasUpdated"]))
+            {
+                newNode["hasUpdate"] = true;
+                hasDirectUpdate = true;
+            }
+
             // 对比时间戳
             var oldTime = ParseLastUpdated(oldNode["lastUpdated"]?.ToString());
             var newTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
@@ -348,10 +353,18 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         // 如果是叶子节点更新，父节点也标记更新
                         var isLeafChild = newChildObj["children"] == null ||
                                           !((JArray?)newChildObj["children"])?.Any() == true;
-                        if (isLeafChild && !hasDirectUpdate && newChildObj["hasUpdate"] != null)
+                        if (isLeafChild && (IsTruthy(newChildObj["hasUpdate"]) || IsTruthy(newChildObj["hasUpdated"])))
                         {
+                            var parentTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
+                            var childTime = ParseLastUpdated(newChildObj["lastUpdated"]?.ToString());
+
                             newNode["hasUpdate"] = true;
                             hasDirectUpdate = true;
+
+                            if (childTime > parentTime && newChildObj["lastUpdated"] != null)
+                            {
+                                newNode["lastUpdated"] = newChildObj["lastUpdated"];
+                            }
                         }
                     }
                 }
@@ -383,6 +396,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             return DateTime.MinValue;
         }
+    }
+
+    private bool IsTruthy(JToken? token)
+    {
+        if (token == null || token.Type == JTokenType.Null) return false;
+        if (token.Type == JTokenType.Boolean) return (bool)token;
+        if (token.Type == JTokenType.String) return string.Equals((string)token, "true", StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
     private static void SimpleCloneRepository(string repoUrl, string repoPath,
