@@ -7,7 +7,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
                  Title="脚本仓库"
-                 Width="400"
+                 Width="410"
                  MinWidth="360"
                  MinHeight="50"
                  ResizeMode="NoResize"
@@ -36,107 +36,220 @@
 
         <!-- 主内容区域 -->
         <Grid Grid.Row="1" Margin="12,0,12,12">
-            <Border Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 标签页区域 -->
+            <Border Grid.Row="0"
+                    Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1,1,1,1"
                     CornerRadius="8">
-                <Grid Margin="12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                <TabControl Margin="12">
+                    <!-- Git仓库标签页 -->
+                    <TabItem Width="110">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0" Symbol="BranchFork24" />
+                                <TextBlock Text="Git一键更新" />
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                    <!--  第一行：更新渠道  -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                            <!--  第一行：更新渠道  -->
+                            <Grid Grid.Row="0" Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
 
-                        <ui:TextBlock Grid.Column="0"
-                                      Margin="0,0,8,0"
-                                      VerticalAlignment="Center"
-                                      Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                      Text="更新渠道：" />
-                        <ComboBox Grid.Column="1"
-                                  MinWidth="160"
-                                  VerticalAlignment="Center"
-                                  DisplayMemberPath="Name"
-                                  ItemsSource="{Binding RepoChannels}"
-                                  SelectedItem="{Binding SelectedRepoChannel}" />
-                    </Grid>
+                                <ui:TextBlock Grid.Column="0"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                              Text="更新渠道：" />
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="160"
+                                          VerticalAlignment="Center"
+                                          DisplayMemberPath="Name"
+                                          ItemsSource="{Binding RepoChannels}"
+                                          SelectedItem="{Binding SelectedRepoChannel}" />
+                            </Grid>
 
-                    <!--  第二行：脚本仓库URL  -->
-                    <Grid Grid.Row="1" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                            <!--  第二行：脚本仓库URL  -->
+                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
 
-                        <ui:TextBlock Grid.Column="0"
-                                      Margin="0,0,8,0"
-                                      VerticalAlignment="Center"
-                                      Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
-                                      Text="仓库地址：" />
-                        <TextBox Grid.Column="1"
-                                 MinWidth="160"
-                                 VerticalAlignment="Center"
-                                 IsEnabled="{Binding IsRepoUrlReadOnly, Converter={StaticResource InverseBooleanConverter}}"
-                                 IsReadOnly="{Binding IsRepoUrlReadOnly}"
-                                 Text="{Binding Config.SelectedRepoUrl}" />
-                    </Grid>
+                                <ui:TextBlock Grid.Column="0"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                              Text="仓库地址：" />
+                                <TextBox Grid.Column="1"
+                                         MinWidth="160"
+                                         VerticalAlignment="Center"
+                                         IsEnabled="{Binding IsRepoUrlReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                                         IsReadOnly="{Binding IsRepoUrlReadOnly}"
+                                         Text="{Binding Config.SelectedRepoUrl}" />
+                            </Grid>
 
-                    <!--  第三行：按钮组  -->
-                    <Grid Grid.Row="2" Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition/>
-                            <ColumnDefinition/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
+                            <!--  第三行：按钮组  -->
+                            <Grid Grid.Row="2" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
 
-                        <ui:Button Grid.Column="0"
-                                   Margin="0,0,4,0"
-                                   Command="{Binding UpdateRepoCommand}"
-                                   Content="更新仓库"
-                                   Icon="{ui:SymbolIcon CloudSync24}"
-                                   HorizontalAlignment="Stretch" />
-                        <ui:Button Grid.Column="1"
-                                   Margin="4,0,4,0"
-                                   Command="{Binding ResetRepoCommand}"
-                                   Content="重置仓库"
-                                   Icon="{ui:SymbolIcon ArrowReset24}"
-                                   HorizontalAlignment="Stretch"/>
-                        <ui:Button Grid.Column="2"
-                                   Margin="4,0,0,0"
-                                   Appearance="Primary"
-                                   Command="{Binding OpenLocalScriptRepoCommand}"
-                                   Content="打开仓库"
-                                   Icon="{ui:SymbolIcon BookStar24}"
-                                   HorizontalAlignment="Stretch"/>
-                    </Grid>
+                                <ui:Button Grid.Column="0"
+                                           Margin="0,0,4,0"
+                                           Command="{Binding UpdateRepoCommand}"
+                                           Content="更新仓库"
+                                           Icon="{ui:SymbolIcon CloudSync24}"
+                                           HorizontalAlignment="Stretch" />
+                                <ui:Button Grid.Column="1"
+                                           Margin="4,0,0,0"
+                                           Command="{Binding ResetRepoCommand}"
+                                           Content="重置仓库"
+                                           Icon="{ui:SymbolIcon ArrowReset24}"
+                                           HorizontalAlignment="Stretch" />
+                            </Grid>
 
-                    <!-- 进度条区域 -->
-                    <Grid Grid.Row="3"
-                          Margin="0,8,0,4"
-                          Visibility="{Binding IsUpdating, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
 
-                        <ui:TextBlock Grid.Row="0"
-                                      Margin="0,0,0,4"
-                                      VerticalAlignment="Center"
-                                      Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                      Text="{Binding UpdateProgressText}" />
-                        <ProgressBar Grid.Row="1"
-                                     Maximum="100" 
-                                     Value="{Binding UpdateProgressValue}" />
-                    </Grid>
-                </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- 在线更新标签页 -->
+                    <!--<TabItem Width="100">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0" Symbol="DocumentArrowDown20" />
+                                <TextBlock Text="URL更新" />
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ui:TextBlock Grid.Row="0"
+                                          Margin="0,0,0,12"
+                                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="从在线地址直接下载脚本仓库压缩包，适用于网络环境较好的情况。" />
+
+                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:TextBlock Grid.Column="0"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                              Text="下载地址：" />
+                                <TextBox Grid.Column="1"
+                                         MinWidth="160"
+                                         VerticalAlignment="Center"
+                                         Text="{Binding OnlineDownloadUrl}" />
+                            </Grid>
+
+                            <ui:Button Grid.Row="2"
+                                       Command="{Binding DownloadOnlineRepoCommand}"
+                                       Content="下载并导入"
+                                       Icon="{ui:SymbolIcon Cloud24}"
+                                       HorizontalAlignment="Left" />
+                        </Grid>
+                    </TabItem>-->
+
+                    <!-- 手动导入标签页 -->
+                    <TabItem  Width="100">
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0" Symbol="FolderZip24" />
+                                <TextBlock Text="手动导入" />
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ui:TextBlock Grid.Row="0"
+                                          Margin="0,0,0,12"
+                                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="从本地zip文件导入脚本仓库，适用于离线环境或网络不稳定的情况。" />
+
+                            <ui:TextBlock Grid.Row="1"
+                                          Margin="0,0,0,12"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="请选择包含脚本仓库内容的zip压缩包文件进行导入。" />
+
+                            <ui:TextBlock Grid.Row="2"
+                                          Margin="0,0,0,12"
+                                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                          TextWrapping="Wrap">
+                                <Run Text="可以从这里获取zip：" />
+                                <Hyperlink NavigateUri="https://bettergi.com/feats/autos/srepo.html" RequestNavigate="Hyperlink_RequestNavigate">
+                                    <Run Text="脚本仓库文档" />
+                                </Hyperlink>
+                            </ui:TextBlock>
+
+                            <ui:Button Grid.Row="3"
+                                       Command="{Binding ImportLocalScriptsRepoZipCommand}"
+                                       Content="选择zip文件导入"
+                                       Icon="{ui:SymbolIcon FolderZip24}"
+                                       HorizontalAlignment="Left" />
+                        </Grid>
+                    </TabItem>
+                </TabControl>
             </Border>
+
+            <!-- 进度条区域 -->
+            <Grid Grid.Row="1"
+                  Margin="0,12,0,8"
+                  Visibility="{Binding IsUpdating, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ui:TextBlock Grid.Row="0"
+                              Margin="0,0,0,4"
+                              VerticalAlignment="Center"
+                              Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                              Text="{Binding UpdateProgressText}" />
+                <ProgressBar Grid.Row="1"
+                             Maximum="100"
+                             Value="{Binding UpdateProgressValue}" />
+            </Grid>
+
+            <!-- 公共按钮区域 -->
+            <Grid Grid.Row="2" Margin="0,4,0,0">
+                <ui:Button Appearance="Primary"
+                           Command="{Binding OpenLocalScriptRepoCommand}"
+                           Content="打开仓库"
+                           Icon="{ui:SymbolIcon BookStar24}"
+                           HorizontalAlignment="Center" />
+            </Grid>
         </Grid>
     </Grid>
 </ui:FluentWindow>

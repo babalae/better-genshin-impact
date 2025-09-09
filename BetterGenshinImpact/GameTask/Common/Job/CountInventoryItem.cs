@@ -24,19 +24,19 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         private readonly InputSimulator input = Simulation.SendInput;
         private CancellationToken ct;
         private readonly GridScreenName gridScreenName;
-        private readonly string foodName;
+        private readonly string itemName;
 
-        public CountInventoryItem(GridScreenName gridScreenName, string foodName)
+        public CountInventoryItem(GridScreenName gridScreenName, string itemName)
         {
             this.gridScreenName = gridScreenName;
-            this.foodName = foodName;
+            this.itemName = itemName;
         }
 
         public async Task<int> Start(CancellationToken ct)
         {
             this.ct = ct;
 
-            logger.LogInformation("打开背包并在{grid}寻找{name}……", this.gridScreenName, this.foodName);
+            logger.LogInformation("打开背包并在{grid}寻找{name}……", this.gridScreenName, this.itemName);
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, input, logger, this.ct);
 
@@ -50,7 +50,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                 using Mat icon = itemRegion.SrcMat.GetGridIcon();
                 var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                 string predName = result.Item1;
-                if (predName == this.foodName)
+                if (predName == this.itemName)
                 {
                     string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
                     if (int.TryParse(numStr, out int num))
@@ -69,7 +69,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             if (count == null)
             {
                 count = -1;
-                logger.LogInformation("没有找到{name}", this.foodName);
+                logger.LogInformation("没有找到{name}", this.itemName);
             }
             await new ReturnMainUiTask().Start(ct);
 
