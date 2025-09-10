@@ -131,7 +131,30 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     private void ApplyTheme(ThemeType themeType)
     {
+        var originalThemeType = themeType;
+
         // 根据主题类型设置应用程序主题（深色/浅色）和背景效果类型（Mica/Acrylic/None）
+        if (!OsVersionHelper.IsWindows11_22523_OrGreater)
+        {
+            // 22523以下版本只支持深浅色切换,修正背景材质为纯色
+            if (themeType == ThemeType.DarkMica || themeType == ThemeType.DarkAcrylic)
+            {
+                themeType = ThemeType.DarkNone;
+            }
+            else if (themeType == ThemeType.LightMica || themeType == ThemeType.LightAcrylic)
+            {
+                themeType = ThemeType.LightNone;
+            }
+        }
+
+        // 如果主题类型被修正，更新配置并保存
+        if (themeType != originalThemeType)
+        {
+            Config.CommonConfig.CurrentThemeType = themeType;
+            _configService.Save();
+            _logger.LogInformation($"主题类型已从 {originalThemeType} 修正为 {themeType}，因为当前系统不支持该主题效果");
+        }
+
         switch (themeType)
         {
             case ThemeType.DarkNone:

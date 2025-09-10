@@ -1,7 +1,9 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -48,6 +50,10 @@ public class GetGridIconsTask : ISoloTask
     {
         this.ct = ct;
 
+        int count = this.maxNumToGet ?? int.MaxValue;
+        string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", $"{this.gridScreenName}{DateTime.Now:yyyyMMddHHmmss}");
+        Directory.CreateDirectory(directory);
+
         switch (this.gridScreenName)
         {
             case GridScreenName.Weapons:
@@ -60,23 +66,23 @@ public class GetGridIconsTask : ISoloTask
             case GridScreenName.PreciousItems:
             case GridScreenName.Furnishings:
                 await new ReturnMainUiTask().Start(ct);
-                await AutoArtifactSalvageTask.OpenBag(this.gridScreenName, this.input, this.logger, this.ct);
+                await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
+            case GridScreenName.ArtifactSetFilter:
+                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                await GetArtifactSetFilterGridIcons(count, directory);
+                return;
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
                 break;
         }
 
-        using var ra0 = CaptureToRectArea();
-        GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
-        Rect gridRoi = gridParams.GetRect(ra0);
+        await GetInventoryGridIcons(count, directory);
+    }
 
-        int count = this.maxNumToGet ?? int.MaxValue;
-
-        string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", DateTime.Now.ToString("yyyyMMddHHmmss"));
-        Directory.CreateDirectory(directory);
-
-        GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct);
+    private async Task GetInventoryGridIcons(int count, string directory)
+    {
+        GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         HashSet<string> fileNames = new HashSet<string>();
         await foreach (ImageRegion itemRegion in gridScreen)
         {
@@ -128,6 +134,106 @@ public class GetGridIconsTask : ISoloTask
                 break;
             }
         }
+    }
+
+    private async Task GetArtifactSetFilterGridIcons(int count, string directory)
+    {
+        ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
+        HashSet<string> fileNames = new HashSet<string>();
+        await foreach (ImageRegion itemRegion in gridScreen)
+        {
+            itemRegion.Click();
+            await Delay(300, ct);
+
+            static bool tryGetFlower(out string flowerName)
+            {
+                using var ra1 = CaptureToRectArea();
+                using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
+                var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
+
+                var flowerWithGlyph = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains("套装包含")).Skip(1).FirstOrDefault();
+                if (flowerWithGlyph == default)
+                {
+                    nameRegion.Move();
+                    flowerName = string.Empty;
+                    return false;
+                }
+                // 可能带有花形符号
+                Rect flowerWithGlyphRect = flowerWithGlyph.Rect.BoundingRect();
+                // 费解的是，原图识别没问题，但为了排除名称前的花形符号，无论裁切还是不裁切只是将符号涂白，都会把一些花名识别出旧体字
+                // 花形符号往往还被识别为空格，导致无法用识别框位置来区分
+
+                // 截取没有符号的区域再识别一次
+                Rect flowerWithoutGlyph = new Rect((int)(ra1.Width * 0.028), (int)(flowerWithGlyphRect.Y - flowerWithGlyphRect.Height * 0), (int)(ra1.Width * 0.228), (int)(flowerWithGlyphRect.Height * 1));
+                Mat roi = nameRegion.SrcMat.SubMat(flowerWithoutGlyph);
+                var whiteOcrResult = OcrFactory.Paddle.OcrResult(roi);
+                flowerName = whiteOcrResult.Text;
+                // 所以只好识别两次，Trim后根据字数取原截图OCR的结果……
+                flowerName = flowerWithGlyph.Text.Trim().Substring(flowerWithGlyph.Text.Trim().Length - flowerName.Trim().Length);
+                return true;
+            }
+
+            if (!tryGetFlower(out string flowerName))
+            {
+                await TaskControl.Delay(100, this.ct);
+                for (int i = 0; i < 5; i++)
+                {
+                    this.input.Mouse.VerticalScroll(-2);
+                    await TaskControl.Delay(40, this.ct);
+                }
+                await TaskControl.Delay(300, this.ct);
+                if (!tryGetFlower(out flowerName))
+                {
+                    throw new Exception("尝试获取生之花失败");
+                    //flowerName = $"识别失败{nameRegion.GetHashCode()}";
+                }
+            }
+
+            string fileName = flowerName;
+            if (fileNames.Add(fileName))
+            {
+                string filePath = Path.Combine(directory, $"{fileName}.png");
+                Thread saveThread = new Thread(() =>
+                {
+                    try
+                    {
+                        using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion);
+                            img125.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        logger.LogInformation("图片保存成功：{Text}", fileName);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e, "图片保存失败：{Text}", fileName);
+                    }
+                });
+                saveThread.IsBackground = true; // 设置为后台线程
+                saveThread.Start();
+            }
+            else
+            {
+                logger.LogInformation("重复的物品：{Text}", fileName);
+            }
+
+            count--;
+            if (count <= 0)
+            {
+                logger.LogInformation("检查次数已耗尽");
+                break;
+            }
+        }
+    }
+
+    internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion, ISystemInfo? systemInfo = null)
+    {
+        double scale = (systemInfo ?? TaskContext.Instance().SystemInfo).AssetScale;
+        double width = 60;
+        double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
+        Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
+        Mat crop = itemRegion.SrcMat.SubMat(iconRect);
+        return crop.Resize(new Size(125, 125));
     }
 
     /// <summary>

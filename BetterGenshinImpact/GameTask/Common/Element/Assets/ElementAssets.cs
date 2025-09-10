@@ -8,6 +8,8 @@ namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 public class ElementAssets : BaseAssets<ElementAssets>
 {
+    public RecognitionObject PromptDialogLeftBottomStar;  // 弹出框左下角的星星
+
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
     public RecognitionObject BtnBlackConfirm;
@@ -15,6 +17,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BtnOnlineYes;
     public RecognitionObject BtnOnlineNo;
     public Lazy<RecognitionObject> BtnExitDoor;
+    public RecognitionObject InDomainRo;
 
     public RecognitionObject PaimonMenuRo;
     public RecognitionObject BlueTrackPoint;
@@ -86,6 +89,14 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     private ElementAssets()
     {
+        PromptDialogLeftBottomStar = new RecognitionObject
+        {
+            Name = "PromptDialogLeftBottomStar",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "prompt_dialog_left_bottom_star.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height - CaptureRect.Height / 2),
+            Threshold = 0.8,
+        }.InitTemplate();
         // 按钮
         BtnWhiteConfirm = new RecognitionObject
         {
@@ -136,6 +147,16 @@ public class ElementAssets : BaseAssets<ElementAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_exit_door.png"),
             DrawOnWindow = false
         }.InitTemplate());
+        
+        // 秘境退出图标
+        InDomainRo = new RecognitionObject
+        {
+            Name = "InDomain",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "in_domain.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
 
         // 派蒙菜单
         // 此图38x40 小地图210x210 小地图左上角位置 24,-15

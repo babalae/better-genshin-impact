@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.49.0</Version>
+		<Version>0.49.2-alpha.3</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -42,8 +42,8 @@
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 		
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.9" />
-		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.9" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.11" />
+		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.11" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.8" />
 		
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
@@ -176,12 +176,6 @@
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="GameTask\GetGridIcons\gridIcon.onnx">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="GameTask\GetGridIcons\训练集原型特征.csv">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
 		<None Update="GameTask\LogParse\Assets\log.css">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
@@ -189,6 +183,9 @@
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="GameTask\GameLoading\Assets\1920x1080\enter_game.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="GameTask\Common\Element\Assets\1920x1080\in_domain.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
