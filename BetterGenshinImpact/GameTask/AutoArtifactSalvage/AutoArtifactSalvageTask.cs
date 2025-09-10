@@ -73,7 +73,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.maxNumToCheck = param.MaxNumToCheck;
         this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
         this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
-        var stringLocalizer = param.StringLocalizer ?? App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
+        var stringLocalizer = param.StringLocalizer;
         this.cultureInfo = param.GameCultureInfo;
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
         numOfStarLocalizedString =

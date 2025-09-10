@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using OpenCvSharp;
@@ -197,7 +197,7 @@ public static partial class Bv
                 RecognitionType = RecognitionTypes.Ocr,
                 RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
             });
-            if (list.Any(r => r.Text.Contains("复苏")))
+            if (list.Any(r => r.Text.Contains("复苏")))   // todo https://github.com/babalae/better-genshin-impact/issues/1608
             {
                 return true;
             }
