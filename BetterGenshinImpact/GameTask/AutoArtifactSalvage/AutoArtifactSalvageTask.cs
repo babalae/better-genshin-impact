@@ -535,7 +535,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+:：]+)\+([\d., ]*)(%?)$";
+            string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)
