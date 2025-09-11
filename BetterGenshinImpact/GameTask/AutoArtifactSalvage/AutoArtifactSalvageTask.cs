@@ -73,7 +73,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.maxNumToCheck = param.MaxNumToCheck;
         this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
         this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
-        var stringLocalizer = param.StringLocalizer ?? App.GetService<IStringLocalizer<AutoArtifactSalvageTask>>() ?? throw new NullReferenceException();
+        var stringLocalizer = param.StringLocalizer;
         this.cultureInfo = param.GameCultureInfo;
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
         numOfStarLocalizedString =
@@ -141,7 +141,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         var openBagSuccess = await NewRetry.WaitForAction(() =>
         {
             using var ra = CaptureToRectArea();
-            
+
             // 判断是否在提示对话框（物品过期提示）
             if (Bv.IsInPromptDialog(ra))
             {
@@ -150,7 +150,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 Sleep(300, ct);
                 return false;
             }
-            
+
             using var artifactBtn = ra.Find(recognitionObjectChecked);
             if (artifactBtn.IsEmpty())
             {
@@ -213,14 +213,21 @@ public class AutoArtifactSalvageTask : ISoloTask
         // 快速选择
         using var ra3 = CaptureToRectArea();
         var ocrList = ra3.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeftBottom(0.25, 0.1)));
+        bool quickSelectBtnFound = false;
         foreach (var ocr in ocrList)
         {
             if (Regex.IsMatch(ocr.Text, quickSelectLocalizedString))
             {
+                quickSelectBtnFound = true;
                 ocr.Click();
                 await Delay(500, ct);
                 break;
             }
+        }
+        if (!quickSelectBtnFound)
+        {
+            logger.LogError("没有找到可匹配{regex}的按钮，终止分解", quickSelectLocalizedString);
+            return;
         }
 
         // 确认选择
@@ -231,14 +238,21 @@ public class AutoArtifactSalvageTask : ISoloTask
             List<Region> ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra4.ToRect().CutLeft(0.20)));
             for (int i = star; i < 4; i++)
             {
+                bool numOfStarFound = false;
                 foreach (var ocr in ocrList2)
                 {
                     if (Regex.IsMatch(ocr.Text, numOfStarLocalizedString[i]))
                     {
+                        numOfStarFound = true;
                         ocr.Click();
                         await Delay(500, ct);
                         break;
                     }
+                }
+                if (!numOfStarFound)
+                {
+                    logger.LogError("没有找到可匹配{regex}的按钮，终止分解", numOfStarLocalizedString[i]);
+                    return;
                 }
             }
         }
@@ -535,7 +549,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         #region 副词条
         ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
         {
-            string pattern = @"^[•·]?([^+:：]+)\+([\d., ]*)(%?)$";
+            string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
             pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(l, pattern);
             if (match.Success)
