@@ -1,17 +1,18 @@
-﻿using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
-using OpenCvSharp;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using System.Threading;
-
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
-using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Localization;
+using OpenCvSharp;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -24,7 +25,7 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// </summary>
 public static partial class Bv
 {
- 
+
     public static string WhichGameUi()
     {
         throw new NotImplementedException();
@@ -37,7 +38,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInMainUi(ImageRegion captureRa)
     {
-        return  captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist() && !IsInRevivePrompt(captureRa);
+        return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist() && !IsInRevivePrompt(captureRa);
     }
 
     /// <summary>
@@ -60,7 +61,7 @@ public static partial class Bv
 
         return false;
     }
-    
+
     /// <summary>
     /// 是否在秘境中
     /// </summary>
@@ -187,7 +188,7 @@ public static partial class Bv
     /// </summary>
     /// <param name="region"></param>
     /// <returns></returns>
-    public static bool IsInRevivePrompt(ImageRegion region)
+    internal static bool IsInRevivePrompt(ImageRegion region)
     {
         using var confirmRectArea = region.Find(AutoFightAssets.Instance.ConfirmRa);
         if (!confirmRectArea.IsEmpty())
@@ -197,7 +198,11 @@ public static partial class Bv
                 RecognitionType = RecognitionTypes.Ocr,
                 RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
             });
-            if (list.Any(r => r.Text.Contains("复苏")))
+
+            CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+            IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
+            string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+            if (list.Any(r => r.Text.Contains(revival)))
             {
                 return true;
             }
@@ -274,7 +279,7 @@ public static partial class Bv
     {
         return await NewRetry.WaitForAction(() => IsInTalkUi(TaskControl.CaptureToRectArea()), ct, retryTimes, 500);
     }
-    
+
     /// <summary>
     /// 是否存在提示框/确认框
     /// 黑白款都能识别

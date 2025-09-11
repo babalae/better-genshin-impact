@@ -1,11 +1,9 @@
-﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Microsoft.Extensions.Localization;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.Helpers;
 public static class CultureHelper
