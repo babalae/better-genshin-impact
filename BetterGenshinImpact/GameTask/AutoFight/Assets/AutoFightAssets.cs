@@ -47,6 +47,9 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     
     public RecognitionObject AbnormalIconRa;
 
+
+    public RecognitionObject ChatIconRa;
+    public RecognitionObject ChatEnterIconRa;
     private AutoFightAssets()
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
@@ -288,5 +291,23 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             DrawOnWindow = false
         }.InitTemplate();
         
+
+        ChatIconRa = new RecognitionObject
+        {
+            Name = "ChatIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "chatIcon.png"),
+            RegionOfInterest = new Rect((int)(30 * AssetScale), CaptureRect.Height - (int)(60 * AssetScale), (int)(100 * AssetScale), (int)(60 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        ChatEnterIconRa = new RecognitionObject
+        {
+            Name = "ChatEnterIcon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "chatEnterIcon.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height - (int)(100 * AssetScale), (int)(180 * AssetScale), (int)(100 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
     }
 }

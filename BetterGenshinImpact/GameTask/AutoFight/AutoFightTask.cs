@@ -20,6 +20,10 @@ using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.Core.Recognition;
+using GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -41,6 +45,7 @@ public class AutoFightTask : ISoloTask
 
     public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
 
+
     private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
@@ -50,6 +55,7 @@ public class AutoFightTask : ISoloTask
         public List<string> CheckNames = new();
         public bool FastCheckEnabled;
         public bool RotateFindEnemyEnabled = false;
+        public int FightStatusCheckTime = 500;
 
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
@@ -230,6 +236,7 @@ public class AutoFightTask : ISoloTask
         {
             throw new Exception("识别队伍角色失败");
         }*/
+        CheckFightFinished.initChatButton(CaptureToRectArea());
 
 
         // var actionSchedulerByCd = ParseStringToDictionary(_taskParam.ActionSchedulerByCd);
@@ -415,8 +422,12 @@ public class AutoFightTask : ISoloTask
                                 {
                                     // Logger.LogInformation($"延时检查为{delayTime}毫秒");
                                 }
-                                
-                                fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+
+                                /*if (i<combatCommands.Count - 1)
+                                {
+                                    Logger.LogInformation($"{command.Name}下一个人为{combatCommands[i+1].Name}毫秒");
+                                }*/
+                                //fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
                             }
                         }
 
@@ -442,6 +453,18 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 Simulation.ReleaseAllKey();
+            }
+        }, cts2.Token);
+
+        var fightFinish = Task.Run(async () => {
+            while(!cts2.Token.IsCancellationRequested) {
+                await Delay(_finishDetectConfig.FightStatusCheckTime, cts2.Token);
+                if(await CheckFightFinished.CheckFightFinishByChangeGroup(CaptureToRectArea(), cts2.Token))
+                {
+                    Logger.LogInformation("检测到战斗结束。");
+                    fightEndFlag = true;
+                    break;  
+                }
             }
         }, cts2.Token);
 
@@ -703,4 +726,5 @@ public class AutoFightTask : ISoloTask
     //     // 要大于 gadgetMat 的 1/2
     //     return list.Any(r => r.Width > gadgetMat.Width / 2 && r.Height > gadgetMat.Height / 2);
     // }
+
 }
