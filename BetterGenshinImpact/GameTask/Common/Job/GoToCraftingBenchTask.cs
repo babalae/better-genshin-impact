@@ -124,7 +124,7 @@ public class GoToCraftingBenchTask
                 }
                 //todo 可加纠错机制判断树脂数量是否正确
                 // 每次合成消耗的数量
-                const int resinConsumedPerCraft = 40;
+                const int resinConsumedPerCraft = 60;
                 // 需要保留的最小数量
                  int minResinToKeep = SelectedConfig.MinResinToKeep;
                 // 可以用来合成的树脂数量
