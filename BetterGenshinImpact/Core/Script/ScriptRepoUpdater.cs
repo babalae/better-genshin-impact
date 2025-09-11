@@ -438,32 +438,41 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         Directory.CreateDirectory(repoPath);
         Repository.Init(repoPath);
 
-        using var repo = new Repository(repoPath);
-        GitConfig(repo);
+        var repo = new Repository(repoPath);
 
-        // 添加远程源
-        Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
-
-        // 只拉取指定分支
-        var fetchOptions = new FetchOptions
+        try
         {
-            TagFetchMode = TagFetchMode.None,
-            ProxyOptions = { ProxyType = ProxyType.None }
-        };
-        string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
-        Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
+            GitConfig(repo);
 
-        // 获取远程分支
-        var remoteBranch = repo.Branches[$"refs/remotes/origin/{branchName}"];
-        if (remoteBranch == null)
-            throw new Exception($"远程仓库中未找到 {branchName} 分支");
+            // 添加远程源
+            Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
-        // 创建并检出本地分支
-        var localBranch = repo.CreateBranch(branchName, remoteBranch.Tip);
-        repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
+            // 只拉取指定分支
+            var fetchOptions = new FetchOptions
+            {
+                TagFetchMode = TagFetchMode.None,
+                ProxyOptions = { ProxyType = ProxyType.None },
+                Depth = 1 // 浅拉取，只获取最新的提交
+            };
+            string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
+            Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
 
-        var checkoutOptions = new CheckoutOptions { OnCheckoutProgress = onCheckoutProgress };
-        Commands.Checkout(repo, localBranch, checkoutOptions);
+            // 获取远程分支
+            var remoteBranch = repo.Branches[$"refs/remotes/origin/{branchName}"];
+            if (remoteBranch == null)
+                throw new Exception($"远程仓库中未找到 {branchName} 分支");
+
+            // 创建并检出本地分支
+            var localBranch = repo.CreateBranch(branchName, remoteBranch.Tip);
+            repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
+
+            var checkoutOptions = new CheckoutOptions { OnCheckoutProgress = onCheckoutProgress };
+            Commands.Checkout(repo, localBranch, checkoutOptions);
+        }
+        finally
+        {
+            repo?.Dispose();
+        }
     }
 
     private void GitConfig(Repository repo)
