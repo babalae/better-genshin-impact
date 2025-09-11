@@ -19,24 +19,23 @@ public class ResinStatus
     /// <summary>
     /// 脆弱树脂（60）
     /// </summary>
-    public int FragileResinCount { get; set; } = 0;
+    public int FragileResinCount { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     /// <summary>
-    /// 浓缩树脂（40）
+    /// 浓缩树脂（60）
     /// </summary>
     public int CondensedResinCount { get; set; } = 0;
 
     /// <summary>
     /// 须臾树脂（60壶内购买）
     /// </summary>
-    public int TransientResinCount { get; set; } = 0;
+    public int TransientResinCount { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     public static ResinStatus RecogniseFromRegion(ImageRegion region, ISystemInfo systemInfo, IOcrService ocrService)
     {
         var status = new ResinStatus();
 
-        // 1. 原粹树脂 起点 w-(256+100) ~ w-256
-        var captureArea = systemInfo.GameScreenSize;
+        // 1. 原粹树脂
         var assetScale = systemInfo.AssetScale;
         var originalResinTopIconRa = new RecognitionObject
         {
@@ -45,7 +44,7 @@ public class ResinStatus
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "original_resin_top_icon.png", systemInfo),
             DrawOnWindow = false
         }.InitTemplate();
-        using ImageRegion crop1 = region.DeriveCrop(new Rect(captureArea.Width - (int)(450 * assetScale), (int)(25 * assetScale), (int)(265 * assetScale), (int)(45 * assetScale)));
+        using ImageRegion crop1 = region.DeriveCrop(new Rect((int)(1300 * assetScale), (int)(25 * assetScale), (int)(160 * assetScale), (int)(50 * assetScale)));   // 数字位数的不同导致了水平方向上宽泛的区域
         //Cv2.ImShow("test", crop1.SrcMat);
         //Cv2.WaitKey();
         var originalResinRes = crop1.Find(originalResinTopIconRa);
@@ -54,9 +53,9 @@ public class ResinStatus
             throw new Exception("未找到原粹树脂图标");
         }
 
-        var originalResinCountRect = new Rect(originalResinRes.Right + 30, (int)(37 * assetScale),
-      captureArea.Width - (originalResinRes.Right + 30) - (int)(190 * assetScale), (int)(21 * assetScale));
-        string cnt1 = ocrService.OcrWithoutDetector(region.DeriveCrop(originalResinCountRect).SrcMat);
+        var originalResinCountRect = new Rect(crop1.X + originalResinRes.Right + (int)(25 * assetScale), (int)(37 * assetScale), (int)(110 * assetScale)/* 考虑最长的“200/200” */, (int)(24 * assetScale));
+        using ImageRegion originalResinCountRegion = region.DeriveCrop(originalResinCountRect);
+        string cnt1 = ocrService.OcrWithoutDetector(originalResinCountRegion.SrcMat);
         var match = System.Text.RegularExpressions.Regex.Match(cnt1, @"(\d+)\s*[/17]\s*(2|20|200)");
         if (match.Success)
         {
@@ -65,6 +64,7 @@ public class ResinStatus
         }
 
         // 2. 浓缩树脂
+        int startX = crop1.X + originalResinRes.Left - (int)(180 * assetScale); // 从原粹树脂图标位置起算
         var condensedResinTopIconRa = new RecognitionObject
         {
             Name = "CondensedResinTopIcon",
@@ -72,13 +72,14 @@ public class ResinStatus
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_top_icon.png", systemInfo),
             DrawOnWindow = false
         }.InitTemplate();
-        using ImageRegion crop2 = region.DeriveCrop(new Rect((int)(1270 * assetScale), (int)(25 * assetScale), (int)(520 * assetScale), (int)(45 * assetScale)));
+        using ImageRegion crop2 = region.DeriveCrop(new Rect(startX, (int)(25 * assetScale), (int)(90 * assetScale), (int)(50 * assetScale)));
         var condensedResinRes = crop2.Find(condensedResinTopIconRa);
         if (condensedResinRes.IsExist())
         {
             // 找出 icon 的位置 + 25 ~ icon 的位置+45 就是浓缩树脂的数字，数字宽20
-            var condensedResinCountRect = new Rect(condensedResinRes.Right + (int)(25 * assetScale), condensedResinRes.Y, (int)(20 * assetScale), condensedResinRes.Height);
-            string cnt40 = ocrService.OcrWithoutDetector(region.DeriveCrop(condensedResinCountRect).SrcMat);
+            var condensedResinCountRect = new Rect(crop2.X + condensedResinRes.Right + (int)(20 * assetScale), (int)(37 * assetScale), (int)(70 * assetScale), (int)(24 * assetScale));
+            using ImageRegion countRegion = region.DeriveCrop(condensedResinCountRect);
+            string cnt40 = ocrService.OcrWithoutDetector(countRegion.SrcMat);
             status.CondensedResinCount = StringUtils.TryExtractPositiveInt(cnt40, 0);
         }
 

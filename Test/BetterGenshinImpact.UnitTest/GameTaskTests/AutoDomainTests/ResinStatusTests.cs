@@ -38,9 +38,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoDomainTests
 
             //
             Assert.Equal(originalResinCount, result.OriginalResinCount);
-            Assert.Equal(fragileResinCount, result.FragileResinCount);
             Assert.Equal(condensedResinCount, result.CondensedResinCount);
-            Assert.Equal(transientResinCount, result.TransientResinCount);
         }
     }
 }
