@@ -1,24 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoDomain.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -29,6 +20,12 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 
@@ -95,7 +92,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
-            
+
             await Delay(1500, _ct); // 开始的三秒计时
 
             // 队伍没初始化成功则重试
@@ -203,7 +200,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // F5 打开活动
         Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
-        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3,0.2)).WaitFor();
+        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3, 0.2)).WaitFor();
         await Delay(500, _ct);
 
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
@@ -402,7 +399,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 // 自动刷干树脂
                 // 识别树脂状况
-                var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
+                var resinStatus = ResinStatus.RecogniseFromRegion(ra3, TaskContext.Instance().SystemInfo, OcrFactory.Paddle);
                 resinStatus.Print(_logger);
 
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
@@ -613,7 +610,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(star).Start(_ct);
+        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
     }
 
 

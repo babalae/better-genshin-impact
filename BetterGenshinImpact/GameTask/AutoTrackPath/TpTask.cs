@@ -1,10 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -29,6 +22,13 @@ using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -37,12 +37,15 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// <summary>
 /// 传送任务
 /// </summary>
-public class TpTask(CancellationToken ct)
+public class TpTask
 {
     private readonly QuickTeleportAssets _assets = QuickTeleportAssets.Instance;
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
+    private readonly CancellationToken ct;
+    private readonly CultureInfo cultureInfo;
+    private readonly IStringLocalizer stringLocalizer;
 
     /// <summary>
     /// 直接通过缩放比例按钮计算放大按钮的Y坐标
@@ -55,6 +58,14 @@ public class TpTask(CancellationToken ct)
     private readonly int _zoomOutButtonY = TaskContext.Instance().Config.TpConfig.ZoomEndY + 24; //  y-coordinate for zoom-out button = _zoomEndY + 24
 
     private const double DisplayTpPointZoomLevel = 4.4; // 传送点显示的时候的地图比例
+
+    public TpTask(CancellationToken ct)
+    {
+        this.ct = ct;
+        TpTaskParam param = new TpTaskParam();
+        this.cultureInfo = param.GameCultureInfo;
+        this.stringLocalizer = param.StringLocalizer;
+    }
 
     /// <summary>
     /// 传送到七天神像
@@ -321,7 +332,7 @@ public class TpTask(CancellationToken ct)
                 return;
             }
             //增加容错，小概率情况下碰到，前面点击传送失败
-            capture.Find(_assets.TeleportButtonRo,rg=>rg.Click());
+            capture.Find(_assets.TeleportButtonRo, rg => rg.Click());
             await Delay(delayMs, ct);
         }
 
@@ -859,7 +870,7 @@ public class TpTask(CancellationToken ct)
         return false;
     }
 
-    public async Task SwitchArea(string areaName)
+    internal async Task SwitchArea(string areaName)
     {
         GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
         await Delay(300, ct);
@@ -869,11 +880,8 @@ public class TpTask(CancellationToken ct)
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
         });
-        IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, areaName);
-        string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
-        Region? matchRect = list.FirstOrDefault(r =>  !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
+        string minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
+        Region? matchRect = list.OrderByDescending(r => r.Y).FirstOrDefault(r => r.Text.Contains(minCountryLocalized));
         if (matchRect == null)
         {
             Logger.LogWarning("切换区域失败：{Country}", areaName);
@@ -891,7 +899,6 @@ public class TpTask(CancellationToken ct)
         await Delay(500, ct);
     }
 
-
     public async Task Tp(string name)
     {
         // 通过大地图传送到指定传送点
@@ -907,7 +914,7 @@ public class TpTask(CancellationToken ct)
     public async Task ClickTpPoint(ImageRegion imageRegion)
     {
         // 1.判断是否在地图界面
-        if(!Bv.IsInBigMapUi(imageRegion)) throw new RetryException("不在地图界面");
+        if (!Bv.IsInBigMapUi(imageRegion)) throw new RetryException("不在地图界面");
 
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
@@ -920,7 +927,7 @@ public class TpTask(CancellationToken ct)
         // 4. 循环判断选项列表是否有传送点(未激活点位也在里面)
         var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
         // 没有传送点说明不是传送点
-        if(!hasMapChooseIcon) throw new TpPointNotActivate("选项列表不存在传送点");
+        if (!hasMapChooseIcon) throw new TpPointNotActivate("选项列表不存在传送点");
         var teleportButtonFound = await NewRetry.WaitForElementAppear(
             _assets.TeleportButtonRo,
             () => { },
@@ -931,10 +938,12 @@ public class TpTask(CancellationToken ct)
         if (!teleportButtonFound) throw new TpPointNotActivate("选项列表的传送点未激活");
         await NewRetry.WaitForElementDisappear(
             _assets.TeleportButtonRo,
-            screen => {  
-                screen.Find(_assets.TeleportButtonRo, ra => { 
-                    ra.Click(); 
-                    ra.Dispose(); 
+            screen =>
+            {
+                screen.Find(_assets.TeleportButtonRo, ra =>
+                {
+                    ra.Click();
+                    ra.Dispose();
                 });
             },
             ct,

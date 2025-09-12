@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 
-namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
+namespace BetterGenshinImpact.UnitTest.GameTaskTests
 {
     internal class FakeSystemInfo : ISystemInfo
     {
@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
         public RECT GameScreenSize { get; }
 
-        public double AssetScale { get; }
+        public double AssetScale { get; } = 1;
 
         public double ZoomOutMax1080PRatio { get; }
 

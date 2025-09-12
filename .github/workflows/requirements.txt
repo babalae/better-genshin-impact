@@ -1,0 +1,3 @@
+# CNB Release Uploader 依赖
+requests>=2.25.0
+tqdm>=4.60.0

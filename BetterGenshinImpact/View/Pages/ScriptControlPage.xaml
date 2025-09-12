@@ -58,7 +58,7 @@
                             <TextBlock Margin="8,4" Text="{Binding Name, Mode=OneWay}" >
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding NextFlag}" Value="True">
                                                 <Setter Property="Foreground" Value="Green" />
@@ -303,7 +303,7 @@
                                         <TextBlock Text="{Binding Name}" FontSize="14" ToolTip="{Binding FolderName}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding NextFlag}" Value="True">
                                                             <Setter Property="Foreground" Value="Green" />

@@ -51,7 +51,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     public static InferenceSession LoadModel(out Dictionary<string, float[]> prototypes)
     {
         #region 加载model
-        var session = new InferenceSession(@".\GameTask\GetGridIcons\gridIcon.onnx"); // todo 所有数据炼好后放到onnx统一存放的位置去
+        var session = new InferenceSession(@".\Assets\Model\Item\gridIcon.onnx");
 
         var metadata = session.ModelMetadata;
 
@@ -62,7 +62,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
         #endregion
         #region 加载原型向量
-        var allLines = File.ReadLines(@".\GameTask\GetGridIcons\训练集原型特征.csv").Skip(1);    // 跳过首行列名
+        var allLines = File.ReadLines(@".\Assets\Model\Item\items.csv").Skip(1);    // 跳过首行列名
         prototypes = new Dictionary<string, float[]>();
         foreach (string line in allLines)
         {
@@ -93,7 +93,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
             case GridScreenName.PreciousItems:
             case GridScreenName.Furnishings:
                 await new ReturnMainUiTask().Start(ct);
-                await AutoArtifactSalvageTask.OpenBag(this.gridScreenName, this.input, this.logger, this.ct);
+                await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
@@ -102,25 +102,21 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
         using InferenceSession session = LoadModel(out Dictionary<string, float[]> prototypes);
 
-        using var ra0 = CaptureToRectArea();
-        GridScreenParams gridParams = GridScreenParams.Templates[this.gridScreenName];
-        Rect gridRoi = gridParams.GetRect(ra0);
-
         int count = this.maxNumToTest ?? int.MaxValue;
         double total_acc = 0.0;
         double total_count = 0;
 
-        GridScreen gridScreen = new GridScreen(gridRoi, gridParams, this.logger, this.ct);
+        GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         await foreach (ImageRegion itemRegion in gridScreen)
         {
             itemRegion.Click();
             Task task1 = Delay(300, ct);
-            var sadf = task1.Status;
 
             // 用模型推理得到的结果
             Task<(string, int)> task2 = Task.Run(() =>
             {
-                return Infer(itemRegion.SrcMat, session, prototypes);
+                using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                return Infer(icon, session, prototypes);
             }, ct);
 
             await Task.WhenAll(task1, task2);
@@ -158,11 +154,21 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
     }
 
-    // todo: 单元测试
+    /// <summary>
+    /// 请自行裁剪缩放到125*125尺寸
+    /// </summary>
+    /// <param name="mat"></param>
+    /// <param name="session"></param>
+    /// <param name="prototypes"></param>
+    /// <returns>(预测名称, 预测星级)</returns>
+    /// <exception cref="Exception"></exception>
     public static (string, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
     {
-        using Mat resized = mat.Resize(new Size(125, 153));
-        using Mat rgb = resized.CvtColor(ColorConversionCodes.BGR2RGB);
+        if (mat.Size().Width != 125 || mat.Size().Height != 125)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mat), "输入图像尺寸应为125*125");
+        }
+        using Mat rgb = mat.CvtColor(ColorConversionCodes.BGR2RGB);
         var tensor = new DenseTensor<float>(new[] { 1, 3, rgb.Height, rgb.Width });  // todo 放到BgiOnnxFactory那边去做个Mat->NamedOnnxValue的通用方法？
         for (int y = 0; y < rgb.Height; y++)
         {
@@ -173,7 +179,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
                 tensor[0, 2, y, x] = rgb.At<Vec3b>(y, x)[2] / 255f;
             }
         }
-        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", tensor) };
+        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input_image", tensor) };
         using var results = session.Run(inputs);
         float[] feature_matrix = results[0].AsEnumerable<float>().ToArray();
         string? pred_name = null;

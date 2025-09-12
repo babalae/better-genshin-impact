@@ -1,8 +1,8 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.GameTask.AutoFishing.Assets;
+namespace BetterGenshinImpact.GameTask.AutoOpenChest.Assets;
 
 public class AutoOpenChestAssets : BaseAssets<AutoOpenChestAssets>
 {
@@ -14,7 +14,7 @@ public class AutoOpenChestAssets : BaseAssets<AutoOpenChestAssets>
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
     private AutoOpenChestAssets() : base()
     {
-        Initialization(this.systemInfo);
+        Initialization(systemInfo);
     }
 
     protected AutoOpenChestAssets(ISystemInfo systemInfo) : base(systemInfo)

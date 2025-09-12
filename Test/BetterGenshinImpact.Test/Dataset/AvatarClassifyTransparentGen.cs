@@ -7,13 +7,13 @@ namespace BetterGenshinImpact.Test.Dataset;
 public class AvatarClassifyTransparentGen
 {
     // 基础图像文件夹
-    private const string BaseDir = @"E:\HuiTask\更好的原神\数据源\Snap.Static\AvatarIcon";
+    private const string BaseDir = @"E:\HuiTask\更好的原神\侧面头像\源数据\AvatarIcon";
 
     // 产出文件夹
-    private const string OutputDir = @"E:\HuiAi\YOLOv8\3.avatar-side";
+    private const string OutputDir = @"E:\HuiTask\更好的原神\侧面头像\dateset";
 
     // 背景图像文件夹
-    private static readonly string BackgroundDir = @"E:\HuiTask\更好的原神\数据源\background";
+    private static readonly string BackgroundDir = @"E:\HuiTask\更好的原神\侧面头像\background";
 
     private static readonly Random Rd = new Random();
 

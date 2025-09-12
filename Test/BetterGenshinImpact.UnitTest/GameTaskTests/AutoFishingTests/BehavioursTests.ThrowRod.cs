@@ -1,4 +1,4 @@
-﻿using BehaviourTree;
+using BehaviourTree;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -6,18 +6,19 @@ using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
+using BetterGenshinImpact.GameTask.AutoFishing.Model;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
     public partial class BehavioursTests
     {
         [Theory]
-        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", "false worm bait")]
-        [InlineData(@"20250226162217468_ThrowRod_Succeeded.png", "fruit paste bait")]
+        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.FalseWormBait)]
+        [InlineData(@"20250226162217468_ThrowRod_Succeeded.png", BaitType.FruitPasteBait)]
         /// <summary>
         /// 测试各种抛竿，结果为成功
         /// </summary>
-        public void ThrowRodTest_VariousFish_ShouldSuccess(string screenshot1080p, string selectedBaitName)
+        public void ThrowRodTest_VariousFish_ShouldSuccess(string screenshot1080p, BaitType selectedBait)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
@@ -25,7 +26,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
-                selectedBaitName = selectedBaitName
+                selectedBait = selectedBait
             };
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
@@ -40,12 +41,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         }
 
         [Theory]
-        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", "redrot bait")]
-        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", "fake fly bait")]
+        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.RedrotBait)]
+        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.FakeFlyBait)]
         /// <summary>
         /// 测试各种抛竿，未满足HutaoFisher判定，结果为运行中
         /// </summary>
-        public void ThrowRodTest_VariousFish_ShouldFail(string screenshot1080p, string selectedBaitName)
+        public void ThrowRodTest_VariousFish_ShouldFail(string screenshot1080p, BaitType selectedBait)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
@@ -53,7 +54,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
-                selectedBaitName = selectedBaitName
+                selectedBait = selectedBait
             };
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
@@ -68,11 +69,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         }
 
         [Theory]
-        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", "flashing maintenance mek bait")]
+        [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.FlashingMaintenanceMekBait)]
         /// <summary>
         /// 测试各种抛竿，无鱼饵适用鱼，结果为失败
         /// </summary>
-        public void ThrowRodTest_NoBaitFish_ShouldFail(string screenshot1080p, string selectedBaitName)
+        public void ThrowRodTest_NoBaitFish_ShouldFail(string screenshot1080p, BaitType selectedBait)
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
@@ -80,7 +81,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
-                selectedBaitName = selectedBaitName
+                selectedBait = selectedBait
             };
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
@@ -119,7 +120,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 
             var blackboard = new Blackboard(Predictor, sleep: i => { })
             {
-                selectedBaitName = "fake fly bait"
+                selectedBait = GameTask.AutoFishing.Model.BaitType.FakeFlyBait
             };
 
             //

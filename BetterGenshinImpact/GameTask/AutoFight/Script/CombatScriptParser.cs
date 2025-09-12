@@ -104,6 +104,7 @@ public class CombatScriptParser
 
     private static List<CombatCommand> ParseLine(string line, HashSet<string> combatAvatarNames, bool validate = true)
     {
+        line = line.Trim();
         var oneLineCombatCommands = new List<CombatCommand>();
         // 以空格分隔角色和指令 截取第一个空格前的内容为角色名称，后面的为指令
         // 20241116更新 不输入角色名称时，直接以当前角色为准
