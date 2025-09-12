@@ -130,10 +130,9 @@ public class GoToCraftingBenchTask
                 },ct,3,200); 
                 if (!condensed)
                 {
-                    Logger.LogWarning("识别浓缩树脂数量失败，放弃本次合成");
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                     await new ReturnMainUiTask().Start(ct);
-                    return;
+                    throw new Exception($"识别浓缩树脂数量失败: {condensedResinCount}");
                 }
                 
                 // 每次合成消耗的数量
