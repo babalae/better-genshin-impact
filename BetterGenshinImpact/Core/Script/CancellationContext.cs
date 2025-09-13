@@ -6,12 +6,14 @@ namespace BetterGenshinImpact.Core.Script;
 public class CancellationContext : Singleton<CancellationContext>
 {
     public CancellationTokenSource Cts { get; set; } = new();
+    public bool IsManualStop { get; set; }
 
     private bool disposed;
 
     public void Set()
     {
         Cts = new CancellationTokenSource();
+        IsManualStop = false;
         disposed = false;
     }
 
