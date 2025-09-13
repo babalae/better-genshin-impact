@@ -19,9 +19,11 @@ namespace BetterGenshinImpact.GameTask.GameLoading;
 
 public class GameLoadingTrigger : ITaskTrigger
 {
+    public static bool GlobalEnabled = true;
+    
     public string Name => "自动开门";
 
-    public bool IsEnabled { get; set; }
+    public bool IsEnabled { get => GlobalEnabled; set {} }
 
     public int Priority => 999;
 
@@ -61,9 +63,17 @@ public class GameLoadingTrigger : ITaskTrigger
         _assets = GameLoadingAssets.Instance;
     }
 
+    public void InnerSetEnabled(bool enabled)
+    {
+        GlobalEnabled = enabled;
+    }
+
     public void Init()
     {
-        IsEnabled = _config.AutoEnterGameEnabled;
+        if (!_config.AutoEnterGameEnabled)
+        {
+            InnerSetEnabled(false);
+        }
 
         // // 前面没有联动启动原神，这个任务也不用启动
         // if ((DateTime.Now - TaskContext.Instance().LinkedStartGenshinTime).TotalMinutes >= 5)
@@ -234,14 +244,14 @@ public class GameLoadingTrigger : ITaskTrigger
         // 5min 后自动停止
         if ((DateTime.Now - _triggerStartTime).TotalMinutes >= 5)
         {
-            IsEnabled = false;
+            InnerSetEnabled(false);
             return;
         }
         // 成功进入游戏判断    
         if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
-            _logger.LogInformation("已进入游戏");
-            IsEnabled = false;
+            _logger.LogInformation("当前在游戏主界面");
+            InnerSetEnabled(false);
             return;
         }
 

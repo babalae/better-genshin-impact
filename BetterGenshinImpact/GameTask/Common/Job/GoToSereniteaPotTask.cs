@@ -18,6 +18,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using Newtonsoft.Json;
+using BetterGenshinImpact.GameTask.QuickSereniteaPot;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -418,7 +421,28 @@ internal class GoToSereniteaPotTask
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
             await Delay(1000, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+
+            var getAare = CaptureToRectArea();
+            var count = OcrFactory.Paddle.OcrWithoutDetector(getAare.DeriveCrop(getAare.Width* 1801 / 1920,
+                getAare.Height* 609 / 1080,getAare.Width * 75 / 1920,getAare.Width * 46 / 1920).SrcMat);
+            
+            var match = System.Text.RegularExpressions.Regex.Match(count, @"(\d+)\s*[/17]\s*(8)");
+            var shouldClick = true;
+            if (match.Success)
+            {
+                var numericPart = StringUtils.TryParseInt(match.Groups[1].Value);
+                if (numericPart == 0)
+                {
+                    Logger.LogWarning("领取尘歌壶奖励:{text}", "没有角色可领取好感"); //存好感
+                    shouldClick = false;
+                }
+            }
+            
+            if (shouldClick)
+            {
+                getAare.Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+            }
+            
             await Delay(500, ct);
             var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject

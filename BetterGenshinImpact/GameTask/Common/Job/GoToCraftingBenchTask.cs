@@ -94,7 +94,7 @@ public class GoToCraftingBenchTask
         {
             InitConfigList();
             // 3. 点击合成树脂
-            if (SelectedConfig.MinResinToKeep > 0){//开关判断，填写的数量大于0时启用 SelectedConfig.MinResinToKeep
+            if (SelectedConfig?.MinResinToKeep > 0){//开关判断，填写的数量大于0时启用 SelectedConfig.MinResinToKeep
                 var fragileResinCount = 0;
                 var condensedResinCount = 0;
                 var fragileResinCountRa = ra.Find(ElementAssets.Instance.fragileResinCount);
@@ -105,7 +105,7 @@ public class GoToCraftingBenchTask
                         fragileResinCountRa.Width, fragileResinCountRa.Height);
                     var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcMat);
                     // Logger.LogInformation("识别原粹树脂数量：{Count}", count);
-                    var match = System.Text.RegularExpressions.Regex.Match(count, @"(\d+)\s*[/17]\s*(4|40)");
+                    var match = System.Text.RegularExpressions.Regex.Match(count, @"(\d+)\s*[/17]\s*(6|60)");
                     if (match.Success)
                     {
                         var numericPart = match.Groups[1].Value;
@@ -113,18 +113,30 @@ public class GoToCraftingBenchTask
                         Logger.LogInformation("提取到的原粹树脂数量：{fragileResinCount}", fragileResinCount);
                     }
                 }
-                var condensedResinCountRa = ra.Find(ElementAssets.Instance.CondensedResinCount);
-                if (!condensedResinCountRa.IsEmpty())
+                
+                //浓缩纠缠重试
+                var condensed =await NewRetry.WaitForAction(() =>
                 {
-                    // 图像右侧就是浓缩树脂数量
-                    var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
-                        condensedResinCountRa.Y, condensedResinCountRa.Width*5/3, condensedResinCountRa.Height);
-                    var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
-                    condensedResinCount = StringUtils.TryParseInt(count);
+                    var condensedResinCountRa = ra.Find(ElementAssets.Instance.CondensedResinCount);
+                    if (!condensedResinCountRa.IsEmpty())
+                    {
+                        // 图像右侧就是浓缩树脂数量
+                        var countArea = ra.DeriveCrop(condensedResinCountRa.X + condensedResinCountRa.Width,
+                            condensedResinCountRa.Y, condensedResinCountRa.Width*5/3, condensedResinCountRa.Height);
+                        var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
+                        condensedResinCount = StringUtils.TryParseInt(count);
+                    }
+                    return condensedResinCount >= 0 && condensedResinCount <=5;
+                },ct,3,200); 
+                if (!condensed)
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                    await new ReturnMainUiTask().Start(ct);
+                    throw new Exception($"识别浓缩树脂数量失败: {condensedResinCount}");
                 }
-                //todo 可加纠错机制判断树脂数量是否正确
+                
                 // 每次合成消耗的数量
-                const int resinConsumedPerCraft = 40;
+                const int resinConsumedPerCraft = 60;
                 // 需要保留的最小数量
                  int minResinToKeep = SelectedConfig.MinResinToKeep;
                 // 可以用来合成的树脂数量

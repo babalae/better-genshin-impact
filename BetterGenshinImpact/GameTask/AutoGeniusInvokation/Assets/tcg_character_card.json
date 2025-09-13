@@ -88,7 +88,7 @@
         "nameEn": "diona",
         "type": "character",
         "name": "迪奥娜",
-        "hp": 10,
+        "hp": 12,
         "energy": 3,
         "element": "冰元素",
         "weapon": "弓",
@@ -2145,7 +2145,7 @@
         "nameEn": "amber",
         "type": "character",
         "name": "安柏",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "火元素",
         "weapon": "弓",
@@ -3923,6 +3923,83 @@
         ]
     },
     {
+        "id": 1414,
+        "nameEn": "iansan",
+        "type": "character",
+        "name": "伊安珊",
+        "hp": 12,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "weighted_spike",
+                "name": "负重锥击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "thunderbolt_rush",
+                "name": "电掣雷驰",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "the_three_principles_of_power",
+                "name": "力的三原理",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "caloric_balancing_plan",
+                "name": "热量均衡计划",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1501,
         "nameEn": "sucrose",
         "type": "character",
@@ -4836,6 +4913,75 @@
         ]
     },
     {
+        "id": 1514,
+        "nameEn": "yumemizuki_mizuki",
+        "type": "character",
+        "name": "梦见月瑞希",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "pure_heart_pure_dreams",
+                "name": "梦我梦心",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "aisa_utamakura_pilgrimage",
+                "name": "秋沙歌枕巡礼",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "anraku_secret_spring_therapy",
+                "name": "安乐秘汤疗法",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1601,
         "nameEn": "ningguang",
         "type": "character",
@@ -5553,7 +5699,7 @@
         "nameEn": "xilonen",
         "type": "character",
         "name": "希诺宁",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "岩元素",
         "weapon": "单手剑",
@@ -6128,7 +6274,7 @@
         "nameEn": "kaveh",
         "type": "character",
         "name": "卡维",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "草元素",
         "weapon": "双手剑",
@@ -6643,7 +6789,7 @@
         "nameEn": "rhodeia_of_loch",
         "type": "character",
         "name": "纯水精灵·洛蒂娅",
-        "hp": 10,
+        "hp": 11,
         "energy": 3,
         "element": "水元素",
         "weapon": "其他武器",
@@ -7315,6 +7461,83 @@
             {
                 "nameEn": "imperial_panoply",
                 "name": "帝王甲胄",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2305,
+        "nameEn": "lord_of_eroded_primal_fire",
+        "type": "character",
+        "name": "蚀灭的源焰之主",
+        "hp": 12,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "void_claw_strike",
+                "name": "虚界玄爪",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "eroded_flaming_feathers",
+                "name": "蚀灭火羽",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "severing_primal_fire",
+                "name": "斫劫源焰",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "resentment",
+                "name": "忿恨",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -8480,7 +8703,7 @@
         "nameEn": "gluttonous_yumkasaur_mountain_king",
         "type": "character",
         "name": "贪食匿叶龙山王",
-        "hp": 7,
+        "hp": 8,
         "energy": 2,
         "element": "草元素",
         "weapon": "其他武器",
