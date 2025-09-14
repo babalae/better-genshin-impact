@@ -16,6 +16,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.GetGridIcons;
@@ -51,7 +52,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     public static InferenceSession LoadModel(out Dictionary<string, float[]> prototypes)
     {
         #region 加载model
-        var session = new InferenceSession(@".\Assets\Model\Item\gridIcon.onnx");
+        var session = new InferenceSession(Global.Absolute(@"Assets\Model\Item\gridIcon.onnx"));
 
         var metadata = session.ModelMetadata;
 
@@ -62,7 +63,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
         #endregion
         #region 加载原型向量
-        var allLines = File.ReadLines(@".\Assets\Model\Item\items.csv").Skip(1);    // 跳过首行列名
+        var allLines = File.ReadLines(Global.Absolute(@"Assets\Model\Item\items.csv")).Skip(1);    // 跳过首行列名
         prototypes = new Dictionary<string, float[]>();
         foreach (string line in allLines)
         {
