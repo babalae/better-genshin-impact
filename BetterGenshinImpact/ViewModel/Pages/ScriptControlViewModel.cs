@@ -1725,6 +1725,45 @@ public partial class ScriptControlViewModel : ViewModel
         );
     }
 
+    [RelayCommand]
+    public void OnOpenScriptFolder(ScriptGroupProject? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        try
+        {
+            string? path = null;
+            switch (item.Type)
+            {
+                case "Javascript":
+                    path = Path.Combine(Global.ScriptPath(), item.FolderName);
+                    break;
+                case "KeyMouse":
+                    path = Global.Absolute(@"User\KeyMouseScript");
+                    break;
+                case "Pathing":
+                    path = Path.Combine(MapPathingViewModel.PathJsonPath, item.FolderName);
+                    break;
+            }
+
+            if (path != null && Directory.Exists(path))
+            {
+                Process.Start("explorer.exe", path);
+            }
+            else
+            {
+                _snackbarService.Show("打开失败", "目录不存在", ControlAppearance.Caution, null, TimeSpan.FromSeconds(2));
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "打开脚本目录失败");
+            _snackbarService.Show("打开失败", e.Message, ControlAppearance.Danger, null, TimeSpan.FromSeconds(3));
+        }
+    }
     private void ScriptGroupsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.NewItems != null)
