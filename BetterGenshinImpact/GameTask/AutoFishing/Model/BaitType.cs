@@ -21,5 +21,9 @@ public enum BaitType
     [Description("澄晶果粒饵")]
     SpinelgrainBait,
     [Description("温火饵")]
-    EmberglowBait
+    EmberglowBait,
+    [Description("槲梭饵")]
+    BerryBait,
+    [Description("清白饵")]
+    RefreshingLakkaBait
 }
