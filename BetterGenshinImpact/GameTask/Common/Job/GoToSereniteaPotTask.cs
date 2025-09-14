@@ -478,7 +478,7 @@ internal class GoToSereniteaPotTask
         }
         // DateTime now = DateTime.Now;
         // DayOfWeek currentDayOfWeek = now.Hour >= 4 ? now.DayOfWeek : now.AddDays(-1).DayOfWeek;
-        DateTimeOffset serverTime = TimeZoneHelper.GetServerTimeNow();
+        DateTimeOffset serverTime = ServerTimeHelper.GetServerTimeNow();
         DayOfWeek currentDayOfWeek = serverTime.Hour >= 4 ? serverTime.DayOfWeek : serverTime.AddDays(-1).DayOfWeek;
         DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
         if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)

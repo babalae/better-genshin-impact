@@ -23,7 +23,7 @@ public class BlessingOfTheWelkinMoonTask
         {
             // 4点全程触发
             // if (DateTime.Now.Hour == 4)
-            if (TimeZoneHelper.GetServerTimeNow().Hour == 4)
+            if (ServerTimeHelper.GetServerTimeNow().Hour == 4)
             {
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))

@@ -14,6 +14,6 @@ public static class ServerTime
     /// </returns>
     public static int GetServerTimeZoneOffset()
     {
-        return (int)TimeZoneHelper.GetServerTimeNow().Offset.TotalMilliseconds;
+        return (int)ServerTimeHelper.GetServerTimeNow().Offset.TotalMilliseconds;
     }
 }
