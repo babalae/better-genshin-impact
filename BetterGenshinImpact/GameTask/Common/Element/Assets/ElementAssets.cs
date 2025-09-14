@@ -252,7 +252,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "fragileResinCount",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "fragile_resin_count.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height * 3/ 4, CaptureRect.Width / 3, CaptureRect.Height / 6),
             DrawOnWindow = true
         }.InitTemplate();
         CondensedResinCount = new RecognitionObject
