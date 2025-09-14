@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -129,7 +129,55 @@
   <data name="4星圣遗物" xml:space="preserve">
     <value>4星圣遗物</value>
   </data>
+  <data name="元素充能效率" xml:space="preserve">
+    <value>元素充能效率</value>
+  </data>
+  <data name="元素精通" xml:space="preserve">
+    <value>元素精通</value>
+  </data>
+  <data name="冰元素伤害加成" xml:space="preserve">
+    <value>冰元素伤害加成</value>
+  </data>
+  <data name="岩元素伤害加成" xml:space="preserve">
+    <value>岩元素伤害加成</value>
+  </data>
   <data name="快速选择" xml:space="preserve">
     <value>快速选择</value>
+  </data>
+  <data name="攻击力" xml:space="preserve">
+    <value>攻击力</value>
+  </data>
+  <data name="暴击伤害" xml:space="preserve">
+    <value>暴击伤害</value>
+  </data>
+  <data name="暴击率" xml:space="preserve">
+    <value>暴击率</value>
+  </data>
+  <data name="水元素伤害加成" xml:space="preserve">
+    <value>水元素伤害加成</value>
+  </data>
+  <data name="治疗加成" xml:space="preserve">
+    <value>治疗加成</value>
+  </data>
+  <data name="火元素伤害加成" xml:space="preserve">
+    <value>火元素伤害加成</value>
+  </data>
+  <data name="物理伤害加成" xml:space="preserve">
+    <value>物理伤害加成</value>
+  </data>
+  <data name="生命值" xml:space="preserve">
+    <value>生命值</value>
+  </data>
+  <data name="草元素伤害加成" xml:space="preserve">
+    <value>草元素伤害加成</value>
+  </data>
+  <data name="防御力" xml:space="preserve">
+    <value>防御力</value>
+  </data>
+  <data name="雷元素伤害加成" xml:space="preserve">
+    <value>雷元素伤害加成</value>
+  </data>
+  <data name="风元素伤害加成" xml:space="preserve">
+    <value>风元素伤害加成</value>
   </data>
 </root>

@@ -1,10 +1,11 @@
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Navigation;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Windows;
 

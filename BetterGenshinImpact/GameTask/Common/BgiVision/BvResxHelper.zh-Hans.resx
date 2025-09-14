@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,25 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="委托" xml:space="preserve">
-    <value>委托</value>
-  </data>
-  <data name="枫丹" xml:space="preserve">
-    <value>枫丹</value>
-  </data>
-  <data name="璃月" xml:space="preserve">
-    <value>璃月</value>
-  </data>
-  <data name="稻妻" xml:space="preserve">
-    <value>稻妻</value>
-  </data>
-  <data name="纳塔" xml:space="preserve">
-    <value>纳塔</value>
-  </data>
-  <data name="蒙德" xml:space="preserve">
-    <value>蒙德</value>
-  </data>
-  <data name="须弥" xml:space="preserve">
-    <value>须弥</value>
+  <data name="复苏" xml:space="preserve">
+    <value>复苏</value>
   </data>
 </root>

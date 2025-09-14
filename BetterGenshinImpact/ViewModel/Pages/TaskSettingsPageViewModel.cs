@@ -1,44 +1,41 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.AutoWood;
-using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.View.Pages;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Windows.System;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-
-using BetterGenshinImpact.Helpers;
-using Wpf.Ui;
-using Wpf.Ui.Violeta.Controls;
-using BetterGenshinImpact.ViewModel.Pages.View;
-using System.Linq;
-using System.Reflection;
-using System.Collections.Frozen;
-using System.Diagnostics;
-using System.Windows;
-using System.Windows.Controls;
-using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
-using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.View;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using Windows.System;
+using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -161,6 +158,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private bool _switchArtifactSalvageEnabled;
+
+    [ObservableProperty]
+    private FrozenDictionary<Enum, string> _recognitionFailurePolicyDict = Enum.GetValues(typeof(RecognitionFailurePolicy))
+        .Cast<RecognitionFailurePolicy>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
 
     [ObservableProperty]
     private bool _switchGetGridIconsEnabled;
@@ -527,7 +534,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchArtifactSalvageEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.JavaScript, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
+            .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
+                int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
+                Config.AutoArtifactSalvageConfig.JavaScript,
+                Config.AutoArtifactSalvageConfig.ArtifactSetFilter,
+                Config.AutoArtifactSalvageConfig.MaxNumToCheck,
+                Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy
+                )));
         SwitchArtifactSalvageEnabled = false;
     }
 
@@ -540,8 +553,54 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
         ocrDialog.ShowDialog();
+    }
+
+    [RelayCommand]
+    private async Task OnCopyArtifactSalvageJavaScriptFromRepository()
+    {
+        var list = ScriptControlViewModel.LoadAllJsScriptProjects();
+        var stackPanel = ScriptControlViewModel.CreateJsScriptSelectionPanel(list, typeof(RadioButton));
+
+        var result = PromptDialog.Prompt("请选择需要复制的JS脚本", "请选择需要复制的JS脚本", stackPanel, new Size(500, 600));
+        if (!string.IsNullOrEmpty(result))
+        {
+            string? selectedFolderName = null;
+            foreach (var child in ((Wpf.Ui.Controls.StackPanel)stackPanel.Content).Children)
+            {
+                if (child is RadioButton { IsChecked: true } radioButton && radioButton.Tag is string folderName)
+                {
+                    selectedFolderName = folderName;
+                }
+            }
+            if (selectedFolderName == null)
+            {
+                return;
+            }
+
+            ScriptProject scriptProject = new ScriptProject(selectedFolderName);
+            string jsCode = await scriptProject.LoadCode();
+
+            var multilineTextBox = new TextBox
+            {
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Text = jsCode,
+                IsReadOnly = true
+            };
+            var p = new PromptDialog($"{scriptProject.Manifest.Name}\r\n{scriptProject.Manifest.ShortDescription}\r\n\r\n将覆盖现有的JavaScript，是否继续？", $"预览 - {scriptProject.FolderName}", multilineTextBox, null);
+            p.Height = 600;
+            p.MaxWidth = 800;
+            p.ShowDialog();
+
+            if (p.DialogResult != true)
+            {
+                return;
+            }
+
+            this.Config.AutoArtifactSalvageConfig.JavaScript = jsCode;
+        }
     }
 
     [RelayCommand]

@@ -1,9 +1,14 @@
-﻿using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model;
 using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
-public class GeniusInvokationTaskParam(string strategyContent) : BaseTaskParam
+public class GeniusInvokationTaskParam : BaseTaskParam<AutoGeniusInvokationTask>
 {
-    public string StrategyContent { get; set; } = strategyContent;
+    public GeniusInvokationTaskParam(string strategyContent) : base(null, null)
+    {
+        this.StrategyContent = strategyContent;
+    }
+
+    public string StrategyContent { get; set; }
 }

@@ -1,8 +1,6 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.AutoOpenChest.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using System;
@@ -11,8 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static TorchSharp.torch.distributions.constraints;
-namespace GameTask.AutoOpenChest;
+namespace BetterGenshinImpact.GameTask.AutoOpenChest;
 
 /// <summary>
 /// 识别宝箱图标，走向宝箱并开启。
@@ -72,7 +69,7 @@ public class AutoOpenChestTask : ISoloTask
                     }
                     else
                     {
-                        var gap = (ra.Width / 2) - chestIcon.X;
+                        var gap = ra.Width / 2 - chestIcon.X;
                         int rate = 2;
                         Simulation.SendInput.Mouse.MoveMouseBy(gap / rate, 0);
                     }

@@ -18,6 +18,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using Windows.UI.Xaml.Automation;
 using BetterGenshinImpact.View.Windows;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
@@ -112,6 +113,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         await Task.Run(() =>
         {
+            Repository? repo = null;
             try
             {
                 GlobalSettings.SetOwnerValidation(false);
@@ -120,9 +122,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 如果仓库不存在，执行浅克隆操作
                     _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
-                    CloneRepository(repoUrl, repoPath, onCheckoutProgress);
-
-                    // CloneRepository(repoUrl, repoPath);
+                    CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                     updated = true;
                 }
                 else
@@ -142,112 +142,117 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         _logger.LogWarning(ex, "备份repo.json失败，继续更新仓库");
                     }
 
-                    using var repo = new Repository(repoPath);
+                    // 检查是否为有效的Git仓库
+                    if (!Repository.IsValid(repoPath))
+                    {
+                        Toast.Error($"不是有效的Git仓库，将重新克隆");
+                        UIDispatcherHelper.Invoke(() => Toast.Error("不是有效的Git仓库，将重新克隆"));
+                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        updated = true;
+                        return;
+                    }
+
+                    repo = new Repository(repoPath);
 
                     // 检查远程URL是否需要更新
                     var origin = repo.Network.Remotes["origin"];
                     if (origin.Url != repoUrl)
                     {
-                        // 远程URL已更改，需要更新
-                        _logger.LogInformation($"更新远程URL: 从 {origin.Url} 到 {repoUrl}");
-                        repo.Network.Remotes.Update("origin", r => r.Url = repoUrl);
+                        // 远程URL已更改，需要删除重新克隆
+                        _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}，将重新克隆");
+                        repo?.Dispose();
+                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        updated = true;
+                        return;
                     }
 
-                    // 获取远程分支信息
+                    // 获取远程分支信息并拉取最新数据
                     var remote = repo.Network.Remotes["origin"];
                     var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
 
-                    // 使用浅拉取选项
-                    var fetchOptions = new FetchOptions();
-                    fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
+                    var fetchOptions = new FetchOptions
+                    {
+                        ProxyOptions = { ProxyType = ProxyType.None },
+                        Depth = 1 // 浅拉取，只获取最新的提交
+                    };
 
                     Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
 
-                    // 获取当前分支
-                    var branch = repo.Branches["refs/heads/origin/main"] ?? repo.Branches["main"];
-                    if (branch == null)
-                    {
-                        throw new Exception("未找到main或master分支");
-                    }
-
-                    // 如果是本地分支，需要设置上游分支
-                    if (!branch.IsRemote)
-                    {
-                        var trackingBranch = repo.Branches[$"origin/{branch.FriendlyName}"];
-                        if (trackingBranch != null && branch.TrackedBranch == null)
-                        {
-                            branch = repo.Branches.Update(branch,
-                                b => b.TrackedBranch = trackingBranch.CanonicalName);
-                        }
-                    }
-
-                    // 检查是否有更新
+                    // 获取本地和远程commit
                     var currentCommitSha = repo.Head.Tip.Sha;
 
-                    // 合并或重置到最新
-                    if (branch.TrackedBranch != null)
+                    // 获取远程release分支的最新commit
+                    var remoteBranch = repo.Branches["refs/remotes/origin/release"];
+                    if (remoteBranch == null)
                     {
-                        var trackingBranch = branch.TrackedBranch;
-                        var mergeResult = Commands.Pull(
-                            repo,
-                            new Signature("BetterGI", "auto@bettergi.com", DateTimeOffset.Now),
-                            new PullOptions());
+                        throw new Exception("未找到远程release分支");
+                    }
 
-                        // 检查是否有更新
-                        updated = currentCommitSha != repo.Head.Tip.Sha;
+                    var remoteCommitSha = remoteBranch.Tip.Sha;
+
+                    // 比较本地和远程commit
+                    if (currentCommitSha == remoteCommitSha)
+                    {
+                        _logger.LogInformation("本地仓库已是最新版本，无需更新");
+                        updated = false;
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha[..7]} -> 远程 {remoteCommitSha[..7]}，将重新克隆");
+
+                        // commit不一致，删除本地仓库重新克隆
+                        repo?.Dispose();
+                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        updated = true;
                     }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Git仓库更新失败");
-                throw;
+                UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
+                repo?.Dispose();
+                CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+            }
+            finally
+            {
+                repo?.Dispose();
             }
         });
-        // 如果仓库有更新，则标记新repo.json中的更新节点
-        if (updated)
-        {
-            try
-            {
-                var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
-                    .FirstOrDefault();
-                if (newRepoJsonPath != null)
-                {
-                    var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
-                    
-                    // 检查是否存在repo_update.json，如果存在则直接与它比对
-                    var parentDir = Path.GetDirectoryName(repoPath);
-                    var repoUpdateJsonPath = Path.Combine(parentDir!, "repo_update.json");
-                    string updatedContent;
-                    
-                    if (File.Exists(repoUpdateJsonPath))
-                    {
-                        try
-                        {
-                            var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
-                            updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
-                        }
-                        catch (Exception ex)
-                        {
-                            updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
-                        }
-                    }
-                    else
-                    {
-                        // 如果没有repo_update.json，则使用备份的旧内容进行比对
-                        updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
-                    }
 
-                    // 保存到同级目录
-                    var updatedRepoJsonPath = Path.Combine(parentDir!, "repo_updated.json");
-                    await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
-                    _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
-                }
-            }
-            catch (Exception ex)
+        // 标记新repo.json中的更新节点
+        try
+        {
+            var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
+                .FirstOrDefault();
+            if (newRepoJsonPath != null)
             {
-                _logger.LogWarning(ex, "标记repo.json更新节点失败");
+                var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
+
+                // 检查是否存在repo_update.json，如果存在则直接与它比对
+                var repoUpdateJsonPath = Path.Combine(ReposPath, "repo_updated.json");
+                string updatedContent;
+
+                if (File.Exists(repoUpdateJsonPath))
+                {
+                    var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
+                    updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
+                }
+                else
+                {
+                    // 如果没有repo_update.json，则使用备份的旧内容进行比对
+                    updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
+                }
+
+                // 保存到同级目录
+                var updatedRepoJsonPath = Path.Combine(ReposPath, "repo_updated.json");
+                await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
+                _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "标记repo.json更新节点失败");
         }
 
         return (repoPath, updated);
@@ -307,6 +312,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 检查节点本身是否有更新
         if (oldNode != null)
         {
+            // 若历史上已标记，则保留该标记
+            if (IsTruthy(oldNode["hasUpdate"]) || IsTruthy(oldNode["hasUpdated"]))
+            {
+                newNode["hasUpdate"] = true;
+                hasDirectUpdate = true;
+            }
+
             // 对比时间戳
             var oldTime = ParseLastUpdated(oldNode["lastUpdated"]?.ToString());
             var newTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
@@ -341,10 +353,18 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         // 如果是叶子节点更新，父节点也标记更新
                         var isLeafChild = newChildObj["children"] == null ||
                                           !((JArray?)newChildObj["children"])?.Any() == true;
-                        if (isLeafChild && !hasDirectUpdate && newChildObj["hasUpdate"] != null)
+                        if (isLeafChild && (IsTruthy(newChildObj["hasUpdate"]) || IsTruthy(newChildObj["hasUpdated"])))
                         {
+                            var parentTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
+                            var childTime = ParseLastUpdated(newChildObj["lastUpdated"]?.ToString());
+
                             newNode["hasUpdate"] = true;
                             hasDirectUpdate = true;
+
+                            if (childTime > parentTime && newChildObj["lastUpdated"] != null)
+                            {
+                                newNode["lastUpdated"] = newChildObj["lastUpdated"];
+                            }
                         }
                     }
                 }
@@ -353,7 +373,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         return hasDirectUpdate || hasChildUpdate;
     }
-
 
 
     /// <summary>
@@ -379,11 +398,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
+    private bool IsTruthy(JToken? token)
+    {
+        if (token == null || token.Type == JTokenType.Null) return false;
+        if (token.Type == JTokenType.Boolean) return (bool)token;
+        if (token.Type == JTokenType.String) return string.Equals((string)token, "true", StringComparison.OrdinalIgnoreCase);
+        return false;
+    }
+
     private static void SimpleCloneRepository(string repoUrl, string repoPath,
         CheckoutProgressHandler? onCheckoutProgress)
     {
         var options = new CloneOptions
         {
+            BranchName = "release", // 指定分支
             Checkout = true,
             IsBare = false,
             RecurseSubmodules = false, // 不递归克隆子模块
@@ -396,55 +424,55 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     /// <summary>
     ///  
-    /// 相当于 Repository.Clone(repoUrl, repoPath, options); 
+    /// 相当于 Repository.Clone(repoUrl, repoPath, options);
+    /// 用这个方法可以无视本地代理
     /// </summary>
     /// <param name="repoUrl"></param>
     /// <param name="repoPath"></param>
+    /// <param name="branchName"></param>
     /// <param name="onCheckoutProgress"></param>
     /// <exception cref="Exception"></exception>
-    private void CloneRepository(string repoUrl, string repoPath, CheckoutProgressHandler? onCheckoutProgress)
+    private void CloneRepository(string repoUrl, string repoPath, string branchName, CheckoutProgressHandler? onCheckoutProgress)
     {
-        // 1. 创建目录
+        DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
         Directory.CreateDirectory(repoPath);
-
-        // 2. 初始化 Git 仓库
         Repository.Init(repoPath);
 
-        using var repo = new Repository(repoPath);
-        GitConfig(repo);
+        var repo = new Repository(repoPath);
 
-        // 3. 添加远程源
-        Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
-
-        // 4. 获取数据（使用浅克隆选项）
-        var fetchOptions = new FetchOptions
+        try
         {
-            TagFetchMode = TagFetchMode.None // 不获取标签
-        };
-        fetchOptions.ProxyOptions.ProxyType = ProxyType.None;
+            GitConfig(repo);
 
-        // 5. 执行获取操作
-        Commands.Fetch(repo, remote.Name, ["+refs/heads/*:refs/remotes/origin/*"], fetchOptions, "初始化拉取");
+            // 添加远程源
+            Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
-        // 6. 创建本地分支并跟踪远程分支
-        var remoteBranch = repo.Branches["refs/remotes/origin/main"] ?? repo.Branches["refs/remotes/origin/master"];
-        if (remoteBranch == null)
-        {
-            throw new Exception("远程仓库中未找到 main 或 master 分支");
+            // 只拉取指定分支
+            var fetchOptions = new FetchOptions
+            {
+                TagFetchMode = TagFetchMode.None,
+                ProxyOptions = { ProxyType = ProxyType.None },
+                Depth = 1 // 浅拉取，只获取最新的提交
+            };
+            string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
+            Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
+
+            // 获取远程分支
+            var remoteBranch = repo.Branches[$"refs/remotes/origin/{branchName}"];
+            if (remoteBranch == null)
+                throw new Exception($"远程仓库中未找到 {branchName} 分支");
+
+            // 创建并检出本地分支
+            var localBranch = repo.CreateBranch(branchName, remoteBranch.Tip);
+            repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
+
+            var checkoutOptions = new CheckoutOptions { OnCheckoutProgress = onCheckoutProgress };
+            Commands.Checkout(repo, localBranch, checkoutOptions);
         }
-
-        // 7. 创建并检出本地分支
-        var localBranch = repo.CreateBranch(remoteBranch.FriendlyName, remoteBranch.Tip);
-
-        // 8. 设置本地分支跟踪远程分支
-        repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
-
-        // 9. 检出分支
-        CheckoutOptions checkoutOptions = new CheckoutOptions
+        finally
         {
-            OnCheckoutProgress = onCheckoutProgress
-        };
-        Commands.Checkout(repo, localBranch, checkoutOptions);
+            repo?.Dispose();
+        }
     }
 
     private void GitConfig(Repository repo)
@@ -795,14 +823,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 var scriptPath = Path.Combine(repoPath, path);
                 var destPath = Path.Combine(userPath, remainingPath);
-                
+
                 // 备份需要保存的文件
                 List<string> backupFiles = new List<string>();
                 if (first == "js") // 只对JS脚本进行备份
                 {
                     backupFiles = BackupScriptFiles(path, repoPath);
                 }
-                
+
                 if (Directory.Exists(scriptPath))
                 {
                     if (Directory.Exists(destPath))
@@ -827,7 +855,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     File.Copy(scriptPath, destPath, true);
                 }
-                
+
                 // 恢复备份的文件
                 if (first == "js" && backupFiles.Count > 0) // 只对JS脚本进行恢复
                 {
@@ -891,7 +919,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 var jsonContent = File.ReadAllText(repoJsonPath);
                 var jsonObj = JObject.Parse(jsonContent);
-                
+
                 if (jsonObj["indexes"] is JArray indexes)
                 {
                     // 递归收集所有路径
@@ -915,7 +943,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                             }
                         }
                     }
-                    
+
                     CollectPaths(indexes, "");
                 }
             }
@@ -925,7 +953,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 // 构建父子关系映射，只记录直接子节点
                 var parentChildMap = new Dictionary<string, List<string>>();
-                
+
                 // 遍历所有路径，找到每个节点的父节点
                 foreach (var path in allAvailablePaths)
                 {
@@ -937,31 +965,31 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         {
                             parentChildMap[parentPath] = new List<string>();
                         }
-                        
+
                         if (!parentChildMap[parentPath].Contains(path))
                         {
                             parentChildMap[parentPath].Add(path);
                         }
                     }
                 }
-                
+
                 // 递归检查父节点，直到没有新的父节点需要添加
                 bool hasNewPaths;
                 do
                 {
                     hasNewPaths = false;
                     var pathsToAdd = new HashSet<string>();
-                    
+
                     // 检查每个父节点
                     foreach (var kvp in parentChildMap)
                     {
                         var parentPath = kvp.Key;
                         var directChildren = kvp.Value;
-                        
+
                         // 检查所有直接子节点是否都已被订阅
-                        bool allDirectChildrenSubscribed = directChildren.All(child => 
+                        bool allDirectChildrenSubscribed = directChildren.All(child =>
                             pathsToKeep.Contains(child));
-                        
+
                         // 如果所有直接子节点都已被订阅，且父节点本身未被订阅，则添加父节点
                         if (allDirectChildrenSubscribed && !pathsToKeep.Contains(parentPath))
                         {
@@ -969,7 +997,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                             hasNewPaths = true;
                         }
                     }
-                    
+
                     // 将需要添加的父节点加入订阅列表
                     foreach (var pathToAdd in pathsToAdd)
                     {
@@ -1103,18 +1131,18 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private List<string> GetMatchedFiles(string basePath, string pattern)
     {
         var matchedFiles = new List<string>();
-        
+
         try
         {
             // 检查是否是正则表达式（以^开头或包含特殊字符）
             bool isRegex = pattern.StartsWith("^") || pattern.Contains(".*") || pattern.Contains("\\d") || pattern.Contains("\\w");
-            
+
             if (isRegex)
             {
                 // 使用正则表达式匹配
                 var regex = new System.Text.RegularExpressions.Regex(pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 var allFiles = Directory.GetFiles(basePath, "*", SearchOption.AllDirectories);
-                
+
                 foreach (var file in allFiles)
                 {
                     var relativePath = Path.GetRelativePath(basePath, file);
@@ -1129,7 +1157,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 // 使用通配符匹配
                 var searchPattern = Path.GetFileName(pattern);
                 var searchDir = Path.GetDirectoryName(pattern);
-                
+
                 if (string.IsNullOrEmpty(searchDir))
                 {
                     // 只在当前目录搜索
@@ -1152,7 +1180,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             _logger.LogError(ex, $"获取匹配文件时发生错误: {pattern}");
         }
-        
+
         return matchedFiles;
     }
 
@@ -1215,6 +1243,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     savedFile += "/";
                     isDir = true;
                 }
+
                 if (isDir)
                 {
                     var dirPath = Path.Combine(scriptUserPath, savedFile.TrimEnd('/', '\\'));
@@ -1241,6 +1270,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         {
                             Directory.CreateDirectory(backupFileDir);
                         }
+
                         try
                         {
                             File.Copy(matchedFile, backupFilePath, true);
@@ -1251,6 +1281,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                             _logger.LogError(ex, $"备份文件失败: {matchedFile}");
                         }
                     }
+
                     if (matchedFiles.Count == 0)
                     {
                         _logger.LogWarning($"没有找到匹配的文件: {savedFile}");
@@ -1262,6 +1293,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             _logger.LogError(ex, $"备份脚本文件时发生错误: {scriptPath}");
         }
+
         return backupFiles;
     }
 
@@ -1302,6 +1334,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
                 return;
             }
+
             var scriptUserPath = Path.Combine(userPath, remainingPath);
 
             // 还原所有备份文件
@@ -1316,6 +1349,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         Directory.CreateDirectory(restoreDir);
                     }
+
                     try
                     {
                         File.Copy(file, restorePath, true);

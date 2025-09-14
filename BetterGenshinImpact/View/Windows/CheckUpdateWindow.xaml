@@ -69,7 +69,6 @@
                             <ComboBoxItem Content="CNB" />
                         </ComboBox>
                         <ui:Button
-                            Appearance="Success"
                             Icon="{ui:SymbolIcon ArrowDownload24}"
                             Content="立即更新"
                             Command="{Binding UpdateFromGitHostPlatformCommand}" />
@@ -92,7 +91,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="普通用户可点此直接更新"
+                                          Text="【国内】普通用户可点此直接更新"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -121,7 +120,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="Mirror酱用户可以输入CDK高速更新"
+                                          Text="【国内】Mirror酱用户可以输入CDK高速更新"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>

@@ -33,8 +33,9 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <codeEditor:JsonCodeBox x:Name="JsonCodeBox"
-                                        Margin="0,8,0,0"
-                                        Code="{Binding JsonText, Mode=OneTime}" />
+                                        Code="{Binding JsonText, Mode=OneTime}"
+                                        Background="#1e1e1e"
+                                        />
             </Grid>
             <Grid Grid.Row="1" Margin="0,8,0,8">
                 <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">

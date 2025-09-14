@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -28,10 +28,10 @@ public class SwitchPartyTask
     public async Task<bool> Start(string partyName, CancellationToken ct)
     {
         bool isInPartyViewUi = false;
-        
+
         Logger.LogInformation("尝试切换至队伍: {Name}", partyName);
         using var ra1 = CaptureToRectArea();
-        
+
         if (!Bv.IsInPartyViewUi(ra1))
         {
             isInPartyViewUi = true;
@@ -55,7 +55,7 @@ public class SwitchPartyTask
                 Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
 
                 // 考虑加载时间 2s，共检查 4.2s，如果失败则抛出异常
-                
+
                 for (int i = 0; i < 7; i++) // 检查 7 次
                 {
                     await Delay(600, ct);
@@ -102,7 +102,7 @@ public class SwitchPartyTask
                 await Delay(500, ct);
                 await _returnMainUiTask.Start(ct);
             }
-            
+
             return true;
         }
 
@@ -135,9 +135,6 @@ public class SwitchPartyTask
             }
         }
 
-        var nextX = partyDeleteBtn.Left;
-        var nextY = partyDeleteBtn.Top - partyDeleteBtn.Height * 2;
-
         // 点击到最上方
         await Task.Delay(50, ct);
         GameCaptureRegion.GameRegion1080PPosClick(700, 120);
@@ -146,15 +143,46 @@ public class SwitchPartyTask
         await Task.Delay(450, ct);
         Simulation.SendInput.Mouse.LeftButtonUp();
 
+        Rect regionOfInterest = new Rect(0, (int)(80 * _assetScale), partyDeleteBtn.Right, partyDeleteBtn.Top - (int)(80 * _assetScale));
+        RecognitionObject recognitionObject = new RecognitionObject
+        {
+            RecognitionType = RecognitionTypes.Ocr,
+            RegionOfInterest = regionOfInterest
+        };
         // 逐页查找
-        for (var i = 0; i < 11; i++)
+        for (var i = 0; i < 16; i++)    // 6.0版本最多20个队伍
         {
             using var page = CaptureToRectArea();
-            var found = await FindPage(partyName, page, partyDeleteBtn, ct, isInPartyViewUi);
-            if (found)
+
+            var partySwitchNameRaList = page.FindMulti(recognitionObject);
+
+            if (partySwitchNameRaList == null || partySwitchNameRaList.Count <= 0)
             {
-                RunnerContext.Instance.ClearCombatScenes();
-                return true;
+                Logger.LogInformation("管理队伍界面文字识别失败");
+                break;
+            }
+
+            // 当前页存在则直接点击
+            foreach (var textRegion in partySwitchNameRaList)
+            {
+                if (Regex.IsMatch(textRegion.Text, partyName))
+                {
+                    page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
+                    await Delay(200, ct);
+                    Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
+                    await ConfirmParty(page, ct, isInPartyViewUi);
+
+                    RunnerContext.Instance.ClearCombatScenes();
+                    return true;
+                }
+            }
+
+            Region lowest = partySwitchNameRaList.OrderBy(r => r.Y).Last();
+
+            if (lowest.Y < 666 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
+            {
+                Logger.LogInformation("已抵达最后一个队伍");
+                break;
             }
 
             // 点击下一页
@@ -164,7 +192,7 @@ public class SwitchPartyTask
                 page.ClickTo(600 * _assetScale, 200 * _assetScale);
             }
 
-            page.ClickTo(nextX, nextY); // 点击最下方队伍下移
+            page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移
             await Delay(400, ct);
         }
 
@@ -172,30 +200,6 @@ public class SwitchPartyTask
         Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
         Logger.LogInformation("如果找不到设定的队伍名，有可能是文字识别效果不佳，请尝试正则表达式");
         await _returnMainUiTask.Start(ct);
-        return false;
-    }
-
-    private async Task<bool> FindPage(string partyName, ImageRegion page, Region partyDeleteBtn, CancellationToken ct, bool isInPartyViewUi = false)
-    {
-        var partySwitchNameRaList = page.FindMulti(new RecognitionObject
-        {
-            RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(0, (int)(80 * _assetScale), partyDeleteBtn.Right, partyDeleteBtn.Top - (int)(80 * _assetScale))
-        });
-
-        // 当前页存在则直接点击
-        foreach (var textRegion in partySwitchNameRaList)
-        {
-            if (Regex.IsMatch(textRegion.Text, partyName))
-            {
-                page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
-                await Delay(200, ct);
-                Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
-                await ConfirmParty(page, ct, isInPartyViewUi);
-                return true;
-            }
-        }
-
         return false;
     }
 
@@ -215,6 +219,6 @@ public class SwitchPartyTask
         using var ra = CaptureToRectArea();
         var r2 = Bv.ClickWhiteConfirmButton(ra.DeriveCrop(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
         await Delay(500, ct);
-        if (isInPartyViewUi)await _returnMainUiTask.Start(ct);
+        if (isInPartyViewUi) await _returnMainUiTask.Start(ct);
     }
 }

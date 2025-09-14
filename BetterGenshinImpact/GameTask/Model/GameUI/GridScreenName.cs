@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
@@ -26,6 +26,8 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         [Description("摆设")]
         Furnishings,
         [Description("圣遗物分解")]
-        ArtifactSalvage
+        ArtifactSalvage,
+        [Description("圣遗物套装筛选")]
+        ArtifactSetFilter
     }
 }

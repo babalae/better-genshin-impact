@@ -14,6 +14,7 @@ using BetterGenshinImpact.Model;
 using Meziantou.Framework.Win32;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using MessageBoxResult = System.Windows.MessageBoxResult;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -30,7 +31,7 @@ public partial class CheckUpdateWindow : FluentWindow
 
     [ObservableProperty] private string selectedGitSource = "Github";
 
-    public string GitSourceDescription => SelectedGitSource == "CNB" ? "直接从 CNB 下载并更新" : "直接从 Github 下载并更新";
+    public string GitSourceDescription => SelectedGitSource == "CNB" ? "【国内】直接从 CNB 下载并更新" : "【国外】直接从 Github 下载并更新";
 
     partial void OnSelectedGitSourceChanged(string value)
     {
@@ -44,13 +45,13 @@ public partial class CheckUpdateWindow : FluentWindow
         _option = option ?? throw new ArgumentNullException(nameof(option));
         DataContext = this;
         InitializeComponent();
-        
+
         // 存在CDK则显示修改按钮
         if (string.IsNullOrEmpty(MirrorChyanHelper.GetCdk()))
         {
             EditCdkButton.Visibility = Visibility.Collapsed;
         }
-        
+
         if (option.Trigger == UpdateTrigger.Manual)
         {
             IgnoreButton.Visibility = Visibility.Collapsed;
@@ -62,11 +63,11 @@ public partial class CheckUpdateWindow : FluentWindow
             WebpagePanel.Visibility = Visibility.Collapsed;
             UpdateStatusMessageGrid.Height = 0;
             ShowUpdateStatus = false;
-            
+
             // 隐藏开源渠道和Steambird服务卡片
             GitSourceCard.Visibility = Visibility.Collapsed;
             SteambirdCard.Visibility = Visibility.Collapsed;
-            
+
             // // 删除前几行
             // MyGrid.RowDefinitions.RemoveAt(0);
             // MyGrid.RowDefinitions.RemoveAt(0);
@@ -91,7 +92,7 @@ public partial class CheckUpdateWindow : FluentWindow
 
 
         Closing += OnClosing;
-        
+
         // 延迟显示气泡提示
         if (option.Channel != UpdateChannel.Alpha)
         {
@@ -103,7 +104,7 @@ public partial class CheckUpdateWindow : FluentWindow
             {
                 showTimer.Stop();
                 ShowOtherUpdateTip = true;
-            
+
                 // 5秒后自动消失
                 var hideTimer = new DispatcherTimer
                 {
@@ -118,7 +119,6 @@ public partial class CheckUpdateWindow : FluentWindow
             };
             showTimer.Start();
         }
-
     }
 
     protected void OnClosing(object? sender, CancelEventArgs e)
@@ -165,9 +165,21 @@ public partial class CheckUpdateWindow : FluentWindow
     private async Task UpdateFromGitHostPlatformAsync()
     {
         string source = SelectedGitSource == "CNB" ? "cnb" : "github";
+
+        if (source == "github")
+        {
+            // 提示用户这个是国外服务器，可能会很慢
+            var result = await MessageBox.ShowAsync("您已选择「Github」作为更新源。\n请确认：您当前网络可正常访问 Github 文件服务？\n若不确定能否访问，建议切换至其他更新渠道。\n是否继续使用 Github 渠道更新？",
+                "警告", System.Windows.MessageBoxButton.OKCancel, MessageBoxImage.Exclamation, System.Windows.MessageBoxResult.None);
+            if (result != MessageBoxResult.OK)
+            {
+                return;
+            }
+        }
+
         await RunUpdaterAsync($"-I --source {source}");
     }
-    
+
 
     [RelayCommand]
     private async Task UpdateFromSteambirdAsync()
@@ -183,7 +195,7 @@ public partial class CheckUpdateWindow : FluentWindow
         {
             return;
         }
-        
+
         if (_option.Channel == UpdateChannel.Stable)
         {
             await RunUpdaterAsync("-I --source mirrorc");
@@ -234,7 +246,7 @@ public partial class CheckUpdateWindow : FluentWindow
             await UserInteraction.Invoke(this, CheckUpdateWindowButton.Cancel);
         }
     }
-    
+
     [RelayCommand]
     private void EditCdk()
     {

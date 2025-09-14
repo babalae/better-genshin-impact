@@ -1,30 +1,35 @@
-using BetterGenshinImpact.GameTask.Common;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BehaviourTree;
 using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
-using BehaviourTree;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.View.Drawable;
-using BetterGenshinImpact.GameTask.AutoFishing.Assets;
-using Vanara.PInvoke;
-using System.Linq;
-using BetterGenshinImpact.GameTask.AutoFishing.Model;
-using BetterGenshinImpact.GameTask.Common.Job;
-using Fischless.WindowsInput;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Core.Recognition.ONNX;
-using static Vanara.PInvoke.User32;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using System.Globalization;
-using Microsoft.Extensions.Localization;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFishing.Assets;
+using BetterGenshinImpact.GameTask.AutoFishing.Model;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
+using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.ML.OnnxRuntime;
+using OpenCvSharp;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Vanara.PInvoke;
+using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -51,10 +56,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this._ct = ct;
 
             IOcrService ocrService = OcrFactory.Paddle;
-
-            IStringLocalizer<AutoFishingImageRecognition> stringLocalizer =
-                App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ??
-                throw new NullReferenceException(nameof(stringLocalizer));
+            using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
             Blackboard blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
 
@@ -68,7 +70,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                 .PushLeaf(() => new TurnAround("转圈圈调整视角", blackboard, _logger, param.SaveScreenshotOnKeyTick, input))
                                 .PushLeaf(() => new FindFishTimeout("找到鱼", 20, blackboard, _logger, param.SaveScreenshotOnKeyTick))
                             .End()
-                            .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, cultureInfo: param.GameCultureInfo))
+                            .PushLeaf(() => new EnterFishingMode("进入钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, session, prototypes, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer))
                             .UntilFailed(@"\")
                                 .Sequence("一直钓鱼直到没鱼")
                                     .AlwaysSucceed(@"\")
@@ -83,7 +85,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                 .End()
                                                 .PushLeaf(() => new FindFishTimeout("确认初始状态和找到鱼", 10, blackboard, _logger, param.SaveScreenshotOnKeyTick))
                                             .End()
-                                            .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, param.SaveScreenshotOnKeyTick, TaskContext.Instance().SystemInfo, input))
+                                            .PushLeaf(() => new ChooseBait("选择鱼饵", blackboard, _logger, param.SaveScreenshotOnKeyTick, TaskContext.Instance().SystemInfo, input, session, prototypes))
                                             .MySimpleParallel("抛竿直到成功或出错", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
                                                 .UntilSuccess("重复抛竿")
                                                     .Sequence("-")
@@ -98,7 +100,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                             .End()
                                             .MySimpleParallel("下杆中", SimpleParallelPolicy.OnlyOneMustSucceed)
                                                 .PushLeaf(() => new CheckThrowRod("检查抛竿结果", blackboard, _logger, param.SaveScreenshotOnKeyTick))    // todo 后面串联一个召回率高的下杆中检测方法
-                                                .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, ocrService, cultureInfo: param.GameCultureInfo, stringLocalizer: stringLocalizer))
+                                                .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, ocrService, cultureInfo: param.GameCultureInfo, stringLocalizer: param.StringLocalizer))
                                                 .PushLeaf(() => new FishBiteTimeout("下杆超时检查", param.ThrowRodTimeOutTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick, input))
                                             .End()
                                             .MySimpleParallel("拉条中", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
@@ -116,7 +118,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         .End()
                         .PushLeaf(() => new WholeProcessTimeout("检查整体超时", param.WholeProcessTimeoutSeconds, _logger, param.SaveScreenshotOnKeyTick))
                     .End()
-                    .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, param.GameCultureInfo))
+                    .PushLeaf(() => new QuitFishingMode("退出钓鱼模式", blackboard, _logger, param.SaveScreenshotOnKeyTick, input, param.GameCultureInfo, param.StringLocalizer))
                 .End()
                 .Build();
             // @formatter:on
@@ -349,6 +351,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             private readonly IInputSimulator input;
             private readonly Blackboard blackboard;
+            private readonly InferenceSession session;
+            private readonly Dictionary<string, float[]> prototypes;
             private readonly TimeProvider timeProvider;
             private DateTimeOffset? pressFWaitEndTime;
             private DateTimeOffset? clickWhiteConfirmButtonWaitEndTime;
@@ -356,16 +360,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly string fishingLocalizedString;
 
             public EnterFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate,
-                IInputSimulator input, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null) : base(name,
+                IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name,
                 logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
                 this.input = input;
+                this.session = session;
+                this.prototypes = prototypes;
                 this.timeProvider = timeProvider ?? TimeProvider.System;
-                IStringLocalizer<AutoFishingImageRecognition> stringLocalizer =
-                    App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ??
-                    throw new NullReferenceException(nameof(stringLocalizer));
-                this.fishingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
+                this.fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
             }
 
             protected override BehaviourStatus Update(ImageRegion imageRegion)
@@ -387,7 +390,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                           clickWhiteConfirmButtonWaitEndTime < timeProvider.GetLocalNow()) &&
                          Bv.ClickWhiteConfirmButton(imageRegion))
                 {
-                    logger.LogInformation("点击开始钓鱼");
+                    Mat subMat = imageRegion.SrcMat.SubMat(new Rect((int)(0.824 * imageRegion.Width), (int)(0.669 * imageRegion.Height), (int)(0.065 * imageRegion.Width), (int)(0.065 * imageRegion.Width)));
+                    using Mat resized = subMat.Resize(new Size(125, 125));
+                    (string predName, _) = GridIconsAccuracyTestTask.Infer(resized, this.session, this.prototypes);
+                    if (predName.TryGetEnumValueFromDescription(out this.blackboard.selectedBait))
+                    {
+                        logger.LogInformation("点击开始钓鱼，当前鱼饵为{bait}", this.blackboard.selectedBait.Value.GetDescription());
+                    }
+                    else
+                    {
+                        logger.LogInformation("点击开始钓鱼，当前鱼饵未识别");
+                    }
 
                     this.blackboard.pitchReset = true;
 
@@ -423,14 +436,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             private readonly string fishingLocalizedString;
 
             public QuitFishingMode(string name, Blackboard blackboard, ILogger logger, bool saveScreenshotOnTerminate,
-                IInputSimulator input, CultureInfo? cultureInfo = null) : base(name, logger, saveScreenshotOnTerminate)
+                IInputSimulator input, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name, logger, saveScreenshotOnTerminate)
             {
                 this.blackboard = blackboard;
                 this.input = input;
-                IStringLocalizer<AutoFishingImageRecognition> stringLocalizer =
-                    App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ??
-                    throw new NullReferenceException(nameof(stringLocalizer));
-                this.fishingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
+                this.fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
             }
 
             protected override BehaviourStatus Update(ImageRegion imageRegion)

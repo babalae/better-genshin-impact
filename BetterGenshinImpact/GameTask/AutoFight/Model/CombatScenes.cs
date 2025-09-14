@@ -100,6 +100,9 @@ public class CombatScenes : IDisposable
             avatarSideIconRectList = AutoFightAssets.Instance.AvatarSideIconRectList;
             avatarIndexRectList = AutoFightAssets.Instance.AvatarIndexRectList;
         }
+        
+        // 6.0 版本 队伍下的 草露 进度条 导致位置偏移
+        AvatarSideFixOffset(imageRegion, avatarSideIconRectList, avatarIndexRectList);
 
         // 识别队伍
         var names = new string[avatarSideIconRectList.Count];
@@ -137,6 +140,49 @@ public class CombatScenes : IDisposable
 
         return this;
     }
+    
+    /// <summary>
+    /// 6.0 版本 队伍下的 草露 进度条 导致位置偏移
+    /// 
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    /// <param name="avatarSideIconRectList"></param>
+    /// <param name="avatarIndexRectList"></param>
+    public void AvatarSideFixOffset(ImageRegion imageRegion, List<Rect> avatarSideIconRectList, List<Rect> avatarIndexRectList)
+    {
+        // 角色序号 左上角 坐标偏移（+2, -5）后存在3个白色点，则认为存在 草露 进度条
+        // 存在 草露 进度条时候整体上移 14 个像素
+        int whitePointCount = 0;
+        foreach (var rectIndex in avatarIndexRectList)
+        {
+            int x = rectIndex.X + 2;
+            int y = rectIndex.Y - 5;
+            var color = imageRegion.SrcMat.At<Vec3b>(y, x);
+            if (color is { Item0: 255, Item1: 255, Item2: 255 })
+            {
+                whitePointCount++;
+            }
+        }
+
+        if (whitePointCount >= 3)
+        {
+            Logger.LogInformation("检测到右侧队伍偏移，进行位置修正");
+            for (int i = 0; i < avatarSideIconRectList.Count; i++)
+            {
+                var rect = avatarSideIconRectList[i];
+                rect.Y -= 14;
+                avatarSideIconRectList[i] = rect;
+            }
+
+            for (int i = 0; i < avatarIndexRectList.Count; i++)
+            {
+                var rect = avatarIndexRectList[i];
+                rect.Y -= 14;
+                avatarIndexRectList[i] = rect;
+            }
+        }
+    }
+    
 
     public (string, string) ClassifyAvatarCnName(Image<Rgb24> img, int index)
     {

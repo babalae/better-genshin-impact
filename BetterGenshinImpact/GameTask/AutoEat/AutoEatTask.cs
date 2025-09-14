@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -24,7 +25,7 @@ namespace BetterGenshinImpact.GameTask.AutoEat;
 /// 自动吃药任务
 /// 检测红血自动使用便携营养袋
 /// </summary>
-public class AutoEatTask : BaseIndependentTask, ISoloTask
+public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 {
     public string Name => "自动吃药";
 
@@ -40,7 +41,12 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
         _config = TaskContext.Instance().Config.AutoEatConfig;
     }
 
-    public async Task Start(CancellationToken ct)
+    async Task ISoloTask.Start(CancellationToken ct)
+    {
+        await Start(ct);
+    }
+
+    public async Task<int?> Start(CancellationToken ct)
     {
         _ct = ct;
 
@@ -52,7 +58,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
             if (!IsTakeFood())
             {
                 _logger.LogWarning("未装备 \"{Tool}\"，无法启用自动吃药功能", "便携营养袋");
-                return;
+                return null;
             }
 
             try
@@ -68,45 +74,62 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask
             {
                 _logger.LogInformation("自动吃药任务结束");
             }
+
+            return null;
         }
         else
         {
             _logger.LogInformation("打开背包寻找{name}……", _taskParam.FoodName);
             await new ReturnMainUiTask().Start(ct);
-            await AutoArtifactSalvageTask.OpenBag(GridScreenName.Food, _input, _logger, _ct);
+            await AutoArtifactSalvageTask.OpenInventory(GridScreenName.Food, _input, _logger, _ct);
 
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
-            using var ra0 = CaptureToRectArea();
-            GridScreenParams gridParams = GridScreenParams.Templates[GridScreenName.Food];
-            var gridRoi = gridParams.GetRect(ra0);
-            GridScreen gridScreen = new GridScreen(gridRoi, gridParams, _logger, _ct);
-            bool isAte = false;
+            GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
+            int? count = null;
             await foreach (ImageRegion itemRegion in gridScreen)
             {
-                var result = GridIconsAccuracyTestTask.Infer(itemRegion.SrcMat, session, prototypes);
+                using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                 string predName = result.Item1;
                 if (predName == _taskParam.FoodName)
                 {
                     // 点击item
                     itemRegion.Click();
+
+                    #region 识别数量
+                    string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                    if (int.TryParse(numStr, out int num))
+                    {
+                        count = num - 1;    // 算上吃掉的1个
+                    }
+                    else
+                    {
+                        count = -2;
+                        _logger.LogWarning("无法识别食物数量：{text}，依然尝试使用", numStr);
+                    }
+                    #endregion
+
                     await Delay(300, ct);
                     // 点击确定
+                    using var ra0 = CaptureToRectArea();
                     using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
                     if (ra.IsExist())
                     {
                         ra.Click();
                     }
                     _logger.LogInformation("吃了一份{name}，真香！", predName);
-                    isAte = true;
                     break;
                 }
             }
-            if (!isAte)
+            if (count == null)
             {
+                count = -1;
                 _logger.LogInformation("没有找到{name}", _taskParam.FoodName);
             }
             await new ReturnMainUiTask().Start(ct);
+
+            return count;
         }
     }
 
