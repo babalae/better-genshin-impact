@@ -273,9 +273,6 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
             else
             {
-                
-            }
-            {
                 Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
                 // if (RuntimeHelper.IsDebug)
                 // {
