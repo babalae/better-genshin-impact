@@ -1,152 +1,79 @@
 using System;
+using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
 using OpenCvSharp;
-using System.Collections.Generic;
-using System.Linq;
 
 public static class TextRectExtractor
 {
-    public static Rect GetTextBoundingRect(Mat src, double minContourArea = 25, int mergeGap = 6)
+    /// <summary>
+    /// 从图片中提取文字范围（假定文字从最左边贴边开始，向右连续）
+    /// 结果矩形固定 x=0,y=0,h=原图高度，只计算连续文字宽度。
+    /// </summary>
+    public static Rect GetTextBoundingRect(Mat textMat, out Mat bin)
     {
-        var rects = GetTextBoundingRects(src, minContourArea, mergeGap);
-        if (rects.Count == 0)
-            return new Rect();
-
-        // 只保留 X <= 20 的矩形, 并取最左(再按 Y 排)
-        var candidate = rects
-            .Where(r => r.X <= 20)
-            .OrderBy(r => r.X)
-            .ThenBy(r => r.Y)
-            .FirstOrDefault();
-
-        return candidate;
-    }
-
-    // 可选: 单独提供一个方法, 可自定义阈值
-    public static Rect GetLeftMostTextRect(Mat src, double minContourArea = 25, int mergeGap = 6, int maxAcceptedX = 20)
-    {
-        var rects = GetTextBoundingRects(src, minContourArea, mergeGap);
-        if (rects.Count == 0)
-            return new Rect();
-
-        var candidate = rects
-            .Where(r => r.X <= maxAcceptedX)
-            .OrderBy(r => r.X)
-            .ThenBy(r => r.Y)
-            .FirstOrDefault();
-
-        return candidate;
-    }
-
-    public static List<Rect> GetTextBoundingRects(Mat src, double minContourArea = 25, int mergeGap = 6)
-    {
-        var result = new List<Rect>();
-        if (src == null || src.Empty())
-            return result;
-
-        using var gray = src.Channels() == 1 ? src.Clone() : src.CvtColor(ColorConversionCodes.BGR2GRAY);
-        using var blur = gray.GaussianBlur(new Size(3, 3), 0);
-
-        using var binary = new Mat();
-        Cv2.Threshold(blur, binary, 0, 255, ThresholdTypes.Otsu | ThresholdTypes.Binary);
-
-        var whiteRatio = Cv2.CountNonZero(binary) / (double)(binary.Rows * binary.Cols);
-        if (whiteRatio > 0.65)
+        // 转换为灰度图
+        Mat gray = new Mat();
+        if (textMat.Channels() == 3)
         {
-            Cv2.BitwiseNot(binary, binary);
+            Cv2.CvtColor(textMat, gray, ColorConversionCodes.BGR2GRAY);
+        }
+        else
+        {
+            gray = textMat.Clone();
         }
 
-        using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
-        Cv2.MorphologyEx(binary, binary, MorphTypes.Close, kernel, iterations: 1);
-        Cv2.MorphologyEx(binary, binary, MorphTypes.Open, kernel, iterations: 1);
+        // 使用阈值160进行二值化处理
+        bin = new Mat();
+        Cv2.Threshold(gray, bin, 160, 255, ThresholdTypes.Binary);
 
-        Cv2.FindContours(binary, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        // 形态学操作：先腐蚀后膨胀，去除噪点并保持文字完整
+        Mat kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
+        Cv2.Erode(bin, bin, kernel, iterations: 1);
+        Cv2.Dilate(bin, bin, kernel, iterations: 2);
+        kernel.Dispose();
+        gray.Dispose();
+        return ProjectionRect(textMat, bin);
+    }
 
-        foreach (var c in contours)
+    private static Rect ProjectionRect(Mat textMat, Mat bin)
+    {
+        // 投影：对行做 ReduceSum，得到 1 x width 的列和
+        using var projection = new Mat();
+        Cv2.Reduce(bin, projection, 0, ReduceTypes.Sum, MatType.CV_32S);
+        int width = projection.Cols;
+        projection.GetArray(out int[] colSums);
+
+        int maxGap = 30; // 允许的最大连续空列数
+        int gapCount = 0;
+        int lastNonEmpty = -1;
+
+        for (int x = 0; x < width; x++)
         {
-            var area = Cv2.ContourArea(c);
-            if (area < minContourArea)
-                continue;
-            var r = Cv2.BoundingRect(c);
-            if (r.Width < 3 || r.Height < 3)
-                continue;
-            if (r.Width / (double)r.Height > 40)
-                continue;
-            result.Add(r);
-        }
-
-        if (result.Count == 0)
-        {
-            using var grad = new Mat();
-            Cv2.Sobel(gray, grad, MatType.CV_8U, 1, 0, ksize: 3);
-            Cv2.Threshold(grad, grad, 0, 255, ThresholdTypes.Otsu | ThresholdTypes.Binary);
-            Cv2.MorphologyEx(grad, grad, MorphTypes.Dilate, kernel, iterations: 1);
-            Cv2.FindContours(grad, out var gContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
-            foreach (var c in gContours)
+            bool hasInk = colSums[x] > 0;
+            if (hasInk)
             {
-                var area = Cv2.ContourArea(c);
-                if (area < minContourArea)
-                    continue;
-                var r = Cv2.BoundingRect(c);
-                if (r.Width < 3 || r.Height < 3) continue;
-                result.Add(r);
-            }
-        }
-
-        if (result.Count == 0)
-            return result;
-
-        result = result
-            .OrderBy(r => r.Y)
-            .ThenBy(r => r.X)
-            .ToList();
-
-        result = MergeRects(result, mergeGap);
-
-        if (result.Count == 1)
-        {
-            var r = result[0];
-            double fill = (r.Width * r.Height) / (double)(src.Cols * src.Rows);
-            if (fill > 0.97)
-                return new List<Rect>();
-        }
-
-        return result;
-    }
-
-    private static List<Rect> MergeRects(List<Rect> rects, int gap)
-    {
-        if (rects.Count <= 1) return rects;
-
-        var merged = new List<Rect>();
-        Rect current = rects[0];
-
-        for (int i = 1; i < rects.Count; i++)
-        {
-            var r = rects[i];
-            bool sameLine = IsSameLine(current, r, lineTolerance: Math.Max(6, (current.Height + r.Height) / 4));
-            bool close = r.X <= current.Right + gap;
-
-            if (sameLine && close)
-            {
-                current = current | r;
+                lastNonEmpty = x;
+                gapCount = 0;
             }
             else
             {
-                merged.Add(current);
-                current = r;
+                gapCount++;
+                if (gapCount > maxGap)
+                {
+                    break;
+                }
             }
         }
-        merged.Add(current);
-        return merged;
-    }
+        
+        if (lastNonEmpty == -1)
+        {
+            // 没有检测到文字
+            return new Rect();
+        }
 
-    private static bool IsSameLine(Rect a, Rect b, int lineTolerance)
-    {
-        int centerA = a.Y + a.Height / 2;
-        int centerB = b.Y + b.Height / 2;
-        return Math.Abs(centerA - centerB) <= lineTolerance;
+        Rect boundingRect = new Rect(0, 0, lastNonEmpty, textMat.Height);
+        return boundingRect;
     }
 }
