@@ -75,7 +75,7 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     public void OnGetExecutionOrder()
     {
-        var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder(DateTime.Now);
+        var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder();
         if (index == -1)
         {
             Toast.Error("计算失败，请检查参数！");

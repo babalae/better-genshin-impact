@@ -63,7 +63,7 @@ public partial class ScriptService : IScriptService
             var tcc = project.GroupInfo.Config.PathingConfig.TaskCycleConfig;
             if (tcc.Enable)
             {
-                int index = tcc.GetExecutionOrder(DateTime.Now);
+                int index = tcc.GetExecutionOrder();
                 if (index == -1)
                 {
                     _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
