@@ -122,7 +122,6 @@ public partial class OneDragonFlowConfig : ObservableObject
     {
         if (WeeklyDomainEnabled)
         {
-            // var dayOfWeek = (DateTime.Now.Hour >= 4 ? DateTime.Today : DateTime.Today.AddDays(-1)).DayOfWeek;
             var serverTime = ServerTimeHelper.GetServerTimeNow();
             var dayOfWeek = (serverTime.Hour >= 4 ? serverTime : serverTime.AddDays(-1)).DayOfWeek;
             return dayOfWeek switch
