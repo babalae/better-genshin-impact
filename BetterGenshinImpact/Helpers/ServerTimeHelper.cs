@@ -4,30 +4,30 @@ using BetterGenshinImpact.GameTask;
 namespace BetterGenshinImpact.Helpers;
 
 /// <summary>
-/// Provides the current time in the configured server's timezone.
+/// 提供配置的服务器时区的当前时间
 /// </summary>
 public interface IServerTimeProvider
 {
     /// <summary>
-    /// Gets the current time adjusted to the server's timezone offset.
+    /// 获取调整到服务器时区偏移量的当前时间
     /// </summary>
-    /// <returns>A <see cref="DateTimeOffset"/> representing the current server time.</returns>
+    /// <returns>表示当前服务器时间的 <see cref="DateTimeOffset"/></returns>
     DateTimeOffset GetServerTimeNow();
 }
 
 /// <inheritdoc cref="IServerTimeProvider"/>
 /// <remarks>
-/// This implementation uses a <see cref="TimeProvider"/> to get the current UTC time
-/// and then applies the configured server timezone offset to it.
+/// 此实现使用 <see cref="TimeProvider"/> 获取当前UTC时间，
+/// 然后应用配置的服务器时区偏移量
 /// </remarks>
 public class ServerTimeProvider : IServerTimeProvider
 {
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ServerTimeProvider"/> class.
+    /// 初始化 <see cref="ServerTimeProvider"/> 类的新实例
     /// </summary>
-    /// <param name="timeProvider">The <see cref="TimeProvider"/> used to retrieve the base UTC time.</param>
+    /// <param name="timeProvider">用于获取基准UTC时间的 <see cref="TimeProvider"/></param>
     public ServerTimeProvider(TimeProvider timeProvider)
     {
         _timeProvider = timeProvider;
@@ -49,43 +49,43 @@ public class ServerTimeProvider : IServerTimeProvider
         // throw new Exception("Config未初始化"); in TaskContext.cs
         catch (Exception)
         {
-            // Assume Beijing timezone for core developers' testing if config isn't loaded
+            // 如果配置未加载，假定为北京时间用于核心开发者测试
             return TimeSpan.FromHours(8);
         }
     }
 }
 
 /// <summary>
-/// Provides a static facade for easy access to the server time.
+/// 提供静态外观以便轻松访问服务器时间
 /// </summary>
 public static class ServerTimeHelper
 {
     private static IServerTimeProvider? _serverTimeProvider;
 
     /// <summary>
-    /// Initializes the static helper with a concrete <see cref="IServerTimeProvider"/> implementation.
-    /// This method must be called once during application startup.
+    /// 使用具体的 <see cref="IServerTimeProvider"/> 实现初始化静态辅助类
+    /// 此方法必须在应用程序启动期间调用一次
     /// </summary>
-    /// <param name="serverTimeProvider">The provider to use for retrieving server time.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="serverTimeProvider"/> is null.</exception>
+    /// <param name="serverTimeProvider">用于检索服务器时间的提供程序</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="serverTimeProvider"/> 为 null 时抛出</exception>
     public static void Initialize(IServerTimeProvider serverTimeProvider)
     {
         _serverTimeProvider = serverTimeProvider ?? throw new ArgumentNullException(nameof(serverTimeProvider));
     }
 
     /// <summary>
-    /// Gets the current time adjusted to the server's timezone offset.
+    /// 获取调整到服务器时区偏移量的当前时间
     /// </summary>
-    /// <returns>A <see cref="DateTimeOffset"/> representing the current server time.</returns>
+    /// <returns>表示当前服务器时间的 <see cref="DateTimeOffset"/></returns>
     /// <exception cref="InvalidOperationException">
-    /// Thrown if <see cref="Initialize"/> has not been called.
+    /// 如果尚未调用 <see cref="Initialize"/> 则抛出
     /// </exception>
     public static DateTimeOffset GetServerTimeNow()
     {
         if (_serverTimeProvider is null)
         {
             throw new InvalidOperationException(
-                $"{nameof(ServerTimeHelper)} has not been initialized. Call {nameof(Initialize)} first.");
+                $"{nameof(ServerTimeHelper)} 尚未初始化。请先调用 {nameof(Initialize)}。");
         }
 
         return _serverTimeProvider.GetServerTimeNow();

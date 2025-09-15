@@ -6,11 +6,11 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 public static class ServerTime
 {
     /// <summary>
-    /// Gets the server's timezone offset from UTC.
+    /// 获取服务器时区偏移量
     /// </summary>
     /// <returns>
-    /// The offset in milliseconds.
-    /// This value can be directly used in JavaScript: `new Date(Date.now() + offset)`
+    /// 以毫秒为单位的偏移量
+    /// 该值可直接在JavaScript中使用：`new Date(Date.now() + offset)`
     /// </returns>
     public static int GetServerTimeZoneOffset()
     {

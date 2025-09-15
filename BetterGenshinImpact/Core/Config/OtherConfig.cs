@@ -15,7 +15,7 @@ public partial class OtherConfig : ObservableObject
     //自动领取派遣任务城市
     [ObservableProperty]
     private string _autoFetchDispatchAdventurersGuildCountry = "无";
-    //日历服务器
+    //服务器时区偏移量
     [ObservableProperty]
     private TimeSpan _serverTimeZoneOffset = TimeSpan.FromHours(8);
     [ObservableProperty]
