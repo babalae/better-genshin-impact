@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.GameTask.LogParse;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Group;
@@ -167,6 +168,10 @@ public partial class ScriptGroupProject : ObservableObject
         //执行记录
         ExecutionRecord executionRecord = new ExecutionRecord()
         {
+            ServerStartTime =
+                GroupInfo?.Config.PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime ?? false
+                    ? ServerTimeHelper.GetServerTimeNow()
+                    : DateTimeOffset.Now,
             StartTime = DateTime.Now,
             GroupName = GroupInfo?.Name ?? "",
             FolderName = FolderName,
@@ -280,6 +285,10 @@ public partial class ScriptGroupProject : ObservableObject
             executionRecord.IsSuccessful = true;
         }
 
+        executionRecord.ServerEndTime =
+            GroupInfo?.Config.PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime ?? false
+                ? ServerTimeHelper.GetServerTimeNow()
+                : DateTimeOffset.Now;
         executionRecord.EndTime = DateTime.Now;
         ExecutionRecordStorage.SaveExecutionRecord(executionRecord);
     }
