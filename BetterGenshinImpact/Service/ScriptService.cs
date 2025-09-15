@@ -429,11 +429,7 @@ public partial class ScriptService : IScriptService
 
         if (!fisrt&&!RunnerContext.Instance.IsPreExecution)
         {
-            if (CancellationContext.Instance.IsManualStop && TaskContext.Instance().Config.NotificationConfig.StopManuallyNoNotification)
-            {
-                _logger.LogInformation("任务被手动停止，根据用户设置不发送结束通知");
-            }
-            else
+            if (CancellationContext.Instance.IsManualStop is false)
             {
                 Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
             }

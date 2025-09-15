@@ -120,11 +120,6 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _includeScreenShot = true;
 
-    /// <summary>
-    /// 手动停止时是否发送通知
-    /// </summary>
-    [ObservableProperty] private bool _stopManuallyNoNotification = false;
-
 
     [ObservableProperty] private string _notificationEventSubscribe = string.Empty;
 
