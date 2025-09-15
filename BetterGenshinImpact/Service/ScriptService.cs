@@ -605,6 +605,12 @@ public partial class ScriptService : IScriptService
                                 SystemControl.ActivateWindow();
                             }
 
+                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                            if (sw.Elapsed.TotalSeconds < 200)
+                            {
+                                GlobalMethod.MoveMouseTo(300, 300);
+                            }
+
                         }
                     }
                 });
