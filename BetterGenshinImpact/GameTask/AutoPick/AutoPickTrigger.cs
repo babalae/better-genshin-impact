@@ -386,9 +386,6 @@ public partial class AutoPickTrigger : ITaskTrigger
         _prevClickFrameIndex = content.FrameIndex;
     }
 
-    [GeneratedRegex(@"^[\p{P} ]+|[\p{P} ]+$")]
-    private static partial Regex PunctuationAndSpacesRegex();
-
     /// <summary>
     /// 高性能处理OCR识别的文字结果
     /// 1. 替换【、[ 为「，替换】、] 为」
