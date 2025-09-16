@@ -196,6 +196,28 @@ public static class OcrUtils
         };
     }
 
+    public static IReadOnlyDictionary<string, int> CreateLabelDict(IReadOnlyList<string> labels, out int[] labelLengths)
+    {
+        var dict = new Dictionary<string, int>();
+        HashSet<int> lengths = [];
+        lengths.Add(0); // "" at index 0
+        // "" at index 0
+        dict[""] = 0;
+        // labels: 1-based index
+        for (int i = 0; i < labels.Count; i++)
+        {
+            var len = labels[i].Length;
+            lengths.Add(len);
+            dict[labels[i]] = i + 1;
+        }
+
+        // " " at index labels.Count + 1
+        dict[" "] = labels.Count + 1;
+        lengths.Add(1);
+        labelLengths = lengths.ToArray();
+        return dict;
+    }
+
     public static Mat Tensor2Mat(Tensor<float> tensor)
     {
         var dimensions = tensor.Dimensions;
@@ -210,7 +232,7 @@ public static class OcrUtils
 
     public static float[] CreateWeights(Dictionary<string, float> extraWeights, IReadOnlyList<string> labels)
     {
-        var result =  new float[labels.Count + 2];
+        var result = new float[labels.Count + 2];
         Array.Fill(result, 1.0f);
         //new Mat(1, labels.Count + 2, MatType.CV_32FC1, Scalar.All(1.0));
         var labelList = labels.ToList();
@@ -223,7 +245,6 @@ public static class OcrUtils
                 {
                     result[index] = value;
                 }
-                
             }
         }
 
