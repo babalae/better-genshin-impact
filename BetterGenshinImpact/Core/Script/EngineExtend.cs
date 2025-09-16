@@ -61,7 +61,8 @@ public class EngineExtend
         
         
         engine.AddHostObject("OpenCvSharp", new HostTypeCollection("OpenCvSharp"));
-
+        // 调用带out参数的方法
+        engine.AddHostObject("host", new HostFunctions());
 
 
 
