@@ -429,7 +429,10 @@ public partial class ScriptService : IScriptService
 
         if (!fisrt&&!RunnerContext.Instance.IsPreExecution)
         {
-            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            if (CancellationContext.Instance.IsManualStop is false)
+            {
+                Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            }
         }
 
         if (taskProgress != null)
@@ -603,6 +606,12 @@ public partial class ScriptService : IScriptService
                                     SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
                                 }
                                 SystemControl.ActivateWindow();
+                            }
+
+                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                            if (sw.Elapsed.TotalSeconds < 200)
+                            {
+                                GlobalMethod.MoveMouseTo(300, 300);
                             }
 
                         }
