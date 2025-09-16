@@ -13,6 +13,12 @@ public interface IServerTimeProvider
     /// </summary>
     /// <returns>表示当前服务器时间的 <see cref="DateTimeOffset"/></returns>
     DateTimeOffset GetServerTimeNow();
+    
+    /// <summary>
+    /// 获取服务器时区偏移量
+    /// </summary>
+    /// <returns>表示服务器时区偏移量的 <see cref="TimeSpan"/></returns>
+    TimeSpan GetServerTimeOffset();
 }
 
 /// <inheritdoc cref="IServerTimeProvider"/>
@@ -36,11 +42,11 @@ public class ServerTimeProvider : IServerTimeProvider
     /// <inheritdoc/>
     public DateTimeOffset GetServerTimeNow()
     {
-        var serverOffset = GetServerOffset();
+        var serverOffset = GetServerTimeOffset();
         return _timeProvider.GetUtcNow().ToOffset(serverOffset);
     }
 
-    private static TimeSpan GetServerOffset()
+    public TimeSpan GetServerTimeOffset()
     {
         try
         {
@@ -89,5 +95,23 @@ public static class ServerTimeHelper
         }
 
         return _serverTimeProvider.GetServerTimeNow();
+    }
+    
+    /// <summary>
+    /// 获取服务器时区偏移量
+    /// </summary>
+    /// <returns>表示服务器时区偏移量的 <see cref="TimeSpan"/></returns>
+    /// <exception cref="InvalidOperationException">
+    /// 如果尚未调用 <see cref="Initialize"/> 则抛出
+    /// </exception>
+    public static TimeSpan GetServerTimeOffset()
+    {
+        if (_serverTimeProvider is null)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(ServerTimeHelper)} 尚未初始化。请先调用 {nameof(Initialize)}。");
+        }
+
+        return _serverTimeProvider.GetServerTimeOffset();
     }
 }
