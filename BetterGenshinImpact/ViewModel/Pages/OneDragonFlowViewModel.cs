@@ -665,7 +665,10 @@ public partial class OneDragonFlowViewModel : ViewModel
                 if (CancellationContext.Instance.Cts.IsCancellationRequested)
                 {
                     _logger.LogInformation("任务被取消，退出执行");
-                    Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                    if (CancellationContext.Instance.IsManualStop is false)
+                    {
+                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                    }
                     return; // 后续的检查任务也不执行
                 }
             }
@@ -676,7 +679,10 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
             await Task.Delay(500);
-            Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+            if (CancellationContext.Instance.IsManualStop is false)
+            {
+                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+            }
             _logger.LogInformation("一条龙和配置组任务结束");
 
             // 执行完成后操作

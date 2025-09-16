@@ -429,7 +429,10 @@ public partial class ScriptService : IScriptService
 
         if (!fisrt&&!RunnerContext.Instance.IsPreExecution)
         {
-            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            if (CancellationContext.Instance.IsManualStop is false)
+            {
+                Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            }
         }
 
         if (taskProgress != null)
