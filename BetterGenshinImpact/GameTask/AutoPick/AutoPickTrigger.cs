@@ -254,33 +254,10 @@ public partial class AutoPickTrigger : ITaskTrigger
                 var textOnlyMat = new Mat(textMat, new Rect(0, 0,
                     boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
                 text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
-                
-                if (RuntimeHelper.IsDebug)
-                {
-                    // 如果不等于正确文字，则保存图片
-                    if (text != "烹饪")
-                    {
-                        var path = Global.Absolute("log/pick");
-                        Directory.CreateDirectory(path);
-                        var str = $"{DateTime.Now:yyyyMMddHHmmssfff}";
-                        // textMat.SaveImage(Path.Combine(path, $"pick_ocr_ori_{str}.png"));
-                        // 画上 boundingRect
-                        Cv2.Rectangle(textMat, boundingRect, new Scalar(0, 0, 255), 1);
-                        textMat.SaveImage(Path.Combine(path, $"pick_ocr_rect_{str}.png"));
-                        bin.SaveImage(Path.Combine(path, $"bin_{str}.png"));
-                    }
-                }
             }
             else
             {
                 Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
-                // if (RuntimeHelper.IsDebug)
-                // {
-                //     var path = Global.Absolute("log/pick");
-                //     Directory.CreateDirectory(path);
-                //     textMat.SaveImage(Path.Combine(path, $"pick_ocr_empty_{DateTime.Now:yyyyMMddHHmmssfff}.png"));
-                // }
-                
                 text = OcrFactory.Paddle.Ocr(textMat);
             }
         }
