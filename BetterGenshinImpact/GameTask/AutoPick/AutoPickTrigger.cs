@@ -296,6 +296,12 @@ public partial class AutoPickTrigger : ITaskTrigger
             {
                 return;
             }
+            // 挪德卡莱聚所中文名特殊处理，不拾取
+            if (text.Contains("聚所") && (text.Contains("霜月") || text.Contains("叮铃") ||
+                                        text.Contains("眶螂") || text.Contains("蛋卷") || text.Contains("坊")))
+            {
+                return;
+            }
 
             // 单个字符不拾取
             if (text.Length <= 1)
