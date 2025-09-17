@@ -250,7 +250,7 @@ public class GameLoadingTrigger : ITaskTrigger
         // 成功进入游戏判断    
         if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
-            _logger.LogInformation("当前在游戏主界面");
+            // _logger.LogInformation("当前在游戏主界面");
             InnerSetEnabled(false);
             return;
         }
