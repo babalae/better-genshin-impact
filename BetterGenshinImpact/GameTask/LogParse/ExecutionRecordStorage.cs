@@ -243,7 +243,7 @@ public class ExecutionRecordStorage
                     // 如果记录不在"今天"，则跳过
                     if (!IsTodayByBoundary(config.BoundaryTime,
                             record.ServerStartTime ??
-                            new DateTimeOffset(record.StartTime).ToOffset(TimeSpan.FromHours(8)),
+                            new DateTimeOffset(record.StartTime).ToOffset(ServerTimeHelper.GetServerTimeOffset()),
                             config.IsBoundaryTimeBasedOnServerTime)) continue;
                 }
 
