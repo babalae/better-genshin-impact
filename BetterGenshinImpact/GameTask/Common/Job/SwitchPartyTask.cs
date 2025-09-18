@@ -3,17 +3,18 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.Common.Exceptions;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using System.Text.RegularExpressions;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -147,53 +148,64 @@ public class SwitchPartyTask
         RecognitionObject recognitionObject = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = regionOfInterest
+            RegionOfInterest = regionOfInterest,
+            DrawOnWindow = true,
+            Name = "队伍名称",
+            DrawOnWindowPen= new System.Drawing.Pen(System.Drawing.Color.White)
         };
         // 逐页查找
-        for (var i = 0; i < 16; i++)    // 6.0版本最多20个队伍
+        try
         {
-            using var page = CaptureToRectArea();
-
-            var partySwitchNameRaList = page.FindMulti(recognitionObject);
-
-            if (partySwitchNameRaList == null || partySwitchNameRaList.Count <= 0)
+            for (var i = 0; i < 16; i++)    // 6.0版本最多20个队伍
             {
-                Logger.LogInformation("管理队伍界面文字识别失败");
-                break;
-            }
+                using var page = CaptureToRectArea();
 
-            // 当前页存在则直接点击
-            foreach (var textRegion in partySwitchNameRaList)
-            {
-                if (Regex.IsMatch(textRegion.Text, partyName))
+                var partySwitchNameRaList = page.FindMulti(recognitionObject);
+
+                if (partySwitchNameRaList == null || partySwitchNameRaList.Count <= 0)
                 {
-                    page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
-                    await Delay(200, ct);
-                    Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
-                    await ConfirmParty(page, ct, isInPartyViewUi);
-
-                    RunnerContext.Instance.ClearCombatScenes();
-                    return true;
+                    Logger.LogInformation("管理队伍界面文字识别失败");
+                    break;
                 }
+
+                // 当前页存在则直接点击
+                foreach (var textRegion in partySwitchNameRaList)
+                {
+                    if (Regex.IsMatch(textRegion.Text, partyName))
+                    {
+                        page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
+                        await Delay(200, ct);
+                        Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
+                        await ConfirmParty(page, ct, isInPartyViewUi);
+
+                        RunnerContext.Instance.ClearCombatScenes();
+                        return true;
+                    }
+                }
+
+                Region lowest = partySwitchNameRaList.Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale).OrderBy(r => r.Y).Last();
+                lowest.DrawSelf("底部的队伍");
+
+                if (lowest.Y < 777 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
+                {
+                    Logger.LogInformation("已抵达最后一个队伍");
+                    break;
+                }
+
+                // 点击下一页
+                if (i == 0)
+                {
+                    // #ebe4d8 首次点一下第一个，防止第五个被点击过
+                    page.ClickTo(600 * _assetScale, 200 * _assetScale);
+                }
+
+                page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移
+                await Delay(400, ct);
             }
-
-            Region lowest = partySwitchNameRaList.OrderBy(r => r.Y).Last();
-
-            if (lowest.Y < 666 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
-            {
-                Logger.LogInformation("已抵达最后一个队伍");
-                break;
-            }
-
-            // 点击下一页
-            if (i == 0)
-            {
-                // #ebe4d8 首次点一下第一个，防止第五个被点击过
-                page.ClickTo(600 * _assetScale, 200 * _assetScale);
-            }
-
-            page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移
-            await Delay(400, ct);
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
 
         // 未找到
