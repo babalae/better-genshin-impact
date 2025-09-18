@@ -175,20 +175,7 @@ public class Avatar
                     break;
             }
 
-            // 6.0 特殊逻辑
-            if (i > 3 && CombatScenes.IndexRectOffset60Fix)
-            {
-                // 3次失败考虑是否偏移出现问题，修改偏移位置
-                // 只有 草露 角色离队，然后跨地图传送后，会出现这个场景。也就是只有 偏移 -> 原始 的场景
-                foreach (var avatar in CombatScenes.GetAvatars())
-                {
-                    var rect1 = avatar.IndexRect;
-                    rect1.Y += 14;
-                    avatar.IndexRect = rect1;
-                }
-
-                CombatScenes.IndexRectOffset60Fix = false;
-            }
+            Offset60Fix(i);
 
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
@@ -247,6 +234,8 @@ public class Avatar
                 default:
                     break;
             }
+            
+            Offset60Fix(i);
 
             Sleep(250, Ct);
         }
@@ -292,8 +281,28 @@ public class Avatar
                 default:
                     break;
             }
+            
+            Offset60Fix(i);
 
             Sleep(250);
+        }
+    }
+
+    private void Offset60Fix(int i)
+    {
+        // 6.0 特殊逻辑
+        if (i > 3 && CombatScenes.IndexRectOffset60Fix)
+        {
+            // 3次失败考虑是否偏移出现问题，修改偏移位置
+            // 只有 草露 角色离队，然后跨地图传送后，会出现这个场景。也就是只有 偏移 -> 原始 的场景
+            foreach (var avatar in CombatScenes.GetAvatars())
+            {
+                var rect1 = avatar.IndexRect;
+                rect1.Y += 14;
+                avatar.IndexRect = rect1;
+            }
+
+            CombatScenes.IndexRectOffset60Fix = false;
         }
     }
 
