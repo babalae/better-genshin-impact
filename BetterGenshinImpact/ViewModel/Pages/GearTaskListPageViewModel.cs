@@ -4,11 +4,15 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System;
+using System.Collections.Generic;
 using BetterGenshinImpact.ViewModel.Pages.Component;
 using BetterGenshinImpact.Service;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
+using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.GearTask;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -380,6 +384,52 @@ public partial class GearTaskListPageViewModel : ViewModel
                 return; // 用户取消了操作
             }
         }
+        else if (taskType == "Shell")
+        {
+            var list = LoadAllKmScripts();
+            var folder = KeyMouseRecordPageViewModel.ScriptPath;
+            var combobox = new ComboBox
+            {
+                VerticalAlignment = VerticalAlignment.Top
+            };
+
+            foreach (var fileInfo in list)
+            {
+                // 计算相对于 KeyMouseScript 文件夹的相对路径
+                var relativePath = Path.GetRelativePath(folder, fileInfo.FullName);
+                combobox.Items.Add(relativePath);
+            }
+
+            var str = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
+            if (!string.IsNullOrEmpty(str))
+            {
+                newTask = new GearTaskViewModel(str)
+                {
+                    TaskType = "Javascript",
+                    Path = @$"{{kmUserFolder}}\{str}\"
+                };
+            }
+            else
+            {
+                return;
+            }
+        }
+        else if (taskType == "Shell")
+        {
+            var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点", "请输入需要执行的shell");
+            if (!string.IsNullOrEmpty(str))
+            {
+                newTask = new GearTaskViewModel(str)
+                {
+                    TaskType = "Shell",
+                    Parameters = str
+                };
+            }
+            else
+            {
+                return;
+            }
+        }
         else
         {
             // 其他类型使用原有的对话框
@@ -409,6 +459,16 @@ public partial class GearTaskListPageViewModel : ViewModel
 
         // 自动保存到文件
         await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+    }
+    
+    private List<FileInfo> LoadAllKmScripts()
+    {
+        var folder = KeyMouseRecordPageViewModel.ScriptPath;
+        // 获取所有脚本项目
+        var files = Directory.GetFiles(folder, "*.*",
+            SearchOption.AllDirectories);
+
+        return files.Select(file => new FileInfo(file)).ToList();
     }
 
     /// <summary>

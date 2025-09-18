@@ -51,9 +51,10 @@ public partial class GearTaskViewModel : ObservableObject
 
     /// <summary>
     /// 任务参数，存储为JSON字符串
+    /// shell 脚本存储 shell 命令
     /// </summary>
     [ObservableProperty]
-    private string _parameters = "{}";
+    private string _parameters = "";
 
     /// <summary>
     /// 创建时间

@@ -188,7 +188,7 @@ public partial class ScriptGroupProject : ObservableObject
         else if (Type == "KeyMouse")
         {
             // 加载并执行
-            var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"));
+            var json = await File.ReadAllTextAsync(Path.Combine(KeyMouseRecordPageViewModel.ScriptPath, Name));
             await KeyMouseMacroPlayer.PlayMacro(json, CancellationContext.Instance.Cts.Token, false);
         }
         else if (Type == "Pathing")
