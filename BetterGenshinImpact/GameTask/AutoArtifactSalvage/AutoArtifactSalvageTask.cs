@@ -146,7 +146,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             if (Bv.IsInPromptDialog(ra))
             {
                 // 如果存在物品过期提示，则点击确认按钮
-                Bv.ClickWhiteConfirmButton(ra.DeriveCrop(0, 0, ra.Width, ra.Height - ra.Height / 0.2));
+                Bv.ClickWhiteConfirmButton(ra.DeriveCrop(0, 0, ra.Width, ra.Height - ra.Height * 0.2));
                 Sleep(300, ct);
                 return false;
             }
