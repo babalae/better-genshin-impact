@@ -1,7 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
-using BetterGenshinImpact.Service;
-using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;

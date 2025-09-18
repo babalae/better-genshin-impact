@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
@@ -254,7 +255,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         var ra = CaptureToRectArea();
 
         var ocrList = ra.FindMulti(RecognitionObject.OcrThis);
-        if (ocrList.Any(o => o.Text.Contains("好友挑战")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
+        if (ocrList.Any(o => o.Text.Contains("角色预览")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
         {
             // 选择boss
             _logger.LogInformation($"{Name}：选择BOSS编号{{Text}}", _taskParam.BossNum);
@@ -398,7 +399,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 // 自动刷干树脂
                 // 识别树脂状况
-                var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
+                var resinStatus = ResinStatus.RecogniseFromRegion(ra3, TaskContext.Instance().SystemInfo, OcrFactory.Paddle);
                 resinStatus.Print(_logger);
 
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })

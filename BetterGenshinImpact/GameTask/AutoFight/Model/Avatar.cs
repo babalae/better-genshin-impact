@@ -175,6 +175,8 @@ public class Avatar
                     break;
             }
 
+            Offset60Fix(i);
+
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -232,6 +234,8 @@ public class Avatar
                 default:
                     break;
             }
+            
+            Offset60Fix(i);
 
             Sleep(250, Ct);
         }
@@ -277,8 +281,28 @@ public class Avatar
                 default:
                     break;
             }
+            
+            Offset60Fix(i);
 
             Sleep(250);
+        }
+    }
+
+    private void Offset60Fix(int i)
+    {
+        // 6.0 特殊逻辑
+        if (i > 3 && CombatScenes.IndexRectOffset60Fix)
+        {
+            // 3次失败考虑是否偏移出现问题，修改偏移位置
+            // 只有 草露 角色离队，然后跨地图传送后，会出现这个场景。也就是只有 偏移 -> 原始 的场景
+            foreach (var avatar in CombatScenes.GetAvatars())
+            {
+                var rect1 = avatar.IndexRect;
+                rect1.Y += 14;
+                avatar.IndexRect = rect1;
+            }
+
+            CombatScenes.IndexRectOffset60Fix = false;
         }
     }
 
@@ -294,19 +318,23 @@ public class Avatar
         }
         else
         {
-            // 剪裁出IndexRect区域
-            var indexRa = region.DeriveCrop(IndexRect);
-            // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
-            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.CacheGreyMat, 251, 255);
-            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            var white = IsIndexRectWhite(region, IndexRect);
+            return !white;
         }
+    }
+    
+    private bool IsIndexRectWhite(ImageRegion region, Rect rect)
+    {
+        // 剪裁出IndexRect区域
+        var indexRa = region.DeriveCrop(rect);
+        var mat = indexRa.CacheGreyMat;
+        var count = OpenCvCommonHelper.CountGrayMatColor(mat, 251, 255);
+        if (count * 1.0 / (mat.Width * mat.Height) > 0.5)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

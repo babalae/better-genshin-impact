@@ -8,6 +8,8 @@ namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 public class ElementAssets : BaseAssets<ElementAssets>
 {
+    public RecognitionObject PromptDialogLeftBottomStar;  // 弹出框左下角的星星
+
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
     public RecognitionObject BtnBlackConfirm;
@@ -87,6 +89,14 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     private ElementAssets()
     {
+        PromptDialogLeftBottomStar = new RecognitionObject
+        {
+            Name = "PromptDialogLeftBottomStar",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "prompt_dialog_left_bottom_star.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height - CaptureRect.Height / 2),
+            Threshold = 0.8,
+        }.InitTemplate();
         // 按钮
         BtnWhiteConfirm = new RecognitionObject
         {
@@ -242,7 +252,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "fragileResinCount",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "fragile_resin_count.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height * 3/ 4, CaptureRect.Width / 3, CaptureRect.Height / 6),
             DrawOnWindow = true
         }.InitTemplate();
         CondensedResinCount = new RecognitionObject

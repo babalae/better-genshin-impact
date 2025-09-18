@@ -9,16 +9,26 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
     {
         private readonly ConcurrentDictionary<string, PaddleOcrService> _paddleOcrServices = new();
 
-        public PaddleOcrService Get(string cultureInfoName = "zh-Hans")
+        public PaddleOcrService Get(string cultureInfoName = "zh-Hans", string version = "V5")
         {
             return _paddleOcrServices.GetOrAdd(cultureInfoName, name =>
             {
                 lock (_paddleOcrServices)
                 {
-                    return new PaddleOcrService(
-                        new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
-                        PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(name)) ??
-                        PaddleOcrService.PaddleOcrModelType.V5);
+                    if (version == "V5")
+                    {
+                        return new PaddleOcrService(new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
+                            PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(name)) ?? PaddleOcrService.PaddleOcrModelType.V5);
+                    }
+                    else if (version == "V4")
+                    {
+                        return new PaddleOcrService(new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
+                            PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(new CultureInfo(name)) ?? PaddleOcrService.PaddleOcrModelType.V4);
+                    }
+                    else
+                    {
+                        throw new NotSupportedException();
+                    }
                 }
             });
         }

@@ -16,6 +16,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.GetGridIcons;
@@ -51,7 +52,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     public static InferenceSession LoadModel(out Dictionary<string, float[]> prototypes)
     {
         #region 加载model
-        var session = new InferenceSession(@".\Assets\Model\Item\gridIcon.onnx");
+        var session = new InferenceSession(Global.Absolute(@"Assets\Model\Item\gridIcon.onnx"));
 
         var metadata = session.ModelMetadata;
 
@@ -62,7 +63,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
         #endregion
         #region 加载原型向量
-        var allLines = File.ReadLines(@".\Assets\Model\Item\items.csv").Skip(1);    // 跳过首行列名
+        var allLines = File.ReadLines(Global.Absolute(@"Assets\Model\Item\items.csv")).Skip(1);    // 跳过首行列名
         prototypes = new Dictionary<string, float[]>();
         foreach (string line in allLines)
         {
@@ -113,15 +114,15 @@ public class GridIconsAccuracyTestTask : ISoloTask
             Task task1 = Delay(300, ct);
 
             // 用模型推理得到的结果
-            Task<(string, int)> task2 = Task.Run(() =>
+            Task<(string?, int)> task2 = Task.Run(() =>
             {
                 using Mat icon = itemRegion.SrcMat.GetGridIcon();
                 return Infer(icon, session, prototypes);
             }, ct);
 
             await Task.WhenAll(task1, task2);
-            (string, int) result = task2.Result;
-            string predName = result.Item1;
+            (string?, int) result = task2.Result;
+            string? predName = result.Item1;
             int predStarNum = result.Item2;
 
             // 用CV方法得到的结果
@@ -135,7 +136,11 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
             // 统计结果
             total_count++;
-            if (itemName.Contains(predName) && predStarNum == itemStarNum)
+            if (predName == null)
+            {
+                logger.LogInformation($"模型没有识别，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+            }
+            else if (itemName.Contains(predName) && predStarNum == itemStarNum)
             {
                 total_acc++;
                 logger.LogInformation($"{predName}|{predStarNum}星，✔，正确率{total_acc / total_count:0.00}");
@@ -162,7 +167,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     /// <param name="prototypes"></param>
     /// <returns>(预测名称, 预测星级)</returns>
     /// <exception cref="Exception"></exception>
-    public static (string, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
+    public static (string?, int) Infer(Mat mat, InferenceSession session, Dictionary<string, float[]> prototypes)
     {
         if (mat.Size().Width != 125 || mat.Size().Height != 125)
         {
@@ -193,15 +198,18 @@ public class GridIconsAccuracyTestTask : ISoloTask
             }
             if (min2 == null || distance2 < min2)
             {
-                pred_name = prototype.Key;
                 min2 = distance2;
+                if (min2 < 10 * 10) // todo：负样本距离10直接读取模型
+                {
+                    pred_name = prototype.Key;
+                }
             }
         }
-        if (pred_name == null || min2 == null)
+        if (min2 == null)
         {
             throw new Exception("特征数据为空");
         }
-        min2 = Math.Sqrt(min2.Value);
+        // min2 = Math.Sqrt(min2.Value);
         int pred_star = results[2].AsEnumerable<float>().ToList().IndexOf(results[2].AsEnumerable<float>().Max());
         return (pred_name, pred_star);
     }

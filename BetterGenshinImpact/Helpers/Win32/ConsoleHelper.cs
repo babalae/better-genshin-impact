@@ -89,19 +89,19 @@ public static class ConsoleHelper
         // 重定向标准输出流
         var stdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
         var stdOutStream = new FileStream(stdOutHandle, FileAccess.Write);
-        var stdOutWriter = new StreamWriter(stdOutStream, Encoding.UTF8) { AutoFlush = true };
+        var stdOutWriter = new StreamWriter(stdOutStream, Console.OutputEncoding) { AutoFlush = true };
         Console.SetOut(stdOutWriter);
 
         // 重定向标准错误流
         var stdErrHandle = GetStdHandle(STD_ERROR_HANDLE);
         var stdErrStream = new FileStream(stdErrHandle, FileAccess.Write);
-        var stdErrWriter = new StreamWriter(stdErrStream, Encoding.UTF8) { AutoFlush = true };
+        var stdErrWriter = new StreamWriter(stdErrStream, Console.OutputEncoding) { AutoFlush = true };
         Console.SetError(stdErrWriter);
 
         // 重定向标准输入流
         var stdInHandle = GetStdHandle(STD_INPUT_HANDLE);
         var stdInStream = new FileStream(stdInHandle, FileAccess.Read);
-        var stdInReader = new StreamReader(stdInStream, Encoding.UTF8);
+        var stdInReader = new StreamReader(stdInStream, Console.InputEncoding);
         Console.SetIn(stdInReader);
     }
 

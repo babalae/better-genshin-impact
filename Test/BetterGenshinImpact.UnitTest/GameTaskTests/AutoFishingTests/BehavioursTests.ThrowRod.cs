@@ -14,7 +14,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
     {
         [Theory]
         [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.FalseWormBait)]
-        [InlineData(@"20250226162217468_ThrowRod_Succeeded.png", BaitType.FruitPasteBait)]
         /// <summary>
         /// 测试各种抛竿，结果为成功
         /// </summary>
@@ -43,6 +42,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [Theory]
         [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.RedrotBait)]
         [InlineData(@"20250225101304534_ThrowRod_Succeeded.png", BaitType.FakeFlyBait)]
+        [InlineData(@"20250226162217468_ThrowRod_Succeeded.png", BaitType.FruitPasteBait)]
         /// <summary>
         /// 测试各种抛竿，未满足HutaoFisher判定，结果为运行中
         /// </summary>
