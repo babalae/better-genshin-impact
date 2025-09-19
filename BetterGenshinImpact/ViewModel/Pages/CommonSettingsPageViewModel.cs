@@ -314,6 +314,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
+        MessageBoxResult result = await MessageBox.ShowAsync("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？", "警告", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Exclamation, System.Windows.MessageBoxResult.None);
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+        
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
         {
             Trigger = UpdateTrigger.Manual,
