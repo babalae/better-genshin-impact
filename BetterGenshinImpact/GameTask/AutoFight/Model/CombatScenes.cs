@@ -156,6 +156,42 @@ public class CombatScenes : IDisposable
     /// <param name="avatarIndexRectList"></param>
     public bool AvatarSideFixOffset(ImageRegion imageRegion, List<Rect> avatarSideIconRectList, List<Rect> avatarIndexRectList)
     {
+        List<Rect> avatarSideIconRectListOffset;
+        List<Rect> avatarIndexRectListOffset;
+        // 直接重新进行初始化，以这个为基准进行修改
+        var pRaList = imageRegion.FindMulti(AutoFightAssets.Instance.PRa);
+        if (pRaList.Count > 0)
+        {
+            var num = pRaList.Count + 1;
+            if (num > 4)
+            {
+                throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
+            }
+
+            // 联机状态下判断
+            var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
+            var p = "p";
+            if (!onePRa.IsEmpty())
+            {
+                Logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
+                p = "1p";
+            }
+            else
+            {
+                Logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
+            }
+
+            avatarSideIconRectListOffset = AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{num}"];
+            avatarIndexRectListOffset = AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{num}"];
+
+            ExpectedTeamAvatarNum = avatarSideIconRectList.Count;
+        }
+        else
+        {
+            avatarSideIconRectListOffset = AutoFightAssets.Instance.AvatarSideIconRectList;
+            avatarIndexRectListOffset = AutoFightAssets.Instance.AvatarIndexRectList;
+        }
+        
         // 角色序号 左上角 坐标偏移（+2, -5）后存在3个白色点，则认为存在 草露 进度条
         // 存在 草露 进度条时候整体上移 14 个像素
         int whitePointCount = 0;
@@ -172,24 +208,45 @@ public class CombatScenes : IDisposable
 
         if (whitePointCount >= 3)
         {
-            Logger.LogInformation("检测到右侧队伍偏移，进行位置修正");
+            Logger.LogInformation("检测到右侧队伍上偏移，进行位置确认");
+
             for (int i = 0; i < avatarSideIconRectList.Count; i++)
             {
-                var rect = avatarSideIconRectList[i];
+                var rect = avatarSideIconRectListOffset[i];
                 rect.Y -= 14;
                 avatarSideIconRectList[i] = rect;
             }
 
             for (int i = 0; i < avatarIndexRectList.Count; i++)
             {
-                var rect = avatarIndexRectList[i];
+                var rect = avatarIndexRectListOffset[i];
                 rect.Y -= 14;
                 avatarIndexRectList[i] = rect;
             }
 
             return true;
         }
+        
+        if (whitePointCount <= 1)//发现有时候识别到一个白点
+        {
+            Logger.LogInformation("检测到右侧队伍下偏移，进行位置位置");
+            for (int i = 0; i < avatarSideIconRectList.Count; i++)
+            {
+                var rect = avatarSideIconRectListOffset[i];
+                rect.Y += 14;
+                avatarSideIconRectList[i] = rect;
+            }
 
+            for (int i = 0; i < avatarIndexRectList.Count; i++)
+            {
+                var rect = avatarIndexRectListOffset[i];
+                rect.Y += 14;
+                avatarIndexRectList[i] = rect;
+            }
+
+            return false;
+        }   
+        
         return false;
     }
     
