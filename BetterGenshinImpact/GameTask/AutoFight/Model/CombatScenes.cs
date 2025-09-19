@@ -172,7 +172,7 @@ public class CombatScenes : IDisposable
 
         if (whitePointCount >= 3)
         {
-            Logger.LogInformation("检测到右侧队伍上偏移，进行位置确认");
+            Logger.LogInformation("检测到右侧队伍上偏移，进行位置偏移");
 
             for (int i = 0; i < avatarSideIconRectList.Count; i++)
             {
@@ -190,10 +190,9 @@ public class CombatScenes : IDisposable
 
             return true;
         }
-        
-        if (whitePointCount <= 1)//发现有时候识别到一个白点
+        else if (whitePointCount <= 1) //发现有时候识别到一个白点
         {
-            Logger.LogInformation("检测到右侧队伍下偏移，进行位置位置");
+            Logger.LogInformation("检测到右侧队伍下偏移，进行位置偏移");
             for (int i = 0; i < avatarSideIconRectList.Count; i++)
             {
                 var rect = avatarSideIconRectList[i];
