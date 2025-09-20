@@ -276,4 +276,14 @@ public partial class NotificationConfig : ObservableObject
     ///     Discord Webhook 图像编码
     /// </summary>
     [ObservableProperty] private string _discordWebhookImageEncoder = "Jpeg";
+    
+    /// <summary>
+    ///     ServerChan通知是否启用
+    /// </summary>
+    [ObservableProperty] private bool _serverChanNotificationEnabled;
+
+    /// <summary>
+    ///     ServerChan SendKey
+    /// </summary>
+    [ObservableProperty] private string _serverChanSendKey = string.Empty;
 }
