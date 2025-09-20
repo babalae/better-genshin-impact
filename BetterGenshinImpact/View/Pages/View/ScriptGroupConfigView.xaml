@@ -416,6 +416,31 @@
                                                 MinWidth="120"
                                                 Text="{Binding PathingConfig.TaskCycleConfig.BoundaryTime}" />
                                 </Grid>
+                                <Grid Margin="16,0,16,16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="分界时间参考服务器时区"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="启用后，上面的分界时间将基于“服务器时区设置”计算。不启用则使用电脑本地时间（旧版行为）。"
+                                                  TextWrapping="Wrap" />
+                                    <ui:ToggleSwitch Grid.Row="0"
+                                                     Grid.RowSpan="2"
+                                                     Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.TaskCycleConfig.IsBoundaryTimeBasedOnServerTime}" />
+                                </Grid>
                                 <Grid Margin="16">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -590,6 +615,31 @@
                                                 Grid.Column="1"
                                                 MinWidth="120"
                                                 Text="{Binding PathingConfig.TaskCompletionSkipRuleConfig.BoundaryTime}" />
+                                </Grid>
+                                <Grid Margin="16,0,16,16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="分界时间参考服务器时区"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="启用后，上面的分界时间将基于“服务器时区设置”计算。不启用则使用电脑本地时间（旧版行为）。"
+                                                  TextWrapping="Wrap" />
+                                    <ui:ToggleSwitch Grid.Row="0"
+                                                     Grid.RowSpan="2"
+                                                     Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime}" />
                                 </Grid>
                                 <Grid Margin="16">
                                     <Grid.RowDefinitions>

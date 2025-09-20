@@ -1,4 +1,5 @@
 ﻿using System;
+using BetterGenshinImpact.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -10,9 +11,13 @@ public partial class PathingPartyTaskCycleConfig : ObservableObject
     [ObservableProperty]
     private bool _enable = false;
     
-    //周期分界时间点
+    //周期分界时间点（小时），如果负数则不启用
     [ObservableProperty]
     private int _boundaryTime = 0;
+    // 分界时间是否基于服务器时间（否则基于本地时间）
+    [ObservableProperty]
+    private bool _isBoundaryTimeBasedOnServerTime = false;
+
     
     //不同材料有不同的周期，按需配置，如矿石类是3、突破材料是2，或按照自已想几天执行一次配置即可
     [ObservableProperty]
@@ -25,7 +30,7 @@ public partial class PathingPartyTaskCycleConfig : ObservableObject
     private int _index = 1;
     
     
-    public int GetExecutionOrder(DateTime now)
+    public int GetExecutionOrder(DateTimeOffset now)
     {
         try
         {
@@ -54,6 +59,12 @@ public partial class PathingPartyTaskCycleConfig : ObservableObject
             return -1;
         }
 
+    }
+    public int GetExecutionOrder()
+    {
+        return GetExecutionOrder(IsBoundaryTimeBasedOnServerTime
+            ? ServerTimeHelper.GetServerTimeNow()
+            : DateTimeOffset.Now);
     }
     
 }

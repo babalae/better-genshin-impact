@@ -8,6 +8,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.LogParse;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -212,8 +213,8 @@ public static class FarmingStatsRecorder
     public static DailyFarmingData ReadDailyFarmingData()
     {
         // 确定统计日期（以凌晨4点为分界）
-        DateTime now = DateTime.Now;
-        DateTime statsDate = CalculateStatsDate(now);
+        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
+        DateTimeOffset statsDate = CalculateStatsDate(now);
         string dateString = statsDate.ToString("yyyyMMdd");
 
         // 确保目录存在
@@ -228,7 +229,7 @@ public static class FarmingStatsRecorder
     /// <summary>
     /// 计算统计日期（凌晨4点为分界）
     /// </summary>
-    private static DateTime CalculateStatsDate(DateTime currentTime)
+    private static DateTime CalculateStatsDate(DateTimeOffset currentTime)
     {
         // 如果当前时间在4点之前，则算作前一天
         return currentTime.Hour < 4 ? currentTime.Date.AddDays(-1) : currentTime.Date;

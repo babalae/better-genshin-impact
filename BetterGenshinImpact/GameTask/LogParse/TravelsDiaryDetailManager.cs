@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
@@ -67,14 +68,14 @@ public class TravelsDiaryDetailManager
     }
     private static List<(int year, int month)> GetMonthPairs()
     {
-        DateTime now = DateTime.Now;
+        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
 
         List<(int year, int month)> result = new List<(int, int)>();
 
         if (now.Day == 1 && now.Hour < 4)
         {
             // 上个月
-            DateTime lastMonth = now.AddMonths(-1);
+            DateTimeOffset lastMonth = now.AddMonths(-1);
             result.Add((lastMonth.Year, lastMonth.Month));
         }
 
@@ -90,10 +91,10 @@ public class TravelsDiaryDetailManager
     {
         //正序的
         var sortedList = loadAllActionItems(gameInfo, GetMonthPairs());
-        DateTime now = DateTime.Now;
-        DateTime today4am = now.Date.AddHours(4);
+        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
+        DateTimeOffset today4am = new DateTimeOffset(now.Year, now.Month, now.Day, 4, 0, 0, now.Offset);
 
-        DateTime startTime, endTime;
+        DateTimeOffset startTime, endTime;
 
         if (now < today4am)
         {
@@ -231,11 +232,14 @@ public class TravelsDiaryDetailManager
             throw new FileNotFoundException("文件未找到", filePath);
         }
 
-        DateTime lastModified = File.GetLastWriteTime(filePath);
-
+        // File.GetLastWriteTime 返回 DateTime 类型为 DateTimeKind.Local
+        DateTimeOffset lastModified =
+            new DateTimeOffset(File.GetLastWriteTime(filePath)).ToOffset(ServerTimeHelper.GetServerTimeOffset());
+        
         // 获取当前月份的开始和结束日期
-        DateTime startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-        DateTime endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
+        DateTimeOffset startOfMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, now.Offset);
+        DateTimeOffset endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
 
         // 判断文件最后修改时间是否在本月
         return lastModified >= startOfMonth && lastModified <= endOfMonth;
@@ -244,7 +248,7 @@ public class TravelsDiaryDetailManager
     static List<(int year, int month)> GetCurrentAndPreviousTwoMonths()
     {
         List<(int year, int month)> months = new List<(int year, int month)>();
-        DateTime now = DateTime.Now;
+        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
 
         for (int i = 0; i < 3; i++)
         {

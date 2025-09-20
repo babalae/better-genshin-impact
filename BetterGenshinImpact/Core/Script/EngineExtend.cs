@@ -62,7 +62,8 @@ public class EngineExtend
         
         engine.AddHostObject("OpenCvSharp", new HostTypeCollection("OpenCvSharp"));
 
-
+        engine.AddHostType("ServerTime", typeof(ServerTime));
+        
 
 
         // 添加C#的类型
