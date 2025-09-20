@@ -131,12 +131,12 @@ public partial class GearTriggerViewModel : ObservableObject
         GearBaseTrigger trigger = TriggerType switch
         {
             TriggerType.Sequential => new SequentialGearTrigger(),
-            TriggerType.Timed => new TimedGearTrigger
+            TriggerType.Timed => new QuartzCronGearTrigger
             {
-                IntervalMs = IntervalMs,
-                IsRepeating = IsRepeating,
-                DelayMs = DelayMs,
-                MaxExecutions = MaxExecutions
+                // IntervalMs = IntervalMs,
+                // IsRepeating = IsRepeating,
+                // DelayMs = DelayMs,
+                // MaxExecutions = MaxExecutions
             },
             TriggerType.Hotkey => new HotkeyGearTrigger
             {

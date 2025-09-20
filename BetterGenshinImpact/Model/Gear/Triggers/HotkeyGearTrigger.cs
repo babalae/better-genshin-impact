@@ -31,7 +31,7 @@ public class HotkeyGearTrigger : GearBaseTrigger
     private DateTime _lastExecutionTime = DateTime.MinValue;
     private bool _isExecuting = false;
 
-    public override async Task Run()
+    public override async Task Trigger()
     {
         // 热键触发器通常不直接调用Run方法
         // 而是通过热键事件触发ExecuteTasks方法

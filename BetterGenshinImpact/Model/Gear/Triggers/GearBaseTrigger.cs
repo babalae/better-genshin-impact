@@ -16,5 +16,5 @@ public abstract class GearBaseTrigger
     /// <summary>
     /// 执行任务
     /// </summary>
-    public abstract Task Run();
+    public abstract Task Trigger();
 }

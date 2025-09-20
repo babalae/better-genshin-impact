@@ -31,6 +31,8 @@ using Serilog.Sinks.RichTextBox.Abstraction;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Controls;
+using Quartz;
+using BetterGenshinImpact.Model.Gear.Triggers;
 
 namespace BetterGenshinImpact;
 
@@ -96,6 +98,20 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
+                
+                // Quartz.NET 调度器配置
+                services.AddQuartz(q =>
+                {
+                    q.UseSimpleTypeLoader();
+                    q.UseInMemoryStore();
+                    q.UseDefaultThreadPool(tp =>
+                    {
+                        tp.MaxConcurrency = 1;
+                    });
+                });
+                services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+                services.AddSingleton<QuartzSchedulerService>();
+                services.AddHostedService(sp => sp.GetRequiredService<QuartzSchedulerService>());
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();
@@ -141,6 +157,8 @@ public partial class App : Application
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
                 services.AddSingleton<GearTaskStorageService>();
+
+
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
