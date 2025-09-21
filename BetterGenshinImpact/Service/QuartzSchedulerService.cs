@@ -12,16 +12,9 @@ namespace BetterGenshinImpact.Service;
 /// <summary>
 /// Quartz.NET 调度器服务
 /// </summary>
-public class QuartzSchedulerService : IHostedService
+public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger, ISchedulerFactory schedulerFactory) : IHostedService
 {
-    private readonly ILogger<QuartzSchedulerService> _logger;
-    private static ISchedulerFactory _schedulerFactory;
-
-    public QuartzSchedulerService(ILogger<QuartzSchedulerService> logger, ISchedulerFactory schedulerFactory)
-    {
-        _logger = logger;
-        _schedulerFactory = schedulerFactory;
-    }
+    private ILogger<QuartzSchedulerService> _logger = logger;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -47,7 +40,7 @@ public class QuartzSchedulerService : IHostedService
             jobsDictionary.Add(job, triggerSet);
         }
 
-        var scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
+        var scheduler = await schedulerFactory.GetScheduler(cancellationToken);
         await scheduler.ScheduleJobs(jobsDictionary, replace: true, cancellationToken);
     }
 
