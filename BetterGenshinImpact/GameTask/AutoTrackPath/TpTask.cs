@@ -918,13 +918,20 @@ public class TpTask
 
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
-        if (hasTeleportButton) return;   // 可以传送了，结束
-        // 3. 没点出传送按钮，且不存在外部地图关闭按钮
+        
+        // 3. 判断是否在离开他人尘歌壶界面
+        var hasSereniteaPotExitConfirmButton = CheckSereniteaPotExitConfirmButton(imageRegion);
+        await Delay(500, ct);
+        
+        if (hasSereniteaPotExitConfirmButton) return; // 在离开他人尘歌壶界面，点击确认并传送，结束
+        if (hasTeleportButton) return;   // 不在离开他人尘歌壶界面，可以传送了，结束
+        
+        // 4. 没点出传送按钮，且不存在外部地图关闭按钮
         // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表
         var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
         if (!mapCloseRa1.IsEmpty()) throw new TpPointNotActivate("传送点未激活或不存在");
 
-        // 4. 循环判断选项列表是否有传送点(未激活点位也在里面)
+        // 5. 循环判断选项列表是否有传送点(未激活点位也在里面)
         var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
         // 没有传送点说明不是传送点
         if (!hasMapChooseIcon) throw new TpPointNotActivate("选项列表不存在传送点");
@@ -962,7 +969,18 @@ public class TpTask
         });
         return hasTeleportButton;
     }
-
+    
+    private bool CheckSereniteaPotExitConfirmButton(ImageRegion imageRegion)
+    {
+        var hasSereniteaPotExitConfirmButton = false;
+        imageRegion.Find(_assets.SereniteaPotExitConfirmButtonRo, ra =>
+        {
+            ra.Click();
+            hasSereniteaPotExitConfirmButton = true;
+        });
+        return hasSereniteaPotExitConfirmButton;
+    }
+    
     /// <summary>
     /// 全匹配一遍并进行文字识别
     /// 60ms ~200ms

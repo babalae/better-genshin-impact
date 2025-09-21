@@ -70,7 +70,12 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
             // 2. 判断是否有传送按钮
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
-
+            
+            // 3. 判断是否有尘歌壶退出按钮，有的话点击退出，直接返回
+            var hasSereniteaPotExitConfirmButton = CheckSereniteaPotConfirmExitButton(content.CaptureRectArea);
+            
+            if (hasSereniteaPotExitConfirmButton) return;
+            
             if (!hasTeleportButton)
             {
                 // 存在地图关闭按钮，说明未选中传送点，直接返回
@@ -87,7 +92,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                     return;
                 }
 
-                // 3. 循环判断选项列表是否有传送点
+                // 4. 循环判断选项列表是否有传送点
                 var hasMapChooseIcon = CheckMapChooseIcon(content);
                 if (hasMapChooseIcon)
                 {
@@ -113,7 +118,18 @@ internal class QuickTeleportTrigger : ITaskTrigger
         });
         return hasTeleportButton;
     }
-
+    
+    private bool CheckSereniteaPotConfirmExitButton(ImageRegion imageRegion)
+    {
+        var hasSereniteaPotExitButton = false;
+        imageRegion.Find(_assets.SereniteaPotExitConfirmButtonRo, ra =>
+        {
+            ra.Click();
+            hasSereniteaPotExitButton = true;
+        });
+        return hasSereniteaPotExitButton;
+    }
+    
     /// <summary>
     /// 全匹配一遍并进行文字识别
     /// 60ms ~200ms

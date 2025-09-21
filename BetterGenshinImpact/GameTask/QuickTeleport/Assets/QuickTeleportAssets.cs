@@ -19,6 +19,8 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
     public RecognitionObject MapUndergroundSwitchButtonRo;
     public RecognitionObject MapUndergroundToGroundButtonRo;
 
+    public RecognitionObject SereniteaPotExitConfirmButtonRo;
+    
     private QuickTeleportAssets()
     {
         MapChooseIconRoi = new Rect((int)(1270 * AssetScale),
@@ -124,6 +126,17 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
                 (int)(250 * AssetScale),
                 (int)(90 * AssetScale),
                 (int)(570 * AssetScale)),
+            DrawOnWindow = false
+        }.InitTemplate();
+        SereniteaPotExitConfirmButtonRo = new RecognitionObject
+        {
+            Name = "SereniteaPotExitConfirmButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("QuickTeleport", "SereniteaPotExitConfirm.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(950 * AssetScale),
+                (int)(725 * AssetScale),
+                (int)(79 * AssetScale),
+                (int)(79 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
     }
