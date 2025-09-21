@@ -1101,7 +1101,7 @@ public class PathExecutor
             return null;
         }
 
-        var success = avatar.TrySwitch();
+        var success = avatar.TrySwitch(5);//多切换一次，否则如果切人纠正要等下一个循环
         if (success)
         {
             await Delay(100, ct);
