@@ -40,6 +40,8 @@ public class AutoFightTask : ISoloTask
     private readonly double _dpi = TaskContext.Instance().DpiScale;
 
     public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
+    
+    public static bool FightStatusFlag { get; set; } = false;
 
     private class TaskFightFinishDetectConfig
     {
@@ -287,6 +289,8 @@ public class AutoFightTask : ISoloTask
         {
             try
             {
+                FightStatusFlag = true;
+                
                 while (!cts2.Token.IsCancellationRequested)
                 {
                     // 所有战斗角色都可以被取消
@@ -442,6 +446,7 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 Simulation.ReleaseAllKey();
+                FightStatusFlag = false;
             }
         }, cts2.Token);
 

@@ -94,6 +94,7 @@ public class Avatar
         NameRect = nameRect;
         CombatAvatar = DefaultAutoFightConfig.CombatAvatarMap[name];
         ManualSkillCd = manualSkillCd;
+        AutoFightTask.FightStatusFlag = false;
     }
 
 
@@ -175,6 +176,8 @@ public class Avatar
                     break;
             }
 
+            Offset60Fix(i);
+
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -232,6 +235,8 @@ public class Avatar
                 default:
                     break;
             }
+            
+            Offset60Fix(i);
 
             Sleep(250, Ct);
         }
@@ -277,9 +282,44 @@ public class Avatar
                 default:
                     break;
             }
+            
+            Offset60Fix(i);
 
             Sleep(250);
         }
+    }
+
+    private void Offset60Fix(int i)
+    {
+        // 3次失败考虑是否偏移出现问题，修改偏移位置
+        if (i <= 2 || AutoFightTask.FightStatusFlag)
+        {
+            return;
+        }
+        
+        if (CombatScenes.IndexRectOffset60Fix)
+        {
+            foreach (var avatar in CombatScenes.GetAvatars())
+            {
+                var originalRect = AutoFightAssets.Instance.AvatarIndexRectList[avatar.Index - 1];
+                var rect1 = new Rect(originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
+                avatar.IndexRect = rect1;
+            }
+            CombatScenes.IndexRectOffset60Fix = false;
+        }
+        else
+        {
+            foreach (var avatar in CombatScenes.GetAvatars())
+            {
+                var originalRect = AutoFightAssets.Instance.AvatarIndexRectList[avatar.Index - 1];
+                var rect1 = new Rect(originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
+                rect1.Y -= 14;
+                avatar.IndexRect = rect1;
+            }
+
+            CombatScenes.IndexRectOffset60Fix = true;
+        }
+        
     }
 
     /// <summary>
@@ -294,19 +334,23 @@ public class Avatar
         }
         else
         {
-            // 剪裁出IndexRect区域
-            var indexRa = region.DeriveCrop(IndexRect);
-            // Cv2.ImWrite($"log/indexRa_{Name}.png", indexRa.SrcMat);
-            var count = OpenCvCommonHelper.CountGrayMatColor(indexRa.CacheGreyMat, 251, 255);
-            if (count * 1.0 / (IndexRect.Width * IndexRect.Height) > 0.5)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            var white = IsIndexRectWhite(region, IndexRect);
+            return !white;
         }
+    }
+    
+    private bool IsIndexRectWhite(ImageRegion region, Rect rect)
+    {
+        // 剪裁出IndexRect区域
+        var indexRa = region.DeriveCrop(rect);
+        var mat = indexRa.CacheGreyMat;
+        var count = OpenCvCommonHelper.CountGrayMatColor(mat, 251, 255);
+        if (count * 1.0 / (mat.Width * mat.Height) > 0.5)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

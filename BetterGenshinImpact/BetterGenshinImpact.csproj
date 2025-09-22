@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.50.1-alpha.1</Version>
+		<Version>0.51.0</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -44,7 +44,7 @@
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.11" />
 		<PackageReference Include="BetterGI.Assets.Model" Version="1.0.12" />
-		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.8" />
+		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.9" />
 		
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />

@@ -40,6 +40,12 @@ public class CombatScenes : IDisposable
         App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
 
     public int ExpectedTeamAvatarNum { get; private set; } = 4;
+    
+        
+    /// <summary>
+    /// 6.0 UI偏移标识
+    /// </summary>
+    public bool IndexRectOffset60Fix { get; set; }
 
     /// <summary>
     /// 获取一个只读的Avatars
@@ -90,19 +96,19 @@ public class CombatScenes : IDisposable
                 Logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
             }
 
-            avatarSideIconRectList = AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{num}"];
-            avatarIndexRectList = AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{num}"];
+            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{num}"]);
+            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{num}"]);
 
             ExpectedTeamAvatarNum = avatarSideIconRectList.Count;
         }
         else
         {
-            avatarSideIconRectList = AutoFightAssets.Instance.AvatarSideIconRectList;
-            avatarIndexRectList = AutoFightAssets.Instance.AvatarIndexRectList;
+            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectList);
+            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectList);
         }
         
         // 6.0 版本 队伍下的 草露 进度条 导致位置偏移
-        AvatarSideFixOffset(imageRegion, avatarSideIconRectList, avatarIndexRectList);
+        IndexRectOffset60Fix = AvatarSideFixOffset(imageRegion, avatarSideIconRectList, avatarIndexRectList);
 
         // 识别队伍
         var names = new string[avatarSideIconRectList.Count];
@@ -148,11 +154,11 @@ public class CombatScenes : IDisposable
     /// <param name="imageRegion"></param>
     /// <param name="avatarSideIconRectList"></param>
     /// <param name="avatarIndexRectList"></param>
-    public void AvatarSideFixOffset(ImageRegion imageRegion, List<Rect> avatarSideIconRectList, List<Rect> avatarIndexRectList)
+    public bool AvatarSideFixOffset(ImageRegion imageRegion, List<Rect> avatarSideIconRectList, List<Rect> avatarIndexRectList)
     {
         // 角色序号 左上角 坐标偏移（+2, -5）后存在3个白色点，则认为存在 草露 进度条
         // 存在 草露 进度条时候整体上移 14 个像素
-        int whitePointCount = 0;
+        var whitePointCount = 0;
         foreach (var rectIndex in avatarIndexRectList)
         {
             int x = rectIndex.X + 2;
@@ -164,23 +170,28 @@ public class CombatScenes : IDisposable
             }
         }
 
-        if (whitePointCount >= 3)
+        if (whitePointCount < 3)
         {
-            Logger.LogInformation("检测到右侧队伍偏移，进行位置修正");
-            for (int i = 0; i < avatarSideIconRectList.Count; i++)
-            {
-                var rect = avatarSideIconRectList[i];
-                rect.Y -= 14;
-                avatarSideIconRectList[i] = rect;
-            }
-
-            for (int i = 0; i < avatarIndexRectList.Count; i++)
-            {
-                var rect = avatarIndexRectList[i];
-                rect.Y -= 14;
-                avatarIndexRectList[i] = rect;
-            }
+            return false;
         }
+
+        Logger.LogInformation("检测到右侧队伍上偏移，进行位置偏移");
+
+        for (var i = 0; i < avatarSideIconRectList.Count; i++)
+        {
+            var rect = avatarSideIconRectList[i];
+            rect.Y -= 14;
+            avatarSideIconRectList[i] = rect;
+        }
+
+        for (var i = 0; i < avatarIndexRectList.Count; i++)
+        {
+            var rect = avatarIndexRectList[i];
+            rect.Y -= 14;
+            avatarIndexRectList[i] = rect;
+        }
+
+        return true;
     }
     
 

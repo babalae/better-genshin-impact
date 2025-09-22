@@ -79,7 +79,12 @@ public class ResinStatus
             // 找出 icon 的位置 + 25 ~ icon 的位置+45 就是浓缩树脂的数字，数字宽20
             var condensedResinCountRect = new Rect(crop2.X + condensedResinRes.Right + (int)(20 * assetScale), (int)(37 * assetScale), (int)(70 * assetScale), (int)(24 * assetScale));
             using ImageRegion countRegion = region.DeriveCrop(condensedResinCountRect);
-            string cnt40 = ocrService.OcrWithoutDetector(countRegion.SrcMat);
+            using Mat threshold = countRegion.CacheGreyMat.Threshold(180, 255, ThresholdTypes.Binary);
+            using Mat bitwiseNot = new Mat();
+            Cv2.BitwiseNot(threshold, bitwiseNot);
+            //Cv2.ImShow("bitwise", bitwise);
+            //Cv2.WaitKey();
+            string cnt40 = ocrService.OcrWithoutDetector(bitwiseNot);
             status.CondensedResinCount = StringUtils.TryExtractPositiveInt(cnt40, 0);
         }
 

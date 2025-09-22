@@ -63,7 +63,9 @@ public partial class App : Application
                     .WriteTo.File(logFile,
                         outputTemplate:
                         "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
-                        rollingInterval: RollingInterval.Day)
+                        rollingInterval: RollingInterval.Day,
+                        retainedFileCountLimit: 31,
+                        retainedFileTimeLimit: TimeSpan.FromDays(21))
                     .WriteTo.Console(outputTemplate: 
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Debug()

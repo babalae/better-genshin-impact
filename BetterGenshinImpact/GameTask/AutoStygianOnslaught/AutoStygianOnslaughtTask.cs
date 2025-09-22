@@ -255,7 +255,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         var ra = CaptureToRectArea();
 
         var ocrList = ra.FindMulti(RecognitionObject.OcrThis);
-        if (ocrList.Any(o => o.Text.Contains("好友挑战")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
+        if (ocrList.Any(o => o.Text.Contains("角色预览")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
         {
             // 选择boss
             _logger.LogInformation($"{Name}：选择BOSS编号{{Text}}", _taskParam.BossNum);
