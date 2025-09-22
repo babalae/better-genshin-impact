@@ -920,10 +920,9 @@ public class TpTask
         var hasTeleportButton = CheckTeleportButton(imageRegion);
         
         // 3. 判断是否在离开他人尘歌壶界面
-        var hasSereniteaPotExitConfirmButton = CheckSereniteaPotExitConfirmButton(imageRegion);
-        await Delay(500, ct);
+        var hasClickBlackConfirmButton = Bv.ClickBlackConfirmButton(imageRegion);
         
-        if (hasSereniteaPotExitConfirmButton) return; // 在离开他人尘歌壶界面，点击确认并传送，结束
+        if (hasClickBlackConfirmButton) return; // 在离开他人尘歌壶界面，点击确认并传送，结束
         if (hasTeleportButton) return;   // 不在离开他人尘歌壶界面，可以传送了，结束
         
         // 4. 没点出传送按钮，且不存在外部地图关闭按钮
@@ -968,17 +967,6 @@ public class TpTask
             hasTeleportButton = true;
         });
         return hasTeleportButton;
-    }
-    
-    private bool CheckSereniteaPotExitConfirmButton(ImageRegion imageRegion)
-    {
-        var hasSereniteaPotExitConfirmButton = false;
-        imageRegion.Find(_assets.SereniteaPotExitConfirmButtonRo, ra =>
-        {
-            ra.Click();
-            hasSereniteaPotExitConfirmButton = true;
-        });
-        return hasSereniteaPotExitConfirmButton;
     }
     
     /// <summary>

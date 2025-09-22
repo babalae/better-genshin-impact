@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Model;
@@ -72,9 +73,9 @@ internal class QuickTeleportTrigger : ITaskTrigger
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
             
             // 3. 判断是否有尘歌壶退出按钮，有的话点击退出，直接返回
-            var hasSereniteaPotExitConfirmButton = CheckSereniteaPotConfirmExitButton(content.CaptureRectArea);
-            
-            if (hasSereniteaPotExitConfirmButton) return;
+            var hasClickBlackConfirmButton = Bv.ClickBlackConfirmButton(content.CaptureRectArea);
+
+            if (hasClickBlackConfirmButton) return;
             
             if (!hasTeleportButton)
             {
@@ -117,17 +118,6 @@ internal class QuickTeleportTrigger : ITaskTrigger
             // _prevClickTeleportButtonTime = DateTime.Now;
         });
         return hasTeleportButton;
-    }
-    
-    private bool CheckSereniteaPotConfirmExitButton(ImageRegion imageRegion)
-    {
-        var hasSereniteaPotExitButton = false;
-        imageRegion.Find(_assets.SereniteaPotExitConfirmButtonRo, ra =>
-        {
-            ra.Click();
-            hasSereniteaPotExitButton = true;
-        });
-        return hasSereniteaPotExitButton;
     }
     
     /// <summary>
