@@ -73,10 +73,10 @@ internal class QuickTeleportTrigger : ITaskTrigger
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
             
             // 3. 判断是否有尘歌壶退出按钮，有的话点击退出，直接返回
-            var hasClickBlackConfirmButton = Bv.ClickBlackConfirmButton(content.CaptureRectArea);
+            using var ra = content.CaptureRectArea.DeriveCrop(_assets.ClickBlackConfirmButtonRo.RegionOfInterest);
+            var hasClickBlackConfirmButton = Bv.ClickBlackConfirmButton(ra);
 
             if (hasClickBlackConfirmButton) return;
-            
             if (!hasTeleportButton)
             {
                 // 存在地图关闭按钮，说明未选中传送点，直接返回
