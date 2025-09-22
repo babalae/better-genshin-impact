@@ -578,11 +578,12 @@ public partial class ScriptService : IScriptService
                     {
                         if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
                         {
+                            await Task.Delay(500);
                             continue;
                         }
 
                         var content = TaskControl.CaptureToRectArea();
-                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
+                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
                         {
                             return;
                         }
