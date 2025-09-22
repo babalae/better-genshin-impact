@@ -29,6 +29,7 @@ public class ConditionDefinitions
                 Subject = "采集物",
                 Description = "地图追踪此采集物时使用的队伍名称。队伍名称是你在游戏中手动设置的队伍名称文字。建议勾选全部并配置存在盾、加血的角色队伍。",
                 ObjectOptions = new List<string> { "全部",
+                    "虹滴晶",
                     "万相石",
                     "初露之源",
                     "劫波莲",
