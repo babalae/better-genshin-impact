@@ -920,6 +920,7 @@ public class TpTask
         var hasTeleportButton = CheckTeleportButton(imageRegion);
         
         // 3. 判断是否在离开他人尘歌壶界面
+        using var ra = imageRegion.DeriveCrop(_assets.ClickBlackConfirmButtonRo.RegionOfInterest);
         var hasClickBlackConfirmButton = Bv.ClickBlackConfirmButton(imageRegion);
         
         if (hasClickBlackConfirmButton) return; // 在离开他人尘歌壶界面，点击确认并传送，结束
