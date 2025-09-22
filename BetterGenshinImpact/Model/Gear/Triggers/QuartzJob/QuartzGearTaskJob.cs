@@ -23,7 +23,7 @@ public class QuartzGearTaskJob : IJob
     {
         try
         {
-            var jobDataMap = context.JobDetail.JobDataMap;
+            var jobDataMap = context.MergedJobDataMap;
             var taskListJson = jobDataMap.GetString("GearTaskReferenceList");
             var triggerName = jobDataMap.GetString("TriggerName") ?? "Unknown";
             var triggerId = jobDataMap.GetString("TriggerId") ?? Guid.NewGuid().ToString();

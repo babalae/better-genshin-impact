@@ -1,8 +1,11 @@
+using System;
+
 namespace BetterGenshinImpact.Model.Gear.Tasks;
 
 /// <summary>
 /// 针对GearTask的引用类
 /// </summary>
+[Obsolete]
 public class GearTaskRefence
 {
     /// <summary>

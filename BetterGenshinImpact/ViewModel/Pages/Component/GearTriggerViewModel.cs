@@ -40,29 +40,14 @@ public partial class GearTriggerViewModel : ObservableObject
     /// 任务引用列表
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<GearTaskRefence> _taskReferences = new();
+    private string _taskDefinitionName = string.Empty;
 
     // 顺序触发器属性（无额外属性）
-
-    // 定时触发器属性
-    [ObservableProperty]
-    private int _intervalMs = 5000;
-
-    [ObservableProperty]
-    private bool _isRepeating = true;
-
-    [ObservableProperty]
-    private int _delayMs = 0;
-
-    [ObservableProperty]
-    private int _maxExecutions = 0;
+    
 
     // 热键触发器属性
     [ObservableProperty]
     private HotKey? _hotkey;
-
-    [ObservableProperty]
-    private int _cooldownMs = 1000;
 
     public GearTriggerViewModel()
     {
@@ -105,23 +90,23 @@ public partial class GearTriggerViewModel : ObservableObject
     /// </summary>
     public string HotkeyDisplayText => Hotkey?.ToString() ?? "未设置";
 
-    /// <summary>
-    /// 获取定时器配置显示文本
-    /// </summary>
-    public string TimerDisplayText
-    {
-        get
-        {
-            if (TriggerType != TriggerType.Timed) return "";
-            
-            var text = $"间隔: {IntervalMs}ms";
-            if (DelayMs > 0) text += $", 延迟: {DelayMs}ms";
-            if (MaxExecutions > 0) text += $", 最大次数: {MaxExecutions}";
-            if (!IsRepeating) text += ", 单次执行";
-            
-            return text;
-        }
-    }
+    // /// <summary>
+    // /// 获取定时器配置显示文本
+    // /// </summary>
+    // public string TimerDisplayText
+    // {
+    //     get
+    //     {
+    //         if (TriggerType != TriggerType.Timed) return "";
+    //         
+    //         var text = $"间隔: {IntervalMs}ms";
+    //         if (DelayMs > 0) text += $", 延迟: {DelayMs}ms";
+    //         if (MaxExecutions > 0) text += $", 最大次数: {MaxExecutions}";
+    //         if (!IsRepeating) text += ", 单次执行";
+    //         
+    //         return text;
+    //     }
+    // }
 
     /// <summary>
     /// 转换为对应的触发器实例
@@ -141,14 +126,13 @@ public partial class GearTriggerViewModel : ObservableObject
             TriggerType.Hotkey => new HotkeyGearTrigger
             {
                 Hotkey = Hotkey,
-                CooldownMs = CooldownMs,
                 IsEnabled = IsEnabled
             },
             _ => new SequentialGearTrigger()
         };
 
         trigger.Name = Name;
-        trigger.GearTaskRefenceList = new ObservableCollection<GearTaskRefence>(TaskReferences);
+        trigger.TaskDefinitionName = _taskDefinitionName;
         
         return trigger;
     }

@@ -43,26 +43,4 @@ public partial class GearTaskDefinitionViewModel : ObservableObject
         Description = description;
         RootTask = new GearTaskViewModel(name, true);
     }
-
-    /// <summary>
-    /// 获取任务总数（包括所有子任务）
-    /// </summary>
-    /// <returns></returns>
-    public int GetTotalTaskCount()
-    {
-        if (RootTask == null) return 0;
-        return 1 + Enumerable.Count<GearTaskViewModel>(RootTask.GetAllChildren());
-    }
-
-    /// <summary>
-    /// 获取启用的任务数量
-    /// </summary>
-    /// <returns></returns>
-    public int GetEnabledTaskCount()
-    {
-        if (RootTask == null) return 0;
-        var count = RootTask.IsEnabled ? 1 : 0;
-        count += Enumerable.Count<GearTaskViewModel>(RootTask.GetAllChildren(), t => t.IsEnabled);
-        return count;
-    }
 }

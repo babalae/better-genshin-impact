@@ -11,12 +11,4 @@ namespace BetterGenshinImpact.Model.Gear.Triggers;
 /// </summary>
 public class SequentialGearTrigger : GearBaseTrigger
 {
-    public override async Task Trigger()
-    {
-        List<BaseGearTask> list = GearTaskRefenceList.Select(gearTask => gearTask.ToGearTask()).ToList();
-        foreach (var gearTask in list)
-        {
-            await gearTask.Run(CancellationToken.None);
-        }
-    }
 }

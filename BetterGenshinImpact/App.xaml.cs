@@ -184,6 +184,11 @@ public partial class App : Application
     {
         return _host.Services.GetService(typeof(T)) as T;
     }
+    
+    public static T GetRequiredService<T>() where T : class
+    {
+        return _host.Services.GetRequiredService<T>();
+    }
 
     /// <summary>
     /// Gets registered service.
