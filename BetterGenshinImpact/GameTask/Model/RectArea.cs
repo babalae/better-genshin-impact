@@ -305,7 +305,7 @@
 //             {
 //                 foreach (var replaceStr in entry.Value)
 //                 {
-//                     text = text.Replace(entry.Key, replaceStr);
+//                     text = text.Replace(replaceStr, entry.Key);
 //                 }
 //             }
 //
