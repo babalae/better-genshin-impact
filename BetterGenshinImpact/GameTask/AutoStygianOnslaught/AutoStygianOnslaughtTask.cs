@@ -223,7 +223,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await Delay(800, _ct);
 
         // 等待传送完成
-        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor();
+        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
         _logger.LogInformation($"{Name}：传送完成");
 
         await Delay(2000, _ct);
