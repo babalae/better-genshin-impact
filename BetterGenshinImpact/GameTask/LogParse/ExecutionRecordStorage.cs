@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Helpers;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.GameTask.LogParse;
@@ -140,16 +141,19 @@ public class ExecutionRecordStorage
     /// <summary>
     /// 根据自定义的一天开始时间判断日期是否属于"今天"
     /// </summary>
-    /// <param name="boundaryHour">分界时间（小时），0-23之间</param>
-    /// <param name="targetDate">要判断的日期</param>
-    /// <returns>如果属于"今天"则返回true，否则返回false</returns>
-    private static bool IsTodayByBoundary(int boundaryHour, DateTime targetDate)
+    /// <param name="boundaryHour">分界时间（小时），0-23之间，基于<paramref name="isBoundaryTimeBasedOnServerTime"/>参数决定的时间参考系</param>
+    /// <param name="targetDate">要判断的日期（本地时间）</param>
+    /// <param name="isBoundaryTimeBasedOnServerTime">true表示使用服务器时间计算，false表示使用本地时间计算</param>
+    /// <returns>如果目标日期在根据分界时间定义的"今天"范围内则返回true，否则返回false</returns>
+    private static bool IsTodayByBoundary(int boundaryHour, DateTimeOffset targetDate, bool isBoundaryTimeBasedOnServerTime)
     {
         // 验证分界时间是否有效
         if (boundaryHour < 0 || boundaryHour > 23)
             throw new ArgumentOutOfRangeException(nameof(boundaryHour), "分界时间必须在0-23之间");
 
-        DateTime now = DateTime.Now;
+        DateTimeOffset now = isBoundaryTimeBasedOnServerTime
+            ? ServerTimeHelper.GetServerTimeNow()
+            : DateTimeOffset.Now;
 
         // 计算今天的开始时间（根据分界时间）
         DateTime todayStart;
@@ -237,7 +241,10 @@ public class ExecutionRecordStorage
                 if (boundaryTimeEnable)
                 {
                     // 如果记录不在"今天"，则跳过
-                    if (!IsTodayByBoundary(config.BoundaryTime, record.StartTime)) continue;
+                    if (!IsTodayByBoundary(config.BoundaryTime,
+                            record.ServerStartTime ??
+                            new DateTimeOffset(record.StartTime).ToOffset(ServerTimeHelper.GetServerTimeOffset()),
+                            config.IsBoundaryTimeBasedOnServerTime)) continue;
                 }
 
                 bool isMatchFound = false;

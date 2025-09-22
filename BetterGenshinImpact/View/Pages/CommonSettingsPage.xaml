@@ -1026,6 +1026,35 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />-->
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="服务器时区设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="设置游戏服务器的时区，用于计算基于服务器时间的每日重置时间等任务调度。JS脚本可手动使用此设置来处理不同区域服务器的时区。"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              MinWidth="100"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding ServerTimeZones}"
+                              SelectedValue="{Binding Config.OtherConfig.ServerTimeZoneOffset}"
+                              SelectedValuePath="Item1"
+                              DisplayMemberPath="Item2" />
+                </Grid>
                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">

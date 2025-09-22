@@ -50,6 +50,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private string _selectedCountry = string.Empty;
     [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    
+    [ObservableProperty] private List<Tuple<TimeSpan, string>> _serverTimeZones =
+    [
+        Tuple.Create(TimeSpan.FromHours(8), "其他 UTC+08"),
+        Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
+        Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
+    ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)
@@ -66,7 +73,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public AllConfig Config { get; set; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
-    
+
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
@@ -106,11 +113,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             }
         }
     }
-    
-    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } = new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
 
-    [ObservableProperty]
-    private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
+    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } =
+        new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
+
+    [ObservableProperty] private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
 
     [RelayCommand]
     public void OnQuestionButtonOnClick()
@@ -127,10 +134,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         cookieWin.NavigateToHtml(TravelsDiaryDetailManager.generHtmlMessage());
         cookieWin.Show();
     }
+
     private void InitializeMiyousheCookie()
     {
         OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
-        if (mcfg.Cookie == string.Empty&&
+        if (mcfg.Cookie == string.Empty &&
             mcfg.LogSyncCookie)
         {
             var config = LogParse.LoadConfig();
@@ -339,6 +347,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
+
     [RelayCommand]
     private async Task OnPaddleOcrModelConfigChanged(PaddleOcrModelConfig value)
     {

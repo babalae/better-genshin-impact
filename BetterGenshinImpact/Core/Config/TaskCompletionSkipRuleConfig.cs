@@ -19,6 +19,9 @@ public partial class TaskCompletionSkipRuleConfig:ObservableObject
     //周期分界时间点，如果负数则不启用，主要适用于固定时间的刷新物品适用
     [ObservableProperty]
     private int _boundaryTime = 4;
+    // 分界时间是否基于服务器时间（否则基于本地时间）
+    [ObservableProperty]
+    private bool _isBoundaryTimeBasedOnServerTime = false;
     
     //上一次执行间隔时间，出于精度考虑，这里使用秒为单位
     [ObservableProperty]

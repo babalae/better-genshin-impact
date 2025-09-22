@@ -390,8 +390,8 @@ public class AutoDomainTask : ISoloTask
             Logger.LogInformation("自动秘境：{Text}", "检测到秘境限时全开");
         }
 
-        DateTime now = DateTime.Now;
-        if ((now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4) || limitedFullyStringRaocrListdone != null)
+        var serverTime = ServerTimeHelper.GetServerTimeNow();
+        if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
             using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
