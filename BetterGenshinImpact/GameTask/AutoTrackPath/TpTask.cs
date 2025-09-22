@@ -878,7 +878,11 @@ public class TpTask
         var list = ra.FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
+            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height),
+            ReplaceDictionary = new Dictionary<string, string[]>
+            {
+                ["渊下宫"] = ["渊下宮"],
+            },
         });
         string minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         Region? matchRect = list.OrderByDescending(r => r.Y).FirstOrDefault(r => r.Text.Contains(minCountryLocalized));
