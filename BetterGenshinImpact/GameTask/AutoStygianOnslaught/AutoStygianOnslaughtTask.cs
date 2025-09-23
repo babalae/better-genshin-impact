@@ -67,7 +67,18 @@ public class AutoStygianOnslaughtTask : ISoloTask
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success($"{Name}启动");
 
-        await DoDomain();
+        try
+        {
+            await DoDomain();
+        }
+        catch (TaskCanceledException)
+        {
+            // do nothing
+        }
+        catch (Exception e)
+        {
+            _logger.LogInformation(e.Message);
+        }
 
         await Delay(3000, ct);
 
