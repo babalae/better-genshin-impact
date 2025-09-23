@@ -417,6 +417,13 @@ public class ImageRegion : Region
                 {
                     var newRa = this.Derive(r.Rect.BoundingRect() + ro.RegionOfInterest.Location);
                     newRa.Text = r.Text;
+                    foreach (var entry in ro.ReplaceDictionary)
+                    {
+                        foreach (var replaceStr in entry.Value)
+                        {
+                            newRa.Text = newRa.Text.Replace(replaceStr, entry.Key);
+                        }
+                    }
                     return newRa;
                 }).ToList();
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))
