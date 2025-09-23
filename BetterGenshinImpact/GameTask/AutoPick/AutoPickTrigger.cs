@@ -246,7 +246,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         else
         {
             var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat, out var bin);
+            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
             // 如果找到有效区域
             if (boundingRect.X <20 && boundingRect.Width > 5 && boundingRect.Height > 5)
             {
