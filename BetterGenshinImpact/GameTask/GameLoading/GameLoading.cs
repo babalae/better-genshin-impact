@@ -345,6 +345,7 @@ public class GameLoadingTrigger : ITaskTrigger
         var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
         if (!wmRa.IsEmpty())
         {
+            GameCaptureRegion.GameRegion1080PPosMove(100, 100);
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
             // TaskControl.Logger.LogInformation("自动点击月卡");
@@ -355,7 +356,7 @@ public class GameLoadingTrigger : ITaskTrigger
         var ysRa = content.CaptureRectArea.Find(ElementAssets.Instance.PrimogemRo);
         if (!ysRa.IsEmpty())
         {
-            GameCaptureRegion.GameRegion1080PPosMove(10, 10);
+            GameCaptureRegion.GameRegion1080PPosMove(100, 100);
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             Debug.WriteLine("[GameLoading] 跳过原石");
             return;
