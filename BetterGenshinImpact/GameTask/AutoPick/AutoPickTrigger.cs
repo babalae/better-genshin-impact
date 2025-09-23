@@ -283,22 +283,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             // 处理OCR识别结果，清理无效字符并确保引号配对
             text = ProcessOcrText(text);
-            
-            // 唯一一个动态拾取项，特殊处理，不拾取
-            if (text.Contains("长时间"))
-            {
-                return;
-            }
 
-            // 纳塔部落中文名特殊处理，不拾取
-            if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
-                                        text.Contains("流泉")))
-            {
-                return;
-            }
-            // 挪德卡莱聚所中文名特殊处理，不拾取
-            if (text.Contains("聚所") && (text.Contains("霜月") || text.Contains("叮铃") ||
-                                        text.Contains("眶螂") || text.Contains("蛋卷") || text.Contains("坊")))
+            if (DoNotPick(text))
             {
                 return;
             }
@@ -336,6 +322,41 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
+
+
+    }
+
+    private bool DoNotPick(string text)
+    {
+        // 唯一一个动态拾取项，特殊处理，不拾取
+        if (text.Contains("长时间"))
+        {
+            return true;
+        }
+
+        // 纳塔部落中文名特殊处理，不拾取
+        if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
+                                    text.Contains("流泉")))
+        {
+            return true;
+        }
+        // 挪德卡莱聚所中文名特殊处理，不拾取
+        if (text.Contains("聚所"))
+        {
+            return true;
+        }
+        
+        if (text.Contains("霜月") && text.Contains("坊"))
+        {
+            return true;
+        }
+
+        if (text.Contains("叮铃") || text.Contains("眶螂") || (text.Contains("蛋卷") && text.Contains("坊")))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public static Rect GetWhiteTextBoundingRect(Mat textMat)
