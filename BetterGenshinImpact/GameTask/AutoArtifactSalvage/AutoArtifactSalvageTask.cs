@@ -497,12 +497,16 @@ public class AutoArtifactSalvageTask : ISoloTask
         string mainAffixText = string.Join("\n", mainAffixOcrResult.Regions.Where(r => r.Score > 0.5).OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
         var mainAffixLines = mainAffixText.Split('\n');
         var levelAndMinorAffixOcrResult = ocrService.OcrResult(levelAndMinorAffixRoi);
-        string levelAndMinorAffixText = string.Join("\n", levelAndMinorAffixOcrResult.Regions.Where(r => r.Score > 0.5)
+        (string Text, Rect Rect)[] levelAndMinorAffixResult = levelAndMinorAffixOcrResult.Regions.Where(r => r.Score > 0.5)
             .Where(r => r.Rect.BoundingRect().Left < levelAndMinorAffixRoi.Width * 0.1) // 一定是贴着左边的，排除套装效果文字也存在类似+15%的情况
-            .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => r.Text));
-        var levelAndMinorAffixLines = levelAndMinorAffixText.Split('\n');
-
-        allText = String.Join('\n', nameOcrResult.Text, typeOcrResult.Text, mainAffixText, levelAndMinorAffixText);
+            .OrderBy(r => r.Rect.Center.Y).ThenBy(r => r.Rect.Center.X).Select(r => (r.Text, r.Rect.BoundingRect())).ToArray();
+        var levelAndMinorAffixLines = levelAndMinorAffixResult.Select(r => r.Text).ToArray();
+        allText = string.Join('\n', new[]
+        {
+            nameOcrResult.Text,
+            typeOcrResult.Text,
+            mainAffixText
+        }.Concat(levelAndMinorAffixLines));
 
         string percentStr = "%";
 
@@ -547,11 +551,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         #endregion
 
         #region 副词条
-        ArtifactAffix[] minorAffixes = levelAndMinorAffixLines.Select(l =>
+        ArtifactAffix[] minorAffixes = levelAndMinorAffixResult.Select(r =>
         {
             string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
             pattern = pattern.Replace("%", percentStr);
-            Match match = Regex.Match(l, pattern);
+            Match match = Regex.Match(r.Text, pattern);
             if (match.Success)
             {
                 ArtifactAffixType artifactAffixType;
@@ -615,12 +619,39 @@ public class AutoArtifactSalvageTask : ISoloTask
                 {
                     throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
                 }
-                return new ArtifactAffix(artifactAffixType, value);
+ 
+                var lineRoi = levelAndMinorAffixRoi.SubMat(r.Rect);
+                var lineHistogram = new Mat();
+                Cv2.CalcHist(
+                    images: [lineRoi],
+                    channels: [0],
+                    mask: null,
+                    hist: lineHistogram,
+                    dims: 1,
+                    histSize: [256],
+                    ranges: [new Rangef(0, 256)]
+                );
+                lineHistogram.GetArray(out float[] histogramFrequencies);
+                // 确保 222 和 152 是最常见的强度（无需对所有 256 个值进行排序）
+                const int backgroundIntensity = 222;
+                const int foregroundIntensity = 152;
+                var backgroundFrequency = histogramFrequencies[backgroundIntensity];
+                var foregroundFrequency = histogramFrequencies[foregroundIntensity];
+                // 检查这两个强度是否比所有其他强度更常见
+                var isUnactivated = backgroundFrequency > 0 &&
+                                    foregroundFrequency > 0 &&
+                                    backgroundFrequency > foregroundFrequency &&
+                                    !histogramFrequencies
+                                        .Where((frequency, intensity) =>
+                                            intensity != backgroundIntensity &&
+                                            intensity != foregroundIntensity &&
+                                            frequency > Math.Min(backgroundFrequency, foregroundFrequency))
+                                        .Any();
+
+                return new ArtifactAffix(artifactAffixType, value, isUnactivated);
             }
-            else
-            {
-                return null;
-            }
+
+            return null;
         }).Where(a => a != null).Cast<ArtifactAffix>().ToArray();
         #endregion
 
@@ -637,7 +668,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 return null;
             }
-        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到等级对应的行：\n{levelAndMinorAffixText}");
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到等级对应的行：\n{levelAndMinorAffixLines}");
         if (!int.TryParse(levelLine, out int level) || level < 0 || level > 20)
         {
             throw new Exception($"未识别的等级：{levelLine}");

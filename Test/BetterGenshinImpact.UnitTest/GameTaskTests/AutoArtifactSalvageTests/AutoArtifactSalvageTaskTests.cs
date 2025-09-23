@@ -213,7 +213,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             foreach (ArtifactAffix expectedArtifactAffix in expectedArtifactStat.MinorAffixes)
             {
                 Assert.Contains(result.MinorAffixes, a =>
-                a.Type == expectedArtifactAffix.Type && a.Value == expectedArtifactAffix.Value);
+                a.Type == expectedArtifactAffix.Type && a.Value == expectedArtifactAffix.Value && a.IsUnactivated == expectedArtifactAffix.IsUnactivated);
             }
             Assert.True(result.Level == expectedArtifactStat.Level);
         }
