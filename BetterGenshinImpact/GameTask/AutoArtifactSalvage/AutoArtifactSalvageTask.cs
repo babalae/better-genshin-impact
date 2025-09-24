@@ -551,77 +551,83 @@ public class AutoArtifactSalvageTask : ISoloTask
         #endregion
 
         #region 副词条
-        ArtifactAffix[] minorAffixes = levelAndMinorAffixResult.Select(r =>
+        var minorAffixes = new List<ArtifactAffix>();
+        string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
+        pattern = pattern.Replace("%", percentStr);
+        foreach (var r in levelAndMinorAffixResult)
         {
-            string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
-            pattern = pattern.Replace("%", percentStr);
             Match match = Regex.Match(r.Text, pattern);
-            if (match.Success)
+            if (!match.Success)
             {
-                ArtifactAffixType artifactAffixType;
-                var dic = this.artifactAffixStrDic;
-
-                if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
+                continue;
+            } 
+            ArtifactAffixType artifactAffixType;
+            var dic = this.artifactAffixStrDic;
+            if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
+            {
+                if (String.IsNullOrEmpty(match.Groups[3].Value))
                 {
-                    if (String.IsNullOrEmpty(match.Groups[3].Value))
-                    {
-                        artifactAffixType = ArtifactAffixType.ATK;
-                    }
-                    else
-                    {
-                        artifactAffixType = ArtifactAffixType.ATKPercent;
-                    }
-                }
-                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.DEF]))
-                {
-                    if (String.IsNullOrEmpty(match.Groups[3].Value))
-                    {
-                        artifactAffixType = ArtifactAffixType.DEF;
-                    }
-                    else
-                    {
-                        artifactAffixType = ArtifactAffixType.DEFPercent;
-                    }
-                }
-                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.HP]))
-                {
-                    if (String.IsNullOrEmpty(match.Groups[3].Value))
-                    {
-                        artifactAffixType = ArtifactAffixType.HP;
-                    }
-                    else
-                    {
-                        artifactAffixType = ArtifactAffixType.HPPercent;
-                    }
-                }
-                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITRate]))
-                {
-                    artifactAffixType = ArtifactAffixType.CRITRate;
-                }
-                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITDMG]))
-                {
-                    artifactAffixType = ArtifactAffixType.CRITDMG;
-                }
-                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ElementalMastery]))
-                {
-                    artifactAffixType = ArtifactAffixType.ElementalMastery;
-                }
-                else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.EnergyRecharge]))
-                {
-                    artifactAffixType = ArtifactAffixType.EnergyRecharge;
+                    artifactAffixType = ArtifactAffixType.ATK;
                 }
                 else
                 {
-                    throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
+                    artifactAffixType = ArtifactAffixType.ATKPercent;
                 }
-
-                if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float value))
+            }
+            else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.DEF]))
+            {
+                if (String.IsNullOrEmpty(match.Groups[3].Value))
                 {
-                    throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
+                    artifactAffixType = ArtifactAffixType.DEF;
                 }
- 
-                var lineRoi = levelAndMinorAffixRoi.SubMat(r.Rect);
-                var lineHistogram = new Mat();
+                else
+                {
+                    artifactAffixType = ArtifactAffixType.DEFPercent;
+                }
+            }
+            else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.HP]))
+            {
+                if (String.IsNullOrEmpty(match.Groups[3].Value))
+                {
+                    artifactAffixType = ArtifactAffixType.HP;
+                }
+                else
+                {
+                    artifactAffixType = ArtifactAffixType.HPPercent;
+                }
+            }
+            else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITRate]))
+            {
+                artifactAffixType = ArtifactAffixType.CRITRate;
+            }
+            else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.CRITDMG]))
+            {
+                artifactAffixType = ArtifactAffixType.CRITDMG;
+            }
+            else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ElementalMastery]))
+            {
+                artifactAffixType = ArtifactAffixType.ElementalMastery;
+            }
+            else if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.EnergyRecharge]))
+            {
+                artifactAffixType = ArtifactAffixType.EnergyRecharge;
+            }
+            else
+            {
+                throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
+            }
+
+            if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float affixValue))
+            {
+                throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
+            }
+            
+            bool isUnactivated = false;
+            // 只有在已经成功识别至少 3 个词条后才执行额外的直方图分析。
+            if (minorAffixes.Count >= 3)
+            {
+                using var lineRoi = levelAndMinorAffixRoi.SubMat(r.Rect);
+                using var lineHistogram = new Mat();
                 Cv2.CalcHist(
                     images: [lineRoi],
                     channels: [0],
@@ -632,27 +638,24 @@ public class AutoArtifactSalvageTask : ISoloTask
                     ranges: [new Rangef(0, 256)]
                 );
                 lineHistogram.GetArray(out float[] histogramFrequencies);
-                // 确保 222 和 152 是最常见的强度（无需对所有 256 个值进行排序）
+                // 检查背景和前景像素是否符合未激活的特征。
                 const int backgroundIntensity = 222;
                 const int foregroundIntensity = 152;
                 var backgroundFrequency = histogramFrequencies[backgroundIntensity];
                 var foregroundFrequency = histogramFrequencies[foregroundIntensity];
                 // 检查这两个强度是否比所有其他强度更常见
-                var isUnactivated = backgroundFrequency > 0 &&
-                                    foregroundFrequency > 0 &&
-                                    backgroundFrequency > foregroundFrequency &&
-                                    !histogramFrequencies
-                                        .Where((frequency, intensity) =>
-                                            intensity != backgroundIntensity &&
-                                            intensity != foregroundIntensity &&
-                                            frequency > Math.Min(backgroundFrequency, foregroundFrequency))
-                                        .Any();
-
-                return new ArtifactAffix(artifactAffixType, value, isUnactivated);
+                isUnactivated = backgroundFrequency > 0 &&
+                                foregroundFrequency > 0 &&
+                                backgroundFrequency > foregroundFrequency &&
+                                !histogramFrequencies
+                                    .Where((frequency, intensity) =>
+                                        intensity != backgroundIntensity &&
+                                        intensity != foregroundIntensity &&
+                                        frequency > Math.Min(backgroundFrequency, foregroundFrequency))
+                                    .Any();
             }
-
-            return null;
-        }).Where(a => a != null).Cast<ArtifactAffix>().ToArray();
+            minorAffixes.Add(new ArtifactAffix(artifactAffixType, affixValue, isUnactivated));
+        }
         #endregion
 
         #region 等级
@@ -675,7 +678,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
         #endregion
 
-        return new ArtifactStat(name, mainAffix, minorAffixes, level);
+        return new ArtifactStat(name, mainAffix, minorAffixes.ToArray(), level);
     }
 
     public static ArtifactStatus GetArtifactStatus(Mat src)
