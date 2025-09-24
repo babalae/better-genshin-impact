@@ -150,34 +150,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             logger.LogInformation("选择鱼饵 {Text}", blackboard.selectedBait.GetDescription());
 
             // 寻找鱼饵
-            using ImageRegion singleRowGrid = imageRegion.DeriveCrop(0.28 * imageRegion.Width, 0.37 * imageRegion.Height, 0.45 * imageRegion.Width, 0.22 * imageRegion.Height);
-            using Mat grey = singleRowGrid.SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
-            using Mat canny = grey.Canny(20, 40);
-
-            Cv2.FindContours(canny, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple, null);
-            contours = contours
-                .Where(c =>
-                {
-                    Rect r = Cv2.BoundingRect(c);
-                    if (r.Width < 0.065 * imageRegion.Width * 0.80)   // 剔除太小的
-                    {
-                        return false;
-                    }
-                    if (r.Height == 0)
-                    {
-                        return false;
-                    }
-                    return Math.Abs((float)r.Width / r.Height - 0.81) < 0.05; // 按形状筛选
-                }).ToArray();
-            IEnumerable<Rect> boxes = contours.Select(Cv2.BoundingRect);
-
-            foreach (Rect box in boxes)
+            var boxAndBaits = FindBait(imageRegion);
+                ;
+            foreach ((Rect box, string? predName) in boxAndBaits)
             {
-                using ImageRegion resRa = singleRowGrid.DeriveCrop(box);
-                using Mat img125 = resRa.SrcMat.GetGridIcon();
-                (string predName, _) = GridIconsAccuracyTestTask.Infer(img125, this.session, this.prototypes);
                 if (predName == blackboard.selectedBait.GetDescription())
                 {
+                    using ImageRegion resRa = imageRegion.DeriveCrop(box);
                     resRa.Click();
                     blackboard.Sleep(700);
                     // 可能重复点击，所以固定界面点击下
@@ -223,6 +202,37 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else
             {
                 return BehaviourStatus.Running;
+            }
+        }
+
+        public IEnumerable<(Rect, string?)> FindBait(ImageRegion imageRegion1080p)
+        {
+            using ImageRegion singleRowGrid = imageRegion1080p.DeriveCrop(0.28 * imageRegion1080p.Width, 0.37 * imageRegion1080p.Height, 0.45 * imageRegion1080p.Width, 0.22 * imageRegion1080p.Height);
+            using Mat grey = singleRowGrid.SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
+            using Mat canny = grey.Canny(20, 40);
+
+            Cv2.FindContours(canny, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple, null);
+            contours = contours
+                .Where(c =>
+                {
+                    Rect r = Cv2.BoundingRect(c);
+                    if (r.Width < 0.065 * imageRegion1080p.Width * 0.80)   // 剔除太小的
+                    {
+                        return false;
+                    }
+                    if (r.Height == 0)
+                    {
+                        return false;
+                    }
+                    return Math.Abs((float)r.Width / r.Height - 0.81) < 0.05; // 按形状筛选
+                }).ToArray();
+            IEnumerable<Rect> boxes = contours.Select(Cv2.BoundingRect);
+            foreach (Rect box in boxes)
+            {
+                using ImageRegion resRa = singleRowGrid.DeriveCrop(box);
+                using Mat img125 = resRa.SrcMat.GetGridIcon();
+                (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, this.session, this.prototypes);
+                yield return (new Rect(singleRowGrid.X + box.X, singleRowGrid.Y + box.Y, box.Width, box.Height), predName);
             }
         }
     }

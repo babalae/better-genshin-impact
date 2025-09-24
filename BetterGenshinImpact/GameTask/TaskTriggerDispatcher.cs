@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.GameTask.GameLoading;
 using Fischless.GameCapture.Graphics;
 using Vanara.PInvoke;
 
@@ -116,6 +117,7 @@ namespace BetterGenshinImpact.GameTask
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
+            GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
             
             // if (GraphicsCapture.IsHdrEnabled(hWnd))
             // {
