@@ -4,6 +4,19 @@ namespace BetterGenshinImpact.Helpers;
 
 public class DirectoryHelper
 {
+    /// <summary>
+    /// 删除指定目录（如果存在）
+    /// </summary>
+    /// <param name="directoryPath">要删除的目录路径</param>
+    /// <param name="recursive">是否递归删除子目录和文件，默认为true</param>
+    public static void DeleteDirectory(string directoryPath, bool recursive = true)
+    {
+        if (Directory.Exists(directoryPath))
+        {
+            Directory.Delete(directoryPath, recursive);
+        }
+    }
+    
     public static void DeleteReadOnlyDirectory(string directoryPath)
     {
         if (Directory.Exists(directoryPath))

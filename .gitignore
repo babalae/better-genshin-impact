@@ -24,8 +24,14 @@ bld/
 Tmp/
 /packages/
 node_modules/
+github_actions_cache/
 
 *.zip
 
 # Rider
 .idea
+.trae
+.claude
+CLAUDE.md
+
+__pycache__/

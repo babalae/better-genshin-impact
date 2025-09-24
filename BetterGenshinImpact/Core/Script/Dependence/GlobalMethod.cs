@@ -3,8 +3,11 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
@@ -112,7 +115,15 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonClick(0x0001);
                 break;
             default:
-                Simulation.SendInput.Keyboard.KeyPress(vk);
+                if (InputBuilder.IsExtendedKey(vk))
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(false, vk);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(vk);
+                }
+                
                 break;
         }
     }
@@ -237,6 +248,14 @@ public class GlobalMethod
         return TaskControl.CaptureToRectArea();
     }
 
+    public static string[] GetAvatars()
+    {
+        var combatScenes = new CombatScenes().InitializeTeam(CaptureGameRegion());
+        ReadOnlyCollection<Avatar> avatars = combatScenes.GetAvatars();
+        return avatars.Count > 0
+            ? avatars.Select(avatar => avatar.Name).ToArray()
+            : [];
+    }
     #endregion 识图操作
 
     #region 文字输入操作

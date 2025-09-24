@@ -1,20 +1,29 @@
-﻿using BetterGenshinImpact.Core.Script.Dependence.Model;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.ViewModel.Pages;
-using System;
-using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
+using BetterGenshinImpact.GameTask.AutoWood;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.ClearScript;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Dispatcher
 {
-    private object _config = null;
+    private readonly ILogger<Dispatcher> _logger = App.GetLogger<Dispatcher>();
+
+    private readonly object _config;
 
     public Dispatcher(object config)
     {
@@ -102,7 +111,7 @@ public class Dispatcher
     /// <param name="customCt">自定义取消令牌，允许从JS控制任务取消</param>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentException"></exception>
-    public async Task RunTask(SoloTask soloTask, CancellationToken? customCt = null)
+    public async Task<object?> RunTask(SoloTask soloTask, CancellationToken? customCt = null)
     {
         if (soloTask == null)
         {
@@ -127,42 +136,133 @@ public class Dispatcher
             // 如果没有自定义令牌，就使用全局令牌
             cancellationToken = CancellationContext.Instance.Cts.Token;
         }
-        
+
         // 根据名称执行任务
         switch (soloTask.Name)
         {
             case "AutoGeniusInvokation":
-                if (taskSettingsPageViewModel.GetTcgStrategy(out var content))
+                string content;
+                // 检查是否有自定义策略内容  
+                if (soloTask.Config != null)
                 {
-                    return;
+                    var jsObject = (ScriptObject)soloTask.Config;
+                    content = ScriptObjectConverter.GetValue(jsObject, "strategy", "");
+                    if (string.IsNullOrEmpty(content))
+                    {
+                        // 回退到原有逻辑  
+                        if (taskSettingsPageViewModel.GetTcgStrategy(out content))
+                        {
+                            return null;
+                        }
+                    }
+                }
+                else
+                {
+                    // 回退到原有逻辑  
+                    if (taskSettingsPageViewModel.GetTcgStrategy(out content))
+                    {
+                        return null;
+                    }
                 }
 
                 await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);
-                break;
+                return null;
 
             case "AutoWood":
                 await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
                     taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(cancellationToken);
-                break;
+                return null;
 
             case "AutoFight":
                 await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);
-                break;
+                return null;
 
             case "AutoDomain":
                 if (taskSettingsPageViewModel.GetFightStrategy(out var path))
                 {
-                    return;
+                    return null;
                 }
 
                 await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
-                break;
+                return null;
 
             case "AutoFishing":
                 await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
                     cancellationToken);
-                break;
+                return null;
+            case "AutoEat":
+                {
+                    string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "foodName", null);
+                    FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?)ScriptObjectConverter.GetValue<int?>((ScriptObject)soloTask.Config, "foodEffectType", null);
 
+                    if (foodName != null && foodEffectType != null)
+                    {
+                        throw new NotSupportedException("不能同时指定foodName和foodEffectType");
+                    }
+
+                    if (foodName == null)
+                    {
+                        if (foodEffectType != null)
+                        {
+                            PathingPartyConfig? pathingPartyConfig = _config as PathingPartyConfig;
+                            if (pathingPartyConfig == null)
+                            {
+                                throw new NotSupportedException("foodEffectType参数需要调度器配置，请在调度器下使用");
+                            }
+                            else
+                            {
+                                switch (foodEffectType)
+                                {
+                                    case FoodEffectType.ATKBoostingDish:
+                                        foodName = pathingPartyConfig.AutoEatConfig.DefaultAtkBoostingDishName;
+                                        if (foodName == null)
+                                        {
+                                            _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的攻击类料理");
+                                            return null;
+                                        }
+                                        break;
+                                    case FoodEffectType.AdventurersDish:
+                                        foodName = pathingPartyConfig.AutoEatConfig.DefaultAdventurersDishName;
+                                        if (foodName == null)
+                                        {
+                                            _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的冒险类料理");
+                                            return null;
+                                        }
+                                        break;
+                                    case FoodEffectType.DEFBoostingDish:
+                                        foodName = pathingPartyConfig.AutoEatConfig.DefaultDefBoostingDishName;
+                                        if (foodName == null)
+                                        {
+                                            _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的防御类料理");
+                                            return null;
+                                        }
+                                        break;
+                                    default:
+                                        throw new NotSupportedException("JS脚本入参错误：错误的foodEffectType");
+                                }
+                            }
+                        }
+                    }
+
+                    var autoEatConfig = TaskContext.Instance().Config.AutoEatConfig;
+                    return await new AutoEatTask(new AutoEatParam()
+                    {
+                        CheckInterval = autoEatConfig.CheckInterval,
+                        EatInterval = autoEatConfig.EatInterval,
+                        ShowNotification = autoEatConfig.ShowNotification,
+                        FoodName = foodName
+                    }).Start(cancellationToken);
+                }
+            case "CountInventoryItem":
+                {
+                    if (soloTask.Config == null)
+                    {
+                        throw new NullReferenceException($"{nameof(soloTask.Config)}为空");
+                    }
+                    GridScreenName gridScreenName = ScriptObjectConverter.GetValue<GridScreenName?>((ScriptObject)soloTask.Config, "gridScreenName", null) ?? throw new Exception("gridScreenName为空或错误");
+                    string itemName = ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "itemName", null) ?? throw new Exception("itemName为空");
+                    return await new CountInventoryItem(gridScreenName, itemName).Start(cancellationToken);
+                }
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
         }

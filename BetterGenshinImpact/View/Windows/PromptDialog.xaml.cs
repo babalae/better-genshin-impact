@@ -1,4 +1,6 @@
-﻿using System.Windows;
+using BetterGenshinImpact.Helpers.Ui;
+using System;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
@@ -28,7 +30,7 @@ public partial class PromptDialog
 {
     private readonly PromptDialogConfig _config;
 
-    public PromptDialog(string question, string title, UIElement uiElement, string defaultValue, PromptDialogConfig? config = null)
+    public PromptDialog(string question, string title, UIElement uiElement, string? defaultValue, PromptDialogConfig? config = null)
     {
         InitializeComponent();
         MyTitleBar.Title = title;
@@ -36,11 +38,11 @@ public partial class PromptDialog
         _config = config ?? new PromptDialogConfig();
 
         DynamicContent.Content = uiElement;
-        if (DynamicContent.Content is TextBox textBox)
+        if (DynamicContent.Content is TextBox textBox && defaultValue != null)
         {
             textBox.Text = defaultValue;
         }
-        else if (DynamicContent.Content is ComboBox comboBox)
+        else if (DynamicContent.Content is ComboBox comboBox && defaultValue != null)
         {
             comboBox.Text = defaultValue;
         }
@@ -49,6 +51,13 @@ public partial class PromptDialog
         ConfigureLeftButton();
 
         this.Loaded += PromptDialogLoaded;
+        this.SourceInitialized += PromptDialog_SourceInitialized;
+    }
+
+    private void PromptDialog_SourceInitialized(object? sender, EventArgs e)
+    {
+        // 应用与主窗口相同的背景主题
+        WindowHelper.TryApplySystemBackdrop(this);
     }
 
     private void ConfigureLeftButton()
@@ -74,16 +83,20 @@ public partial class PromptDialog
 
     public static string Prompt(string question, string title, string defaultValue = "", PromptDialogConfig? config = null)
     {
-        var inst = new PromptDialog(question, title, new TextBox(), defaultValue, config);
+        var textBox = new TextBox
+        {
+            VerticalAlignment = VerticalAlignment.Top,
+        };
+        var inst = new PromptDialog(question, title, textBox, defaultValue, config);
         inst.ShowDialog();
-        return inst.DialogResult == true ? inst.ResponseText : defaultValue;
+        return inst.DialogResult == true ? inst.ResponseText : "";
     }
 
     public static string Prompt(string question, string title, UIElement uiElement, string defaultValue = "", PromptDialogConfig? config = null)
     {
         var inst = new PromptDialog(question, title, uiElement, defaultValue, config);
         inst.ShowDialog();
-        return inst.DialogResult == true ? inst.ResponseText : defaultValue;
+        return inst.DialogResult == true ? inst.ResponseText : "";
     }
 
     public static string Prompt(string question, string title, UIElement uiElement, Size size, PromptDialogConfig? config = null)

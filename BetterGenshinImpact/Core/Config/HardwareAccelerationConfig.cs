@@ -14,10 +14,10 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private InferenceDeviceType _inferenceDevice = InferenceDeviceType.Cpu;
 
     /// <summary>
-    /// 是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认开。
+    /// 是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认关闭。
     /// </summary>
     [ObservableProperty]
-    private bool _cpuOcr = true;
+    private bool _cpuOcr = false;
 
     #region 一般GPU加速设置
 
@@ -50,10 +50,10 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private int _cudaDevice = 0;
 
     /// <summary>
-    /// 自动附加cuda的path。一般情况下用这个就足够了。默认开启。
+    /// 自动附加cuda的path。一般情况下用这个就足够了。默认关闭。
     /// </summary>
     [ObservableProperty]
-    private bool _autoAppendCudaPath = true;
+    private bool _autoAppendCudaPath = false;
 
     #endregion
 
@@ -70,6 +70,21 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _embedTensorRtCache = true;
+
+    #endregion
+
+    #region OpenVINO设置
+    /// <summary>
+    /// OpenVino 设备参数。
+    /// </summary>
+    [ObservableProperty]
+    private string _openVinoDevice = "AUTO:GPU,CPU";
+    
+    /// <summary>
+    /// 启用 OpenVINO 缓存。默认关闭。
+    /// </summary>
+    [ObservableProperty]
+    private bool _enableOpenVinoCache = false;
 
     #endregion
 }

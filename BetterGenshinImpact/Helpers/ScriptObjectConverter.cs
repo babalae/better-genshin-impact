@@ -1,4 +1,4 @@
-﻿using Microsoft.ClearScript;
+using Microsoft.ClearScript;
 using System;
 using System.Reflection;
 
@@ -39,13 +39,45 @@ public class ScriptObjectConverter
             }
         }
     }
-    
+
     public static T GetValue<T>(ScriptObject source, string propertyName, T defaultValue)
     {
         if (source[propertyName] is not Undefined && source[propertyName] != null)
         {
             object value = source.GetProperty(propertyName);
-            return (T)Convert.ChangeType(value, typeof(T));
+
+            Type type = typeof(T);
+            type = Nullable.GetUnderlyingType(type) ?? type;
+
+            if (type.IsEnum)
+            {
+                // 处理数字
+                if (value is int intValue)
+                {
+                    if (Enum.IsDefined(type, intValue))
+                    {
+                        return (T)Enum.ToObject(type, intValue);
+                    }
+                    else
+                    {
+                        return defaultValue;
+                    }
+                }
+                // 处理字符串
+                else if (value is string strValue)
+                {
+                    if (Enum.TryParse(type, strValue, ignoreCase: true, out object? parsedEnum))
+                    {
+                        return (T)parsedEnum;
+                    }
+                    else
+                    {
+                        return defaultValue;
+                    }
+                }
+            }
+
+            return (T)value;
         }
         return defaultValue;
     }

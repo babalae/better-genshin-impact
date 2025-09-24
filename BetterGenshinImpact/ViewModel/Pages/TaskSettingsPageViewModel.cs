@@ -1,42 +1,42 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.AutoSkip.Model;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.AutoWood;
-using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Windows.System;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-
-using BetterGenshinImpact.Helpers;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Violeta.Controls;
-using BetterGenshinImpact.ViewModel.Pages.View;
 using System.Linq;
 using System.Reflection;
-using System.Collections.Frozen;
-using System.Diagnostics;
-using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
-using BetterGenshinImpact.View.Windows;
-using BetterGenshinImpact.GameTask.GetGridIcons;
-using BetterGenshinImpact.GameTask.Model.GameUI;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using Windows.System;
+using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -121,6 +121,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     public static List<string> ArtifactSalvageStarList = ["4", "3", "2", "1"];
 
+    public static List<int> BossNumList = [1, 2, 3];
+
+
     [ObservableProperty]
     private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
 
@@ -157,6 +160,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchArtifactSalvageEnabled;
 
     [ObservableProperty]
+    private FrozenDictionary<Enum, string> _recognitionFailurePolicyDict = Enum.GetValues(typeof(RecognitionFailurePolicy))
+        .Cast<RecognitionFailurePolicy>()
+        .ToFrozenDictionary(
+            e => (Enum)e,
+            e => e.GetType()
+                .GetField(e.ToString())?
+                .GetCustomAttribute<DescriptionAttribute>()?
+                .Description ?? e.ToString());
+
+    [ObservableProperty]
     private bool _switchGetGridIconsEnabled;
     [ObservableProperty]
     private string _switchGetGridIconsButtonText = "启动";
@@ -169,6 +182,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .GetField(e.ToString())?
                 .GetCustomAttribute<DescriptionAttribute>()?
                 .Description ?? e.ToString());
+
+    [ObservableProperty]
+    private string _switchGridIconsAccuracyTestButtonText = "运行模型准确率测试";
+
+    [ObservableProperty]
+    private bool _switchAutoRedeemCodeEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoRedeemCodeButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -210,6 +232,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoDomainEnabled = false;
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
+        SwitchAutoAlbumEnabled = false;
+        SwitchAutoFishingEnabled = false;
+        SwitchArtifactSalvageEnabled = false;
+        SwitchAutoRedeemCodeEnabled = false;
+        SwitchAutoStygianOnslaughtEnabled = false;
+        SwitchGetGridIconsEnabled = false;
         await Task.Delay(800);
     }
 
@@ -506,20 +534,73 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchArtifactSalvageEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoArtifactSalvageTask(int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar), Config.AutoArtifactSalvageConfig.RegularExpression, Config.AutoArtifactSalvageConfig.MaxNumToCheck));
+            .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
+                int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
+                Config.AutoArtifactSalvageConfig.JavaScript,
+                Config.AutoArtifactSalvageConfig.ArtifactSetFilter,
+                Config.AutoArtifactSalvageConfig.MaxNumToCheck,
+                Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy
+                )));
         SwitchArtifactSalvageEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnGoToArtifactSalvageUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/artifactSalvage.html"));
     }
 
     [RelayCommand]
     private void OnOpenArtifactSalvageTestOCRWindow()
     {
-        if (!TaskContext.Instance().IsInitialized)
-        {
-            PromptDialog.Prompt("请先启动截图器！", "");    // todo 自动启动截图器
-            return;
-        }
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.098, 0.24, 0.52, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.RegularExpression);
+        OcrDialog ocrDialog = new OcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
         ocrDialog.ShowDialog();
+    }
+
+    [RelayCommand]
+    private async Task OnCopyArtifactSalvageJavaScriptFromRepository()
+    {
+        var list = ScriptControlViewModel.LoadAllJsScriptProjects();
+        var stackPanel = ScriptControlViewModel.CreateJsScriptSelectionPanel(list, typeof(RadioButton));
+
+        var result = PromptDialog.Prompt("请选择需要复制的JS脚本", "请选择需要复制的JS脚本", stackPanel, new Size(500, 600));
+        if (!string.IsNullOrEmpty(result))
+        {
+            string? selectedFolderName = null;
+            foreach (var child in ((Wpf.Ui.Controls.StackPanel)stackPanel.Content).Children)
+            {
+                if (child is RadioButton { IsChecked: true } radioButton && radioButton.Tag is string folderName)
+                {
+                    selectedFolderName = folderName;
+                }
+            }
+            if (selectedFolderName == null)
+            {
+                return;
+            }
+
+            ScriptProject scriptProject = new ScriptProject(selectedFolderName);
+            string jsCode = await scriptProject.LoadCode();
+
+            var multilineTextBox = new TextBox
+            {
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Text = jsCode,
+                IsReadOnly = true
+            };
+            var p = new PromptDialog($"{scriptProject.Manifest.Name}\r\n{scriptProject.Manifest.ShortDescription}\r\n\r\n将覆盖现有的JavaScript，是否继续？", $"预览 - {scriptProject.FolderName}", multilineTextBox, null);
+            p.Height = 600;
+            p.MaxWidth = 800;
+            p.ShowDialog();
+
+            if (p.DialogResult != true)
+            {
+                return;
+            }
+
+            this.Config.AutoArtifactSalvageConfig.JavaScript = jsCode;
+        }
     }
 
     [RelayCommand]
@@ -528,7 +609,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         try
         {
             SwitchGetGridIconsEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.StarAsSuffix, Config.GetGridIconsConfig.MaxNumToGet));
         }
         finally
         {
@@ -537,7 +618,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OnGoToGridIconsFolder()
+    private void OnGoToGetGridIconsFolder()
     {
         var path = Global.Absolute(@"log\gridIcons\");
         if (!Directory.Exists(path))
@@ -546,5 +627,65 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    private async Task OnGoToGetGridIconsUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchGridIconsModelAccuracyTest()
+    {
+        try
+        {
+            SwitchGetGridIconsEnabled = true;
+            await new TaskRunner().RunSoloTaskAsync(new GridIconsAccuracyTestTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+        }
+        finally
+        {
+            SwitchGetGridIconsEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoRedeemCode()
+    {
+        var multilineTextBox = new TextBox
+        {
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = true,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            PlaceholderText = "请在此输入兑换码，每行一条记录"
+        };
+        var p = new PromptDialog(
+            "输入兑换码",
+            "自动使用兑换码",
+            multilineTextBox,
+            null);
+        p.Height = 500;
+        p.ShowDialog();
+        if (p.DialogResult == true && !string.IsNullOrWhiteSpace(multilineTextBox.Text))
+        {
+            char[] separators = ['\r', '\n'];
+            var codes = multilineTextBox.Text.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+
+           .Select(code => code.Trim())
+           .Where(code => !string.IsNullOrEmpty(code))
+           .ToList();
+
+            if (codes.Count == 0)
+            {
+                Toast.Warning("没有有效的兑换码");
+                return;
+            }
+
+            SwitchAutoRedeemCodeEnabled = true;
+            await new TaskRunner()
+                .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
+            SwitchAutoRedeemCodeEnabled = false;
+        }
     }
 }

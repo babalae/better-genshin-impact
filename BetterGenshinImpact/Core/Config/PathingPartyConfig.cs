@@ -1,9 +1,10 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoEat;
+using BetterGenshinImpact.GameTask.AutoFight;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -92,9 +93,31 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _autoRunEnabled = true;
     
+    // 启用自动吃药功能
+    [ObservableProperty]
+    private bool _autoEatEnabled = false;
+
+    /// <summary>
+    /// 自动吃食物配置
+    /// 供JS脚本使用
+    /// </summary>
+    [ObservableProperty]
+    private AutoEatConfig _autoEatConfig = new();
+
+    //在连续执行时是否隐藏
+    [ObservableProperty]
+    private bool _hideOnRepeat = false;
+    
     //执行周期配置
     [ObservableProperty]
     private PathingPartyTaskCycleConfig _taskCycleConfig = new();
+    
+    //任务完成跳过执行配置
+    [ObservableProperty]
+    private TaskCompletionSkipRuleConfig _taskCompletionSkipRuleConfig = new();
+    //优先执行其他配置组
+    [ObservableProperty]
+    private PreExecutionPriorityConfig _preExecutionPriorityConfig = new();
 
     //启用自动战斗配置
     [ObservableProperty]
@@ -109,7 +132,8 @@ public partial class PathingPartyConfig : ObservableObject
         return new PathingPartyConfig
         {
             OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
-            UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs
+            UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs,
+            AutoEatEnabled = pathingConditionConfig.AutoEatEnabled
         };
     }
 }

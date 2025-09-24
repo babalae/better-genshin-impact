@@ -1,13 +1,15 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Interface;
@@ -61,7 +63,11 @@ public partial class App : Application
                     .WriteTo.File(logFile,
                         outputTemplate:
                         "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
-                        rollingInterval: RollingInterval.Day)
+                        rollingInterval: RollingInterval.Day,
+                        retainedFileCountLimit: 31,
+                        retainedFileTimeLimit: TimeSpan.FromDays(21))
+                    .WriteTo.Console(outputTemplate: 
+                        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
@@ -129,8 +135,11 @@ public partial class App : Application
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<HutaoNamedPipe>();
-                services.AddSingleton(sp=> sp.GetRequiredService<HomePageViewModel>().Config.HardwareAccelerationConfig);
                 services.AddSingleton<BgiOnnxFactory>();
+                services.AddSingleton<OcrFactory>();
+                
+                services.AddSingleton(TimeProvider.System);
+                services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
@@ -174,14 +183,18 @@ public partial class App : Application
 
         try
         {
+            // 分配控制台窗口以支持控制台输出
+            ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
             await _host.StartAsync();
+            ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
             await UrlProtocolHelper.RegisterAsync();
         }
         catch (Exception ex)
         {
             // DEBUG only, no overhead
             Debug.WriteLine(ex);
+            ConsoleHelper.WriteError($"应用程序启动失败: {ex.Message}");
 
             if (Debugger.IsAttached)
             {
@@ -197,10 +210,15 @@ public partial class App : Application
     {
         base.OnExit(e);
 
+        ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
+        
         TempManager.CleanUp();
 
         await _host.StopAsync();
         _host.Dispose();
+        
+        // 释放控制台窗口
+        ConsoleHelper.FreeConsoleWindow();
     }
 
     /// <summary>

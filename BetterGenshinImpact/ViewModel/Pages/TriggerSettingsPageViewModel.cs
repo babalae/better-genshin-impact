@@ -64,7 +64,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         {
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
-            Height = 340,
+            //Height = 340,
+            VerticalAlignment = VerticalAlignment.Stretch,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             PlaceholderText = "请在此输入黑名单配置，每行一条记录。\n" +
                               "示例：\n" +
@@ -73,7 +74,11 @@ public partial class TriggerSettingsPageViewModel : ViewModel
                               "牢固的箭簇"
         };
         var p = new PromptDialog(
-            "黑名单配置，每行一条记录",
+            "黑名单配置，每行一条记录\n"+
+            "示例：\n" +
+            "精致的宝箱\n" +
+            "史莱姆凝液\n" +
+            "牢固的箭簇",
             "黑名单配置",
             multilineTextBox,
             text);
@@ -100,7 +105,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         {
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
-            Height = 340,
+            //Height = 340,
+            VerticalAlignment = VerticalAlignment.Stretch,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             PlaceholderText = "请在此输入白名单配置，每行一条记录。\n" +
                               "示例：\n" +
@@ -109,7 +115,11 @@ public partial class TriggerSettingsPageViewModel : ViewModel
                               "启动"
         };
         var p = new PromptDialog(
-            "白名单配置，每行一条记录",
+            "白名单配置，每行一条记录\n" +
+            "示例：\n" +
+            "调查\n" +
+            "合成\n" +
+            "启动",
             "白名单配置",
             multilineTextBox,
             text);

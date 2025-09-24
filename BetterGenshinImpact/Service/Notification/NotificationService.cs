@@ -106,6 +106,8 @@ public class NotificationService : IHostedService, IDisposable
         InitializeDingDingNotifier();
         InitializeTelegramNotifier();
         InitializeXxtuiNotifier();
+        InitializeDiscordWebhookNotifier();
+        InitializeServerChanNotifier();
 
         // 添加新通知渠道时，在此处添加对应的初始化方法调用
     }
@@ -207,7 +209,8 @@ public class NotificationService : IHostedService, IDisposable
                 _notificationConfig.BarkDeviceKeys,
                 _notificationConfig.BarkApiEndpoint,
                 _notificationConfig.BarkGroup,
-                _notificationConfig.BarkSound
+                _notificationConfig.BarkSound,
+                _notificationConfig.BarkIcon
             ));
         }
     }
@@ -256,10 +259,12 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.TelegramNotificationEnabled == true)
         {
             _notifierManager.RegisterNotifier(new TelegramNotifier(
-                _notifyHttpClient,
+                null,
                 _notificationConfig.TelegramBotToken,
                 _notificationConfig.TelegramChatId,
-                _notificationConfig.TelegramApiBaseUrl
+                _notificationConfig.TelegramApiBaseUrl,
+                _notificationConfig.TelegramProxyUrl,
+                _notificationConfig.TelegramProxyEnabled
             ));
         }
     }
@@ -277,6 +282,35 @@ public class NotificationService : IHostedService, IDisposable
             _notificationConfig.XxtuiApiKey,
             _notificationConfig.XxtuiFrom,
             channels
+        ));
+    }
+
+    /// <summary>
+    ///     初始化 Discord 通知器
+    /// </summary>
+    private void InitializeDiscordWebhookNotifier()
+    {
+        if (_notificationConfig?.DiscordWebhookNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new DiscordWebhookNotifier(
+            _notifyHttpClient,
+            _notificationConfig.DiscordWebhookUrl,
+            _notificationConfig.DiscordWebhookUsername,
+            _notificationConfig.DiscordWebhookAvatarUrl,
+            _notificationConfig.DiscordWebhookImageEncoder
+        ));
+    }
+
+    /// <summary>
+    /// 初始化 ServerChan 通知器
+    /// </summary>
+    private void InitializeServerChanNotifier()
+    {
+        if (_notificationConfig?.ServerChanNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new ServerChanNotifier(
+            _notifyHttpClient,
+            _notificationConfig.ServerChanSendKey
         ));
     }
 

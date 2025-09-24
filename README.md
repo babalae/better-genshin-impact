@@ -1,6 +1,6 @@
 <div align="center">
   <h1 align="center">
-    <a href="https://bettergi.com/"><img src="https://img.alicdn.com/imgextra/i2/2042484851/O1CN014wn1rf1lhoFYjL0gA_!!2042484851.png" width="200"></a>
+    <a href="https://bettergi.com/"><img src="https://img.alicdn.com/imgextra/i4/2042484851/O1CN016PuRSW1lhoOl4tcHS_!!2042484851.png" width="190"></a>
     <br/>
     <a href="https://bettergi.com/">BetterGI</a>
   </h1>
@@ -29,6 +29,7 @@
 
 <br/>
 
+[English](./Docs/readme_en.md) | [中文](./README.md)| [繁体中文](./Docs/readme_tcn.md)  
 BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原神变的更好的项目。
 
 ## 功能
@@ -45,7 +46,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
   * [自动伐木](https://bettergi.com/feats/task/felling.html)：自动 <kbd>Z</kbd> 键使用「王树瑞佑」，利用上下线可以刷新木材的原理，挂机刷满一背包的木材
   * [自动秘境](https://bettergi.com/feats/task/domain.html)：全自动秘境挂机刷体力，自动循环进入秘境开启钥匙、战斗、走到古树并领取奖励
   * [自动音游](https://bettergi.com/feats/task/music.html)：一键自动完成千音雅集的专辑，快速获取成就
-  * [全自动钓鱼](https://bettergi.com/feats/task/fish.html)：在出现钓鱼F按钮的位置面向鱼塘，然后启动全自动钓鱼，启动后程序会自动完成钓鱼，并切换白天和晚上
+  * [全自动钓鱼](https://bettergi.com/feats/task/fish.html)：在出现钓鱼 <kbd>F</kbd> 按钮的位置面向鱼塘，然后启动全自动钓鱼，启动后程序会自动完成钓鱼，并切换白天和晚上
 * 全自动
   * [一条龙](https://github.com/babalae/better-genshin-impact/issues/846)：一键完成日常（使用历练点），并领取奖励
   * [自动采集/挖矿/锄地](https://bettergi.com/feats/autos/pathing.html)：通过左上角小地图的识别，完成自动采集、挖矿、锄地等功能
@@ -73,7 +74,8 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 > 
 > 不知道下载哪个？第一次使用？请看：[快速上手](https://bettergi.com/quickstart.html) ， 遇到问题请先看：[常见问题](https://bettergi.com/faq.html)
 
-最新编译版本可以从自动构建中获取： [![](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml/badge.svg)](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml)
+最新测试版本可以从自动构建中获取： [![](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml/badge.svg)](https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml)
+或者从CNB上直接下载（速度快）：[CNB Releases](https://cnb.cool/bettergi/better-genshin-impact/-/releases)
 
 ## 使用方法
 由于图像识别比较吃性能，低配置电脑可能无法正常使用部分功能。
@@ -130,4 +132,4 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 ## 问题反馈
 
-提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[1053273766](https://qm.qq.com/q/qtocsOXnIQ)
+提 [Issue](https://github.com/babalae/better-genshin-impact/issues) 或 QQ群[1051494685](https://qm.qq.com/q/TPQtZlgraU)

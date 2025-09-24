@@ -57,7 +57,13 @@ public class EngineExtend
         engine.AddHostType("Region", typeof(Region));
         
         engine.AddHostType("CombatScenes", typeof(CombatScenes));
-        engine.AddHostType("CombatScenes", typeof(Avatar));
+        engine.AddHostType("Avatar", typeof(Avatar));
+        
+        
+        engine.AddHostObject("OpenCvSharp", new HostTypeCollection("OpenCvSharp"));
+
+        engine.AddHostType("ServerTime", typeof(ServerTime));
+        
 
 
         // 添加C#的类型
@@ -105,6 +111,7 @@ public class EngineExtend
         engine.AddHostObject("middleButtonUp", GlobalMethod.MiddleButtonUp);
         engine.AddHostObject("verticalScroll", GlobalMethod.VerticalScroll);
         engine.AddHostObject("captureGameRegion", GlobalMethod.CaptureGameRegion);
+        engine.AddHostObject("getAvatars", GlobalMethod.GetAvatars);
         engine.AddHostObject("inputText", GlobalMethod.InputText);
 #pragma warning restore CS8974 // Converting method group to non-delegate type
     }

@@ -58,7 +58,7 @@
                             <TextBlock Margin="8,4" Text="{Binding Name, Mode=OneWay}" >
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding NextFlag}" Value="True">
                                                 <Setter Property="Foreground" Value="Green" />
@@ -246,6 +246,7 @@
                                 <MenuItem Header="打开脚本仓库" Command="{Binding OpenLocalScriptRepoCommand}" />
                                 <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
                                 <MenuItem Header="任务倒序排列" Command="{Binding ReverseTaskOrderCommand}" />
+                                <MenuItem Header="导出根据控制文件修改任务" Command="{Binding ExportMergerJsonsCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
@@ -299,10 +300,10 @@
                                             Header="名称" >
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" FontSize="14">
+                                        <TextBlock Text="{Binding Name}" FontSize="14" ToolTip="{Binding FolderName}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding NextFlag}" Value="True">
                                                             <Setter Property="Foreground" Value="Green" />
@@ -352,6 +353,22 @@
                                                 Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}"
                                                 Value="Javascript">
                                                 <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </MenuItem.Style>
+                            </MenuItem>
+                            <MenuItem Command="{Binding OpenScriptFolderCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Header="打开所在目录">
+                                <MenuItem.Style>
+                                    <Style TargetType="MenuItem">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger
+                                                Binding="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem.Type}"
+                                                Value="Shell">
+                                                <Setter Property="Visibility" Value="Collapsed" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>

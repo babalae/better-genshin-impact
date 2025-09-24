@@ -1,38 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoDomain.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 public class AutoStygianOnslaughtTask : ISoloTask
 {
+    private readonly ILogger<AutoStygianOnslaughtTask> _logger = App.GetLogger<AutoStygianOnslaughtTask>();
+
+
     public string Name => "自动幽境危战";
 
     private readonly AutoStygianOnslaughtConfig _taskParam;
@@ -64,8 +68,19 @@ public class AutoStygianOnslaughtTask : ISoloTask
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success($"{Name}启动");
 
-        await DoDomain();
-        
+        try
+        {
+            await DoDomain();
+        }
+        catch (TaskCanceledException)
+        {
+            // do nothing
+        }
+        catch (Exception e)
+        {
+            _logger.LogInformation(e.Message);
+        }
+
         await Delay(3000, ct);
 
         await ArtifactSalvage();
@@ -74,8 +89,12 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task DoDomain()
     {
+        var page = new BvPage(_ct);
+
         // 前置进入秘境
-        await EnterDomain();
+        await TpToDomain(page);
+        await EnterDomain(page);
+        await ChooseBoss(page);
 
         for (var i = 0; i < 9999; i++)
         {
@@ -85,6 +104,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 throw new Exception("幽境危战进入秘境失败！");
             }
+
+            await Delay(1500, _ct); // 开始的三秒计时
 
             // 队伍没初始化成功则重试
             var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
@@ -96,7 +117,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             // 0. 切换到第一个角色
             var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
-            await Delay(2950, _ct); // 开始的三秒计时
+            await Delay(1500, _ct); // 开始的三秒计时
             // 走到boss前面
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             await Delay(1200, _ct);
@@ -104,7 +125,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
 
             // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
-            Logger.LogInformation($"{Name}：{{Text}}", "2. 执行战斗策略");
+            _logger.LogInformation($"{Name}：{{Text}}", "2. 执行战斗策略");
             await StartFight(combatScenes, combatCommands);
             await Delay(500, _ct);
 
@@ -112,7 +133,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             using var ra = CaptureToRectArea();
             if (ra.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist())
             {
-                Logger.LogWarning($"{Name}：{{Text}}", "挑战失败，重试！");
+                _logger.LogWarning($"{Name}：{{Text}}", "挑战失败，重试！");
                 Bv.ClickWhiteCancelButton(ra);
                 continue;
             }
@@ -122,21 +143,23 @@ public class AutoStygianOnslaughtTask : ISoloTask
             await Delay(6000, _ct); // 等待载入完成
 
             // 4. 寻找地脉花
-            Logger.LogInformation($"{Name}：{{Text}}", "3. 寻找地脉花");
+            _logger.LogInformation($"{Name}：{{Text}}", "3. 寻找地脉花");
             await _lowerHeadThenWalkToTask!.Start(_ct);
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
 
 
             // 5. 快速领取奖励并判断是否有下一轮
-            Logger.LogInformation($"{Name}：{{Text}}", "5. 领取奖励");
+            _logger.LogInformation($"{Name}：{{Text}}", "5. 领取奖励");
             if (!await GettingTreasure())
             {
-                Logger.LogInformation($"体力耗尽或者设置轮次已达标，{Name}");
+                _logger.LogInformation($"体力耗尽或者设置轮次已达标，{Name}");
                 break;
             }
 
             Notify.Event(NotificationEvent.DomainReward).Success($"{Name}奖励领取");
         }
+
+        await ExitDomain(page);
     }
 
     private void Init()
@@ -144,11 +167,11 @@ public class AutoStygianOnslaughtTask : ISoloTask
         LogScreenResolution();
         if (_taskParam.SpecifyResinUse)
         {
-            Logger.LogInformation("→ {Text} 指定使用树脂", $"{Name}，");
+            _logger.LogInformation("→ {Text} 指定使用树脂", $"{Name}，");
         }
         else
         {
-            Logger.LogInformation("→ {Text} 用尽所有浓缩树脂和原粹树脂后结束", $"{Name}，");
+            _logger.LogInformation("→ {Text} 用尽所有浓缩树脂和原粹树脂后结束", $"{Name}，");
         }
     }
 
@@ -157,26 +180,112 @@ public class AutoStygianOnslaughtTask : ISoloTask
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError($"游戏窗口分辨率不是 16:9 ！当前分辨率为 {{Width}}x{{Height}} , 非 16:9 分辨率的游戏无法正常使用{Name}功能 !",
+            _logger.LogError($"游戏窗口分辨率不是 16:9 ！当前分辨率为 {{Width}}x{{Height}} , 非 16:9 分辨率的游戏无法正常使用{Name}功能 !",
                 gameScreenSize.Width, gameScreenSize.Height);
             throw new Exception("游戏窗口分辨率不是 16:9");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogWarning($"游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {{Width}}x{{Height}} , 小于 1920x1080 的分辨率的游戏可能无法正常使用{Name}功能 !",
+            _logger.LogWarning($"游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {{Width}}x{{Height}} , 小于 1920x1080 的分辨率的游戏可能无法正常使用{Name}功能 !",
                 gameScreenSize.Width, gameScreenSize.Height);
         }
     }
 
-    private async Task EnterDomain()
+    private async Task TpToDomain(BvPage page)
+    {
+        await new ReturnMainUiTask().Start(_ct);
+        await Delay(100, _ct);
+
+        // 检查是否当前已经在秘境前面，如果已经在了就直接进入
+        if (page.Locator(AutoPickAssets.Instance.PickRo).WithRoi(r => r.CutRight(0.5)).IsExist())
+        {
+            if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
+            {
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                _logger.LogInformation($"{Name}：交互秘境");
+                return;
+            }
+        }
+
+        // 使用传送方式进入
+
+        // F5 打开活动
+        Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
+        await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3, 0.2)).WaitFor();
+        await Delay(500, _ct);
+
+        if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
+        {
+            await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
+        }
+        else if (page.GetByText("幽境危战").WithRoi(r => r.CutLeft(0.3)).IsExist())
+        {
+            await page.GetByText("幽境危战").WithRoi(r => r.CutLeft(0.3)).Click();
+            await Delay(1500, _ct);
+            await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
+        }
+
+        _logger.LogInformation($"{Name}：点击前往挑战");
+
+        // 传送
+        await Delay(1000, _ct);
+        await page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo).Click();
+        _logger.LogInformation($"{Name}：点击传送");
+        await Delay(800, _ct);
+
+        // 等待传送完成
+        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
+        _logger.LogInformation($"{Name}：传送完成");
+
+        await Delay(2000, _ct);
+        Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+        _logger.LogInformation($"{Name}：交互秘境");
+    }
+
+    private async Task EnterDomain(BvPage page)
+    {
+        await Delay(4000, _ct); // 等待动画完成
+        await page.Locator(ElementAssets.Instance.BtnWhiteConfirm)
+            .WithRoi(r => r.CutRight(0.5))
+            .ClickUntilDisappears();
+        _logger.LogInformation($"{Name}：进入秘境");
+
+        await Delay(2000, _ct);
+        await page.Locator(ElementAssets.Instance.LeylineDisorderIconRo).WaitFor(60000);
+        await Delay(1000, _ct);
+
+        _logger.LogInformation($"{Name}：步行前往钥匙");
+        await new WalkToFTask().Start(_ct);
+        await Delay(100, _ct);
+        await page.GetByText("开始挑战").WithRoi(r => r.CutRight(0.3)).WaitFor();
+    }
+
+    private async Task ChooseBoss(BvPage page)
     {
         await Delay(300, _ct);
         var ra = CaptureToRectArea();
 
         var ocrList = ra.FindMulti(RecognitionObject.OcrThis);
-        if (ocrList.Any(o => o.Text.Contains("好友挑战")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
+        if (ocrList.Any(o => o.Text.Contains("角色预览")) && ocrList.Any(o => o.Text.Contains("开始挑战")))
         {
+            // 选择boss
+            _logger.LogInformation($"{Name}：选择BOSS编号{{Text}}", _taskParam.BossNum);
+            if (_taskParam.BossNum == 1)
+            {
+                page.Click(196, 346);
+            }
+            else if (_taskParam.BossNum == 2)
+            {
+                page.Click(237, 541);
+            }
+            else if (_taskParam.BossNum == 3)
+            {
+                page.Click(203, 728);
+            }
+
+            await Delay(120, _ct);
+
             // 幽境危战确认界面
             Bv.ClickWhiteConfirmButton(ra);
 
@@ -185,7 +294,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
         else
         {
-            Logger.LogWarning("当前界面不是幽境危战{Msg1}界面，请注意是旅行者打开钥匙后弹出的界面！", "开始挑战");
+            _logger.LogWarning("当前界面不是幽境危战{Msg1}界面，请注意是旅行者打开钥匙后弹出的界面！", "开始挑战");
             throw new NormalEndException("当前界面不是幽境危战开始挑战界面，请注意是旅行者打开钥匙后弹出的界面！");
         }
     }
@@ -210,6 +319,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             try
             {
+                AutoFightTask.FightStatusFlag = true;
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
@@ -221,18 +331,19 @@ public class AutoStygianOnslaughtTask : ISoloTask
             }
             catch (NormalEndException e)
             {
-                Logger.LogInformation("战斗操作中断：{Msg}", e.Message);
+                _logger.LogInformation("战斗操作中断：{Msg}", e.Message);
             }
             catch (Exception e)
             {
-                Logger.LogWarning(e.Message);
+                _logger.LogWarning(e.Message);
                 throw;
             }
             finally
             {
-                Logger.LogInformation("自动战斗线程结束");
+                _logger.LogInformation("自动战斗线程结束");
                 Simulation.ReleaseAllKey();
                 Simulation.SendInput.Mouse.LeftButtonUp();
+                AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
 
@@ -289,7 +400,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
         {
             // 没有原粹树脂，直接退出秘境
-            Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
+            _logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
             await ExitDomain();
             return false;
         }
@@ -302,12 +413,12 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 // 自动刷干树脂
                 // 识别树脂状况
-                var resinStatus = ResinStatus.RecogniseFromRegion(ra3);
-                resinStatus.Print(Logger);
+                var resinStatus = ResinStatus.RecogniseFromRegion(ra3, TaskContext.Instance().SystemInfo, OcrFactory.Paddle);
+                resinStatus.Print(_logger);
 
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
                 {
-                    Logger.LogWarning("树脂不足");
+                    _logger.LogWarning("树脂不足");
                     await ExitDomain();
                     return false;
                 }
@@ -326,7 +437,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
                 if (!resinUsed)
                 {
-                    Logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
+                    _logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
                     await ExitDomain();
                     return false;
                 }
@@ -348,7 +459,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                     if (record.RemainCount > 0 && PressUseResin(textListInPrompt2, record.Name))
                     {
                         record.RemainCount -= 1;
-                        Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
+                        _logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
                         break;
                     }
                     else
@@ -366,8 +477,8 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 if (failCount == _resinPriorityListWhenSpecifyUse.Count)
                 {
                     // 没有找到对应的树脂
-                    Logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
-                    Logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
+                    _logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
+                    _logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
                     await ExitDomain();
                     return false;
                 }
@@ -438,11 +549,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task ExitDomain()
     {
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-        await Delay(500, _ct);
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-        await Delay(800, _ct);
-        Bv.ClickBlackConfirmButton(CaptureToRectArea());
+        await ExitDomain(new BvPage(_ct));
     }
 
     private bool PressUseResin(ImageRegion ra, string resinName)
@@ -470,17 +577,17 @@ public class AutoStygianOnslaughtTask : ISoloTask
                     // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了。使用双击
                     Sleep(60, _ct);
                     useKey.Click();
-                    Logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
+                    _logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
                     return true;
                 }
                 else
                 {
-                    Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                    _logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
                 }
             }
             else
             {
-                Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                _logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
             }
         }
 
@@ -513,6 +620,22 @@ public class AutoStygianOnslaughtTask : ISoloTask
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(star, false).Start(_ct);
+        await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
+    }
+
+
+    private async Task ExitDomain(BvPage page)
+    {
+        await Delay(1000, _ct);
+
+        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        await Delay(1000, _ct);
+
+        await page.Locator(ElementAssets.Instance.BtnExitDoor.Value).Click();
+
+        // 等待传送完成
+        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
+
+        await Delay(3000, _ct);
     }
 }

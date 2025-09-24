@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -11,17 +6,25 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using OpenCvSharp;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using BetterGenshinImpact.Core.Config;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -83,9 +86,10 @@ internal class GoToSereniteaPotTask
 
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenMap); // 打开地图
         await Delay(900, ct);
-        
+
         // 进入 壶
-        await ChangeCountryForce("尘歌壶", ct);
+        TpTask tpTask = new TpTask(ct);
+        await tpTask.SwitchArea("尘歌壶");
         
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
         var  ra = CaptureToRectArea();
@@ -377,9 +381,7 @@ internal class GoToSereniteaPotTask
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect((int)(ra.Width * 0.7), (int)(ra.Height * 0.35), (int)(ra.Width * 0.2), (int)(ra.Height * 0.15))
         });
-        IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        string shopOff = stringLocalizer.WithCultureGet(cultureInfo, "已售");
+        string shopOff = "已售";
         var shopOffRo = list.FirstOrDefault(r => r.Text.Contains(shopOff));
         if (shopOffRo != null)
         {
@@ -419,7 +421,28 @@ internal class GoToSereniteaPotTask
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "领取好感和宝钱");
             await Delay(1000, ct);
-            CaptureToRectArea().Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+
+            var getAare = CaptureToRectArea();
+            var count = OcrFactory.Paddle.OcrWithoutDetector(getAare.DeriveCrop(getAare.Width* 1801 / 1920,
+                getAare.Height* 609 / 1080,getAare.Width * 75 / 1920,getAare.Width * 46 / 1920).SrcMat);
+            
+            var match = System.Text.RegularExpressions.Regex.Match(count, @"(\d+)\s*[/17]\s*(8)");
+            var shouldClick = true;
+            if (match.Success)
+            {
+                var numericPart = StringUtils.TryParseInt(match.Groups[1].Value);
+                if (numericPart == 0)
+                {
+                    Logger.LogWarning("领取尘歌壶奖励:{text}", "没有角色可领取好感"); //存好感
+                    shouldClick = false;
+                }
+            }
+            
+            if (shouldClick)
+            {
+                getAare.Find(ElementAssets.Instance.SereniteaPotLoveRo, a => a.Click());
+            }
+            
             await Delay(500, ct);
             var ra = CaptureToRectArea();
             var list = ra.FindMulti(new RecognitionObject
@@ -453,8 +476,8 @@ internal class GoToSereniteaPotTask
             Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
             return; 
         }
-        DateTime now = DateTime.Now;
-        DayOfWeek currentDayOfWeek = now.Hour >= 4 ? now.DayOfWeek : now.AddDays(-1).DayOfWeek;
+        DateTimeOffset serverTime = ServerTimeHelper.GetServerTimeNow();
+        DayOfWeek currentDayOfWeek = serverTime.Hour >= 4 ? serverTime.DayOfWeek : serverTime.AddDays(-1).DayOfWeek;
         DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
         if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
         {
@@ -601,34 +624,6 @@ internal class GoToSereniteaPotTask
         // TP回主世界
         var tp = new TpTask(ct);
         await tp.Tp(4508.97509765625, 3630.557373046875); // TP到枫丹
-    }
-
-    private async Task ChangeCountryForce(string country, CancellationToken ct)
-    {
-        GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-        await Delay(500, ct);
-        using var ra = CaptureToRectArea();
-        var list = ra.FindMulti(new RecognitionObject
-        {
-            RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height)
-        });
-        IStringLocalizer<MapLazyAssets> stringLocalizer = App.GetService<IStringLocalizer<MapLazyAssets>>() ?? throw new NullReferenceException(nameof(stringLocalizer));
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        string minCountryLocalized = stringLocalizer.WithCultureGet(cultureInfo, country);
-        string commissionLocalized = stringLocalizer.WithCultureGet(cultureInfo, "委托");
-        Region? matchRect = list.FirstOrDefault(r => r.Text.Length == minCountryLocalized.Length && !r.Text.Contains(commissionLocalized) && r.Text.Contains(minCountryLocalized));
-        if (matchRect == null)
-        {
-            Logger.LogWarning("切换区域失败：{Country}", country);
-        }
-        else
-        {
-            matchRect.Click();
-            Logger.LogInformation("切换到区域：{Country}", country);
-        }
-
-        await Delay(500, ct);
     }
 
     public async Task DoOnce(CancellationToken ct)
