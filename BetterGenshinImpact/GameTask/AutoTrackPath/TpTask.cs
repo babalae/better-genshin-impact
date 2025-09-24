@@ -362,11 +362,11 @@ public class TpTask
             return false;
         }
 
-        // 屏蔽周围 115 一圈的区域
-        if (clickX < 115 * _zoomOutMax1080PRatio
-            || clickY < 115 * _zoomOutMax1080PRatio
-            || clickX > _captureRect.Width - 115 * _zoomOutMax1080PRatio
-            || clickY > _captureRect.Height - 115 * _zoomOutMax1080PRatio)
+        // 屏蔽周围一圈的区域，避免点到任务追踪、角色追踪图标等
+        if (clickX < 180 * _zoomOutMax1080PRatio
+            || clickY < 130 * _zoomOutMax1080PRatio
+            || clickX > _captureRect.Width - 180 * _zoomOutMax1080PRatio
+            || clickY > _captureRect.Height - 130 * _zoomOutMax1080PRatio)
         {
             return false;
         }
