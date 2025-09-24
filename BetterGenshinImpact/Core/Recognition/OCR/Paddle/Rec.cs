@@ -181,4 +181,6 @@ public class Rec(
             }
         }).ToArray();
     }
+
+    public string GetConfigName => config.Name;
 }

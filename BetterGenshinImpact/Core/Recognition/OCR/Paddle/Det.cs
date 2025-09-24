@@ -195,4 +195,6 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
 
         return score;
     }
+
+    public string GetConfigName => config.Name;
 }

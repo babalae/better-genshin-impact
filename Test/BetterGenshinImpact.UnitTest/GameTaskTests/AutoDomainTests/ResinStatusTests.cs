@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoDomainTests
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
             //
-            var result = ResinStatus.RecogniseFromRegion(imageRegion, systemInfo, this.paddle.Get(version: ocrVersion));   // todo：System.Exception : 未找到原粹树脂图标
+            var result = ResinStatus.RecogniseFromRegion(imageRegion, systemInfo, this.paddle.Get(version: ocrVersion));
 
             //
             Assert.Equal(originalResinCount, result.OriginalResinCount);
