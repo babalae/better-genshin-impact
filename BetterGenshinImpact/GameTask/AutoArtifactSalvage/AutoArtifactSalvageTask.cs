@@ -643,6 +643,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 const int foregroundIntensity = 152;
                 var backgroundFrequency = histogramFrequencies[backgroundIntensity];
                 var foregroundFrequency = histogramFrequencies[foregroundIntensity];
+                var noiseFrequencyUpperBound = Math.Min(backgroundFrequency, foregroundFrequency);
                 // 检查这两个强度是否比所有其他强度更常见
                 isUnactivated = backgroundFrequency > 0 &&
                                 foregroundFrequency > 0 &&
@@ -651,7 +652,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                                     .Where((frequency, intensity) =>
                                         intensity != backgroundIntensity &&
                                         intensity != foregroundIntensity &&
-                                        frequency > Math.Min(backgroundFrequency, foregroundFrequency))
+                                        frequency > noiseFrequencyUpperBound)
                                     .Any();
             }
             minorAffixes.Add(new ArtifactAffix(artifactAffixType, affixValue, isUnactivated));
