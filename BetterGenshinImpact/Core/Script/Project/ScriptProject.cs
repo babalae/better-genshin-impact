@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using System;

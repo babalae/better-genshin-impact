@@ -6,16 +6,16 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
     /// <summary>
     /// 圣遗物词条
     /// </summary>
-    public class ArtifactAffix
+    public class ArtifactAffix(ArtifactAffixType type, float value, bool isUnactivated)
     {
-        public ArtifactAffix(ArtifactAffixType type, float value)
+        public ArtifactAffix(ArtifactAffixType type, float value) : this(type, value, false)
         {
-            Type = type;
-            Value = value;
         }
 
-        public ArtifactAffixType Type { get; private set; }
-        public float Value { get; private set; }
+        public ArtifactAffixType Type { get; private set; } = type;
+        public float Value { get; private set; } = value;
+        public bool IsUnactivated { get; private set; } = isUnactivated;
+
         public static FrozenDictionary<ArtifactAffixType, string> DefaultStrDic { get; } = new Dictionary<ArtifactAffixType, string>() {
             { ArtifactAffixType.ATK, "攻击力" },
             { ArtifactAffixType.ATKPercent, "攻击力" },
