@@ -1176,10 +1176,9 @@
                                   HorizontalContentAlignment="Center"
                                   VerticalContentAlignment="Center"
                                   Margin="10,0,10,0"
-                                  ItemsSource=' 1234'
+                                  ItemsSource="{Binding PathingConfig.AvatarIndexList}"
                                   SelectedIndex="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
                                   SelectedItem="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
-                            <!--todo ItemsSource=' 1234'导致XAML设计器无法加载-->
 
                             <ui:TextBlock Grid.Row="0"
                                       Grid.Column="2"
