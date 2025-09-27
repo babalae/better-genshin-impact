@@ -54,6 +54,8 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
 
     public Task RecordTask(CancellationToken ct)
     {
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+
         return new Task(() =>
         {
             GiPath way = new();
@@ -74,7 +76,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
                         continue;
                     }
 
-                    var p2 = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(new Mat(ra.SrcMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
+                    var p2 = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).GetMiniMapPosition(new Mat(ra.SrcMat, new Rect(p.X + 24, p.Y - 15, 210, 210)));
                     if (!p2.IsEmpty())
                     {
                         way.AddPoint(p2);
