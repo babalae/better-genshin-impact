@@ -50,7 +50,8 @@ public class PathRecorder : Singleton<PathRecorder>
 
     public void Start()
     {
-        Navigation.WarmUp();
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        Navigation.WarmUp(matchingMethod);
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
         if (GetMapName() == nameof(MapTypes.Teyvat))
@@ -60,14 +61,14 @@ public class PathRecorder : Singleton<PathRecorder>
 
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen, GetMapName());
+        var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
         if (position == default)
         {
             TaskControl.Logger.LogWarning("未识别到当前位置！");
             return;
         }
 
-        position = MapManager.GetMap(GetMapName()).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        position = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = WaypointType.Teleport.Code;
@@ -88,8 +89,9 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         Waypoint waypoint = new();
         var screen = TaskControl.CaptureToRectArea();
-        var position = Navigation.GetPositionStable(screen, GetMapName());
-        position = MapManager.GetMap(GetMapName()).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
+        position = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (position == default)
         {
             TaskControl.Logger.LogWarning("未识别到当前位置！");
@@ -108,11 +110,13 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         if (_webWindow == null)
         {
+            var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
             _pathingTask.Info = new PathingTaskInfo
             {
                 Name = "未命名路线",
                 Type = PathingTaskType.Collect.Code,
                 MapName = GetMapName(),
+                MapMatchMethod = matchingMethod,
                 BgiVersion = Global.Version
             };
             var name = $@"{DateTime.Now:yyyyMMdd_HHmmss}.json";
