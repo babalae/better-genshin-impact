@@ -55,16 +55,10 @@ public partial class GearTriggerPageViewModel : ViewModel
     private ObservableCollection<GearTaskDefinitionViewModel> _availableTaskDefinitions = new();
 
     /// <summary>
-    /// 当前触发器的任务引用列表
+    /// 当前选中的任务定义
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<GearTaskRefence> _currentTaskReferences = new();
-
-    /// <summary>
-    /// 当前选中的任务引用
-    /// </summary>
-    [ObservableProperty]
-    private GearTaskRefence? _selectedTaskReference;
+    private GearTaskDefinitionViewModel? _selectedTaskDefinition;
 
     public GearTriggerPageViewModel(ILogger<GearTriggerPageViewModel> logger)
     {
@@ -78,11 +72,7 @@ public partial class GearTriggerPageViewModel : ViewModel
         var sequentialTrigger = new GearTriggerViewModel("示例顺序触发器", TriggerType.Sequential);
         SequentialTriggers.Add(sequentialTrigger);
 
-        var timedTrigger = new GearTriggerViewModel("示例定时触发器", TriggerType.Timed)
-        {
-            IntervalMs = 10000,
-            IsRepeating = true
-        };
+        var timedTrigger = new GearTriggerViewModel("示例定时触发器", TriggerType.Timed);
         TimedTriggers.Add(timedTrigger);
 
         var hotkeyTrigger = new GearTriggerViewModel("示例热键触发器", TriggerType.Hotkey)
@@ -105,18 +95,19 @@ public partial class GearTriggerPageViewModel : ViewModel
 
     partial void OnSelectedTriggerChanged(GearTriggerViewModel? value)
     {
-        UpdateCurrentTaskReferences();
+        UpdateSelectedTaskDefinition();
     }
 
-    private void UpdateCurrentTaskReferences()
+    private void UpdateSelectedTaskDefinition()
     {
-        CurrentTaskReferences.Clear();
-        if (SelectedTrigger != null)
+        if (SelectedTrigger != null && !string.IsNullOrEmpty(SelectedTrigger.TaskDefinitionName))
         {
-            foreach (var taskRef in SelectedTrigger.TaskReferences)
-            {
-                CurrentTaskReferences.Add(taskRef);
-            }
+            // 根据任务定义名称找到对应的任务定义
+            SelectedTaskDefinition = AvailableTaskDefinitions.FirstOrDefault(t => t.Name == SelectedTrigger.TaskDefinitionName);
+        }
+        else
+        {
+            SelectedTaskDefinition = null;
         }
     }
 
@@ -207,67 +198,27 @@ public partial class GearTriggerPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 添加任务定义到当前触发器
+    /// 设置任务定义到当前触发器
     /// </summary>
     [RelayCommand]
-    private void AddTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
+    private void SetTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
     {
         if (taskDefinition == null || SelectedTrigger == null) return;
 
-        // 创建任务引用
-        var taskRef = new GearTaskRefence
-        {
-            Name = taskDefinition.Name,
-            Enabled = true,
-            GearTaskFilePath = $"tasks/{taskDefinition.Name}.json" // 这里应该是实际的文件路径
-        };
-
-        SelectedTrigger.TaskReferences.Add(taskRef);
-        CurrentTaskReferences.Add(taskRef);
+        SelectedTrigger.TaskDefinitionName = taskDefinition.Name;
+        SelectedTaskDefinition = taskDefinition;
     }
 
     /// <summary>
-    /// 删除任务引用
+    /// 清除当前触发器的任务定义
     /// </summary>
     [RelayCommand]
-    private void RemoveTaskReference(GearTaskRefence? taskRef)
+    private void ClearTaskDefinition()
     {
-        if (taskRef == null || SelectedTrigger == null) return;
+        if (SelectedTrigger == null) return;
 
-        SelectedTrigger.TaskReferences.Remove(taskRef);
-        CurrentTaskReferences.Remove(taskRef);
-    }
-
-    /// <summary>
-    /// 上移任务引用
-    /// </summary>
-    [RelayCommand]
-    private void MoveTaskReferenceUp(GearTaskRefence? taskRef)
-    {
-        if (taskRef == null || SelectedTrigger == null) return;
-
-        var index = CurrentTaskReferences.IndexOf(taskRef);
-        if (index > 0)
-        {
-            CurrentTaskReferences.Move(index, index - 1);
-            SelectedTrigger.TaskReferences.Move(index, index - 1);
-        }
-    }
-
-    /// <summary>
-    /// 下移任务引用
-    /// </summary>
-    [RelayCommand]
-    private void MoveTaskReferenceDown(GearTaskRefence? taskRef)
-    {
-        if (taskRef == null || SelectedTrigger == null) return;
-
-        var index = CurrentTaskReferences.IndexOf(taskRef);
-        if (index < CurrentTaskReferences.Count - 1)
-        {
-            CurrentTaskReferences.Move(index, index + 1);
-            SelectedTrigger.TaskReferences.Move(index, index + 1);
-        }
+        SelectedTrigger.TaskDefinitionName = string.Empty;
+        SelectedTaskDefinition = null;
     }
 
     /// <summary>
