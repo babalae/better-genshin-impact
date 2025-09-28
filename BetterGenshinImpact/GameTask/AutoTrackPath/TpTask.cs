@@ -878,7 +878,7 @@ public class TpTask
         var list = ra.FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height),
+            RegionOfInterest = new Rect(ra.Width * 2 / 3, 0, ra.Width / 3, ra.Height),
             ReplaceDictionary = new Dictionary<string, string[]>
             {
                 ["渊下宫"] = ["渊下宮"],
