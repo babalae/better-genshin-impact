@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
@@ -67,7 +68,18 @@ public class AutoStygianOnslaughtTask : ISoloTask
         Init();
         Notify.Event(NotificationEvent.DomainStart).Success($"{Name}启动");
 
-        await DoDomain();
+        try
+        {
+            await DoDomain();
+        }
+        catch (TaskCanceledException)
+        {
+            // do nothing
+        }
+        catch (Exception e)
+        {
+            _logger.LogInformation(e.Message);
+        }
 
         await Delay(3000, ct);
 
@@ -223,7 +235,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await Delay(800, _ct);
 
         // 等待传送完成
-        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor();
+        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
         _logger.LogInformation($"{Name}：传送完成");
 
         await Delay(2000, _ct);
@@ -307,6 +319,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             try
             {
+                AutoFightTask.FightStatusFlag = true;
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
@@ -330,6 +343,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 _logger.LogInformation("自动战斗线程结束");
                 Simulation.ReleaseAllKey();
                 Simulation.SendInput.Mouse.LeftButtonUp();
+                AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
 
@@ -535,11 +549,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task ExitDomain()
     {
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-        await Delay(500, _ct);
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-        await Delay(800, _ct);
-        Bv.ClickBlackConfirmButton(CaptureToRectArea());
+        await ExitDomain(new BvPage(_ct));
     }
 
     private bool PressUseResin(ImageRegion ra, string resinName)
@@ -624,7 +634,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await page.Locator(ElementAssets.Instance.BtnExitDoor.Value).Click();
 
         // 等待传送完成
-        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor();
+        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
 
         await Delay(3000, _ct);
     }

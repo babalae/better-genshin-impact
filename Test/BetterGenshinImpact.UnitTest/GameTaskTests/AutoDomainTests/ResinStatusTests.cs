@@ -21,12 +21,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoDomainTests
             this.paddle = paddle;
         }
 
-        [Theory]
-        [InlineData(@"AutoDomain\SelectRevitalization.png", 21, 0, 2, 1)]
-        [InlineData(@"AutoDomain\SelectRevitalizationOcrV4.png", 11, 0, 1, 149, "V4")]
         /// <summary>
         /// 测试识别四种树脂数量，数量应正确
         /// </summary>
+        [Theory]
+        [InlineData(@"AutoDomain\SelectRevitalization.png", 21, 0, 2, 1)]
+        [InlineData(@"AutoDomain\SelectRevitalizationOcrV4.png", 11, 0, 1, 149, "V4")]
+        [InlineData(@"AutoDomain\SelectRevitalizationOcrV4_NSSZ1.png", 20, 1, 1, 0, "V4")]
+        [InlineData(@"AutoDomain\SelectRevitalizationOcrV4_NSSZ1.png", 20, 1, 1, 0)]
         public void RecogniseFromRegion_ResinStatusShouldBeRight(string screenshot1080p, int originalResinCount, int fragileResinCount, int condensedResinCount, int transientResinCount, string ocrVersion = "V5")
         {
             //
@@ -35,7 +37,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoDomainTests
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
             //
-            var result = ResinStatus.RecogniseFromRegion(imageRegion, systemInfo, this.paddle.Get(version: ocrVersion));   // todo：System.Exception : 未找到原粹树脂图标
+            var result = ResinStatus.RecogniseFromRegion(imageRegion, systemInfo, this.paddle.Get(version: ocrVersion));
 
             //
             Assert.Equal(originalResinCount, result.OriginalResinCount);

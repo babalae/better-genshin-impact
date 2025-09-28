@@ -161,6 +161,9 @@ public partial class App : Application
                 services.AddSingleton<GearTaskStorageService>();
 
 
+                
+                services.AddSingleton(TimeProvider.System);
+                services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
@@ -213,6 +216,7 @@ public partial class App : Application
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
             await _host.StartAsync();
+            ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
             await UrlProtocolHelper.RegisterAsync();
         }
         catch (Exception ex)

@@ -40,6 +40,7 @@ using BetterGenshinImpact.GameTask.AutoDomain.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -390,8 +391,8 @@ public class AutoDomainTask : ISoloTask
             Logger.LogInformation("自动秘境：{Text}", "检测到秘境限时全开");
         }
 
-        DateTime now = DateTime.Now;
-        if ((now.DayOfWeek == DayOfWeek.Sunday && now.Hour >= 4 || now.DayOfWeek == DayOfWeek.Monday && now.Hour < 4) || limitedFullyStringRaocrListdone != null)
+        var serverTime = ServerTimeHelper.GetServerTimeNow();
+        if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
             using var artifactArea = CaptureToRectArea().Find(fightAssets.ArtifactAreaRa); //检测是否为圣遗物副本
             if (artifactArea.IsEmpty())
@@ -646,6 +647,7 @@ public class AutoDomainTask : ISoloTask
         {
             try
             {
+                AutoFightTask.FightStatusFlag = true;
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
@@ -668,6 +670,7 @@ public class AutoDomainTask : ISoloTask
             {
                 Logger.LogInformation("自动战斗线程结束");
                 Simulation.ReleaseAllKey();
+                AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
 

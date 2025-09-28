@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.GetGridIconsTests
             var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 10);
 
             //
-            var result = new List<(string, int)>();
+            var result = new List<(string?, int)>();
             foreach (var row in rows)
             {
                 foreach (Rect rect in row)

@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -201,7 +200,7 @@ public class PaddleOcrService : IOcrService, IDisposable
 
             return null;
         }
-        
+
         /// <summary>
         /// 中英文优先使用V4模型，其他语言使用V5模型
         /// </summary>
@@ -341,5 +340,16 @@ public class PaddleOcrService : IOcrService, IDisposable
     {
         _localDetModel.Dispose();
         _localRecModel.Dispose();
+    }
+
+    /// <summary>
+    /// 返回(DetConfigName, RecConfigName)
+    /// </summary>
+    public (string, string) GetConfigName
+    {
+        get
+        {
+            return (this._localDetModel.GetConfigName, this._localRecModel.GetConfigName);
+        }
     }
 }

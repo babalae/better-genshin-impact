@@ -50,7 +50,11 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
             sb.Append("├─").Append("MinorAffixes: ").Append('\n');
             for (int i = 0; i < this.MinorAffixes.Length; i++)
             {
-                sb.Append('│').Append('\t').Append(i == this.MinorAffixes.Length - 1 ? "└─" : "├─").Append($"[{i}]: ").Append(this.MinorAffixes[i].Type).Append(", ").Append(this.MinorAffixes[i].Value).Append('\n');
+                sb.Append('│').Append('\t').Append(i == this.MinorAffixes.Length - 1 ? "└─" : "├─").Append($"[{i}]: ").Append(this.MinorAffixes[i].Type).Append(", ").Append(this.MinorAffixes[i].Value);
+                if (this.MinorAffixes[i].IsUnactivated) {
+                    sb.Append(", Unactivated");
+                }
+                sb.Append('\n');
             }
             sb.Append("└─").Append("Level: ").Append(this.Level);
             return sb.ToString();

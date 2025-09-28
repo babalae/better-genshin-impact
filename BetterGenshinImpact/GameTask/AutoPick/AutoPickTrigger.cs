@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -36,6 +37,11 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 拾取黑名单
     /// </summary>
     private HashSet<string> _blackList = [];
+    
+    /// <summary>
+    /// 拾取黑名单(模糊匹配)
+    /// </summary>
+    private List<string> _fuzzyBlackList = [];
 
     /// <summary>
     /// 拾取白名单
@@ -71,6 +77,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             {
                 _blackList.UnionWith(userBlackList);
             }
+            _fuzzyBlackList  = ReadTextList(@"User\pick_black_lists.txt");
         }
 
         if (config.WhiteListEnabled)
@@ -107,6 +114,26 @@ public partial class AutoPickTrigger : ITaskTrigger
             {
                 // 明确指定使用 char[] 重载版本
                 return new HashSet<string>(txt.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "读取拾取黑/白名单失败");
+            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+        }
+
+        return [];
+    }
+    
+    private List<string> ReadTextList(string textFilePath)
+    {
+        try
+        {
+            var txt = Global.ReadAllTextIfExist(textFilePath);
+            if (!string.IsNullOrEmpty(txt))
+            {
+                // 明确指定使用 char[] 重载版本
+                return [..txt.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)];
             }
         }
         catch (Exception e)
@@ -246,7 +273,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         else
         {
             var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat, out var bin);
+            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
             // 如果找到有效区域
             if (boundingRect.X <20 && boundingRect.Width > 5 && boundingRect.Height > 5)
             {
@@ -283,22 +310,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             // 处理OCR识别结果，清理无效字符并确保引号配对
             text = ProcessOcrText(text);
-            
-            // 唯一一个动态拾取项，特殊处理，不拾取
-            if (text.Contains("长时间"))
-            {
-                return;
-            }
 
-            // 纳塔部落中文名特殊处理，不拾取
-            if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
-                                        text.Contains("流泉")))
-            {
-                return;
-            }
-            // 挪德卡莱聚所中文名特殊处理，不拾取
-            if (text.Contains("聚所") && (text.Contains("霜月") || text.Contains("叮铃") ||
-                                        text.Contains("眶螂") || text.Contains("蛋卷") || text.Contains("坊")))
+            if (DoNotPick(text))
             {
                 return;
             }
@@ -324,9 +337,19 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            if (config.BlackListEnabled && _blackList.Contains(text))
+            if (config.BlackListEnabled)
             {
-                return;
+                if (_blackList.Contains(text))
+                {
+                    return;
+                }
+                if (_fuzzyBlackList.Count>0)
+                {
+                    if (_fuzzyBlackList.Any(item => text.Contains(item)))
+                    {
+                        return;
+                    }
+                }
             }
 
             speedTimer.Record("黑名单判断");
@@ -336,6 +359,41 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
+
+
+    }
+
+    private bool DoNotPick(string text)
+    {
+        // 唯一一个动态拾取项，特殊处理，不拾取
+        if (text.Contains("长时间"))
+        {
+            return true;
+        }
+
+        // 纳塔部落中文名特殊处理，不拾取
+        if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
+                                    text.Contains("流泉")))
+        {
+            return true;
+        }
+        // 挪德卡莱聚所中文名特殊处理，不拾取
+        if (text.Contains("聚所"))
+        {
+            return true;
+        }
+        
+        if (text.Contains("霜月") && text.Contains("坊"))
+        {
+            return true;
+        }
+
+        if (text.Contains("叮铃") || text.Contains("眶螂") || (text.Contains("蛋卷") && text.Contains("坊")))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public static Rect GetWhiteTextBoundingRect(Mat textMat)

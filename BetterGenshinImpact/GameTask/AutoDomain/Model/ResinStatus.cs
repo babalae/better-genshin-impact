@@ -6,6 +6,7 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using BetterGenshinImpact.GameTask.AutoPick;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.Model;
 
@@ -77,7 +78,7 @@ public class ResinStatus
         if (condensedResinRes.IsExist())
         {
             // 找出 icon 的位置 + 25 ~ icon 的位置+45 就是浓缩树脂的数字，数字宽20
-            var condensedResinCountRect = new Rect(crop2.X + condensedResinRes.Right + (int)(20 * assetScale), (int)(37 * assetScale), (int)(70 * assetScale), (int)(24 * assetScale));
+            var condensedResinCountRect = new Rect(crop2.X + condensedResinRes.Right + (int)(20 * assetScale), crop2.Y + condensedResinRes.Y, (int)(30 * assetScale), condensedResinRes.Height);
             using ImageRegion countRegion = region.DeriveCrop(condensedResinCountRect);
             using Mat threshold = countRegion.CacheGreyMat.Threshold(180, 255, ThresholdTypes.Binary);
             using Mat bitwiseNot = new Mat();

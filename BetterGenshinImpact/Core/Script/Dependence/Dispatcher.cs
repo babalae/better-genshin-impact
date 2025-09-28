@@ -14,6 +14,8 @@ using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
+using System.Dynamic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -192,8 +194,8 @@ public class Dispatcher
                 return null;
             case "AutoEat":
                 {
-                    string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "foodName", null);
-                    FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?)ScriptObjectConverter.GetValue<int?>((ScriptObject)soloTask.Config, "foodEffectType", null);
+                    string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "foodName", (string?)null);
+                    FoodEffectType? foodEffectType = soloTask.Config == null ? null : (FoodEffectType?)ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "foodEffectType", (int?)null);
 
                     if (foodName != null && foodEffectType != null)
                     {
@@ -259,9 +261,32 @@ public class Dispatcher
                     {
                         throw new NullReferenceException($"{nameof(soloTask.Config)}为空");
                     }
-                    GridScreenName gridScreenName = ScriptObjectConverter.GetValue<GridScreenName?>((ScriptObject)soloTask.Config, "gridScreenName", null) ?? throw new Exception("gridScreenName为空或错误");
-                    string itemName = ScriptObjectConverter.GetValue<string?>((ScriptObject)soloTask.Config, "itemName", null) ?? throw new Exception("itemName为空");
-                    return await new CountInventoryItem(gridScreenName, itemName).Start(cancellationToken);
+                    GridScreenName gridScreenName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "gridScreenName", (GridScreenName?)null) ?? throw new Exception("gridScreenName为空或错误");
+                    string? itemName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "itemName", (string?)null);
+                    IEnumerable<string>? itemNames = ScriptObjectConverter.GetValue<string>((ScriptObject)soloTask.Config, "itemNames");
+                    if (itemName != null && itemNames != null)
+                    {
+                        throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时使用");
+                    }
+                    if (itemName == null && itemNames == null)
+                    {
+                        throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时为空");
+                    }
+                    var result = await new CountInventoryItem(gridScreenName, itemName, itemNames).Start(cancellationToken);
+                    if (itemName != null)
+                    {
+                        return result;
+                    }
+                    else
+                    {
+                        dynamic expando = new ExpandoObject();
+                        var expandoDict = (IDictionary<string, object>)expando;
+                        foreach (var kvp in (Dictionary<string, int>)result)
+                        {
+                            expandoDict[kvp.Key] = kvp.Value;
+                        }
+                        return expandoDict;
+                    }
                 }
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
