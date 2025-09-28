@@ -4,10 +4,10 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Width="600"
+                 Width="400"
                  Height="700"
-                 MinWidth="500"
-                 MinHeight="400"
+                 MinWidth="400"
+                 MinHeight="250"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
@@ -46,7 +46,7 @@
                               Margin="0,0,0,5" />
                 <ui:TextBlock FontSize="14"
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                              Text="查看最新的原神的兑换码信息"
+                              Text="查看最新的原神的兑换码，一键自动兑换"
                               TextWrapping="Wrap" />
             </StackPanel>
 
@@ -61,6 +61,8 @@
                                      Padding="16">
                                 <Grid>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -85,25 +87,62 @@
                                     <!-- 内容 -->
                                     <ui:TextBlock Grid.Row="2"
                                                   FontSize="14"
+                                                  Visibility="{Binding Content, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                                   Text="{Binding Content}"
                                                   TextWrapping="Wrap"
                                                   LineHeight="20"
                                                   Margin="0,0,0,8" />
 
+                                    <!-- 兑换码列表 -->
+                                    <ItemsControl Grid.Row="3"
+                                                  ItemsSource="{Binding Codes}"
+                                                  Margin="0,0,0,8">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderThickness="1">
+                                                    <ui:TextBlock FontSize="14"
+                                                                  FontFamily="Consolas"
+                                                                  Text="{Binding}"
+                                                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
                                     <!-- 标签 -->
-                                    <StackPanel Grid.Row="3"
+                                    <StackPanel Grid.Row="4"
                                                 Orientation="Horizontal"
                                                 Visibility="{Binding HasTag, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Border CornerRadius="10"
                                                 Background="{DynamicResource CardBackground}"
-                                                BorderBrush="{DynamicResource CardBorderBrush}"
-                                                Padding="8,4">
+                                                BorderBrush="{DynamicResource CardBorderBrush}">
                                             <ui:TextBlock FontSize="11"
                                                           VerticalAlignment="Center"
                                                           Foreground="White"
                                                           Text="{Binding Tag}" />
                                         </Border>
                                     </StackPanel>
+
+                                    <!-- 按钮组 -->
+                                    <StackPanel Grid.Row="5"
+                                                Orientation="Horizontal"
+                                                Margin="0,0,0,8">
+                                        <ui:Button Content="复制"
+                                                   Appearance="Secondary"
+                                                   FontSize="12"
+                                                   Padding="12,6"
+                                                   Margin="0,0,8,0"
+                                                   Command="{Binding DataContext.CopyItemCodesCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}" />
+                                        <ui:Button Content="一键兑换"
+                                                   Appearance="Primary"
+                                                   FontSize="12"
+                                                   Padding="12,6"
+                                                   Command="{Binding DataContext.AutoRedeemItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}" />
+                                    </StackPanel>
+
+
                                 </Grid>
                             </ui:Card>
                         </DataTemplate>
@@ -113,14 +152,14 @@
         </Grid>
 
         <!-- 底部按钮 -->
-        <Grid Grid.Row="2" Margin="20,10,20,20">
+        <Grid Grid.Row="2" Margin="40,10,20,20">
             <StackPanel Orientation="Horizontal" 
                         HorizontalAlignment="Right">
-                <ui:Button Name="BtnRefresh"
+                <!--<ui:Button Name="BtnRefresh"
                            Margin="0,0,10,0"
                            Appearance="Secondary"
                            Content="刷新"
-                           Command="{Binding RefreshCommand}" />
+                           Command="{Binding RefreshCommand}" />-->
                 <ui:Button Name="BtnClose"
                            Content="关闭"
                            Click="BtnCloseClick" />

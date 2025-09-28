@@ -191,7 +191,7 @@
                                Command="{Binding OpenFeedCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Bookmark20}"
-                               ToolTip="打开兑换码等Feed信息" />
+                               ToolTip="获取兑换码信息" />
                     <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"
