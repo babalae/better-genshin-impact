@@ -31,21 +31,23 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
     /// <summary>Gets or sets the ratio for enlarging text boxes during post-processing.</summary>
     public float UnclipRatio { get; set; } = 2.0f;
 
+    private bool _disposed;
+
     ~Det()
     {
-        lock (_session)
-        {
-            _session.Dispose();
-        }
+        Dispose();
     }
 
     public void Dispose()
     {
+        if (_disposed) return;
         lock (_session)
         {
             _session.Dispose();
         }
+
         GC.SuppressFinalize(this);
+        _disposed = true;
     }
 
     public RotatedRect[] Run(Mat src)
@@ -100,42 +102,40 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
 
     public Mat RunRaw(Mat src, out Size resizedSize)
     {
-        var padded = src.Channels() switch
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(Det));
+        }
+        using var cov = src.Channels() switch
         {
             4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
             1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
-            3 => src,
+            3 => null,
             var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
         };
         // DetResizeForTest resize_long
-        using (var resized = MatResize(padded, MaxSize))
+        using var resized = MatResize(cov??src, MaxSize);
+        resizedSize = new Size(resized.Width, resized.Height);
+        using var padded = MatPadding32(resized);
+        var inputTensor = OcrUtils.NormalizeToTensorDnn(padded, config.NormalizeImage.Scale,
+            config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
+        try
         {
-            resizedSize = new Size(resized.Width, resized.Height);
-            padded = MatPadding32(resized);
-        }
+            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
+                NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
+            ]);
+            var output = results[0];
+            if (output.ElementType is not TensorElementType.Float)
+                throw new Exception($"Unexpected output tensor type: {output.ElementType}");
 
-        using (var _ = padded)
+            if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
+                throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
+            var outputTensor = output.AsTensor<float>();
+            return OcrUtils.Tensor2Mat(outputTensor);
+            // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
+        }finally
         {
-            var inputTensor = OcrUtils.NormalizeToTensorDnn(padded, config.NormalizeImage.Scale,
-                config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
-            using (owner)
-            {
-                lock (_session)
-                {
-                    using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
-                        NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
-                    ]);
-                    var output = results[0];
-                    if (output.ElementType is not TensorElementType.Float)
-                        throw new Exception($"Unexpected output tensor type: {output.ElementType}");
-
-                    if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
-                        throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-                    var outputTensor = output.AsTensor<float>();
-                    return OcrUtils.Tensor2Mat(outputTensor);
-                    // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
-                }
-            }
+            owner.Dispose();
         }
     }
 

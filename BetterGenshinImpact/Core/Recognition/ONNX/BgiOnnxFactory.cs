@@ -168,7 +168,10 @@ public class BgiOnnxFactory
                 if (!hasGpu) _logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
 
                 //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
-                list.Add(ProviderType.Cpu);
+                if (!list.Contains(ProviderType.Cpu))
+                {
+                    list.Add(ProviderType.Cpu);
+                }
                 return list.ToArray();
             }
 
