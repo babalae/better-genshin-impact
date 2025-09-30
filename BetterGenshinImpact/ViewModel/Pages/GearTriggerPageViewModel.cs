@@ -1,261 +1,172 @@
-using System;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.ViewModel.Pages.Component;
-using BetterGenshinImpact.Model.Gear.Tasks;
+using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Model;
+using System.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-/// <summary>
-/// 任务触发页面ViewModel
-/// </summary>
 public partial class GearTriggerPageViewModel : ViewModel
 {
-    private readonly ILogger<GearTriggerPageViewModel> _logger;
-
-    /// <summary>
-    /// 顺序触发器列表
-    /// </summary>
-    [ObservableProperty]
-    private ObservableCollection<GearTriggerViewModel> _sequentialTriggers = new();
-
-    /// <summary>
-    /// 定时触发器列表
-    /// </summary>
     [ObservableProperty]
     private ObservableCollection<GearTriggerViewModel> _timedTriggers = new();
 
-    /// <summary>
-    /// 热键触发器列表
-    /// </summary>
     [ObservableProperty]
     private ObservableCollection<GearTriggerViewModel> _hotkeyTriggers = new();
 
-    /// <summary>
-    /// 当前选中的触发器
-    /// </summary>
     [ObservableProperty]
     private GearTriggerViewModel? _selectedTrigger;
 
-    /// <summary>
-    /// 当前选中的触发器类型Tab
-    /// </summary>
-    [ObservableProperty]
-    private int _selectedTriggerTypeIndex = 0;
-
-    /// <summary>
-    /// 触发器配置中的任务定义列表
-    /// </summary>
     [ObservableProperty]
     private ObservableCollection<GearTaskDefinitionViewModel> _availableTaskDefinitions = new();
 
-    /// <summary>
-    /// 当前选中的任务定义
-    /// </summary>
     [ObservableProperty]
     private GearTaskDefinitionViewModel? _selectedTaskDefinition;
 
-    public GearTriggerPageViewModel(ILogger<GearTriggerPageViewModel> logger)
+    [ObservableProperty]
+    private ObservableCollection<GearTaskViewModel> _taskReferences = new();
+
+    public GearTriggerPageViewModel()
     {
-        _logger = logger;
-        InitializeData();
+    }
+    
+    public override void OnNavigatedTo()
+    {
+        InitializeExampleData();
     }
 
-    private void InitializeData()
+    private void InitializeExampleData()
     {
-        // 初始化示例数据
-        var sequentialTrigger = new GearTriggerViewModel("示例顺序触发器", TriggerType.Sequential);
-        SequentialTriggers.Add(sequentialTrigger);
-
-        var timedTrigger = new GearTriggerViewModel("示例定时触发器", TriggerType.Timed);
-        TimedTriggers.Add(timedTrigger);
-
-        var hotkeyTrigger = new GearTriggerViewModel("示例热键触发器", TriggerType.Hotkey)
+        // 添加定时触发器示例数据
+        TimedTriggers.Add(new GearTriggerViewModel("每日签到", TriggerType.Timed)
         {
-            Hotkey = new HotKey(System.Windows.Input.Key.F1, System.Windows.Input.ModifierKeys.Control)
-        };
-        HotkeyTriggers.Add(hotkeyTrigger);
+            Description = "每天早上8点自动签到",
+            IsEnabled = true,
+            TaskDefinitionName = "自动签到任务"
+        });
 
-        // 初始化可用的任务定义（这里应该从实际的任务定义服务获取）
-        LoadAvailableTaskDefinitions();
-    }
-
-    private void LoadAvailableTaskDefinitions()
-    {
-        // 这里应该从实际的任务定义服务获取
-        // 暂时创建示例数据
-        var sampleTask = new GearTaskDefinitionViewModel("示例任务组", "这是一个示例任务组");
-        AvailableTaskDefinitions.Add(sampleTask);
-    }
-
-    partial void OnSelectedTriggerChanged(GearTriggerViewModel? value)
-    {
-        UpdateSelectedTaskDefinition();
-    }
-
-    private void UpdateSelectedTaskDefinition()
-    {
-        if (SelectedTrigger != null && !string.IsNullOrEmpty(SelectedTrigger.TaskDefinitionName))
+        TimedTriggers.Add(new GearTriggerViewModel("周常清理", TriggerType.Timed)
         {
-            // 根据任务定义名称找到对应的任务定义
-            SelectedTaskDefinition = AvailableTaskDefinitions.FirstOrDefault(t => t.Name == SelectedTrigger.TaskDefinitionName);
-        }
-        else
+            Description = "每周一清理背包",
+            IsEnabled = false,
+            TaskDefinitionName = "背包清理任务"
+        });
+
+        // 添加快捷键触发器示例数据
+        HotkeyTriggers.Add(new GearTriggerViewModel("快速战斗", TriggerType.Hotkey)
         {
-            SelectedTaskDefinition = null;
-        }
+            Description = "按F1快速开始战斗",
+            IsEnabled = true,
+            TaskDefinitionName = "自动战斗任务",
+            Hotkey = new HotKey { Key = System.Windows.Input.Key.F1 }
+        });
+
+        HotkeyTriggers.Add(new GearTriggerViewModel("快速采集", TriggerType.Hotkey)
+        {
+            Description = "按F2快速采集物品",
+            IsEnabled = true,
+            TaskDefinitionName = "自动采集任务",
+            Hotkey = new HotKey { Key = System.Windows.Input.Key.F2 }
+        });
+
+        // 添加示例任务定义
+        AvailableTaskDefinitions.Add(new GearTaskDefinitionViewModel("自动签到任务", "每日自动签到"));
+        AvailableTaskDefinitions.Add(new GearTaskDefinitionViewModel("背包清理任务", "清理背包中的无用物品"));
+        AvailableTaskDefinitions.Add(new GearTaskDefinitionViewModel("自动战斗任务", "自动进行战斗"));
+        AvailableTaskDefinitions.Add(new GearTaskDefinitionViewModel("自动采集任务", "自动采集周围的物品"));
     }
 
-    /// <summary>
-    /// 添加顺序触发器
-    /// </summary>
-    [RelayCommand]
-    private void AddSequentialTrigger()
-    {
-        var trigger = new GearTriggerViewModel($"顺序触发器 {SequentialTriggers.Count + 1}", TriggerType.Sequential);
-        SequentialTriggers.Add(trigger);
-        SelectedTrigger = trigger;
-        SelectedTriggerTypeIndex = 0;
-    }
-
-    /// <summary>
-    /// 添加定时触发器
-    /// </summary>
     [RelayCommand]
     private void AddTimedTrigger()
     {
-        var trigger = new GearTriggerViewModel($"定时触发器 {TimedTriggers.Count + 1}", TriggerType.Timed);
-        TimedTriggers.Add(trigger);
-        SelectedTrigger = trigger;
-        SelectedTriggerTypeIndex = 1;
+        var newTrigger = new GearTriggerViewModel($"定时触发器 {TimedTriggers.Count + 1}", TriggerType.Timed);
+        TimedTriggers.Add(newTrigger);
+        SelectedTrigger = newTrigger;
     }
 
-    /// <summary>
-    /// 添加热键触发器
-    /// </summary>
     [RelayCommand]
     private void AddHotkeyTrigger()
     {
-        var trigger = new GearTriggerViewModel($"热键触发器 {HotkeyTriggers.Count + 1}", TriggerType.Hotkey);
-        HotkeyTriggers.Add(trigger);
-        SelectedTrigger = trigger;
-        SelectedTriggerTypeIndex = 2;
+        var newTrigger = new GearTriggerViewModel($"快捷键触发器 {HotkeyTriggers.Count + 1}", TriggerType.Hotkey);
+        HotkeyTriggers.Add(newTrigger);
+        SelectedTrigger = newTrigger;
     }
 
-    /// <summary>
-    /// 删除触发器
-    /// </summary>
     [RelayCommand]
-    private void DeleteTrigger(GearTriggerViewModel? trigger)
+    private void DeleteTrigger()
     {
-        if (trigger == null) return;
+        if (SelectedTrigger == null) return;
 
-        var result = MessageBox.Show($"确定要删除触发器 '{trigger.Name}' 吗？", "确认删除", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (result == MessageBoxResult.Yes)
+        switch (SelectedTrigger.TriggerType)
         {
-            switch (trigger.TriggerType)
-            {
-                case TriggerType.Sequential:
-                    SequentialTriggers.Remove(trigger);
-                    break;
-                case TriggerType.Timed:
-                    TimedTriggers.Remove(trigger);
-                    break;
-                case TriggerType.Hotkey:
-                    HotkeyTriggers.Remove(trigger);
-                    break;
-            }
-
-            if (SelectedTrigger == trigger)
-            {
-                SelectedTrigger = null;
-            }
+            case TriggerType.Timed:
+                TimedTriggers.Remove(SelectedTrigger);
+                break;
+            case TriggerType.Hotkey:
+                HotkeyTriggers.Remove(SelectedTrigger);
+                break;
         }
+
+        SelectedTrigger = null;
     }
 
-    /// <summary>
-    /// 编辑触发器
-    /// </summary>
     [RelayCommand]
-    private void EditTrigger(GearTriggerViewModel? trigger)
+    private void SetTaskDefinition()
     {
-        if (trigger == null) return;
-        SelectedTrigger = trigger;
-        
-        // 切换到对应的Tab
-        SelectedTriggerTypeIndex = trigger.TriggerType switch
-        {
-            TriggerType.Sequential => 0,
-            TriggerType.Timed => 1,
-            TriggerType.Hotkey => 2,
-            _ => 0
-        };
+        if (SelectedTrigger == null || SelectedTaskDefinition == null) return;
+
+        SelectedTrigger.TaskDefinitionName = SelectedTaskDefinition.Name;
+        UpdateTaskReferences();
     }
 
-    /// <summary>
-    /// 设置任务定义到当前触发器
-    /// </summary>
-    [RelayCommand]
-    private void SetTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
-    {
-        if (taskDefinition == null || SelectedTrigger == null) return;
-
-        SelectedTrigger.TaskDefinitionName = taskDefinition.Name;
-        SelectedTaskDefinition = taskDefinition;
-    }
-
-    /// <summary>
-    /// 清除当前触发器的任务定义
-    /// </summary>
     [RelayCommand]
     private void ClearTaskDefinition()
     {
         if (SelectedTrigger == null) return;
 
         SelectedTrigger.TaskDefinitionName = string.Empty;
-        SelectedTaskDefinition = null;
+        TaskReferences.Clear();
     }
 
-    /// <summary>
-    /// 保存配置
-    /// </summary>
+    partial void OnSelectedTriggerChanged(GearTriggerViewModel? value)
+    {
+        UpdateTaskReferences();
+    }
+
+    private void UpdateTaskReferences()
+    {
+        TaskReferences.Clear();
+
+        if (SelectedTrigger == null || string.IsNullOrEmpty(SelectedTrigger.TaskDefinitionName))
+            return;
+
+        var taskDefinition = AvailableTaskDefinitions.FirstOrDefault(t => t.Name == SelectedTrigger.TaskDefinitionName);
+        if (taskDefinition?.RootTask != null)
+        {
+            AddTaskReferences(taskDefinition.RootTask);
+        }
+    }
+
+    private void AddTaskReferences(GearTaskViewModel task)
+    {
+        TaskReferences.Add(task);
+        foreach (var child in task.Children)
+        {
+            AddTaskReferences(child);
+        }
+    }
+
     [RelayCommand]
     private void SaveConfiguration()
     {
-        try
-        {
-            // 这里应该实现保存到文件的逻辑
-            _logger.LogInformation("触发器配置已保存");
-            MessageBox.Show("配置保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "保存触发器配置时发生错误");
-            MessageBox.Show($"保存失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        // TODO: 实现保存配置逻辑
     }
 
-    /// <summary>
-    /// 加载配置
-    /// </summary>
     [RelayCommand]
     private void LoadConfiguration()
     {
-        try
-        {
-            // 这里应该实现从文件加载的逻辑
-            _logger.LogInformation("触发器配置已加载");
-            MessageBox.Show("配置加载成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "加载触发器配置时发生错误");
-            MessageBox.Show($"加载失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        // TODO: 实现加载配置逻辑
     }
 }
