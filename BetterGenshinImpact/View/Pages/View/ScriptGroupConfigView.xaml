@@ -1151,7 +1151,7 @@
                             <Style x:Key="GuardianVisibilityStyle" TargetType="FrameworkElement">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                    <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -1177,7 +1177,6 @@
                                   VerticalContentAlignment="Center"
                                   Margin="10,0,10,0"
                                   ItemsSource="{Binding PathingConfig.AvatarIndexList}"
-                                  SelectedIndex="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}"
                                   SelectedItem="{Binding PathingConfig.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
 
                             <ui:TextBlock Grid.Row="0"
@@ -1208,7 +1207,7 @@
                                 <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
                                     <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value="">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -1237,7 +1236,7 @@
                                 <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
                                     <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value="">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -1266,7 +1265,7 @@
                                 <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
                                     <Setter Property="Visibility" Value="Visible"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value=" ">
+                                        <DataTrigger Binding="{Binding PathingConfig.AutoFightConfig.GuardianAvatar}" Value="">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                         </DataTrigger>
                                     </Style.Triggers>

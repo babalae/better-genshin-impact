@@ -125,7 +125,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
 
-
     [ObservableProperty]
     private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
 
