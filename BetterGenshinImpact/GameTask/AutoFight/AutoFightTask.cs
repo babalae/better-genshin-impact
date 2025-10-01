@@ -341,7 +341,7 @@ public class AutoFightTask : ISoloTask
                         
                         #endregion
                         
-                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && _taskParam.GuardianCombatSkip))
+                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && (_taskParam.GuardianCombatSkip || _taskParam.BurstEnabled)))
                         {
                             continue;
                         }
