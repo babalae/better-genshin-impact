@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -407,9 +407,81 @@ public class CombatScenes : IDisposable
             }
         }
 
-        if (notActiveCount != ExpectedTeamAvatarNum - 1) return avatarName;
+        // 如果识别结果不正确（没有恰好一个出战角色），尝试切换偏移状态重试
+        if (notActiveCount != ExpectedTeamAvatarNum - 1)
+        {
+            var activeCount = ExpectedTeamAvatarNum - notActiveCount;
+            Logger.LogWarning("当前角色识别异常（检测到{ActiveCount}个出战角色，预期1个），尝试切换UI偏移状态重试", activeCount);
+            
+            // 切换偏移状态
+            var originalOffsetState = IndexRectOffset60Fix;
+            ToggleIndexRectOffset();
+            
+            // 重新识别
+            avatarName = null;
+            notActiveCount = 0;
+            foreach (var avatar in GetAvatars())
+            {
+                if (avatar.IsActive(imageRegion))
+                {
+                    avatarName = avatar.Name;
+                }
+                else
+                {
+                    notActiveCount++;
+                }
+            }
+            
+            // 如果还是不对，切换回去
+            if (notActiveCount != ExpectedTeamAvatarNum - 1)
+            {
+                var retryActiveCount = ExpectedTeamAvatarNum - notActiveCount;
+                Logger.LogWarning("切换UI偏移状态后仍无法正确识别（检测到{ActiveCount}个出战角色），恢复原状态", retryActiveCount);
+                ToggleIndexRectOffset();
+                return avatarName;
+            }
+            else
+            {
+                Logger.LogInformation("切换UI偏移状态成功！偏移状态: {OriginalState} -> {NewState}，识别到当前角色: {AvatarName}", 
+                    originalOffsetState ? "上偏移" : "正常", 
+                    IndexRectOffset60Fix ? "上偏移" : "正常",
+                    avatarName);
+            }
+        }
+        
         Avatar.LastActiveAvatar = avatarName;
         return Avatar.LastActiveAvatar;
+    }
+    
+    /// <summary>
+    /// 切换角色序号位置的偏移状态（上偏移 <-> 下偏移）
+    /// </summary>
+    private void ToggleIndexRectOffset()
+    {
+        var offsetAmount = 14;
+        
+        if (IndexRectOffset60Fix)
+        {
+            // 当前是上偏移状态，切换到正常状态（向下移动）
+            foreach (var avatar in GetAvatars())
+            {
+                var rect = avatar.IndexRect;
+                rect.Y += offsetAmount;
+                avatar.IndexRect = rect;
+            }
+            IndexRectOffset60Fix = false;
+        }
+        else
+        {
+            // 当前是正常状态，切换到上偏移状态（向上移动）
+            foreach (var avatar in GetAvatars())
+            {
+                var rect = avatar.IndexRect;
+                rect.Y -= offsetAmount;
+                avatar.IndexRect = rect;
+            }
+            IndexRectOffset60Fix = true;
+        }
     }
 
 
