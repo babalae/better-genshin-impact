@@ -2,6 +2,8 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 
@@ -11,6 +13,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect TeamRect;
     public List<Rect> AvatarSideIconRectList; // 侧边栏角色头像 非联机状态下
     public List<Rect> AvatarIndexRectList; // 侧边栏角色头像对应的白色块 非联机状态下
+    public List<Rect> AvatarQRectListMap; // 角色头像对应的Q技能图标 
+    
     public Rect ERect;
     public Rect ECooldownRect;
     public Rect QRect;
@@ -70,6 +74,14 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(352 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(448 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(544 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+        ];
+        
+        AvatarQRectListMap =
+        [
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(216 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(316 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(416 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(516 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
         ];
 
         AvatarSideIconRectList =
