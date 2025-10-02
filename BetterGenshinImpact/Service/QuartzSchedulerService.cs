@@ -14,7 +14,6 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger, ISchedulerFactory schedulerFactory) : IHostedService
 {
-    private ILogger<QuartzSchedulerService> _logger = logger;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -23,7 +22,7 @@ public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger, ISch
         Dictionary<IJobDetail, IReadOnlyCollection<ITrigger>> jobsDictionary = new();
         foreach (var data in allData)
         {
-            if (string.IsNullOrEmpty(data.CronExpression))
+            if (string.IsNullOrEmpty(data.CronExpression) || !data.IsEnabled)
             {
                 continue;
             }
@@ -44,7 +43,8 @@ public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger, ISch
         await scheduler.ScheduleJobs(jobsDictionary, replace: true, cancellationToken);
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
+        return Task.CompletedTask;
     }
 }

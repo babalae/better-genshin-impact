@@ -16,9 +16,6 @@ public partial class GearTriggerViewModel : ObservableObject
     private string _name = string.Empty;
 
     [ObservableProperty]
-    private string _description = string.Empty;
-
-    [ObservableProperty]
     private bool _isEnabled = true;
 
     [ObservableProperty]
@@ -37,15 +34,13 @@ public partial class GearTriggerViewModel : ObservableObject
     /// 触发器类型
     /// </summary>
     [ObservableProperty]
-    private TriggerType _triggerType = TriggerType.Sequential;
+    private TriggerType _triggerType = TriggerType.Timed;
 
     /// <summary>
-    /// 任务引用列表
+    /// 任务引用名称
     /// </summary>
     [ObservableProperty]
     private string _taskDefinitionName = string.Empty;
-
-    // 顺序触发器属性（无额外属性）
     
 
     // 热键触发器属性
@@ -60,29 +55,13 @@ public partial class GearTriggerViewModel : ObservableObject
     {
         Name = name;
         TriggerType = triggerType;
-        Description = GetDefaultDescription(triggerType);
     }
-
-    /// <summary>
-    /// 获取触发器类型的默认描述
-    /// </summary>
-    private string GetDefaultDescription(TriggerType triggerType)
-    {
-        return triggerType switch
-        {
-            TriggerType.Sequential => "按顺序执行任务",
-            TriggerType.Timed => "定时执行任务",
-            TriggerType.Hotkey => "热键触发执行任务",
-            _ => "未知触发器类型"
-        };
-    }
-
+    
     /// <summary>
     /// 获取触发器类型显示名称
     /// </summary>
     public string TriggerTypeDisplayName => TriggerType switch
     {
-        TriggerType.Sequential => "顺序触发",
         TriggerType.Timed => "定时触发",
         TriggerType.Hotkey => "热键触发",
         _ => "未知类型"
@@ -92,24 +71,7 @@ public partial class GearTriggerViewModel : ObservableObject
     /// 获取热键显示文本
     /// </summary>
     public string HotkeyDisplayText => Hotkey?.ToString() ?? "未设置";
-
-    // /// <summary>
-    // /// 获取定时器配置显示文本
-    // /// </summary>
-    // public string TimerDisplayText
-    // {
-    //     get
-    //     {
-    //         if (TriggerType != TriggerType.Timed) return "";
-    //         
-    //         var text = $"间隔: {IntervalMs}ms";
-    //         if (DelayMs > 0) text += $", 延迟: {DelayMs}ms";
-    //         if (MaxExecutions > 0) text += $", 最大次数: {MaxExecutions}";
-    //         if (!IsRepeating) text += ", 单次执行";
-    //         
-    //         return text;
-    //     }
-    // }
+    
 
     /// <summary>
     /// 转换为对应的触发器实例
@@ -118,24 +80,20 @@ public partial class GearTriggerViewModel : ObservableObject
     {
         GearBaseTrigger trigger = TriggerType switch
         {
-            TriggerType.Sequential => new SequentialGearTrigger(),
             TriggerType.Timed => new QuartzCronGearTrigger
             {
-                // IntervalMs = IntervalMs,
-                // IsRepeating = IsRepeating,
-                // DelayMs = DelayMs,
-                // MaxExecutions = MaxExecutions
+                CronExpression = CronExpression
             },
             TriggerType.Hotkey => new HotkeyGearTrigger
             {
-                Hotkey = Hotkey,
-                IsEnabled = IsEnabled
+                Hotkey = Hotkey
             },
-            _ => new SequentialGearTrigger()
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         trigger.Name = Name;
-        trigger.TaskDefinitionName = _taskDefinitionName;
+        trigger.IsEnabled = IsEnabled;
+        trigger.TaskDefinitionName = TaskDefinitionName;
         
         return trigger;
     }
@@ -146,11 +104,6 @@ public partial class GearTriggerViewModel : ObservableObject
 /// </summary>
 public enum TriggerType
 {
-    /// <summary>
-    /// 顺序触发
-    /// </summary>
-    Sequential,
-    
     /// <summary>
     /// 定时触发
     /// </summary>

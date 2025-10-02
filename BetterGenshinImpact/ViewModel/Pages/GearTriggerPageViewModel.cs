@@ -42,14 +42,12 @@ public partial class GearTriggerPageViewModel : ViewModel
         // 添加定时触发器示例数据
         TimedTriggers.Add(new GearTriggerViewModel("每日签到", TriggerType.Timed)
         {
-            Description = "每天早上8点自动签到",
             IsEnabled = true,
             TaskDefinitionName = "自动签到任务"
         });
 
         TimedTriggers.Add(new GearTriggerViewModel("周常清理", TriggerType.Timed)
         {
-            Description = "每周一清理背包",
             IsEnabled = false,
             TaskDefinitionName = "背包清理任务"
         });
@@ -57,7 +55,6 @@ public partial class GearTriggerPageViewModel : ViewModel
         // 添加快捷键触发器示例数据
         HotkeyTriggers.Add(new GearTriggerViewModel("快速战斗", TriggerType.Hotkey)
         {
-            Description = "按F1快速开始战斗",
             IsEnabled = true,
             TaskDefinitionName = "自动战斗任务",
             Hotkey = new HotKey { Key = System.Windows.Input.Key.F1 }
@@ -65,7 +62,6 @@ public partial class GearTriggerPageViewModel : ViewModel
 
         HotkeyTriggers.Add(new GearTriggerViewModel("快速采集", TriggerType.Hotkey)
         {
-            Description = "按F2快速采集物品",
             IsEnabled = true,
             TaskDefinitionName = "自动采集任务",
             Hotkey = new HotKey { Key = System.Windows.Input.Key.F2 }

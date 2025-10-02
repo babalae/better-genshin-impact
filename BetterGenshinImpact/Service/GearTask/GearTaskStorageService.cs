@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.GearTask.Model;
 
 namespace BetterGenshinImpact.Service;
 
@@ -23,7 +24,7 @@ public class GearTaskStorageService
     public GearTaskStorageService(ILogger<GearTaskStorageService> logger)
     {
         _logger = logger;
-        _taskStoragePath = Path.Combine(Global.Absolute("User"), "task_v2", "list");
+        _taskStoragePath = GearTaskPaths.TaskListPath;
         
         // 确保目录存在
         Directory.CreateDirectory(_taskStoragePath);
