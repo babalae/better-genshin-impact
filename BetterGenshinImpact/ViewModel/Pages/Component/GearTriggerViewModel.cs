@@ -23,6 +23,9 @@ public partial class GearTriggerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected = false;
+    
+    [ObservableProperty]
+    private string? _cronExpression;
 
     [ObservableProperty]
     private DateTime _createdTime = DateTime.Now;
