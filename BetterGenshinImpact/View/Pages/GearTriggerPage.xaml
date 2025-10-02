@@ -277,15 +277,35 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     
+                    <!-- 工具栏 -->
+                    <Border Grid.Row="0" 
+                            Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="新增定时触发器"
+                                       Command="{Binding AddTimedTriggerCommand}"
+                                       Icon="{ui:SymbolIcon Add24}"
+                                       Appearance="Primary"
+                                       Margin="0,0,8,0" />
+                            <ui:Button Content="删除选中项"
+                                       Command="{Binding DeleteTriggerCommand}"
+                                       Icon="{ui:SymbolIcon Delete24}"
+                                       Appearance="Secondary" />
+                        </StackPanel>
+                    </Border>
+                    
                     <!-- 固定表格头部 -->
-                    <ContentPresenter Grid.Row="0" 
+                    <ContentPresenter Grid.Row="1" 
                                       ContentTemplate="{StaticResource TimedTableHeaderTemplate}" />
                     
                     <!-- 可滚动的列表内容 -->
-                    <ScrollViewer Grid.Row="1"
+                    <ScrollViewer Grid.Row="2"
                                   VerticalScrollBarVisibility="Auto" 
                                   HorizontalScrollBarVisibility="Disabled">
                         <ui:ListView ItemsSource="{Binding TimedTriggers}"
@@ -301,15 +321,35 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     
+                    <!-- 工具栏 -->
+                    <Border Grid.Row="0" 
+                            Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="0,0,0,1"
+                            Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="新增快捷键触发器"
+                                       Command="{Binding AddHotkeyTriggerCommand}"
+                                       Icon="{ui:SymbolIcon Add24}"
+                                       Appearance="Primary"
+                                       Margin="0,0,8,0" />
+                            <ui:Button Content="删除选中项"
+                                       Command="{Binding DeleteTriggerCommand}"
+                                       Icon="{ui:SymbolIcon Delete24}"
+                                       Appearance="Secondary" />
+                        </StackPanel>
+                    </Border>
+                    
                     <!-- 固定表格头部 -->
-                    <ContentPresenter Grid.Row="0" 
+                    <ContentPresenter Grid.Row="1" 
                                       ContentTemplate="{StaticResource TableHeaderTemplate}" />
                     
                     <!-- 可滚动的列表内容 -->
-                    <ScrollViewer Grid.Row="1"
+                    <ScrollViewer Grid.Row="2"
                                   VerticalScrollBarVisibility="Auto" 
                                   HorizontalScrollBarVisibility="Disabled">
                         <ui:ListView ItemsSource="{Binding HotkeyTriggers}"

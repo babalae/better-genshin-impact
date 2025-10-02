@@ -1,9 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
+using System.ComponentModel;
+using System.Linq;
 using BetterGenshinImpact.Model.Gear.Triggers;
-using BetterGenshinImpact.Model.Gear.Tasks;
 using BetterGenshinImpact.Model;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Component;
 
@@ -107,10 +108,12 @@ public enum TriggerType
     /// <summary>
     /// 定时触发
     /// </summary>
+    [Description("定时触发")]
     Timed,
     
     /// <summary>
     /// 热键触发
     /// </summary>
+    [Description("热键触发")]
     Hotkey
 }

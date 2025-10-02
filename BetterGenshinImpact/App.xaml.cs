@@ -12,6 +12,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
@@ -159,6 +160,7 @@ public partial class App : Application
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
                 services.AddSingleton<GearTaskStorageService>();
+                services.AddSingleton<GearTriggerStorageService>();
 
 
                 

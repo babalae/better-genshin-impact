@@ -1,0 +1,127 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.GearTask.AddTriggerDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:gearTask="clr-namespace:BetterGenshinImpact.ViewModel.Windows.GearTask"
+                 xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+                 d:DataContext="{d:DesignInstance Type=gearTask:AddTriggerDialogViewModel}"
+                 Width="500"
+                 Height="450"
+                 MinWidth="450"
+                 MinHeight="400"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner"
+                 WindowStyle="SingleBorderWindow"
+                 mc:Ignorable="d">
+
+    <ui:FluentWindow.Resources>
+        <converters:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter" />
+    </ui:FluentWindow.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <ui:TitleBar Grid.Row="0" Title="新增触发器">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!-- 主要内容 -->
+        <ScrollViewer Grid.Row="1" Margin="20" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!-- 触发器名称 -->
+                <StackPanel>
+                    <ui:TextBlock Text="触发器名称" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ui:TextBox x:Name="TriggerNameTextBox"
+                                Text="{Binding TriggerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="请输入触发器名称" />
+                </StackPanel>
+
+                <!-- 触发器类型 -->
+                <StackPanel Margin="0,16,0,0">
+                    <ui:TextBlock Text="触发器类型" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ComboBox ItemsSource="{Binding TriggerTypes}"
+                              SelectedValue="{Binding SelectedTriggerType, Mode=TwoWay}"
+                              SelectedValuePath="Value"
+                              DisplayMemberPath="DisplayName"
+                              IsEnabled="{Binding IsTriggerTypeSelectionEnabled}" />
+                </StackPanel>
+
+                <!-- 定时触发设置 -->
+                <StackPanel Margin="0,16,0,0"
+                            Visibility="{Binding SelectedTriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Timed}">
+                    <ui:TextBlock Text="Cron 表达式" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ui:TextBox Text="{Binding CronExpression, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="例如: 0 0 8 * * ? (每天8点)"
+                                FontFamily="Consolas" />
+                    <ui:TextBlock Text="格式: 秒 分 时 日 月 星期 [年]"
+                                  FontSize="12"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Margin="0,4,0,0" />
+                </StackPanel>
+
+                <!-- 热键触发设置 -->
+                <StackPanel Margin="0,16,0,0"
+                            Visibility="{Binding SelectedTriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Hotkey}">
+                    <ui:TextBlock Text="快捷键" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBox Grid.Column="0"
+                                    Text="{Binding SelectedHotkey, Mode=OneWay}"
+                                    IsReadOnly="True"
+                                    PlaceholderText="点击右侧按钮设置快捷键" />
+
+                        <ui:Button Grid.Column="1"
+                                   Content="设置"
+                                   Command="{Binding SelectHotkeyCommand}"
+                                   Margin="8,0,0,0" />
+                    </Grid>
+                </StackPanel>
+
+                <!-- 关联任务 -->
+                <StackPanel  Margin="0,16,0,0">
+                    <ui:TextBlock Text="关联任务定义" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ComboBox ItemsSource="{Binding AvailableTaskDefinitions}"
+                              SelectedItem="{Binding SelectedTaskDefinitionName, Mode=TwoWay}"
+                              IsEditable="True" />
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 按钮栏 -->
+        <Border Grid.Row="2"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="20,16">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <ui:Button Content="取消"
+                           Command="{Binding CancelCommand}"
+                           Appearance="Secondary"
+                           MinWidth="80" />
+                <ui:Button Content="确定"
+                           Command="{Binding ConfirmCommand}"
+                           Appearance="Primary"
+                           MinWidth="80" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:FluentWindow>
