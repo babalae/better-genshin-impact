@@ -274,28 +274,52 @@
                Margin="10">
         <TabControl Style="{StaticResource ConsistentTabControlStyle}">
             <TabItem Header="定时触发" Style="{StaticResource ConsistentTabItemStyle}">
-                <StackPanel>
-                    <!-- 表格头部 -->
-                    <ContentPresenter ContentTemplate="{StaticResource TimedTableHeaderTemplate}" />
-                    <!-- 列表内容 -->
-                    <ui:ListView ItemsSource="{Binding TimedTriggers}"
-                                 SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
-                                 ItemTemplate="{StaticResource TimedTriggerItemTemplate}"
-                                 BorderThickness="0"
-                                 Margin="0" />
-                </StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 固定表格头部 -->
+                    <ContentPresenter Grid.Row="0" 
+                                      ContentTemplate="{StaticResource TimedTableHeaderTemplate}" />
+                    
+                    <!-- 可滚动的列表内容 -->
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto" 
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ui:ListView ItemsSource="{Binding TimedTriggers}"
+                                     SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                     ItemTemplate="{StaticResource TimedTriggerItemTemplate}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     BorderThickness="0"
+                                     Margin="0" />
+                    </ScrollViewer>
+                </Grid>
             </TabItem>
             <TabItem Header="快捷键触发" Style="{StaticResource ConsistentTabItemStyle}">
-                <StackPanel>
-                    <!-- 表格头部 -->
-                    <ContentPresenter ContentTemplate="{StaticResource TableHeaderTemplate}" />
-                    <!-- 列表内容 -->
-                    <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
-                                 SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
-                                 ItemTemplate="{StaticResource TriggerItemTemplate}"
-                                 BorderThickness="0"
-                                 Margin="0" />
-                </StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 固定表格头部 -->
+                    <ContentPresenter Grid.Row="0" 
+                                      ContentTemplate="{StaticResource TableHeaderTemplate}" />
+                    
+                    <!-- 可滚动的列表内容 -->
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto" 
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
+                                     SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                     ItemTemplate="{StaticResource TriggerItemTemplate}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     BorderThickness="0"
+                                     Margin="0" />
+                    </ScrollViewer>
+                </Grid>
             </TabItem>
         </TabControl>
     </ui:Border>

@@ -187,7 +187,7 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:TextBlock Text="任务导入方式：" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ui:ToggleSwitch IsChecked="{Binding IsGroupImportMode}"
-                                     OnContent="按组引用"
+                                     OnContent="按组引用（推荐）"
                                      OffContent="逐个添加"
                                      VerticalAlignment="Center" />
                 </StackPanel>
