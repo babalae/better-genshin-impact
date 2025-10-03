@@ -1,6 +1,12 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using BetterGenshinImpact.GameTask.Model;
 using System.Threading;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.ClearScript;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -73,5 +79,61 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainParam>
         TransientResinUseCount = config.TransientResinUseCount;
         FragileResinUseCount = config.FragileResinUseCount;
         SpecifyResinUse = config.SpecifyResinUse;
+    }
+
+    /// <summary>  
+    /// 从JS请求参数构建任务参数  
+    /// </summary>  
+    /// <param name="config"></param>  
+    /// <returns></returns>  
+    public static AutoDomainParam BuildFromSoloTaskConfig(object config)
+    {
+        var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+        if (taskSettingsPageViewModel == null)
+        {
+            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
+        }
+
+        var jsObject = (ScriptObject)config;
+
+ 
+        string strategyPath;
+        var customStrategyName = ScriptObjectConverter.GetValue(jsObject, "strategyName", "");
+
+        if (string.IsNullOrEmpty(customStrategyName))
+        {
+            // 未指定战斗策略参数，使用"根据队伍自动选择"  
+            if (taskSettingsPageViewModel.GetFightStrategy("根据队伍自动选择", out strategyPath))
+            {
+                throw new InvalidOperationException("获取默认战斗策略失败");
+            }
+        }
+        else
+        {
+            // 指定了战斗策略，直接拼接路径  
+            strategyPath = Global.Absolute(@"User\AutoFight\" + customStrategyName + ".txt");
+
+            // 验证文件是否存在  
+            if (!File.Exists(strategyPath))
+            {
+                throw new InvalidOperationException($"战斗策略文件不存在: {strategyPath}");
+            }
+        }
+
+        var domainRoundNum = ScriptObjectConverter.GetValue(jsObject, "domainRoundNum", 0);
+        var param = new AutoDomainParam(domainRoundNum, strategyPath);
+
+        // 设置其他参数  
+        param.PartyName = ScriptObjectConverter.GetValue(jsObject, "partyName", param.PartyName);
+        param.DomainName = ScriptObjectConverter.GetValue(jsObject, "domainName", param.DomainName);
+        param.AutoArtifactSalvage = ScriptObjectConverter.GetValue(jsObject, "autoArtifactSalvage", param.AutoArtifactSalvage);
+        param.MaxArtifactStar = ScriptObjectConverter.GetValue(jsObject, "maxArtifactStar", param.MaxArtifactStar);
+        param.SpecifyResinUse = ScriptObjectConverter.GetValue(jsObject, "specifyResinUse", param.SpecifyResinUse);
+        param.OriginalResinUseCount = ScriptObjectConverter.GetValue(jsObject, "originalResinUseCount", param.OriginalResinUseCount);
+        param.CondensedResinUseCount = ScriptObjectConverter.GetValue(jsObject, "condensedResinUseCount", param.CondensedResinUseCount);
+        param.TransientResinUseCount = ScriptObjectConverter.GetValue(jsObject, "transientResinUseCount", param.TransientResinUseCount);
+        param.FragileResinUseCount = ScriptObjectConverter.GetValue(jsObject, "fragileResinUseCount", param.FragileResinUseCount);
+
+        return param;
     }
 }

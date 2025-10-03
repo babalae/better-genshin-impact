@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -175,17 +176,30 @@ public class Dispatcher
                     taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(cancellationToken);
                 return null;
 
-            case "AutoFight":
-                await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);
+            case "AutoFight":  
+                if (soloTask.Config != null)  
+                {  
+                    await new AutoFightTask(AutoFightParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(cancellationToken);  
+                }  
+                else  
+                {  
+                    await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);  
+                }  
                 return null;
 
             case "AutoDomain":
-                if (taskSettingsPageViewModel.GetFightStrategy(out var path))
+                if (soloTask.Config != null)  
+                { 
+                    await new AutoDomainTask(AutoDomainParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(cancellationToken);  
+                }  
+                else  
                 {
-                    return null;
+                    if (taskSettingsPageViewModel.GetFightStrategy(out var path))  
+                    {
+                        return null;
+                    }
+                    await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);  
                 }
-
-                await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
                 return null;
 
             case "AutoFishing":
