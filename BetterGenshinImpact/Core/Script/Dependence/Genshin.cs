@@ -45,7 +45,8 @@ public class Genshin
     
     public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
     {
-        Navigation.WarmUp();
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        Navigation.WarmUp(matchingMethod);
         return new NavigationInstance();
     });
 
@@ -227,7 +228,10 @@ public class Genshin
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
-        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value.GetPositionStableByCache(imageRegion, mapName, cacheTimeMs));
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        return MapManager.GetMap(mapName, matchingMethod)
+            .ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value
+                .GetPositionStableByCache(imageRegion, mapName, matchingMethod, cacheTimeMs));
     }
     
     /// <summary>
@@ -244,11 +248,12 @@ public class Genshin
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        var sceneMap = MapManager.GetMap(mapName);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var sceneMap = MapManager.GetMap(mapName, matchingMethod);
         var navigationInstance = LazyNavigationInstance.Value;
         var pos = sceneMap.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(x, y));
         navigationInstance.SetPrevPosition(pos.X, pos.Y);
-        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName));
+        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName, matchingMethod));
     }
 
     #endregion 大地图操作

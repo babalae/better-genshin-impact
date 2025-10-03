@@ -25,7 +25,8 @@ public class GiPathPoint
 
     public static GiPathPoint BuildFrom(Point2f point, int index)
     {
-        var pt = MapManager.GetMap(MapTypes.Teyvat).ConvertImageCoordinatesToGenshinMapCoordinates(point);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var pt = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(point);
         return new GiPathPoint
         {
             Pt = pt,
