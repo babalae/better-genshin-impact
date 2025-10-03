@@ -279,6 +279,9 @@ public class AutoFightTask : ISoloTask
         //所有角色是否都可被跳过
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
         
+        var delayTime = _finishDetectConfig.DelayTime;
+        var detectDelayTime = _finishDetectConfig.DetectDelayTime;
+        
         //盾奶优先功能角色预处理
         var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
         
@@ -322,13 +325,23 @@ public class AutoFightTask : ISoloTask
                         
                         #region 盾奶位技能优先功能
                         
-                        var skipModel = _taskParam.SkipModel? (guardianAvatar != null) : (guardianAvatar != null && lastFightName != command.Name);
-                        if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,_taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct);
+                        var skipModel = guardianAvatar != null && lastFightName != command.Name;
+                        if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,
+                            _taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct,_taskParam.GuardianCombatSkip,_taskParam.BurstEnabled);
                         var avatar = combatScenes.SelectAvatar(command.Name);
                         
                         #endregion
                         
-                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && _taskParam.GuardianCombatSkip))
+                        #region 初始寻敌处理
+                        
+                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
+                        {
+                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,true,_taskParam.RotaryFactor);
+                        }
+                        
+                        #endregion
+                        
+                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && (_taskParam.GuardianCombatSkip || _taskParam.BurstEnabled)))
                         {
                             continue;
                         }
@@ -386,6 +399,13 @@ public class AutoFightTask : ISoloTask
                             timeOutFlag = true;
                             break;
                         }
+
+                        #region Q前寻敌处理
+                        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.CheckBeforeBurst && (command.Method == Method.Burst || command.Args.Contains("q") || command.Args.Contains("Q")))
+                        {
+                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                        }
+                        #endregion
                         
                         command.Execute(combatScenes);
                         //统计战斗人次
@@ -408,8 +428,7 @@ public class AutoFightTask : ISoloTask
                                 ))
                             {
                                 checkFightFinishStopwatch.Restart();
-                                var delayTime = _finishDetectConfig.DelayTime;
-                                var detectDelayTime = _finishDetectConfig.DetectDelayTime;
+
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
                                 {
                                     delayTime = time;
