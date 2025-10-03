@@ -1,0 +1,6 @@
+伊涅芙 e,q
+珊瑚宫心海 e
+爱诺 e,q
+行秋 dash,e,wait(2),e,q
+砂糖 e,wait(1),q
+菲林斯 e,wait(0.5),e,q,attack(3.6),e,q,attack(1.5)
