@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -8,6 +8,7 @@ using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -28,6 +29,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.ViewModel.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -37,6 +39,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
+    private readonly INavigationService _navigationService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty] private bool _isVisible = true;
@@ -53,6 +56,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
     {
+        _navigationService = navigationService;
         _configService = configService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
@@ -198,6 +202,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             e.Cancel = true;
             OnHide();
         }
+    }
+
+    [RelayCommand]
+    private void OnOpenFeed()
+    {
+        var feedWindow = new FeedWindow(new FeedWindowViewModel());
+        feedWindow.Show();
     }
 
     [RelayCommand]
