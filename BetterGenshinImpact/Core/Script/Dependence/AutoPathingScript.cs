@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 
@@ -43,8 +44,13 @@ public class AutoPathingScript
     {
         try
         {
-            var json = await new LimitedFile(_rootPath).ReadText(path);
-            await Run(json);
+            var task = PathingTask.BuildFromFilePath(ScriptUtils.NormalizePath(_rootPath, path));
+            var pathExecutor = new PathExecutor(CancellationContext.Instance.Cts.Token);
+            if (_config != null && _config is PathingPartyConfig patyConfig)
+            {
+                pathExecutor.PartyConfig = patyConfig;
+            }
+            await pathExecutor.Pathing(task);
         }
         catch (Exception e)
         {
