@@ -6,6 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:gearTask="clr-namespace:BetterGenshinImpact.ViewModel.Windows.GearTask"
                  xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+                 xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
                  d:DataContext="{d:DesignInstance Type=gearTask:AddTriggerDialogViewModel}"
                  Width="500"
                  Height="450"
@@ -76,22 +77,45 @@
                 <!-- 热键触发设置 -->
                 <StackPanel Margin="0,16,0,0"
                             Visibility="{Binding SelectedTriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Hotkey}">
-                    <ui:TextBlock Text="快捷键" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ui:TextBlock Text="快捷键设置" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    
+                    <!-- 快捷键类型选择 -->
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <ui:TextBlock Grid.Column="0" 
+                                      Text="快捷键类型" 
+                                      VerticalAlignment="Center" />
+                        
+                        <ui:Button Grid.Column="1"
+                                   Height="33"
+                                   HorizontalAlignment="Left"
+                                   Command="{Binding SwitchHotKeyTypeCommand}"
+                                   Content="{Binding HotkeyTypeName, Mode=OneWay}"
+                                   MinWidth="100" />
+                    </Grid>
+                    
+                    <!-- 快捷键配置 -->
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <ui:TextBox Grid.Column="0"
-                                    Text="{Binding SelectedHotkey, Mode=OneWay}"
-                                    IsReadOnly="True"
-                                    PlaceholderText="点击右侧按钮设置快捷键" />
-
-                        <ui:Button Grid.Column="1"
-                                   Content="设置"
-                                   Command="{Binding SelectHotkeyCommand}"
-                                   Margin="8,0,0,0" />
+                        
+                        <ui:TextBlock Grid.Column="0" 
+                                      Text="配置快捷键" 
+                                      VerticalAlignment="Center" />
+                        
+                        <hotKey:HotKeyTextBox Grid.Column="1"
+                                              Padding="16,6,16,6"
+                                              VerticalAlignment="Center"
+                                              HotKeyTypeName="{Binding HotkeyTypeName, Mode=OneWay}"
+                                              Hotkey="{Binding SelectedHotkey}"
+                                              Style="{StaticResource DefaultTextBoxStyle}"
+                                              TextAlignment="Center" />
                     </Grid>
                 </StackPanel>
 

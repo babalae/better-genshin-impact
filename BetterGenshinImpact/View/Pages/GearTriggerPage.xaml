@@ -124,15 +124,17 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="80" />   <!-- 启用状态 -->
-                            <ColumnDefinition Width="200" />  <!-- 触发器名称 -->
-                            <ColumnDefinition Width="150" />  <!-- 快捷键 -->
-                            <ColumnDefinition Width="*" />  <!-- 关联任务 -->
+                            <ColumnDefinition Width="180" />  <!-- 触发器名称 -->
+                            <ColumnDefinition Width="120" />  <!-- 快捷键 -->
+                            <ColumnDefinition Width="100" />  <!-- 快捷键类型 -->
+                            <ColumnDefinition Width="*" />    <!-- 关联任务 -->
                         </Grid.ColumnDefinitions>
 
                         <ui:TextBlock Grid.Column="0" Text="启用" FontWeight="SemiBold" HorizontalAlignment="Center" />
                         <ui:TextBlock Grid.Column="1" Text="触发器名称" FontWeight="SemiBold" HorizontalAlignment="Center" />
                         <ui:TextBlock Grid.Column="2" Text="快捷键" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                        <ui:TextBlock Grid.Column="3" Text="关联任务" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="3" Text="快捷键类型" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="4" Text="关联任务" FontWeight="SemiBold" HorizontalAlignment="Center" />
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -164,9 +166,10 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="60" />   <!-- 启用状态 -->
-                            <ColumnDefinition Width="200" />  <!-- 触发器名称 -->
-                            <ColumnDefinition Width="150" />  <!-- 快捷键 -->
-                            <ColumnDefinition Width="*" />  <!-- 关联任务 -->
+                            <ColumnDefinition Width="180" />  <!-- 触发器名称 -->
+                            <ColumnDefinition Width="120" />  <!-- 快捷键 -->
+                            <ColumnDefinition Width="100" />  <!-- 快捷键类型 -->
+                            <ColumnDefinition Width="*" />    <!-- 关联任务 -->
                         </Grid.ColumnDefinitions>
 
                         <!-- 启用状态 -->
@@ -197,8 +200,19 @@
                                       Padding="5,0"
                                       Visibility="{Binding TriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Hotkey}" />
 
-                        <!-- 关联任务 -->
+                        <!-- 快捷键类型 -->
                         <ui:TextBlock Grid.Column="3"
+                                      Text="{Binding HotkeyTypeName}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Foreground="{DynamicResource AccentTextFillColorSecondaryBrush}"
+                                      TextTrimming="CharacterEllipsis"
+                                      ToolTip="{Binding HotkeyTypeName}"
+                                      Padding="5,0"
+                                      Visibility="{Binding TriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Hotkey}" />
+
+                        <!-- 关联任务 -->
+                        <ui:TextBlock Grid.Column="4"
                                       Text="{Binding TaskDefinitionName, TargetNullValue='未设置'}"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"

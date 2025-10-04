@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Helpers.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Component;
@@ -47,6 +48,17 @@ public partial class GearTriggerViewModel : ObservableObject
     // 热键触发器属性
     [ObservableProperty]
     private HotKey? _hotkey;
+
+    /// <summary>
+    /// 快捷键类型 (全局热键/键鼠监听)
+    /// </summary>
+    [ObservableProperty]
+    private HotKeyTypeEnum _hotkeyType = HotKeyTypeEnum.KeyboardMonitor;
+
+    /// <summary>
+    /// 快捷键类型名称 (中文显示)
+    /// </summary>
+    public string HotkeyTypeName => HotkeyType.ToChineseName();
 
     public GearTriggerViewModel()
     {

@@ -9,6 +9,7 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Helpers.Extensions;
 
 namespace BetterGenshinImpact.ViewModel.Windows.GearTask;
 
@@ -31,6 +32,14 @@ public partial class AddTriggerDialogViewModel : ObservableObject
 
     [ObservableProperty]
     private HotKey? _selectedHotkey;
+
+    [ObservableProperty]
+    private HotKeyTypeEnum _hotkeyType = HotKeyTypeEnum.KeyboardMonitor;
+
+    /// <summary>
+    /// 快捷键类型显示名称
+    /// </summary>
+    public string HotkeyTypeName => HotkeyType.ToChineseName();
 
     [ObservableProperty]
     private string _selectedTaskDefinitionName = string.Empty;
@@ -152,6 +161,18 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 快捷键类型改变时的处理
+    /// </summary>
+    partial void OnHotkeyTypeChanged(HotKeyTypeEnum value)
+    {
+        // 通知UI更新快捷键类型显示名称
+        OnPropertyChanged(nameof(HotkeyTypeName));
+        
+        // 清空当前快捷键设置
+        SelectedHotkey = null;
+    }
+
+    /// <summary>
     /// 触发器类型改变时的处理
     /// </summary>
     partial void OnSelectedTriggerTypeChanged(TriggerType value)
@@ -189,7 +210,8 @@ public partial class AddTriggerDialogViewModel : ObservableObject
             IsEnabled = IsEnabled,
             TaskDefinitionName = SelectedTaskDefinitionName,
             CronExpression = SelectedTriggerType == TriggerType.Timed ? CronExpression : null,
-            Hotkey = SelectedTriggerType == TriggerType.Hotkey ? SelectedHotkey : null
+            Hotkey = SelectedTriggerType == TriggerType.Hotkey ? SelectedHotkey : null,
+            HotkeyType = SelectedTriggerType == TriggerType.Hotkey ? HotkeyType : HotKeyTypeEnum.KeyboardMonitor
         };
 
         RequestClose?.Invoke(this, true);
@@ -205,13 +227,21 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 切换快捷键类型
+    /// </summary>
+    [RelayCommand]
+    private void SwitchHotKeyType()
+    {
+        HotkeyType = HotkeyType == HotKeyTypeEnum.GlobalRegister ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
+    }
+
+    /// <summary>
     /// 选择热键
     /// </summary>
     [RelayCommand]
     private void SelectHotkey()
     {
-        // TODO: 打开热键选择对话框
-        // 这里先创建一个示例热键
-        SelectedHotkey = new HotKey(System.Windows.Input.Key.F1, System.Windows.Input.ModifierKeys.Control);
+        // 移除旧的示例代码，现在使用HotKeyTextBox直接设置
+        // HotKeyTextBox会直接绑定到SelectedHotkey属性
     }
 }

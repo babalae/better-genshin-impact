@@ -156,6 +156,7 @@ public class GearTriggerStorageService
             TriggerType = viewModel.TriggerType.ToString(),
             CronExpression = viewModel.CronExpression,
             Hotkey = viewModel.Hotkey?.ToString() ?? string.Empty,
+            HotkeyType = viewModel.HotkeyType.ToString(),
             TaskDefinitionName = viewModel.TaskDefinitionName,
             CreatedTime = DateTime.Now,
             ModifiedTime = DateTime.Now
@@ -175,11 +176,18 @@ public class GearTriggerStorageService
                 return null;
             }
 
+            // 解析快捷键类型，如果解析失败则使用默认值
+            if (!Enum.TryParse<HotKeyTypeEnum>(data.HotkeyType, out var hotkeyType))
+            {
+                hotkeyType = HotKeyTypeEnum.KeyboardMonitor; // 默认值
+            }
+
             var viewModel = new GearTriggerViewModel(data.Name, triggerType)
             {
                 IsEnabled = data.IsEnabled,
                 CronExpression = data.CronExpression,
                 Hotkey = string.IsNullOrEmpty(data.Hotkey) ? null : HotKey.FromString(data.Hotkey),
+                HotkeyType = hotkeyType,
                 TaskDefinitionName = data.TaskDefinitionName
             };
 
@@ -224,6 +232,9 @@ public class GearTriggerData
 
     [JsonProperty("hotkey")]
     public string Hotkey { get; set; } = string.Empty;
+
+    [JsonProperty("hotkey_type")]
+    public string HotkeyType { get; set; } = string.Empty;
 
     [JsonProperty("task_definition_name")]
     public string TaskDefinitionName { get; set; } = string.Empty;
