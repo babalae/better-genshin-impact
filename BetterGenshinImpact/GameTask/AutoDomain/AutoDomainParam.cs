@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Model;
 using System.Threading;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -73,5 +74,42 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainParam>
         TransientResinUseCount = config.TransientResinUseCount;
         FragileResinUseCount = config.FragileResinUseCount;
         SpecifyResinUse = config.SpecifyResinUse;
+    }
+
+    public AutoDomainParam(int domainRoundNum = 0) : base(null, null)
+    {
+        DomainRoundNum = domainRoundNum;
+        if (domainRoundNum == 0)
+        {
+            DomainRoundNum = 9999;
+        }
+
+        CombatStrategyPath = SetCombatStrategyPath();
+        SetDefault();
+    }
+
+    /// <summary>  
+    /// 设置战斗策略路径
+    /// </summary>  
+    /// <param name="strategyName">策略名称</param>  
+    public string SetCombatStrategyPath(string? strategyName = null)
+    {
+        if (string.IsNullOrEmpty(strategyName))
+        {
+            strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
+        }
+
+        if ("根据队伍自动选择".Equals(strategyName))
+        {
+            return Global.Absolute(@"User\AutoFight\");
+        }
+
+        return Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+    }
+
+    public void SetResinPriorityList(params string[] priorities)
+    {
+        ResinPriorityList.Clear();
+        ResinPriorityList.AddRange(priorities);
     }
 }
