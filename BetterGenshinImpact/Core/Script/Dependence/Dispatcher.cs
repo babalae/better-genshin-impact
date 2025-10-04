@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -303,5 +304,39 @@ public class Dispatcher
     public CancellationToken GetLinkedCancellationToken()
     {
         return GetLinkedCancellationTokenSource().Token;
+    }
+    
+    /// <summary>  
+    /// 运行自动秘境任务
+    /// </summary>  
+    /// <param name="param">秘境任务参数</param>  
+    /// <param name="customCt">自定义取消令牌</param>  
+    /// <returns></returns>  
+    public async Task RunAutoDomainTask(AutoDomainParam param, CancellationToken? customCt = null)  
+    {  
+        if (param == null)  
+        {  
+            throw new ArgumentNullException(nameof(param), "秘境任务参数不能为空");  
+        }  
+  
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        await new AutoDomainTask(param).Start(cancellationToken);  
+    }  
+  
+    /// <summary>  
+    /// 运行自动战斗任务
+    /// </summary>  
+    /// <param name="param">战斗任务参数</param>  
+    /// <param name="customCt">自定义取消令牌</param>  
+    /// <returns></returns>  
+    public async Task RunAutoFightTask(AutoFightParam param, CancellationToken? customCt = null)  
+    {  
+        if (param == null)  
+        {  
+            throw new ArgumentNullException(nameof(param), "战斗任务参数不能为空");  
+        }  
+  
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        await new AutoFightTask(param).Start(cancellationToken);  
     }
 }
