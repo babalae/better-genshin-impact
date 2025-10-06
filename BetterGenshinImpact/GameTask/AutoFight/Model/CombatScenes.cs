@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
 using SixLabors.ImageSharp;
@@ -40,8 +41,8 @@ public class CombatScenes : IDisposable
         App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
 
     public int ExpectedTeamAvatarNum { get; private set; } = 4;
-    
-        
+
+
     /// <summary>
     /// 6.0 UI偏移标识
     /// </summary>
@@ -71,45 +72,9 @@ public class CombatScenes : IDisposable
             return this;
         }
 
-        // 判断当前是否处于联机状态
-        List<Rect> avatarSideIconRectList;
-        List<Rect> avatarIndexRectList;
-        var pRaList = imageRegion.FindMulti(AutoFightAssets.Instance.PRa);
-        if (pRaList.Count > 0)
-        {
-            var num = pRaList.Count + 1;
-            if (num > 4)
-            {
-                throw new Exception("当前处于联机状态，但是队伍人数超过4人，无法识别");
-            }
-
-            // 联机状态下判断
-            var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
-            var p = "p";
-            if (!onePRa.IsEmpty())
-            {
-                Logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
-                p = "1p";
-            }
-            else
-            {
-                Logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
-            }
-
-            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectListMap[$"{p}_{num}"]);
-            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectListMap[$"{p}_{num}"]);
-
-            ExpectedTeamAvatarNum = avatarSideIconRectList.Count;
-        }
-        else
-        {
-            avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectList);
-            avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectList);
-        }
+        // 队伍角色编号和侧面头像位置
+        var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion);
         
-        // 6.0 版本 队伍下的 草露 进度条 导致位置偏移
-        IndexRectOffset60Fix = AvatarSideFixOffset(imageRegion, avatarSideIconRectList, avatarIndexRectList);
-
         // 识别队伍
         var names = new string[avatarSideIconRectList.Count];
         var displayNames = new string[avatarSideIconRectList.Count];
@@ -146,54 +111,18 @@ public class CombatScenes : IDisposable
 
         return this;
     }
-    
-    /// <summary>
-    /// 6.0 版本 队伍下的 草露 进度条 导致位置偏移
-    /// 
-    /// </summary>
-    /// <param name="imageRegion"></param>
-    /// <param name="avatarSideIconRectList"></param>
-    /// <param name="avatarIndexRectList"></param>
-    public bool AvatarSideFixOffset(ImageRegion imageRegion, List<Rect> avatarSideIconRectList, List<Rect> avatarIndexRectList)
+
+    public static List<Rect> FindAvatarIndexRectList(ImageRegion imageRegion)
     {
-        // 角色序号 左上角 坐标偏移（+2, -5）后存在3个白色点，则认为存在 草露 进度条
-        // 存在 草露 进度条时候整体上移 14 个像素
-        var whitePointCount = 0;
-        foreach (var rectIndex in avatarIndexRectList)
-        {
-            int x = rectIndex.X + 2;
-            int y = rectIndex.Y - 5;
-            var color = imageRegion.SrcMat.At<Vec3b>(y, x);
-            if (color is { Item0: 255, Item1: 255, Item2: 255 })
-            {
-                whitePointCount++;
-            }
-        }
-
-        if (whitePointCount < 3)
-        {
-            return false;
-        }
-
-        Logger.LogInformation("检测到右侧队伍上偏移，进行位置偏移");
-
-        for (var i = 0; i < avatarSideIconRectList.Count; i++)
-        {
-            var rect = avatarSideIconRectList[i];
-            rect.Y -= 14;
-            avatarSideIconRectList[i] = rect;
-        }
-
-        for (var i = 0; i < avatarIndexRectList.Count; i++)
-        {
-            var rect = avatarIndexRectList[i];
-            rect.Y -= 14;
-            avatarIndexRectList[i] = rect;
-        }
-
-        return true;
+        var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
+        var i2 = imageRegion.Find(ElementAssets.Instance.Index2);
+        var i3 = imageRegion.Find(ElementAssets.Instance.Index3);
+        var i4 = imageRegion.Find(ElementAssets.Instance.Index4);
+        var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold);
+        // Debug.WriteLine($"i1:{i1.X},{i1.Y},{i1.Width},{i1.Height}; i2:{i2.X},{i2.Y},{i2.Width},{i2.Height}; i3:{i3.X},{i3.Y},{i3.Width},{i3.Height}; i4:{i4.X},{i4.Y},{i4.Width},{i4.Height}; curr:{curr.X},{curr.Y},{curr.Width},{curr.Height}");
+        return null;
     }
-    
+
 
     public (string, string) ClassifyAvatarCnName(Image<Rgb24> img, int index)
     {
