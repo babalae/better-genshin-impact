@@ -74,6 +74,7 @@ public class CombatScenes : IDisposable
 
         // 队伍角色编号和侧面头像位置
         var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion);
+        ExpectedTeamAvatarNum = avatarIndexRectList.Count;
         
         // 识别队伍
         var names = new string[avatarSideIconRectList.Count];

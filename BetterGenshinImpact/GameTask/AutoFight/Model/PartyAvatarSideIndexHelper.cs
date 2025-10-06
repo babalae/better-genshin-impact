@@ -145,7 +145,8 @@ public class PartyAvatarSideIndexHelper
         if (existNum == multiGameStatus.MaxControlAvatarCount)
         {
             // 识别存在个数和当前能控制的最大角色数相等,意味者全部识别,直接返回
-            return (indexRectList, GetAvatarSideIconRectFromIndexRect(indexRectList));
+            var notNullIndexRectList = indexRectList.Where(r => r != default).ToList();
+            return (notNullIndexRectList, GetAvatarSideIconRectFromIndexRect(notNullIndexRectList));
         }
         else
         {
