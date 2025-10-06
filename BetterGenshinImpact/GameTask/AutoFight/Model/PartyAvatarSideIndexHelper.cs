@@ -182,7 +182,8 @@ public class PartyAvatarSideIndexHelper
                     // 校验推测结果（编号从 1 开始必定连续）
                     if (AreNullsAtEnd(indexRectList))
                     {
-                        return (indexRectList, GetAvatarSideIconRectFromIndexRect(indexRectList));
+                        var notNullIndexRectList = indexRectList.Where(r => r != default).ToList();
+                        return (notNullIndexRectList, GetAvatarSideIconRectFromIndexRect(notNullIndexRectList));
                     }
                     else
                     {

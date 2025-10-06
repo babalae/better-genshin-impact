@@ -12,7 +12,7 @@ public class ThresholdWindow
     public static void Test()
     {
         var window = new ThresholdWindow();
-        window.ShowThresholdAdjuster(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\223.png");
+        window.ShowThresholdAdjuster(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\当前角色小三角\无法识别小三角2.png");
     }
     
     public static void Save()
