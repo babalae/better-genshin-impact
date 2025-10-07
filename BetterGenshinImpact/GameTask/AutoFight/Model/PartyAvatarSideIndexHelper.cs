@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -128,9 +129,40 @@ public class PartyAvatarSideIndexHelper
             avatarSideIconRectList = new List<Rect>(AutoFightAssets.Instance.AvatarSideIconRectList);
             avatarIndexRectList = new List<Rect>(AutoFightAssets.Instance.AvatarIndexRectList);
         }
+
         // 6.0 版本 队伍下的 草露 进度条 导致位置偏移
         AvatarSideFixOffset(imageRegion, avatarSideIconRectList, avatarIndexRectList);
         return (avatarIndexRectList, avatarSideIconRectList);
+    }
+    
+    public static bool HasIndexRect(ImageRegion imageRegion)
+    {
+        var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
+        if (i1.IsExist())
+        {
+            return true;
+        }
+        var i2 = imageRegion.Find(ElementAssets.Instance.Index2);
+        if (i2.IsExist())
+        {
+            return true;
+        }
+        var i3 = imageRegion.Find(ElementAssets.Instance.Index3);
+        if (i3.IsExist())
+        {
+            return true;
+        }
+        var i4 = imageRegion.Find(ElementAssets.Instance.Index4);
+        if (i4.IsExist())
+        {
+            return true;
+        }
+        return false;
+    }
+    
+    public static bool HasActiveAvatarArrow(ImageRegion imageRegion)
+    {
+        return imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold).IsExist();
     }
 
     private static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
@@ -237,7 +269,7 @@ public class PartyAvatarSideIndexHelper
         int firstNullIndex = list.FindIndex(x => x == default); // 找到第一个 null 的索引
         return firstNullIndex == -1 || list.Skip(firstNullIndex).All(x => x == default); // 检查从第一个 null 开始到末尾是否都是 null
     }
-    
+
     /// <summary>
     /// 6.0 版本 队伍下的 草露 进度条 导致位置偏移
     /// 
@@ -283,5 +315,111 @@ public class PartyAvatarSideIndexHelper
         }
 
         return true;
+    }
+
+    public static AvatarActiveCheckContext GetAvatarIndexIsActiveWithContext(ImageRegion imageRegion, Rect[] rectArray)
+    {
+        var index1 = FindActiveIndexRectByArrow(imageRegion, rectArray);
+        var index2 = FindActiveIndexRectByColor(imageRegion, rectArray);
+        if (index1 > 0 && index2 > 0)
+        {
+            return new AvatarActiveCheckContext()
+            {
+                ActiveIndex = index2
+            };
+        }
+
+        if (index1 > 0 || index2 > 0)
+        {
+            return new AvatarActiveCheckContext()
+            {
+                ActiveIndex = index2 > 0 ? index2 : index1,
+                NeedRetry = true
+            };
+        }
+        else
+        {
+            return new AvatarActiveCheckContext()
+            {
+                ActiveIndex = -1,
+                NeedRetry = true
+            };
+        }
+    }
+
+    // public static int FindDifferentRect(Mat greyMat, Rect[] rectArray)
+    // {
+    //     // 取其中一个矩形和另外三个矩形进行比较
+    //     var one = new Mat(greyMat, rectArray[0]);
+    //     for (int i = 1; i < rectArray.Length; i++)
+    //     {
+    //         Mat diff = new Mat();
+    //         Cv2.Absdiff(one, new Mat(greyMat, rectArray[i]), diff);
+    //         Scalar diffSum = Cv2.Sum(diff);
+    //         double totalDiff = diffSum.Val0 + diffSum.Val1 + diffSum.Val2;
+    //         totalDiff = totalDiff / (one.Width * one.Height);
+    //     }
+    //
+    //     return 1;
+    // }
+
+    public static int FindActiveIndexRectByColor(ImageRegion imageRegion, Rect[] rectArray)
+    {
+        var whiteCount = 0;
+        var notWhiteRectNum = 0;
+        var mat = imageRegion.CacheGreyMat;
+        for (int i = 0; i < rectArray.Length; i++)
+        {
+            if (IsWhiteRect(mat, rectArray[i]))
+            {
+                whiteCount++;
+            }
+            else
+            {
+                notWhiteRectNum = i + 1;
+            }
+        }
+
+        if (whiteCount == rectArray.Length - 1)
+        {
+            return notWhiteRectNum;
+        }
+        else
+        {
+            return -1;
+        }
+    }
+
+    public static bool IsWhiteRect(Mat greyMat, Rect rect)
+    {
+        using var indexMat = new Mat(greyMat, rect);
+        var count = OpenCvCommonHelper.CountGrayMatColor(indexMat, 251, 255);
+        if (count * 1.0 / (indexMat.Width * indexMat.Height) > 0.5)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /// <summary>
+    /// 使用出战标识识别出战
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    /// <param name="rectArray"></param>
+    /// <returns></returns>
+    public static int FindActiveIndexRectByArrow(ImageRegion imageRegion, Rect[] rectArray)
+    {
+        var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold); // 当前出战角色标识
+        for (int i = 0; i < rectArray.Length; i++)
+        {
+            if (IsIntersecting(curr.Y, curr.Height, rectArray[i].Y, rectArray[i].Height))
+            {
+                return i + 1;
+            }
+        }
+
+        return -1;
     }
 }

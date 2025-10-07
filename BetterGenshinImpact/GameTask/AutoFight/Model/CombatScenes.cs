@@ -36,17 +36,16 @@ public class CombatScenes : IDisposable
 
     public int AvatarCount => Avatars.Length;
 
+    /// <summary>
+    /// 最近一次识别出的出战角色编号，从1开始，-1表示未识别
+    /// </summary>
+    public int LastActiveAvatarIndex { get; set; } = -1;
+
 
     private readonly BgiYoloPredictor _predictor =
         App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
 
     public int ExpectedTeamAvatarNum { get; private set; } = 4;
-
-
-    /// <summary>
-    /// 6.0 UI偏移标识
-    /// </summary>
-    public bool IndexRectOffset60Fix { get; set; }
 
     /// <summary>
     /// 获取一个只读的Avatars
@@ -340,6 +339,12 @@ public class CombatScenes : IDisposable
         if (notActiveCount != ExpectedTeamAvatarNum - 1) return avatarName;
         Avatar.LastActiveAvatar = avatarName;
         return Avatar.LastActiveAvatar;
+    }
+    
+    public int GetActiveAvatarIndex()
+    {
+        
+        return LastActiveAvatarIndex;
     }
 
 

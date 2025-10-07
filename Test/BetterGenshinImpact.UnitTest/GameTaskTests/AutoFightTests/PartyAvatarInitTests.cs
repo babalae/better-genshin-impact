@@ -50,4 +50,28 @@ public class PartyAvatarInitTests
             }
         }
     }
+    
+    /// <summary>
+    /// 测试普通的多人游戏下的角色头像识别
+    /// </summary>
+    // [Theory]
+    // [InlineData(@"AutoFight\联机满编\别人进我世界_2人.png", new[] { "阿蕾奇诺", "钟离" })]
+    // public void WhatAvatarIsActive_New_AvatarShouldBeRight(string screenshot1080P)
+    // {
+    //     //
+    //     TaskContext.Instance().InitFakeForTest();
+    //     Mat mat = new Mat(@$"..\..\..\Assets\{screenshot1080P}");
+    //     var systemInfo = TaskContext.Instance().SystemInfo;
+    //     // 桌面 -> 游戏捕获区域 -> 1080P区域
+    //     var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(mat, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
+    //     var imageRegion = gameCaptureRegion.DeriveTo1080P();
+    //
+    //
+    //     //
+    //     var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
+    //
+    //     //
+    //     Assert.True(combatScenes.CheckTeamInitialized());
+    //
+    // }
 }

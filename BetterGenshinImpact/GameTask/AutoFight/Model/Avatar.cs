@@ -154,30 +154,7 @@ public class Avatar
                 return;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
-            switch (Index)
-            {
-                case 1:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
-                    break;
-                case 2:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
-                    break;
-                case 3:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
-                    break;
-                case 4:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
-                    break;
-                case 5:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
-                    break;
-                default:
-                    break;
-            }
-
-            Offset60Fix(i);
-
+            SimulateSwitchAction(Index);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -214,34 +191,37 @@ public class Avatar
                 return true;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
-            switch (Index)
-            {
-                case 1:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
-                    break;
-                case 2:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
-                    break;
-                case 3:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
-                    break;
-                case 4:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
-                    break;
-                case 5:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
-                    break;
-                default:
-                    break;
-            }
-            
-            Offset60Fix(i);
+            SimulateSwitchAction(Index);
 
             Sleep(250, Ct);
         }
 
         return false;
+    }
+
+    private void SimulateSwitchAction(int index)
+    {
+        Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
+        switch (index)
+        {
+            case 1:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
+                break;
+            case 2:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
+                break;
+            case 3:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
+                break;
+            case 4:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
+                break;
+            case 5:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
+                break;
+            default:
+                break;
+        }
     }
 
     /// <summary>
@@ -261,65 +241,10 @@ public class Avatar
                 return;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
-            switch (Index)
-            {
-                case 1:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
-                    break;
-                case 2:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
-                    break;
-                case 3:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
-                    break;
-                case 4:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
-                    break;
-                case 5:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
-                    break;
-                default:
-                    break;
-            }
-            
-            Offset60Fix(i);
+            SimulateSwitchAction(Index);
 
             Sleep(250);
         }
-    }
-
-    private void Offset60Fix(int i)
-    {
-        // 3次失败考虑是否偏移出现问题，修改偏移位置
-        if (i <= 2 || AutoFightTask.FightStatusFlag)
-        {
-            return;
-        }
-        
-        if (CombatScenes.IndexRectOffset60Fix)
-        {
-            foreach (var avatar in CombatScenes.GetAvatars())
-            {
-                var originalRect = AutoFightAssets.Instance.AvatarIndexRectList[avatar.Index - 1];
-                var rect1 = new Rect(originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
-                avatar.IndexRect = rect1;
-            }
-            CombatScenes.IndexRectOffset60Fix = false;
-        }
-        else
-        {
-            foreach (var avatar in CombatScenes.GetAvatars())
-            {
-                var originalRect = AutoFightAssets.Instance.AvatarIndexRectList[avatar.Index - 1];
-                var rect1 = new Rect(originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
-                rect1.Y -= 14;
-                avatar.IndexRect = rect1;
-            }
-
-            CombatScenes.IndexRectOffset60Fix = true;
-        }
-        
     }
 
     /// <summary>
@@ -525,7 +450,6 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
-        // var isBurstReleased = false;
         for (var i = 0; i < 10; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -538,26 +462,13 @@ public class Avatar
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (notActiveCount == 0)
+
+            if (!PartyAvatarSideIndexHelper.HasIndexRect(region))
             {
-                // isBurstReleased = true;
+                // 找不到角色编号块意味者技能释放成功
                 Sleep(1500, Ct);
                 return;
             }
-            // else
-            // {
-            //     if (!isBurstReleased)
-            //     {
-            //         var cd = GetBurstCurrentCd(content);
-            //         if (cd > 0)
-            //         {
-            //             Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
-            //             // todo  把cd加入执行队列
-            //             return;
-            //         }
-            //     }
-            // }
         }
     }
 
