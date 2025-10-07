@@ -179,6 +179,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
             if (_config.ClosePopupPagedEnabled)
             {
                 ClosePopupPage(content);
+                CloseItemPopup(content);
+                CloseCharacterPopup(content);
             }
 
             // 自动剧情点击3s内判断
@@ -711,6 +713,121 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 pageCloseRoRa.Dispose();
             }
         });
+    }
+
+    /// <summary>
+    /// 关闭剧情中弹出的道具页面
+    /// </summary>
+    /// <param name="content"></param>
+    private void CloseItemPopup(CaptureContent content)
+    {
+        //屏幕底部中间，实心黄色三角的位置
+        using var croppedRegion = content.CaptureRectArea.DeriveCrop(945, 1040, 30, 20);
+
+        using var hsv = new Mat();
+        Cv2.CvtColor(croppedRegion.SrcMat, hsv, ColorConversionCodes.BGR2HSV);
+
+        using var mask = new Mat();
+        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), mask);
+
+        Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+        foreach (var contour in contours)
+        {
+            var area = Cv2.ContourArea(contour);
+
+            if (!(area >= 20) || !(area <= 50)) continue;
+
+            var approx = Cv2.ApproxPolyDP(contour, 0.04 * Cv2.ArcLength(contour, true), true);
+
+            if (approx.Length != 3) continue;
+
+            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            {
+                croppedRegion.Derive(Cv2.BoundingRect(approx)).BackgroundClick();
+            }
+            else
+            {
+                croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
+            }
+
+            _logger.LogInformation($"自动剧情：点击黄色三角形");
+            return;
+        }
+    }
+
+    /// <summary>
+    /// 关闭剧情中弹出的初见角色信息弹窗
+    /// </summary>
+    /// <param name="content"></param>
+    private void CloseCharacterPopup(CaptureContent content)
+    {
+        using var srcMat = content.CaptureRectArea.SrcMat.Clone();
+
+        // 把被角色头像遮挡的矩形闭合（假设矩形存在）
+        Cv2.Rectangle(srcMat, new Rect(240, 395, 300, 50), new Scalar(229, 241, 245), -1);
+        Cv2.Rectangle(srcMat, new Rect(290, 660, 210, 40), new Scalar(101, 82, 74), -1);
+
+        using var hsv = new Mat();
+        Cv2.CvtColor(srcMat, hsv, ColorConversionCodes.BGR2HSV);
+
+        // 颜色阈值分割 - 背景色中的黄跟藏青
+        using var maskLight = new Mat();
+        using var maskDark = new Mat();
+        Cv2.InRange(hsv, new Scalar(18, 16, 234), new Scalar(27, 19, 250), maskLight);
+        Cv2.InRange(hsv, new Scalar(101, 57, 95), new Scalar(118, 85, 106), maskDark);
+
+        // 合并掩码并进行形态学操作 - 减少背景中的噪点
+        using var combinedMask = new Mat();
+        using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(21, 21));
+        Cv2.BitwiseOr(maskLight, maskDark, combinedMask);
+        Cv2.MorphologyEx(combinedMask, combinedMask, MorphTypes.Close, kernel);
+        Cv2.MorphologyEx(combinedMask, combinedMask, MorphTypes.Open, kernel);
+
+        // 查找轮廓  
+        Cv2.FindContours(combinedMask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+        var imgHeight = srcMat.Height;
+        var imgWidth = srcMat.Width;
+
+        // 筛选弹窗轮廓 
+        foreach (var contour in contours)
+        {
+            var bbox = Cv2.BoundingRect(contour);
+            if (bbox.Height == 0) continue;
+
+            // 面积检查
+            var areaRatio = (double)(bbox.Width * bbox.Height) / (imgWidth * imgHeight);
+            if (areaRatio <= 0.24 || areaRatio >= 0.3) continue; // 弹窗高约300，面积比约等于0.27
+            _logger.LogDebug("自动剧情：关闭角色弹窗-面积检查通过");
+
+            // 宽高比检查
+            var aspectRatio = (double)bbox.Width / bbox.Height;
+            if (aspectRatio < 5.6 || aspectRatio > 7.2) continue;
+            _logger.LogDebug("自动剧情：关闭角色弹窗-宽高比检查通过");
+
+            // 位置检查
+            if (bbox.Y <= imgHeight * 0.3 || bbox.Y + bbox.Height >= imgHeight * 0.7) continue;
+            _logger.LogDebug("自动剧情：关闭角色弹窗-位置检查通过");
+
+
+            // 检查是否包含两种颜色  
+            var lightCount = Cv2.CountNonZero(new Mat(maskLight, bbox));
+            var darkCount = Cv2.CountNonZero(new Mat(maskDark, bbox));
+            if (lightCount <= 0 || darkCount <= 0) continue;
+
+            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            {
+                content.CaptureRectArea.Derive(bbox).BackgroundClick();
+            }
+            else
+            {
+                content.CaptureRectArea.Derive(bbox).Click();
+            }
+
+            _logger.LogInformation("自动剧情：关闭角色弹窗");
+            return;
+        }
     }
 
     private bool SubmitGoods(CaptureContent content)
