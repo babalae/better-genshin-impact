@@ -131,7 +131,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
 
         GuardianAvatar = autoFightConfig.GuardianAvatar;
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
-        SkipModel = autoFightConfig.SkipModel;
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
     }
 }
