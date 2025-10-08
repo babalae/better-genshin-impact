@@ -16,11 +16,11 @@ public class Navigation
     
     private static readonly NavigationInstance _instance = new();
 
-    public static void WarmUp()
+    public static void WarmUp(string mapMatchMethod)
     {
         if (!_isWarmUp)
         {
-            MapManager.GetMap(MapTypes.Teyvat);
+            MapManager.GetMap(MapTypes.Teyvat, mapMatchMethod);
         }
 
         _isWarmUp = true;
@@ -37,9 +37,9 @@ public class Navigation
         _instance.SetPrevPosition(x,y);
     }
 
-    public static Point2f GetPosition(ImageRegion imageRegion, string mapName)
+    public static Point2f GetPosition(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
-        return _instance.GetPosition(imageRegion, mapName);
+        return _instance.GetPosition(imageRegion, mapName, mapMatchMethod);
     }
 
     /// <summary>
@@ -47,10 +47,11 @@ public class Navigation
     /// </summary>
     /// <param name="imageRegion">图像区域</param>
     /// <param name="mapName"></param>
+    /// <param name="mapMatchMethod"></param>
     /// <returns>当前位置坐标</returns>
-    public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName)
+    public static Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
-        return _instance.GetPositionStable(imageRegion, mapName);
+        return _instance.GetPositionStable(imageRegion, mapName, mapMatchMethod);
     }
 
     public static int GetTargetOrientation(Waypoint waypoint, Point2f position)
