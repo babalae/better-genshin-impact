@@ -1349,22 +1349,51 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="战斗结束后执行万叶长E"
+                                      Text="聚集材料动作"
                                       TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      Margin="90,0,5,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      FontSize="10"
+                                      FontTypography="Body"
+                                      VerticalAlignment="Bottom"
+                                      Text="(琴二次拾取：首次拾取空,再次拾取)"
+                                      TextWrapping="Wrap" />
+                        
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="战斗结束后，如果存在枫原万叶，则战斗结束后执行万叶长E，使用该角色捡材料"
+                                      Text="战斗结束后，如存在(万叶/琴)，则执行长E聚集材料动作"
                                       TextWrapping="Wrap" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
-                                         Margin="0,0,36,0"
+                                         Margin="0,0,10,0"
                                          IsChecked="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
+                        
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="2"
+                                         Margin="0,0,38,0"
+                                         IsEnabled="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
+                                         IsChecked="{Binding PathingConfig.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="2"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      FontSize="8"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Margin="0,0,38,26"
+                                      FontTypography="Body"
+                                      Text="琴二次拾取"
+                                      TextWrapping="Wrap" />
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
