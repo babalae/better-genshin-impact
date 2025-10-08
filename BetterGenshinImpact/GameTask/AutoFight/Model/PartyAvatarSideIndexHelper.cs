@@ -94,11 +94,8 @@ public class PartyAvatarSideIndexHelper
         return new Rect(currRect.X + (int)(126 * s), currRect.Y - (int)(194 * s), (int)(16 * s), (int)(17 * s));
     }
 
-    public static (List<Rect>, List<Rect>) GetAllIndexRects(ImageRegion imageRegion)
+    public static (List<Rect>, List<Rect>) GetAllIndexRects(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
     {
-        // 判断联机状态
-        var multiGameStatus = DetectedMultiGameStatus(imageRegion);
-
         try
         {
             // 新的动态获取角色编号位置逻辑
@@ -135,7 +132,7 @@ public class PartyAvatarSideIndexHelper
         return (avatarIndexRectList, avatarSideIconRectList);
     }
     
-    public static bool HasIndexRect(ImageRegion imageRegion)
+    public static bool HasAnyIndexRect(ImageRegion imageRegion)
     {
         var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
         if (i1.IsExist())
@@ -165,7 +162,7 @@ public class PartyAvatarSideIndexHelper
         return imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold).IsExist();
     }
 
-    private static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
+    public static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
     {
         // 找到编号块
         var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
@@ -182,6 +179,8 @@ public class PartyAvatarSideIndexHelper
         }
         else
         {
+            // 为什么这里要用箭头确认一遍？因为出战角色编号框的识别率不是100%，需要用箭头来辅助确认。这也是为了保证非满队情况下的队伍识别率
+            // 非出战角色编号框识别率100%
             var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold); // 当前出战角色标识
             if (curr.IsExist())
             {

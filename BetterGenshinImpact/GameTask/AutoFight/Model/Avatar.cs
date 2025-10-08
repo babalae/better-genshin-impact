@@ -463,7 +463,7 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            if (!PartyAvatarSideIndexHelper.HasIndexRect(region))
+            if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
             {
                 // 找不到角色编号块意味者技能释放成功
                 Sleep(1500, Ct);

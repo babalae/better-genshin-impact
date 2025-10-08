@@ -40,6 +40,8 @@ public class CombatScenes : IDisposable
     /// 最近一次识别出的出战角色编号，从1开始，-1表示未识别
     /// </summary>
     public int LastActiveAvatarIndex { get; set; } = -1;
+    
+    public MultiGameStatus? CurrentMultiGameStatus { set; get; }
 
 
     private readonly BgiYoloPredictor _predictor =
@@ -71,8 +73,11 @@ public class CombatScenes : IDisposable
             return this;
         }
 
+     
+        // 判断联机状态
+        CurrentMultiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(imageRegion);
         // 队伍角色编号和侧面头像位置
-        var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion);
+        var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus);
         ExpectedTeamAvatarNum = avatarIndexRectList.Count;
         
         // 识别队伍
@@ -110,6 +115,42 @@ public class CombatScenes : IDisposable
         }
 
         return this;
+    }
+    
+    
+    /// <summary>
+    /// 这个个方法主要用于在切人判断有误的情况下，且能够找到预期数量的角色编号框。此时只有两种情况
+    /// 1. A草露进度条导致角色编号框偏移，B退队后偏移不变，C独立地图传送后偏移还原
+    /// 2. 地图边缘环境，导致角色编号框切人判断失效
+    /// 此方法必须在判定一定存在 ExpectedTeamAvatarNum 数量的 IndexRectList 的情况下才能使用
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    /// <returns>false:存在 IndexRectList 的情况下使用此方法，返回false的时候很有可能处于地图边缘环境下</returns>
+    public bool RefreshTeamAvatarIndexRectList(ImageRegion imageRegion)
+    {
+        // 只用新方法判断
+        try
+        {
+            var (avatarIndexRectList, _) = PartyAvatarSideIndexHelper.GetAllIndexRectsNew(imageRegion, CurrentMultiGameStatus!);
+            if (avatarIndexRectList.Count != ExpectedTeamAvatarNum)
+            {
+                Logger.LogWarning("重新识别到的队伍角色数量与之前不一致，之前{Old}个，现在{New}个", ExpectedTeamAvatarNum, avatarIndexRectList.Count);
+                return false;
+            }
+
+            for (var i = 0; i < ExpectedTeamAvatarNum; i++)
+            {
+                Avatars[i].IndexRect = avatarIndexRectList[i];
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "使用新方法获取角色编号位置失败");
+            Logger.LogWarning("[重新识别角色编号位置]使用新方法获取角色编号位置失败，原因：" + ex.Message);
+            return false;
+        }
+
     }
 
     public static List<Rect> FindAvatarIndexRectList(ImageRegion imageRegion)
