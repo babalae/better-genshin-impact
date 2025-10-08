@@ -50,6 +50,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
         SkipModel = autoFightConfig.SkipModel;
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
+        QinDoublePickUp = autoFightConfig.QinDoublePickUp;
     }
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
@@ -70,6 +71,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public bool GuardianCombatSkip { get; set; } = false;
     public bool SkipModel = false;
     public bool GuardianAvatarHold = false;
+    public bool QinDoublePickUp { get; set; } = false;
 
     public AutoFightParam(string? strategyName = null) : base(null, null)
     {
