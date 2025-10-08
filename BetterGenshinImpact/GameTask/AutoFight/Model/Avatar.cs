@@ -20,6 +20,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -115,6 +119,67 @@ public class Avatar
             Sleep(600, ct);
             TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
+        else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
+        {
+            if (PathingConditionConfig.FightWaypoint is not null)
+            {
+                if (!SwimmingConfirm(CaptureToRectArea())) //二次确认
+                {
+                    return;
+                }
+                
+                Logger.LogInformation("游泳检测：尝试回到战斗地点");
+                var pathExecutor = new PathExecutor(ct);
+                try
+                {
+                    pathExecutor.FaceTo(PathingConditionConfig.FightWaypoint).Wait(2000, ct);
+                    PathingConditionConfig.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code;//改为跳飞
+                    Simulation.SendInput.Mouse.RightButtonDown();
+                    pathExecutor.MoveTo(PathingConditionConfig.FightWaypoint).Wait(15000, ct);
+                    PathingConditionConfig.FightWaypoint = null;//执行后清空，即每次战斗只执行一次，第二次直接去七天神像
+                    Simulation.SendInput.Mouse.RightButtonUp();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "游泳检测：回到战斗地点异常");
+                }
+                
+                Simulation.ReleaseAllKey();
+                
+                if (!SwimmingConfirm(CaptureToRectArea()))
+                {
+                    Logger.LogInformation("游泳检测：游泳脱困成功");
+                    return;
+                }
+                
+                Logger.LogWarning("游泳检测：回到战斗地点失败");
+            }
+            
+            Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
+            TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
+        }
+    }
+    
+    /// <summary>
+    /// 游泳检测（色块连通性检测）
+    /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
+    /// </summary>
+    private static bool SwimmingConfirm(Region region)
+    {
+        var mask = OpenCvCommonHelper.Threshold(region.ToImageRegion().DeriveCrop(1819, 1025, 9, 11).SrcMat, 
+            new Scalar(242, 223, 39),new Scalar(255, 233, 44));
+        var labels = new Mat();
+        var stats = new Mat();
+        var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        labels.Dispose();
+        stats.Dispose();
+        centroids.Dispose();
+
+        return numLabels > 1;
     }
 
     /// <summary>

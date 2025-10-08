@@ -6,6 +6,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -33,6 +37,14 @@ public partial class PathingConditionConfig : ObservableObject
     // 启用自动吃药功能
     [ObservableProperty]
     private bool _autoEatEnabled = false;
+    
+    // 战斗点位
+    private static WaypointForTrack? _fightWaypoint = null;
+    public static WaypointForTrack? FightWaypoint
+    {
+        get => _fightWaypoint;
+        set => _fightWaypoint = value;
+    }
 
     public static PathingConditionConfig Default => new()
     {
