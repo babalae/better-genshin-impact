@@ -40,7 +40,7 @@ public class CombatScenes : IDisposable
     /// 最近一次识别出的出战角色编号，从1开始，-1表示未识别
     /// </summary>
     public int LastActiveAvatarIndex { get; set; } = -1;
-    
+
     public MultiGameStatus? CurrentMultiGameStatus { set; get; }
 
 
@@ -73,13 +73,13 @@ public class CombatScenes : IDisposable
             return this;
         }
 
-     
+
         // 判断联机状态
         CurrentMultiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(imageRegion);
         // 队伍角色编号和侧面头像位置
         var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus);
         ExpectedTeamAvatarNum = avatarIndexRectList.Count;
-        
+
         // 识别队伍
         var names = new string[avatarSideIconRectList.Count];
         var displayNames = new string[avatarSideIconRectList.Count];
@@ -116,8 +116,8 @@ public class CombatScenes : IDisposable
 
         return this;
     }
-    
-    
+
+
     /// <summary>
     /// 这个个方法主要用于在切人判断有误的情况下，且能够找到预期数量的角色编号框。此时只有两种情况
     /// 1. A草露进度条导致角色编号框偏移，B退队后偏移不变，C独立地图传送后偏移还原
@@ -142,6 +142,7 @@ public class CombatScenes : IDisposable
             {
                 Avatars[i].IndexRect = avatarIndexRectList[i];
             }
+
             return true;
         }
         catch (Exception ex)
@@ -150,7 +151,6 @@ public class CombatScenes : IDisposable
             Logger.LogWarning("[重新识别角色编号位置]使用新方法获取角色编号位置失败，原因：" + ex.Message);
             return false;
         }
-
     }
 
     public static List<Rect> FindAvatarIndexRectList(ImageRegion imageRegion)
@@ -348,6 +348,8 @@ public class CombatScenes : IDisposable
 
     /// <summary>
     /// 获取当前出战角色名
+    /// 不考虑重新刷新编号框位置
+    /// 不推荐使用
     /// </summary>
     /// <param name="force"></param>
     /// <param name="region"></param>
@@ -356,36 +358,59 @@ public class CombatScenes : IDisposable
     public string? CurrentAvatar(bool force = false, ImageRegion? region = null,
         CancellationToken ct = default)
     {
-        if (!force && Avatar.LastActiveAvatar is not null)
+        if (!force && LastActiveAvatarIndex > 0)
         {
-            return Avatar.LastActiveAvatar;
+            return Avatars[LastActiveAvatarIndex - 1].Name;
         }
 
         var imageRegion = region ?? CaptureToRectArea();
-        string? avatarName = null;
 
-        var notActiveCount = 0;
-        foreach (var avatar in GetAvatars())
+        var rectArray = Avatars.Select(t => t.IndexRect).ToArray();
+        int index = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(imageRegion, rectArray, new AvatarActiveCheckContext());
+
+        if (index > 0)
         {
-            if (avatar.IsActive(imageRegion))
+            LastActiveAvatarIndex = index;
+        }
+
+        return Avatars[LastActiveAvatarIndex - 1].Name;
+    }
+
+    /// <summary>
+    /// 推荐使用
+    /// 失败后自动刷新编号框位置
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public int GetActiveAvatarIndex(ImageRegion imageRegion, AvatarActiveCheckContext context)
+    {
+        var rectArray = Avatars.Select(t => t.IndexRect).ToArray();
+        int index = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(imageRegion, rectArray, context);
+
+        if (index > 0)
+        {
+            LastActiveAvatarIndex = index;
+        }
+        else
+        {
+            // 多次识别失败则尝试刷新角色编号位置
+            // 应对草露问题
+            if (context.TotalCheckFailedCount > 3)
             {
-                avatarName = avatar.Name;
-            }
-            else
-            {
-                notActiveCount++;
+                // 失败多次，识别是否存在满足预期的编号框
+                if (PartyAvatarSideIndexHelper.CountIndexRect(imageRegion) == Avatars.Length)
+                {
+                    bool res = RefreshTeamAvatarIndexRectList(imageRegion);
+                    if (res)
+                    {
+                        context.TotalCheckFailedCount = 0;
+                    }
+                }
             }
         }
 
-        if (notActiveCount != ExpectedTeamAvatarNum - 1) return avatarName;
-        Avatar.LastActiveAvatar = avatarName;
-        return Avatar.LastActiveAvatar;
-    }
-    
-    public int GetActiveAvatarIndex()
-    {
-        
-        
+
         return LastActiveAvatarIndex;
     }
 

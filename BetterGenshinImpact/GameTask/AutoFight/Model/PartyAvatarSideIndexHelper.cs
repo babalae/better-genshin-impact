@@ -131,32 +131,17 @@ public class PartyAvatarSideIndexHelper
         AvatarSideFixOffset(imageRegion, avatarSideIconRectList, avatarIndexRectList);
         return (avatarIndexRectList, avatarSideIconRectList);
     }
-    
+
     public static bool HasAnyIndexRect(ImageRegion imageRegion)
     {
-        var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
-        if (i1.IsExist())
-        {
-            return true;
-        }
-        var i2 = imageRegion.Find(ElementAssets.Instance.Index2);
-        if (i2.IsExist())
-        {
-            return true;
-        }
-        var i3 = imageRegion.Find(ElementAssets.Instance.Index3);
-        if (i3.IsExist())
-        {
-            return true;
-        }
-        var i4 = imageRegion.Find(ElementAssets.Instance.Index4);
-        if (i4.IsExist())
-        {
-            return true;
-        }
-        return false;
+        return ElementAssets.Instance.IndexList.Select(indexRo => imageRegion.Find(indexRo)).Any(indexRes => indexRes.IsExist());
     }
-    
+
+    public static int CountIndexRect(ImageRegion imageRegion)
+    {
+        return ElementAssets.Instance.IndexList.Select(indexRo => imageRegion.Find(indexRo)).Count(indexRes => indexRes.IsExist());
+    }
+
     public static bool HasActiveAvatarArrow(ImageRegion imageRegion)
     {
         return imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold).IsExist();
@@ -316,34 +301,40 @@ public class PartyAvatarSideIndexHelper
         return true;
     }
 
-    public static AvatarActiveCheckContext GetAvatarIndexIsActiveWithContext(ImageRegion imageRegion, Rect[] rectArray, AvatarActiveCheckContext context)
+    /// <summary>
+    /// 识别当前出战角色编号
+    /// 1. 颜色识别只要成功一次就认为成功并返回(优先级最高)
+    /// 2. 出战标识识别成功，颜色识别失败，认为结果不确定，需要重试一次。2次后结果相同认为成功
+    /// </summary>
+    /// <param name="imageRegion"></param>
+    /// <param name="rectArray"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public static int GetAvatarIndexIsActiveWithContext(ImageRegion imageRegion, Rect[] rectArray, AvatarActiveCheckContext context)
     {
-        var index1 = FindActiveIndexRectByArrow(imageRegion, rectArray);
-        var index2 = FindActiveIndexRectByColor(imageRegion, rectArray);
-        if (index1 > 0 && index2 > 0)
+        var indexByColor = FindActiveIndexRectByColor(imageRegion, rectArray);
+        if (indexByColor > 0)
         {
-            return new AvatarActiveCheckContext()
-            {
-                ActiveIndex = index2
-            };
+            context.TotalCheckFailedCount = 0;
+            return indexByColor;
         }
 
-        if (index1 > 0 || index2 > 0)
+        var indexByArrow = FindActiveIndexRectByArrow(imageRegion, rectArray);
+        if (indexByArrow > 0)
         {
-            return new AvatarActiveCheckContext()
+            // 累计识别次数
+            context.ActiveIndexByArrowCount[indexByArrow - 1]++;
+            if (context.ActiveIndexByArrowCount[indexByArrow - 1] >= 2)
             {
-                ActiveIndex = index2 > 0 ? index2 : index1,
-                NeedRetry = true
-            };
+                context.TotalCheckFailedCount = 0;
+                return indexByArrow;
+            }
+
+            return -2; // 重试
         }
-        else
-        {
-            return new AvatarActiveCheckContext()
-            {
-                ActiveIndex = -1,
-                NeedRetry = true
-            };
-        }
+
+        context.TotalCheckFailedCount++;
+        return -1; // 两种方式都失败
     }
 
     // public static int FindDifferentRect(Mat greyMat, Rect[] rectArray)
@@ -364,6 +355,11 @@ public class PartyAvatarSideIndexHelper
 
     public static int FindActiveIndexRectByColor(ImageRegion imageRegion, Rect[] rectArray)
     {
+        if (rectArray.Length == 1)
+        {
+            return 1;
+        }
+
         var whiteCount = 0;
         var notWhiteRectNum = 0;
         var mat = imageRegion.CacheGreyMat;
@@ -410,6 +406,11 @@ public class PartyAvatarSideIndexHelper
     /// <returns></returns>
     public static int FindActiveIndexRectByArrow(ImageRegion imageRegion, Rect[] rectArray)
     {
+        if (rectArray.Length == 1)
+        {
+            return 1;
+        }
+
         var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold); // 当前出战角色标识
         for (int i = 0; i < rectArray.Length; i++)
         {

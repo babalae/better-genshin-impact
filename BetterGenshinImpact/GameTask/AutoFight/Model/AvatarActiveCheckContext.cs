@@ -2,13 +2,16 @@
 
 /// <summary>
 /// 多次识别出战角色结果上下文
-/// 置信度规则：
-/// 1. 通过颜色识别成功的，置信度最高，一次识别就返回
-/// 2. 颜色无法识别
 /// </summary>
 public class AvatarActiveCheckContext
 {
-    public bool NeedRetry { get; set; } = false;
+    /// <summary>
+    /// 出战标识识别结果的次数统计
+    /// </summary>
+    public int[] ActiveIndexByArrowCount { get; set; } = new int[4];
     
-    public int ActiveIndex { get; set; } = -1;
+    /// <summary>
+    /// 累计识别失败次数
+    /// </summary>
+    public int TotalCheckFailedCount { get; set; } = 0;
 }

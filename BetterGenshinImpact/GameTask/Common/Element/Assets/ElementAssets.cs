@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -91,6 +92,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject Index2;
     public RecognitionObject Index3;
     public RecognitionObject Index4;
+    public List<RecognitionObject> IndexList => [Index1, Index2, Index3, Index4];
     public RecognitionObject CurrentAvatarThreshold;
 
 

@@ -82,9 +82,7 @@ public class Avatar
     /// 战斗场景
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
-
-    public static string? LastActiveAvatar { get; internal set; } = null;
-
+    
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
@@ -138,6 +136,7 @@ public class Avatar
     /// </summary>
     public void Switch()
     {
+        var context = new AvatarActiveCheckContext();
         for (var i = 0; i < 30; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -148,8 +147,8 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
+            // 切换成功
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
                 return;
             }
@@ -169,6 +168,7 @@ public class Avatar
     /// <returns></returns>
     public bool TrySwitch(int tryTimes = 4, bool needLog = true)
     {
+        var context = new AvatarActiveCheckContext();
         for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -179,17 +179,17 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
+            // 切换成功
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
                 if (needLog && i > 0)
                 {
-                    LastActiveAvatar = Name;
                     Logger.LogInformation("成功切换角色:{Name}", Name);
                 }
 
                 return true;
             }
+
 
             SimulateSwitchAction(Index);
 
@@ -230,13 +230,13 @@ public class Avatar
     /// </summary>
     public void SwitchWithoutCts()
     {
+        var context = new AvatarActiveCheckContext();
         for (var i = 0; i < 10; i++)
         {
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == 3)
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
                 return;
             }
@@ -263,7 +263,7 @@ public class Avatar
             return !white;
         }
     }
-    
+
     private bool IsIndexRectWhite(ImageRegion region, Rect rect)
     {
         // 剪裁出IndexRect区域
@@ -720,6 +720,7 @@ public class Avatar
                     rateX = lowspeed;
                     rateY = 0;
                 }
+
                 Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
 
                 tick = (tick + 1) % 100;
