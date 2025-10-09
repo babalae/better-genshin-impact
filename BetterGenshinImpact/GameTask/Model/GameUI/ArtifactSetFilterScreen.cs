@@ -19,6 +19,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         private readonly CancellationToken ct;
         private readonly ILogger logger;
         private readonly InputSimulator input = Simulation.SendInput;
+        internal Action? OnBeforeScroll { get; set; }
 
         /// <summary>
         /// 对圣遗物套装筛选界面的操作封装类
@@ -37,11 +38,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         }
         public IAsyncEnumerator<ImageRegion> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            return new GridEnumerator(@params.Roi, @params.Columns, new GridScroller(@params, logger, input, ct), ct);
+            return new GridEnumerator(this, @params.Roi, @params.Columns, new GridScroller(@params, logger, input, ct), ct);
         }
 
         public class GridEnumerator : IAsyncEnumerator<ImageRegion>
         {
+            private readonly ArtifactSetFilterScreen owner;
             private readonly Rect roi;
             private readonly CancellationToken ct;
             private readonly int columns;
@@ -51,8 +53,9 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             private ImageRegion? current;
             ImageRegion IAsyncEnumerator<ImageRegion>.Current => current ?? throw new NullReferenceException();
 
-            internal GridEnumerator(Rect roi, int columns, GridScroller gridScroller, CancellationToken ct)
+            internal GridEnumerator(ArtifactSetFilterScreen owner, Rect roi, int columns, GridScroller gridScroller, CancellationToken ct)
             {
+                this.owner = owner;
                 this.roi = roi;
                 this.ct = ct;
                 this.columns = columns;
@@ -71,6 +74,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                         ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
                         await TaskControl.Delay(300, ct);
 
+                        owner.OnBeforeScroll?.Invoke();
                         if (!await this.gridScroller.TryVerticalScollDown(GetGridItems))
                         {
                             return false;

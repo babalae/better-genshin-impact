@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
@@ -303,20 +304,48 @@ public class AutoArtifactSalvageTask : ISoloTask
                 quickSelectConfirmBtn.Click();
                 await Delay(400, ct);
                 // 点击所属套装
-                ra5.ClickTo(315, 205);
+                ra5.ClickTo(315, 190);
                 await Delay(1000, ct);
                 // 遍历套装Grid勾选套装
                 using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
                 ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
-                await foreach (ImageRegion itemRegion in gridScreen)
+                string drawKey = "ArtifactSetFilter";
+                var drawRectList = new List<RectDrawable>();
+                var drawTextList = new List<TextDrawable>();
+                gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
+                System.Drawing.Pen greenPen = new System.Drawing.Pen(System.Drawing.Color.Lime);
+                try
                 {
-                    using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
-                    (string predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
-                    if (this.artifactSetFilter.Contains(predName))
+                    await foreach (ImageRegion itemRegion in gridScreen)
                     {
-                        itemRegion.Click();
-                        await Delay(100, ct);
+                        using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
+                        (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
+                        if (predName == null)
+                        {
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey);
+                            drawRectList.Add(rectDrawable);
+                            VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
+                            drawTextList.Add(new TextDrawable("识别失败", new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
+                            VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
+                        }
+                        else
+                        {
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, greenPen);
+                            drawRectList.Add(rectDrawable);
+                            VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
+                            drawTextList.Add(new TextDrawable(predName, new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
+                            VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
+                            if (this.artifactSetFilter.Contains(predName))
+                            {
+                                itemRegion.Click();
+                                await Delay(100, ct);
+                            }
+                        }
                     }
+                }
+                finally
+                {
+                    VisionContext.Instance().DrawContent.ClearAll();
                 }
                 // 点击确认筛选
                 using var confirmFilterBtnRegion = CaptureToRectArea();
@@ -560,7 +589,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             if (!match.Success)
             {
                 continue;
-            } 
+            }
             ArtifactAffixType artifactAffixType;
             var dic = this.artifactAffixStrDic;
             if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
@@ -621,7 +650,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
             }
-            
+
             bool isUnactivated = false;
             // 只有在已经成功识别至少 3 个词条后才执行额外的直方图分析。
             if (minorAffixes.Count >= 3)
