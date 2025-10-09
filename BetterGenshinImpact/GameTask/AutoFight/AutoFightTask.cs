@@ -45,6 +45,8 @@ public class AutoFightTask : ISoloTask
     public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
     
     public static bool FightStatusFlag { get; set; } = false;
+    
+    private static readonly object PickLock = new object(); // 建议放在类成员处
 
     private class TaskFightFinishDetectConfig
     {
@@ -540,14 +542,17 @@ public class AutoFightTask : ISoloTask
                                     //异步执行，防止卡顿
                                     Task.Run(() =>
                                     {
-                                        if (find)
+                                        lock (PickLock)
                                         {
-                                            var imagePick = CaptureToRectArea();
-                                            if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                            if (find)
                                             {
-                                                find = false;
+                                                var imagePick = CaptureToRectArea();
+                                                if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                {
+                                                    find = false;
+                                                }
+                                                imagePick.Dispose();
                                             }
-                                            imagePick.Dispose();
                                         }
                                     });
                                 }
