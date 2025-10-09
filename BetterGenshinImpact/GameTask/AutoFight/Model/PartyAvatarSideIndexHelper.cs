@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -388,9 +389,11 @@ public class PartyAvatarSideIndexHelper
     public static bool IsWhiteRect(Mat greyMat, Rect rect)
     {
         using var indexMat = new Mat(greyMat, rect);
-        var count = OpenCvCommonHelper.CountGrayMatColor(indexMat, 251, 255);
-        if (count * 1.0 / (indexMat.Width * indexMat.Height) > 0.5)
+        var count1 = OpenCvCommonHelper.CountGrayMatColor(indexMat, 251, 255); // 白
+        var count2 = OpenCvCommonHelper.CountGrayMatColor(indexMat, 50, 54); // 黑色文字
+        if ((count1 + count2) * 1.0 / (indexMat.Width * indexMat.Height) > 0.5)
         {
+            // Debug.WriteLine($"白色矩形占比{(count1 + count2) * 1.0 / (indexMat.Width * indexMat.Height)}");
             return true;
         }
 

@@ -676,7 +676,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_1.png"),
             RegionOfInterest = partyRect,
-            DrawOnWindow = true
+            // DrawOnWindow = true
         }.InitTemplate();
         Index2 = new RecognitionObject
         {
@@ -684,7 +684,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_2.png"),
             RegionOfInterest = partyRect,
-            DrawOnWindow = true
+            // DrawOnWindow = true
         }.InitTemplate();
         Index3 = new RecognitionObject
         {
@@ -692,7 +692,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_3.png"),
             RegionOfInterest = partyRect,
-            DrawOnWindow = true
+            // DrawOnWindow = true
         }.InitTemplate();
         Index4 = new RecognitionObject
         {
@@ -700,7 +700,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_4.png"),
             RegionOfInterest = partyRect,
-            DrawOnWindow = true
+            // DrawOnWindow = true
         }.InitTemplate();
         CurrentAvatarThreshold = new RecognitionObject
         {
@@ -710,7 +710,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(240 * AssetScale), (int)(155 * AssetScale), (int)(210 * AssetScale), (int)(600 * AssetScale)),
             UseBinaryMatch = true,
             BinaryThreshold = 200,
-            DrawOnWindow = true
+            // DrawOnWindow = true
         }.InitTemplate();
     }
 }

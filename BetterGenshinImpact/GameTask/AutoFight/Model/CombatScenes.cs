@@ -153,16 +153,16 @@ public class CombatScenes : IDisposable
         }
     }
 
-    public static List<Rect> FindAvatarIndexRectList(ImageRegion imageRegion)
-    {
-        var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
-        var i2 = imageRegion.Find(ElementAssets.Instance.Index2);
-        var i3 = imageRegion.Find(ElementAssets.Instance.Index3);
-        var i4 = imageRegion.Find(ElementAssets.Instance.Index4);
-        var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold);
-        // Debug.WriteLine($"i1:{i1.X},{i1.Y},{i1.Width},{i1.Height}; i2:{i2.X},{i2.Y},{i2.Width},{i2.Height}; i3:{i3.X},{i3.Y},{i3.Width},{i3.Height}; i4:{i4.X},{i4.Y},{i4.Width},{i4.Height}; curr:{curr.X},{curr.Y},{curr.Width},{curr.Height}");
-        return null;
-    }
+    // public static List<Rect> FindAvatarIndexRectList(ImageRegion imageRegion)
+    // {
+    //     var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
+    //     var i2 = imageRegion.Find(ElementAssets.Instance.Index2);
+    //     var i3 = imageRegion.Find(ElementAssets.Instance.Index3);
+    //     var i4 = imageRegion.Find(ElementAssets.Instance.Index4);
+    //     var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold);
+    //     // Debug.WriteLine($"i1:{i1.X},{i1.Y},{i1.Width},{i1.Height}; i2:{i2.X},{i2.Y},{i2.Width},{i2.Height}; i3:{i3.X},{i3.Y},{i3.Width},{i3.Height}; i4:{i4.X},{i4.Y},{i4.Width},{i4.Height}; curr:{curr.X},{curr.Y},{curr.Width},{curr.Height}");
+    //     return null;
+    // }
 
 
     public (string, string) ClassifyAvatarCnName(Image<Rgb24> img, int index)
@@ -402,6 +402,7 @@ public class CombatScenes : IDisposable
                 if (PartyAvatarSideIndexHelper.CountIndexRect(imageRegion) == Avatars.Length)
                 {
                     bool res = RefreshTeamAvatarIndexRectList(imageRegion);
+                    Logger.LogWarning("多次识别出战角色失败，尝试刷新角色编号位置（处理草露问题），刷新结果:{Result}", res ? "成功" : "失败");
                     if (res)
                     {
                         context.TotalCheckFailedCount = 0;
