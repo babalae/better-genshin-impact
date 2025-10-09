@@ -121,7 +121,7 @@ public class Avatar
         }
         else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
         {
-            if (PathingConditionConfig.FightWaypoint is not null)
+            if (AutoFightTask.FightWaypoint is not null)
             {
                 if (!SwimmingConfirm(CaptureToRectArea())) //二次确认
                 {
@@ -132,11 +132,11 @@ public class Avatar
                 var pathExecutor = new PathExecutor(ct);
                 try
                 {
-                    pathExecutor.FaceTo(PathingConditionConfig.FightWaypoint).Wait(2000, ct);
-                    PathingConditionConfig.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code;//改为跳飞
+                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).Wait(2000, ct);
+                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code;//改为跳飞
                     Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(PathingConditionConfig.FightWaypoint).Wait(15000, ct);
-                    PathingConditionConfig.FightWaypoint = null;//执行后清空，即每次战斗只执行一次，第二次直接去七天神像
+                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).Wait(15000, ct);
+                    AutoFightTask.FightWaypoint = null;//执行后清空，即每次战斗只执行一次，第二次直接去七天神像
                     Simulation.SendInput.Mouse.RightButtonUp();
                 }
                 catch (Exception ex)

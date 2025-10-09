@@ -37,14 +37,6 @@ public partial class PathingConditionConfig : ObservableObject
     // 启用自动吃药功能
     [ObservableProperty]
     private bool _autoEatEnabled = false;
-    
-    // 战斗点位
-    private static WaypointForTrack? _fightWaypoint = null;
-    public static WaypointForTrack? FightWaypoint
-    {
-        get => _fightWaypoint;
-        set => _fightWaypoint = value;
-    }
 
     public static PathingConditionConfig Default => new()
     {
