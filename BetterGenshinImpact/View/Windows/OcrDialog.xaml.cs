@@ -7,6 +7,7 @@ using OpenCvSharp;
 using System;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -53,7 +54,7 @@ public partial class OcrDialog
             this.ModelStructure.Text = artifact.ToStructuredString();
             if (this.javaScript != null)
             {
-                bool isMatch = AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
+                bool isMatch = Task.Run(() => AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript)).Result;
                 this.RegexResult.Text = isMatch ? "匹配" : "不匹配";
             }
         }

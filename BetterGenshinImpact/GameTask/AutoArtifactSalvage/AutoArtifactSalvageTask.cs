@@ -415,7 +415,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         }
                     }
 
-                    if (IsMatchJavaScript(artifact, javaScript))
+                    if (await IsMatchJavaScript(artifact, javaScript))
                     {
                         // logger.LogInformation(message: msg);
                     }
@@ -441,15 +441,15 @@ public class AutoArtifactSalvageTask : ISoloTask
     /// </summary>
     /// <param name="artifact">作为JS入参，JS使用“ArtifactStat”获取</param>
     /// <param name="javaScript"></param>
-    /// <param name="engine">由调用者控制生命周期</param>
+    /// <param name="cts">为空则默认创建一个3秒延迟的cts</param>
     /// <returns>是否匹配。取JS的“Output”作为出参</returns>
     /// <exception cref="InvalidOperationException"></exception>
     /// <exception cref="Exception"></exception>
-    public static bool IsMatchJavaScript(ArtifactStat artifact, string javaScript)
+    public async static Task<bool> IsMatchJavaScript(ArtifactStat artifact, string javaScript, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
-        var logger = App.GetLogger<AutoArtifactSalvageTask>();
+        logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
         using V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.DisableGlobalMembers);
-        var cts = new CancellationTokenSource(3000);    // 这里只是用JS写一个自定义判断方法，由于每个圣遗物都会执行一次，这个方法不应执行太久
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3), timeProvider ?? TimeProvider.System);    // 这里只是用JS写一个自定义判断方法，由于每个圣遗物都会执行一次，这个方法不应执行太久
         cts.Token.Register(() =>
         {
             try
@@ -467,7 +467,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             engine.Script.ArtifactStat = artifact;
 
             // 执行JavaScript代码
-            engine.Execute(javaScript);
+            await Task.Run(() => engine.Execute(javaScript));
 
             // 检查是否有输出
             if (!engine.Script.propertyIsEnumerable("Output"))
