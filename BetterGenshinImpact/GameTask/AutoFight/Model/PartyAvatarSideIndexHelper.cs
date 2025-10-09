@@ -316,7 +316,7 @@ public class PartyAvatarSideIndexHelper
         return true;
     }
 
-    public static AvatarActiveCheckContext GetAvatarIndexIsActiveWithContext(ImageRegion imageRegion, Rect[] rectArray)
+    public static AvatarActiveCheckContext GetAvatarIndexIsActiveWithContext(ImageRegion imageRegion, Rect[] rectArray, AvatarActiveCheckContext context)
     {
         var index1 = FindActiveIndexRectByArrow(imageRegion, rectArray);
         var index2 = FindActiveIndexRectByColor(imageRegion, rectArray);

@@ -385,6 +385,7 @@ public class CombatScenes : IDisposable
     public int GetActiveAvatarIndex()
     {
         
+        
         return LastActiveAvatarIndex;
     }
 
