@@ -205,7 +205,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         /// <summary>
         /// 具有行号列号的单元格
         /// ColNum和RowNum也是0-based的
-        /// 不仅方便编程，ClusterColsAndRows方法也需要一个引用类型
+        /// 不仅方便编程，ClusterToCells方法也需要一个引用类型
         /// </summary>
         /// <param name="rect"></param>
         private class Cell(Rect rect)
@@ -229,11 +229,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             var orderByX = result.OrderBy(t => t.Rect.Left).ToArray();
             int col = 0;
             int? lastX = null;
+            int avgWidth = (int)rects.Average(r => r.Width);
             for (int i = 0; i < orderByX.Length; i++)
             {
                 if (lastX != null && orderByX[i].Rect.X - lastX > threshold)
                 {
-                    col++;
+                    col += (int)Math.Round((float)(orderByX[i].Rect.X - lastX.Value) / (avgWidth + threshold));
                 }
                 orderByX[i].ColNum = col;
                 lastX = orderByX[i].Rect.X;
@@ -242,11 +243,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             var orderByY = result.OrderBy(t => t.Rect.Top).ToArray();
             int row = 0;
             int? lastY = null;
+            int avgHeight = (int)rects.Average(r => r.Height);
             for (int i = 0; i < orderByY.Length; i++)
             {
                 if (lastY != null && orderByY[i].Rect.Y - lastY > threshold)
                 {
-                    row++;
+                    row += (int)Math.Round((float)(orderByY[i].Rect.Y - lastY.Value) / (avgHeight + threshold));    // 估算隔了多少行
                 }
                 orderByY[i].RowNum = row;
                 lastY = orderByY[i].Rect.Y;
