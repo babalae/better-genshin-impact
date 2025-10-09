@@ -447,7 +447,20 @@ public class AutoArtifactSalvageTask : ISoloTask
     /// <exception cref="Exception"></exception>
     public static bool IsMatchJavaScript(ArtifactStat artifact, string javaScript)
     {
+        var logger = App.GetLogger<AutoArtifactSalvageTask>();
         using V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.DisableGlobalMembers);
+        var cts = new CancellationTokenSource(3000);    // 这里只是用JS写一个自定义判断方法，由于每个圣遗物都会执行一次，这个方法不应执行太久
+        cts.Token.Register(() =>
+        {
+            try
+            {
+                engine.Interrupt();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"中断失败: {ex.Message}");
+            }
+        });
         try
         {
             // 传入输入参数
@@ -468,6 +481,11 @@ public class AutoArtifactSalvageTask : ISoloTask
             }
 
             return (bool)engine.Script.Output;
+        }
+        catch (ScriptInterruptedException)
+        {
+            logger.LogWarning("脚本执行超出3秒限制，请使用正确的JS代码（JavaScript execution timeout!）");
+            throw;
         }
         catch (ScriptEngineException ex)
         {
