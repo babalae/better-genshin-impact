@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -8,7 +9,7 @@ namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 public class ElementAssets : BaseAssets<ElementAssets>
 {
-    public RecognitionObject PromptDialogLeftBottomStar;  // 弹出框左下角的星星
+    public RecognitionObject PromptDialogLeftBottomStar; // 弹出框左下角的星星
 
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
@@ -87,6 +88,14 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject LeylineDisorderIconRo;
 
+    public RecognitionObject Index1;
+    public RecognitionObject Index2;
+    public RecognitionObject Index3;
+    public RecognitionObject Index4;
+    public List<RecognitionObject> IndexList => [Index1, Index2, Index3, Index4];
+    public RecognitionObject CurrentAvatarThreshold;
+
+
     private ElementAssets()
     {
         PromptDialogLeftBottomStar = new RecognitionObject
@@ -147,7 +156,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_exit_door.png"),
             DrawOnWindow = false
         }.InitTemplate());
-        
+
         // 秘境退出图标
         InDomainRo = new RecognitionObject
         {
@@ -252,7 +261,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "fragileResinCount",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "fragile_resin_count.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height * 3/ 4, CaptureRect.Width / 3, CaptureRect.Height / 6),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height * 3 / 4, CaptureRect.Width / 3, CaptureRect.Height / 6),
             DrawOnWindow = true
         }.InitTemplate();
         CondensedResinCount = new RecognitionObject
@@ -468,7 +477,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "BtnArtifactSalvageConfirm",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_artifact_salvage_confirm.png"),
-            RegionOfInterest = CaptureRect.CutRightBottom(0.3,0.1),
+            RegionOfInterest = CaptureRect.CutRightBottom(0.3, 0.1),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -646,7 +655,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "尘歌壶小手",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "finger.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(650*AssetScale), 0, (int)(80 * AssetScale), (int)(80 * AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(650 * AssetScale), 0, (int)(80 * AssetScale), (int)(80 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
         LeylineDisorderIconRo = new RecognitionObject
@@ -659,5 +668,49 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
 
 
+        Rect partyRect = new Rect(CaptureRect.Width - (int)(65 * AssetScale), (int)(155 * AssetScale), (int)(35 * AssetScale), (int)(600 * AssetScale));
+        // 1 2 3 4 按键
+        Index1 = new RecognitionObject
+        {
+            Name = "Index1",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_1.png"),
+            RegionOfInterest = partyRect,
+            // DrawOnWindow = true
+        }.InitTemplate();
+        Index2 = new RecognitionObject
+        {
+            Name = "Index2",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_2.png"),
+            RegionOfInterest = partyRect,
+            // DrawOnWindow = true
+        }.InitTemplate();
+        Index3 = new RecognitionObject
+        {
+            Name = "Index3",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_3.png"),
+            RegionOfInterest = partyRect,
+            // DrawOnWindow = true
+        }.InitTemplate();
+        Index4 = new RecognitionObject
+        {
+            Name = "Index4",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "index_4.png"),
+            RegionOfInterest = partyRect,
+            // DrawOnWindow = true
+        }.InitTemplate();
+        CurrentAvatarThreshold = new RecognitionObject
+        {
+            Name = "CurrentAvatarThreshold",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "current_avatar_threshold.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(240 * AssetScale), (int)(155 * AssetScale), (int)(210 * AssetScale), (int)(600 * AssetScale)),
+            UseBinaryMatch = true,
+            BinaryThreshold = 200,
+            // DrawOnWindow = true
+        }.InitTemplate();
     }
 }

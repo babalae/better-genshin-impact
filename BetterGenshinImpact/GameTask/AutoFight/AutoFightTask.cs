@@ -20,6 +20,7 @@ using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -43,6 +44,9 @@ public class AutoFightTask : ISoloTask
     
     public static bool FightStatusFlag { get; set; } = false;
 
+    // 战斗点位
+    public static WaypointForTrack? FightWaypoint  {get; set;} = null;
+    
     private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;

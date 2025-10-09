@@ -131,6 +131,8 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private string _kazuhaPartyName = "";
     
+    [ObservableProperty]
+    private bool _swimmingEnabled = false;
 
     /// <summary>
     /// 战斗超时，单位秒

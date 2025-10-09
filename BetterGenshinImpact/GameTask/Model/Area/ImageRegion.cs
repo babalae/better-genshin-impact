@@ -124,8 +124,17 @@ public class ImageRegion : Region
             }
             else
             {
+                if (ro.UseBinaryMatch)
+                {
+                    roi = new Mat();
+                    Cv2.Threshold(CacheGreyMat, roi, ro.BinaryThreshold, 255, ThresholdTypes.Binary);
+                }
+                else
+                {
+                    roi = CacheGreyMat;
+                }
+                
                 template = ro.TemplateImageGreyMat;
-                roi = CacheGreyMat;
             }
 
             if (template == null)
