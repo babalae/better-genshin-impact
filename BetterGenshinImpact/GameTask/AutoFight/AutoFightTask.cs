@@ -46,7 +46,7 @@ public class AutoFightTask : ISoloTask
     
     public static bool FightStatusFlag { get; set; } = false;
     
-    private static readonly object PickLock = new object(); // 建议放在类成员处
+    private static readonly object PickLock = new object(); 
 
     private class TaskFightFinishDetectConfig
     {
@@ -546,12 +546,13 @@ public class AutoFightTask : ISoloTask
                                         {
                                             if (find)
                                             {
-                                                var imagePick = CaptureToRectArea();
-                                                if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                using (var imagePick = CaptureToRectArea())
                                                 {
-                                                    find = false;
+                                                    if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                    {
+                                                        find = false;
+                                                    }
                                                 }
-                                                imagePick.Dispose();
                                             }
                                         }
                                     });
