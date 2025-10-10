@@ -531,14 +531,13 @@ public class AutoFightTask : ISoloTask
                     await Delay(150, ct);
                     if (picker.TrySwitch(10))
                     {
- 
-                        await picker.WaitSkillCd(ct);
                         foreach (var miningActionStr in actionsToUse)
                         {
                             var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);
 
                             for (int i = 0; i < 2; i++)
                             {
+                                await picker.WaitSkillCd(ct);
                                 foreach (var command in pickUpAction.CombatCommands)
                                 {
                                     command.Execute(combatScenes);
@@ -577,7 +576,8 @@ public class AutoFightTask : ISoloTask
                                 if (i == 0)
                                 {
                                     Logger.LogInformation("自动拾取；尝试再次执行 琴-长E 拾取");
-                                    await Delay(4500, ct);//公版现在keypress无法更新CD，所以固定延时4.5秒
+                                    // picker.LastSkillTime = DateTime.Now;不正确
+                                    picker.AfterUseSkill();
                                 }
                                 else
                                 {

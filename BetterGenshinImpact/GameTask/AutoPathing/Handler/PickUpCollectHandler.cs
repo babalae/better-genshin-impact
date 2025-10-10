@@ -127,6 +127,7 @@ public class PickUpCollectHandler : IActionHandler
         {
             var foundAvatar = false;
             string[] actionsToUse;
+            var characterName = string.Empty;
             
             if (pickerName != null)
             {
@@ -157,7 +158,7 @@ public class PickUpCollectHandler : IActionHandler
                 else
                 {
                     // 提取角色名称
-                    var characterName = GetCharacterName(pickerName);
+                    characterName = GetCharacterName(pickerName);
 
                     // 3.填了具体命令，则用具体命令筛选，并将命令中的角色替换为角色名称
                     actionsToUse = actionsToUse
@@ -185,6 +186,11 @@ public class PickUpCollectHandler : IActionHandler
                 }
                 if (foundAvatar)
                 {
+                    var selectedAvatar = combatScenes.SelectAvatar(characterName);
+                    if (selectedAvatar != null)
+                    {
+                        selectedAvatar.AfterUseSkill();// 使用技能后更新技能CD
+                    }
                     break;
                 }
             }
