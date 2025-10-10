@@ -20,7 +20,6 @@ using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
-using BetterGenshinImpact.GameTask.AutoPick; // 添加对System.Drawing的引用
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 
@@ -48,6 +47,9 @@ public class AutoFightTask : ISoloTask
     
     private static readonly object PickLock = new object(); 
 
+    // 战斗点位
+    public static WaypointForTrack? FightWaypoint  {get; set;} = null;
+    
     private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;

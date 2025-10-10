@@ -26,4 +26,8 @@
         <ProjectReference Include="..\..\BetterGenshinImpact\BetterGenshinImpact.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Assets\AutoFight\" />
+    </ItemGroup>
+
 </Project>

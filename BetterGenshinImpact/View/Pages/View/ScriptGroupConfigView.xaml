@@ -1476,32 +1476,52 @@
                                     Margin="0,0,36,0"
                                     Text="{Binding PathingConfig.AutoFightConfig.KazuhaPartyName}" />
                     </Grid>
-                    <Grid Margin="16">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBlock Grid.Row="0"
-                                      Grid.Column="0"
-                                      FontTypography="Body"
-                                      Text="战斗超时（秒）"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBlock Grid.Row="1"
-                                      Grid.Column="0"
-                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="当战斗超过一定时间后，自动停止战斗"
-                                      TextWrapping="Wrap" />
-                        <ui:TextBox Grid.Row="0"
-                                    Grid.RowSpan="2"
-                                    Grid.Column="1"
-                                    MinWidth="120"
-                                    Margin="0,0,36,0"
-                                    Text="{Binding PathingConfig.AutoFightConfig.Timeout}" />
-                    </Grid>
+                   <Grid Margin="16,10,16,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动战斗超时(秒)"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="到达指定时间后，自动停止战斗"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                HorizontalContentAlignment="Center"
+                                Margin="10,0,20,0"
+                                MinWidth="50"
+                                Text="{Binding PathingConfig.AutoFightConfig.Timeout}"/>
+                    
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="2"
+                                  FontTypography="Body"
+                                  Text="游泳检测(自动战斗过程中)"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="2"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="先回战斗节点，失败则去七天神像"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="3"
+                                     Margin="10,0,36,0"
+                                     HorizontalAlignment="Right"
+                                     IsChecked="{Binding PathingConfig.AutoFightConfig.SwimmingEnabled, Mode=TwoWay}" />
+                </Grid>
                 </StackPanel>
             </ui:CardExpander>
             <!-- 自动吃食物 -->
