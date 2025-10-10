@@ -67,6 +67,12 @@ public partial class FeedWindowViewModel : ViewModel
             new FeedItem
             {
                 Title = "五周年兑换码",
+                Codes = ["原神奈芙尔月之二上线","月之二再战猎月人","我现在就要玩千星奇域"],
+                Time = "2025-10-10 21:10"
+            },
+            new FeedItem
+            {
+                Title = "五周年兑换码",
                 Codes = ["原神5周年快乐"],
                 Time = "2025-09-28 11:30"
             },

@@ -190,7 +190,7 @@
                                BorderBrush="Transparent"
                                Command="{Binding OpenFeedCommand}"
                                CornerRadius="0"
-                               Icon="{ui:SymbolIcon Bookmark20}"
+                               Icon="{ui:SymbolIcon Gift16}"
                                ToolTip="获取兑换码信息" />
                     <ui:Button Width="40"
                                Height="32"
