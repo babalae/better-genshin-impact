@@ -1559,6 +1559,7 @@ public partial class ScriptControlViewModel : ViewModel
     private List<FileInfo> LoadAllKmScripts()
     {
         var folder = Global.Absolute(@"User\KeyMouseScript");
+        Directory.CreateDirectory(folder);
         // 获取所有脚本项目
         var files = Directory.GetFiles(folder, "*.*",
             SearchOption.AllDirectories);

@@ -12,7 +12,17 @@ public class ThresholdWindow
     public static void Test()
     {
         var window = new ThresholdWindow();
-        window.ShowThresholdAdjuster(@"E:\HuiTask\更好的原神\自动拾取\pick_ocr_ori_20250915011455192.png");
+        window.ShowThresholdAdjuster(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\当前角色小三角\无法识别小三角2.png");
+    }
+    
+    public static void Save()
+    {
+        var image = Cv2.ImRead(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\22.png");
+        var grayImage = new Mat();
+        Cv2.CvtColor(image, grayImage, ColorConversionCodes.BGR2GRAY);
+        var thresholdImage = new Mat();
+        Cv2.Threshold(grayImage, thresholdImage, 200, 255, ThresholdTypes.Binary);
+        Cv2.ImWrite(@"E:\HuiTask\更好的原神\自动秘境\自动战斗\队伍识别\22-threshold.png", thresholdImage);
     }
     
     /// <summary>

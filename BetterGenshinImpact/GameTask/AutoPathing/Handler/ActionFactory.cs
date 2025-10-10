@@ -29,6 +29,7 @@ public class ActionFactory
                 "exit_and_relogin" => new ExitAndReloginHandler(),
                 "set_time" => new SetTimeHandler(),
                 "use_gadget" => new UseGadgetHandler(),
+                "pick_up_collect" => new PickUpCollectHandler(),
                 _ => throw new ArgumentException("未知的后置 action 类型")
             };
         });

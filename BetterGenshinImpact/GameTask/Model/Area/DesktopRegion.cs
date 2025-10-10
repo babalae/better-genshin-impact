@@ -16,6 +16,12 @@ namespace BetterGenshinImpact.GameTask.Model.Area;
 public class DesktopRegion : Region
 {
     private readonly IMouseSimulator mouse;
+    
+    public DesktopRegion(int w, int h, IMouseSimulator? iMouse = null) : base(0, 0, w, h)
+    {
+        mouse = iMouse ?? Simulation.SendInput.Mouse;
+    }
+    
     public DesktopRegion() : base(0, 0, PrimaryScreen.WorkingArea.Width, PrimaryScreen.WorkingArea.Height)
     {
         mouse = Simulation.SendInput.Mouse;

@@ -131,6 +131,9 @@ public partial class AutoFightConfig : ObservableObject
     private bool _kazuhaPickupEnabled = true;
     
     [ObservableProperty]
+    private bool _qinDoublePickUp = false;
+    
+    [ObservableProperty]
     private string _guardianAvatar = string.Empty;
     
     [ObservableProperty]
@@ -151,6 +154,8 @@ public partial class AutoFightConfig : ObservableObject
     [ObservableProperty]
     private string _kazuhaPartyName = "";
     
+    [ObservableProperty]
+    private bool _swimmingEnabled = false;
 
     /// <summary>
     /// 战斗超时，单位秒

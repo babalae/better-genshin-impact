@@ -6,6 +6,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Config;
 
