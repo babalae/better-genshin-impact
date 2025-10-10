@@ -25,7 +25,7 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
     public static readonly ActionEnum ExitAndRelogin = new("exit_and_relogin", "退出重新登录", ActionUseWaypointTypeEnum.Custom);
     public static readonly ActionEnum SetTime = new("set_time", "设置时间", ActionUseWaypointTypeEnum.Custom);
     public static readonly ActionEnum UseGadget = new("use_gadget", "使用小道具", ActionUseWaypointTypeEnum.Custom);
-
+    public static readonly ActionEnum PickUpCollect = new("pick_up_collect", "聚集材料", ActionUseWaypointTypeEnum.Custom);
 
     // 还有要加入的其他动作
     // 滚轮F

@@ -210,7 +210,8 @@ public class AutoTrackPathTask
                 var miniMapMat = GetMiniMapMat(ra) ?? throw new InvalidOperationException("当前不在主界面");
 
                 // 注意游戏坐标系的角度是顺时针的
-                var currMapImageAvatarPos = MapManager.GetMap(MapTypes.Teyvat).GetMiniMapPosition(miniMapMat);
+                var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+                var currMapImageAvatarPos = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).GetMiniMapPosition(miniMapMat);
                 if (currMapImageAvatarPos.IsEmpty())
                 {
                     Debug.WriteLine("识别小地图位置失败");

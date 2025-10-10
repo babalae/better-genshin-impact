@@ -20,6 +20,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -82,9 +86,7 @@ public class Avatar
     /// 战斗场景
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
-
-    public static string? LastActiveAvatar { get; internal set; } = null;
-
+    
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
@@ -115,6 +117,67 @@ public class Avatar
             Sleep(600, ct);
             TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
+        else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
+        {
+            if (AutoFightTask.FightWaypoint is not null)
+            {
+                if (!SwimmingConfirm(CaptureToRectArea())) //二次确认
+                {
+                    return;
+                }
+                
+                Logger.LogInformation("游泳检测：尝试回到战斗地点");
+                var pathExecutor = new PathExecutor(ct);
+                try
+                {
+                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).Wait(2000, ct);
+                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code;//改为跳飞
+                    Simulation.SendInput.Mouse.RightButtonDown();
+                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).Wait(15000, ct);
+                    AutoFightTask.FightWaypoint = null;//执行后清空，即每次战斗只执行一次，第二次直接去七天神像
+                    Simulation.SendInput.Mouse.RightButtonUp();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "游泳检测：回到战斗地点异常");
+                }
+                
+                Simulation.ReleaseAllKey();
+                
+                if (!SwimmingConfirm(CaptureToRectArea()))
+                {
+                    Logger.LogInformation("游泳检测：游泳脱困成功");
+                    return;
+                }
+                
+                Logger.LogWarning("游泳检测：回到战斗地点失败");
+            }
+            
+            Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
+            TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
+        }
+    }
+    
+    /// <summary>
+    /// 游泳检测（色块连通性检测）
+    /// 游泳时右下角会出现鼠标图标，带有黄色色块，不受改按键影响
+    /// </summary>
+    private static bool SwimmingConfirm(Region region)
+    {
+        var mask = OpenCvCommonHelper.Threshold(region.ToImageRegion().DeriveCrop(1819, 1025, 9, 11).SrcMat, 
+            new Scalar(242, 223, 39),new Scalar(255, 233, 44));
+        var labels = new Mat();
+        var stats = new Mat();
+        var centroids = new Mat();
+
+        var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+            connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+        labels.Dispose();
+        stats.Dispose();
+        centroids.Dispose();
+
+        return numLabels > 1;
     }
 
     /// <summary>
@@ -138,6 +201,7 @@ public class Avatar
     /// </summary>
     public void Switch()
     {
+        var context = new AvatarActiveCheckContext();
         for (var i = 0; i < 30; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -148,36 +212,13 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
+            // 切换成功
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
                 return;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
-            switch (Index)
-            {
-                case 1:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
-                    break;
-                case 2:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
-                    break;
-                case 3:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
-                    break;
-                case 4:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
-                    break;
-                case 5:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
-                    break;
-                default:
-                    break;
-            }
-
-            Offset60Fix(i);
-
+            SimulateSwitchAction(Index);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
             Sleep(250, Ct);
@@ -192,6 +233,7 @@ public class Avatar
     /// <returns></returns>
     public bool TrySwitch(int tryTimes = 4, bool needLog = true)
     {
+        var context = new AvatarActiveCheckContext();
         for (var i = 0; i < tryTimes; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -202,46 +244,49 @@ public class Avatar
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == CombatScenes.ExpectedTeamAvatarNum - 1)
+            // 切换成功
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
                 if (needLog && i > 0)
                 {
-                    LastActiveAvatar = Name;
                     Logger.LogInformation("成功切换角色:{Name}", Name);
                 }
 
                 return true;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
-            switch (Index)
-            {
-                case 1:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
-                    break;
-                case 2:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
-                    break;
-                case 3:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
-                    break;
-                case 4:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
-                    break;
-                case 5:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
-                    break;
-                default:
-                    break;
-            }
-            
-            Offset60Fix(i);
+
+            SimulateSwitchAction(Index);
 
             Sleep(250, Ct);
         }
 
         return false;
+    }
+
+    private void SimulateSwitchAction(int index)
+    {
+        Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
+        switch (index)
+        {
+            case 1:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
+                break;
+            case 2:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
+                break;
+            case 3:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
+                break;
+            case 4:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
+                break;
+            case 5:
+                Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
+                break;
+            default:
+                break;
+        }
     }
 
     /// <summary>
@@ -250,76 +295,21 @@ public class Avatar
     /// </summary>
     public void SwitchWithoutCts()
     {
+        var context = new AvatarActiveCheckContext();
         for (var i = 0; i < 10; i++)
         {
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (IsActive(region) && notActiveCount == 3)
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
                 return;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
-            switch (Index)
-            {
-                case 1:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
-                    break;
-                case 2:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
-                    break;
-                case 3:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
-                    break;
-                case 4:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
-                    break;
-                case 5:
-                    Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
-                    break;
-                default:
-                    break;
-            }
-            
-            Offset60Fix(i);
+            SimulateSwitchAction(Index);
 
             Sleep(250);
         }
-    }
-
-    private void Offset60Fix(int i)
-    {
-        // 3次失败考虑是否偏移出现问题，修改偏移位置
-        if (i <= 2 || AutoFightTask.FightStatusFlag)
-        {
-            return;
-        }
-        
-        if (CombatScenes.IndexRectOffset60Fix)
-        {
-            foreach (var avatar in CombatScenes.GetAvatars())
-            {
-                var originalRect = AutoFightAssets.Instance.AvatarIndexRectList[avatar.Index - 1];
-                var rect1 = new Rect(originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
-                avatar.IndexRect = rect1;
-            }
-            CombatScenes.IndexRectOffset60Fix = false;
-        }
-        else
-        {
-            foreach (var avatar in CombatScenes.GetAvatars())
-            {
-                var originalRect = AutoFightAssets.Instance.AvatarIndexRectList[avatar.Index - 1];
-                var rect1 = new Rect(originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
-                rect1.Y -= 14;
-                avatar.IndexRect = rect1;
-            }
-
-            CombatScenes.IndexRectOffset60Fix = true;
-        }
-        
     }
 
     /// <summary>
@@ -338,7 +328,7 @@ public class Avatar
             return !white;
         }
     }
-    
+
     private bool IsIndexRectWhite(ImageRegion region, Rect rect)
     {
         // 剪裁出IndexRect区域
@@ -525,7 +515,6 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
-        // var isBurstReleased = false;
         for (var i = 0; i < 10; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -538,26 +527,13 @@ public class Avatar
 
             var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
-            var notActiveCount = CombatScenes.GetAvatars().Count(avatar => !avatar.IsActive(region));
-            if (notActiveCount == 0)
+
+            if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
             {
-                // isBurstReleased = true;
+                // 找不到角色编号块意味者技能释放成功
                 Sleep(1500, Ct);
                 return;
             }
-            // else
-            // {
-            //     if (!isBurstReleased)
-            //     {
-            //         var cd = GetBurstCurrentCd(content);
-            //         if (cd > 0)
-            //         {
-            //             Logger.LogInformation("{Name} 释放元素爆发，cd:{Cd}", Name, cd);
-            //             // todo  把cd加入执行队列
-            //             return;
-            //         }
-            //     }
-            // }
         }
     }
 
@@ -809,6 +785,7 @@ public class Avatar
                     rateX = lowspeed;
                     rateY = 0;
                 }
+
                 Simulation.SendInput.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
 
                 tick = (tick + 1) % 100;

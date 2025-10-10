@@ -37,6 +37,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -160,7 +161,7 @@ public class PathExecutor
         var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
 
         await Delay(100, ct);
-        Navigation.WarmUp(); // 提前加载地图特征点
+        Navigation.WarmUp(task.Info.MapMatchMethod); // 提前加载地图特征点
 
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
@@ -213,6 +214,9 @@ public class PathExecutor
                             if ((!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations) ||
                                 waypoint.Action == ActionEnum.CombatScript.Code)
                             {
+                                //战斗前的节点记录，用于游泳检测回到战斗节点
+                                AutoFightTask.FightWaypoint = waypoint.Action == ActionEnum.Fight.Code ? waypoint : null;
+
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
                             }
@@ -505,7 +509,7 @@ public class PathExecutor
         // 把 X Y 转换为 MatX MatY
         var allList = positions.Select(waypoint =>
         {
-            WaypointForTrack wft=new WaypointForTrack(waypoint, task.Info.MapName);
+            WaypointForTrack wft = new WaypointForTrack(waypoint, task.Info.MapName, task.Info.MapMatchMethod);
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
             wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
             wft.EnableMonsterLootSplit = waypoint.PointExtParams.EnableMonsterLootSplit;
@@ -685,7 +689,7 @@ public class PathExecutor
         TpTask tpTask = new TpTask(ct);
         await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
-        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName)
+        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
             .ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
@@ -1072,7 +1076,8 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.Fishing.Code
             || waypoint.Action == ActionEnum.ExitAndRelogin.Code
             || waypoint.Action == ActionEnum.SetTime.Code
-            || waypoint.Action == ActionEnum.UseGadget.Code)
+            || waypoint.Action == ActionEnum.UseGadget.Code
+            || waypoint.Action == ActionEnum.PickUpCollect.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
@@ -1178,7 +1183,7 @@ public class PathExecutor
     private async Task<(Point2f point,int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
     {
         
-        var position = Navigation.GetPosition(imageRegion, waypoint.MapName);
+        var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
         int time = 0;
         if (position == new Point2f())
         {
@@ -1213,7 +1218,7 @@ public class PathExecutor
                 await tpTask.OpenBigMapUi();
                 try
                 {
-                    position =MapManager.GetMap(waypoint.MapName).ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
+                    position =MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
                 }
                 catch (Exception e)
                 {

@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
@@ -303,20 +304,48 @@ public class AutoArtifactSalvageTask : ISoloTask
                 quickSelectConfirmBtn.Click();
                 await Delay(400, ct);
                 // 点击所属套装
-                ra5.ClickTo(315, 205);
+                ra5.ClickTo(315, 190);
                 await Delay(1000, ct);
                 // 遍历套装Grid勾选套装
                 using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
                 ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
-                await foreach (ImageRegion itemRegion in gridScreen)
+                string drawKey = "ArtifactSetFilter";
+                var drawRectList = new List<RectDrawable>();
+                var drawTextList = new List<TextDrawable>();
+                gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
+                System.Drawing.Pen greenPen = new System.Drawing.Pen(System.Drawing.Color.Lime);
+                try
                 {
-                    using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
-                    (string predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
-                    if (this.artifactSetFilter.Contains(predName))
+                    await foreach (ImageRegion itemRegion in gridScreen)
                     {
-                        itemRegion.Click();
-                        await Delay(100, ct);
+                        using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
+                        (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
+                        if (predName == null)
+                        {
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey);
+                            drawRectList.Add(rectDrawable);
+                            VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
+                            drawTextList.Add(new TextDrawable("识别失败", new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
+                            VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
+                        }
+                        else
+                        {
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, greenPen);
+                            drawRectList.Add(rectDrawable);
+                            VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
+                            drawTextList.Add(new TextDrawable(predName, new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
+                            VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
+                            if (this.artifactSetFilter.Contains(predName))
+                            {
+                                itemRegion.Click();
+                                await Delay(100, ct);
+                            }
+                        }
                     }
+                }
+                finally
+                {
+                    VisionContext.Instance().DrawContent.ClearAll();
                 }
                 // 点击确认筛选
                 using var confirmFilterBtnRegion = CaptureToRectArea();
@@ -386,7 +415,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         }
                     }
 
-                    if (IsMatchJavaScript(artifact, javaScript))
+                    if (await IsMatchJavaScript(artifact, javaScript))
                     {
                         // logger.LogInformation(message: msg);
                     }
@@ -412,20 +441,33 @@ public class AutoArtifactSalvageTask : ISoloTask
     /// </summary>
     /// <param name="artifact">作为JS入参，JS使用“ArtifactStat”获取</param>
     /// <param name="javaScript"></param>
-    /// <param name="engine">由调用者控制生命周期</param>
+    /// <param name="cts">为空则默认创建一个3秒延迟的cts</param>
     /// <returns>是否匹配。取JS的“Output”作为出参</returns>
     /// <exception cref="InvalidOperationException"></exception>
     /// <exception cref="Exception"></exception>
-    public static bool IsMatchJavaScript(ArtifactStat artifact, string javaScript)
+    public async static Task<bool> IsMatchJavaScript(ArtifactStat artifact, string javaScript, ILogger? logger = null, TimeProvider? timeProvider = null)
     {
+        logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
         using V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.DisableGlobalMembers);
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3), timeProvider ?? TimeProvider.System);    // 这里只是用JS写一个自定义判断方法，由于每个圣遗物都会执行一次，这个方法不应执行太久
+        cts.Token.Register(() =>
+        {
+            try
+            {
+                engine.Interrupt();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"中断失败: {ex.Message}");
+            }
+        });
         try
         {
             // 传入输入参数
             engine.Script.ArtifactStat = artifact;
 
             // 执行JavaScript代码
-            engine.Execute(javaScript);
+            await Task.Run(() => engine.Execute(javaScript));
 
             // 检查是否有输出
             if (!engine.Script.propertyIsEnumerable("Output"))
@@ -439,6 +481,11 @@ public class AutoArtifactSalvageTask : ISoloTask
             }
 
             return (bool)engine.Script.Output;
+        }
+        catch (ScriptInterruptedException)
+        {
+            logger.LogWarning("脚本执行超出3秒限制，请使用正确的JS代码（JavaScript execution timeout!）");
+            throw;
         }
         catch (ScriptEngineException ex)
         {
@@ -560,7 +607,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             if (!match.Success)
             {
                 continue;
-            } 
+            }
             ArtifactAffixType artifactAffixType;
             var dic = this.artifactAffixStrDic;
             if (match.Groups[1].Value.Contains(dic[ArtifactAffixType.ATK]))
@@ -621,7 +668,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
             }
-            
+
             bool isUnactivated = false;
             // 只有在已经成功识别至少 3 个词条后才执行额外的直方图分析。
             if (minorAffixes.Count >= 3)

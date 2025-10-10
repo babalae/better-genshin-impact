@@ -8,7 +8,7 @@ public static class MapManager
     private static readonly Dictionary<string, ISceneMap> _maps = new();
     private static readonly object LockObject = new();
 
-    public static ISceneMap GetMap(string mapName, string? matchingMethod = null)
+    public static ISceneMap GetMap(string mapName, string matchingMethod)
     {
         return GetMap(MapTypesExtensions.ParseFromName(mapName), matchingMethod);
     }
@@ -20,15 +20,10 @@ public static class MapManager
     /// <param name="mapType">地图类型</param>
     /// <param name="matchingMethod">地图匹配方式</param>
     /// <returns>地图实例</returns>
-    public static ISceneMap GetMap(MapTypes mapType, string? matchingMethod = null)
+    public static ISceneMap GetMap(MapTypes mapType, string matchingMethod)
     {
-        if (matchingMethod == null)
-        {
-            matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        }
-        
         string key = $"{mapType}_{matchingMethod}";
-        
+
         if (_maps.TryGetValue(key, out var map))
         {
             return map;

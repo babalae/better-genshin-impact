@@ -1,7 +1,9 @@
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
+using Microsoft.ClearScript;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Time.Testing;
 using OpenCvSharp;
 using System;
 using System.Collections.Concurrent;
@@ -219,18 +221,16 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         }
 
         [Theory]
-        [InlineData(@"ArtifactAffixes.png", @"(async function (artifact) {
-                    var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
-                    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
-                    Output = hasATK && hasDEF;
-                })(ArtifactStat);", false)]
-        [InlineData(@"ArtifactAffixes.png", @"(async function (artifact) {
-                    var level = artifact.Level;
-                    var hasATKPercent = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATKPercent');
-                    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
-                    Output = level == 0 && hasATKPercent && hasDEF;
-                })(ArtifactStat);", true)]
-        public void IsMatchJavaScript_JSShouldBeRight(string screenshot, string js, bool expected)
+        [InlineData(@"ArtifactAffixes.png", @"
+                    var hasATK = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'ATK');
+                    var hasDEF = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'DEF');
+                    Output = hasATK && hasDEF;", false)]
+        [InlineData(@"ArtifactAffixes.png", @"
+                    var level = ArtifactStat.Level;
+                    var hasATKPercent = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'ATKPercent');
+                    var hasDEF = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'DEF');
+                    Output = level == 0 && hasATKPercent && hasDEF;", true)]
+        public async Task IsMatchJavaScript_JSShouldBeRight(string screenshot, string js, bool expected)
         {
             //
             using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot}");
@@ -239,10 +239,29 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             //
             AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
             ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), out string _);
-            bool result = IsMatchJavaScript(artifact, js);
+            bool result = await IsMatchJavaScript(artifact, js, new FakeLogger());
 
             //
             Assert.Equal(expected, result);
+        }
+
+        /// <summary>
+        /// 测试JavaScript运行超时的情况，应抛出正确的异常
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task IsMatchJavaScript_Timeout_ShouldThrowException()
+        {
+            //
+            string js = @"while (true) {};";
+            FakeTimeProvider timeProvider = new FakeTimeProvider();
+
+            //
+            Task sut = IsMatchJavaScript(new ArtifactStat("", new ArtifactAffix(ArtifactAffixType.ATK, 0), [], 0), js, new FakeLogger(), timeProvider);
+            timeProvider.Advance(TimeSpan.FromSeconds(3));
+
+            //
+            await Assert.ThrowsAsync<ScriptInterruptedException>(()=> sut);
         }
     }
 }
