@@ -1,11 +1,11 @@
 using System.IO;
-using System.Net;
-using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using MailKit.Security;
+using MimeKit;
 using SixLabors.ImageSharp;
 
 namespace BetterGenshinImpact.Service.Notifier
@@ -38,10 +38,6 @@ namespace BetterGenshinImpact.Service.Notifier
             _fromEmail = fromEmail;
             _fromName = fromName;
             ToEmail = toEmail;
-
-            // 忽略SSL证书验证错误
-            ServicePointManager.ServerCertificateValidationCallback =
-                delegate { return true; };
         }
 
         // 收件人邮箱
@@ -55,79 +51,70 @@ namespace BetterGenshinImpact.Service.Notifier
                 throw new NotifierException("收件人邮箱地址为空");
             }
 
-            // 创建一个新的SmtpClient实例（不复用）
-            using (var smtpClient = new SmtpClient())
+            // 创建邮件消息
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_fromName, _fromEmail));
+            message.To.Add(new MailboxAddress("", ToEmail));
+            message.Subject = FormatEmailSubject(content);
+
+            var bodyBuilder = new BodyBuilder
             {
-                try
-                {
-                    // 配置SMTP客户端
-                    smtpClient.Host = _smtpServer;
-                    smtpClient.Port = _smtpPort;
-                    smtpClient.EnableSsl = true;
-                    smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
-                    smtpClient.UseDefaultCredentials = false;
-                    smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-                    smtpClient.Timeout = 30000; // 30秒超时
+                HtmlBody = FormatEmailBody(content)
+            };
 
-                    // 创建邮件
-                    using (var mailMessage = new MailMessage())
-                    {
-                        mailMessage.From = new MailAddress(_fromEmail, _fromName);
-                        mailMessage.To.Add(ToEmail);
-                        mailMessage.Subject = FormatEmailSubject(content);
-                        mailMessage.Body = FormatEmailBody(content);
-                        mailMessage.IsBodyHtml = true;
-                        mailMessage.BodyEncoding = Encoding.UTF8;
-                        mailMessage.SubjectEncoding = Encoding.UTF8;
-
-                        // 添加图片附件（如果存在）
-                        if (content.Screenshot != null)
-                        {
-                            var tempPath = Path.GetTempFileName() + ".jpg";
-                            try
-                            {
-                                // 保存图片到临时文件
-                                await content.Screenshot.SaveAsJpegAsync(tempPath);
-
-                                // 从文件添加附件
-                                var attachment = new Attachment(tempPath);
-                                mailMessage.Attachments.Add(attachment);
-
-                                // 发送邮件
-                                await smtpClient.SendMailAsync(mailMessage);
-
-                                // 清理附件和临时文件
-                                attachment.Dispose();
-                                if (File.Exists(tempPath)) File.Delete(tempPath);
-                            }
-                            catch (System.Exception ex)
-                            {
-                                // 尝试清理临时文件
-                                try
-                                {
-                                    if (File.Exists(tempPath)) File.Delete(tempPath);
-                                }
-                                catch
-                                {
-                                    /* 忽略清理错误 */
-                                }
-
-                                throw new NotifierException($"发送邮件失败: {ex.Message}");
-                            }
-                        }
-                        else
-                        {
-                            // 没有图片时直接发送
-                            await smtpClient.SendMailAsync(mailMessage);
-                        }
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    var errorMessage = $"发送邮件失败: {ex.Message}";
-                    throw new NotifierException(errorMessage);
-                }
+            // 添加图片附件（如果存在）
+            if (content.Screenshot != null)
+            {
+                using var memoryStream = new MemoryStream();
+                // 将图片保存到内存流
+                await content.Screenshot.SaveAsJpegAsync(memoryStream);
+                memoryStream.Position = 0; // 重置流位置
+                    
+                // 添加附件
+                var attachment = await bodyBuilder.Attachments.AddAsync("screenshot.jpg", memoryStream, ContentType.Parse("image/jpeg"));
+                attachment.ContentId = "screenshot";
             }
+
+            message.Body = bodyBuilder.ToMessageBody();
+
+            // 使用 MailKit 发送邮件
+            using var smtpClient = new MailKit.Net.Smtp.SmtpClient();
+            try
+            {
+                // 根据端口选择合适的连接方式
+                var secureSocketOptions = GetSecureSocketOptions();
+                    
+                await smtpClient.ConnectAsync(_smtpServer, _smtpPort, secureSocketOptions);
+                    
+                // 如果服务器需要认证，则进行登录
+                if (!string.IsNullOrEmpty(_smtpUsername))
+                {
+                    await smtpClient.AuthenticateAsync(_smtpUsername, _smtpPassword);
+                }
+
+                await smtpClient.SendAsync(message);
+                await smtpClient.DisconnectAsync(true);
+            }
+            catch (System.Exception ex)
+            {
+                var errorMessage = $"发送邮件失败: {ex.Message}";
+                throw new NotifierException(errorMessage);
+            }
+        }
+
+        /// <summary>
+        /// 根据端口号选择合适的 SecureSocketOptions
+        /// </summary>
+        private SecureSocketOptions GetSecureSocketOptions()
+        {
+            // 465 端口通常使用 SSL/TLS，587 端口通常使用 StartTls
+            return _smtpPort switch
+            {
+                465 => SecureSocketOptions.SslOnConnect,
+                587 => SecureSocketOptions.StartTls,
+                25 => SecureSocketOptions.None, // 25 端口通常不加密
+                _ => SecureSocketOptions.Auto // 其他端口自动选择
+            };
         }
 
         private string FormatEmailSubject(BaseNotificationData content)
@@ -159,7 +146,11 @@ namespace BetterGenshinImpact.Service.Notifier
             }
 
             // 添加提示信息
-            builder.AppendLine("<p><em>如有截图，请查看附件。</em></p>");
+            if (content.Screenshot != null)
+            {
+                builder.AppendLine("<p><em>截图已作为附件添加到邮件中。</em></p>");
+            }
+            
             builder.AppendLine("</body></html>");
             return builder.ToString();
         }
