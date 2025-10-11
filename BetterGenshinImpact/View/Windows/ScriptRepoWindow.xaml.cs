@@ -16,6 +16,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
+using System.Globalization;
 using System.Windows.Navigation;
 using Wpf.Ui.Violeta.Controls;
 
@@ -24,6 +26,20 @@ namespace BetterGenshinImpact.View.Windows;
 [ObservableObject]
 public partial class ScriptRepoWindow
 {
+    // 转换器类
+    public class InverseBooleanConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value is bool b ? !b : value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value is bool b ? !b : value;
+        }
+    }
+
     // 更新渠道类
     public class RepoChannel
     {
@@ -114,8 +130,6 @@ public partial class ScriptRepoWindow
         {
             new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
             new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
-            // 暂时无法使用
-            // new("Gitee", "https://gitee.com/babalae/bettergi-scripts-list"),
             new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
             new("自定义", "https://example.com/custom-repo")
         };
@@ -137,10 +151,33 @@ public partial class ScriptRepoWindow
     private void OnConfigSelectedRepoUrlChanged()
     {
         // 如果配置中的URL与当前选中渠道不一致，更新选中渠道
-        if (string.IsNullOrEmpty(SelectedRepoChannel?.Url) || SelectedRepoChannel.Url != Config.SelectedRepoUrl)
+        if (string.IsNullOrEmpty(Config.SelectedRepoUrl))
         {
-            SelectedRepoChannel = _repoChannels.FirstOrDefault(c => c.Url == Config.SelectedRepoUrl) ??
-                                  _repoChannels.FirstOrDefault(c => c.Name == "自定义") ?? _repoChannels[0];
+            SelectedRepoChannel = _repoChannels[0];
+            Config.SelectedRepoUrl = SelectedRepoChannel.Url;
+            return;
+        }
+
+        // 尝试找到匹配的预定义渠道
+        var matchedChannel = _repoChannels.FirstOrDefault(c => 
+            c.Name != "自定义" && c.Url == Config.SelectedRepoUrl);
+        
+        if (matchedChannel != null)
+        {
+            SelectedRepoChannel = matchedChannel;
+        }
+        else
+        {
+            // 没有匹配的预定义渠道，选择自定义渠道
+            var customChannel = _repoChannels.FirstOrDefault(c => c.Name == "自定义");
+            if (customChannel != null)
+            {
+                SelectedRepoChannel = customChannel;
+            }
+            else
+            {
+                SelectedRepoChannel = _repoChannels[0];
+            }
         }
     }
 
@@ -157,7 +194,7 @@ public partial class ScriptRepoWindow
         // 更新配置中的选中仓库URL
         if (SelectedRepoChannel.Name != "自定义")
         {
-            // 如果不是自定义渠道，直接使用选中渠道的URL
+            // 如果不是自定义渠道，使用选中渠道的URL
             Config.SelectedRepoUrl = SelectedRepoChannel.Url;
         }
     }
@@ -170,11 +207,41 @@ public partial class ScriptRepoWindow
             Toast.Warning("请选择一个脚本仓库更新渠道。");
             return;
         }
+
+        // 确定要使用的URL
+        string repoUrl;
+        if (SelectedRepoChannel.Name == "自定义")
+        {
+            // 使用配置中的自定义URL
+            repoUrl = Config.SelectedRepoUrl;
+            
+            // 验证自定义URL
+            if (string.IsNullOrWhiteSpace(repoUrl))
+            {
+                Toast.Warning("请输入自定义仓库URL。");
+                return;
+            }
+            
+            if (repoUrl == "https://example.com/custom-repo")
+            {
+                Toast.Warning("请修改默认的自定义URL为有效的仓库地址。");
+                return;
+            }
+        }
+        else
+        {
+            // 使用预定义渠道的URL
+            repoUrl = SelectedRepoChannel.Url;
+        }
+
+        if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out _))
+        {
+            Toast.Warning("请输入有效的URL地址。");
+            return;
+        }
+
         try
         {
-            // 使用选定渠道的URL进行更新
-            string repoUrl = SelectedRepoChannel.Url;
-
             // 显示更新中提示
             Toast.Information("正在更新脚本仓库，请耐心等待...");
 
@@ -182,7 +249,8 @@ public partial class ScriptRepoWindow
             IsUpdating = true;
             UpdateProgressValue = 0;
             UpdateProgressText = "准备更新，请耐心等待...";
-            // 执行更新  (repoPath, updated) 
+            
+            // 执行更新
             var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
                 {
@@ -191,7 +259,6 @@ public partial class ScriptRepoWindow
                     UpdateProgressValue = (int)progressPercentage;
                     UpdateProgressText = $"{path}";
                 });
-
 
             // 更新结果提示
             if (updated)
@@ -205,7 +272,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            await MessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：: {ex.Message}");
+            await MessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
         }
         finally
         {
