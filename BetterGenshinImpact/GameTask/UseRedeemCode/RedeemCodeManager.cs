@@ -13,6 +13,12 @@ namespace BetterGenshinImpact.GameTask.UseRedeemCode;
 public class RedeemCodeManager
 {
     public static HashSet<string> CancelClipboardHash { get; } = [];
+
+    public static void AddNotDetectClipboardText(string clipboardText)
+    {
+        var md5Hash = MD5Helper.ComputeMD5(clipboardText);
+        CancelClipboardHash.Add(md5Hash);
+    }
     
     public static async Task ImportFromClipboard(string clipboardText)
     {
