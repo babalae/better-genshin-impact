@@ -25,6 +25,7 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
         { "须弥", [2877, -374] },
         { "枫丹", [4515, 3631] },
         { "纳塔", [8973.5, -1879.1] },
+        { "挪德卡莱", [9542.25, 1661.84] },
     };
 
     public readonly Dictionary<string, GiTpPosition> DomainPositionMap = new();
