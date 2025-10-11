@@ -81,7 +81,7 @@ namespace BetterGenshinImpact.Service.Notifier
             using var smtpClient = new MailKit.Net.Smtp.SmtpClient();
             try
             {
-                // 根据端口选择合适的连接方式
+                // 根据服务器和端口选择合适的连接方式
                 var secureSocketOptions = GetSecureSocketOptions();
                     
                 await smtpClient.ConnectAsync(_smtpServer, _smtpPort, secureSocketOptions);
@@ -103,20 +103,53 @@ namespace BetterGenshinImpact.Service.Notifier
         }
 
         /// <summary>
-        /// 根据端口号选择合适的 SecureSocketOptions
+        /// 根据服务器地址和端口号选择合适的 SecureSocketOptions
         /// </summary>
         private SecureSocketOptions GetSecureSocketOptions()
         {
-            // 465 端口通常使用 SSL/TLS，587 端口通常使用 StartTls
+            // 对于已知的特殊服务器配置
+            if (IsKnownServerWithSpecialRequirements(_smtpServer, _smtpPort, out var secureSocketOption))
+            {
+                return secureSocketOption;
+            }
+
+            // 通用规则
             return _smtpPort switch
             {
                 465 => SecureSocketOptions.SslOnConnect,
-                587 => SecureSocketOptions.StartTls,
-                25 => SecureSocketOptions.None, // 25 端口通常不加密
-                _ => SecureSocketOptions.Auto // 其他端口自动选择
+                587 => SecureSocketOptions.StartTls, // 大多数服务商使用 STARTTLS
+                25 => SecureSocketOptions.None,
+                _ => SecureSocketOptions.Auto // 其他端口让 MailKit 自动协商
             };
         }
 
+        /// <summary>
+        /// 检查是否是已知有特殊要求的服务器
+        /// </summary>
+        private bool IsKnownServerWithSpecialRequirements(string server, int port, out SecureSocketOptions option)
+        {
+            option = SecureSocketOptions.Auto;
+            
+            // 网易邮箱系列 - 587 端口使用 SSL
+            if ((server.Contains("163.com") || 
+                 server.Contains("126.com") || 
+                 server.Contains("yeah.net")) && port == 587)
+            {
+                option = SecureSocketOptions.SslOnConnect;
+                return true;
+            }
+            
+            // 可以继续添加其他已知的特殊配置
+            // 例如:
+            // if (server.Contains("some-special-server.com") && port == 587)
+            // {
+            //     option = SecureSocketOptions.SslOnConnect;
+            //     return true;
+            // }
+            
+            return false;
+        }
+        
         private string FormatEmailSubject(BaseNotificationData content)
         {
             // 可以根据实际需求自定义邮件主题格式
