@@ -637,9 +637,9 @@ public class PathExecutor
         {
             tpTask = new TpTask(ct);
         }
-
+        
         // 最小5分钟间隔
-        if ((DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
+        if ( _combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true && (DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
         {
             return false;
         }
@@ -652,7 +652,6 @@ public class PathExecutor
         if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry != "无")
         {
             var ra1 = CaptureToRectArea();
-
             var textRect = new Rect(60, 20, 160, 260);
             var textMat = new Mat(ra1.SrcMat, textRect);
             string text = OcrFactory.Paddle.Ocr(textMat);
