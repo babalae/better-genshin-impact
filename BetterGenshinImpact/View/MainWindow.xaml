@@ -191,6 +191,7 @@
                                Command="{Binding OpenFeedCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Gift16}"
+                               Foreground="{Binding RedeemCodeButtonForeground}"
                                ToolTip="获取兑换码信息" />
                     <ui:Button Width="40"
                                Height="32"
