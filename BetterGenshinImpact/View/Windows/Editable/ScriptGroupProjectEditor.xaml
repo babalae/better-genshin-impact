@@ -49,6 +49,14 @@
                       SelectedValue="{Binding AllowJsNotification, Mode=TwoWay}"
                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
             </ComboBox>
+            <TextBlock Margin="0,10,0,5" Text="JS HTTP权限"
+                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
+            <ComboBox DisplayMemberPath="Value"
+                      ItemsSource="{Binding JsNotificationOptions}"
+                      SelectedValue="{Binding AllowJsHTTP, Mode=TwoWay}"
+                      SelectedValuePath="Key"
+                      Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
+            </ComboBox>
 
         </StackPanel>
     </Grid>

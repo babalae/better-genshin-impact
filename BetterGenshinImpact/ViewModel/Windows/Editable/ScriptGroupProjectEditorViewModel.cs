@@ -35,6 +35,16 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
         }
     }
     
+    public bool? AllowJsHTTP
+    {
+        get => _project.AllowJsHTTP;
+        set
+        {
+            _project.AllowJsHTTP = value;
+            OnPropertyChanged();
+        }
+    }
+    
     public string Status
     {
         get => _project.Status;
@@ -57,6 +67,10 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
             if (e.PropertyName == nameof(ScriptGroupProject.AllowJsNotification))
             {
                 OnPropertyChanged(nameof(AllowJsNotification));
+            }
+            if (e.PropertyName == nameof(ScriptGroupProject.AllowJsHTTP))
+            {
+                OnPropertyChanged(nameof(AllowJsHTTP));
             }
         };
     }

@@ -32,6 +32,7 @@ public class EngineExtend
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
+        engine.AddHostObject("http", new Http()); // 限制文件访问
         engine.AddHostObject("notification", new Notification());
 
         // 任务调度器
