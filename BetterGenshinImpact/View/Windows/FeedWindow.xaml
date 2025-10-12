@@ -83,12 +83,23 @@
                                                   TextWrapping="Wrap"
                                                   Margin="0,0,0,8" />
 
-                                    <!-- 时间 -->
-                                    <ui:TextBlock Grid.Row="1"
-                                                  FontSize="12"
-                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="{Binding Time}"
-                                                  Margin="0,0,0,8" />
+                                    <!-- 时间与有效期：同一行更紧凑 -->
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{Binding Time}" />
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="  |  "
+                                                      Margin="8,0,8,0" />
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="有效期至" />
+                                        <ui:TextBlock FontSize="12"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{Binding Valid}"
+                                                      Margin="4,0,0,0" />
+                                    </StackPanel>
 
                                     <!-- 内容 -->
                                     <ui:TextBlock Grid.Row="2"
