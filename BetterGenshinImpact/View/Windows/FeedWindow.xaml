@@ -1,4 +1,4 @@
-﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.FeedWindow"
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.FeedWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -48,6 +48,12 @@
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                               Text="查看最新的原神的兑换码，一键自动兑换"
                               TextWrapping="Wrap" />
+            </StackPanel>
+
+            <!-- 加载状态 -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Top" Height="16" Orientation="Horizontal" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
+                <ui:TextBlock Text="正在加载兑换码..." Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <!-- Feed 列表 -->

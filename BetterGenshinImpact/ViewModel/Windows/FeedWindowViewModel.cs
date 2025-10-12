@@ -5,11 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Http;
+using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
@@ -17,17 +20,20 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 public partial class FeedWindowViewModel : ViewModel
 {
     [ObservableProperty] private ObservableCollection<FeedItem> _feedItems = new();
+    [ObservableProperty] private bool _isLoading;
+
+    private readonly HttpClient _httpClient = HttpClientFactory.GetCommonSendClient();
+    private const string CodesJsonUrl = "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/codes.json";
 
     public FeedWindowViewModel()
     {
-        LoadSampleData();
+        // 初始数据在窗口加载时触发远程拉取
     }
 
     [RelayCommand]
-    private void Refresh()
+    private async Task Refresh()
     {
-        // 刷新数据逻辑
-        LoadSampleData();
+        await LoadRemoteDataAsync();
     }
 
     [RelayCommand]
@@ -58,35 +64,33 @@ public partial class FeedWindowViewModel : ViewModel
         }
     }
 
-    private void LoadSampleData()
+    public async Task LoadRemoteDataAsync()
     {
-        FeedItems.Clear();
-
-        var sampleFeeds = new[]
+        IsLoading = true;
+        try
         {
-            new FeedItem
+            var request = new HttpRequestMessage(HttpMethod.Get, CodesJsonUrl);
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+
+            var items = JsonConvert.DeserializeObject<List<FeedItem>>(json) ?? [];
+
+            FeedItems.Clear();
+            foreach (var feed in items)
             {
-                Title = "五周年兑换码",
-                Codes = ["原神奈芙尔月之二上线","月之二再战猎月人","我现在就要玩千星奇域"],
-                Time = "2025-10-10 21:10"
-            },
-            new FeedItem
-            {
-                Title = "五周年兑换码",
-                Codes = ["原神5周年快乐"],
-                Time = "2025-09-28 11:30"
-            },
-            new FeedItem
-            {
-                Title = "五周年音乐APP兑换码",
-                Time = "2025-09-28 10:15",
-                Codes = ["SY2Y3FHHGKTE", "AY2Y3WZGY3TJ", "VYKGJWZHY2AN", "CY2H2XHYZKCS", "NG3ZJXHYG3CW", "NG2Z3EHYYKVJ"]
+                // 若存在标签文本，设置 HasTag
+                feed.HasTag = !string.IsNullOrWhiteSpace(feed.Tag);
+                FeedItems.Add(feed);
             }
-        };
-
-        foreach (var feed in sampleFeeds)
+        }
+        catch (Exception ex)
         {
-            FeedItems.Add(feed);
+            Toast.Error($"获取兑换码失败: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 }
@@ -104,4 +108,6 @@ public partial class FeedItem : ObservableObject
     [ObservableProperty] private bool _hasTag = false;
 
     [ObservableProperty] private List<string> _codes = new();
+    
+    [ObservableProperty] private string _valid = string.Empty;
 }

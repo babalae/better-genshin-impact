@@ -30,7 +30,8 @@ public partial class FeedWindow
 
     private void FeedWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        // 窗口加载完成后的逻辑
+        // 窗口加载完成后拉取远程兑换码数据
+        _ = ViewModel.LoadRemoteDataAsync();
     }
 
     private void BtnCloseClick(object sender, RoutedEventArgs e)
