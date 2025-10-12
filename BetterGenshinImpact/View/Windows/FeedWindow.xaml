@@ -47,7 +47,7 @@
                               Margin="0,0,0,5" />
                 <ui:TextBlock FontSize="14"
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                              Text="查看最新的原神的兑换码，一键自动兑换"
+                              Text="查看最新的国服原神的兑换码，一键自动兑换"
                               TextWrapping="Wrap" />
             </StackPanel>
 
@@ -89,7 +89,7 @@
                                                   TextWrapping="Wrap"
                                                   Margin="0,0,0,8" />
 
-                                    <!-- 时间与有效期：同一行更紧凑 -->
+                                    <!-- 时间与有效期：同一行更紧凑（Valid 为空或 null 时隐藏） -->
                                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
                                         <ui:TextBlock FontSize="12"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -97,14 +97,53 @@
                                         <ui:TextBlock FontSize="12"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                       Text="  |  "
-                                                      Margin="8,0,8,0" />
+                                                      Margin="8,0,8,0">
+                                            <ui:TextBlock.Style>
+                                                <Style TargetType="{x:Type ui:TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Valid}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Valid}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:TextBlock.Style>
+                                        </ui:TextBlock>
                                         <ui:TextBlock FontSize="12"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="有效期至" />
+                                                      Text="有效期至">
+                                            <ui:TextBlock.Style>
+                                                <Style TargetType="{x:Type ui:TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Valid}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Valid}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:TextBlock.Style>
+                                        </ui:TextBlock>
                                         <ui:TextBlock FontSize="12"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                       Text="{Binding Valid}"
-                                                      Margin="4,0,0,0" />
+                                                      Margin="4,0,0,0">
+                                            <ui:TextBlock.Style>
+                                                <Style TargetType="{x:Type ui:TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Valid}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Valid}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:TextBlock.Style>
+                                        </ui:TextBlock>
                                     </StackPanel>
 
                                     <!-- 内容：卡片式展示，增强层次与可读性 -->
@@ -211,7 +250,9 @@
                            Margin="0,0,10,0"
                            Appearance="Secondary"
                            Content="实时获取前瞻兑换码"
-                           Command="{Binding GetLiveRedeemCodesCommand}" />
+                           Command="{Binding GetLiveRedeemCodesCommand}"
+                           Visibility="{Binding IsDisplayBtnGetLiveCodes, Converter={StaticResource BooleanToVisibilityConverter}}"
+                           />
                 <ui:Button Name="BtnClose"
                            Content="关闭"
                            Click="BtnCloseClick" />

@@ -21,12 +21,14 @@ public partial class FeedWindowViewModel : ViewModel
 {
     [ObservableProperty] private ObservableCollection<FeedItem> _feedItems = new();
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isDisplayBtnGetLiveCodes;
 
     private readonly HttpClient _httpClient = HttpClientFactory.GetCommonSendClient();
     private const string CodesJsonUrl = "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/codes.json";
 
     public FeedWindowViewModel()
     {
+        IsDisplayBtnGetLiveCodes = GamePreviewLiveDateCalculator.IsWithinPreviewRange(DateTime.Now);
     }
 
     [RelayCommand]
@@ -161,6 +163,6 @@ public partial class FeedItem : ObservableObject
     [ObservableProperty] private bool _hasTag = false;
 
     [ObservableProperty] private List<string> _codes = new();
-    
+
     [ObservableProperty] private string _valid = string.Empty;
 }
