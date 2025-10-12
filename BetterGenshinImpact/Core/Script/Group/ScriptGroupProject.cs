@@ -106,6 +106,10 @@ public partial class ScriptGroupProject : ObservableObject
     [ObservableProperty]
     private bool? _allowJsNotification = true;
 
+    [ObservableProperty]
+    private bool? _allowJsHTTP = false;
+
+
     public ScriptGroupProject()
     {
     }
