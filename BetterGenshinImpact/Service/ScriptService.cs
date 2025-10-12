@@ -486,7 +486,7 @@ public partial class ScriptService : IScriptService
         target.JsScriptSettingsObject = source.JsScriptSettingsObject;
         target.GroupInfo = source.GroupInfo;
         target.AllowJsNotification = source.AllowJsNotification;
-        target.AllowJsHTTP = source.AllowJsHTTP;
+        target.AllowJsHTTPHash = source.AllowJsHTTPHash;
         target.SkipFlag = source.SkipFlag;
     }
 
