@@ -380,7 +380,7 @@ public class CombatScenes : IDisposable
     /// 推荐使用
     /// 失败后自动刷新编号框位置
     /// </summary>
-    /// <param name="imageRegion"></param>
+    /// <param name="imageRegion"></param>l
     /// <param name="context"></param>
     /// <returns></returns>
     public int GetActiveAvatarIndex(ImageRegion imageRegion, AvatarActiveCheckContext context)
@@ -391,6 +391,7 @@ public class CombatScenes : IDisposable
         if (index > 0)
         {
             LastActiveAvatarIndex = index;
+            return index;
         }
         else
         {
@@ -412,7 +413,7 @@ public class CombatScenes : IDisposable
         }
 
 
-        return LastActiveAvatarIndex;
+        return -1;
     }
 
 
