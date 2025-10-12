@@ -27,7 +27,60 @@ public partial class FeedWindowViewModel : ViewModel
 
     public FeedWindowViewModel()
     {
-        // 初始数据在窗口加载时触发远程拉取
+    }
+
+    [RelayCommand]
+    private async Task GetLiveRedeemCodes()
+    {
+        IsLoading = true;
+        try
+        {
+            var getter = new GetLiveRedeemCode();
+            var codeList = await getter.GetCodeMsgAsync();
+
+            if (codeList.Count == 0)
+            {
+                Toast.Warning("暂无前瞻兑换码信息");
+                return;
+            }
+
+            var displayItems = codeList
+                .Select(c => string.IsNullOrWhiteSpace(c.Items) ? null : c.Items)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
+
+            var item = new FeedItem
+            {
+                Title = "【实时获取】前瞻直播兑换码",
+                Content = displayItems.Count > 0 ? string.Join("\n", displayItems) : string.Empty,
+                Time = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+                Codes = codeList.Select(c => c.Code).ToList()
+            };
+
+            // 插入到列表顶部，方便查看
+            if (FeedItems.Count > 0 && FeedItems[0].Title == item.Title)
+            {
+                // 如果已经存在相同标题的项，则更新内容和时间
+                FeedItems[0].Content = item.Content;
+                FeedItems[0].Time = item.Time;
+                FeedItems[0].Codes = item.Codes;
+            }
+            else
+            {
+                FeedItems.Insert(0, item);
+            }
+
+
+            Toast.Success("已实时获取前瞻兑换码");
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"获取前瞻兑换码失败: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [RelayCommand]

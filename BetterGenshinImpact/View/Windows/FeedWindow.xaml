@@ -35,12 +35,13 @@
         <Grid Grid.Row="1" Margin="20,10,20,10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
             <!-- 标题和描述 -->
             <StackPanel Grid.Row="0" Margin="0,0,0,15">
-                <ui:TextBlock FontSize="24" 
+                <ui:TextBlock FontSize="24"
                               FontWeight="SemiBold"
                               Text="最新兑换码动态"
                               Margin="0,0,0,5" />
@@ -51,19 +52,24 @@
             </StackPanel>
 
             <!-- 加载状态 -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Top" Height="16" Orientation="Horizontal" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Grid.Row="1"
+                        VerticalAlignment="Top"
+                        Height="16"
+                        Orientation="Horizontal"
+                        Margin="0,0,0,10"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
                 <ui:TextBlock Text="正在加载兑换码..." Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <!-- Feed 列表 -->
-            <ScrollViewer Grid.Row="1" 
+            <ScrollViewer Grid.Row="2"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding FeedItems}" Padding="0,0,16,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <ui:Card Margin="0,0,0,12" 
+                            <ui:Card Margin="0,0,0,12"
                                      Padding="16">
                                 <Grid>
                                     <Grid.RowDefinitions>
@@ -101,30 +107,59 @@
                                                       Margin="4,0,0,0" />
                                     </StackPanel>
 
-                                    <!-- 内容 -->
-                                    <ui:TextBlock Grid.Row="2"
-                                                  FontSize="14"
-                                                  Visibility="{Binding Content, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
-                                                  Text="{Binding Content}"
-                                                  TextWrapping="Wrap"
-                                                  LineHeight="20"
-                                                  Margin="0,0,0,8" />
+                                    <!-- 内容：卡片式展示，增强层次与可读性 -->
+                                    <StackPanel Grid.Row="2"
+                                                Visibility="{Binding Content, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
+                                                Margin="0,0,0,12">
+                                        <!--<ui:TextBlock Text="内容"
+                                                      FontSize="12"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Margin="0,0,0,6"/>-->
+                                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                                BorderThickness="1"
+                                                Padding="12">
+                                            <ui:TextBlock FontSize="14"
+                                                          Text="{Binding Content}"
+                                                          TextWrapping="Wrap"
+                                                          LineHeight="20" />
+                                        </Border>
+                                    </StackPanel>
 
-                                    <!-- 兑换码列表 -->
-                                    <ItemsControl Grid.Row="3"
-                                                  ItemsSource="{Binding Codes}"
-                                                  Margin="0,0,0,8">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderThickness="1">
-                                                    <ui:TextBlock FontSize="14"
-                                                                  FontFamily="Consolas"
-                                                                  Text="{Binding}"
-                                                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <!-- 兑换码列表：胶囊标签，WrapPanel自动换行 -->
+                                    <StackPanel Grid.Row="3" Margin="0,0,0,8">
+                                        <!--<ui:TextBlock Text="兑换码"
+                                                      FontSize="12"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Margin="0,0,0,6"/>-->
+                                        <ItemsControl ItemsSource="{Binding Codes}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                                            CornerRadius="4"
+                                                            BorderThickness="1"
+                                                            Padding="8,4"
+                                                            Margin="0,0,8,8">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <ui:SymbolIcon Symbol="TicketDiagonal24" Margin="0,0,6,0" />
+                                                            <ui:TextBlock FontSize="14"
+                                                                          LineHeight="16"
+                                                                          FontFamily="Consolas"
+                                                                          Text="{Binding}"
+                                                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
 
                                     <!-- 标签 -->
                                     <StackPanel Grid.Row="4"
@@ -170,13 +205,13 @@
 
         <!-- 底部按钮 -->
         <Grid Grid.Row="2" Margin="40,10,20,20">
-            <StackPanel Orientation="Horizontal" 
+            <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right">
-                <!--<ui:Button Name="BtnRefresh"
+                <ui:Button Name="BtnGetLiveCodes"
                            Margin="0,0,10,0"
                            Appearance="Secondary"
-                           Content="刷新"
-                           Command="{Binding RefreshCommand}" />-->
+                           Content="实时获取前瞻兑换码"
+                           Command="{Binding GetLiveRedeemCodesCommand}" />
                 <ui:Button Name="BtnClose"
                            Content="关闭"
                            Click="BtnCloseClick" />
