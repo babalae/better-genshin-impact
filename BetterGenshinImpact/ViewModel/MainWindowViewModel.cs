@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -8,6 +8,7 @@ using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -28,6 +29,8 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.ViewModel.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -37,6 +40,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
+    private readonly INavigationService _navigationService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty] private bool _isVisible = true;
@@ -46,6 +50,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [ObservableProperty] private WindowBackdropType _currentBackdropType = WindowBackdropType.Auto;
 
     [ObservableProperty] private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
+    
+    [ObservableProperty] private Brush _redeemCodeButtonForeground = Brushes.White;
+    
+    private string? _redeemCodeUpdateNewVersion;
 
     private bool _firstActivated = true;
 
@@ -53,6 +61,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
     {
+        _navigationService = navigationService;
         _configService = configService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
@@ -201,6 +210,19 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     }
 
     [RelayCommand]
+    private void OnOpenFeed()
+    {
+        if (_redeemCodeUpdateNewVersion != null)
+        {
+            Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
+            RedeemCodeButtonForeground = Brushes.White;
+        }
+
+        var feedWindow = new FeedWindow(new FeedWindowViewModel());
+        feedWindow.Show();
+    }
+
+    [RelayCommand]
     private async Task OnLoaded()
     {
 
@@ -242,6 +264,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 检查更新
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
+        
+        // 检查兑换码更新
+        await CheckRedeemCodeFeedsUpdateAsync();
 
         //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
         if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
@@ -408,6 +433,36 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
             Config.CommonConfig.OnceHadRunDeviceIdList.Add(deviceId);
             _configService.Save();
+        }
+    }
+    
+    private async Task CheckRedeemCodeFeedsUpdateAsync()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/update_time.txt");
+            var response = await HttpClientFactory.GetCommonSendClient().SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var txt = await response.Content.ReadAsStringAsync();
+
+
+            if (!string.IsNullOrEmpty(txt))
+            {
+                if (long.TryParse(txt, out long v2) 
+                    && long.TryParse(Config.CommonConfig.RedeemCodeFeedsUpdateVersion, out long v1))
+                {
+                    if (v2 > v1)
+                    {
+                        RedeemCodeButtonForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E9BFA"));
+                        _redeemCodeUpdateNewVersion = txt;
+                    }
+                }
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, $"获取兑换码是否存在更新失败");
         }
     }
 }

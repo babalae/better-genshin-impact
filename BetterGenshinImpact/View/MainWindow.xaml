@@ -178,13 +178,22 @@
             </ui:NavigationView.ContentOverlay>
         </ui:NavigationView>
 
-        <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0">
+        <ui:TitleBar Title="{Binding Title, Mode=OneWay}" Grid.Row="0" Grid.Column="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
-                    <ui:Button Width="46"
+                    <ui:Button Width="40"
+                               Height="32"
+                               Background="Transparent"
+                               BorderBrush="Transparent"
+                               Command="{Binding OpenFeedCommand}"
+                               CornerRadius="0"
+                               Icon="{ui:SymbolIcon Gift16}"
+                               Foreground="{Binding RedeemCodeButtonForeground}"
+                               ToolTip="获取兑换码信息" />
+                    <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -192,7 +201,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Blur24}"
                                ToolTip="切换深浅主题或背景样式" />
-                    <ui:Button Width="46"
+                    <ui:Button Width="32"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -204,7 +213,7 @@
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
 
-        <tray:NotifyIcon Grid.Row="0"
+        <tray:NotifyIcon Grid.Row="0" Grid.Column="0"
                          FocusOnLeftClick="False"
                          Icon="pack://application:,,,/Resources/Images/logo.ico"
                          LeftDoubleClick="OnNotifyIconLeftDoubleClick"
