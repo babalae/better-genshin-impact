@@ -26,6 +26,7 @@ public class Manifest
     public string[] Scripts { get; set; } = [];
     public string[] Library { get; set; } = [];
     public string[] SavedFiles { get; set; } = [];
+    public string[] HttpAllowedUrls { get; set; } = [];
 
     public static Manifest FromJson(string json)
     {
