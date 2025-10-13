@@ -25,9 +25,17 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="1" Margin="12">
+            <emoji:TextBlock Text="🎉 BetterGI 两周年快乐！感谢一路相伴 ❤️"
+                             Margin="0,0,0,10"
+                             FontSize="17"
+                             FontWeight="Bold"
+                             Foreground="#1E9BFA"
+                             HorizontalAlignment="Center" />
+
             <emoji:TextBlock Text="🔹 本软件开源且免费，喜欢的可以点🌟Star -> " Margin="5" FontSize="16">
                 <Hyperlink NavigateUri="https://github.com/babalae/better-genshin-impact"
-                           RequestNavigate="HyperlinkRequestNavigate" Foreground="#1E9BFA">
+                           RequestNavigate="HyperlinkRequestNavigate"
+                           Foreground="#1E9BFA">
                     Github
                 </Hyperlink>
             </emoji:TextBlock>
