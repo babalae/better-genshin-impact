@@ -1,4 +1,4 @@
-﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.MainWindow"
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.MainWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -126,6 +126,14 @@
                                                TargetPageType="{x:Type pages:KeyMouseRecordPage}">
                             <ui:NavigationViewItem.Icon>
                                 <ui:SymbolIcon Symbol="Record24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <!--  Video24  -->
+                        <ui:NavigationViewItem Content="综合录制"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:IntegratedRecordPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Video24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                     </ui:NavigationViewItem.MenuItems>

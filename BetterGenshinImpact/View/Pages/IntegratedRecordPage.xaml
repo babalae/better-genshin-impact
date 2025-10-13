@@ -1,0 +1,180 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.IntegratedRecordPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:IntegratedRecordPageViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="800"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/View/Controls/Style/ListViewEx.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="42,16,42,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <ui:TextBlock Grid.Row="0"
+                      Margin="0,0,0,8"
+                      FontTypography="BodyStrong"
+                      Text="综合录制" />
+
+        <!-- 功能说明 -->
+        <ui:TextBlock Grid.Row="1" 
+                      TextWrapping="Wrap" 
+                      Margin="0,0,0,8" 
+                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}">
+            <Run Text="功能说明：同时录制视频、键鼠操作和坐标信息。" FontWeight="Bold"/>
+        </ui:TextBlock>
+        
+        <!-- 操作按钮 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal">
+            <ui:Button Command="{Binding OpenRecordDirectoryCommand}"
+                       Content="打开记录目录"
+                       Icon="{ui:SymbolIcon FolderOpen24}" />
+            <Separator Width="10" Opacity="0" />
+            <ui:Button Command="{Binding RefreshRecordListCommand}"
+                       Content="刷新列表"
+                       Icon="{ui:SymbolIcon ArrowClockwise24}" />
+            <Separator Width="10" Opacity="0" />
+            <ui:Button Command="{Binding StartRecordCommand}"
+                       Content="开始录制"
+                       Icon="{ui:SymbolIcon Record20}"
+                       IsEnabled="{Binding CanStartRecord}" />
+            <Separator Width="10" Opacity="0" />
+            <ui:Button Command="{Binding StopRecordCommand}"
+                       Content="停止录制"
+                       Icon="{ui:SymbolIcon Stop24}"
+                       IsEnabled="{Binding CanStopRecord}" />
+            <Separator Width="10" Opacity="0" />
+        </StackPanel>
+        
+        <!-- 录制设置 -->
+        <ui:CardExpander Grid.Row="3" Header="录制设置" Margin="0,0,0,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="视频帧率：" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="0" Grid.Column="1" Width="80" SelectedValue="{Binding VideoFrameRate}" SelectedValuePath="Tag" Margin="5">
+                    <ComboBoxItem Content="15" Tag="15"/>
+                    <ComboBoxItem Content="24" Tag="24"/>
+                    <ComboBoxItem Content="30" Tag="30"/>
+                    <ComboBoxItem Content="60" Tag="60"/>
+                </ComboBox>
+
+                <ui:TextBlock Grid.Row="0" Grid.Column="2" Text="坐标间隔(ms)：" VerticalAlignment="Center"/>
+                <ComboBox Grid.Row="0" Grid.Column="3" Width="80" SelectedValue="{Binding CoordinateRecordInterval}" SelectedValuePath="Tag" Margin="5">
+                    <ComboBoxItem Content="100" Tag="100"/>
+                    <ComboBoxItem Content="500" Tag="500"/>
+                    <ComboBoxItem Content="1000" Tag="1000"/>
+                    <ComboBoxItem Content="2000" Tag="2000"/>
+                    <ComboBoxItem Content="5000" Tag="5000"/>
+                </ComboBox>
+
+                <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="输出目录：" VerticalAlignment="Center"/>
+                <ui:TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" x:Name="OutputDirectoryTextBox" 
+                           Text="{Binding OutputDirectory}" IsReadOnly="True" Margin="5"/>
+                <ui:Button Grid.Row="1" Grid.Column="3" Content="选择目录" Command="{Binding SelectOutputDirectoryCommand}" Margin="5"/>
+            </Grid>
+        </ui:CardExpander>
+
+        <!-- 录制记录列表 -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="20" />
+            </Grid.ColumnDefinitions>
+            <Grid x:Name="Col1" Grid.Column="0" />
+            <Grid x:Name="Col2" Grid.Column="1" />
+            <Grid x:Name="Col3" Grid.Column="2" />
+        </Grid>
+        
+        <ui:ListView Grid.Row="5"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"
+                     ItemsSource="{Binding RecordList}"
+                     SelectionMode="Single">
+            <ListView.View>
+                <GridView ColumnHeaderContainerStyle="{StaticResource GridViewColumnHeaderDarkStyle}">
+                    <GridViewColumn Width="{Binding ElementName=Col1, Path=ActualWidth}"
+                                    DisplayMemberBinding="{Binding SessionId}"
+                                    Header="会话ID" />
+                    <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
+                                    DisplayMemberBinding="{Binding StartTime, StringFormat=yyyy-MM-dd HH:mm:ss}"
+                                    Header="开始时间" />
+                    <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}" Header="操作">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Button Command="{Binding DataContext.OpenRecordFolderCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ui:ListView}}}"
+                                               CommandParameter="{Binding}"
+                                               Content="打开"
+                                               Margin="2"
+                                               Padding="5,2"/>
+                                    <ui:Button Command="{Binding DataContext.DeleteRecordCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ui:ListView}}}"
+                                               CommandParameter="{Binding}"
+                                               Content="删除"
+                                               Margin="2"
+                                               Padding="5,2"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Command="{Binding OpenRecordFolderCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="打开目录"/>
+                    <MenuItem Command="{Binding DeleteRecordCommand}"
+                              CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                              Header="删除记录"/>
+                </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListView.Style>
+                <Style TargetType="{x:Type ListView}">
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Background" Value="Transparent" />
+                </Style>
+            </ListView.Style>
+        </ui:ListView>
+    </Grid>
+</UserControl>
