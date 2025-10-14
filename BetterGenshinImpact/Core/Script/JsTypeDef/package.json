@@ -5,9 +5,9 @@
   "author": "babalae",
   "license": "GPL-3.0",
   "description": "Types for BetterGI JS Scripts",
-  "types": "bgi.d.ts",
+  "types": "dist/bettergi.d.ts",
   "files": [
-    "bgi.d.ts"
+    "dist/bettergi.d.ts"
   ],
   "repository": {
     "type": "git",
@@ -24,11 +24,16 @@
     "better-genshin-impact"
   ],
   "devDependencies": {
-    "@types/node": "^24.7.2",
-    "typescript": "^5.9.3"
+    "@babel/parser": "^7.28.4",
+    "@typescript-eslint/parser": "^8.46.1",
+    "recast": "^0.23.11",
+    "typescript": "<5.0.0"
   },
   "scripts": {
-    "check": "npx tsc bgi.d.ts",
-    "publish:prepare": "npm run check"
+    "check": "npx tsc bettergi.d.ts",
+    "check-dist": "npx tsc dist/bettergi.d.ts",
+    "transform": "node checker/add-capitalize-method.mjs bettergi.d.ts dist/bettergi.d.ts",
+    "build": "npm run check && npm run transform && npm run check-dist",
+    "publish:prepare": "npm run build"
   }
 }

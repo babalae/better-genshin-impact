@@ -58,12 +58,15 @@
     ],
     excludeFunctionProperties: [
       'Target', // C# delegate 属性
-      'Equals', // C# override Equals
-      'ReferenceEquals', // C# override Equals
       'prototype', // JavaScript 原型
       'caller', // 函数调用者
       'callee', // 函数自身
       'arguments', // 函数参数
+    ],
+    excludeProperties: [
+      'Equals', // C# override Equals
+      'ReferenceEquals', // C# override Equals,
+      'GetHashCode', 'ToString', 'GetType', // C# override Object 方法
     ],
     maxDepth: 4,
     outputFile: 'runtime-type-assertions.ts',
@@ -76,7 +79,7 @@
    */
   function getDetailedType(value) {
     if (value === null) return { kind: 'null', tsType: 'null' };
-    if (value === undefined) return { kind: 'undefined', tsType: 'undefined' };
+    if (value === undefined) return { kind: 'undefined', tsType: 'Unknown' };
     
     const type = typeof value;
     
@@ -149,11 +152,13 @@
             if (!isConstructor) {
               // 普通函数，不保留任何属性
               return false;
-            } else {
-              if (CONFIG.excludeFunctionProperties.includes(key)) {
-                return false;
-              }
             }
+            if (CONFIG.excludeFunctionProperties.includes(key)) {
+              return false;
+            }
+          }
+          if (CONFIG.excludeProperties.includes(key)) {
+            return false;
           }
           if (false) {
             // 过滤掉访问会出错的属性
@@ -216,6 +221,7 @@
     
     const isFunction = typeof obj === 'function';
     const keys = getEnumerableProperties(obj, isFunction);
+    log.debug(`Analyzing ${isFunction ? 'function' : 'object'} (depth ${depth}): found ${keys.length} keys [${keys.join(', ')}]`);
     
     // 检查是否是构造函数类型
     const isCtorType = isConstructorType(obj);
@@ -333,6 +339,12 @@
   lines.push(' */');
   lines.push('type HostInvocable = any;');
   lines.push('');
+  lines.push('/**');
+  lines.push(' * 未知类型');
+  lines.push(' * 用于表示无法确定的类型');
+  lines.push(' */');
+  lines.push('type Unknown = any;');
+  lines.push('');
   lines.push('// ==================== 类型断言辅助函数 ====================');
   lines.push('');
   lines.push('/**');
@@ -352,6 +364,7 @@
   lines.push('');    lines.push('/**');
     lines.push(' * 验证方法可调用性（支持函数和构造函数）');
     lines.push(' */');
+    lines.push('/* eslint-disable-next-line  @typescript-eslint/no-unsafe-function-type */');
     lines.push('function assertCallable<T extends Function>(fn: T): T {');
     lines.push('  return fn;');
     lines.push('}');
