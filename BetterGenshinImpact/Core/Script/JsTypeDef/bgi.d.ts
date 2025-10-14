@@ -609,6 +609,12 @@ declare class CancellationTokenSource {
     constructor();
 
     /**
+     * 创建关联的令牌源
+     * @param tokens 取消令牌列表
+     */
+    static createLinkedTokenSource(...tokens: CancellationToken[]): CancellationTokenSource;
+
+    /**
      * 取消操作
      */
     cancel(): void;
@@ -691,6 +697,26 @@ declare class AutoDomainParam {
 }
 
 /**
+ * 战斗结束检测配置
+ */
+declare class FightFinishDetectConfig {
+    /** 战斗结束进度条颜色 */
+    battleEndProgressBarColor: string;
+    /** 战斗结束进度条颜色容差 */
+    battleEndProgressBarColorTolerance: string;
+    /** 是否启用快速检测 */
+    fastCheckEnabled: boolean;
+    /** 快速检测参数 */
+    fastCheckParams: string;
+    /** 检测结束延迟 */
+    checkEndDelay: string;
+    /** 检测前延迟 */
+    beforeDetectDelay: string;
+    /** 是否启用旋转查找敌人 */
+    rotateFindEnemyEnabled: boolean;
+}
+
+/**
  * 自动战斗任务参数
  */
 declare class AutoFightParam {
@@ -702,6 +728,8 @@ declare class AutoFightParam {
     timeout: number;
     /** 是否启用战斗结束检测 */
     fightFinishDetectEnabled: boolean;
+    /** 战斗结束检测配置 */
+    finishDetectConfig: FightFinishDetectConfig;
     /** 战斗后是否拾取掉落物 */
     pickDropsAfterFightEnabled: boolean;
     /** 战斗后拾取掉落物的秒数 */
@@ -720,6 +748,18 @@ declare class AutoFightParam {
     guardianAvatar: string;
     /** 守护战斗跳过 */
     guardianCombatSkip: boolean;
+    /** 守护角色长按 */
+    guardianAvatarHold: boolean;
+    /** 爆发前检测 */
+    checkBeforeBurst: boolean;
+    /** 是否首次检测 */
+    isFirstCheck: boolean;
+    /** 旋转因子 */
+    rotaryFactor: number;
+    /** 是否启用爆发 */
+    burstEnabled: boolean;
+    /** 琴双倍拾取 */
+    qinDoublePickUp: boolean;
 
     /** 是否启用游泳检测 */
     static swimmingEnabled: boolean;
@@ -735,6 +775,79 @@ declare class Mat {
     readonly width: number;
     /** 图像高度 */
     readonly height: number;
+
+    /** 索引器 */
+    static readonly indexer: any;
+    /** 非安全索引器 */
+    static readonly unsafeIndexer: any;
+
+    /**
+     * 从原生指针创建 Mat
+     * @param pointer 原生指针
+     */
+    static fromNativePointer(pointer: any): Mat;
+
+    /**
+     * 从像素数据创建 Mat
+     * @param width 宽度
+     * @param height 高度
+     * @param data 像素数据
+     */
+    static fromPixelData(width: number, height: number, data: any): Mat;
+
+    /**
+     * 从流创建 Mat
+     * @param stream 流对象
+     */
+    static fromStream(stream: any): Mat;
+
+    /**
+     * 解码图像数据
+     * @param data 图像数据
+     */
+    static imDecode(data: any): Mat;
+
+    /**
+     * 从图像数据创建 Mat
+     * @param imageData 图像数据
+     */
+    static fromImageData(imageData: any): Mat;
+
+    /**
+     * 创建对角矩阵
+     * @param mat 输入矩阵
+     */
+    static diag(mat: Mat): Mat;
+
+    /**
+     * 创建零矩阵
+     * @param rows 行数
+     * @param cols 列数
+     * @param type 数据类型
+     */
+    static zeros(rows: number, cols: number, type: number): Mat;
+
+    /**
+     * 创建全1矩阵
+     * @param rows 行数
+     * @param cols 列数
+     * @param type 数据类型
+     */
+    static ones(rows: number, cols: number, type: number): Mat;
+
+    /**
+     * 创建单位矩阵
+     * @param rows 行数
+     * @param cols 列数
+     * @param type 数据类型
+     */
+    static eye(rows: number, cols: number, type: number): Mat;
+
+    /**
+     * 从数组创建 Mat
+     * @param array 数组
+     */
+    static fromArray(array: any[]): Mat;
 
     /**
      * 释放资源
@@ -753,6 +866,39 @@ declare class Point2f {
 
     constructor();
     constructor(x: number, y: number);
+
+    /**
+     * 从 Point 创建 Point2f
+     * @param point 点对象
+     */
+    static fromPoint(point: any): Point2f;
+
+    /**
+     * 从 Vec2f 创建 Point2f
+     * @param vec Vec2f 对象
+     */
+    static fromVec2f(vec: any): Point2f;
+
+    /**
+     * 计算两点之间的距离
+     * @param p1 点1
+     * @param p2 点2
+     */
+    static distance(p1: Point2f, p2: Point2f): number;
+
+    /**
+     * 计算点积
+     * @param p1 点1
+     * @param p2 点2
+     */
+    static dotProduct(p1: Point2f, p2: Point2f): number;
+
+    /**
+     * 计算叉积
+     * @param p1 点1
+     * @param p2 点2
+     */
+    static crossProduct(p1: Point2f, p2: Point2f): number;
 }
 
 /**
@@ -796,6 +942,27 @@ declare class RecognitionObject {
      * 初始化模板
      */
     initTemplate(): this;
+
+    /**
+     * 模板匹配
+     * @param srcMat 源图像
+     * @param ro 识别对象
+     */
+    static templateMatch(srcMat: Mat, ro: RecognitionObject): Region[];
+
+    /**
+     * OCR 文字识别
+     * @param srcMat 源图像
+     * @param ro 识别对象
+     */
+    static ocr(srcMat: Mat, ro: RecognitionObject): Region[];
+
+    /**
+     * OCR 匹配
+     * @param srcMat 源图像
+     * @param ro 识别对象
+     */
+    static ocrMatch(srcMat: Mat, ro: RecognitionObject): Region[];
 
     static readonly ocrThis: RecognitionObject;
 }
@@ -879,6 +1046,20 @@ declare class GameCaptureRegion extends ImageRegion {
      * @param y Y 坐标 (1080P)
      */
     static move1080P(x: number, y: number): void;
+
+    /**
+     * 静态方法：点击游戏区域的 1080P 坐标
+     * @param x X 坐标 (1080P)
+     * @param y Y 坐标 (1080P)
+     */
+    static gameRegion1080PPosClick(x: number, y: number): void;
+
+    /**
+     * 静态方法：移动到游戏区域的 1080P 坐标
+     * @param x X 坐标 (1080P)
+     * @param y Y 坐标 (1080P)
+     */
+    static gameRegion1080PPosMove(x: number, y: number): void;
 }
 
 /**
@@ -1197,6 +1378,22 @@ declare class Avatar {
      * @param ct 取消令牌
      */
     waitSkillCd(ct: any): Promise<void>;
+
+    /**
+     * 静态方法：角色倒下时抛出异常
+     */
+    static throwWhenDefeated(): void;
+
+    /**
+     * 静态方法：传送点恢复
+     */
+    static tpForRecover(): Promise<void>;
+
+    /**
+     * 静态方法：根据技能CD解析动作调度器
+     * @param schedule 调度配置
+     */
+    static parseActionSchedulerByCd(schedule: string): any;
 }
 
 // /**

@@ -48,7 +48,7 @@
       'gc',
 
       // ClearScript 相关
-      'EngineInternal', 'HostFunctions', '__getNullInstance',
+      'EngineInternal', 'HostObject', 'HostInvocable', 'HostFunctions', '__getNullInstance',
 
       // C# 相关
       'Task',
@@ -58,6 +58,8 @@
     ],
     excludeFunctionProperties: [
       'Target', // C# delegate 属性
+      'Equals', // C# override Equals
+      'ReferenceEquals', // C# override Equals
       'prototype', // JavaScript 原型
       'caller', // 函数调用者
       'callee', // 函数自身
@@ -139,14 +141,24 @@
    */
   function getEnumerableProperties(obj, isFunction = false) {
     try {
-      return Object.keys(obj).filter(key => {
+      const isConstructor = isConstructorType(obj);
+      return Object.getOwnPropertyNames(obj).filter(key => {
         try {
-          // 如果是函数，过滤掉配置中排除的属性
-          if (isFunction && CONFIG.excludeFunctionProperties.includes(key)) {
-            return false;
+          // 如果是函数，先判断是到底是constructor，还是普通函数
+          if (isFunction) {
+            if (!isConstructor) {
+              // 普通函数，不保留任何属性
+              return false;
+            } else {
+              if (CONFIG.excludeFunctionProperties.includes(key)) {
+                return false;
+              }
+            }
           }
-          // 过滤掉访问会出错的属性
-          const value = obj[key];
+          if (false) {
+            // 过滤掉访问会出错的属性
+            const value = obj[key];
+          }
           return true;
         } catch (e) {
           return false;
@@ -164,12 +176,7 @@
    */
   function isConstructorType(obj) {
     try {
-      // 检查是否存在 HostFunctions 并且有 isTypeObj 方法
-      if (typeof HostFunctions !== 'undefined' && 
-          typeof HostFunctions.isTypeObj === 'function') {
-        return HostFunctions.isTypeObj(obj);
-      }
-      return false;
+      return HostFunctions.isTypeObj(obj);
     } catch (e) {
       return false;
     }
@@ -376,6 +383,18 @@
           const propPath = `${name}.${camelPropName}`;
           lines.push(`  if ('${camelPropName}' in ${name}) {`);
           lines.push(`    const _prop_${safeName}_${sanitizeName(camelPropName)}: ${propInfo.type} = ${propPath};`);
+          lines.push(`  }`);
+        }
+      }
+      
+      // 如果函数有静态方法，检查这些方法
+      if (info.structure && Object.keys(info.structure.methods).length > 0) {
+        lines.push(`  // ${name} 的静态方法`);
+        for (const [methodName, methodInfo] of Object.entries(info.structure.methods)) {
+          const camelMethodName = toCamelCase(methodName);
+          const methodPath = `${name}.${camelMethodName}`;
+          lines.push(`  if ('${camelMethodName}' in ${name} && typeof ${methodPath} === 'function') {`);
+          lines.push(`    assertCallable(${methodPath});`);
           lines.push(`  }`);
         }
       }
