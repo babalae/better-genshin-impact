@@ -13203,6 +13203,25 @@
                 "area": "银月之庭"
             },
             {
+                "id": "1750",
+                "gadgetId": "70600003",
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    3278.798828125,
+                    0,
+                    10179.552734375
+                ],
+                "tranPosition": [
+                    3268.82958984375,
+                    0,
+                    10170.6865234375
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "月矩力试验设计局"
+            },
+            {
                 "id": "1751",
                 "gadgetId": "70600003",
                 "gadgetType": "TransPointSecond",

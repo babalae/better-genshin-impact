@@ -59,7 +59,7 @@ public class Http
     /// <param name="body">请求体</param>
     /// <param name="headersJson">请求头，JSON格式</param>
     /// <returns></returns>
-    public async Task<HttpReponse> Request(string method, string url, string? body, string? headersJson)
+    public async Task<HttpReponse> Request(string method, string url, string? body = null, string? headersJson = null)
     {
         _logger.LogDebug($"[HTTP] 发送HTTP请求: {method} {url} Body: {(body != null ? body : "null")} Headers: {(headersJson != null ? headersJson : "null")}");
         CheckHttpPermission(url);
