@@ -26,6 +26,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -426,13 +427,13 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 bool resinUsed = false;
                 if (resinStatus.CondensedResinCount > 0)
                 {
-                    resinUsed = PressUseResin(ra3, "浓缩树脂");
+                    (resinUsed, _) = AutoDomainTask.PressUseResin(ra3, "浓缩树脂");
                     resinStatus.CondensedResinCount -= 1;
                 }
                 else if (resinStatus.OriginalResinCount >= 20)
                 {
-                    resinUsed = PressUseResin(ra3, "原粹树脂");
-                    resinStatus.OriginalResinCount -= 20;
+                    (resinUsed, var num) =  AutoDomainTask.PressUseResin(ra3, "原粹树脂");
+                    resinStatus.OriginalResinCount -= num;
                 }
 
                 if (!resinUsed)
@@ -456,11 +457,15 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 var failCount = 0;
                 foreach (var record in _resinPriorityListWhenSpecifyUse)
                 {
-                    if (record.RemainCount > 0 && PressUseResin(textListInPrompt2, record.Name))
+                    if (record.RemainCount > 0)
                     {
-                        record.RemainCount -= 1;
-                        _logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
-                        break;
+                        var (success, _) = AutoDomainTask.PressUseResin(textListInPrompt2, record.Name);
+                        if (success)
+                        {
+                            record.RemainCount -= 1;
+                            Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
+                            break;
+                        }
                     }
                     else
                     {
@@ -550,62 +555,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
     private async Task ExitDomain()
     {
         await ExitDomain(new BvPage(_ct));
-    }
-
-    private bool PressUseResin(ImageRegion ra, string resinName)
-    {
-        var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-        return PressUseResin(regionList, resinName);
-    }
-
-    private bool PressUseResin(List<Region> regionList, string resinName)
-    {
-        var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
-        if (resinKey != null)
-        {
-            // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
-            var useList = regionList.Where(t => t.Text.Contains("使用")).ToList();
-            if (useList.Count != 0)
-            {
-                // 找到使用按键
-                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width / 2
-                                                         && IsHeightOverlap(t, resinKey));
-                if (useKey != null)
-                {
-                    // 点击使用
-                    useKey.Click();
-                    // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了。使用双击
-                    Sleep(60, _ct);
-                    useKey.Click();
-                    _logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
-                    return true;
-                }
-                else
-                {
-                    _logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// 判断两个区域在垂直方向上是否有重叠
-    /// </summary>
-    private bool IsHeightOverlap(Region region1, Region region2)
-    {
-        int region1Top = region1.Y;
-        int region1Bottom = region1.Y + region1.Height;
-        int region2Top = region2.Y;
-        int region2Bottom = region2.Y + region2.Height;
-
-        // 检查区域是否在垂直方向上重叠
-        return (region1Top <= region2Bottom && region1Bottom >= region2Top);
     }
 
     private async Task ArtifactSalvage()
