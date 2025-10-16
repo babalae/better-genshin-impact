@@ -197,6 +197,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             WindowHelper.ApplyThemeToWindow(Application.Current.MainWindow, themeType);
         }
+
+        // 根据当前主题更新兑换码按钮的默认前景色（若无更新高亮）
+        if (_redeemCodeUpdateNewVersion == null)
+        {
+            UpdateRedeemCodeButtonDefaultForeground();
+        }
     }
 
     [RelayCommand]
@@ -215,7 +221,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         if (_redeemCodeUpdateNewVersion != null)
         {
             Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
-            RedeemCodeButtonForeground = Brushes.White;
+            // 重置为主题默认前景色，避免浅色主题下显示为白色
+            UpdateRedeemCodeButtonDefaultForeground();
+            _redeemCodeUpdateNewVersion = null;
         }
 
         var feedWindow = new FeedWindow(new FeedWindowViewModel());
@@ -464,5 +472,29 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             _logger.LogDebug(ex, $"获取兑换码是否存在更新失败");
         }
+    }
+
+    // 更新兑换码按钮在当前主题下的默认前景色
+    private void UpdateRedeemCodeButtonDefaultForeground()
+    {
+        try
+        {
+            var brush = Application.Current.TryFindResource("TextFillColorPrimaryBrush") as Brush;
+            if (brush != null)
+            {
+                RedeemCodeButtonForeground = brush;
+                return;
+            }
+        }
+        catch
+        {
+            // 忽略资源查找异常，走回退逻辑
+        }
+
+        // 回退：根据当前主题类型使用黑/白色
+        var isLightTheme = Config.CommonConfig.CurrentThemeType == ThemeType.LightNone
+                           || Config.CommonConfig.CurrentThemeType == ThemeType.LightMica
+                           || Config.CommonConfig.CurrentThemeType == ThemeType.LightAcrylic;
+        RedeemCodeButtonForeground = isLightTheme ? Brushes.Black : Brushes.White;
     }
 }
