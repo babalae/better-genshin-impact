@@ -919,7 +919,6 @@ public class TpTask
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
         if (hasTeleportButton) return;   // 可以传送了，结束
-        
         // 3. 没点出传送按钮，且不存在外部地图关闭按钮
         // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表
         var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
@@ -963,7 +962,7 @@ public class TpTask
         });
         return hasTeleportButton;
     }
-    
+
     /// <summary>
     /// 全匹配一遍并进行文字识别
     /// 60ms ~200ms
