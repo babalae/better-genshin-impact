@@ -13,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Compunet.YoloSharp;
@@ -196,7 +197,7 @@ public class CombatScenes : IDisposable
             // 降低琴和衣装角色的识别率要求
             if (topClass.Confidence < 0.51)
             {
-                img.SaveAsPng(@"log\avatar_side_classify_error.png");
+                img.SaveAsPng(Global.Absolute($@"log\avatar_side_classify_error.png"));
                 throw new Exception(
                     $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
@@ -205,7 +206,7 @@ public class CombatScenes : IDisposable
         {
             if (topClass.Confidence < 0.7)
             {
-                img.SaveAsPng(@"log\avatar_side_classify_error.png");
+                img.SaveAsPng(Global.Absolute($@"log\avatar_side_classify_error.png"));
                 throw new Exception(
                     $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
