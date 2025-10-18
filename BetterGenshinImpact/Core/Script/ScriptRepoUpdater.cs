@@ -223,9 +223,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 标记新repo.json中的更新节点
         try
         {
-            // bare仓库中repo.json直接在仓库根目录
-            var newRepoJsonPath = Path.Combine(repoPath, "repo.json");
-            if (File.Exists(newRepoJsonPath))
+            // 查找repo.json文件
+            var newRepoJsonPath = Directory.GetFiles(repoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (!string.IsNullOrEmpty(newRepoJsonPath))
             {
                 var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
 
@@ -557,12 +557,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 从Git仓库读取文件内容（处理 repo/ 子目录）
+    /// 从Git仓库读取文件内容
     /// </summary>
     private string? ReadFileFromGitRepository(string repoPath, string filePath)
     {
         try
         {
+            // 判断是否为 Git 仓库
+            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            if (!isGitRepo)
+            {
+                return null;
+            }
+
             using var repo = new Repository(repoPath);
 
             var manifestPath = $"repo/{filePath}";
@@ -613,8 +620,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <param name="destPath">目标路径</param>
     private void CheckoutPath(string repoPath, string sourcePath, string destPath)
     {
-        // 检查是否为Git仓库
-        if (Repository.IsValid(repoPath))
+        // 判断仓库类型：检查是否为 Git 仓库且不存在 repo/ 子目录
+        bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+
+        if (isGitRepo)
         {
             // 从Git仓库检出
             using var repo = new Repository(repoPath);
@@ -826,14 +835,44 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public string FindCenterRepoPath()
     {
-        // 使用标准Git仓库，repo.json通过sparse-checkout检出到根目录
+        // 查找 repo.json 文件
         var repoJsonPath = Path.Combine(CenterRepoPath, "repo.json");
-        if (!File.Exists(repoJsonPath))
+        string? repoJsonDir = null;
+
+        if (File.Exists(repoJsonPath))
+        {
+            repoJsonDir = CenterRepoPath;
+        }
+        else
+        {
+            // 递归查找 repo.json
+            var localRepoJsonPath = Directory
+                .GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (localRepoJsonPath != null)
+            {
+                repoJsonDir = Path.GetDirectoryName(localRepoJsonPath);
+            }
+        }
+
+        if (string.IsNullOrEmpty(repoJsonDir))
         {
             throw new Exception("本地仓库缺少 repo.json");
         }
 
-        return CenterRepoPath;
+        // 检查 repo.json 同级是否存在 repo/ 目录来判断仓库类型
+        var repoSubDir = Path.Combine(repoJsonDir, "repo");
+        if (Directory.Exists(repoSubDir))
+        {
+            // 存在 repo/ 目录，说明是文件式仓库
+            _logger.LogInformation("检测到文件式仓库");
+            return repoSubDir;
+        }
+        else
+        {
+            // 不存在 repo/ 目录，说明是 Git 仓库
+            _logger.LogInformation("检测到 Git 仓库");
+            return repoJsonDir;
+        }
     }
 
     private (string time, string url, string file) ParseJson(string jsonString)
@@ -1059,8 +1098,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             //顶层节点，按库中的文件夹来
             if (path == "pathing")
             {
-                // 兼容Git仓库和老版本文件系统读取pathing子目录
-                if (Repository.IsValid(repoPath))
+                // 判断仓库类型：Git 仓库或文件式仓库
+                bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+
+                if (isGitRepo)
                 {
                     // 从Git仓库读取
                     using var repo = new Repository(repoPath);
@@ -1091,7 +1132,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 else
                 {
-                    // 老版本：从文件系统读取
+                    // 文件式仓库：从文件系统读取
                     var pathingDir = Path.Combine(repoPath, "pathing");
                     if (Directory.Exists(pathingDir))
                     {
@@ -1498,7 +1539,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 获取脚本的manifest文件内容
             string? manifestContent = null;
 
-            if (Repository.IsValid(repoPath))
+            // 判断仓库类型
+            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+
+            if (isGitRepo)
             {
                 // 从Git仓库读取
                 manifestContent = ReadFileFromGitRepository(repoPath, $"{scriptPath}/manifest.json");
@@ -1510,7 +1554,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else
             {
-                // 老版本：从文件系统读取
+                // 文件式仓库：从文件系统读取
                 var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
                 if (!File.Exists(scriptManifestPath))
                 {
@@ -1620,7 +1664,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 获取脚本的manifest文件内容
             string? manifestContent = null;
 
-            if (Repository.IsValid(repoPath))
+            // 判断仓库类型
+            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+
+            if (isGitRepo)
             {
                 // 从Git仓库读取
                 manifestContent = ReadFileFromGitRepository(repoPath, $"{scriptPath}/manifest.json");
@@ -1632,7 +1679,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else
             {
-                // 老版本：从文件系统读取
+                // 文件式仓库：从文件系统读取
                 var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
                 if (!File.Exists(scriptManifestPath))
                 {
