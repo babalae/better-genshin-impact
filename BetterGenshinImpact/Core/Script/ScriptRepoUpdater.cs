@@ -173,7 +173,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var fetchOptions = new FetchOptions
                     {
                         ProxyOptions = { ProxyType = ProxyType.None },
-                        Depth = 1 // 浅拉取，只获取最新的提交
+                        Depth = 1, // 浅拉取，只获取最新的提交
+                        CredentialsProvider = CreateCredentialsHandler() // 添加凭据处理器
                     };
 
                     Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
@@ -418,6 +419,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             OnCheckoutProgress = onCheckoutProgress
         };
         // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+        // 设置凭据处理器
+        options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
         // 克隆仓库
         Repository.Clone(repoUrl, repoPath, options);
     }
@@ -452,7 +455,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 TagFetchMode = TagFetchMode.None,
                 ProxyOptions = { ProxyType = ProxyType.None },
-                Depth = 1 // 浅拉取，只获取最新的提交
+                Depth = 1, // 浅拉取，只获取最新的提交
+                CredentialsProvider = CreateCredentialsHandler() // 添加凭据处理器
             };
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
@@ -487,6 +491,32 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 3. 移除 http.proxy 和 https.proxy 配置
         repo.Config.Unset("http.proxy");
         repo.Config.Unset("https.proxy");
+    }
+
+    /// <summary>
+    /// 创建凭据处理器（用于私有仓库身份验证）
+    /// </summary>
+    /// <returns>凭据处理器</returns>
+    private CredentialsHandler? CreateCredentialsHandler()
+    {
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+        // 如果没有配置凭据，返回 null
+        if (string.IsNullOrEmpty(scriptConfig.GitToken))
+        {
+            return null;
+        }
+
+        // 返回凭据处理器
+        return (url, usernameFromUrl, types) =>
+        {
+            _logger.LogInformation($"使用配置的Git凭据进行身份验证");
+            return new UsernamePasswordCredentials
+            {
+                Username = scriptConfig.GitUsername,
+                Password = scriptConfig.GitToken
+            };
+        };
     }
 
     // [Obsolete]
