@@ -130,9 +130,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     try
                     {
                         // 检测repo.json是否存在，存在则备份
-                        var oldRepoJsonPath = Directory
-                            .GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                        if (oldRepoJsonPath != null)
+                        var oldRepoJsonPath = Path.Combine(repoPath, "repo.json");
+                        if (File.Exists(oldRepoJsonPath))
                         {
                             oldRepoJsonContent = File.ReadAllText(oldRepoJsonPath);
                         }
@@ -168,7 +167,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     // 获取远程分支信息并拉取最新数据
                     var remote = repo.Network.Remotes["origin"];
-                    var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
 
                     var fetchOptions = new FetchOptions
                     {
@@ -176,19 +174,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         Depth = 1 // 浅拉取，只获取最新的提交
                     };
 
-                    Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, "拉取最新更新");
+                    string refSpec = $"+refs/heads/release:refs/heads/release";
+                    Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "拉取最新更新");
 
                     // 获取本地和远程commit
-                    var currentCommitSha = repo.Head.Tip.Sha;
+                    var currentCommitSha = repo.Head.Tip?.Sha;
 
-                    // 获取远程release分支的最新commit
-                    var remoteBranch = repo.Branches["refs/remotes/origin/release"];
-                    if (remoteBranch == null)
+                    // 获取release分支的最新commit
+                    var releaseBranch = repo.Branches["release"];
+                    if (releaseBranch == null)
                     {
-                        throw new Exception("未找到远程release分支");
+                        throw new Exception("未找到release分支");
                     }
 
-                    var remoteCommitSha = remoteBranch.Tip.Sha;
+                    var remoteCommitSha = releaseBranch.Tip.Sha;
 
                     // 比较本地和远程commit
                     if (currentCommitSha == remoteCommitSha)
@@ -198,7 +197,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     else
                     {
-                        _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha[..7]} -> 远程 {remoteCommitSha[..7]}，将重新克隆");
+                        _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha?[..7] ?? "无"} -> 远程 {remoteCommitSha[..7]}");
 
                         // commit不一致，删除本地仓库重新克隆
                         repo?.Dispose();
@@ -213,6 +212,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
                 repo?.Dispose();
                 CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                updated = true;
             }
             finally
             {
@@ -223,9 +223,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 标记新repo.json中的更新节点
         try
         {
-            var newRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
-                .FirstOrDefault();
-            if (newRepoJsonPath != null)
+            // bare仓库中repo.json直接在仓库根目录
+            var newRepoJsonPath = Path.Combine(repoPath, "repo.json");
+            if (File.Exists(newRepoJsonPath))
             {
                 var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
 
@@ -402,7 +402,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         if (token == null || token.Type == JTokenType.Null) return false;
         if (token.Type == JTokenType.Boolean) return (bool)token;
-        if (token.Type == JTokenType.String) return string.Equals((string)token, "true", StringComparison.OrdinalIgnoreCase);
+        if (token.Type == JTokenType.String) return string.Equals(token.ToString(), "true", StringComparison.OrdinalIgnoreCase);
         return false;
     }
 
@@ -423,7 +423,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    ///  
+    /// 克隆Git仓库（只检出repo.json）
     /// 相当于 Repository.Clone(repoUrl, repoPath, options);
     /// 用这个方法可以无视本地代理
     /// </summary>
@@ -444,6 +444,18 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             GitConfig(repo);
 
+            // 配置sparse-checkout
+            repo.Config.Set("core.sparseCheckout", true, ConfigurationLevel.Local);
+            repo.Config.Set("core.sparseCheckoutCone", false, ConfigurationLevel.Local);
+
+            // 写入 .git/info/sparse-checkout
+            var infoDir = Path.Combine(repo.Info.Path, "info");
+            Directory.CreateDirectory(infoDir);
+            var sparseFile = Path.Combine(infoDir, "sparse-checkout");
+
+            // 仅检出仓库根目录下的 repo.json
+            File.WriteAllText(sparseFile, "/repo.json\n");
+
             // 添加远程源
             Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
@@ -458,20 +470,281 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
 
             // 获取远程分支
-            var remoteBranch = repo.Branches[$"refs/remotes/origin/{branchName}"];
+            var remoteBranch = repo.Branches[$"origin/{branchName}"];
             if (remoteBranch == null)
                 throw new Exception($"远程仓库中未找到 {branchName} 分支");
 
-            // 创建并检出本地分支
+            // 创建本地分支（不检出）
             var localBranch = repo.CreateBranch(branchName, remoteBranch.Tip);
             repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
 
-            var checkoutOptions = new CheckoutOptions { OnCheckoutProgress = onCheckoutProgress };
-            Commands.Checkout(repo, localBranch, checkoutOptions);
+            // 手动检出HEAD到新分支
+            repo.Refs.UpdateTarget(repo.Refs.Head, localBranch.CanonicalName);
+
+            // 手动检出 repo.json 文件（LibGit2Sharp 的 sparse-checkout 支持有限）
+            CheckoutRepoJson(repo, remoteBranch.Tip);
+
+            _logger.LogInformation("已使用sparse-checkout模式克隆仓库，仅检出repo.json");
         }
         finally
         {
             repo?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 从Git仓库检出repo.json文件到工作目录
+    /// </summary>
+    /// <param name="repo"></param>
+    /// <param name="commit"></param>
+    private void CheckoutRepoJson(Repository repo, Commit commit)
+    {
+        try
+        {
+            // 查找repo.json文件
+            var repoJsonEntry = commit.Tree.FirstOrDefault(e => e.Name == "repo.json");
+            if (repoJsonEntry != null && repoJsonEntry.TargetType == TreeEntryTargetType.Blob)
+            {
+                var blob = (Blob)repoJsonEntry.Target;
+                var repoJsonPath = Path.Combine(repo.Info.WorkingDirectory ?? repo.Info.Path, "repo.json");
+
+                // 创建目录（如果需要）
+                var dir = Path.GetDirectoryName(repoJsonPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                // 写入文件
+                using (var contentStream = blob.GetContentStream())
+                using (var fileStream = File.Create(repoJsonPath))
+                {
+                    contentStream.CopyTo(fileStream);
+                }
+
+                _logger.LogInformation($"已检出 repo.json 到 {repoJsonPath}");
+            }
+            else
+            {
+                _logger.LogWarning("未在仓库中找到 repo.json 文件");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "检出 repo.json 失败");
+        }
+    }
+
+    /// <summary>
+    /// 获取仓库的根树（脚本内容在 repo/ 子目录下）
+    /// </summary>
+    private Tree GetRepositoryRootTree(Repository repo)
+    {
+        var commit = repo.Head.Tip;
+        if (commit == null)
+        {
+            throw new Exception("仓库HEAD未指向任何提交");
+        }
+
+        // 脚本内容都在 repo/ 子目录下
+        var repoEntry = commit.Tree["repo"];
+        if (repoEntry == null || repoEntry.TargetType != TreeEntryTargetType.Tree)
+        {
+            throw new Exception("仓库结构错误：未找到 repo/ 子目录");
+        }
+
+        return (Tree)repoEntry.Target;
+    }
+
+    /// <summary>
+    /// 从Git仓库读取文件内容（处理 repo/ 子目录）
+    /// </summary>
+    private string? ReadFileFromGitRepository(string repoPath, string filePath)
+    {
+        try
+        {
+            using var repo = new Repository(repoPath);
+
+            var manifestPath = $"repo/{filePath}";
+            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            Tree currentTree = repo.Head.Tip!.Tree;
+            TreeEntry? entry = null;
+
+            for (int i = 0; i < pathParts.Length; i++)
+            {
+                entry = currentTree[pathParts[i]];
+                if (entry == null)
+                {
+                    return null;
+                }
+
+                if (i < pathParts.Length - 1)
+                {
+                    if (entry.TargetType != TreeEntryTargetType.Tree)
+                    {
+                        return null;
+                    }
+                    currentTree = (Tree)entry.Target;
+                }
+            }
+
+            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+            {
+                return null;
+            }
+
+            var blob = (Blob)entry.Target;
+            using var contentStream = blob.GetContentStream();
+            using var reader = new StreamReader(contentStream);
+            return reader.ReadToEnd();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"从Git仓库读取文件失败: {filePath}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 从仓库中检出指定路径的文件或文件夹到目标位置
+    /// </summary>
+    /// <param name="repoPath">仓库路径</param>
+    /// <param name="sourcePath">仓库中的相对路径</param>
+    /// <param name="destPath">目标路径</param>
+    private void CheckoutPath(string repoPath, string sourcePath, string destPath)
+    {
+        // 检查是否为Git仓库
+        if (Repository.IsValid(repoPath))
+        {
+            // 从Git仓库检出
+            using var repo = new Repository(repoPath);
+            var commit = repo.Head.Tip;
+
+            if (commit == null)
+            {
+                _logger.LogError($"仓库HEAD未指向任何提交。HEAD: {repo.Head?.CanonicalName ?? "null"}");
+                throw new Exception("仓库HEAD未指向任何提交");
+            }
+
+            _logger.LogInformation($"开始从Git仓库检出路径: {sourcePath}, Commit: {commit.Sha[..7]}");
+
+            // 递归查找路径
+            TreeEntry? entry = null;
+            var pathParts = sourcePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            Tree currentTree = GetRepositoryRootTree(repo);
+
+            for (int i = 0; i < pathParts.Length; i++)
+            {
+                entry = currentTree[pathParts[i]];
+                if (entry == null)
+                {
+                    // 调试信息：列出当前树中的所有条目
+                    var availableEntries = string.Join(", ", currentTree.Select(e => e.Name));
+                    _logger.LogError($"在路径 '{string.Join("/", pathParts.Take(i))}' 中未找到 '{pathParts[i]}'");
+                    _logger.LogError($"可用的条目: {availableEntries}");
+                    throw new Exception($"仓库中不存在路径: {sourcePath}");
+                }
+
+                if (i < pathParts.Length - 1)
+                {
+                    if (entry.TargetType != TreeEntryTargetType.Tree)
+                    {
+                        throw new Exception($"路径中间部分不是目录: {string.Join("/", pathParts.Take(i + 1))}");
+                    }
+                    currentTree = (Tree)entry.Target;
+                }
+            }
+
+            // 检出文件或目录
+            if (entry == null)
+            {
+                throw new Exception($"未找到路径: {sourcePath}");
+            }
+
+            if (entry.TargetType == TreeEntryTargetType.Blob)
+            {
+                // 检出单个文件
+                var blob = (Blob)entry.Target;
+
+                // 确保目标目录存在
+                var dir = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                using (var contentStream = blob.GetContentStream())
+                using (var fileStream = File.Create(destPath))
+                {
+                    contentStream.CopyTo(fileStream);
+                }
+
+                _logger.LogInformation($"已检出文件: {sourcePath} -> {destPath}");
+            }
+            else if (entry.TargetType == TreeEntryTargetType.Tree)
+            {
+                // 检出目录
+                var tree = (Tree)entry.Target;
+                CheckoutTree(tree, destPath, sourcePath);
+                _logger.LogInformation($"已检出目录: {sourcePath} -> {destPath}");
+            }
+        }
+        else
+        {
+            // 老版本：从文件系统复制
+            var scriptPath = Path.Combine(repoPath, sourcePath);
+
+            if (Directory.Exists(scriptPath))
+            {
+                // 复制目录
+                CopyDirectory(scriptPath, destPath);
+                _logger.LogInformation($"已复制目录: {sourcePath} -> {destPath}");
+            }
+            else if (File.Exists(scriptPath))
+            {
+                // 复制文件
+                var dir = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.Copy(scriptPath, destPath, true);
+                _logger.LogInformation($"已复制文件: {sourcePath} -> {destPath}");
+            }
+            else
+            {
+                throw new Exception($"仓库中不存在路径: {sourcePath}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 递归检出树对象
+    /// </summary>
+    private void CheckoutTree(Tree tree, string destPath, string currentPath)
+    {
+        if (!Directory.Exists(destPath))
+        {
+            Directory.CreateDirectory(destPath);
+        }
+
+        foreach (var entry in tree)
+        {
+            var entryDestPath = Path.Combine(destPath, entry.Name);
+            var entrySourcePath = $"{currentPath}/{entry.Name}";
+
+            if (entry.TargetType == TreeEntryTargetType.Blob)
+            {
+                var blob = (Blob)entry.Target;
+                using var contentStream = blob.GetContentStream();
+                using var fileStream = File.Create(entryDestPath);
+                contentStream.CopyTo(fileStream);
+            }
+            else if (entry.TargetType == TreeEntryTargetType.Tree)
+            {
+                var subTree = (Tree)entry.Target;
+                CheckoutTree(subTree, entryDestPath, entrySourcePath);
+            }
         }
     }
 
@@ -553,22 +826,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public string FindCenterRepoPath()
     {
-        var localRepoJsonPath = Directory.GetFiles(CenterRepoPath, "repo.json", SearchOption.AllDirectories)
-            .FirstOrDefault();
-        if (localRepoJsonPath is null)
+        // 使用标准Git仓库，repo.json通过sparse-checkout检出到根目录
+        var repoJsonPath = Path.Combine(CenterRepoPath, "repo.json");
+        if (!File.Exists(repoJsonPath))
         {
             throw new Exception("本地仓库缺少 repo.json");
         }
 
-        // 获取与 localRepoJsonPath 同名（无扩展名）的文件夹路径
-        var folderName = Path.GetFileNameWithoutExtension(localRepoJsonPath);
-        var folderPath = Path.Combine(Path.GetDirectoryName(localRepoJsonPath)!, folderName);
-        if (!Directory.Exists(folderPath))
-        {
-            throw new Exception("本地仓库文件夹不存在");
-        }
-
-        return folderPath;
+        return CenterRepoPath;
     }
 
     private (string time, string url, string file) ParseJson(string jsonString)
@@ -794,19 +1059,53 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             //顶层节点，按库中的文件夹来
             if (path == "pathing")
             {
-                var scriptPath = Path.Combine(repoPath, path);
-                if (Directory.Exists(scriptPath))
+                // 兼容Git仓库和老版本文件系统读取pathing子目录
+                if (Repository.IsValid(repoPath))
                 {
-                    // 获取该路径下的所有“仅第一层文件夹”
-                    string[] directories = Directory.GetDirectories(scriptPath, "*", SearchOption.TopDirectoryOnly);
-                    foreach (var dir in directories)
+                    // 从Git仓库读取
+                    using var repo = new Repository(repoPath);
+                    var commit = repo.Head.Tip;
+                    if (commit == null)
                     {
-                        newPaths.Add("pathing" + "/" + Path.GetFileName(dir));
+                        throw new Exception("仓库HEAD未指向任何提交");
+                    }
+
+                    Tree rootTree = GetRepositoryRootTree(repo);
+
+                    var pathingEntry = rootTree["pathing"];
+                    if (pathingEntry != null && pathingEntry.TargetType == TreeEntryTargetType.Tree)
+                    {
+                        var pathingTree = (Tree)pathingEntry.Target;
+                        foreach (var entry in pathingTree)
+                        {
+                            if (entry.TargetType == TreeEntryTargetType.Tree)
+                            {
+                                newPaths.Add("pathing/" + entry.Name);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Toast.Warning($"未知的脚本路径：{path}");
                     }
                 }
                 else
                 {
-                    Toast.Warning($"未知的脚本路径：{path}");
+                    // 老版本：从文件系统读取
+                    var pathingDir = Path.Combine(repoPath, "pathing");
+                    if (Directory.Exists(pathingDir))
+                    {
+                        // 获取该路径下的所有“仅第一层文件夹”
+                        string[] directories = Directory.GetDirectories(pathingDir, "*", SearchOption.TopDirectoryOnly);
+                        foreach (var dir in directories)
+                        {
+                            newPaths.Add("pathing/" + Path.GetFileName(dir));
+                        }
+                    }
+                    else
+                    {
+                        Toast.Warning($"未知的脚本路径：{path}");
+                    }
                 }
             }
             else
@@ -815,13 +1114,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
         }
 
-        // 拷贝文件
+        // 从 Git 仓库检出文件到用户文件夹
         foreach (var path in newPaths)
         {
             var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
             if (PathMapper.TryGetValue(first, out var userPath))
             {
-                var scriptPath = Path.Combine(repoPath, path);
                 var destPath = Path.Combine(userPath, remainingPath);
 
                 // 备份需要保存的文件
@@ -831,29 +1129,23 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     backupFiles = BackupScriptFiles(path, repoPath);
                 }
 
-                if (Directory.Exists(scriptPath))
+                // 如果目标路径存在，先删除
+                if (Directory.Exists(destPath))
                 {
-                    if (Directory.Exists(destPath))
-                    {
-                        DirectoryHelper.DeleteDirectoryWithReadOnlyCheck(destPath);
-                    }
-
-                    CopyDirectory(scriptPath, destPath);
-
-                    // 图标处理
-                    DealWithIconFolder(destPath);
+                    DirectoryHelper.DeleteDirectoryWithReadOnlyCheck(destPath);
                 }
-                else if (File.Exists(scriptPath))
+                else if (File.Exists(destPath))
                 {
-                    // 目标文件所在文件夹不存在时创建它
-                    Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                    File.Delete(destPath);
+                }
 
-                    if (File.Exists(destPath))
-                    {
-                        File.Delete(destPath);
-                    }
+                // 从 Git 仓库检出文件或目录
+                CheckoutPath(repoPath, path, destPath);
 
-                    File.Copy(scriptPath, destPath, true);
+                // 图标处理（仅对目录）
+                if (Directory.Exists(destPath))
+                {
+                    DealWithIconFolder(destPath);
                 }
 
                 // 恢复备份的文件
@@ -1203,16 +1495,32 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 Directory.CreateDirectory(backupScriptDir);
             }
 
-            // 获取脚本的manifest文件路径
-            var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
-            if (!File.Exists(scriptManifestPath))
+            // 获取脚本的manifest文件内容
+            string? manifestContent = null;
+
+            if (Repository.IsValid(repoPath))
             {
-                _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
-                return backupFiles;
+                // 从Git仓库读取
+                manifestContent = ReadFileFromGitRepository(repoPath, $"{scriptPath}/manifest.json");
+                if (manifestContent == null)
+                {
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptPath}/manifest.json");
+                    return backupFiles;
+                }
+            }
+            else
+            {
+                // 老版本：从文件系统读取
+                var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
+                if (!File.Exists(scriptManifestPath))
+                {
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
+                    return backupFiles;
+                }
+                manifestContent = File.ReadAllText(scriptManifestPath);
             }
 
             // 解析manifest文件获取savedFiles
-            var manifestContent = File.ReadAllText(scriptManifestPath);
             var manifest = Manifest.FromJson(manifestContent);
 
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
@@ -1309,16 +1617,32 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var backupScriptDir = Path.Combine(tempBackupPath, scriptPathSafe);
         try
         {
-            // 获取脚本的manifest文件路径
-            var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
-            if (!File.Exists(scriptManifestPath))
+            // 获取脚本的manifest文件内容
+            string? manifestContent = null;
+
+            if (Repository.IsValid(repoPath))
             {
-                _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
-                return;
+                // 从Git仓库读取
+                manifestContent = ReadFileFromGitRepository(repoPath, $"{scriptPath}/manifest.json");
+                if (manifestContent == null)
+                {
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptPath}/manifest.json");
+                    return;
+                }
+            }
+            else
+            {
+                // 老版本：从文件系统读取
+                var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
+                if (!File.Exists(scriptManifestPath))
+                {
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
+                    return;
+                }
+                manifestContent = File.ReadAllText(scriptManifestPath);
             }
 
             // 解析manifest文件获取savedFiles
-            var manifestContent = File.ReadAllText(scriptManifestPath);
             var manifest = Manifest.FromJson(manifestContent);
 
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
