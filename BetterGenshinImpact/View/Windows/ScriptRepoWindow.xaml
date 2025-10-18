@@ -81,7 +81,8 @@
                                           VerticalAlignment="Center"
                                           DisplayMemberPath="Name"
                                           ItemsSource="{Binding RepoChannels}"
-                                          SelectedItem="{Binding SelectedRepoChannel}" />
+                                          SelectedItem="{Binding SelectedRepoChannel}"
+                                          IsTextSearchEnabled="False" />
                             </Grid>
 
                             <!--  第二行：脚本仓库URL  -->
@@ -96,12 +97,22 @@
                                               VerticalAlignment="Center"
                                               Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
                                               Text="仓库地址：" />
+
+                                <!-- 只读模式：显示文本 -->
+                                <ui:TextBlock Grid.Column="1"
+                                              MinWidth="160"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                              Text="{Binding CurrentRepoUrl}"
+                                              TextWrapping="Wrap"
+                                              Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                <!-- 编辑模式：可输入 -->
                                 <TextBox Grid.Column="1"
                                          MinWidth="160"
                                          VerticalAlignment="Center"
-                                         IsEnabled="{Binding IsRepoUrlReadOnly, Converter={StaticResource InverseBooleanConverter}}"
-                                         IsReadOnly="{Binding IsRepoUrlReadOnly}"
-                                         Text="{Binding Config.SelectedRepoUrl}" />
+                                         Text="{Binding Config.CustomRepoUrl, UpdateSourceTrigger=PropertyChanged}"
+                                         Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                             </Grid>
 
                             <!--  第三行：按钮组  -->

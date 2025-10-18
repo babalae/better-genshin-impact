@@ -26,20 +26,6 @@ namespace BetterGenshinImpact.View.Windows;
 [ObservableObject]
 public partial class ScriptRepoWindow
 {
-    // 转换器类
-    public class InverseBooleanConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return value is bool b ? !b : value;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return value is bool b ? !b : value;
-        }
-    }
-
     // 更新渠道类
     public class RepoChannel
     {
@@ -72,6 +58,19 @@ public partial class ScriptRepoWindow
     // 在线更新相关属性
     [ObservableProperty] private string _onlineDownloadUrl = "";
 
+    // 获取当前仓库URL（用于界面显示）
+    public string CurrentRepoUrl
+    {
+        get
+        {
+            if (SelectedRepoChannel == null)
+            {
+                return "";
+            }
+            return SelectedRepoChannel.Name == "自定义" ? Config.CustomRepoUrl : SelectedRepoChannel.Url;
+        }
+    }
+
     public ScriptRepoWindow()
     {
         InitializeRepoChannels();
@@ -83,6 +82,9 @@ public partial class ScriptRepoWindow
         {
             // 应用系统背景
             WindowHelper.TryApplySystemBackdrop(this);
+
+            // 设置仓库地址的只读状态
+            IsRepoUrlReadOnly = SelectedRepoChannel == null || SelectedRepoChannel.Name != "自定义";
         };
     }
 
@@ -108,9 +110,10 @@ public partial class ScriptRepoWindow
 
     private void OnConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ScriptConfig.SelectedRepoUrl))
+        // 监听CustomRepoUrl变化，通知界面更新显示
+        if (e.PropertyName == nameof(ScriptConfig.CustomRepoUrl))
         {
-            OnConfigSelectedRepoUrlChanged();
+            OnPropertyChanged(nameof(CurrentRepoUrl));
         }
     }
 
@@ -134,49 +137,23 @@ public partial class ScriptRepoWindow
             new("自定义", "https://example.com/custom-repo")
         };
 
-        if (string.IsNullOrEmpty(Config.SelectedRepoUrl))
+        // 根据配置中保存的渠道名称恢复选择
+        if (string.IsNullOrEmpty(Config.SelectedChannelName))
         {
             // 默认选中第一个渠道
             SelectedRepoChannel = _repoChannels[0];
-            Config.SelectedRepoUrl = SelectedRepoChannel.Url;
+            Config.SelectedChannelName = SelectedRepoChannel.Name;
         }
         else
         {
-            // 尝试根据配置中的URL找到对应的渠道
-            OnConfigSelectedRepoUrlChanged();
-        }
-    }
+            // 根据保存的渠道名称找到对应的渠道
+            var savedChannel = _repoChannels.FirstOrDefault(c => c.Name == Config.SelectedChannelName);
+            SelectedRepoChannel = savedChannel ?? _repoChannels[0];
 
-    // Config.SelectedRepoUrl 变化
-    private void OnConfigSelectedRepoUrlChanged()
-    {
-        // 如果配置中的URL与当前选中渠道不一致，更新选中渠道
-        if (string.IsNullOrEmpty(Config.SelectedRepoUrl))
-        {
-            SelectedRepoChannel = _repoChannels[0];
-            Config.SelectedRepoUrl = SelectedRepoChannel.Url;
-            return;
-        }
-
-        // 尝试找到匹配的预定义渠道
-        var matchedChannel = _repoChannels.FirstOrDefault(c => 
-            c.Name != "自定义" && c.Url == Config.SelectedRepoUrl);
-        
-        if (matchedChannel != null)
-        {
-            SelectedRepoChannel = matchedChannel;
-        }
-        else
-        {
-            // 没有匹配的预定义渠道，选择自定义渠道
-            var customChannel = _repoChannels.FirstOrDefault(c => c.Name == "自定义");
-            if (customChannel != null)
+            // 如果找不到保存的渠道，更新配置为默认渠道
+            if (savedChannel == null)
             {
-                SelectedRepoChannel = customChannel;
-            }
-            else
-            {
-                SelectedRepoChannel = _repoChannels[0];
+                Config.SelectedChannelName = _repoChannels[0].Name;
             }
         }
     }
@@ -188,15 +165,14 @@ public partial class ScriptRepoWindow
             return;
         }
 
+        // 保存选择的渠道名称
+        Config.SelectedChannelName = SelectedRepoChannel.Name;
+
         // 更新仓库地址只读状态
         IsRepoUrlReadOnly = SelectedRepoChannel.Name != "自定义";
 
-        // 更新配置中的选中仓库URL
-        if (SelectedRepoChannel.Name != "自定义")
-        {
-            // 如果不是自定义渠道，使用选中渠道的URL
-            Config.SelectedRepoUrl = SelectedRepoChannel.Url;
-        }
+        // 通知界面更新CurrentRepoUrl
+        OnPropertyChanged(nameof(CurrentRepoUrl));
     }
 
     [RelayCommand]
@@ -208,30 +184,20 @@ public partial class ScriptRepoWindow
             return;
         }
 
-        // 确定要使用的URL
-        string repoUrl;
-        if (SelectedRepoChannel.Name == "自定义")
+        // 获取当前仓库URL
+        string repoUrl = CurrentRepoUrl;
+
+        // 验证URL
+        if (string.IsNullOrWhiteSpace(repoUrl))
         {
-            // 使用配置中的自定义URL
-            repoUrl = Config.SelectedRepoUrl;
-            
-            // 验证自定义URL
-            if (string.IsNullOrWhiteSpace(repoUrl))
-            {
-                Toast.Warning("请输入自定义仓库URL。");
-                return;
-            }
-            
-            if (repoUrl == "https://example.com/custom-repo")
-            {
-                Toast.Warning("请修改默认的自定义URL为有效的仓库地址。");
-                return;
-            }
+            Toast.Warning("请输入自定义仓库URL。");
+            return;
         }
-        else
+
+        if (repoUrl == "https://example.com/custom-repo")
         {
-            // 使用预定义渠道的URL
-            repoUrl = SelectedRepoChannel.Url;
+            Toast.Warning("请修改默认的自定义URL为有效的仓库地址。");
+            return;
         }
 
         if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out _))
