@@ -62,6 +62,8 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <!--  第一行：更新渠道  -->
@@ -81,7 +83,8 @@
                                           VerticalAlignment="Center"
                                           DisplayMemberPath="Name"
                                           ItemsSource="{Binding RepoChannels}"
-                                          SelectedItem="{Binding SelectedRepoChannel}" />
+                                          SelectedItem="{Binding SelectedRepoChannel}"
+                                          IsTextSearchEnabled="False" />
                             </Grid>
 
                             <!--  第二行：脚本仓库URL  -->
@@ -96,16 +99,71 @@
                                               VerticalAlignment="Center"
                                               Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
                                               Text="仓库地址：" />
+
+                                <!-- 只读模式：显示文本 -->
+                                <ui:TextBlock Grid.Column="1"
+                                              MinWidth="160"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                              Text="{Binding CurrentRepoUrl}"
+                                              TextWrapping="Wrap"
+                                              Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                <!-- 编辑模式：可输入 -->
                                 <TextBox Grid.Column="1"
                                          MinWidth="160"
                                          VerticalAlignment="Center"
-                                         IsEnabled="{Binding IsRepoUrlReadOnly, Converter={StaticResource InverseBooleanConverter}}"
-                                         IsReadOnly="{Binding IsRepoUrlReadOnly}"
-                                         Text="{Binding Config.SelectedRepoUrl}" />
+                                         Text="{Binding Config.CustomRepoUrl, UpdateSourceTrigger=PropertyChanged}"
+                                         Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                             </Grid>
 
-                            <!--  第三行：按钮组  -->
-                            <Grid Grid.Row="2" Margin="0,0,0,8">
+                            <!--  第三行：Git 用户名 -->
+                            <Grid Grid.Row="2"
+                                  Margin="0,0,0,12"
+                                  Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:TextBlock Grid.Column="0"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                              Text="用户名称：" />
+
+                                <!-- 编辑模式：可输入 -->
+                                <TextBox Grid.Column="1"
+                                         MinWidth="160"
+                                         VerticalAlignment="Center"
+                                         Text="{Binding GitUsername, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+
+                            <!--  第四行：Git Token -->
+                            <Grid Grid.Row="3"
+                                  Margin="0,0,0,12"
+                                  Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <ui:TextBlock Grid.Column="0"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center"
+                                              Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                              Text="访问令牌：" />
+
+                                <!-- 编辑模式：可输入 -->
+                                <PasswordBox x:Name="GitTokenPasswordBox"
+                                             Grid.Column="1"
+                                             MinWidth="160"
+                                             VerticalAlignment="Center"
+                                             PasswordChanged="PasswordBox_PasswordChanged" />
+                            </Grid>
+
+                            <!--  第五行：按钮组  -->
+                            <Grid Grid.Row="4" Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition />
                                     <ColumnDefinition />
