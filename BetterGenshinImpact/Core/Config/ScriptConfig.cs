@@ -31,10 +31,4 @@ public partial class ScriptConfig : ObservableObject
 
     // 自定义渠道的URL
     [ObservableProperty] private string _customRepoUrl = "";
-
-    // Git 用户名
-    [ObservableProperty] private string _gitUsername = "";
-
-    // Git 令牌
-    [ObservableProperty] private string _gitToken = "";
 }

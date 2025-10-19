@@ -3,8 +3,10 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Helpers.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Meziantou.Framework.Win32;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -55,6 +57,12 @@ public partial class ScriptRepoWindow
     [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
     [ObservableProperty] private ScriptConfig _config = TaskContext.Instance().Config.ScriptConfig;
 
+    // Git 凭据相关属性
+    private const string GitCredentialAppName = "BetterGenshinImpact.GitCredentials";
+
+    [ObservableProperty] private string _gitUsername = "";
+    [ObservableProperty] private string _gitToken = "";
+
     // 在线更新相关属性
     [ObservableProperty] private string _onlineDownloadUrl = "";
 
@@ -74,10 +82,15 @@ public partial class ScriptRepoWindow
     public ScriptRepoWindow()
     {
         InitializeRepoChannels();
+        LoadCredentialsFromManager();
         InitializeComponent();
         DataContext = this;
         Config.PropertyChanged += OnConfigPropertyChanged;
         PropertyChanged += OnPropertyChanged;
+
+        // 设置 PasswordBox 的初始值
+        Loaded += (s, e) => GitTokenPasswordBox.Password = GitToken;
+
         SourceInitialized += (s, e) =>
         {
             // 应用系统背景
@@ -100,6 +113,34 @@ public partial class ScriptRepoWindow
         {
             OnIsUpdatingChanged();
         }
+        // 监听 GitUsername 和 GitToken 变化，保存到凭据管理器
+        else if (e.PropertyName == nameof(GitUsername) || e.PropertyName == nameof(GitToken))
+        {
+            SaveCredentialsToManager();
+        }
+    }
+
+    /// <summary>
+    /// 从 Windows 凭据管理器加载 Git 凭据
+    /// </summary>
+    private void LoadCredentialsFromManager()
+    {
+        var credential = CredentialManagerHelper.ReadCredential(GitCredentialAppName);
+        GitUsername = credential?.UserName ?? "";
+        GitToken = credential?.Password ?? "";
+    }
+
+    /// <summary>
+    /// 保存 Git 凭据到 Windows 凭据管理器
+    /// </summary>
+    private void SaveCredentialsToManager()
+    {
+        CredentialManagerHelper.SaveCredential(
+            GitCredentialAppName,
+            GitUsername,
+            GitToken,
+            "Git credentials for BetterGenshinImpact script repository",
+            CredentialPersistence.LocalMachine);
     }
 
     ~ScriptRepoWindow()
@@ -498,5 +539,17 @@ public partial class ScriptRepoWindow
             MessageBox.Show($"无法打开链接: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// 处理 PasswordBox 的密码变化事件
+    /// </summary>
+    private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.PasswordBox passwordBox)
+        {
+            // 更新 GitToken 属性，触发自动保存到凭据管理器
+            GitToken = passwordBox.Password;
+        }
     }
 }

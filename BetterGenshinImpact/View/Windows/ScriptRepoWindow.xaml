@@ -136,7 +136,7 @@
                                 <TextBox Grid.Column="1"
                                          MinWidth="160"
                                          VerticalAlignment="Center"
-                                         Text="{Binding Config.GitUsername, UpdateSourceTrigger=PropertyChanged}" />
+                                         Text="{Binding GitUsername, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
 
                             <!--  第四行：Git Token -->
@@ -155,10 +155,11 @@
                                               Text="访问令牌：" />
 
                                 <!-- 编辑模式：可输入 -->
-                                <TextBox Grid.Column="1"
-                                         MinWidth="160"
-                                         VerticalAlignment="Center"
-                                         Text="{Binding Config.GitToken, UpdateSourceTrigger=PropertyChanged}" />
+                                <PasswordBox x:Name="GitTokenPasswordBox"
+                                             Grid.Column="1"
+                                             MinWidth="160"
+                                             VerticalAlignment="Center"
+                                             PasswordChanged="PasswordBox_PasswordChanged" />
                             </Grid>
 
                             <!--  第五行：按钮组  -->

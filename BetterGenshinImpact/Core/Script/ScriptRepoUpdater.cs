@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -499,13 +500,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <returns>凭据处理器</returns>
     private CredentialsHandler? CreateCredentialsHandler()
     {
-        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+        // 从凭据管理器读取 Git 凭据
+        var credential = CredentialManagerHelper.ReadCredential("BetterGenshinImpact.GitCredentials");
 
-        // 如果没有配置凭据，返回 null
-        if (string.IsNullOrEmpty(scriptConfig.GitToken))
-        {
-            return null;
-        }
 
         // 返回凭据处理器
         return (url, usernameFromUrl, types) =>
@@ -513,8 +510,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogInformation($"使用配置的Git凭据进行身份验证");
             return new UsernamePasswordCredentials
             {
-                Username = scriptConfig.GitUsername,
-                Password = scriptConfig.GitToken
+                Username = credential?.UserName ?? "",
+                Password = credential?.Password ?? ""
             };
         };
     }
