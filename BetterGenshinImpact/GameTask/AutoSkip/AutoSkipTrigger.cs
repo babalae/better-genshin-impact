@@ -41,7 +41,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool IsExclusive => false;
 
     public bool IsBackgroundRunning { get; private set; }
-    
+
     public bool UseBackgroundOperation { get; private set; }
 
     public bool IsUseInteractionKey { get; set; } = false;
@@ -66,7 +66,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private List<string> _selectList = [];
 
     private PostMessageSimulator? _postMessageSimulator;
-    
+
     private readonly bool _isCustomConfiguration;
 
     public AutoSkipTrigger()
@@ -74,7 +74,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         _autoSkipAssets = AutoSkipAssets.Instance;
         _config = TaskContext.Instance().Config.AutoSkipConfig;
     }
-    
+
     /// <summary>
     /// 用于内部的其他方法调用
     /// </summary>
@@ -162,6 +162,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             return;
         }
+
         UseBackgroundOperation = IsBackgroundRunning && !SystemControl.IsGenshinImpactActive();
 
         _prevExecute = DateTime.Now;
@@ -206,7 +207,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 if (IsUseInteractionKey)
                 {
-                    _postMessageSimulator? .SimulateActionBackground(GIActions.PickUpOrInteract); // 注意这里不是交互键 NOTE By Ayu0K: 这里确实是交互键
+                    _postMessageSimulator?.SimulateActionBackground(GIActions.PickUpOrInteract); // 注意这里不是交互键 NOTE By Ayu0K: 这里确实是交互键
                 }
                 else
                 {
@@ -427,7 +428,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             return false;
         }
-        
+
         using var chatOptionResult = region.Find(_autoSkipAssets.OptionIconRo);
         var isInChat = false;
         isInChat = chatOptionResult.IsExist();
@@ -464,7 +465,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 Thread.Sleep(100);
                 _postMessageSimulator?.KeyPressBackground(fKey);
             }
-            
+
             AutoSkipLog("交互键点击(后台)");
 
             return true;
@@ -702,7 +703,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             return;
         }
-        
+
         content.CaptureRectArea.Find(_autoSkipAssets.PageCloseRo, pageCloseRoRa =>
         {
             if (!Bv.IsInBigMapUi(content.CaptureRectArea))
@@ -721,26 +722,28 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// <param name="content"></param>
     private void CloseItemPopup(CaptureContent content)
     {
-        //屏幕底部中间，实心黄色三角的位置
-        using var croppedRegion = content.CaptureRectArea.DeriveCrop(945, 1040, 30, 20);
+        //屏幕底部中间，实心三角的位置
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        using var croppedRegion = content.CaptureRectArea.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
 
         using var hsv = new Mat();
         Cv2.CvtColor(croppedRegion.SrcMat, hsv, ColorConversionCodes.BGR2HSV);
 
-        using var mask = new Mat();
-        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), mask);
+        using var yellowMask = new Mat();
+        using var buleMask = new Mat();
+        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), yellowMask);
+        Cv2.InRange(hsv, new Scalar(87, 131, 142), new Scalar(124, 255, 255), buleMask);  //活动玩法介绍会有出现蓝色三角，但不一定在对话流程中出现，先加上
 
-        Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Cv2.FindContours(yellowMask, out var yellowContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Cv2.FindContours(buleMask, out var buleMaskContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
-        foreach (var contour in contours)
+        var mergedContours = yellowContours.Concat(buleMaskContours).ToArray();
+        foreach (var contour in mergedContours)
         {
             var area = Cv2.ContourArea(contour);
-
-            if (!(area >= 20) || !(area <= 50)) continue;
-
             var approx = Cv2.ApproxPolyDP(contour, 0.04 * Cv2.ArcLength(contour, true), true);
-
-            if (approx.Length != 3) continue;
+            
+            if (area > 50 || approx.Length != 3) continue;
 
             if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
             {
@@ -751,7 +754,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
             }
 
-            _logger.LogInformation($"自动剧情：点击黄色三角形");
+            _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
             return;
         }
     }
@@ -763,10 +766,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private void CloseCharacterPopup(CaptureContent content)
     {
         using var srcMat = content.CaptureRectArea.SrcMat.Clone();
-
+        var scale = (int)TaskContext.Instance().SystemInfo.AssetScale;
         // 把被角色头像遮挡的矩形闭合（假设矩形存在）
-        Cv2.Rectangle(srcMat, new Rect(240, 395, 300, 50), new Scalar(229, 241, 245), -1);
-        Cv2.Rectangle(srcMat, new Rect(290, 660, 210, 40), new Scalar(101, 82, 74), -1);
+        Cv2.Rectangle(srcMat, new Rect(240*scale, 395*scale, 300*scale, 50*scale), new Scalar(229, 241, 245), -1);
+        Cv2.Rectangle(srcMat, new Rect(290*scale, 660*scale, 210*scale, 40*scale), new Scalar(101, 82, 74), -1);
 
         using var hsv = new Mat();
         Cv2.CvtColor(srcMat, hsv, ColorConversionCodes.BGR2HSV);
