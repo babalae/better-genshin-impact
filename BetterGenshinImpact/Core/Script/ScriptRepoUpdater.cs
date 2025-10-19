@@ -553,6 +553,78 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
+    /// 从中央仓库读取文件内容
+    /// </summary>
+    /// <param name="relPath">相对于仓库根目录的路径</param>
+    /// <returns>文件内容，如果文件不存在则返回null</returns>
+    public string? ReadFileFromCenterRepo(string relPath)
+    {
+        try
+        {
+            var repoPath = CenterRepoPath;
+
+            // 判断是否为 Git 仓库
+            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+
+            if (isGitRepo)
+            {
+                return ReadFileFromGitRepository(repoPath, relPath);
+            }
+            else
+            {
+                // 老版本：从文件系统读取
+                var filePath = Path.Combine(repoPath, "repo", relPath);
+                if (File.Exists(filePath))
+                {
+                    return File.ReadAllText(filePath);
+                }
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"从中央仓库读取文件失败: {relPath}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 从中央仓库读取二进制文件
+    /// </summary>
+    /// <param name="relPath">相对于仓库根目录的路径</param>
+    /// <returns>文件字节数组，如果文件不存在则返回null</returns>
+    public byte[]? ReadBinaryFileFromCenterRepo(string relPath)
+    {
+        try
+        {
+            var repoPath = CenterRepoPath;
+
+            // 判断是否为 Git 仓库
+            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+
+            if (isGitRepo)
+            {
+                return ReadBinaryFileFromGitRepository(repoPath, relPath);
+            }
+            else
+            {
+                // 老版本：从文件系统读取
+                var filePath = Path.Combine(repoPath, "repo", relPath);
+                if (File.Exists(filePath))
+                {
+                    return File.ReadAllBytes(filePath);
+                }
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"从中央仓库读取二进制文件失败: {relPath}");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// 从Git仓库读取文件内容
     /// </summary>
     private string? ReadFileFromGitRepository(string repoPath, string filePath)
@@ -604,6 +676,63 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         catch (Exception ex)
         {
             _logger.LogError(ex, $"从Git仓库读取文件失败: {filePath}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 从Git仓库读取二进制文件内容
+    /// </summary>
+    private byte[]? ReadBinaryFileFromGitRepository(string repoPath, string filePath)
+    {
+        try
+        {
+            // 判断是否为 Git 仓库
+            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            if (!isGitRepo)
+            {
+                return null;
+            }
+
+            using var repo = new Repository(repoPath);
+
+            var manifestPath = $"repo/{filePath}";
+            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            Tree currentTree = repo.Head.Tip!.Tree;
+            TreeEntry? entry = null;
+
+            for (int i = 0; i < pathParts.Length; i++)
+            {
+                entry = currentTree[pathParts[i]];
+                if (entry == null)
+                {
+                    return null;
+                }
+
+                if (i < pathParts.Length - 1)
+                {
+                    if (entry.TargetType != TreeEntryTargetType.Tree)
+                    {
+                        return null;
+                    }
+                    currentTree = (Tree)entry.Target;
+                }
+            }
+
+            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+            {
+                return null;
+            }
+
+            var blob = (Blob)entry.Target;
+            using var contentStream = blob.GetContentStream();
+            using var memoryStream = new MemoryStream();
+            contentStream.CopyTo(memoryStream);
+            return memoryStream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"从Git仓库读取二进制文件失败: {filePath}");
             return null;
         }
     }
