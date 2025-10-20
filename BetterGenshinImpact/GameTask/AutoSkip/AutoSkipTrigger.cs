@@ -721,26 +721,28 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// <param name="content"></param>
     private void CloseItemPopup(CaptureContent content)
     {
-        //屏幕底部中间，实心黄色三角的位置
-        using var croppedRegion = content.CaptureRectArea.DeriveCrop(945, 1040, 30, 20);
+        //屏幕底部中间，实心三角的位置
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        using var croppedRegion = content.CaptureRectArea.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
 
         using var hsv = new Mat();
         Cv2.CvtColor(croppedRegion.SrcMat, hsv, ColorConversionCodes.BGR2HSV);
 
-        using var mask = new Mat();
-        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), mask);
+        using var yellowMask = new Mat();
+        using var buleMask = new Mat();
+        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), yellowMask);
+        Cv2.InRange(hsv, new Scalar(87, 131, 142), new Scalar(124, 255, 255), buleMask);  //活动玩法介绍会有出现蓝色三角，但不一定在对话流程中出现，先加上
 
-        Cv2.FindContours(mask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Cv2.FindContours(yellowMask, out var yellowContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Cv2.FindContours(buleMask, out var buleMaskContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
-        foreach (var contour in contours)
+        var mergedContours = yellowContours.Concat(buleMaskContours).ToArray();
+        foreach (var contour in mergedContours)
         {
             var area = Cv2.ContourArea(contour);
-
-            if (!(area >= 20) || !(area <= 50)) continue;
-
             var approx = Cv2.ApproxPolyDP(contour, 0.04 * Cv2.ArcLength(contour, true), true);
-
-            if (approx.Length != 3) continue;
+            
+            if (area > 50 || approx.Length != 3) continue;
 
             if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
             {
@@ -751,7 +753,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
             }
 
-            _logger.LogInformation($"自动剧情：点击黄色三角形");
+            _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
             return;
         }
     }
@@ -763,11 +765,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private void CloseCharacterPopup(CaptureContent content)
     {
         using var srcMat = content.CaptureRectArea.SrcMat.Clone();
-
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
         // 把被角色头像遮挡的矩形闭合（假设矩形存在）
-        Cv2.Rectangle(srcMat, new Rect(240, 395, 300, 50), new Scalar(229, 241, 245), -1);
-        Cv2.Rectangle(srcMat, new Rect(290, 660, 210, 40), new Scalar(101, 82, 74), -1);
-
+        Cv2.Rectangle(srcMat, new Rect((int)(240 * scale), (int)(395 * scale), (int)(300 * scale), (int)(50 * scale)), new Scalar(229, 241, 245), -1);
+        Cv2.Rectangle(srcMat, new Rect((int)(290 * scale), (int)(660 * scale), (int)(210 * scale), (int)(40 * scale)), new Scalar(101, 82, 74), -1);
+        
         using var hsv = new Mat();
         Cv2.CvtColor(srcMat, hsv, ColorConversionCodes.BGR2HSV);
 
