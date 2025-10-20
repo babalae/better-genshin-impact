@@ -69,37 +69,14 @@ public class EngineExtend
 
         engine.AddHostType("ServerTime", typeof(ServerTime));
         
-        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
+        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam));
 
         // 添加ClearScript辅助类
+        engine.AllowReflection = true; // 允许反射
         engine.AddHostObject("HostFunctions", new HostFunctions());
         // 用于辅助JsTypeDef创建空对象导出JS类型信息
-        engine.AddHostObject("__getNullInstance", new Func<object, object>((object obj) => {
-            // obj是HostType，通过反射获取真实Type，然后创建一个nullwrapper
-            var asm = typeof(HostItemFlags).Assembly;
-
-            // public Type[] Types { get; }
-            var hostType = asm.GetType("Microsoft.ClearScript.HostType", true);
-            if (hostType == null) throw new InvalidOperationException("HostType type not found");
-            var typesProp = hostType.GetProperty("Types", BindingFlags.Public | BindingFlags.Instance);
-            if (typesProp == null) throw new InvalidOperationException("HostType.Types property not found");
-            var types = (Type[]?)typesProp.GetValue(obj);
-            if (types == null || types.Length == 0) throw new InvalidOperationException("HostType.Types is null or empty");
-            if (types.Length > 1) throw new InvalidOperationException("HostType.Types has multiple types, cannot determine which one to create");
-            var type = types[0];
-            // App.GetLogger<EngineExtend>().LogDebug($"[Script] 创建类型 {type.FullName} 的 null HostObject");
-
-            // private static HostObject GetNullWrapper(Type type)
-            var hostObject = asm.GetType("Microsoft.ClearScript.HostObject", true);
-            if (hostObject == null) throw new InvalidOperationException("HostObject type not found");
-            var getNullWrapperMethod = hostObject.GetMethod("GetNullWrapper", BindingFlags.NonPublic | BindingFlags.Static);
-            if (getNullWrapperMethod == null) throw new InvalidOperationException("HostObject.GetNullWrapper method not found");
-            var instance = getNullWrapperMethod.Invoke(null, [type]);
-            if (instance == null) throw new InvalidOperationException("HostObject.GetNullWrapper returned null");
-
-            return instance;
-        }));
+        engine.AddHostObject("TypeHelper", new TypeHelper(engine));
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));

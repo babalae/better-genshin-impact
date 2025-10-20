@@ -48,7 +48,7 @@
       'gc',
 
       // ClearScript 相关
-      'EngineInternal', 'HostObject', 'HostInvocable', 'HostFunctions', '__getNullInstance',
+      'EngineInternal', 'HostObject', 'HostInvocable', 'HostFunctions', 'TypeHelper',
 
       // C# 相关
       'Task',
@@ -193,11 +193,31 @@
   function tryCreateInstance(typeObj) {
     try {
       // return HostFunctions.newVar(typeObj, null);
-      return __getNullInstance(typeObj);
+      return TypeHelper.GetNullInstance(typeObj);
     } catch (e) {
       log.info(`  ⚠ 无法创建实例: ${e.message}`);
       return null;
     }
+  }
+
+  /**
+   * 获取方法的重载信息
+   */
+  function getMethodOverloads(typeObj, methodName) {
+    try {
+      const overloads = JSON.parse(TypeHelper.GetMethodDefinitionForType(typeObj, methodName));
+      if (overloads && Array.isArray(overloads)) {
+        return overloads.map(o => ({
+          name: o.name,
+          definition: o.definition,
+          parameterTypes: o.parameterTypes || [],
+          paramCount: (o.parameterTypes || []).length
+        }));
+      }
+    } catch (e) {
+      log.debug(`  ⚠ 无法获取方法 ${methodName} 的重载信息: ${e.message}`);
+    }
+    return null;
   }
 
   /**
@@ -235,10 +255,20 @@
       const typeInfo = getDetailedType(value);
       
       if (typeInfo.kind === 'function') {
-        structure.methods[key] = {
+        const methodInfo = {
           params: typeInfo.params,
           type: 'Function',
         };
+        
+        // 如果是构造函数类型，获取方法重载信息
+        if (isCtorType) {
+          const overloads = getMethodOverloads(obj, key);
+          if (overloads && overloads.length > 0) {
+            methodInfo.overloads = overloads;
+          }
+        }
+        
+        structure.methods[key] = methodInfo;
       } else {
         structure.properties[key] = {
           type: typeInfo.tsType,
@@ -268,10 +298,18 @@
           const typeInfo = getDetailedType(value);
           
           if (typeInfo.kind === 'function') {
-            structure.instanceMethods[key] = {
+            const methodInfo = {
               params: typeInfo.params,
               type: 'Function',
             };
+            
+            // 获取实例方法的重载信息
+            const overloads = getMethodOverloads(obj, key);
+            if (overloads && overloads.length > 0) {
+              methodInfo.overloads = overloads;
+            }
+            
+            structure.instanceMethods[key] = methodInfo;
           } else {
             structure.instanceProperties[key] = {
               type: typeInfo.tsType,
@@ -299,6 +337,41 @@
    * 生成类型断言代码
    * 使用 TypeScript 的结构化类型检查
    */
+  
+  // 仅在生成器内部使用：根据参数个数生成“纯静态（TSC）重载校验”函数（静态方法）
+  function emitStaticOverloadCountChecks(lines, ownerName, methodPath, counts, indent = 0) {
+    const i = '  '.repeat(indent);
+    // const fnName = `__tc_only__${sanitizeName(ownerName)}_${sanitizeName(methodPath.replace(/\W+/g, '_'))}`;
+    const sorted = Array.from(new Set(counts)).sort((a, b) => a - b);
+
+    lines.push(`${i}// 纯静态重载检查：${methodPath}（仅校验各参数个数是否可调用）`);
+    // lines.push(`${i}function ${fnName}(f: typeof ${methodPath}) {`);
+    lines.push(`${i}(f: typeof ${methodPath}) => {`);
+    for (const n of sorted) {
+      const args = n === 0 ? '' : Array.from({ length: n }, () => 'undefined as any').join(', ');
+      lines.push(`${i}  void f(${args}); // 参数个数 = ${n}`);
+    }
+    lines.push(`${i}}`);
+  }
+
+  // 仅在生成器内部使用：根据参数个数生成“纯静态（TSC）重载校验”函数（实例方法）
+  function emitInstanceOverloadCountChecks(lines, ctorName, methodName, counts, indent = 0) {
+    const i = '  '.repeat(indent);
+    const safeCtor = sanitizeName(ctorName);
+    const safeMethod = sanitizeName(methodName);
+    // const fnName = `__tc_only__${safeCtor}_inst_${safeMethod}`;
+    const sorted = Array.from(new Set(counts)).sort((a, b) => a - b);
+
+    lines.push(`${i}// 纯静态重载检查：实例方法 ${ctorName}.${methodName}（仅校验各参数个数是否可调用）`);
+    // lines.push(`${i}function ${fnName}(inst: InstanceType<typeof ${ctorName}>) {`);
+    lines.push(`${i}(inst: InstanceType<typeof ${ctorName}>) => {`);
+    for (const n of sorted) {
+      const args = n === 0 ? '' : Array.from({ length: n }, () => 'undefined as any').join(', ');
+      lines.push(`${i}  void inst.${methodName}(${args}); // 参数个数 = ${n}`);
+    }
+    lines.push(`${i}}`);
+  }
+
   function generateTypeAssertions(globalVars) {
     const lines = [
       '/**',
@@ -361,14 +434,15 @@
   lines.push('function assertHasProperty<T, K extends keyof T>(obj: T, key: K): T[K] {');
   lines.push('  return obj[key];');
   lines.push('}');
-  lines.push('');    lines.push('/**');
-    lines.push(' * 验证方法可调用性（支持函数和构造函数）');
-    lines.push(' */');
-    lines.push('/* eslint-disable-next-line  @typescript-eslint/no-unsafe-function-type */');
-    lines.push('function assertCallable<T extends Function>(fn: T): T {');
-    lines.push('  return fn;');
-    lines.push('}');
-    lines.push('');
+  lines.push('');
+  lines.push('/**');
+  lines.push(' * 验证方法可调用性（支持函数和构造函数）');
+  lines.push(' */');
+  lines.push('/* eslint-disable-next-line  @typescript-eslint/no-unsafe-function-type */');
+  lines.push('function assertCallable<T extends Function>(fn: T): T {');
+  lines.push('  return fn;');
+  lines.push('}');
+  lines.push('');
   
   lines.push('// ==================== 全局变量类型断言 ====================');
   lines.push('');
@@ -406,8 +480,17 @@
         for (const [methodName, methodInfo] of Object.entries(info.structure.methods)) {
           const camelMethodName = toCamelCase(methodName);
           const methodPath = `${name}.${camelMethodName}`;
+          const safeMethodName = sanitizeName(camelMethodName);
+          
           lines.push(`  if ('${camelMethodName}' in ${name} && typeof ${methodPath} === 'function') {`);
           lines.push(`    assertCallable(${methodPath});`);
+          
+          // 纯静态（TSC）重载参数个数检查
+          if (methodInfo.overloads && methodInfo.overloads.length > 0) {
+            const counts = methodInfo.overloads.map(o => o.paramCount);
+            emitStaticOverloadCountChecks(lines, name, methodPath, counts, 2);
+          }
+          
           lines.push(`  }`);
         }
       }
@@ -433,9 +516,18 @@
         // 生成实例方法检查
         for (const [methodName, methodInfo] of Object.entries(info.structure.instanceMethods || {})) {
           const camelMethodName = toCamelCase(methodName);
+          const safeMethodName = sanitizeName(camelMethodName);
+          
           lines.push(`    // 检查实例方法 ${camelMethodName}`);
           lines.push(`    if ('${camelMethodName}' in _checkInstance_${safeName} && typeof _checkInstance_${safeName}.${camelMethodName} === 'function') {`);
           lines.push(`      assertCallable(_checkInstance_${safeName}.${camelMethodName}!);`);
+          
+          // 纯静态（TSC）重载参数个数检查
+          if (methodInfo.overloads && methodInfo.overloads.length > 0) {
+            const counts = methodInfo.overloads.map(o => o.paramCount);
+            emitInstanceOverloadCountChecks(lines, name, camelMethodName, counts, 3);
+          }
+          
           lines.push(`    }`);
         }
         
@@ -502,7 +594,7 @@
       lines.push(`${indentStr}}`);
     }
     
-    // 生成方法断言
+    // 生成方法断言（仅校验可调用性，不再生成重载检查）
     for (const [methodName, methodInfo] of Object.entries(structure.methods)) {
       const camelMethodName = toCamelCase(methodName); // 首字母小写
       const methodPath = `${objPath}.${camelMethodName}`;
