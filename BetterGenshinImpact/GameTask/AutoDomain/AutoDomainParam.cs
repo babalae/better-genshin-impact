@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Model;
-using System.Threading;
 using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public class AutoDomainParam : BaseTaskParam<AutoDomainParam>
+public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 {
     public int DomainRoundNum { get; set; }
 
