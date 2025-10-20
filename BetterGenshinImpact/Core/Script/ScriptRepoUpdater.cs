@@ -444,18 +444,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             GitConfig(repo);
 
-            // 配置sparse-checkout
-            repo.Config.Set("core.sparseCheckout", true, ConfigurationLevel.Local);
-            repo.Config.Set("core.sparseCheckoutCone", false, ConfigurationLevel.Local);
-
-            // 写入 .git/info/sparse-checkout
-            var infoDir = Path.Combine(repo.Info.Path, "info");
-            Directory.CreateDirectory(infoDir);
-            var sparseFile = Path.Combine(infoDir, "sparse-checkout");
-
-            // 仅检出仓库根目录下的 repo.json
-            File.WriteAllText(sparseFile, "/repo.json\n");
-
             // 添加远程源
             Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
@@ -474,14 +462,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (remoteBranch == null)
                 throw new Exception($"远程仓库中未找到 {branchName} 分支");
 
-            // 创建本地分支（不检出）
+            // 创建本地分支
             var localBranch = repo.CreateBranch(branchName, remoteBranch.Tip);
             repo.Branches.Update(localBranch, b => b.TrackedBranch = remoteBranch.CanonicalName);
 
             // 手动检出HEAD到新分支
             repo.Refs.UpdateTarget(repo.Refs.Head, localBranch.CanonicalName);
 
-            // 手动检出 repo.json 文件（LibGit2Sharp 的 sparse-checkout 支持有限）
+            // 手动检出 repo.json 文件
             CheckoutRepoJson(repo, remoteBranch.Tip);
         }
         finally
