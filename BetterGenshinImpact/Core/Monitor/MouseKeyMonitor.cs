@@ -41,21 +41,21 @@ public class MouseKeyMonitor
     /// </summary>
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
-    private IKeyboardMouseEvents? _globalHook;
+    private static IKeyboardMouseEvents? _globalHook;
+    public static IKeyboardMouseEvents GlobalHook => _globalHook ??= Hook.GlobalEvents();
     private nint _hWnd;
 
     public void Subscribe(nint gameHandle)
     {
         _hWnd = gameHandle;
         // Note: for the application hook, use the Hook.AppEvents() instead
-        _globalHook = Hook.GlobalEvents();
 
-        _globalHook.KeyDown += GlobalHookKeyDown;
-        _globalHook.KeyUp += GlobalHookKeyUp;
-        _globalHook.MouseDownExt += GlobalHookMouseDownExt;
-        _globalHook.MouseUpExt += GlobalHookMouseUpExt;
-        _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
-        _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+        GlobalHook.KeyDown += GlobalHookKeyDown;
+        GlobalHook.KeyUp += GlobalHookKeyUp;
+        GlobalHook.MouseDownExt += GlobalHookMouseDownExt;
+        GlobalHook.MouseUpExt += GlobalHookMouseUpExt;
+        GlobalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+        GlobalHook.MouseWheelExt += GlobalHookMouseWheelExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
