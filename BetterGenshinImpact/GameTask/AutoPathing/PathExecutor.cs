@@ -639,7 +639,7 @@ public class PathExecutor
         }
         
         // 最小5分钟间隔
-        if ( _combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true && (DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
+        if ( _combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true || (DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
         {
             return false;
         }
