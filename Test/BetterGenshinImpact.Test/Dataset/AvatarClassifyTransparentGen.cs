@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.Test.Dataset;
 public class AvatarClassifyTransparentGen
 {
     // 基础图像文件夹
-    private const string BaseDir = @"E:\HuiTask\更好的原神\侧面头像\源数据\AvatarIcon";
+    private const string BaseDir = @"E:\HuiTask\更好的原神\侧面头像\side_src";
 
     // 产出文件夹
     private const string OutputDir = @"E:\HuiTask\更好的原神\侧面头像\dateset";
@@ -22,12 +22,16 @@ public class AvatarClassifyTransparentGen
 
     public static void GenAll()
     {
-        List<string> sideImageFiles = [];
-        List<string> imgNames = AvatarClassifyGen.ImgNames;
-        foreach (string imgName in imgNames)
-        {
-            sideImageFiles.Add(Path.Combine(BaseDir, imgName));
-        }
+        // List<string> sideImageFiles = [];
+        // List<string> imgNames = AvatarClassifyGen.ImgNames;
+        // foreach (string imgName in imgNames)
+        // {
+        //     sideImageFiles.Add(Path.Combine(BaseDir, imgName));
+        // }
+        
+        // 度文件夹下所有
+        List<string> sideImageFiles = Directory.GetFiles(BaseDir, "*.png", SearchOption.TopDirectoryOnly).ToList();
+
 
         var newList = AdjustTransparency(sideImageFiles, 0.5f);
 

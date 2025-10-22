@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.Test.Dataset;
 public class AvatarClassifyGen
 {
     // 基础图像文件夹
-    private const string BaseDir = @"E:\HuiTask\更好的原神\侧面头像\源数据\AvatarIcon";
+    private const string BaseDir = @"E:\HuiTask\更好的原神\侧面头像\side_src";
     
     // 产出文件夹
     private const string OutputDir = @"E:\HuiTask\更好的原神\侧面头像\dateset";
@@ -17,19 +17,19 @@ public class AvatarClassifyGen
 
     private static readonly Random Rd = new Random();
     
-    public static readonly List<string> ImgNames = ["UI_AvatarIcon_Side_Aino.png","UI_AvatarIcon_Side_Flins.png", "UI_AvatarIcon_Side_Nefer.png", "UI_AvatarIcon_Side_Nefer.png", "UI_AvatarIcon_Side_Lauma.png"];
+    // public static readonly List<string> ImgNames = ["UI_AvatarIcon_Side_Aino.png","UI_AvatarIcon_Side_Flins.png", "UI_AvatarIcon_Side_Nefer.png", "UI_AvatarIcon_Side_Nefer.png", "UI_AvatarIcon_Side_Lauma.png"];
 
     public static void GenAll()
     {
         // 读取基础图像
-        // List<string> sideImageFiles = Directory.GetFiles(Path.Combine(BaseDir, "side_src"), "*.png", SearchOption.TopDirectoryOnly).ToList();
+        List<string> sideImageFiles = Directory.GetFiles(BaseDir, "*.png", SearchOption.TopDirectoryOnly).ToList();
         // 只用一个图像
-        List<string> sideImageFiles = [];
-        
-        foreach (string imgName in ImgNames)
-        {
-            sideImageFiles.Add(Path.Combine(BaseDir, imgName));
-        }
+        // List<string> sideImageFiles = [];
+        //
+        // foreach (string imgName in ImgNames)
+        // {
+        //     sideImageFiles.Add(Path.Combine(BaseDir, imgName));
+        // }
         // 生成训练集
         GenTo(sideImageFiles, Path.Combine(OutputDir, @"dateset\train"), 200);
         // 生成测试集
