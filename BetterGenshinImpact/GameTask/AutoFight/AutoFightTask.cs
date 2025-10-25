@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -13,7 +13,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
@@ -41,8 +40,6 @@ public class AutoFightTask : ISoloTask
     private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
-
-    public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
     
     public static bool FightStatusFlag { get; set; } = false;
     

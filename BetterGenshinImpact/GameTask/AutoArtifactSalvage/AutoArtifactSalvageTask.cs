@@ -313,7 +313,6 @@ public class AutoArtifactSalvageTask : ISoloTask
                 var drawRectList = new List<RectDrawable>();
                 var drawTextList = new List<TextDrawable>();
                 gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
-                System.Drawing.Pen greenPen = new System.Drawing.Pen(System.Drawing.Color.Lime);
                 try
                 {
                     await foreach (ImageRegion itemRegion in gridScreen)
@@ -330,7 +329,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         }
                         else
                         {
-                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, greenPen);
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, System.Drawing.Pens.Lime);
                             drawRectList.Add(rectDrawable);
                             VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
                             drawTextList.Add(new TextDrawable(predName, new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
@@ -380,59 +379,68 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         GridParams gridParams = GridParams.Templates[GridScreenName.ArtifactSalvage];
         GridScreen gridScreen = new GridScreen(gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
-        await foreach (ImageRegion itemRegion in gridScreen)
+        gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        try
         {
-            Rect gridRect = itemRegion.ToRect();
-            if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
+            await foreach (ImageRegion itemRegion in gridScreen)
             {
-                itemRegion.Click();
-                await Delay(300, ct);
-
-                using var ra1 = CaptureToRectArea();
-                using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridParams.Roi.X, gridParams.Roi.Y));
-                if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
+                Rect gridRect = itemRegion.ToRect();
+                if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
                 {
-                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
+                    itemRegion.Click();
+                    await Delay(300, ct);
 
-                    ArtifactStat artifact;
-                    try
+                    using var ra1 = CaptureToRectArea();
+                    using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridParams.Roi.X, gridParams.Roi.Y));
+                    if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                     {
-                        artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
-                    }
-                    catch (Exception e)
-                    {
-                        if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
+                        using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
+
+                        ArtifactStat artifact;
+                        try
                         {
-                            logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
+                            artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+                        }
+                        catch (Exception e)
+                        {
+                            if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
+                            {
+                                logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
 
-                            itemRegion.Click(); // 反选取消
-                            await Delay(100, ct);
-                            continue;
+                                itemRegion.Click(); // 反选取消
+                                await Delay(100, ct);
+                                continue;
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+
+                        if (await IsMatchJavaScript(artifact, javaScript))
+                        {
+                            // logger.LogInformation(message: msg);
                         }
                         else
                         {
-                            throw;
+                            itemRegion.Click(); // 反选取消
+                            await Delay(100, ct);
                         }
                     }
 
-                    if (await IsMatchJavaScript(artifact, javaScript))
+                    count--;
+                    if (count <= 0)
                     {
-                        // logger.LogInformation(message: msg);
+                        logger.LogInformation("检查次数已耗尽");
+                        break;
                     }
-                    else
-                    {
-                        itemRegion.Click(); // 反选取消
-                        await Delay(100, ct);
-                    }
-                }
-
-                count--;
-                if (count <= 0)
-                {
-                    logger.LogInformation("检查次数已耗尽");
-                    break;
                 }
             }
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
     }
 

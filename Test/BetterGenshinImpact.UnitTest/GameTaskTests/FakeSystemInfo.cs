@@ -15,6 +15,8 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
     {
         public FakeSystemInfo(RECT gameScreenSize, double assetScale)
         {
+            DesktopRectArea = new(gameScreenSize.Width, gameScreenSize.Height);
+
             GameScreenSize = gameScreenSize;
             // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
             if (GameScreenSize.Width < 1920)
@@ -36,7 +38,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
         public double ScaleTo1080PRatio { get; }
 
         public RECT CaptureAreaRect { get ; set ; }
-        public Rect ScaleMax1080PCaptureRect { get ; set ; }
+        public Rect ScaleMax1080PCaptureRect { get; set; } = new Rect(0, 0, 1920, 1080);
 
         public Process GameProcess => throw new NotImplementedException();
 
@@ -44,6 +46,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
 
         public int GameProcessId => throw new NotImplementedException();
 
-        public DesktopRegion DesktopRectArea => throw new NotImplementedException();
+        public DesktopRegion DesktopRectArea { get; set; }
     }
 }

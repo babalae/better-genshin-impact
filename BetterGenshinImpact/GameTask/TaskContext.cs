@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Genshin.Settings;
@@ -38,19 +38,6 @@ namespace BetterGenshinImpact.GameTask
             PostMessageSimulator = Simulation.PostMessage(GameHandle);
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
-            //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
-            IsInitialized = true;
-        }
-        
-        /// <summary>
-        /// 提供给单元测试使用的初始化方法
-        /// </summary>
-        public void InitFakeForTest()
-        {
-            GameHandle = IntPtr.Zero;
-            // PostMessageSimulator = Simulation.PostMessage(GameHandle);
-            SystemInfo = new FakeSystemInfo();
-            DpiScale = 1;
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
             IsInitialized = true;
         }

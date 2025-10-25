@@ -20,6 +20,19 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         private readonly CancellationToken ct;
         private readonly ILogger logger;
         private readonly InputSimulator input = Simulation.SendInput;
+        internal Action? OnBeforeScroll { get; set; }
+        internal Action<IEnumerable<ImageRegion>>? OnAfterTurnToNewPage { get; set; }
+
+        /// <summary>
+        /// 提供一个默认的绘制页面上所有识别出的项目的行为
+        /// </summary>
+        internal static readonly Action<IEnumerable<ImageRegion>> DrawItemsAfterTurnToNewPage = items =>
+        {
+            foreach (ImageRegion item in items)
+            {
+                item.DrawSelf($"GridItem{item.GetHashCode()}", System.Drawing.Pens.Lime);
+            }
+        };
 
         /// <summary>
         /// 对Gird类型界面的操作封装类
@@ -43,11 +56,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
         public IAsyncEnumerator<ImageRegion> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            return new GridEnumerator(@params.Roi, @params.Columns, input, new GridScroller(@params, logger, input, ct), ct);
+            return new GridEnumerator(this, @params.Roi, @params.Columns, input, new GridScroller(@params, logger, input, ct), ct);
         }
 
         public class GridEnumerator : IAsyncEnumerator<ImageRegion>
         {
+            private readonly GridScreen owner;
             private readonly Rect roi;
             private readonly CancellationToken ct;
             private readonly InputSimulator input = Simulation.SendInput;
@@ -61,8 +75,8 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <param name="AntiRecycling">为了防止Grid的页面元素自动回收复用技术导致item高亮干扰，每次滚动后记录靠近下方的一个item，在下次滚动前主动点击该item</param>
             private record Page(Queue<ImageRegion> ImageRegions, Rect? AntiRecycling);
             private Page? currentPage;
-            private ImageRegion current;
-            ImageRegion IAsyncEnumerator<ImageRegion>.Current => current;
+            private ImageRegion? current;
+            ImageRegion IAsyncEnumerator<ImageRegion>.Current => current ?? throw new NullReferenceException();
 
             /// <summary>
             /// 滚动操作枚举器
@@ -76,8 +90,9 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <param name="logger"></param>
             /// <param name="input"></param>
             /// <param name="ct"></param>
-            internal GridEnumerator(Rect roi, int columns, InputSimulator input, GridScroller gridScroller, CancellationToken ct)
+            internal GridEnumerator(GridScreen owner, Rect roi, int columns, InputSimulator input, GridScroller gridScroller, CancellationToken ct)
             {
+                this.owner = owner;
                 this.roi = roi;
                 this.ct = ct;
                 this.input = input;
@@ -261,6 +276,13 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 return contours;
             }
 
+            /*
+             * hutaofisher给的划线算法参数，对网格划分效果似乎较好，待应用
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                canny = cv2.Canny(gray, 25, 50)
+                hough = cv2.HoughLinesP(canny, 1, np.pi / 180, threshold=500, minLineLength=200, maxLineGap=400)
+             */
+
             /// <summary>
             /// 背包界面的背景是把打开界面之前的画面进行了模糊+黑白渐变滤镜+左上角水印叠加处理
             /// 放任五彩斑斓的输入，并且允许点击高亮的话处理起来就复杂了
@@ -391,12 +413,11 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                             await TaskControl.Delay(500, ct);
                         }
 
-                        //BetterGenshinImpact.View.Drawable.VisionContext.Instance().DrawContent.ClearAll();
-
                         using var ra4 = TaskControl.CaptureToRectArea();
                         ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
                         await TaskControl.Delay(300, ct);
 
+                        owner.OnBeforeScroll?.Invoke();
                         if (!await this.gridScroller.TryVerticalScollDown((src, columns) => GetGridItems(src, columns)))
                         {
                             return false;
@@ -439,10 +460,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     List<List<ImageRegion>> clusterRows = ClusterRows(gridItems, (int)(0.025 * this.roi.Height));
                     this.currentPage = new Page(new Queue<ImageRegion>(clusterRows.SelectMany(r => r)), clusterRows.Reverse<List<ImageRegion>>().Skip(1)?.FirstOrDefault()?.FirstOrDefault()?.ToRect());
 
-                    //foreach (Rect item in gridItems.Select(r => r.ToRect()))
-                    //{
-                    //    imageRegion.DrawRect(item, item.GetHashCode().ToString(), new System.Drawing.Pen(System.Drawing.Color.Lime));
-                    //}
+                    owner.OnAfterTurnToNewPage?.Invoke(this.currentPage.ImageRegions);
                 }
 
                 this.current = this.currentPage.ImageRegions.Dequeue();

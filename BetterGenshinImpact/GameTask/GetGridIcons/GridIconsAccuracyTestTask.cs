@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
@@ -5,6 +6,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -16,7 +18,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.GetGridIcons;
@@ -108,54 +109,63 @@ public class GridIconsAccuracyTestTask : ISoloTask
         double total_count = 0;
 
         GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
-        await foreach (ImageRegion itemRegion in gridScreen)
+        gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        try
         {
-            itemRegion.Click();
-            Task task1 = Delay(300, ct);
-
-            // 用模型推理得到的结果
-            Task<(string?, int)> task2 = Task.Run(() =>
+            await foreach (ImageRegion itemRegion in gridScreen)
             {
-                using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                return Infer(icon, session, prototypes);
-            }, ct);
+                itemRegion.Click();
+                Task task1 = Delay(300, ct);
 
-            await Task.WhenAll(task1, task2);
-            (string?, int) result = task2.Result;
-            string? predName = result.Item1;
-            int predStarNum = result.Item2;
+                // 用模型推理得到的结果
+                Task<(string?, int)> task2 = Task.Run(() =>
+                {
+                    using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                    return Infer(icon, session, prototypes);
+                }, ct);
 
-            // 用CV方法得到的结果
-            using var ra1 = CaptureToRectArea();
-            using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
-            var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
-            string itemName = ocrResult.Text;
+                await Task.WhenAll(task1, task2);
+                (string?, int) result = task2.Result;
+                string? predName = result.Item1;
+                int predStarNum = result.Item2;
 
-            using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
-            int itemStarNum = GetGridIconsTask.GetStars(starRegion.SrcMat);
+                // 用CV方法得到的结果
+                using var ra1 = CaptureToRectArea();
+                using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
+                var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
+                string itemName = ocrResult.Text;
 
-            // 统计结果
-            total_count++;
-            if (predName == null)
-            {
-                logger.LogInformation($"模型没有识别，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+                using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
+                int itemStarNum = GetGridIconsTask.GetStars(starRegion.SrcMat);
+
+                // 统计结果
+                total_count++;
+                if (predName == null)
+                {
+                    logger.LogInformation($"模型没有识别，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+                }
+                else if (itemName.Contains(predName) && predStarNum == itemStarNum)
+                {
+                    total_acc++;
+                    logger.LogInformation($"{predName}|{predStarNum}星，✔，正确率{total_acc / total_count:0.00}");
+                }
+                else
+                {
+                    logger.LogInformation($"{predName}|{predStarNum}星，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+                }
+
+                count--;
+                if (count <= 0)
+                {
+                    logger.LogInformation("检查次数已耗尽");
+                    break;
+                }
             }
-            else if (itemName.Contains(predName) && predStarNum == itemStarNum)
-            {
-                total_acc++;
-                logger.LogInformation($"{predName}|{predStarNum}星，✔，正确率{total_acc / total_count:0.00}");
-            }
-            else
-            {
-                logger.LogInformation($"{predName}|{predStarNum}星，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
-            }
-
-            count--;
-            if (count <= 0)
-            {
-                logger.LogInformation("检查次数已耗尽");
-                break;
-            }
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -28,11 +29,19 @@ public class PartyAvatarSideIndexHelper
     /// <param name="imageRegion"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public static MultiGameStatus DetectedMultiGameStatus(ImageRegion imageRegion)
+    public static MultiGameStatus DetectedMultiGameStatus(ImageRegion imageRegion, AutoFightAssets? autoFightAssets = null, ILogger? logger = null)
     {
+        if (autoFightAssets == null)
+        {
+            autoFightAssets = AutoFightAssets.Instance;
+        }
+        if (logger == null)
+        {
+            logger = TaskControl.Logger;
+        }
         var status = new MultiGameStatus();
         // 判断当前联机人数
-        var pRaList = imageRegion.FindMulti(AutoFightAssets.Instance.PRa);
+        var pRaList = imageRegion.FindMulti(autoFightAssets.PRa);
         if (pRaList.Count > 0)
         {
             status.IsInMultiGame = true;
@@ -45,24 +54,24 @@ public class PartyAvatarSideIndexHelper
             status.PlayerCount = num;
 
             // 联机状态下判断
-            var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
+            var onePRa = imageRegion.Find(autoFightAssets.OnePRa);
             if (onePRa.IsExist())
             {
-                TaskControl.Logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
+                logger.LogInformation("当前处于联机状态，且当前账号是房主，联机人数{Num}人", num);
                 status.IsHost = true;
             }
             else
             {
-                TaskControl.Logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
+                logger.LogInformation("当前处于联机状态，且在别人世界中，联机人数{Num}人", num);
             }
         }
         else
         {
             // 没有其他联机玩家的情况下，也有可能是单人房主
-            var onePRa = imageRegion.Find(AutoFightAssets.Instance.OnePRa);
+            var onePRa = imageRegion.Find(autoFightAssets.OnePRa);
             if (onePRa.IsExist())
             {
-                TaskControl.Logger.LogInformation("当前处于联机状态，但是没有其他玩家连入");
+                logger.LogInformation("当前处于联机状态，但是没有其他玩家连入");
                 status.IsInMultiGame = true;
                 status.IsHost = true;
                 status.PlayerCount = 1;
@@ -95,18 +104,18 @@ public class PartyAvatarSideIndexHelper
         return new Rect(currRect.X + (int)(126 * s), currRect.Y - (int)(194 * s), (int)(16 * s), (int)(17 * s));
     }
 
-    public static (List<Rect>, List<Rect>) GetAllIndexRects(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
+    public static (List<Rect>, List<Rect>) GetAllIndexRects(ImageRegion imageRegion, MultiGameStatus multiGameStatus, ILogger logger, ElementAssets elementAssets, ISystemInfo systemInfo)
     {
         try
         {
             // 新的动态获取角色编号位置逻辑
-            return GetAllIndexRectsNew(imageRegion, multiGameStatus);
+            return GetAllIndexRectsNew(imageRegion, multiGameStatus, logger, elementAssets, systemInfo);
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogDebug(ex, "使用新方法获取角色编号位置失败");
-            TaskControl.Logger.LogWarning("使用新方法获取角色编号位置失败，原因：" + ex.Message);
-            TaskControl.Logger.LogWarning("尝试使用旧的写死位置逻辑");
+            logger.LogDebug(ex, "使用新方法获取角色编号位置失败");
+            logger.LogWarning("使用新方法获取角色编号位置失败，原因：" + ex.Message);
+            logger.LogWarning("尝试使用旧的写死位置逻辑");
             // 旧的写死位置逻辑
             return GetAllIndexRectsOld(imageRegion, multiGameStatus);
         }
@@ -148,26 +157,26 @@ public class PartyAvatarSideIndexHelper
         return imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold).IsExist();
     }
 
-    public static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus)
+    public static (List<Rect>, List<Rect>) GetAllIndexRectsNew(ImageRegion imageRegion, MultiGameStatus multiGameStatus, ILogger logger, ElementAssets elementAssets, ISystemInfo systemInfo)
     {
         // 找到编号块
-        var i1 = imageRegion.Find(ElementAssets.Instance.Index1);
-        var i2 = imageRegion.Find(ElementAssets.Instance.Index2);
-        var i3 = imageRegion.Find(ElementAssets.Instance.Index3);
-        var i4 = imageRegion.Find(ElementAssets.Instance.Index4);
+        var i1 = imageRegion.Find(elementAssets.Index1);
+        var i2 = imageRegion.Find(elementAssets.Index2);
+        var i3 = imageRegion.Find(elementAssets.Index3);
+        var i4 = imageRegion.Find(elementAssets.Index4);
         List<Rect> indexRectList = [i1.ToRect(), i2.ToRect(), i3.ToRect(), i4.ToRect()];
         int existNum = indexRectList.Count(indexRect => indexRect != default);
         if (existNum == multiGameStatus.MaxControlAvatarCount)
         {
             // 识别存在个数和当前能控制的最大角色数相等,意味者全部识别,直接返回
             var notNullIndexRectList = indexRectList.Where(r => r != default).ToList();
-            return (notNullIndexRectList, GetAvatarSideIconRectFromIndexRect(notNullIndexRectList));
+            return (notNullIndexRectList, GetAvatarSideIconRectFromIndexRect(notNullIndexRectList, systemInfo));
         }
         else
         {
             // 为什么这里要用箭头确认一遍？因为出战角色编号框的识别率不是100%，需要用箭头来辅助确认。这也是为了保证非满队情况下的队伍识别率
             // 非出战角色编号框识别率100%
-            var curr = imageRegion.Find(ElementAssets.Instance.CurrentAvatarThreshold); // 当前出战角色标识
+            var curr = imageRegion.Find(elementAssets.CurrentAvatarThreshold); // 当前出战角色标识
             if (curr.IsExist())
             {
                 var (knownIndex, knownRect) = GetKnownIndexAndRect(indexRectList);
@@ -176,8 +185,8 @@ public class PartyAvatarSideIndexHelper
                     // 没有已知的编号位置，这种情况下可能是单人队
                     // 直接用出战角色标识来反推
                     var oneIndexRect = GetIndexRectFromKnownCurrentAvatarFlag(curr.ToRect());
-                    TaskControl.Logger.LogInformation("当前编队中可能只存在一个角色（且角色编号未正确识别）");
-                    return ([oneIndexRect], [GetAvatarSideIconRectFromIndexRect(oneIndexRect)]);
+                    logger.LogInformation("当前编队中可能只存在一个角色（且角色编号未正确识别）");
+                    return ([oneIndexRect], [GetAvatarSideIconRectFromIndexRect(oneIndexRect, systemInfo)]);
                 }
                 else
                 {
@@ -191,7 +200,7 @@ public class PartyAvatarSideIndexHelper
                             {
                                 // 如果和当前出战角色标识相交，说明这个位置是正确的
                                 indexRectList[i] = rect;
-                                TaskControl.Logger.LogInformation("当前出战角色未正确识别，通过出战标识推测角色编号为{Index}", i + 1);
+                                logger.LogInformation("当前出战角色未正确识别，通过出战标识推测角色编号为{Index}", i + 1);
                             }
                         }
                     }
@@ -200,7 +209,7 @@ public class PartyAvatarSideIndexHelper
                     if (AreNullsAtEnd(indexRectList))
                     {
                         var notNullIndexRectList = indexRectList.Where(r => r != default).ToList();
-                        return (notNullIndexRectList, GetAvatarSideIconRectFromIndexRect(notNullIndexRectList));
+                        return (notNullIndexRectList, GetAvatarSideIconRectFromIndexRect(notNullIndexRectList, systemInfo));
                     }
                     else
                     {
@@ -229,15 +238,15 @@ public class PartyAvatarSideIndexHelper
         return (-1, default);
     }
 
-    public static Rect GetAvatarSideIconRectFromIndexRect(Rect indexRect)
+    public static Rect GetAvatarSideIconRectFromIndexRect(Rect indexRect, ISystemInfo systemInfo)
     {
-        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        var s = systemInfo.AssetScale;
         return new Rect(indexRect.X - (int)(91 * s), indexRect.Y - (int)(47 * s), (int)(82 * s), (int)(82 * s));
     }
 
-    public static List<Rect> GetAvatarSideIconRectFromIndexRect(List<Rect> indexRect)
+    public static List<Rect> GetAvatarSideIconRectFromIndexRect(List<Rect> indexRect, ISystemInfo systemInfo)
     {
-        return indexRect.Select(GetAvatarSideIconRectFromIndexRect).ToList();
+        return indexRect.Select(r=> GetAvatarSideIconRectFromIndexRect(r, systemInfo)).ToList();
     }
 
     public static bool IsIntersecting(double y1, double h1, double y2, double h2)
