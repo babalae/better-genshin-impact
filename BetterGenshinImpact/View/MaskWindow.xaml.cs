@@ -68,6 +68,11 @@ public partial class MaskWindow : Window
         return _maskWindow != null && PresentationSource.FromVisual(_maskWindow) != null;
     }
 
+    public void BringToTop()
+    {
+        User32.BringWindowToTop(new WindowInteropHelper(this).Handle);
+    }
+
     public void RefreshPosition()
     {
         if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
@@ -92,6 +97,7 @@ public partial class MaskWindow : Window
             Top = currentRect.Top / dpiScale;
             Width = currentRect.Width / dpiScale;
             Height = currentRect.Height / dpiScale;
+            BringToTop();
         });
     }
 
