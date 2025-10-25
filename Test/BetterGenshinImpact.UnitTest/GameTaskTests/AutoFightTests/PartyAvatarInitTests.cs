@@ -63,10 +63,7 @@ public class PartyAvatarInitTests
         var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(mat, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
         var imageRegion = gameCaptureRegion.DeriveTo1080P();
 
-        // 需要读取主项目编译目录中的配置
-        string configFullPath = Path.Combine(Path.GetFullPath(@"..\..\..\..\..\"), @"BetterGenshinImpact\bin\x64\Debug\net8.0-windows10.0.22621.0\User\config.json");
-        IConfigurationRoot configurationRoot = new ConfigurationBuilder().AddJsonFile(configFullPath, optional: false).Build();
-        AutoFightConfig autoFightConfig = configurationRoot.GetRequiredSection("autoFightConfig").Get<AutoFightConfig>() ?? throw new ArgumentNullException();
+        AutoFightConfig autoFightConfig = new AutoFightConfig();
 
         FakeLogger logger = new FakeLogger();
 

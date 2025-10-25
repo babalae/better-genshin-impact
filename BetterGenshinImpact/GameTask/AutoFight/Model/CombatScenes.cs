@@ -129,7 +129,7 @@ public class CombatScenes : IDisposable
         // 优先取配置
         if (!string.IsNullOrEmpty(autoFightConfig.TeamNames))
         {
-            InitializeTeamFromConfig(autoFightConfig.TeamNames);
+            InitializeTeamFromConfig(autoFightConfig.TeamNames, autoFightConfig);
             return this;
         }
 
@@ -274,7 +274,7 @@ public class CombatScenes : IDisposable
         return topClass.Name.Name;
     }
 
-    private void InitializeTeamFromConfig(string teamNames)
+    private void InitializeTeamFromConfig(string teamNames, AutoFightConfig autoFightConfig)
     {
         var names = teamNames.Split(["，", ","], StringSplitOptions.TrimEntries);
         if (names.Length != 4)
@@ -289,8 +289,8 @@ public class CombatScenes : IDisposable
         }
 
         _logger.LogInformation("强制指定队伍角色:{Text}", string.Join(",", names));
-        TaskContext.Instance().Config.AutoFightConfig.TeamNames = string.Join(",", names);
-        Avatars = BuildAvatars([.. names]);
+        autoFightConfig.TeamNames = string.Join(",", names);
+        Avatars = BuildAvatars([.. names], autoFightConfig: autoFightConfig);
     }
 
     public bool CheckTeamInitialized()
@@ -492,7 +492,7 @@ public class CombatScenes : IDisposable
         // 优先取配置
         if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
         {
-            InitializeTeamFromConfig(TaskContext.Instance().Config.AutoFightConfig.TeamNames);
+            InitializeTeamFromConfig(TaskContext.Instance().Config.AutoFightConfig.TeamNames, TaskContext.Instance().Config.AutoFightConfig);
             return this;
         }
 
