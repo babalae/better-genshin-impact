@@ -139,7 +139,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInBigMapUi(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo).IsExist();
+        return captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo).IsExist() || captureRa.Find(QuickTeleportAssets.Instance.MapSettingsButtonRo).IsExist();
     }
 
     /// <summary>
