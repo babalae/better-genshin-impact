@@ -46,6 +46,7 @@ public class CombatScenes : IDisposable
     public MultiGameStatus? CurrentMultiGameStatus { set; get; }
 
     private readonly BgiYoloPredictor _predictor;
+    private readonly bool _ownsPredictor;
 
     private readonly AutoFightAssets _autoFightAssets;
 
@@ -60,10 +61,12 @@ public class CombatScenes : IDisposable
         if (predictor == null)
         {
             _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
+            _ownsPredictor = true;
         }
         else
         {
             _predictor = predictor;
+            _ownsPredictor = false;
         }
         if (autoFightAssets == null)
         {
@@ -606,6 +609,9 @@ public class CombatScenes : IDisposable
 
     public void Dispose()
     {
-        _predictor.Dispose();
+        if (_ownsPredictor)
+        {
+            _predictor.Dispose();
+        }
     }
 }
