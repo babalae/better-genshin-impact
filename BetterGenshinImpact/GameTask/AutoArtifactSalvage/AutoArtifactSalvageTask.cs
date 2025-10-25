@@ -313,7 +313,6 @@ public class AutoArtifactSalvageTask : ISoloTask
                 var drawRectList = new List<RectDrawable>();
                 var drawTextList = new List<TextDrawable>();
                 gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
-                System.Drawing.Pen greenPen = new System.Drawing.Pen(System.Drawing.Color.Lime);
                 try
                 {
                     await foreach (ImageRegion itemRegion in gridScreen)
@@ -330,7 +329,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         }
                         else
                         {
-                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, greenPen);
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, System.Drawing.Pens.Lime);
                             drawRectList.Add(rectDrawable);
                             VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
                             drawTextList.Add(new TextDrawable(predName, new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));

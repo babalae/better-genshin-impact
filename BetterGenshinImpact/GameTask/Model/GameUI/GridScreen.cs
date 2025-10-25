@@ -30,7 +30,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         {
             foreach (ImageRegion item in items)
             {
-                item.DrawSelf($"GridItem{item.GetHashCode()}", new System.Drawing.Pen(System.Drawing.Color.Lime));
+                item.DrawSelf($"GridItem{item.GetHashCode()}", System.Drawing.Pens.Lime);
             }
         };
 
