@@ -262,6 +262,10 @@ namespace BetterGenshinImpact.GameTask
                             if (maskWindow.IsExist())
                             {
                                 maskWindow.Show();
+                                if (!_prevGameActive)
+                                {
+                                    maskWindow.BringToTop();
+                                }
                             }
                         });
                         // }
