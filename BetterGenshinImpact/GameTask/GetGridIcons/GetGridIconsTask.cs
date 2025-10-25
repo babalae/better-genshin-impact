@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -83,56 +84,65 @@ public class GetGridIconsTask : ISoloTask
     private async Task GetInventoryGridIcons(int count, string directory)
     {
         GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
+        gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
         HashSet<string> fileNames = new HashSet<string>();
-        await foreach (ImageRegion itemRegion in gridScreen)
+        try
         {
-            itemRegion.Click();
-            await Delay(300, ct);
-
-            using var ra1 = CaptureToRectArea();
-            using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
-            var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
-            string itemName = ocrResult.Text;
-            string itemStar = "";
-            if (this.starAsSuffix)
+            await foreach (ImageRegion itemRegion in gridScreen)
             {
-                using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
-                itemStar = String.Join(string.Empty, Enumerable.Repeat("★", GetStars(starRegion.SrcMat)));
-            }
+                itemRegion.Click();
+                await Delay(300, ct);
 
-            string fileName = itemName + itemStar;
-            if (fileNames.Add(fileName))
-            {
-                string filePath = Path.Combine(directory, $"{fileName}.png");
-                Thread saveThread = new Thread(() =>
+                using var ra1 = CaptureToRectArea();
+                using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
+                var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
+                string itemName = ocrResult.Text;
+                string itemStar = "";
+                if (this.starAsSuffix)
                 {
-                    try
-                    {
-                        using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
-                        }
-                        logger.LogInformation("图片保存成功：{Text}", fileName);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogError(e, "图片保存失败：{Text}", fileName);
-                    }
-                });
-                saveThread.IsBackground = true; // 设置为后台线程
-                saveThread.Start();
-            }
-            else
-            {
-                logger.LogInformation("重复的物品：{Text}", fileName);
-            }
+                    using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
+                    itemStar = String.Join(string.Empty, Enumerable.Repeat("★", GetStars(starRegion.SrcMat)));
+                }
 
-            count--;
-            if (count <= 0)
-            {
-                logger.LogInformation("检查次数已耗尽");
-                break;
+                string fileName = itemName + itemStar;
+                if (fileNames.Add(fileName))
+                {
+                    string filePath = Path.Combine(directory, $"{fileName}.png");
+                    Thread saveThread = new Thread(() =>
+                    {
+                        try
+                        {
+                            using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                            }
+                            logger.LogInformation("图片保存成功：{Text}", fileName);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.LogError(e, "图片保存失败：{Text}", fileName);
+                        }
+                    });
+                    saveThread.IsBackground = true; // 设置为后台线程
+                    saveThread.Start();
+                }
+                else
+                {
+                    logger.LogInformation("重复的物品：{Text}", fileName);
+                }
+
+                count--;
+                if (count <= 0)
+                {
+                    logger.LogInformation("检查次数已耗尽");
+                    break;
+                }
             }
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
     }
 

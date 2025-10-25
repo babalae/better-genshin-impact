@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -86,41 +87,50 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
 
             GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
+            gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+            gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             int? count = null;
-            await foreach (ImageRegion itemRegion in gridScreen)
+            try
             {
-                using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                string predName = result.Item1;
-                if (predName == _taskParam.FoodName)
+                await foreach (ImageRegion itemRegion in gridScreen)
                 {
-                    // 点击item
-                    itemRegion.Click();
+                    using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
+                    string predName = result.Item1;
+                    if (predName == _taskParam.FoodName)
+                    {
+                        // 点击item
+                        itemRegion.Click();
 
-                    #region 识别数量
-                    string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
-                    if (int.TryParse(numStr, out int num))
-                    {
-                        count = num - 1;    // 算上吃掉的1个
-                    }
-                    else
-                    {
-                        count = -2;
-                        _logger.LogWarning("无法识别食物数量：{text}，依然尝试使用", numStr);
-                    }
-                    #endregion
+                        #region 识别数量
+                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        if (int.TryParse(numStr, out int num))
+                        {
+                            count = num - 1;    // 算上吃掉的1个
+                        }
+                        else
+                        {
+                            count = -2;
+                            _logger.LogWarning("无法识别食物数量：{text}，依然尝试使用", numStr);
+                        }
+                        #endregion
 
-                    await Delay(300, ct);
-                    // 点击确定
-                    using var ra0 = CaptureToRectArea();
-                    using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
-                    if (ra.IsExist())
-                    {
-                        ra.Click();
+                        await Delay(300, ct);
+                        // 点击确定
+                        using var ra0 = CaptureToRectArea();
+                        using var ra = ra0.Find(ElementAssets.Instance.BtnWhiteConfirm);
+                        if (ra.IsExist())
+                        {
+                            ra.Click();
+                        }
+                        _logger.LogInformation("吃了一份{name}，真香！", predName);
+                        break;
                     }
-                    _logger.LogInformation("吃了一份{name}，真香！", predName);
-                    break;
                 }
+            }
+            finally
+            {
+                VisionContext.Instance().DrawContent.ClearAll();
             }
             if (count == null)
             {

@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -82,30 +83,39 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         private async Task<int> FindOne(InferenceSession session, Dictionary<string, float[]> prototypes)
         {
             GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
+            gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+            gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             int? count = null;
-            await foreach (ImageRegion itemRegion in gridScreen)
+            try
             {
-                using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                if (result.Item1 == null)
+                await foreach (ImageRegion itemRegion in gridScreen)
                 {
-                    continue;
-                }
-                string predName = result.Item1;
-                if (predName == this.itemName!)
-                {
-                    string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
-                    if (int.TryParse(numStr, out int num))
+                    using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
+                    if (result.Item1 == null)
                     {
-                        count = num;
+                        continue;
                     }
-                    else
+                    string predName = result.Item1;
+                    if (predName == this.itemName!)
                     {
-                        logger.LogWarning("无法识别数量：{text}", numStr);
-                        count = -2;
+                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        if (int.TryParse(numStr, out int num))
+                        {
+                            count = num;
+                        }
+                        else
+                        {
+                            logger.LogWarning("无法识别数量：{text}", numStr);
+                            count = -2;
+                        }
+                        break;
                     }
-                    break;
                 }
+            }
+            finally
+            {
+                VisionContext.Instance().DrawContent.ClearAll();
             }
             if (count == null)
             {
@@ -121,41 +131,50 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             List<string> notFoundItemNames = this.itemNames!.ToList();
 
             GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
-            await foreach (ImageRegion itemRegion in gridScreen)
+            gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+            gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+            try
             {
-                using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                if (result.Item1 == null)
+                await foreach (ImageRegion itemRegion in gridScreen)
                 {
-                    continue;
+                    using Mat icon = itemRegion.SrcMat.GetGridIcon();
+                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
+                    if (result.Item1 == null)
+                    {
+                        continue;
+                    }
+                    string predName = result.Item1;
+                    if (this.itemNames!.Contains(predName) && !itemsCountDic!.ContainsKey(predName))
+                    {
+                        int count;
+                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        if (int.TryParse(numStr, out int num))
+                        {
+                            count = num;
+                        }
+                        else
+                        {
+                            logger.LogWarning("无法识别数量：{text}", numStr);
+                            count = -2;
+                        }
+
+                        if (!itemsCountDic!.TryAdd(predName, count))
+                        {
+                            logger.LogWarning("重复的名称：{name}", predName);
+                        }
+
+                        notFoundItemNames.RemoveAll(n => n == predName);
+
+                        if (notFoundItemNames.Count <= 0)
+                        {
+                            break;
+                        }
+                    }
                 }
-                string predName = result.Item1;
-                if (this.itemNames!.Contains(predName) && !itemsCountDic!.ContainsKey(predName))
-                {
-                    int count;
-                    string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
-                    if (int.TryParse(numStr, out int num))
-                    {
-                        count = num;
-                    }
-                    else
-                    {
-                        logger.LogWarning("无法识别数量：{text}", numStr);
-                        count = -2;
-                    }
-
-                    if (!itemsCountDic!.TryAdd(predName, count))
-                    {
-                        logger.LogWarning("重复的名称：{name}", predName);
-                    }
-
-                    notFoundItemNames.RemoveAll(n => n == predName);
-
-                    if (notFoundItemNames.Count <= 0)
-                    {
-                        break;
-                    }
-                }
+            }
+            finally
+            {
+                VisionContext.Instance().DrawContent.ClearAll();
             }
 
             if (notFoundItemNames.Count > 0)
