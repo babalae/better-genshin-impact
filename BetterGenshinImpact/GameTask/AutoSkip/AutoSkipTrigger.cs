@@ -156,6 +156,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private DateTime _prevClickTime = DateTime.MinValue;
 
+    private DateTime _prevPopupDetectionOcrTime = DateTime.MinValue;
+
     public void OnCapture(CaptureContent content)
     {
         if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 200)
@@ -241,6 +243,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         else
         {
             ClickBlackGameScreen(content);
+            CloseMiscellaneousPopupPages(content);
         }
     }
 
@@ -713,6 +716,62 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 pageCloseRoRa.Dispose();
             }
         });
+    }
+
+    /// <summary>
+    /// 关闭其他非剧情弹出页
+    /// </summary>
+    /// <param name="content"></param>
+    private void CloseMiscellaneousPopupPages(CaptureContent content)
+    {
+        if (!_config.ClosePopupPagedEnabled)
+        {
+            return;
+        }
+
+        // 发光点误触发的阅读页面
+        content.CaptureRectArea.Find(_autoSkipAssets.PageReadingRo, pageReadingRoRa =>
+        {
+            TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+
+            AutoSkipLog("关闭弹出页");
+            pageReadingRoRa.Dispose();
+        });
+
+        // OCR is much slower, don't do this too often
+        if ((DateTime.Now - _prevPopupDetectionOcrTime).TotalMilliseconds >= 3000)
+        {
+            _prevPopupDetectionOcrTime = DateTime.Now;
+            // 路过的观景点
+            content.CaptureRectArea.Find(_autoSkipAssets.ViewpointRo, viewpointRoRa =>
+            {
+                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+
+                _logger.LogInformation("关闭观景点");
+                viewpointRoRa.Dispose();
+            });
+
+            // 空月祝福，实际测试可能早几分钟或晚几分钟推送
+            if (DateTime.Now.Minute >= 55 || DateTime.Now.Minute <= 5)
+            {
+                content.CaptureRectArea.Find(_autoSkipAssets.WelkinMoonRo, welkinMoonRoRa =>
+                {
+                    _logger.LogInformation("关闭空月祝福");
+                    GameCaptureRegion.GameRegion1080PPosMove(100, 100);
+                    const int numDoubleClicks = 3;
+                    for (int i = 0; i < numDoubleClicks; ++i)
+                    {
+                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                        if (i != numDoubleClicks - 1)
+                        {
+                            Thread.Sleep(1000);
+                        }
+                    }
+                    welkinMoonRoRa.Dispose();
+                });
+            }
+        }
     }
 
     /// <summary>

@@ -22,6 +22,8 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
     public RecognitionObject PageCloseRo;
     public RecognitionObject CookRo;
     public RecognitionObject PageCloseMainRo;
+    public RecognitionObject PageReadingRo;
+
     public RecognitionObject CollectRo;
     public RecognitionObject ReRo;
 
@@ -37,6 +39,9 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 
     public RecognitionObject HangoutUnselectedRo;
     public RecognitionObject HangoutSkipRo;
+
+    public RecognitionObject ViewpointRo;
+    public RecognitionObject WelkinMoonRo;
 
     private AutoSkipAssets()
     {
@@ -134,8 +139,15 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 25, CaptureRect.Height / 14),
             DrawOnWindow = true
         }.InitTemplate();
-        
-        
+        PageReadingRo = new RecognitionObject
+        {
+            Name = "PageCloseMain",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "reading.png"),
+            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 16, CaptureRect.Height / 14),
+        }.InitTemplate();
+
+
         // 一键派遣
         CollectRo = new RecognitionObject
         {
@@ -210,6 +222,22 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_skip.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8)
+        }.InitTemplate();
+
+        ViewpointRo = new RecognitionObject
+        {
+            Name = "Viewpoint",
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)(300 * AssetScale), (int)(35 * AssetScale), (int)(1300 * AssetScale), (int)(85 * AssetScale)),
+            OneContainMatchText = ["录入图鉴"],
+        }.InitTemplate();
+
+        WelkinMoonRo = new RecognitionObject
+        {
+            Name = "Viewpoint",
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)(750 * AssetScale), (int)(800 * AssetScale), (int)(450 * AssetScale), (int)(200 * AssetScale)),
+            OneContainMatchText = ["点击领取", "空月祝福", "双击跳过", "点击空白区域继续"],
         }.InitTemplate();
     }
 }
