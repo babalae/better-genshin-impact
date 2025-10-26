@@ -141,7 +141,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
         }.InitTemplate();
         PageReadingRo = new RecognitionObject
         {
-            Name = "PageCloseMain",
+            Name = "PageReading",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "reading.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 16, CaptureRect.Height / 14),
@@ -234,7 +234,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 
         WelkinMoonRo = new RecognitionObject
         {
-            Name = "Viewpoint",
+            Name = "WelkinMoon",
             RecognitionType = RecognitionTypes.OcrMatch,
             RegionOfInterest = new Rect((int)(750 * AssetScale), (int)(800 * AssetScale), (int)(450 * AssetScale), (int)(200 * AssetScale)),
             OneContainMatchText = ["点击领取", "空月祝福", "双击跳过", "点击空白区域继续"],
