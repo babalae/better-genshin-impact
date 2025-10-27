@@ -61,6 +61,11 @@ public class Avatar
     /// 最近一次使用元素战技的时间
     /// </summary>
     public DateTime LastSkillTime { get; set; }
+    
+    /// <summary>
+    /// 元素战技检测锁
+    /// </summary>
+    private static readonly object SkillCheckLock = new object();
 
     /// <summary>
     /// 元素爆发是否就绪
@@ -215,8 +220,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
+                region.Dispose();
                 return;
             }
+            region.Dispose();
 
             SimulateSwitchAction(Index);
             // Debug.WriteLine($"切换到{Index}号位");
@@ -252,9 +259,10 @@ public class Avatar
                     Logger.LogInformation("成功切换角色:{Name}", Name);
                 }
 
+                region.Dispose();
                 return true;
             }
-
+            region.Dispose();
 
             SimulateSwitchAction(Index);
 
@@ -303,8 +311,10 @@ public class Avatar
 
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
+                region.Dispose();
                 return;
             }
+            region.Dispose();
 
             SimulateSwitchAction(Index);
 
@@ -459,16 +469,25 @@ public class Avatar
             }
 
             Sleep(200, Ct);
-
             var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
-            var cd = AfterUseSkill(region);
+            ThrowWhenDefeated(region, Ct);
+            
+            double cd = 0;
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                if (attempt > 0) region = CaptureToRectArea(); // 非首次尝试时重新截图
+                cd = AfterUseSkill(region);
+                if (cd > 0) break;
+                Thread.Sleep(Name == "茜特菈莉"? 200:100);//茜特菈莉的ECD显示会慢半拍
+            }
+            region.Dispose();
+            
             if (cd > 0)
             {
                 Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
                     Math.Round(cd, 2));
                 return;
-            }
+            } 
         }
     }
 
@@ -907,6 +926,57 @@ public class Avatar
                 break;
             default:
                 Simulation.SendInput.Keyboard.KeyUp(vk);
+                if (vk == User32.VK.VK_E)
+                {
+                    if (Monitor.TryEnter(SkillCheckLock))
+                    {
+                        try
+                        {
+                            Task.Run(() =>
+                            {
+                                Thread.Sleep(200);
+                                double cd = 0;
+                                var cooldownDetected = false;
+
+                                for (var attempt = 0; attempt < 4; attempt++)
+                                {
+                                    var region = CaptureToRectArea();
+                                    cd = AfterUseSkill(region);
+                                    region.Dispose();
+
+                                    if (cd > 0)
+                                    {
+                                        cooldownDetected = true;
+                                        break;
+                                    }
+
+                                    if (attempt < 3)
+                                    {
+                                        Thread.Sleep(100);
+                                    }
+                                }
+
+                                if (cooldownDetected)
+                                {
+                                    Logger.LogInformation("{Name} 元素战技，cd:{Cooldown} 秒",
+                                        Name, Math.Round(cd, 2));
+                                }
+                                else
+                                {
+                                    Logger.LogWarning("{Name} 战技cd未更新", Name);
+                                }
+                            },Ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "元素战技检测异常");
+                        }
+                        finally
+                        {
+                            Monitor.Exit(SkillCheckLock);
+                        }
+                    }
+                }
                 break;
         }
     }
@@ -933,6 +1003,57 @@ public class Avatar
                 break;
             default:
                 Simulation.SendInput.Keyboard.KeyPress(vk);
+                if (vk == User32.VK.VK_E)
+                {
+                    if (Monitor.TryEnter(SkillCheckLock))
+                    {
+                        try
+                        {
+                            Task.Run(() =>
+                            {
+                                Thread.Sleep(200);
+                                double cd = 0;
+                                var cooldownDetected = false;
+
+                                for (var attempt = 0; attempt < 4; attempt++)
+                                {
+                                    var region = CaptureToRectArea();
+                                    cd = AfterUseSkill(region);
+                                    region.Dispose();
+
+                                    if (cd > 0)
+                                    {
+                                        cooldownDetected = true;
+                                        break;
+                                    }
+
+                                    if (attempt < 3)
+                                    {
+                                        Thread.Sleep(100);
+                                    }
+                                }
+
+                                if (cooldownDetected)
+                                {
+                                    Logger.LogInformation("{Name} 元素战技，cd:{Cooldown} 秒",
+                                        Name, Math.Round(cd, 2));
+                                }
+                                else
+                                {
+                                    Logger.LogWarning("{Name} 战技cd未更新", Name);
+                                }
+                            },Ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "元素战技检测异常");
+                        }
+                        finally
+                        {
+                            Monitor.Exit(SkillCheckLock);
+                        }
+                    }
+                }
                 break;
         }
     }
