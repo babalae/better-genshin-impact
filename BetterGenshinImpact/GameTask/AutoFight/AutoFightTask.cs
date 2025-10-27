@@ -492,17 +492,17 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 Simulation.ReleaseAllKey();
+                
+                if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpKazuhaPickup && !_isExperiencePickup)//可能刚死亡，等待经验显示
+                {
+                    TaskControl.Logger.LogInformation("基于怪物经验判断：{text} 经验值显示","等待");
+                    await Delay(1000, ct);
+                }
                 FightStatusFlag = false;
             }
         }, cts2.Token);
 
         await fightTask;
-        
-        if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpKazuhaPickup && !_isExperiencePickup)//可能刚死亡，等待经验显示
-        {
-            TaskControl.Logger.LogInformation("基于怪物经验判断：{text} 经验值显示","等待");
-            await Delay(1000, ct);
-        }
         
         if ((_taskParam.BattleThresholdForLoot >= 2 && countFight < _taskParam.BattleThresholdForLoot) && (!_taskParam.ExpKazuhaPickup || !_isExperiencePickup))
         {
