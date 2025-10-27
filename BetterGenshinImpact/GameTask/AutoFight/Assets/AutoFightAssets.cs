@@ -44,6 +44,11 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect GadgetRect;
 
     public RecognitionObject AbnormalIconRa;
+    
+    // 经验图标
+    public RecognitionObject ExperienceRa;
+    
+    private  Vanara.PInvoke.RECT _gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
     private AutoFightAssets() : base()
@@ -265,4 +270,30 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             DrawOnWindow = false
         }.InitTemplate();
     }
+    
+    public RecognitionObject InitializeRecognitionObject(int experience)
+    {
+        var threshold = 0.9;
+        
+        if (_gameScreenSize.Width > 2560)
+        {
+            threshold =0.6;
+        }
+        else if (_gameScreenSize.Width > 1920)
+        {
+            threshold =0.6;
+        }
+        
+        ExperienceRa = new RecognitionObject
+        {
+            Name = experience.ToString(),
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "experience_" + experience + ".png"),
+            RegionOfInterest = new Rect((int)(CaptureRect.Width*0.145),(int)(CaptureRect.Height*0.5), (int)(CaptureRect.Width*0.02), (int)(CaptureRect.Height*0.22)),
+            UseMask = true,
+            Threshold = threshold,
+            DrawOnWindow = true,
+        }.InitTemplate();
+        return  ExperienceRa;
+    }  
 }
