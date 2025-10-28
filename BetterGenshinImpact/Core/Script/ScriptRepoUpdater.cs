@@ -530,11 +530,21 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
+    /// 检查指定路径是否为 Git 仓库（非文件式仓库）
+    /// </summary>
+    /// <param name="repoPath">仓库路径</param>
+    /// <returns>如果是 Git 仓库返回 true，否则返回 false</returns>
+    private bool IsGitRepository(string repoPath)
+    {
+        return Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+    }
+
+    /// <summary>
     /// 获取仓库中 repo/ 子目录的树对象
     /// </summary>
     private Tree GetRepoSubdirectoryTree(Repository repo)
     {
-        var commit = repo.Head.Tip;
+        var commit = repo.Head?.Tip;
         if (commit == null)
         {
             throw new Exception("仓库HEAD未指向任何提交");
@@ -562,7 +572,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var repoPath = CenterRepoPath;
 
             // 判断是否为 Git 仓库
-            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            bool isGitRepo = IsGitRepository(repoPath);
 
             if (isGitRepo)
             {
@@ -570,7 +580,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else
             {
-                // 老版本：从文件系统读取
+                // 文件式仓库：从文件系统读取
                 var filePath = Path.Combine(repoPath, "repo", relPath);
                 if (File.Exists(filePath))
                 {
@@ -598,7 +608,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var repoPath = CenterRepoPath;
 
             // 判断是否为 Git 仓库
-            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            bool isGitRepo = IsGitRepository(repoPath);
 
             if (isGitRepo)
             {
@@ -606,7 +616,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else
             {
-                // 老版本：从文件系统读取
+                // 文件式仓库：从文件系统读取
                 var filePath = Path.Combine(repoPath, "repo", relPath);
                 if (File.Exists(filePath))
                 {
@@ -630,7 +640,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         try
         {
             // 判断是否为 Git 仓库
-            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            bool isGitRepo = IsGitRepository(repoPath);
             if (!isGitRepo)
             {
                 return null;
@@ -686,7 +696,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         try
         {
             // 判断是否为 Git 仓库
-            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            bool isGitRepo = IsGitRepository(repoPath);
             if (!isGitRepo)
             {
                 return null;
@@ -744,7 +754,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private void CheckoutPath(string repoPath, string sourcePath, string destPath)
     {
         // 判断仓库类型：检查是否为 Git 仓库且不存在 repo/ 子目录
-        bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+        bool isGitRepo = IsGitRepository(repoPath);
 
         if (isGitRepo)
         {
@@ -818,7 +828,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         else
         {
-            // 老版本：从文件系统复制
+            // 文件式仓库：从文件系统复制
             var scriptPath = Path.Combine(repoPath, sourcePath);
 
             if (Directory.Exists(scriptPath))
@@ -1213,7 +1223,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (path == "pathing")
             {
                 // 判断仓库类型：Git 仓库或文件式仓库
-                bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+                bool isGitRepo = IsGitRepository(repoPath);
 
                 if (isGitRepo)
                 {
@@ -1654,7 +1664,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             string? manifestContent = null;
 
             // 判断仓库类型
-            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            bool isGitRepo = IsGitRepository(repoPath);
 
             if (isGitRepo)
             {
@@ -1779,7 +1789,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             string? manifestContent = null;
 
             // 判断仓库类型
-            bool isGitRepo = Repository.IsValid(repoPath) && !Directory.Exists(Path.Combine(repoPath, "repo"));
+            bool isGitRepo = IsGitRepository(repoPath);
 
             if (isGitRepo)
             {
