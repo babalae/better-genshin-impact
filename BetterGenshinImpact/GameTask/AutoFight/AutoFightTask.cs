@@ -55,7 +55,7 @@ public class AutoFightTask : ISoloTask
     
     private static readonly object PickLock = new object(); 
     
-    private static bool _isExperiencePickup = false;
+    private static volatile bool _isExperiencePickup = false;
 
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
