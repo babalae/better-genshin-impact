@@ -103,6 +103,7 @@ public class EngineExtend
         engine.AddHostObject("keyUp", GlobalMethod.KeyUp);
         engine.AddHostObject("keyPress", GlobalMethod.KeyPress);
         engine.AddHostObject("setGameMetrics", GlobalMethod.SetGameMetrics);
+        engine.AddHostObject("getGameMetrics", GlobalMethod.GetGameMetrics);
         engine.AddHostObject("moveMouseBy", GlobalMethod.MoveMouseBy);
         engine.AddHostObject("moveMouseTo", GlobalMethod.MoveMouseTo);
         engine.AddHostObject("click", GlobalMethod.Click);
