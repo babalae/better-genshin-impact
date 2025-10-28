@@ -738,6 +738,26 @@ public partial class AutoSkipTrigger : ITaskTrigger
             pageReadingRoRa.Dispose();
         });
 
+        {
+            // 空月祝福，实际测试可能早几分钟或晚几分钟推送，仅在服务器时间03:55~04:05之间执行
+            var now = ServerTimeHelper.GetServerTimeNow().AddMinutes(5);
+            if (now.Hour == 4 && now.Minute < 10 && Bv.IsInBlessingOfTheWelkinMoon(content.CaptureRectArea))
+            {
+                _logger.LogInformation("关闭空月祝福");
+                GameCaptureRegion.GameRegion1080PPosMove(100, 100);
+                const int numDoubleClicks = 3;
+                for (int i = 0; i < numDoubleClicks; ++i)
+                {
+                    TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                    TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                    if (i != numDoubleClicks - 1)
+                    {
+                        Thread.Sleep(1000);
+                    }
+                }
+            }
+        }
+
         // OCR is much slower, don't do this too often
         if ((DateTime.Now - _prevPopupDetectionOcrTime).TotalMilliseconds >= 3000)
         {
@@ -746,31 +766,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
             content.CaptureRectArea.Find(_autoSkipAssets.ViewpointRo, viewpointRoRa =>
             {
                 TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
-
                 _logger.LogInformation("关闭观景点");
                 viewpointRoRa.Dispose();
             });
-
-            // 空月祝福，实际测试可能早几分钟或晚几分钟推送
-            if (DateTime.Now.Minute >= 55 || DateTime.Now.Minute <= 5)
-            {
-                content.CaptureRectArea.Find(_autoSkipAssets.WelkinMoonRo, welkinMoonRoRa =>
-                {
-                    _logger.LogInformation("关闭空月祝福");
-                    GameCaptureRegion.GameRegion1080PPosMove(100, 100);
-                    const int numDoubleClicks = 3;
-                    for (int i = 0; i < numDoubleClicks; ++i)
-                    {
-                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                        if (i != numDoubleClicks - 1)
-                        {
-                            Thread.Sleep(1000);
-                        }
-                    }
-                    welkinMoonRoRa.Dispose();
-                });
-            }
         }
     }
 
