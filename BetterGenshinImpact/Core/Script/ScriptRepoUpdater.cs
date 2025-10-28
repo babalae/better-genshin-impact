@@ -174,20 +174,25 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         Depth = 1 // 浅拉取，只获取最新的提交
                     };
 
-                    string refSpec = $"+refs/heads/release:refs/heads/release";
+                    // 拉取到远程追踪分支
+                    string refSpec = $"+refs/heads/release:refs/remotes/origin/release";
                     Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "拉取最新更新");
 
                     // 获取本地和远程commit
-                    var currentCommitSha = repo.Head.Tip?.Sha;
-
-                    // 获取release分支的最新commit
-                    var releaseBranch = repo.Branches["release"];
-                    if (releaseBranch == null)
+                    var localBranch = repo.Branches["release"];
+                    if (localBranch == null)
                     {
-                        throw new Exception("未找到release分支");
+                        throw new Exception("未找到本地release分支");
                     }
 
-                    var remoteCommitSha = releaseBranch.Tip.Sha;
+                    var remoteBranch = repo.Branches["origin/release"];
+                    if (remoteBranch == null)
+                    {
+                        throw new Exception("未找到远程release分支");
+                    }
+
+                    var currentCommitSha = localBranch.Tip?.Sha;
+                    var remoteCommitSha = remoteBranch.Tip.Sha;
 
                     // 比较本地和远程commit
                     if (currentCommitSha == remoteCommitSha)
@@ -199,9 +204,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha?[..7] ?? "无"} -> 远程 {remoteCommitSha[..7]}");
 
-                        // commit不一致，删除本地仓库重新克隆
-                        repo?.Dispose();
-                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        // 更新本地分支引用指向远程分支的 commit
+                        repo.Refs.UpdateTarget(localBranch.Reference, remoteBranch.Tip.Id);
+                        _logger.LogInformation("本地分支引用已更新到远程分支");
+
+                        // 检出 repo.json 文件到工作目录
+                        CheckoutRepoJson(repo, remoteBranch.Tip);
+                        _logger.LogInformation("已更新工作目录中的 repo.json 文件");
+
                         updated = true;
                     }
                 }
