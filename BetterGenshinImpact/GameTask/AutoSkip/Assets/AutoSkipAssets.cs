@@ -41,7 +41,6 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
     public RecognitionObject HangoutSkipRo;
 
     public RecognitionObject ViewpointRo;
-    public RecognitionObject WelkinMoonRo;
 
     private AutoSkipAssets()
     {
@@ -230,14 +229,6 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RecognitionType = RecognitionTypes.OcrMatch,
             RegionOfInterest = new Rect((int)(300 * AssetScale), (int)(35 * AssetScale), (int)(1300 * AssetScale), (int)(85 * AssetScale)),
             OneContainMatchText = ["录入图鉴"],
-        }.InitTemplate();
-
-        WelkinMoonRo = new RecognitionObject
-        {
-            Name = "WelkinMoon",
-            RecognitionType = RecognitionTypes.OcrMatch,
-            RegionOfInterest = new Rect((int)(750 * AssetScale), (int)(800 * AssetScale), (int)(450 * AssetScale), (int)(200 * AssetScale)),
-            OneContainMatchText = ["点击领取", "空月祝福", "双击跳过", "点击空白区域继续"],
         }.InitTemplate();
     }
 }
