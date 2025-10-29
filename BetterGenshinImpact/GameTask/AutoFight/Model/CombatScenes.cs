@@ -147,7 +147,7 @@ public class CombatScenes : IDisposable
         {
             for (var i = 0; i < avatarSideIconRectList.Count; i++)
             {
-                var ra = imageRegion.DeriveCrop(avatarSideIconRectList[i]);
+                using var ra = imageRegion.DeriveCrop(avatarSideIconRectList[i]);
                 var pair = ClassifyAvatarCnName(ra.CacheImage, i + 1);
                 names[i] = pair.Item1;
                 if (!string.IsNullOrEmpty(pair.Item2))
@@ -426,7 +426,7 @@ public class CombatScenes : IDisposable
             return Avatars[LastActiveAvatarIndex - 1].Name;
         }
 
-        var imageRegion = region ?? TaskControl.CaptureToRectArea();
+        using var imageRegion = region ?? TaskControl.CaptureToRectArea();
 
         var rectArray = Avatars.Select(t => t.IndexRect).ToArray();
         int index = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(imageRegion, rectArray, new AvatarActiveCheckContext());
