@@ -324,9 +324,11 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
-                    foreach (var command in combatCommands)
+                    for (var i = 0; i < combatCommands.Count; i++)
                     {
-                        command.Execute(combatScenes);
+                        var command = combatCommands[i];
+                        var lastCommand = i == 0 ? command : combatCommands[i - 1];
+                        command.Execute(combatScenes, lastCommand);
                     }
                 }
             }
@@ -432,7 +434,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 }
                 else if (resinStatus.OriginalResinCount >= 20)
                 {
-                    (resinUsed, var num) =  AutoDomainTask.PressUseResin(ra3, "原粹树脂");
+                    (resinUsed, var num) = AutoDomainTask.PressUseResin(ra3, "原粹树脂");
                     resinStatus.OriginalResinCount -= num;
                 }
 
