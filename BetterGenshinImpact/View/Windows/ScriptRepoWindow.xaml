@@ -101,13 +101,22 @@
                                               Text="仓库地址：" />
 
                                 <!-- 只读模式：显示文本 -->
-                                <ui:TextBlock Grid.Column="1"
-                                              MinWidth="160"
-                                              VerticalAlignment="Center"
-                                              Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                              Text="{Binding CurrentRepoUrl}"
-                                              TextWrapping="Wrap"
-                                              Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Border Grid.Column="1"
+                                        MinWidth="160"
+                                        MinHeight="32"
+                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Visibility="{Binding IsRepoUrlReadOnly, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  Padding="8,6">
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                      Text="{Binding CurrentRepoUrl}"
+                                                      TextWrapping="Wrap" />
+                                    </ScrollViewer>
+                                </Border>
 
                                 <!-- 编辑模式：可输入 -->
                                 <TextBox Grid.Column="1"
