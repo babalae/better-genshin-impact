@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading.Tasks;
 using OpenCvSharp;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -16,26 +18,35 @@ public class LimitedFile(string rootPath)
     /// <returns>文件夹内所有文件和文件夹的路径数组</returns>
     public string[] ReadPathSync(string folderPath)
     {
-        // 对传入的文件夹路径进行标准化
-        string normalizedFolderPath = NormalizePath(folderPath);
-
-        // 确保目录存在
-        if (!Directory.Exists(normalizedFolderPath))
+        try
         {
-            Directory.CreateDirectory(normalizedFolderPath);
+            // 对传入的文件夹路径进行标准化
+            string normalizedFolderPath = NormalizePath(folderPath);
+
+            // 确保目录存在
+            if (!Directory.Exists(normalizedFolderPath))
+            {
+                Directory.CreateDirectory(normalizedFolderPath);
+            }
+
+            // 获取指定文件夹下的所有文件（非递归）
+            string[] files = Directory.GetFiles(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+
+            // 获取指定文件夹下的所有子文件夹（非递归）
+            string[] directories = Directory.GetDirectories(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+
+            // 合并文件和文件夹路径
+            string[] combined = files.Concat(directories).ToArray();
+
+            // 将绝对路径转换为相对于 rootPath 的相对路径
+            return combined.Select(path => Path.GetRelativePath(rootPath, path)).ToArray();
         }
-
-        // 获取指定文件夹下的所有文件（非递归）
-        string[] files = Directory.GetFiles(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
-
-        // 获取指定文件夹下的所有子文件夹（非递归）
-        string[] directories = Directory.GetDirectories(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
-
-        // 合并文件和文件夹路径
-        string[] combined = files.Concat(directories).ToArray();
-
-        // 将绝对路径转换为相对于 rootPath 的相对路径
-        return combined.Select(path => Path.GetRelativePath(rootPath, path)).ToArray();
+        catch (Exception ex)
+        {
+            // 记录异常并返回空数组
+            TaskControl.Logger.LogError("ReadPathSync 异常: {Message}", ex.Message);
+            return Array.Empty<string>();
+        }
     }
 
     /// <summary>
@@ -45,11 +56,20 @@ public class LimitedFile(string rootPath)
     /// <returns>如果该路径是文件夹则返回 true，否则返回 false。</returns>
     public bool IsFolder(string path)
     {
-        // 对传入的路径进行标准化处理
-        string normalizedPath = NormalizePath(path);
+        try
+        {
+            // 对传入的路径进行标准化处理
+            string normalizedPath = NormalizePath(path);
 
-        // 使用 Directory.Exists 判断标准化路径是否为文件夹
-        return Directory.Exists(normalizedPath);
+            // 使用 Directory.Exists 判断标准化路径是否为文件夹
+            return Directory.Exists(normalizedPath);
+        }
+        catch (Exception ex)
+        {
+            // 记录异常并返回 false
+            TaskControl.Logger.LogError("IsFolder 异常: {Message}", ex.Message);
+            return false;
+        }
     }
 
     /// <summary>
@@ -67,8 +87,17 @@ public class LimitedFile(string rootPath)
     /// <returns>Text read from file.</returns>
     public string ReadTextSync(string path)
     {
-        path = NormalizePath(path);
-        return File.ReadAllText(path);
+        try
+        {
+            path = NormalizePath(path);
+            return File.ReadAllText(path);
+        }
+        catch (Exception ex)
+        {
+            // 记录异常并返回空字符串
+            TaskControl.Logger.LogError("ReadTextSync 异常: {Message}", ex.Message);
+            return string.Empty;
+        }
     }
 
     /// <summary>
@@ -78,9 +107,18 @@ public class LimitedFile(string rootPath)
     /// <returns>Text read from file.</returns>
     public async Task<string> ReadText(string path)
     {
-        path = NormalizePath(path);
-        var ret = await File.ReadAllTextAsync(path);
-        return ret;
+        try
+        {
+            path = NormalizePath(path);
+            var ret = await File.ReadAllTextAsync(path);
+            return ret;
+        }
+        catch (Exception ex)
+        {
+            // 记录异常并返回空字符串
+            TaskControl.Logger.LogError("ReadText 异常: {Message}", ex.Message);
+            return string.Empty;
+        }
     }
 
     /// <summary>
@@ -112,9 +150,18 @@ public class LimitedFile(string rootPath)
     /// <returns></returns>
     public Mat ReadImageMatSync(string path)
     {
-        path = NormalizePath(path);
-        var mat = Mat.FromStream(File.OpenRead(path), ImreadModes.Color);
-        return mat;
+        try
+        {
+            path = NormalizePath(path);
+            var mat = Mat.FromStream(File.OpenRead(path), ImreadModes.Color);
+            return mat;
+        }
+        catch (Exception ex)
+        {
+            // 记录异常并返回空的Mat
+            TaskControl.Logger.LogError("ReadImageMatSync 异常: {Message}", ex.Message);
+            return new Mat();
+        }
     }
     
     /// <summary>
@@ -135,32 +182,41 @@ public class LimitedFile(string rootPath)
     /// <returns>是否合法</returns>
     private bool IsValid(string path, string? content = null)
     {
-        // 验证文件扩展名
-        string extension = Path.GetExtension(path).ToLower();
-        if (!Array.Exists(_allowedExtensions, ext => ext == extension))
+        try
         {
-            return false;
-        }
-        
-        // 确保目录存在
-        var normalizedPath = NormalizePath(path);
-        string? directoryPath = Path.GetDirectoryName(normalizedPath);
-        if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
-        {
-            Directory.CreateDirectory(directoryPath);
-        }
-        
-        // 如果提供了内容，验证内容是否合法
-        if (content != null)
-        {
-            // 检查文件大小
-            if (content.Length > MaxFileSize)
+            // 验证文件扩展名
+            string extension = Path.GetExtension(path).ToLower();
+            if (!Array.Exists(_allowedExtensions, ext => ext == extension))
             {
                 return false;
             }
+            
+            // 确保目录存在
+            var normalizedPath = NormalizePath(path);
+            string? directoryPath = Path.GetDirectoryName(normalizedPath);
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+            
+            // 如果提供了内容，验证内容是否合法
+            if (content != null)
+            {
+                // 检查文件大小
+                if (content.Length > MaxFileSize)
+                {
+                    return false;
+                }
+            }
+            
+            return true;
         }
-        
-        return true;
+        catch (Exception ex)
+        {
+            // 记录异常并返回 false
+            TaskControl.Logger.LogError("IsValid 异常: {Message}", ex.Message);
+            return false;
+        }
     }
     
     /// <summary>
@@ -295,8 +351,10 @@ public class LimitedFile(string rootPath)
             Cv2.ImWrite(path, mat);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            // 记录异常并返回 false
+            TaskControl.Logger.LogError("WriteImageSync 异常: {Message}", ex.Message);
             return false;
         }
     }

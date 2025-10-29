@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 namespace BetterGenshinImpact.Core.Script.Utils;
 
@@ -10,17 +11,30 @@ public class ScriptUtils
     /// </summary>
     public static string NormalizePath(string root, string path)
     {
-        // convert to full path relative to root
-        path = path.Replace('\\', '/');
-        var fullPath = Path.GetFullPath(Path.Combine(root, path));
+        // 校验空字符串
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("文件路径不能为空");
 
-        // if root is locked, make sure didn't attempt to exit it
-        if (!fullPath.StartsWith(root))
+        // 检查是否含有非法文件名字符
+        var invalidChars = Path.GetInvalidFileNameChars();
+        string fileName = Path.GetFileName(path);
+        if (fileName.Any(c => invalidChars.Contains(c)))
         {
-            throw new ArgumentException($"Path '{path}' is not allowed, because its outside the caged root folder!");
+            throw new ArgumentException($"文件路径 '{path}' 包含非法字符");
         }
 
-        // return full path
+        // 替换分隔符
+        path = path.Replace('\\', '/');
+
+        // 组合并获取绝对路径
+        var fullPath = Path.GetFullPath(Path.Combine(root, path));
+
+        // 防止越界访问
+        if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException($"文件路径 '{path}' 越界访问!");
+        }
+
         return fullPath;
     }
 }
