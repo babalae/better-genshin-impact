@@ -1268,7 +1268,8 @@ public class PathExecutor
         var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
         var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
         var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
-        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
+        var closeRa3 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo);
+        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist() || closeRa3.IsExist())
         {
             // 排除大地图
             if (Bv.IsInBigMapUi(imageRegion))
