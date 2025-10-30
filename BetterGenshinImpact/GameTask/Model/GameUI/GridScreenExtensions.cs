@@ -30,5 +30,16 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             using Mat resized = mat.Resize(new Size(125, 153));
             return resized.SubMat(0, 125, 0, 125).Clone();
         }
+
+        /// <summary>
+        /// 截取Grid图标中底部的部分
+        /// </summary>
+        /// <param name="mat"></param>
+        /// <returns></returns>
+        public static Mat GetGridBottom(this Mat mat)
+        {
+            using Mat resized = mat.Resize(new Size(125, 153));
+            return resized.SubMat(126, 153, 0, 125).Clone();
+        }
     }
 }
