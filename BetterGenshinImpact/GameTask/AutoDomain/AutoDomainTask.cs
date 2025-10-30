@@ -1090,7 +1090,7 @@ public class AutoDomainTask : ISoloTask
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
+        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充")))
         {
             // 没有原粹树脂，直接退出秘境
             Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
