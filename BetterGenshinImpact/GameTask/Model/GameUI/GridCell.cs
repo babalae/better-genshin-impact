@@ -40,6 +40,11 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         /// <returns></returns>
         public static IEnumerable<Tuple<T, GridCell>> ClusterToCells<T>(IEnumerable<Tuple<T, Rect>> rects, int threshold)
         {
+            if (!rects.Any())
+            {
+                return [];
+            }
+
             var result = rects.Select(r => new Tuple<T, GridCell>(r.Item1, new GridCell(r.Item2)));
             result = result.ToArray();  // 必需，不然引用会丢掉。。
 

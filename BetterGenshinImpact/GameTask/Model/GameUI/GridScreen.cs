@@ -325,6 +325,10 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <returns></returns>
             public static IEnumerable<GridCell> PostProcess(Mat mat, IEnumerable<Rect> rects, int threshold)
             {
+                if (!rects.Any())
+                {
+                    return [];
+                }
                 // 根据聚簇结果补漏……
                 List<GridCell> cells = GridCell.ClusterToCells(rects, threshold).ToList();
                 GridCell.FillMissingGridCells(ref cells);
