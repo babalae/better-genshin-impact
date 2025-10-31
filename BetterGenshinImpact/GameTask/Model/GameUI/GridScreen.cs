@@ -355,73 +355,82 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 if (this.currentPage == null || this.currentPage.ItemRects.Count < 1)
                 {
                     ImageRegion? imageRegion = null;
-                    if (this.currentPage != null)   // 当前页遍历完了就向下滚动
+                    try
                     {
-                        if (this.currentPage.AntiRecycling.HasValue)
+                        if (this.currentPage != null)   // 当前页遍历完了就向下滚动
                         {
+                            if (this.currentPage.AntiRecycling.HasValue)
+                            {
+                                using DesktopRegion desktop = new DesktopRegion(this.input.Mouse);
+                                var (x, y, w, h) = (this.currentPage.AntiRecycling.Value.X, this.currentPage.AntiRecycling.Value.Y, this.currentPage.AntiRecycling.Value.Width, this.currentPage.AntiRecycling.Value.Height);
+                                var (gcX, gcY) = (TaskContext.Instance().SystemInfo.CaptureAreaRect.X, TaskContext.Instance().SystemInfo.CaptureAreaRect.Y);
+                                desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
+                                await TaskControl.Delay(500, ct);
+                                desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
+                                await TaskControl.Delay(500, ct);
+                            }
+
+                            using var ra4 = TaskControl.CaptureToRectArea();
+                            ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
+                            await TaskControl.Delay(300, ct);
+
+                            owner.OnBeforeScroll?.Invoke();
+                            if (!await this.gridScroller.TryVerticalScollDown((src, columns) => GetGridItems(src, columns)))
+                            {
+                                return false;
+                            }
+
+                            using ImageRegion ra = TaskControl.CaptureToRectArea();
+                            imageRegion = ra.DeriveCrop(this.roi);
+                        }
+                        else
+                        {
+                            // 第一页采集时，主动操作来避免图标高亮
+                            Rect rect12 = new Rect(0, 0, (int)(this.roi.Width * 1.5 / this.columns), this.roi.Height);
+                            // 双击第三列，采集第一、二列
                             using DesktopRegion desktop = new DesktopRegion(this.input.Mouse);
-                            var (x, y, w, h) = (this.currentPage.AntiRecycling.Value.X, this.currentPage.AntiRecycling.Value.Y, this.currentPage.AntiRecycling.Value.Width, this.currentPage.AntiRecycling.Value.Height);
                             var (gcX, gcY) = (TaskContext.Instance().SystemInfo.CaptureAreaRect.X, TaskContext.Instance().SystemInfo.CaptureAreaRect.Y);
-                            desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
+                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                            await TaskControl.Delay(300, ct);
+                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
                             await TaskControl.Delay(500, ct);
-                            desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
+
+                            using ImageRegion ra12 = TaskControl.CaptureToRectArea();
+                            using ImageRegion imageRegion12 = ra12.DeriveCrop(this.roi);
+                            using Mat columns12 = new Mat(imageRegion12.SrcMat, rect12);
+
+                            // 双击第一列，采集第二列以后的列
+                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                            await TaskControl.Delay(300, ct);
+                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
                             await TaskControl.Delay(500, ct);
+
+                            using ImageRegion raRest = TaskControl.CaptureToRectArea();
+                            imageRegion = raRest.DeriveCrop(this.roi);
+                            using Mat subMat12 = imageRegion.SrcMat.SubMat(rect12);
+                            columns12.CopyTo(subMat12); // 拼接两次的采集
                         }
 
-                        using var ra4 = TaskControl.CaptureToRectArea();
-                        ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
-                        await TaskControl.Delay(300, ct);
+                        var rects = GetGridItems(imageRegion.SrcMat, this.columns);
+                        var cells = PostProcess(imageRegion.SrcMat, rects, (int)(0.025 * this.roi.Height));
 
-                        owner.OnBeforeScroll?.Invoke();
-                        if (!await this.gridScroller.TryVerticalScollDown((src, columns) => GetGridItems(src, columns)))
+                        if (!cells.Any())
                         {
+                            imageRegion.Dispose();
                             return false;
                         }
 
-                        using ImageRegion ra = TaskControl.CaptureToRectArea();
-                        imageRegion = ra.DeriveCrop(this.roi);
+                        this.currentPage?.PageRegion?.Dispose();
+                        this.currentPage = new Page(imageRegion, new Queue<Rect>(cells.OrderBy(c => c.RowNum).ThenBy(c => c.ColNum).Select(c => c.Rect)),
+                            cells.GroupBy(c => c.RowNum).OrderByDescending(g => g.Key).Skip(1)?.FirstOrDefault()?.OrderBy(c => c.ColNum)?.FirstOrDefault()?.Rect);
+
+                        owner.OnAfterTurnToNewPage?.Invoke(Tuple.Create(imageRegion, cells.Select(c => Tuple.Create(c.Rect, c.IsPhantom))));
                     }
-                    else
+                    catch
                     {
-                        // 第一页采集时，主动操作来避免图标高亮
-                        Rect rect12 = new Rect(0, 0, (int)(this.roi.Width * 1.5 / this.columns), this.roi.Height);
-                        // 双击第三列，采集第一、二列
-                        using DesktopRegion desktop = new DesktopRegion(this.input.Mouse);
-                        var (gcX, gcY) = (TaskContext.Instance().SystemInfo.CaptureAreaRect.X, TaskContext.Instance().SystemInfo.CaptureAreaRect.Y);
-                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
-                        await TaskControl.Delay(300, ct);
-                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
-                        await TaskControl.Delay(500, ct);
-
-                        using ImageRegion ra12 = TaskControl.CaptureToRectArea();
-                        using ImageRegion imageRegion12 = ra12.DeriveCrop(this.roi);
-                        using Mat columns12 = new Mat(imageRegion12.SrcMat, rect12);
-
-                        // 双击第一列，采集第二列以后的列
-                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
-                        await TaskControl.Delay(300, ct);
-                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
-                        await TaskControl.Delay(500, ct);
-
-                        using ImageRegion raRest = TaskControl.CaptureToRectArea();
-                        imageRegion = raRest.DeriveCrop(this.roi);
-                        using Mat subMat12 = imageRegion.SrcMat.SubMat(rect12);
-                        columns12.CopyTo(subMat12); // 拼接两次的采集
+                        imageRegion?.Dispose();
+                        throw;
                     }
-
-                    var rects = GetGridItems(imageRegion.SrcMat, this.columns);
-                    var cells = PostProcess(imageRegion.SrcMat, rects, (int)(0.025 * this.roi.Height));
-
-                    if (!cells.Any())
-                    {
-                        return false;
-                    }
-
-                    this.currentPage?.PageRegion?.Dispose();
-                    this.currentPage = new Page(imageRegion, new Queue<Rect>(cells.OrderBy(c => c.RowNum).ThenBy(c => c.ColNum).Select(c => c.Rect)),
-                        cells.GroupBy(c => c.RowNum).OrderByDescending(g => g.Key).Skip(1)?.FirstOrDefault()?.OrderBy(c => c.ColNum)?.FirstOrDefault()?.Rect);
-
-                    owner.OnAfterTurnToNewPage?.Invoke(Tuple.Create(imageRegion, cells.Select(c => Tuple.Create(c.Rect, c.IsPhantom))));
                 }
 
                 this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());

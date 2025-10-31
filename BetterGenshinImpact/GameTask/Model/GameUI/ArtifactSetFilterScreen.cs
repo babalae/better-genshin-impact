@@ -83,15 +83,24 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     using ImageRegion ra = TaskControl.CaptureToRectArea();
 
                     ImageRegion imageRegion = ra.DeriveCrop(this.roi);
-                    IEnumerable<Rect> gridRects = GetGridItems(imageRegion.SrcMat, this.columns);
-
-                    if (!gridRects.Any())
+                    try
                     {
-                        return false;
-                    }
+                        IEnumerable<Rect> gridRects = GetGridItems(imageRegion.SrcMat, this.columns);
 
-                    this.currentPage?.PageRegion?.Dispose();
-                    this.currentPage = new Page(imageRegion, new Queue<Rect>(gridRects));
+                        if (!gridRects.Any())
+                        {
+                            imageRegion.Dispose();
+                            return false;
+                        }
+
+                        this.currentPage?.PageRegion?.Dispose();
+                        this.currentPage = new Page(imageRegion, new Queue<Rect>(gridRects));
+                    }
+                    catch
+                    {
+                        imageRegion?.Dispose();
+                        throw;
+                    }
                 }
                 this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());
                 return true;
