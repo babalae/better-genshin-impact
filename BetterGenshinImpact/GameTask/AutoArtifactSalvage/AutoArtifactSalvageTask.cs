@@ -526,19 +526,19 @@ public class AutoArtifactSalvageTask : ISoloTask
     public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
         using Mat gray = src.CvtColor(ColorConversionCodes.BGR2GRAY);
-        Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
+        using Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
 
-        Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
+        using Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
         //Cv2.ImShow("name", nameRoi);
-        Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
+        using Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
         #region 主词条预处理 去除背景干扰
-        Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
+        using Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
         using Mat mainAffixRoiBottomHat = mainAffixRoi.MorphologyEx(MorphTypes.TopHat, hatKernel);
         using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
         //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
         #endregion
         #region 副词条预处理 还是不处理效果最好……
-        Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
+        using Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
         //using Mat levelAndMinorAffixRoiThreshold = new Mat(); // otsu确定阈值大概在170
         //double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
         //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);

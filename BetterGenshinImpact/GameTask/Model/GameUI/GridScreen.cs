@@ -337,7 +337,8 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 var result = cells.ToList();
                 foreach (var cell in cells.Where(c => c.IsPhantom))
                 {
-                    using Mat bottom = mat.SubMat(cell.Rect).GetGridBottom();
+                    using Mat cellMat = mat.SubMat(cell.Rect);
+                    using Mat bottom = cellMat.GetGridBottom();
                     if (!IsCorrectBottomColor(bottom))
                     {
                         result.Remove(cell);
@@ -404,7 +405,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
                             using ImageRegion raRest = TaskControl.CaptureToRectArea();
                             imageRegion = raRest.DeriveCrop(this.roi);
-                            Mat subMat12 = imageRegion.SrcMat.SubMat(rect12);
+                            using Mat subMat12 = imageRegion.SrcMat.SubMat(rect12);
                             columns12.CopyTo(subMat12); // 拼接两次的采集
                         }
 

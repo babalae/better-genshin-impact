@@ -390,7 +390,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                           clickWhiteConfirmButtonWaitEndTime < timeProvider.GetLocalNow()) &&
                          Bv.ClickWhiteConfirmButton(imageRegion))
                 {
-                    Mat subMat = imageRegion.SrcMat.SubMat(new Rect((int)(0.824 * imageRegion.Width), (int)(0.669 * imageRegion.Height), (int)(0.065 * imageRegion.Width), (int)(0.065 * imageRegion.Width)));
+                    using Mat subMat = imageRegion.SrcMat.SubMat(new Rect((int)(0.824 * imageRegion.Width), (int)(0.669 * imageRegion.Height), (int)(0.065 * imageRegion.Width), (int)(0.065 * imageRegion.Width)));
                     using Mat resized = subMat.Resize(new Size(125, 125));
                     (string predName, _) = GridIconsAccuracyTestTask.Infer(resized, this.session, this.prototypes);
                     if (predName.TryGetEnumValueFromDescription(out this.blackboard.selectedBait))

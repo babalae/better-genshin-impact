@@ -111,7 +111,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
             var result = new List<string>();
             foreach (var cell in cells)
             {
-                Mat gridItemMat = mat.SubMat(cell.Rect);
+                using Mat gridItemMat = mat.SubMat(cell.Rect);
                 string numStr = gridItemMat.GetGridItemIconText(paddle.Get());
                 result.Add(numStr);
             }

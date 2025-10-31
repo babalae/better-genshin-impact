@@ -49,7 +49,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.GetGridIconsTests
             var result = new List<(string?, int)>();
             foreach (var cell in cells)
             {
-                Mat gridItemMat = mat.SubMat(cell.Rect);
+                using Mat gridItemMat = mat.SubMat(cell.Rect);
                 using Mat icon = gridItemMat.GetGridIcon();
                 var pred = GridIconsAccuracyTestTask.Infer(icon, this.session, this.prototypes);
                 result.Add(pred);
