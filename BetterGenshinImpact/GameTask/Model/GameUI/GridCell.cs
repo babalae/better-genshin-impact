@@ -85,6 +85,11 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         /// <param name="cells"></param>
         public static void FillMissingGridCells(ref List<GridCell> cells)
         {
+            if (cells.Count <= 0)
+            {
+                return;
+            }
+
             double avgWidth = cells.Average(c => c.Rect.Width);
             double avgHeight = cells.Average(c => c.Rect.Height);
             double avgColSpacing;
