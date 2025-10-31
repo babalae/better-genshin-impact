@@ -387,6 +387,10 @@ public class Genshin
     /// <returns></returns>
     public async Task SetTime(int hour, int minute, bool skip = false)
     {
+        if ( hour < 0 || hour > 24)
+            throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
+        if (minute < 0 || minute > 59)
+            throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
         await new SetTimeTask().Start(hour, minute, CancellationContext.Instance.Cts.Token, skip);
     }
     
