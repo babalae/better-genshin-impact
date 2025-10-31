@@ -539,12 +539,12 @@ public class AutoArtifactSalvageTask : ISoloTask
         #endregion
         #region 副词条预处理 还是不处理效果最好……
         Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
-        //using Mat levelAndMinorAffixRoiThreshold = new Mat();
+        //using Mat levelAndMinorAffixRoiThreshold = new Mat(); // otsu确定阈值大概在170
         //double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-        // //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
         //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);
-        #endregion
         //Cv2.WaitKey();
+        //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
+        #endregion
 
         var nameOcrResult = ocrService.OcrResult(nameRoi);
         var typeOcrResult = ocrService.OcrResult(typeRoi);
@@ -607,7 +607,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         #region 副词条
         var minorAffixes = new List<ArtifactAffix>();
-        string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
+        string pattern = @"^([^+:：]+)\+([\d., 。]*)(%?).*$";
         pattern = pattern.Replace("%", percentStr);
         foreach (var r in levelAndMinorAffixResult)
         {
@@ -672,7 +672,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
             }
 
-            if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float affixValue))
+            if (!float.TryParse(match.Groups[2].Value.Replace("。", "."), NumberStyles.Any, cultureInfo, out float affixValue))
             {
                 throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
             }
