@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TorchSharp.Modules;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
@@ -84,6 +85,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     ImageRegion imageRegion = ra.DeriveCrop(this.roi);
                     IEnumerable<Rect> gridRects = GetGridItems(imageRegion.SrcMat, this.columns);
 
+                    if (!gridRects.Any())
+                    {
+                        return false;
+                    }
+
+                    this.currentPage?.PageRegion?.Dispose();
                     this.currentPage = new Page(imageRegion, new Queue<Rect>(gridRects));
                 }
                 this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());

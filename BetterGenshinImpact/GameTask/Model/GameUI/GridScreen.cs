@@ -412,10 +412,16 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     var rects = GetGridItems(imageRegion.SrcMat, this.columns);
                     var cells = PostProcess(imageRegion.SrcMat, rects, (int)(0.025 * this.roi.Height));
 
+                    if (!cells.Any())
+                    {
+                        return false;
+                    }
+
+                    this.currentPage?.PageRegion?.Dispose();
                     this.currentPage = new Page(imageRegion, new Queue<Rect>(cells.OrderBy(c => c.RowNum).ThenBy(c => c.ColNum).Select(c => c.Rect)),
                         cells.GroupBy(c => c.RowNum).OrderByDescending(g => g.Key).Skip(1)?.FirstOrDefault()?.OrderBy(c => c.ColNum)?.FirstOrDefault()?.Rect);
 
-                    owner.OnAfterTurnToNewPage?.Invoke(Tuple.Create(imageRegion, cells.Select(c=> Tuple.Create(c.Rect, c.IsPhantom))));
+                    owner.OnAfterTurnToNewPage?.Invoke(Tuple.Create(imageRegion, cells.Select(c => Tuple.Create(c.Rect, c.IsPhantom))));
                 }
 
                 this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());
