@@ -80,7 +80,8 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     }
 
                     using ImageRegion ra = TaskControl.CaptureToRectArea();
-                    using ImageRegion imageRegion = ra.DeriveCrop(this.roi);
+
+                    ImageRegion imageRegion = ra.DeriveCrop(this.roi);
                     IEnumerable<Rect> gridRects = GetGridItems(imageRegion.SrcMat, this.columns);
 
                     this.currentPage = new Page(imageRegion, new Queue<Rect>(gridRects));
