@@ -377,4 +377,30 @@ public class Genshin
     {
         await new ExitAndReloginJob().Start(CancellationContext.Instance.Cts.Token);
     }
+
+    /// <summary>
+    /// 调整时间
+    /// </summary>
+    /// <param name="hour">目标小时</param>
+    /// <param name="minute">目标分钟</param>
+    /// <param name="skip">是否跳过动画（默认为否）</param>
+    /// <returns></returns>
+    public async Task SetTime(int hour, int minute, bool skip = false)
+    {
+        await new SetTimeTask().Start(hour, minute, CancellationContext.Instance.Cts.Token, skip);
+    }
+    
+    /// <summary>
+    /// 调整时间
+    /// </summary>
+    /// <param name="hour">目标小时</param>
+    /// <param name="minute">目标分钟</param>
+    /// <param name="skip">是否跳过动画（默认为否）</param>
+    /// <returns></returns>
+    public async Task SetTime(String hour, String minute, bool skip = false)
+    {
+        int.TryParse(hour, out var h);
+        int.TryParse(minute, out var m);
+        await new SetTimeTask().Start(h, m, CancellationContext.Instance.Cts.Token, skip);
+    }
 }
