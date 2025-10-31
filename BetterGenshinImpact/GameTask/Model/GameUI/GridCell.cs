@@ -106,7 +106,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                         count++;
                     }
                 }
-                avgColSpacing = count == 0 ? 0 : Math.Round(((double)sum) / count, MidpointRounding.AwayFromZero);
+                avgColSpacing = Math.Round(((double)sum) / count, MidpointRounding.AwayFromZero);
             }
             {
                 int count = 0;
@@ -125,7 +125,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                         count++;
                     }
                 }
-                avgRowSpace = count == 0 ? 0 : Math.Round(((double)sum) / count, MidpointRounding.AwayFromZero);
+                avgRowSpace = Math.Round(((double)sum) / count, MidpointRounding.AwayFromZero);
             }
 
             int avgLeft = (int)Math.Round(cells.Average(c => c.Rect.X - (avgWidth + avgColSpacing) * c.ColNum), MidpointRounding.AwayFromZero);
