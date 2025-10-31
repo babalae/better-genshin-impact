@@ -456,7 +456,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 // 指定使用树脂
                 var textListInPrompt2 = ra3.FindMulti(RecognitionObject.Ocr(ra3.Width * 0.25, ra3.Height * 0.2, ra3.Width * 0.5, ra3.Height * 0.6));
                 // 按优先级使用
-                var failCount = 0;
+                int successCount = 0;
                 foreach (var record in _resinPriorityListWhenSpecifyUse)
                 {
                     if (record.RemainCount > 0)
@@ -466,12 +466,9 @@ public class AutoStygianOnslaughtTask : ISoloTask
                         {
                             record.RemainCount -= 1;
                             Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
+                            successCount++;
                             break;
                         }
-                    }
-                    else
-                    {
-                        failCount++;
                     }
                 }
 
@@ -481,7 +478,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                     isLastTurn = true;
                 }
 
-                if (failCount == _resinPriorityListWhenSpecifyUse.Count)
+                if (successCount == 0)
                 {
                     // 没有找到对应的树脂
                     _logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
