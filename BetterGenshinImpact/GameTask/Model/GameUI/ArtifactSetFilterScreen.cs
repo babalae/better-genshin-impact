@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
-    public class ArtifactSetFilterScreen : IAsyncEnumerable<ImageRegion>
+    public class ArtifactSetFilterScreen : IAsyncEnumerable<Tuple<ImageRegion, Rect>>
     {
         private readonly GridParams @params;
         private readonly CancellationToken ct;
@@ -36,22 +36,22 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             this.logger = logger;
             this.@params = @params;
         }
-        public IAsyncEnumerator<ImageRegion> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        public IAsyncEnumerator<Tuple<ImageRegion, Rect>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             return new GridEnumerator(this, @params.Roi, @params.Columns, new GridScroller(@params, logger, input, ct), ct);
         }
 
-        public class GridEnumerator : IAsyncEnumerator<ImageRegion>
+        public class GridEnumerator : IAsyncEnumerator<Tuple<ImageRegion, Rect>>
         {
             private readonly ArtifactSetFilterScreen owner;
             private readonly Rect roi;
             private readonly CancellationToken ct;
             private readonly int columns;
             private readonly GridScroller gridScroller;
-
-            private Queue<ImageRegion> imageRegions;
-            private ImageRegion? current;
-            ImageRegion IAsyncEnumerator<ImageRegion>.Current => current ?? throw new NullReferenceException();
+            private record Page(ImageRegion PageRegion, Queue<Rect> ItemRects);
+            private Page? currentPage;
+            private Tuple<ImageRegion, Rect>? current;
+            Tuple<ImageRegion, Rect> IAsyncEnumerator<Tuple<ImageRegion, Rect>>.Current => current ?? throw new NullReferenceException();
 
             internal GridEnumerator(ArtifactSetFilterScreen owner, Rect roi, int columns, GridScroller gridScroller, CancellationToken ct)
             {
@@ -60,15 +60,13 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 this.ct = ct;
                 this.columns = columns;
                 this.gridScroller = gridScroller;
-
-                this.imageRegions = new Queue<ImageRegion>();
             }
 
             public async ValueTask<bool> MoveNextAsync()
             {
-                if (current == null || this.imageRegions.Count < 1)
+                if (this.currentPage == null || this.currentPage.ItemRects.Count < 1)
                 {
-                    if (current != null)
+                    if (this.currentPage != null)
                     {
                         using var ra4 = TaskControl.CaptureToRectArea();
                         ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
@@ -83,16 +81,17 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
                     using ImageRegion ra = TaskControl.CaptureToRectArea();
                     using ImageRegion imageRegion = ra.DeriveCrop(this.roi);
-                    IEnumerable<ImageRegion> gridItems = GetGridItems(imageRegion.SrcMat, this.columns).Select(imageRegion.DeriveCrop);
+                    IEnumerable<Rect> gridRects = GetGridItems(imageRegion.SrcMat, this.columns);
 
-                    this.imageRegions = new Queue<ImageRegion>(gridItems);
+                    this.currentPage = new Page(imageRegion, new Queue<Rect>(gridRects));
                 }
-                this.current = this.imageRegions.Dequeue();
+                this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());
                 return true;
             }
 
             public ValueTask DisposeAsync()
             {
+                this.currentPage?.PageRegion?.Dispose();
                 return ValueTask.CompletedTask;
             }
         }

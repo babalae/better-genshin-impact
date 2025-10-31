@@ -92,8 +92,9 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             int? count = null;
             try
             {
-                await foreach (ImageRegion itemRegion in gridScreen)
+                await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
+                    using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                     using Mat icon = itemRegion.SrcMat.GetGridIcon();
                     var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                     string predName = result.Item1;

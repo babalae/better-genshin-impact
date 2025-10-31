@@ -89,8 +89,9 @@ public class GetGridIconsTask : ISoloTask
         HashSet<string> fileNames = new HashSet<string>();
         try
         {
-            await foreach (ImageRegion itemRegion in gridScreen)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 itemRegion.Click();
                 await Delay(300, ct);
 
@@ -150,8 +151,9 @@ public class GetGridIconsTask : ISoloTask
     {
         ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
         HashSet<string> fileNames = new HashSet<string>();
-        await foreach (ImageRegion itemRegion in gridScreen)
+        await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
         {
+            using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
             itemRegion.Click();
             await Delay(300, ct);
 

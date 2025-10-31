@@ -14,22 +14,24 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
-    public class GridScreen : IAsyncEnumerable<ImageRegion>
+    public class GridScreen : IAsyncEnumerable<Tuple<ImageRegion, Rect>>
     {
         private readonly GridParams @params;
         private readonly CancellationToken ct;
         private readonly ILogger logger;
         private readonly InputSimulator input = Simulation.SendInput;
         internal Action? OnBeforeScroll { get; set; }
-        internal Action<IEnumerable<Tuple<ImageRegion, bool>>>? OnAfterTurnToNewPage { get; set; }
+        internal Action<Tuple<ImageRegion, IEnumerable<Tuple<Rect, bool>>>>? OnAfterTurnToNewPage { get; set; }
 
         /// <summary>
         /// 提供一个默认的绘制页面上所有识别出的项目的行为
         /// </summary>
-        internal static readonly Action<IEnumerable<Tuple<ImageRegion, bool>>> DrawItemsAfterTurnToNewPage = items =>
+        internal static readonly Action<Tuple<ImageRegion, IEnumerable<Tuple<Rect, bool>>>> DrawItemsAfterTurnToNewPage = data =>
         {
-            foreach ((ImageRegion item, bool isPhantom) in items)
+            (ImageRegion page, var items) = data;
+            foreach ((Rect rect, bool isPhantom) in items)
             {
+                using ImageRegion item = page.DeriveCrop(rect);
                 item.DrawSelf($"GridItem{item.GetHashCode()}", isPhantom ? System.Drawing.Pens.Yellow : System.Drawing.Pens.Lime);
             }
         };
@@ -54,12 +56,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             this.@params = @params;
         }
 
-        public IAsyncEnumerator<ImageRegion> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        public IAsyncEnumerator<Tuple<ImageRegion, Rect>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             return new GridEnumerator(this, @params.Roi, @params.Columns, input, new GridScroller(@params, logger, input, ct), ct);
         }
 
-        public class GridEnumerator : IAsyncEnumerator<ImageRegion>
+        public class GridEnumerator : IAsyncEnumerator<Tuple<ImageRegion, Rect>>
         {
             private readonly GridScreen owner;
             private readonly Rect roi;
@@ -73,10 +75,10 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// </summary>
             /// <param name="ImageRegion">供枚举输出的队列</param>
             /// <param name="AntiRecycling">为了防止Grid的页面元素自动回收复用技术导致item高亮干扰，每次滚动后记录靠近下方的一个item，在下次滚动前主动点击该item</param>
-            private record Page(Queue<ImageRegion> ImageRegions, Rect? AntiRecycling);
+            private record Page(ImageRegion PageRegion, Queue<Rect> ItemRects, Rect? AntiRecycling);
             private Page? currentPage;
-            private ImageRegion? current;
-            ImageRegion IAsyncEnumerator<ImageRegion>.Current => current ?? throw new NullReferenceException();
+            private Tuple<ImageRegion, Rect>? current;
+            Tuple<ImageRegion, Rect> IAsyncEnumerator<Tuple<ImageRegion, Rect>>.Current => current ?? throw new NullReferenceException();
 
             /// <summary>
             /// 滚动操作枚举器
@@ -350,82 +352,73 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
             public async ValueTask<bool> MoveNextAsync()
             {
-                if (this.currentPage == null || this.currentPage.ImageRegions.Count < 1)
+                if (this.currentPage == null || this.currentPage.ItemRects.Count < 1)
                 {
                     ImageRegion? imageRegion = null;
-                    try
+                    if (this.currentPage != null)   // 当前页遍历完了就向下滚动
                     {
-                        if (this.currentPage != null)   // 当前页遍历完了就向下滚动
+                        if (this.currentPage.AntiRecycling.HasValue)
                         {
-                            if (this.currentPage.AntiRecycling.HasValue)
-                            {
-                                using DesktopRegion desktop = new DesktopRegion(this.input.Mouse);
-                                var (x, y, w, h) = (this.currentPage.AntiRecycling.Value.X, this.currentPage.AntiRecycling.Value.Y, this.currentPage.AntiRecycling.Value.Width, this.currentPage.AntiRecycling.Value.Height);
-                                var (gcX, gcY) = (TaskContext.Instance().SystemInfo.CaptureAreaRect.X, TaskContext.Instance().SystemInfo.CaptureAreaRect.Y);
-                                desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
-                                await TaskControl.Delay(500, ct);
-                                desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
-                                await TaskControl.Delay(500, ct);
-                            }
-
-                            using var ra4 = TaskControl.CaptureToRectArea();
-                            ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
-                            await TaskControl.Delay(300, ct);
-
-                            owner.OnBeforeScroll?.Invoke();
-                            if (!await this.gridScroller.TryVerticalScollDown((src, columns) => GetGridItems(src, columns)))
-                            {
-                                return false;
-                            }
-
-                            using ImageRegion ra = TaskControl.CaptureToRectArea();
-                            imageRegion = ra.DeriveCrop(this.roi);
-                        }
-                        else
-                        {
-                            // 第一页采集时，主动操作来避免图标高亮
-                            Rect rect12 = new Rect(0, 0, (int)(this.roi.Width * 1.5 / this.columns), this.roi.Height);
-                            // 双击第三列，采集第一、二列
                             using DesktopRegion desktop = new DesktopRegion(this.input.Mouse);
+                            var (x, y, w, h) = (this.currentPage.AntiRecycling.Value.X, this.currentPage.AntiRecycling.Value.Y, this.currentPage.AntiRecycling.Value.Width, this.currentPage.AntiRecycling.Value.Height);
                             var (gcX, gcY) = (TaskContext.Instance().SystemInfo.CaptureAreaRect.X, TaskContext.Instance().SystemInfo.CaptureAreaRect.Y);
-                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
-                            await TaskControl.Delay(300, ct);
-                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                            desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
                             await TaskControl.Delay(500, ct);
-
-                            using ImageRegion ra12 = TaskControl.CaptureToRectArea();
-                            using ImageRegion imageRegion12 = ra12.DeriveCrop(this.roi);
-                            using Mat columns12 = new Mat(imageRegion12.SrcMat, rect12);
-
-                            // 双击第一列，采集第二列以后的列
-                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
-                            await TaskControl.Delay(300, ct);
-                            desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                            desktop.ClickTo(gcX + this.roi.X + x + (w / 2d), gcY + this.roi.Y + y + (h / 2d));
                             await TaskControl.Delay(500, ct);
-
-                            using ImageRegion raRest = TaskControl.CaptureToRectArea();
-                            imageRegion = raRest.DeriveCrop(this.roi);
-                            using Mat subMat12 = imageRegion.SrcMat.SubMat(rect12);
-                            columns12.CopyTo(subMat12); // 拼接两次的采集
                         }
 
-                        var rects = GetGridItems(imageRegion.SrcMat, this.columns);
-                        var cells = PostProcess(imageRegion.SrcMat, rects, (int)(0.025 * this.roi.Height));
+                        using var ra4 = TaskControl.CaptureToRectArea();
+                        ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
+                        await TaskControl.Delay(300, ct);
 
-                        var imageRegionCells = cells.Select(c => Tuple.Create(imageRegion.DeriveCrop(c.Rect), c)).ToArray();
+                        owner.OnBeforeScroll?.Invoke();
+                        if (!await this.gridScroller.TryVerticalScollDown((src, columns) => GetGridItems(src, columns)))
+                        {
+                            return false;
+                        }
 
-                        this.currentPage = new Page(new Queue<ImageRegion>(imageRegionCells.OrderBy(c => c.Item2.RowNum).ThenBy(c => c.Item2.ColNum).Select(c => c.Item1)),
-                            imageRegionCells.GroupBy(c => c.Item2.RowNum).OrderByDescending(g => g.Key).Skip(1)?.FirstOrDefault()?.OrderBy(c => c.Item2.ColNum)?.FirstOrDefault()?.Item2.Rect);
-
-                        owner.OnAfterTurnToNewPage?.Invoke(imageRegionCells.Select(c => Tuple.Create(c.Item1, c.Item2.IsPhantom)));
+                        using ImageRegion ra = TaskControl.CaptureToRectArea();
+                        imageRegion = ra.DeriveCrop(this.roi);
                     }
-                    finally
+                    else
                     {
-                        imageRegion?.Dispose();
+                        // 第一页采集时，主动操作来避免图标高亮
+                        Rect rect12 = new Rect(0, 0, (int)(this.roi.Width * 1.5 / this.columns), this.roi.Height);
+                        // 双击第三列，采集第一、二列
+                        using DesktopRegion desktop = new DesktopRegion(this.input.Mouse);
+                        var (gcX, gcY) = (TaskContext.Instance().SystemInfo.CaptureAreaRect.X, TaskContext.Instance().SystemInfo.CaptureAreaRect.Y);
+                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                        await TaskControl.Delay(300, ct);
+                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 2.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                        await TaskControl.Delay(500, ct);
+
+                        using ImageRegion ra12 = TaskControl.CaptureToRectArea();
+                        using ImageRegion imageRegion12 = ra12.DeriveCrop(this.roi);
+                        using Mat columns12 = new Mat(imageRegion12.SrcMat, rect12);
+
+                        // 双击第一列，采集第二列以后的列
+                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                        await TaskControl.Delay(300, ct);
+                        desktop.ClickTo(gcX + this.roi.X + this.roi.Width * 0.5 / this.columns, gcY + this.roi.Y + this.roi.Width * 0.5 / this.columns);
+                        await TaskControl.Delay(500, ct);
+
+                        using ImageRegion raRest = TaskControl.CaptureToRectArea();
+                        imageRegion = raRest.DeriveCrop(this.roi);
+                        using Mat subMat12 = imageRegion.SrcMat.SubMat(rect12);
+                        columns12.CopyTo(subMat12); // 拼接两次的采集
                     }
+
+                    var rects = GetGridItems(imageRegion.SrcMat, this.columns);
+                    var cells = PostProcess(imageRegion.SrcMat, rects, (int)(0.025 * this.roi.Height));
+
+                    this.currentPage = new Page(imageRegion, new Queue<Rect>(cells.OrderBy(c => c.RowNum).ThenBy(c => c.ColNum).Select(c => c.Rect)),
+                        cells.GroupBy(c => c.RowNum).OrderByDescending(g => g.Key).Skip(1)?.FirstOrDefault()?.OrderBy(c => c.ColNum)?.FirstOrDefault()?.Rect);
+
+                    owner.OnAfterTurnToNewPage?.Invoke(Tuple.Create(imageRegion, cells.Select(c=> Tuple.Create(c.Rect, c.IsPhantom))));
                 }
 
-                this.current = this.currentPage.ImageRegions.Dequeue();
+                this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());
                 return true;
             }
 
@@ -452,6 +445,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
             public ValueTask DisposeAsync()
             {
+                this.currentPage?.PageRegion?.Dispose();
                 return ValueTask.CompletedTask;
             }
         }

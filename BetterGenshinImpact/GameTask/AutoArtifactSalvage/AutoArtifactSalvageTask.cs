@@ -315,8 +315,9 @@ public class AutoArtifactSalvageTask : ISoloTask
                 gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
                 try
                 {
-                    await foreach (ImageRegion itemRegion in gridScreen)
+                    await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                     {
+                        using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                         using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
                         (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
                         if (predName == null)
@@ -383,8 +384,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
         try
         {
-            await foreach (ImageRegion itemRegion in gridScreen)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 Rect gridRect = itemRegion.ToRect();
                 if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
                 {
