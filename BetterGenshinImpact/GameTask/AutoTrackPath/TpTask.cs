@@ -44,6 +44,7 @@ public class TpTask
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
     private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
 
     private readonly CancellationToken ct;
     private readonly CultureInfo cultureInfo;
@@ -336,6 +337,8 @@ public class TpTask
             //增加容错，小概率情况下碰到，前面点击传送失败
             capture.Find(_assets.TeleportButtonRo, rg => rg.Click());
             await Delay(delayMs, ct);
+            // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
+            await _blessingOfTheWelkinMoonTask.Start(ct);
         }
 
         Logger.LogWarning("传送等待超时，换台电脑吧");
