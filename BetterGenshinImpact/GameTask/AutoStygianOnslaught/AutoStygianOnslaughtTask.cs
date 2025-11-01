@@ -422,7 +422,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
                 {
                     _logger.LogWarning("树脂不足");
-                    await ExitDomain();
                     return false;
                 }
 
@@ -441,7 +440,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 if (!resinUsed)
                 {
                     _logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
-                    await ExitDomain();
                     return false;
                 }
 
@@ -591,7 +589,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
         else
         {
-            Logger.LogError("未能找到退出秘境按钮，未知原因，请手动确认是否已退出秘境");
+            Logger.LogWarning("未能找到退出秘境按钮，可能已经退出秘境");
         }
     }
 }
