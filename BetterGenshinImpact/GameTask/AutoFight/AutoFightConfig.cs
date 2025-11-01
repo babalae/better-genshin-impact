@@ -156,6 +156,9 @@ public partial class AutoFightConfig : ObservableObject
     
     [ObservableProperty]
     private bool _swimmingEnabled = false;
+    
+    [ObservableProperty]
+    private bool _expKazuhaPickup = false;
 
     /// <summary>
     /// 战斗超时，单位秒

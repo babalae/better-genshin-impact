@@ -1425,6 +1425,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
@@ -1438,9 +1439,8 @@
                                       FontSize="10"
                                       FontTypography="Body"
                                       VerticalAlignment="Bottom"
-                                      Text="(琴二次拾取：首次拾取空,再次拾取)"
+                                      Text="(基于经验：通过精英经验值判断是否聚集 / 琴二次拾取：琴首次拾取空,再次拾取)"
                                       TextWrapping="Wrap" />
-                        
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
@@ -1451,16 +1451,32 @@
                                          Grid.Column="1"
                                          Margin="0,0,10,0"
                                          IsChecked="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
-                        
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="2"
+                                         Margin="0,0,10,0"
+                                         IsEnabled="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
+                                         IsChecked="{Binding PathingConfig.AutoFightConfig.ExpKazuhaPickup, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="2"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      FontSize="8"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Margin="0,0,10,26"
+                                      FontTypography="Body"
+                                      Text="基于经验值"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="3"
                                          Margin="0,0,38,0"
                                          IsEnabled="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
                                          IsChecked="{Binding PathingConfig.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
                         <ui:TextBlock Grid.Row="0"
                                       Grid.RowSpan="2"
-                                      Grid.Column="2"
+                                      Grid.Column="3"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
                                       FontSize="8"
@@ -1469,6 +1485,61 @@
                                       FontTypography="Body"
                                       Text="琴二次拾取"
                                       TextWrapping="Wrap" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="拾取战斗人次阈值"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="拾取战斗人次阈值,当战斗人次小于一定次数，就结束战斗情况下，不触发拾取掉落物和万叶拾取配置，只有不小于2时才生效。"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="120"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding PathingConfig.AutoFightConfig.BattleThresholdForLoot}" />
+                    </Grid>
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="只拾取精英掉落模式"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="需要路径文件支持，需勾选区分怪物拾取才生效，可通过仓库标签查看，精英怪物可以在点位的更多》扩展配置》怪物标签中，可标记。只拾取标记为精英或传奇的点位。非精英允许自动拾取：战斗过程中掉落脚下的可以自动拾取，但不会执行万叶拾取和自动拾取配置逻辑。非精英关闭拾取：战斗过程中掉落到脚下的也不会自动拾取。"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  MinWidth="75"
+                                  SelectedValuePath="Key"
+                                  DisplayMemberPath="Value"
+                                  Margin="0,0,36,0"
+                                  ItemsSource="{Binding OnlyPickEliteDropsSource}"
+                                  SelectedValue="{Binding PathingConfig.AutoFightConfig.OnlyPickEliteDropsMode}" />
                     </Grid>
                     <Grid Margin="16">
                         <Grid.RowDefinitions>
