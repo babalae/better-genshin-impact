@@ -121,7 +121,8 @@ public class Avatar
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
-                if (!SwimmingConfirm(CaptureToRectArea())) //二次确认
+                using var ra = CaptureToRectArea();
+                if (!SwimmingConfirm(ra)) //二次确认
                 {
                     return;
                 }
@@ -144,7 +145,8 @@ public class Avatar
                 
                 Simulation.ReleaseAllKey();
                 
-                if (!SwimmingConfirm(CaptureToRectArea()))
+                using var ra2 = CaptureToRectArea();
+                if (!SwimmingConfirm(ra2))
                 {
                     Logger.LogInformation("游泳检测：游泳脱困成功");
                     return;
@@ -164,19 +166,15 @@ public class Avatar
     /// </summary>
     private static bool SwimmingConfirm(Region region)
     {
-        var mask = OpenCvCommonHelper.Threshold(region.ToImageRegion().DeriveCrop(1819, 1025, 9, 11).SrcMat, 
+        using var mask = OpenCvCommonHelper.Threshold(region.ToImageRegion().DeriveCrop(1819, 1025, 9, 11).SrcMat, 
             new Scalar(242, 223, 39),new Scalar(255, 233, 44));
-        var labels = new Mat();
-        var stats = new Mat();
-        var centroids = new Mat();
+        using var labels = new Mat();
+        using var stats = new Mat();
+        using var centroids = new Mat();
 
         var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
             connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-
-        labels.Dispose();
-        stats.Dispose();
-        centroids.Dispose();
-
+        
         return numLabels > 1;
     }
 
@@ -209,7 +207,7 @@ public class Avatar
                 return;
             }
 
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
             // 切换成功
@@ -241,7 +239,7 @@ public class Avatar
                 return false;
             }
 
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
             // 切换成功
@@ -298,7 +296,7 @@ public class Avatar
         var context = new AvatarActiveCheckContext();
         for (var i = 0; i < 10; i++)
         {
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
@@ -332,8 +330,8 @@ public class Avatar
     private bool IsIndexRectWhite(ImageRegion region, Rect rect)
     {
         // 剪裁出IndexRect区域
-        var indexRa = region.DeriveCrop(rect);
-        var mat = indexRa.CacheGreyMat;
+        using var indexRa = region.DeriveCrop(rect);
+        using var mat = indexRa.CacheGreyMat;
         var count = OpenCvCommonHelper.CountGrayMatColor(mat, 251, 255);
         if (count * 1.0 / (mat.Width * mat.Height) > 0.5)
         {
@@ -460,7 +458,7 @@ public class Avatar
 
             Sleep(200, Ct);
 
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct); // 检测是不是要跑神像
             var cd = AfterUseSkill(region);
             if (cd > 0)
@@ -485,7 +483,7 @@ public class Avatar
             return GetSkillCdSeconds();
         }
 
-        var region = givenRegion ?? CaptureToRectArea();
+        using var region = givenRegion ?? CaptureToRectArea();
         return GetSkillCurrentCd(region);
     }
 
@@ -496,8 +494,8 @@ public class Avatar
     /// </summary>
     private double GetSkillCurrentCd(ImageRegion imageRegion)
     {
-        var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
-        var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+        using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+        using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
         if (cd > 0 && cd <= CombatAvatar.SkillCd)
@@ -525,7 +523,7 @@ public class Avatar
             Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
             Sleep(200, Ct);
 
-            var region = CaptureToRectArea();
+            using var region = CaptureToRectArea();
             ThrowWhenDefeated(region, Ct);
 
             if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))

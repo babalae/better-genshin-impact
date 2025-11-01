@@ -29,16 +29,16 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
         public static Task<bool?> MoveForwardAsync(Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
         {
-            var image2 = CaptureToRectArea();
-            Mat mask2 = OpenCvCommonHelper.Threshold(
+            using var image2 = CaptureToRectArea();
+            using Mat mask2 = OpenCvCommonHelper.Threshold(
                 image2.DeriveCrop(0, 0, image2.Width * 1570 / 1920, image2.Height * 970 / 1080).SrcMat,
                 scalarLower,
                 scalarHigher
             );
 
-            Mat labels2 = new Mat();
-            Mat stats2 = new Mat();
-            Mat centroids2 = new Mat();
+            using Mat labels2 = new Mat();
+            using Mat stats2 = new Mat();
+            using Mat centroids2 = new Mat();
 
             int numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2, connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
@@ -215,12 +215,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     logger.LogError("无法获取统计信息数组");
                 }
             }
-
-            mask2.Dispose();
-            labels2.Dispose();
-            stats2.Dispose();
-            centroids2.Dispose();
-            image2.Dispose();
+            
             return Task.FromResult<bool?>(null);
         }
     }
@@ -263,18 +258,18 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 {
                     // logger.LogInformation("检测画面内疑似有敌人，继续战斗...");
 
-                    Mat firstRow = stats.Row(1);
+                    using Mat firstRow = stats.Row(1);
                     int[] statsArray;
                     bool success = firstRow.GetArray(out statsArray); 
                     int height = statsArray[3];
                     int x = statsArray[0];
                     // Logger.LogInformation("敌人位置: ({x}，血量高度: {height}", x, height);
                     
+                    image.Dispose();
                     mask.Dispose();
                     labels.Dispose();
                     stats.Dispose();
                     centroids.Dispose();
-                    image.Dispose();
                     
                     if (success)
                     {
@@ -523,12 +518,12 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             }
             else if (burstEnabled)
             {
-                var image = CaptureToRectArea();
+                using var image = CaptureToRectArea();
                 if (!guardianAvatar.IsActive(image))
                 {
                     var skillArea = AutoFightAssets.Instance.AvatarQRectListMap[guardianAvatar.Index - 1];//Q技能区域
                     // 首先对图像进行预处理，转为灰度图
-                    var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
+                    using var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
                 
                     //调试用
                     // grayImage.SaveImage("D:\\Images\\grayImage.png");
@@ -562,28 +557,25 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         
                             //普攻一下，防止在纳塔飞天
                             Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                            var imageAfterBurst = CaptureToRectArea();
-                            if (AvatarSkillAsync(Logger, guardianAvatar, true, 1, ct).Result 
-                                 || !Bv.IsInMainUi(imageAfterBurst)) //Q技能CD（冷却检测）或者不在主界面（大招动画播放中）
+                            using (var imageAfterBurst = CaptureToRectArea())
                             {
-                                guardianAvatar.IsBurstReady = false;
+                                if (AvatarSkillAsync(Logger, guardianAvatar, true, 1, ct).Result 
+                                    || !Bv.IsInMainUi(imageAfterBurst)) //Q技能CD（冷却检测）或者不在主界面（大招动画播放中）
+                                {
+                                    guardianAvatar.IsBurstReady = false;
+                                }
+                                else
+                                {
+                                    Sleep(500, ct);
+                                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);//普攻一下，防止在纳塔飞天
+                                    Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);//尝试再放一次,不检查
+                                    guardianAvatar.IsBurstReady = true;
+                                }
+                                Logger.LogInformation("优先第 {guardianAvatarName} 盾奶位 {GuardianAvatar} 释放元素爆发：{text}",
+                                    guardianAvatarName, guardianAvatar.Name, !guardianAvatar.IsBurstReady ? "成功" : "失败");
                             }
-                            else
-                            {
-                                Sleep(500, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);//普攻一下，防止在纳塔飞天
-                                Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);//尝试再放一次,不检查
-                                guardianAvatar.IsBurstReady = true;
-                            }
-                            Logger.LogInformation("优先第 {guardianAvatarName} 盾奶位 {GuardianAvatar} 释放元素爆发：{text}",
-                                guardianAvatarName, guardianAvatar.Name, !guardianAvatar.IsBurstReady ? "成功" : "失败");
-                            
-                            imageAfterBurst.Dispose();
                         }
                     }
-                    
-                    image.Dispose();
-                    grayImage.Dispose();
                 }
             }
         }
@@ -613,7 +605,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 while (attempt < retryCount)
                 {
-                    var image2 = model ? CaptureToRectArea() : image ?? CaptureToRectArea();
+                    using var image2 = model ? CaptureToRectArea() : image ?? CaptureToRectArea();
 
                     // var image2 = CaptureToRectArea();
 
@@ -624,24 +616,20 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         : new Rect(image2.Width * 1809 / 1920, image2.Height * 968 / 1080,
                             image2.Width * 30 / 1920, image2.Height * 15 / 1080); //Q技能区域
                     
-                    var mask2 = OpenCvCommonHelper.Threshold(
+                    using var mask2 = OpenCvCommonHelper.Threshold(
                         image2.DeriveCrop(skillAra).SrcMat,
                         bloodLower,
                         bloodLower
                     );
 
-                    var labels2 = new Mat();
-                    var stats2 = new Mat();
-                    var centroids2 = new Mat();
+                    using var labels2 = new Mat();
+                    using var stats2 = new Mat();
+                    using var centroids2 = new Mat();
 
                     int numLabels2 = Cv2.ConnectedComponentsWithStats(mask2, labels2, stats2, centroids2,
                         connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
                     if (model) image2.Dispose();
-                    mask2.Dispose();
-                    labels2.Dispose();
-                    stats2.Dispose();
-                    centroids2.Dispose();
                     
                     if (needLog) Logger.LogInformation("技能状态：{guardianAvatar.Name} - {skills} 状态 {text}", 
                         guardianAvatar.Name, skills?"Q技能":"E技能", numLabels2 > 1?"冷却中":"就绪");
@@ -700,7 +688,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             {
                 var skillArea = i != avatarCurrent ? AutoFightAssets.Instance.AvatarQRectListMap[i - 1]: new Rect(1762, 915, 114, 111);
                 
-                var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
+                using var grayImage = image.DeriveCrop(skillArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
         
                 var meanBrightness = Cv2.Mean(grayImage);
                 var avgBrightness = meanBrightness.Val0;
@@ -716,7 +704,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 {
                     useMedicine.Add(i);
                 }
-                grayImage.Dispose();
             }
             
             image.Dispose();

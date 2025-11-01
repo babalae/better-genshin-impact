@@ -682,7 +682,7 @@ public class AutoFightTask : ISoloTask
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
         
-        var ra = CaptureToRectArea();
+        using var ra = CaptureToRectArea();
         //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
         // 只提取橙色
         
