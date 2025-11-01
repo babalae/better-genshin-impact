@@ -89,8 +89,9 @@ public class GetGridIconsTask : ISoloTask
         HashSet<string> fileNames = new HashSet<string>();
         try
         {
-            await foreach (ImageRegion itemRegion in gridScreen)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 itemRegion.Click();
                 await Delay(300, ct);
 
@@ -150,8 +151,9 @@ public class GetGridIconsTask : ISoloTask
     {
         ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
         HashSet<string> fileNames = new HashSet<string>();
-        await foreach (ImageRegion itemRegion in gridScreen)
+        await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
         {
+            using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
             itemRegion.Click();
             await Delay(300, ct);
 
@@ -175,7 +177,7 @@ public class GetGridIconsTask : ISoloTask
 
                 // 截取没有符号的区域再识别一次
                 Rect flowerWithoutGlyph = new Rect((int)(ra1.Width * 0.028), (int)(flowerWithGlyphRect.Y - flowerWithGlyphRect.Height * 0), (int)(ra1.Width * 0.228), (int)(flowerWithGlyphRect.Height * 1));
-                Mat roi = nameRegion.SrcMat.SubMat(flowerWithoutGlyph);
+                using Mat roi = nameRegion.SrcMat.SubMat(flowerWithoutGlyph);
                 var whiteOcrResult = OcrFactory.Paddle.OcrResult(roi);
                 flowerName = whiteOcrResult.Text;
                 // 所以只好识别两次，Trim后根据字数取原截图OCR的结果……
@@ -242,7 +244,7 @@ public class GetGridIconsTask : ISoloTask
         double width = 60;
         double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
         Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
-        Mat crop = itemRegion.SrcMat.SubMat(iconRect);
+        using Mat crop = itemRegion.SrcMat.SubMat(iconRect);
         return crop.Resize(new Size(125, 125));
     }
 

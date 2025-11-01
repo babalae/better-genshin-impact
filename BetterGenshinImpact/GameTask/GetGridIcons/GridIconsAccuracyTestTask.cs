@@ -113,8 +113,9 @@ public class GridIconsAccuracyTestTask : ISoloTask
         gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
         try
         {
-            await foreach (ImageRegion itemRegion in gridScreen)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 itemRegion.Click();
                 Task task1 = Delay(300, ct);
 

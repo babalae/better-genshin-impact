@@ -88,8 +88,9 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             int? count = null;
             try
             {
-                await foreach (ImageRegion itemRegion in gridScreen)
+                await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
+                    using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                     using Mat icon = itemRegion.SrcMat.GetGridIcon();
                     var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                     if (result.Item1 == null)
@@ -135,8 +136,9 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             try
             {
-                await foreach (ImageRegion itemRegion in gridScreen)
+                await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
+                    using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                     using Mat icon = itemRegion.SrcMat.GetGridIcon();
                     var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
                     if (result.Item1 == null)

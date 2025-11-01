@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         /// <returns></returns>
         public static string GetGridItemIconText(this Mat mat, IOcrService ocrService)
         {
-            Mat subMat = mat.SubMat(mat.Height * 128 / 153, mat.Height * 150 / 153, mat.Width * 5 / 125, mat.Width * 120 / 125);
+            using Mat subMat = mat.SubMat(mat.Height * 128 / 153, mat.Height * 150 / 153, mat.Width * 5 / 125, mat.Width * 120 / 125);
             using Mat resize = subMat.Resize(new Size(subMat.Width * 2, subMat.Height * 2));
             return ocrService.Ocr(resize);
         }
@@ -28,7 +28,18 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         public static Mat GetGridIcon(this Mat mat)
         {
             using Mat resized = mat.Resize(new Size(125, 153));
-            return resized.SubMat(0, 125, 0, 125).Clone();
+            return resized.SubMat(0, 125, 0, 125);
+        }
+
+        /// <summary>
+        /// 截取Grid图标中底部的部分
+        /// </summary>
+        /// <param name="mat"></param>
+        /// <returns></returns>
+        public static Mat GetGridBottom(this Mat mat)
+        {
+            using Mat resized = mat.Resize(new Size(125, 153));
+            return resized.SubMat(126, 153, 0, 125);
         }
     }
 }

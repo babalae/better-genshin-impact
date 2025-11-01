@@ -10,10 +10,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TorchSharp.Modules;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
-    public class ArtifactSetFilterScreen : IAsyncEnumerable<ImageRegion>
+    public class ArtifactSetFilterScreen : IAsyncEnumerable<Tuple<ImageRegion, Rect>>
     {
         private readonly GridParams @params;
         private readonly CancellationToken ct;
@@ -36,22 +37,22 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             this.logger = logger;
             this.@params = @params;
         }
-        public IAsyncEnumerator<ImageRegion> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        public IAsyncEnumerator<Tuple<ImageRegion, Rect>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
             return new GridEnumerator(this, @params.Roi, @params.Columns, new GridScroller(@params, logger, input, ct), ct);
         }
 
-        public class GridEnumerator : IAsyncEnumerator<ImageRegion>
+        public class GridEnumerator : IAsyncEnumerator<Tuple<ImageRegion, Rect>>
         {
             private readonly ArtifactSetFilterScreen owner;
             private readonly Rect roi;
             private readonly CancellationToken ct;
             private readonly int columns;
             private readonly GridScroller gridScroller;
-
-            private Queue<ImageRegion> imageRegions;
-            private ImageRegion? current;
-            ImageRegion IAsyncEnumerator<ImageRegion>.Current => current ?? throw new NullReferenceException();
+            private record Page(ImageRegion PageRegion, Queue<Rect> ItemRects);
+            private Page? currentPage;
+            private Tuple<ImageRegion, Rect>? current;
+            Tuple<ImageRegion, Rect> IAsyncEnumerator<Tuple<ImageRegion, Rect>>.Current => current ?? throw new NullReferenceException();
 
             internal GridEnumerator(ArtifactSetFilterScreen owner, Rect roi, int columns, GridScroller gridScroller, CancellationToken ct)
             {
@@ -60,15 +61,13 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 this.ct = ct;
                 this.columns = columns;
                 this.gridScroller = gridScroller;
-
-                this.imageRegions = new Queue<ImageRegion>();
             }
 
             public async ValueTask<bool> MoveNextAsync()
             {
-                if (current == null || this.imageRegions.Count < 1)
+                if (this.currentPage == null || this.currentPage.ItemRects.Count < 1)
                 {
-                    if (current != null)
+                    if (this.currentPage != null)
                     {
                         using var ra4 = TaskControl.CaptureToRectArea();
                         ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
@@ -82,17 +81,34 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     }
 
                     using ImageRegion ra = TaskControl.CaptureToRectArea();
-                    using ImageRegion imageRegion = ra.DeriveCrop(this.roi);
-                    IEnumerable<ImageRegion> gridItems = GetGridItems(imageRegion.SrcMat, this.columns).Select(imageRegion.DeriveCrop);
 
-                    this.imageRegions = new Queue<ImageRegion>(gridItems);
+                    ImageRegion imageRegion = ra.DeriveCrop(this.roi);
+                    try
+                    {
+                        IEnumerable<Rect> gridRects = GetGridItems(imageRegion.SrcMat, this.columns);
+
+                        if (!gridRects.Any())
+                        {
+                            imageRegion.Dispose();
+                            return false;
+                        }
+
+                        this.currentPage?.PageRegion?.Dispose();
+                        this.currentPage = new Page(imageRegion, new Queue<Rect>(gridRects));
+                    }
+                    catch
+                    {
+                        imageRegion?.Dispose();
+                        throw;
+                    }
                 }
-                this.current = this.imageRegions.Dequeue();
+                this.current = Tuple.Create(this.currentPage.PageRegion, this.currentPage.ItemRects.Dequeue());
                 return true;
             }
 
             public ValueTask DisposeAsync()
             {
+                this.currentPage?.PageRegion?.Dispose();
                 return ValueTask.CompletedTask;
             }
         }
@@ -134,131 +150,11 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
             IEnumerable<Rect> boxes = contours.Select(Cv2.BoundingRect);
 
-            double avgWidth = boxes.Average(r => r.Width);
-            double avgHeight = boxes.Average(r => r.Height);
+            List<GridCell> cells = GridCell.ClusterToCells(boxes, 10).ToList();
 
-            List<Cell> cells = ClusterToCells(boxes, 10).ToList();
-
-            double avgColSpacing;
-            double avgRowSpace;
-            {
-                int count = 0;
-                int sum = 0;
-                foreach (var row in cells.GroupBy(t => t.RowNum))
-                {
-                    for (int i = 0; i < row.Max(r => r.ColNum); i++)
-                    {
-                        var x1 = row.SingleOrDefault(r => r.ColNum == i);
-                        var x2 = row.SingleOrDefault(r => r.ColNum == i + 1);
-                        if (x1 == null || x2 == null)
-                        {
-                            continue;
-                        }
-                        sum += x2.Rect.X - x1.Rect.X - x1.Rect.Width;
-                        count++;
-                    }
-                }
-                avgColSpacing = Math.Round(((double)sum) / count, MidpointRounding.AwayFromZero);
-            }
-            {
-                int count = 0;
-                int sum = 0;
-                foreach (var col in cells.GroupBy(t => t.ColNum))
-                {
-                    for (int i = 0; i < col.Max(r => r.RowNum); i++)
-                    {
-                        var y1 = col.SingleOrDefault(r => r.RowNum == i);
-                        var y2 = col.SingleOrDefault(r => r.RowNum == i + 1);
-                        if (y1 == null || y2 == null)
-                        {
-                            continue;
-                        }
-                        sum += y2.Rect.Y - y1.Rect.Y - y1.Rect.Height;
-                        count++;
-                    }
-                }
-                avgRowSpace = Math.Round(((double)sum) / count, MidpointRounding.AwayFromZero);
-            }
-
-            int avgLeft = (int)Math.Round(cells.Average(c => c.Rect.X - (avgWidth + avgColSpacing) * c.ColNum), MidpointRounding.AwayFromZero);
-            int avgTop = (int)Math.Round(cells.Average(c => c.Rect.Y - (avgHeight + avgRowSpace) * c.RowNum), MidpointRounding.AwayFromZero);
-
-            // 遍历方阵，补上缺的Cell
-            for (int i = 0; i < cells.Max(r => r.ColNum) + 1; i++)
-            {
-                for (int j = 0; j < cells.Max(r => r.RowNum) + 1; j++)
-                {
-                    if (cells.Any(c => c.ColNum == i && c.RowNum == j))
-                    {
-                        continue;
-                    }
-                    int x = (int)Math.Round(avgLeft + (avgWidth + avgColSpacing) * i, MidpointRounding.AwayFromZero);
-                    int y = (int)Math.Round(avgTop + (avgHeight + avgRowSpace) * j, MidpointRounding.AwayFromZero);
-                    int width = (int)Math.Round(avgWidth, MidpointRounding.AwayFromZero);
-                    int height = (int)Math.Round(avgHeight, MidpointRounding.AwayFromZero);
-                    Cell cell = new Cell(new Rect(x, y, width, height));
-                    cell.ColNum = i;
-                    cell.RowNum = j;
-                    cells.Add(cell);
-                }
-            }
+            GridCell.FillMissingGridCells(ref cells);
 
             return cells.OrderBy(c => c.RowNum).ThenBy(c => c.ColNum).Select(c => c.Rect).ToArray();
-        }
-
-        /// <summary>
-        /// 具有行号列号的单元格
-        /// ColNum和RowNum也是0-based的
-        /// 不仅方便编程，ClusterToCells方法也需要一个引用类型
-        /// </summary>
-        /// <param name="rect"></param>
-        private class Cell(Rect rect)
-        {
-            internal Rect Rect = rect;
-            internal int ColNum;
-            internal int RowNum;
-        }
-
-        /// <summary>
-        /// 把检出的矩形聚簇成类似Excel的单元格集合
-        /// </summary>
-        /// <param name="rects"></param>
-        /// <param name="threshold"></param>
-        /// <returns></returns>
-        private static IEnumerable<Cell> ClusterToCells(IEnumerable<Rect> rects, int threshold)
-        {
-            var result = rects.Select(r => new Cell(r));
-            result = result.ToArray();  // 必需，不然引用会丢掉。。
-
-            var orderByX = result.OrderBy(t => t.Rect.Left).ToArray();
-            int col = 0;
-            int? lastX = null;
-            int avgWidth = (int)rects.Average(r => r.Width);
-            for (int i = 0; i < orderByX.Length; i++)
-            {
-                if (lastX != null && orderByX[i].Rect.X - lastX > threshold)
-                {
-                    col += (int)Math.Round((float)(orderByX[i].Rect.X - lastX.Value) / (avgWidth + threshold));
-                }
-                orderByX[i].ColNum = col;
-                lastX = orderByX[i].Rect.X;
-            }
-
-            var orderByY = result.OrderBy(t => t.Rect.Top).ToArray();
-            int row = 0;
-            int? lastY = null;
-            int avgHeight = (int)rects.Average(r => r.Height);
-            for (int i = 0; i < orderByY.Length; i++)
-            {
-                if (lastY != null && orderByY[i].Rect.Y - lastY > threshold)
-                {
-                    row += (int)Math.Round((float)(orderByY[i].Rect.Y - lastY.Value) / (avgHeight + threshold));    // 估算隔了多少行
-                }
-                orderByY[i].RowNum = row;
-                lastY = orderByY[i].Rect.Y;
-            }
-
-            return result;
         }
     }
 }

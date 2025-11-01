@@ -43,19 +43,16 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.GetGridIconsTests
             using Mat mat = new Mat(@$"..\..\..\Assets\{screenshot}");
 
             var gridItems = GridScreen.GridEnumerator.GetGridItems(mat, columns, findContoursAlpha: findContoursAlpha);
-            var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 10);
+            var cells = GridCell.ClusterToCells(gridItems, 10).OrderBy(c => c.RowNum).ThenBy(c => c.ColNum);
 
             //
             var result = new List<(string?, int)>();
-            foreach (var row in rows)
+            foreach (var cell in cells)
             {
-                foreach (Rect rect in row)
-                {
-                    Mat gridItemMat = mat.SubMat(rect);
-                    using Mat icon = gridItemMat.GetGridIcon();
-                    var pred = GridIconsAccuracyTestTask.Infer(icon, this.session, this.prototypes);
-                    result.Add(pred);
-                }
+                using Mat gridItemMat = mat.SubMat(cell.Rect);
+                using Mat icon = gridItemMat.GetGridIcon();
+                var pred = GridIconsAccuracyTestTask.Infer(icon, this.session, this.prototypes);
+                result.Add(pred);
             }
 
             //

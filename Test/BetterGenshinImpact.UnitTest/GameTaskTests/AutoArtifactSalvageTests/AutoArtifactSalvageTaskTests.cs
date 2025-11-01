@@ -173,12 +173,18 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
                     new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23),
                     new ArtifactAffix(ArtifactAffixType.ATKPercent, 4.1f)
                 ], 0), new CultureInfo("zh-Hant") };
-                yield return new object[] { "20250828093344_GetArtifactStat.png", new ArtifactStat("黃金時代的先聲",new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
+                yield return new object[] { "20250828093344_GetArtifactStat.png", new ArtifactStat("黃金時代的先聲", new ArtifactAffix(ArtifactAffixType.DEFPercent, 8.7f), [
                     new ArtifactAffix(ArtifactAffixType.DEF, 19),
                     new ArtifactAffix(ArtifactAffixType.CRITDMG, 7.8f),
                     new ArtifactAffix(ArtifactAffixType.ATK, 18),
                     new ArtifactAffix(ArtifactAffixType.ElementalMastery, 23)
                 ], 0), new CultureInfo("zh-Hant") };
+                yield return new object[] { "202510311559_GetArtifactStat.png", new ArtifactStat("黃金乐曲的变奏",/* 应为"黄"*/ new ArtifactAffix(ArtifactAffixType.HP, 717f), [
+                    new ArtifactAffix(ArtifactAffixType.DEF, 16),
+                    new ArtifactAffix(ArtifactAffixType.ElementalMastery, 16),
+                    new ArtifactAffix(ArtifactAffixType.ATKPercent, 4.1f),
+                    new ArtifactAffix(ArtifactAffixType.HPPercent, 4.7f)
+                ], 0), new CultureInfo("zh-Hans") };
             }
         }
 
@@ -261,7 +267,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             timeProvider.Advance(TimeSpan.FromSeconds(3));
 
             //
-            await Assert.ThrowsAsync<ScriptInterruptedException>(()=> sut);
+            await Assert.ThrowsAsync<ScriptInterruptedException>(() => sut);
         }
     }
 }

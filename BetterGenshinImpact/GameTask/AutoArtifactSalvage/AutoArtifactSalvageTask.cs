@@ -315,8 +315,9 @@ public class AutoArtifactSalvageTask : ISoloTask
                 gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
                 try
                 {
-                    await foreach (ImageRegion itemRegion in gridScreen)
+                    await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                     {
+                        using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                         using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
                         (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
                         if (predName == null)
@@ -383,8 +384,9 @@ public class AutoArtifactSalvageTask : ISoloTask
         gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
         try
         {
-            await foreach (ImageRegion itemRegion in gridScreen)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 Rect gridRect = itemRegion.ToRect();
                 if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
                 {
@@ -526,25 +528,25 @@ public class AutoArtifactSalvageTask : ISoloTask
     public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
         using Mat gray = src.CvtColor(ColorConversionCodes.BGR2GRAY);
-        Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
+        using Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
 
-        Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
+        using Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
         //Cv2.ImShow("name", nameRoi);
-        Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
+        using Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
         #region 主词条预处理 去除背景干扰
-        Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
+        using Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
         using Mat mainAffixRoiBottomHat = mainAffixRoi.MorphologyEx(MorphTypes.TopHat, hatKernel);
         using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
         //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
         #endregion
         #region 副词条预处理 还是不处理效果最好……
-        Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
-        //using Mat levelAndMinorAffixRoiThreshold = new Mat();
+        using Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
+        //using Mat levelAndMinorAffixRoiThreshold = new Mat(); // otsu确定阈值大概在170
         //double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-        // //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
         //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);
-        #endregion
         //Cv2.WaitKey();
+        //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
+        #endregion
 
         var nameOcrResult = ocrService.OcrResult(nameRoi);
         var typeOcrResult = ocrService.OcrResult(typeRoi);
@@ -607,7 +609,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         #region 副词条
         var minorAffixes = new List<ArtifactAffix>();
-        string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
+        string pattern = @"^([^+:：]+)\+([\d., 。]*)(%?).*$";
         pattern = pattern.Replace("%", percentStr);
         foreach (var r in levelAndMinorAffixResult)
         {
@@ -672,7 +674,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
             }
 
-            if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float affixValue))
+            if (!float.TryParse(match.Groups[2].Value.Replace("。", "."), NumberStyles.Any, cultureInfo, out float affixValue))
             {
                 throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
             }

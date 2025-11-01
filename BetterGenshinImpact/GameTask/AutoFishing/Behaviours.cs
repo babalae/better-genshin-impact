@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -150,7 +151,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             // 寻找鱼饵
             var boxAndBaits = FindBait(imageRegion);
-                ;
+            ;
             foreach ((Rect box, string? predName) in boxAndBaits)
             {
                 if (predName == blackboard.selectedBait.GetDescription())
@@ -231,9 +232,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 using ImageRegion resRa = singleRowGrid.DeriveCrop(box);
                 using Mat img125 = resRa.SrcMat.GetGridIcon();
                 (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, this.session, this.prototypes);
+                if (predName != null && !availableBaitNames.Contains(predName))
+                {
+                    predName = null;
+                }
                 yield return (new Rect(singleRowGrid.X + box.X, singleRowGrid.Y + box.Y, box.Width, box.Height), predName);
             }
         }
+
+        private static readonly FrozenSet<string> availableBaitNames = Enum.GetValues(typeof(BaitType)).Cast<BaitType>().Select(bt => bt.GetDescription()).ToFrozenSet();
     }
 
     [Obsolete]
