@@ -714,13 +714,23 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
         });
     }
-
+    
+    private DateTime _prevCloseItemTime = DateTime.MinValue;
     /// <summary>
     /// 关闭剧情中弹出的道具页面
     /// </summary>
     /// <param name="content"></param>
     private void CloseItemPopup(CaptureContent content)
     {
+        if ((DateTime.Now - _prevCloseItemTime).TotalMilliseconds < 1000)
+        {
+            return; 
+        }
+        
+        if (Bv.IsInMainUi(content.CaptureRectArea))  
+        {  
+            return;  
+        }  
         //屏幕底部中间，实心三角的位置
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
         using var croppedRegion = content.CaptureRectArea.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
@@ -742,7 +752,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var area = Cv2.ContourArea(contour);
             var approx = Cv2.ApproxPolyDP(contour, 0.04 * Cv2.ArcLength(contour, true), true);
             
-            if (area > 50 || approx.Length != 3) continue;
+            if (area < 10 || area > 50 || approx.Length != 3) continue; 
 
             if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
             {
@@ -752,7 +762,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
             }
-
+            _prevCloseItemTime = DateTime.Now;
             _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
             return;
         }
