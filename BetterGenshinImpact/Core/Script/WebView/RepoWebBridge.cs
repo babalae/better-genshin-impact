@@ -25,6 +25,11 @@ public sealed class RepoWebBridge
         ".yaml", ".yml", ".ini", ".config"
     };
 
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg", ".ico"
+    };
+
     public async Task<string> GetRepoJson()
     {
         try
@@ -70,27 +75,53 @@ public sealed class RepoWebBridge
         return await File.ReadAllTextAsync(userConfigPath);
     }
 
-    public async Task<string> GetFile(string relPath)
+    public Task<string> GetFile(string relPath)
     {
-        try
-        {
-            string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        string extension = Path.GetExtension(relPath);
 
-            if (!File.Exists(filePath))
+        // 检查是否是允许的文件类型
+        bool isTextFile = AllowedTextExtensions.Contains(extension);
+        bool isImageFile = AllowedImageExtensions.Contains(extension);
+
+        if (!isTextFile && !isImageFile)
+        {
+            return Task.FromResult("404");
+        }
+
+        if (isTextFile)
+        {
+            // 读取文本文件
+            string? content = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(relPath);
+            return Task.FromResult(string.IsNullOrEmpty(content) ? "404" : content);
+        }
+        else
+        {
+            // 读取图片文件，返回 Base64 编码
+            byte[]? bytes = ScriptRepoUpdater.Instance.ReadBinaryFileFromCenterRepo(relPath);
+            if (bytes == null || bytes.Length == 0)
             {
-                return "404";
+                return Task.FromResult("404");
             }
 
-            string extension = Path.GetExtension(filePath);
-            return AllowedTextExtensions.Contains(extension) 
-                ? await File.ReadAllTextAsync(filePath) 
-                : "404";
+            string base64 = Convert.ToBase64String(bytes);
+            string mimeType = GetMimeType(extension);
+            return Task.FromResult($"data:{mimeType};base64,{base64}");
         }
-        catch
+    }
+
+    private static string GetMimeType(string extension)
+    {
+        return extension.ToLower() switch
         {
-            return "404";
-        }
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            ".ico" => "image/x-icon",
+            _ => "application/octet-stream"
+        };
     }
 
     public async Task<bool> UpdateSubscribed(string path)
