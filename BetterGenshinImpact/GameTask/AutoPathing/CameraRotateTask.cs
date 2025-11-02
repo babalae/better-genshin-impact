@@ -56,14 +56,16 @@ public class CameraRotateTask(CancellationToken ct)
     /// <param name="maxDiff">最大误差</param>
     /// <param name="maxTryTimes">最大尝试次数（超时时间）</param>
     /// <returns></returns>
-    public async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff, int maxTryTimes = 50)
+    public async Task<bool> WaitUntilRotatedTo(int targetOrientation, int maxDiff, int maxTryTimes = 50)
     {
+        bool isSuccessful = false;
         int count = 0;
         while (!ct.IsCancellationRequested)
         {
             var screen = CaptureToRectArea();
             if (Math.Abs(RotateToApproach(targetOrientation, screen)) < maxDiff)
             {
+                isSuccessful = true;
                 break;
             }
 
@@ -76,5 +78,6 @@ public class CameraRotateTask(CancellationToken ct)
             await Delay(50, ct);
             count++;
         }
+        return isSuccessful;
     }
 }

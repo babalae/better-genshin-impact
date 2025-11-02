@@ -700,7 +700,7 @@ public class PathExecutor
         var position = await GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+        await WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
 
@@ -715,7 +715,7 @@ public class PathExecutor
         var (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
+        await WaitUntilRotatedTo(targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
@@ -845,7 +845,7 @@ public class PathExecutor
                 if (consecutiveRotationCountBeyondAngle > 10)
                 {
                     // 直接站定好转向
-                    await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+                    await WaitUntilRotatedTo(targetOrientation, 2);
                 }
             }
             
@@ -1019,7 +1019,7 @@ public class PathExecutor
             }
 
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+            await WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Thread.Sleep(60);
@@ -1051,7 +1051,7 @@ public class PathExecutor
             var screen = CaptureToRectArea();
             var position = await GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 10);
+            await WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
             await handler.RunAsync(ct, waypoint);
         }
@@ -1251,6 +1251,16 @@ public class PathExecutor
 
         //Logger.LogDebug("识别到路径："+position.X+","+position.Y);
         return (position,time);
+    }
+
+    private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
+    {
+        if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
+        {
+            return;
+        }
+        await ResolveAnomalies();
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff);
     }
 
     /**

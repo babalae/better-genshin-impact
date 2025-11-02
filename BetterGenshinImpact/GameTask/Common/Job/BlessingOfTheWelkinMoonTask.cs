@@ -20,8 +20,8 @@ public class BlessingOfTheWelkinMoonTask
     {
         try
         {
-            // 4点全程触发
-            if (ServerTimeHelper.GetServerTimeNow().Hour == 4)
+            var t = ServerTimeHelper.GetServerTimeNow().AddMinutes(5);
+            if (t.Hour == 4 && t.Minute < 10)
             {
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
@@ -45,6 +45,7 @@ public class BlessingOfTheWelkinMoonTask
                     await Delay(2000, ct);
 
                     TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                    Logger.LogInformation("空月祝福处理完毕");
                 }
             }
         }
