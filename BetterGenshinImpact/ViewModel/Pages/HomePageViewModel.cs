@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -20,6 +20,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -35,8 +36,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Windows.System;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -73,11 +76,18 @@ public partial class HomePageViewModel : ViewModel
     [ObservableProperty]
     private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
+    [ObservableProperty]
+    private ImageSource _bannerImageSource;
+
+    private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
+    private const string CustomBannerImagePath = "UserData/Images/custom_banner.jpg";
+
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         _taskDispatcher = taskTriggerDispatcher;
         Config = configService.Get();
         ReadGameInstallPath();
+        InitializeBannerImage();
 
 
         // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
@@ -509,4 +519,123 @@ public partial class HomePageViewModel : ViewModel
         };
         var result = dialogWindow.ShowDialog();
     }
+
+    #region 背景图片管理
+
+    private void InitializeBannerImage()
+    {
+        try
+        {
+            // 检查是否存在自定义图片
+            if (File.Exists(CustomBannerImagePath))
+            {
+                BannerImageSource = new BitmapImage(new Uri(Path.GetFullPath(CustomBannerImagePath)));
+                _logger.LogInformation("已加载自定义背景图片");
+            }
+            else
+            {
+                // 使用默认图片
+                BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
+                _logger.LogInformation("已加载默认背景图片");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化背景图片失败，使用默认图片");
+            BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
+        }
+    }
+
+    [RelayCommand]
+    private void ChangeBannerImage()
+    {
+        try
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Title = "选择背景图片",
+                Filter = "图片文件|*.jpg;*.jpeg;*.png;*.bmp;*.gif|所有文件|*.*",
+                Multiselect = false
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                var selectedFile = openFileDialog.FileName;
+                _logger.LogInformation("用户选择了图片: {ImagePath}", selectedFile);
+
+                // 确保目标目录存在
+                var directory = Path.GetDirectoryName(CustomBannerImagePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                    _logger.LogInformation("创建了自定义图片目录: {Directory}", directory);
+                }
+
+                // 复制图片到自定义路径
+                File.Copy(selectedFile, CustomBannerImagePath, true);
+                _logger.LogInformation("图片已复制到: {CustomPath}", CustomBannerImagePath);
+
+                // 更新UI
+                BannerImageSource = new BitmapImage(new Uri(Path.GetFullPath(CustomBannerImagePath)));
+                Toast.Success("背景图片更换成功！");
+                _logger.LogInformation("背景图片更换成功");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "更换背景图片失败");
+            Toast.Error($"更换背景图片失败: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ResetBannerImage()
+    {
+        try
+        {
+            // 获取自定义图片的完整路径
+            var customImageFullPath = Path.GetFullPath(CustomBannerImagePath);
+            _logger.LogInformation("尝试恢复默认背景图片，自定义图片路径: {CustomPath}", customImageFullPath);
+
+            if (File.Exists(customImageFullPath))
+            {
+                File.Delete(customImageFullPath);
+                _logger.LogInformation("已删除自定义背景图片: {CustomPath}", customImageFullPath);
+            }
+            else
+            {
+                _logger.LogInformation("自定义背景图片不存在: {CustomPath}", customImageFullPath);
+            }
+
+            // 恢复为默认图片
+            _logger.LogInformation("正在恢复为默认背景图片，默认路径: {DefaultPath}", DefaultBannerImagePath);
+            BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
+            Toast.Success("已恢复为默认背景图片！");
+            _logger.LogInformation("背景图片已恢复为默认");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "恢复默认背景图片失败，尝试使用备用方案");
+            
+            // 备用方案：尝试重新创建默认图片的BitmapImage
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(DefaultBannerImagePath, UriKind.Absolute);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                BannerImageSource = bitmap;
+                Toast.Success("已恢复为默认背景图片！");
+                _logger.LogInformation("使用备用方案恢复默认背景图片成功");
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "备用方案也失败");
+                Toast.Error($"恢复默认背景图片失败: {ex.Message}");
+            }
+        }
+    }
+
+    #endregion
 }
