@@ -241,13 +241,25 @@ public static partial class Bv
     public static bool CurrentAvatarIsLowHp(ImageRegion captureRa)
     {
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-
-        // 获取 (808, 1010) 位置的像素颜色
-        var pixelColor = captureRa.SrcMat.At<Vec3b>((int)(1010 * assetScale), (int)(808 * assetScale));
-
-        // 判断颜色是否是 (255, 90, 90)
-        return pixelColor is { Item2: 255, Item1: 90, Item0: 90 };
+        var mat = captureRa.SrcMat;
+    
+        // 主判定：红色(255,90,90)
+        var pixelColor = mat.At<Vec3b>((int)(1010 * assetScale), (int)(808 * assetScale));
+        if (pixelColor is { Item2: 255, Item1: 90, Item0: 90 })
+            return true;
+    
+        // 附加判定：4个点有至少2个不是(150,215,34)
+        int bad = 0;
+        foreach (var y in new[] { 283, 379, 475, 571 })
+        {
+            var c = mat.At<Vec3b>((int)(y * assetScale), (int)(1700 * assetScale));
+            if (!(c.Item2 == 150 && c.Item1 == 215 && c.Item0 == 34))
+                bad++;
+        }
+    
+        return bad >= 2;
     }
+
 
     /// <summary>
     /// 在空月祝福界面
