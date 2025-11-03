@@ -7,7 +7,6 @@ public static class MapManager
 {
     private static readonly Dictionary<string, ISceneMap> _maps = new();
     private static readonly object LockObject = new();
-    private const string DefaultMatchingMethod = "TemplateMatch";
 
     public static ISceneMap GetMap(string mapName, string matchingMethod)
     {
@@ -25,7 +24,7 @@ public static class MapManager
     {
         if (string.IsNullOrEmpty(matchingMethod))
         {
-            matchingMethod = DefaultMatchingMethod;
+            matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         }
         string key = $"{mapType}_{matchingMethod}";
 
