@@ -667,7 +667,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "尘歌壶小手",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "finger.png", systemInfo),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(650 * AssetScale), 0, (int)(80 * AssetScale), (int)(80 * AssetScale)),
+            RegionOfInterest = new Rect(CaptureRect.Width - (int)(600 * AssetScale), 0, (int)(80 * AssetScale), (int)(80 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
         LeylineDisorderIconRo = new RecognitionObject
