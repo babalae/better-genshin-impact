@@ -153,7 +153,8 @@ public class LimitedFile(string rootPath)
         try
         {
             path = NormalizePath(path);
-            var mat = Mat.FromStream(File.OpenRead(path), ImreadModes.Color);
+            using var stream = File.OpenRead(path);
+            var mat = Mat.FromStream(stream, ImreadModes.Color);
             return mat;
         }
         catch (Exception ex)
@@ -163,6 +164,55 @@ public class LimitedFile(string rootPath)
             return new Mat();
         }
     }
+    
+    /// <summary>
+    /// 读取图像文件为Mat对象，并调整到指定尺寸
+    /// </summary>
+    /// <param name="path">图像文件路径</param>
+    /// <param name="width">调整后的宽度</param>
+    /// <param name="height">调整后的高度</param>
+    /// <param name="interpolation">插值算法，默认为双线性插值(1)</param>
+    /// <returns>调整尺寸后的Mat图像对象</returns>
+    /// <remarks>
+    /// 支持的插值算法：
+    /// <list type="bullet">
+    /// <item><description>最近邻插值 (0)</description></item>
+    /// <item><description>双线性插值 (1) - 默认</description></item>
+    /// <item><description>双三次插值 (2)</description></item>
+    /// <item><description>像素区域关系重采样 (3)</description></item>
+    /// <item><description>Lanczos插值 (4)</description></item>
+    /// <item><description>精确双线性插值 (5)</description></item>
+    /// </list>
+    /// </remarks>
+    public Mat ReadImageMatWithResizeSync(string path, double width, double height, int interpolation = 1)
+    {
+        try
+        {
+            if (width <= 0 || height <= 0)
+            {
+                throw new Exception("ReadImageMatWithResizeSync: 宽度和高度必须为正数");
+            }
+
+            if (interpolation is < 0 or > 5)
+            {
+                throw new Exception($"ReadImageMatWithResizeSync: 不支持的插值算法 {interpolation}");
+            }
+
+            path = NormalizePath(path);
+            using var stream = File.OpenRead(path);
+            using var mat = Mat.FromStream(stream, ImreadModes.Color);
+            var rsz = new Mat();
+            Cv2.Resize(mat, rsz, new Size(width, height), 0, 0, (InterpolationFlags)interpolation);
+            return rsz;
+        }
+        catch (Exception ex)
+        {
+            // 记录异常并返回空的Mat
+            TaskControl.Logger.LogError("ReadImageMatWithResizeSync 异常: {Message}", ex.Message);
+            return new Mat();
+        }
+    }
+
     
     /// <summary>
     /// 允许的文件扩展名白名单
