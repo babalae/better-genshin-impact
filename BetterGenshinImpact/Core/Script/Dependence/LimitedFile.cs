@@ -166,25 +166,42 @@ public class LimitedFile(string rootPath)
     }
     
     /// <summary>
-    /// 读取图像文件为Mat对象，并调整到指定尺寸
+    /// 读取图像文件并调整到指定尺寸，支持多种缩放模式和插值算法
     /// </summary>
-    /// <param name="path">图像文件路径</param>
-    /// <param name="width">调整后的宽度</param>
-    /// <param name="height">调整后的高度</param>
-    /// <param name="interpolation">插值算法，默认为双线性插值(1)</param>
+    /// <param name="path">图像文件的完整路径</param>
+    /// <param name="width">调整后的目标宽度（像素）</param>
+    /// <param name="height">调整后的目标高度（像素）</param>
+    /// <param name="interpolation">图像缩放时使用的插值算法，默认为双线性插值</param>
+    /// <param name="fit">图像缩放模式，默认为拉伸填充</param>
     /// <returns>调整尺寸后的Mat图像对象</returns>
     /// <remarks>
-    /// 支持的插值算法：
-    /// <list type="bullet">
-    /// <item><description>最近邻插值 (0)</description></item>
-    /// <item><description>双线性插值 (1) - 默认</description></item>
-    /// <item><description>双三次插值 (2)</description></item>
-    /// <item><description>像素区域关系重采样 (3)</description></item>
-    /// <item><description>Lanczos插值 (4)</description></item>
-    /// <item><description>精确双线性插值 (5)</description></item>
+    /// <para><b>支持的插值算法：</b></para>
+    /// <list type="table">
+    /// <listheader>
+    /// <term>取值</term>
+    /// <description>插值算法</description>
+    /// </listheader>
+    /// <item><term>0</term><description>最近邻插值</description></item>
+    /// <item><term>1</term><description>双线性插值</description></item>
+    /// <item><term>2</term><description>双三次插值</description></item>
+    /// <item><term>3</term><description>像素区域关系重采样</description></item>
+    /// <item><term>4</term><description>Lanczos插值</description></item>
+    /// <item><term>5</term><description>精确双线性插值</description></item>
+    /// </list>
+    /// 
+    /// <para><b>支持的缩放模式：</b></para>
+    /// <list type="table">
+    /// <listheader>
+    /// <term>模式</term>
+    /// <description>行为说明</description>
+    /// </listheader>
+    /// <item><term>fill</term><description>拉伸填充（不保持比例）</description></item>
+    /// <item><term>contain</term><description>适应内容（保持比例，完整显示）</description></item>
+    /// <item><term>cover</term><description>覆盖填充（保持比例，可能裁剪）</description></item>
     /// </list>
     /// </remarks>
-    public Mat ReadImageMatWithResizeSync(string path, double width, double height, int interpolation = 1)
+    public Mat ReadImageMatWithResizeSync(string path, double width, double height, int interpolation = 1,
+        string? fit = null)
     {
         try
         {
@@ -201,9 +218,40 @@ public class LimitedFile(string rootPath)
             path = NormalizePath(path);
             using var stream = File.OpenRead(path);
             using var mat = Mat.FromStream(stream, ImreadModes.Color);
-            var rsz = new Mat();
-            Cv2.Resize(mat, rsz, new Size(width, height), 0, 0, (InterpolationFlags)interpolation);
-            return rsz;
+
+            switch (fit?.ToLower() ?? "fill")
+            {
+                case "fill":
+                    var fillMat = new Mat();
+                    Cv2.Resize(mat, fillMat, new Size(width, height), 0, 0, (InterpolationFlags)interpolation);
+                    return fillMat;
+
+                case "contain":
+                    var containMat = new Mat();
+                    var cts = Math.Min(width / mat.Width, height / mat.Height);
+                    Cv2.Resize(mat, containMat, new Size(mat.Width * cts, mat.Height * cts), 0, 0,
+                        (InterpolationFlags)interpolation);
+                    return containMat;
+
+                case "cover":
+                    using (var coverMat = new Mat())
+                    {
+                        var cvs = Math.Max(width / mat.Width, height / mat.Height);
+                        Cv2.Resize(mat, coverMat, new Size(mat.Width * cvs, mat.Height * cvs), 0, 0,
+                            (InterpolationFlags)interpolation);
+
+                        // 裁剪图像
+                        var x = (int)Math.Max(0, (coverMat.Width - width) / 2);
+                        var y = (int)Math.Max(0, (coverMat.Height - height) / 2);
+                        var w = (int)Math.Min(coverMat.Width - x, width);
+                        var h = (int)Math.Min(coverMat.Height - y, height);
+
+                        return new Mat(coverMat, new Rect(x, y, w, h)).Clone();
+                    }
+
+                default:
+                    throw new Exception($"ReadImageMatWithResizeSync: 不支持的缩放模式 {fit}");
+            }
         }
         catch (Exception ex)
         {
