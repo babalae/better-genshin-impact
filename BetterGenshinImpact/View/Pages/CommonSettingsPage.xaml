@@ -320,6 +320,46 @@
                         </b:Interaction.Triggers>
                     </ui:ToggleSwitch>
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="遮罩文本透明度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="调整遮罩窗口中文本的透明度（0.0-1.0）"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="1"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            Minimum="0"
+                            Maximum="1"
+                            TickFrequency="0.1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.TextOpacity, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="2"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.TextOpacity, StringFormat=F2}" />
+                </Grid>
 
 
                 <!--<Grid Margin="16">
@@ -1769,4 +1809,3 @@
         </ui:CardControl>
     </StackPanel>
 </Page>
-
