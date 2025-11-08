@@ -71,7 +71,7 @@ public partial class MaskWindowConfig : ObservableObject
     private bool _useSubform = false;
 
     /// <summary>
-    /// 遮罩文字透明度 (0.0-1.0)
+    /// 遮罩文本透明度 (0.0-1.0)
     /// </summary>
     [ObservableProperty]
     private double _textOpacity = 1.0;
