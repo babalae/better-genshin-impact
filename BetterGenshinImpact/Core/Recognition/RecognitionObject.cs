@@ -66,6 +66,12 @@ public class RecognitionObject
     /// </summary>
     public Color MaskColor { get; set; } = Color.FromArgb(0, 255, 0);
 
+    /// <summary>
+    ///     模板遮罩的颜色容差，默认零容差
+    ///     UseMask = true 的时候有用
+    /// </summary>
+    public int MaskColorTolerance { get; set; } = 0;
+
     public Mat? MaskMat { get; set; }
 
     /// <summary>
@@ -102,20 +108,21 @@ public class RecognitionObject
             Cv2.CvtColor(TemplateImageMat, TemplateImageGreyMat, ColorConversionCodes.BGR2GRAY);
         }
 
-        if (UseMask && TemplateImageMat != null && MaskMat == null) MaskMat = OpenCvCommonHelper.CreateMask(TemplateImageMat, MaskColor.ToScalar());
+        if (UseMask && TemplateImageMat != null && MaskMat == null)
+            MaskMat = OpenCvCommonHelper.CreateMask(TemplateImageMat, MaskColor.ToScalar(), MaskColorTolerance);
         return this;
     }
 
-    
+
     public static RecognitionObject TemplateMatch(Mat mat)
     {
         var ro = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = mat,
-            UseMask = false, 
+            UseMask = false,
         };
-        
+
         return ro.InitTemplate();
     }
 
@@ -126,12 +133,12 @@ public class RecognitionObject
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = mat,
             UseMask = useMask,
-            MaskColor = maskColor == default? Color.FromArgb(0, 255, 0) : maskColor
+            MaskColor = maskColor == default ? Color.FromArgb(0, 255, 0) : maskColor
         };
-        
+
         return ro.InitTemplate();
     }
-    
+
     public static RecognitionObject TemplateMatch(Mat mat, double x, double y, double w, double h)
     {
         var ro = new RecognitionObject
@@ -140,7 +147,7 @@ public class RecognitionObject
             TemplateImageMat = mat,
             RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h))
         };
-        
+
         return ro.InitTemplate();
     }
 
@@ -195,12 +202,12 @@ public class RecognitionObject
     ///     多个值全匹配的情况下才算成功
     /// </summary>
     public List<string> RegexMatchText { get; set; } = [];
-    
+
     /// <summary>
     /// 用于多个OCR结果的匹配
     /// </summary>
     public string Text { get; set; } = string.Empty;
-    
+
     public static RecognitionObject Ocr(double x, double y, double w, double h)
     {
         return new RecognitionObject
@@ -209,7 +216,7 @@ public class RecognitionObject
             RegionOfInterest = new Rect((int)Math.Round(x), (int)Math.Round(y), (int)Math.Round(w), (int)Math.Round(h))
         };
     }
-    
+
     public static RecognitionObject OcrMatch(double x, double y, double w, double h, params string[] matchTexts)
     {
         return new RecognitionObject
@@ -235,9 +242,8 @@ public class RecognitionObject
     };
 
     #endregion OCR文字识别
-    
-    
-    
+
+
     /// <summary>
     /// 克隆当前 RecognitionObject 实例
     /// </summary>
@@ -249,7 +255,7 @@ public class RecognitionObject
             RecognitionType = this.RecognitionType,
             RegionOfInterest = this.RegionOfInterest,
             Name = this.Name,
-            
+
             // 模板匹配相关属性
             TemplateImageMat = this.TemplateImageMat, // 注意：Mat 是引用类型，克隆后仍然指向同一内存
             TemplateImageGreyMat = this.TemplateImageGreyMat, // 注意：Mat 是引用类型，克隆后仍然指向同一内存
@@ -262,22 +268,22 @@ public class RecognitionObject
             DrawOnWindow = this.DrawOnWindow,
             DrawOnWindowPen = new Pen(this.DrawOnWindowPen.Color, this.DrawOnWindowPen.Width),
             MaxMatchCount = this.MaxMatchCount,
-            
+
             // 颜色匹配相关属性
             ColorConversionCode = this.ColorConversionCode,
             LowerColor = this.LowerColor,
             UpperColor = this.UpperColor,
             MatchCount = this.MatchCount,
-            
+
             // OCR相关属性
             OcrEngine = this.OcrEngine,
-            ReplaceDictionary = this.ReplaceDictionary,  // 不克隆字典，因为字典通常是不可变的
+            ReplaceDictionary = this.ReplaceDictionary, // 不克隆字典，因为字典通常是不可变的
             AllContainMatchText = this.AllContainMatchText, // 不克隆
             OneContainMatchText = this.OneContainMatchText, // 不克隆
             RegexMatchText = this.RegexMatchText, // 不克隆
             Text = this.Text
         };
-        
+
         return cloned;
     }
 }

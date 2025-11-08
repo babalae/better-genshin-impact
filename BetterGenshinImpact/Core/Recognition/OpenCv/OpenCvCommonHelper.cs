@@ -114,14 +114,23 @@ public class OpenCvCommonHelper
     /// <summary>
     ///     和二值化的颜色刚好相反
     /// </summary>
-    /// <param name="src"></param>
-    /// <param name="s"></param>
+    /// <param name="src">源图像</param>
+    /// <param name="s">遮罩颜色</param>
+    /// <param name="tolerance">容差</param>
     /// <returns></returns>
-    public static Mat CreateMask(Mat src, Scalar s)
+    public static Mat CreateMask(Mat src, Scalar s, int tolerance = 0)
     {
+        var lower = new Scalar(
+            Math.Max(0, s.Val0 - tolerance),
+            Math.Max(0, s.Val1 - tolerance),
+            Math.Max(0, s.Val2 - tolerance));
+        var upper = new Scalar(
+            Math.Min(255, s.Val0 + tolerance),
+            Math.Min(255, s.Val1 + tolerance),
+            Math.Min(255, s.Val2 + tolerance));
         var mask = new Mat();
-        Cv2.InRange(src, s, s, mask);
-        return ~ mask;
+        Cv2.InRange(src, lower, upper, mask);
+        return ~mask;
     }
     
     /// <summary>
