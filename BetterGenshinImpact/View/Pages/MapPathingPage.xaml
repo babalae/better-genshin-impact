@@ -95,6 +95,14 @@
                                      ItemsSource="{Binding TreeList}"
                                      SelectedItem="{Binding SelectNode, Mode=TwoWay}">
                         <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                                <b:InvokeCommandAction Command="{Binding SetRightClickSelectionCommand}"
+                                                       CommandParameter="True" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="ContextMenuClosing">
+                                <b:InvokeCommandAction Command="{Binding SetRightClickSelectionCommand}"
+                                                       CommandParameter="False" />
+                            </b:EventTrigger>
                             <b:EventTrigger EventName="SelectedItemChanged">
                                 <b:InvokeCommandAction Command="{Binding OpenPathingDetailCommand}"
                                                        CommandParameter="{Binding SelectNode}" />
@@ -127,8 +135,14 @@
                         </ui:TreeListView.ItemTemplate>
                         <ui:TreeListView.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Command="{Binding StartCommand}" Header="执行任务" />
+                                <MenuItem Command="{Binding StartCommand}"
+                                          CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                          Header="执行任务" />
                                 <MenuItem Command="{Binding RefreshCommand}" Header="刷新" />
+                                <Separator />
+                                <MenuItem Command="{Binding DeleteCommand}"
+                                          CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                          Header="删除" />
                             </ContextMenu>
                         </ui:TreeListView.ContextMenu>
                     </ui:TreeListView>

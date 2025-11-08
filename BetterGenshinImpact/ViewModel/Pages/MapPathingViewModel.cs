@@ -44,6 +44,9 @@ public partial class MapPathingViewModel : ViewModel
 
     [ObservableProperty] private FileTreeNode<PathingTask>? _selectNode;
 
+    [ObservableProperty]
+    private bool _isRightClickSelection;
+
     private MapPathingDevWindow? _mapPathingDevWindow;
     private readonly IScriptService _scriptService;
 
@@ -119,9 +122,14 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
-    public async Task OnStart()
+    public async Task OnStart(FileTreeNode<PathingTask>? item)
     {
-        var item = SelectNode;
+        // 如果没有传入参数，使用选中的节点
+        if (item == null)
+        {
+            item = SelectNode;
+        }
+
         if (item == null)
         {
             return;
@@ -188,6 +196,86 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
+    public async Task OnDelete(FileTreeNode<PathingTask>? item)
+    {
+        // 如果没有传入参数，使用选中的节点
+        if (item == null)
+        {
+            item = SelectNode;
+        }
+
+        if (item == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(item.FilePath))
+        {
+            Toast.Warning("无法删除：路径无效");
+            return;
+        }
+
+        // 确定删除的内容类型
+        string itemType = item.IsDirectory ? "文件夹" : "文件";
+        string itemName = item.FileName ?? "未知项目";
+
+        // 显示确认对话框
+        var messageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "删除确认",
+            Content = $"确定要删除{itemType} \"{itemName}\" 吗？\n\n此操作将永久删除该{itemType}及其所有内容，无法恢复！",
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var result = await messageBox.ShowDialogAsync();
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            try
+            {
+                if (item.IsDirectory)
+                {
+                    // 删除目录
+                    if (Directory.Exists(item.FilePath))
+                    {
+                        Directory.Delete(item.FilePath, true);
+                        Toast.Success($"已删除文件夹: {itemName}");
+                        _logger.LogInformation("已删除地图追踪文件夹: {Name} ({Path})", itemName, item.FilePath);
+                    }
+                    else
+                    {
+                        Toast.Warning("文件夹不存在");
+                    }
+                }
+                else
+                {
+                    // 删除文件
+                    if (File.Exists(item.FilePath))
+                    {
+                        File.Delete(item.FilePath);
+                        Toast.Success($"已删除文件: {itemName}");
+                        _logger.LogInformation("已删除地图追踪文件: {Name} ({Path})", itemName, item.FilePath);
+                    }
+                    else
+                    {
+                        Toast.Warning("文件不存在");
+                    }
+                }
+
+                // 刷新列表
+                InitScriptListViewData();
+            }
+            catch (Exception ex)
+            {
+                Toast.Error($"删除失败: {ex.Message}");
+                _logger.LogError(ex, "删除地图追踪项失败");
+            }
+        }
+    }
+
+    [RelayCommand]
     public void OnOpenLocalScriptRepo()
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
@@ -195,10 +283,18 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void SetRightClickSelection(string isRightClick)
+    {
+        IsRightClickSelection = "True".Equals(isRightClick, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [RelayCommand]
     public void OnOpenPathingDetail()
     {
         var item = SelectNode;
-        if (item == null)
+        
+        // 如果是右键点击，不打开抽屉
+        if (item == null || IsRightClickSelection)
         {
             return;
         }

@@ -136,6 +136,53 @@ public partial class JsListViewModel : ViewModel
     }
 
     [RelayCommand]
+    public async Task OnDeleteScript(ScriptProject? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        // 显示确认对话框
+        var messageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "删除确认",
+            Content = $"确定要删除脚本 \"{item.Manifest.Name}\" 吗？\n\n此操作将永久删除脚本文件夹及其所有内容，无法恢复！",
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var result = await messageBox.ShowDialogAsync();
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            try
+            {
+                // 删除脚本文件夹
+                if (Directory.Exists(item.ProjectPath))
+                {
+                    Directory.Delete(item.ProjectPath, true);
+                    Toast.Success($"已删除脚本: {item.Manifest.Name}");
+                    _logger.LogInformation("已删除脚本: {Name} ({Path})", item.Manifest.Name, item.ProjectPath);
+                    
+                    // 刷新列表
+                    InitScriptListViewData();
+                }
+                else
+                {
+                    Toast.Warning("脚本目录不存在");
+                }
+            }
+            catch (Exception ex)
+            {
+                Toast.Error($"删除脚本失败: {ex.Message}");
+                _logger.LogError(ex, "删除脚本失败");
+            }
+        }
+    }
+
+    [RelayCommand]
     public void OnGoToJsScriptUrl()
     {
         Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/jsscript.html")
