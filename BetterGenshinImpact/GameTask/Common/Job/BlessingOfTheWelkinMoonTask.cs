@@ -36,7 +36,6 @@ public class BlessingOfTheWelkinMoonTask
                             // 双击快速跳过
                             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                            Logger.LogInformation($"Click {i + 1}");
                         }
                         await Delay(500, ct);
                         using var ra2 = CaptureToRectArea();
