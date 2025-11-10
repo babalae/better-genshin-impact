@@ -1088,13 +1088,49 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         UpdateSubscribedScriptPaths();
         if (_webWindow is not { IsVisible: true })
         {
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            
+
+            // 计算宽高（默认0.7屏幕宽高）
+            double width = scriptConfig.WebviewWidth == 0
+                ? SystemParameters.WorkArea.Width * 0.7
+                : scriptConfig.WebviewWidth;
+
+            double height = scriptConfig.WebviewHeight == 0
+                ? SystemParameters.WorkArea.Height * 0.7
+                : scriptConfig.WebviewHeight;
+
+            // 计算位置（默认居中）
+            double left = scriptConfig.WebviewLeft == 0
+                ? (SystemParameters.WorkArea.Width - width) / 2
+                : scriptConfig.WebviewLeft;
+
+            double top = scriptConfig.WebviewTop == 0
+                ? (SystemParameters.WorkArea.Height - height) / 2
+                : scriptConfig.WebviewTop;
+            
             _webWindow = new WebpageWindow
             {
                 Title = "Genshin Copilot Scripts | BetterGI 脚本本地中央仓库",
-                Width = 1366,
-                Height = 768,
+                Width = width,
+                Height = height,
+                Left = left,
+                Top = top,
+                WindowStartupLocation = WindowStartupLocation.Manual
             };
-            _webWindow.Closed += (s, e) => _webWindow = null;
+            // 关闭时保存窗口位置与大小
+            _webWindow.Closed += (s, e) =>
+            {
+                if (_webWindow != null)
+                {
+                    scriptConfig.WebviewLeft = _webWindow.Left;
+                    scriptConfig.WebviewTop = _webWindow.Top;
+                    scriptConfig.WebviewWidth = _webWindow.Width;
+                    scriptConfig.WebviewHeight = _webWindow.Height;
+                }
+
+                _webWindow = null;
+            };
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
             _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
