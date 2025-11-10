@@ -1089,7 +1089,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         if (_webWindow is not { IsVisible: true })
         {
             var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-            
 
             // 计算宽高（默认0.7屏幕宽高）
             double width = scriptConfig.WebviewWidth == 0
@@ -1109,20 +1108,17 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 ? (SystemParameters.WorkArea.Height - height) / 2
                 : scriptConfig.WebviewTop;
             
-            WindowState state = scriptConfig.WebviewState; 
-            // 如果未设置或非法值，则默认 Normal
-            if (!Enum.IsDefined(typeof(WindowState), state))
-            {
-                state = WindowState.Normal;
-            }
-            
-            // 小屏直接最大化
+            WindowState state = scriptConfig.WebviewState;
             var screen = SystemParameters.WorkArea;
             bool isSmallScreen = screen.Width <= 1600 || screen.Height <= 900;
-
+            // 如果未设置或非法值，则默认 Normal，小屏则直接最大化
             if (isSmallScreen)
             {
                 state = WindowState.Maximized;
+            }
+            else if (!Enum.IsDefined(typeof(WindowState), scriptConfig.WebviewState))
+            {
+                state = WindowState.Normal;
             }
             else
             {
