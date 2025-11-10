@@ -1116,6 +1116,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 state = WindowState.Normal;
             }
             
+            // 小屏直接最大化
+            var screen = SystemParameters.WorkArea;
+            bool isSmallScreen = screen.Width <= 1600 || screen.Height <= 900;
+
+            if (isSmallScreen)
+            {
+                state = WindowState.Maximized;
+            }
+            else
+            {
+                state = scriptConfig.WebviewState;
+            }
+            
             _webWindow = new WebpageWindow
             {
                 Title = "Genshin Copilot Scripts | BetterGI 脚本本地中央仓库",
