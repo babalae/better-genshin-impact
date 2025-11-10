@@ -1109,6 +1109,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 ? (SystemParameters.WorkArea.Height - height) / 2
                 : scriptConfig.WebviewTop;
             
+            WindowState state = scriptConfig.WebviewState; 
+            // 如果未设置或非法值，则默认 Normal
+            if (!Enum.IsDefined(typeof(WindowState), state))
+            {
+                state = WindowState.Normal;
+            }
+            
             _webWindow = new WebpageWindow
             {
                 Title = "Genshin Copilot Scripts | BetterGI 脚本本地中央仓库",
@@ -1116,7 +1123,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 Height = height,
                 Left = left,
                 Top = top,
-                WindowStartupLocation = WindowStartupLocation.Manual
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                WindowState = state
             };
             // 关闭时保存窗口位置与大小
             _webWindow.Closed += (s, e) =>
@@ -1127,6 +1135,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     scriptConfig.WebviewTop = _webWindow.Top;
                     scriptConfig.WebviewWidth = _webWindow.Width;
                     scriptConfig.WebviewHeight = _webWindow.Height;
+                    scriptConfig.WebviewState = _webWindow.WindowState;
                 }
 
                 _webWindow = null;
