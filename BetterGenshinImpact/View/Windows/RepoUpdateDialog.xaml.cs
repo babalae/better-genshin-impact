@@ -28,7 +28,7 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
 
         // 配置窗口属性
         Title = "仓库更新提示";
-        MessageTextBlock.Text = $"脚本仓库已经 {daysSinceUpdate} 天未更新是否立即更新？";
+        MessageTextBlock.Text = $"脚本仓库已经 {daysSinceUpdate} 天未更新\n\n温馨提示：\n脚本内容跟随仓库版本，旧版仓库会订阅到旧版脚本。\n更新仓库后需要重新订阅脚本，以更新脚本内容。\n\n是否立即更新？";
         Owner = Application.Current.MainWindow;
 
         // 注册事件

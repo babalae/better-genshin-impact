@@ -4,10 +4,10 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Width="480"
-                 Height="240"
+                 Width="520"
+                 Height="280"
                  MinWidth="400"
-                 MinHeight="200"
+                 MinHeight="240"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
@@ -32,25 +32,26 @@
 
         <!-- 内容区域 -->
         <Grid Grid.Row="1" Margin="24,12,24,12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
             <!-- 图标 -->
-            <ui:SymbolIcon Grid.Row="0"
+            <ui:SymbolIcon Grid.Column="0"
                           Symbol="Warning24"
                           FontSize="48"
                           Foreground="{DynamicResource SystemFillColorAttentionBrush}"
-                          HorizontalAlignment="Center"
-                          Margin="0,0,0,16" />
+                          VerticalAlignment="Center"
+                          Margin="0,0,16,0" />
 
             <!-- 消息内容 -->
-            <ui:TextBlock Grid.Row="1"
+            <ui:TextBlock Grid.Column="1"
                          x:Name="MessageTextBlock"
-                         TextAlignment="Center"
+                         TextAlignment="Left"
                          TextWrapping="Wrap"
                          FontSize="14"
+                         VerticalAlignment="Center"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
         </Grid>
 
