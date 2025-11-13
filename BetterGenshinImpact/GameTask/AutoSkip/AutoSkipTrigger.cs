@@ -834,7 +834,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
             else
             {
-                content.CaptureRectArea.Derive(bbox).Click();
+                content.CaptureRectArea.ClickTo(100, 100); // 点击角色横幅外的区域才能跳过
             }
 
             _logger.LogInformation("自动剧情：关闭角色弹窗");
