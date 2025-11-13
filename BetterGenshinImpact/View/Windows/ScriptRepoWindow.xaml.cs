@@ -289,8 +289,44 @@ public partial class ScriptRepoWindow
     }
 
     [RelayCommand]
-    private void OpenLocalScriptRepo()
+    private async Task OpenLocalScriptRepo()
     {
+        try
+        {
+            // 检查仓库文件夹是否存在
+            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            {
+                // 查找 repo.json 文件
+                var repoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+
+                if (repoJsonPath != null && File.Exists(repoJsonPath))
+                {
+                    // 获取 repo.json 文件的最后修改时间
+                    var repoJsonFile = new FileInfo(repoJsonPath);
+                    DateTime lastUpdateTime = repoJsonFile.LastWriteTime;
+
+                    // 检查是否超过 7 天
+                    TimeSpan timeSinceUpdate = DateTime.Now - lastUpdateTime;
+                    if (timeSinceUpdate.TotalDays > 7)
+                    {
+                        // 超过 7 天，提示用户更新
+                        var result = await MessageBox.ShowAsync(
+                            $"脚本仓库已经 {(int)timeSinceUpdate.TotalDays} 天未更新，是否立即更新？",
+                            "仓库更新提示",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Question);
+
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            // 触发更新操作
+                            await UpdateRepo();
+                        }
+                    }
+                }
+            }
+        }
+        catch {}
+
         TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
         Close();
