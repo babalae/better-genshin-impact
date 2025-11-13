@@ -256,7 +256,7 @@ public partial class ScriptRepoWindow
             IsUpdating = true;
             UpdateProgressValue = 0;
             UpdateProgressText = "准备更新，请耐心等待...";
-            
+
             // 执行更新
             var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
@@ -291,45 +291,75 @@ public partial class ScriptRepoWindow
     [RelayCommand]
     private async Task OpenLocalScriptRepo()
     {
+        // 检查是否需要提示用户更新仓库
+        var shouldContinue = await CheckAndPromptRepoUpdate();
+        if (shouldContinue)
+        {
+            TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+            ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+            Close();
+        }
+    }
+
+    /// <summary>
+    /// 检查仓库更新时间并提示用户
+    /// </summary>
+    /// <returns>是否继续打开仓库（true: 继续打开, false: 取消操作）</returns>
+    private async Task<bool> CheckAndPromptRepoUpdate()
+    {
+        TimeSpan timeSinceUpdate;
         try
         {
             // 检查仓库文件夹是否存在
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            if (!Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
             {
-                // 查找 repo.json 文件
-                var repoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                return true;
+            }
 
-                if (repoJsonPath != null && File.Exists(repoJsonPath))
-                {
-                    // 获取 repo.json 文件的最后修改时间
-                    var repoJsonFile = new FileInfo(repoJsonPath);
-                    DateTime lastUpdateTime = repoJsonFile.LastWriteTime;
+            // 查找 repo.json 文件
+            var repoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (repoJsonPath == null || !File.Exists(repoJsonPath))
+            {
+                return true;
+            }
 
-                    // 检查是否超过 7 天
-                    TimeSpan timeSinceUpdate = DateTime.Now - lastUpdateTime;
-                    if (timeSinceUpdate.TotalDays > 7)
-                    {
-                        // 超过 7 天，提示用户更新
-                        var result = await MessageBox.ShowAsync(
-                            $"脚本仓库已经 {(int)timeSinceUpdate.TotalDays} 天未更新，是否立即更新？",
-                            "仓库更新提示",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Question);
+            // 获取 repo.json 文件的最后修改时间
+            var repoJsonFile = new FileInfo(repoJsonPath);
+            DateTime lastUpdateTime = repoJsonFile.LastWriteTime;
 
-                        if (result == MessageBoxResult.Yes)
-                        {
-                            // 触发更新操作
-                            await UpdateRepo();
-                        }
-                    }
-                }
+            // 检查是否超过 2 天
+            timeSinceUpdate = DateTime.Now - lastUpdateTime;
+            if (timeSinceUpdate.TotalDays <= 2)
+            {
+                return true;
             }
         }
-        catch {}
+        catch
+        {
+            // 出现异常时，继续打开仓库
+            return true;
+        }
 
-        TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
-        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
-        Close();
+        // 超过 2 天，提示用户更新
+        var dialog = new RepoUpdateDialog((int)timeSinceUpdate.TotalDays);
+        var result = await dialog.ShowDialogAsync();
+
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            // 用户选择"立即更新"
+            await UpdateRepo();
+            return false;
+        }
+        else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
+        {
+            // 用户选择"直接打开"
+            return true;
+        }
+        else
+        {
+            // 用户关闭对话框（点击 X 或按 ESC）
+            return false;
+        }
     }
 
     [RelayCommand]
