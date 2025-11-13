@@ -460,7 +460,7 @@ public class CombatScenes : IDisposable
         {
             // 多次识别失败则尝试刷新角色编号位置
             // 应对草露问题
-            if (context.TotalCheckFailedCount > 3)
+            if (context.TotalCheckFailedCount % 3 == 0 && context.TotalCheckFailedCount > 0 && context.TotalCheckFailedCount < 10)
             {
                 // 失败多次，识别是否存在满足预期的编号框
                 if (PartyAvatarSideIndexHelper.CountIndexRect(imageRegion) == Avatars.Length)
