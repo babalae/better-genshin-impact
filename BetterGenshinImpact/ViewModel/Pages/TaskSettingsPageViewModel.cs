@@ -433,7 +433,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         // }
         // catch (Exception ex)
         // {
-        //     MessageBox.Error(ex.Message);
+        //     ThemedMessageBox.Error(ex.Message);
         // }
     }
 
@@ -468,7 +468,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         // }
         // catch (Exception ex)
         // {
-        //     MessageBox.Error(ex.Message);
+        //     ThemedMessageBox.Error(ex.Message);
         // }
     }
 

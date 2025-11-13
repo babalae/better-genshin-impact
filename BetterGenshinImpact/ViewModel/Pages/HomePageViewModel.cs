@@ -346,11 +346,11 @@ public partial class HomePageViewModel : ViewModel
         //    new Bitmap(Global.Absolute("test_yolo.png")).Save(memoryStream, ImageFormat.Bmp);
         //    memoryStream.Seek(0, SeekOrigin.Begin);
         //    var result = predictor.Detect(memoryStream);
-        //    MessageBox.Show(JsonSerializer.Serialize(result));
+        //    ThemedMessageBox.Show(JsonSerializer.Serialize(result));
         //}
         //catch (Exception e)
         //{
-        //    MessageBox.Show(e.StackTrace);
+        //    ThemedMessageBox.Show(e.StackTrace);
         //}
 
         // Mat tar = new(@"E:\HuiTask\更好的原神\自动剧情\自动邀约\selected.png", ImreadModes.Grayscale);

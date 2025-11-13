@@ -118,6 +118,19 @@ public partial class ThemedMessageBox : FluentWindow
         return result;
     }
 
+    public static MessageBoxResult Show(string message, string title, MessageBoxButton button, MessageBoxIcon icon, MessageBoxResult defaultResult = MessageBoxResult.None, Window? owner = null)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            return ShowAsync(message, title, button, icon, defaultResult).GetAwaiter().GetResult();
+        }
+        else
+        {
+            return Application.Current.Dispatcher.Invoke(() =>
+                ShowAsync(message, title, button, icon, defaultResult).GetAwaiter().GetResult());
+        }
+    }
+
     /// <summary>
     /// 设置图标
     /// </summary>
@@ -177,27 +190,130 @@ public partial class ThemedMessageBox : FluentWindow
         }
     }
 
+    #region Error 方法
+
     public static void Error(string message, string title = "错误") =>
         Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Error));
+
+    public static MessageBoxResult Error(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            return ShowAsync(message, title, button, MessageBoxIcon.Error, defaultResult).GetAwaiter().GetResult();
+        }
+        else
+        {
+            return Application.Current.Dispatcher.Invoke(() =>
+                ShowAsync(message, title, button, MessageBoxIcon.Error, defaultResult).GetAwaiter().GetResult());
+        }
+    }
 
     public static Task<MessageBoxResult> ErrorAsync(string message, string title = "错误") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Error);
 
+    public static Task<MessageBoxResult> ErrorAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        ShowAsync(message, title, button, MessageBoxIcon.Error, defaultResult);
+
+    #endregion
+
+    #region Warning 方法
+
     public static void Warning(string message, string title = "警告") =>
         Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning));
+
+    public static MessageBoxResult Warning(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            return ShowAsync(message, title, button, MessageBoxIcon.Warning, defaultResult).GetAwaiter().GetResult();
+        }
+        else
+        {
+            return Application.Current.Dispatcher.Invoke(() =>
+                ShowAsync(message, title, button, MessageBoxIcon.Warning, defaultResult).GetAwaiter().GetResult());
+        }
+    }
 
     public static Task<MessageBoxResult> WarningAsync(string message, string title = "警告") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning);
 
+    public static Task<MessageBoxResult> WarningAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        ShowAsync(message, title, button, MessageBoxIcon.Warning, defaultResult);
+
+    #endregion
+
+    #region Information 方法
+
     public static void Information(string message, string title = "信息") =>
         Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Information));
+
+    public static MessageBoxResult Information(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            return ShowAsync(message, title, button, MessageBoxIcon.Information, defaultResult).GetAwaiter().GetResult();
+        }
+        else
+        {
+            return Application.Current.Dispatcher.Invoke(() =>
+                ShowAsync(message, title, button, MessageBoxIcon.Information, defaultResult).GetAwaiter().GetResult());
+        }
+    }
 
     public static Task<MessageBoxResult> InformationAsync(string message, string title = "信息") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Information);
 
+    public static Task<MessageBoxResult> InformationAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        ShowAsync(message, title, button, MessageBoxIcon.Information, defaultResult);
+
+    #endregion
+
+    #region Success 方法
+
     public static void Success(string message, string title = "成功") =>
         Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Success));
 
+    public static MessageBoxResult Success(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            return ShowAsync(message, title, button, MessageBoxIcon.Success, defaultResult).GetAwaiter().GetResult();
+        }
+        else
+        {
+            return Application.Current.Dispatcher.Invoke(() =>
+                ShowAsync(message, title, button, MessageBoxIcon.Success, defaultResult).GetAwaiter().GetResult());
+        }
+    }
+
     public static Task<MessageBoxResult> SuccessAsync(string message, string title = "成功") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Success);
+
+    public static Task<MessageBoxResult> SuccessAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        ShowAsync(message, title, button, MessageBoxIcon.Success, defaultResult);
+
+    #endregion
+
+    #region Question 方法
+
+    public static MessageBoxResult Question(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
+    {
+        if (Application.Current.Dispatcher.CheckAccess())
+        {
+            return ShowAsync(message, title, button, MessageBoxIcon.Question, defaultResult).GetAwaiter().GetResult();
+        }
+        else
+        {
+            return Application.Current.Dispatcher.Invoke(() =>
+                ShowAsync(message, title, button, MessageBoxIcon.Question, defaultResult).GetAwaiter().GetResult());
+        }
+    }
+
+    public static Task<MessageBoxResult> QuestionAsync(string message, string title = "确认") =>
+        ShowAsync(message, title, MessageBoxButton.YesNo, MessageBoxIcon.Question);
+
+    public static Task<MessageBoxResult> QuestionAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        ShowAsync(message, title, button, MessageBoxIcon.Question, defaultResult);
+
+    #endregion
 }
