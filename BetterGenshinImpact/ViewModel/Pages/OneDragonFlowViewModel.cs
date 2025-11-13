@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -247,6 +248,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
         MaxHeight = 600,
         };
+        uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {

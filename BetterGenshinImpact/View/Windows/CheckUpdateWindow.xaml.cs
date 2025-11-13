@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Windows.System;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using Meziantou.Framework.Win32;
@@ -45,6 +46,7 @@ public partial class CheckUpdateWindow : FluentWindow
         _option = option ?? throw new ArgumentNullException(nameof(option));
         DataContext = this;
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         // 存在CDK则显示修改按钮
         if (string.IsNullOrEmpty(MirrorChyanHelper.GetCdk()))

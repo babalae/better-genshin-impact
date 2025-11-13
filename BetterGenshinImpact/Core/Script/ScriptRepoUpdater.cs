@@ -684,6 +684,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Owner = Application.Current.MainWindow,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
+                uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
 
                 var result = await uiMessageBox.ShowDialogAsync();
                 if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
