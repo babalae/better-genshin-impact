@@ -279,7 +279,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            await MessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
+            await ThemedMessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
         }
         finally
         {
@@ -306,11 +306,11 @@ public partial class ScriptRepoWindow
         }
 
         // 添加确认对话框
-        var result = await MessageBox.ShowAsync(
+        var result = await ThemedMessageBox.ShowAsync(
             "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
             "确认重置",
             MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            ThemedMessageBox.MessageBoxIcon.Warning);
 
         if (result == MessageBoxResult.Yes)
         {
@@ -536,7 +536,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"无法打开链接: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ThemedMessageBox.Warning($"无法打开链接: {ex.Message}", "错误");
         }
         e.Handled = true;
     }

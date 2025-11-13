@@ -13,6 +13,7 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -120,7 +121,7 @@ public partial class HomePageViewModel : ViewModel
     private void OnLoaded()
     {
         // OnTest();
-        
+
         // 组件首次加载时运行一次。
         if (!_autoRun)
         {
@@ -174,7 +175,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                MessageBox.Error("选择的窗体句柄为空");
+                ThemedMessageBox.Error("选择的窗体句柄为空");
             }
         }
     }
@@ -192,7 +193,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                MessageBox.Error("选择的窗体句柄为空！");
+                ThemedMessageBox.Error("选择的窗体句柄为空！");
             }
         }
     }
@@ -218,7 +219,7 @@ public partial class HomePageViewModel : ViewModel
             {
                 if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
                 {
-                    MessageBox.Error("没有找到原神的安装路径");
+                    await ThemedMessageBox.ErrorAsync("没有找到原神的安装路径");
                     return;
                 }
 
@@ -231,7 +232,7 @@ public partial class HomePageViewModel : ViewModel
 
             if (hWnd == IntPtr.Zero)
             {
-                await MessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
+                await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
                 return;
             }
         }
@@ -246,7 +247,7 @@ public partial class HomePageViewModel : ViewModel
         {
             if (Config.TriggerInterval <= 0)
             {
-                MessageBox.Error("触发器触发频率必须大于0");
+                ThemedMessageBox.Error("触发器触发频率必须大于0");
                 return;
             }
 

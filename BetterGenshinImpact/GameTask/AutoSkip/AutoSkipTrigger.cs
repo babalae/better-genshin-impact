@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -112,7 +113,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情默认暂停点击关键词列表失败");
-            MessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！");
+            ThemedMessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！");
         }
 
         try
@@ -126,7 +127,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情暂停点击关键词列表失败");
-            MessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！");
+            ThemedMessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！");
         }
 
         try
@@ -140,7 +141,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情优先点击选项列表失败");
-            MessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！");
+            ThemedMessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！");
         }
     }
 

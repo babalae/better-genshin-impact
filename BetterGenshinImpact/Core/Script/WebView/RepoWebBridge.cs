@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
@@ -39,7 +40,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception ex)
         {
-            await MessageBox.ShowAsync(ex.Message, "获取仓库信息失败");
+            await ThemedMessageBox.ErrorAsync(ex.Message, "获取仓库信息失败");
             return string.Empty;
         }
     }
@@ -53,7 +54,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception e)
         {
-            await MessageBox.ShowAsync(e.Message, "订阅脚本链接失败！");
+            await ThemedMessageBox.ErrorAsync(e.Message, "订阅脚本链接失败！");
         }
     }
 
@@ -63,7 +64,7 @@ public sealed class RepoWebBridge
         
         if (!File.Exists(userConfigPath))
         {
-            await MessageBox.ShowAsync($"用户配置文件不存在: {userConfigPath}", "获取用户配置失败");
+            await ThemedMessageBox.ErrorAsync($"用户配置文件不存在: {userConfigPath}", "获取用户配置失败");
             return string.Empty;
         }
 
@@ -118,7 +119,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception ex)
         {
-            await MessageBox.ShowAsync(ex.Message, "信息更新失败");
+            await ThemedMessageBox.ErrorAsync(ex.Message, "信息更新失败");
             return false;
         }
     }
@@ -144,7 +145,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception ex)
         {
-            await MessageBox.ShowAsync($"清空更新标记失败: {ex.Message}", "操作失败");
+            await ThemedMessageBox.ErrorAsync($"清空更新标记失败: {ex.Message}", "操作失败");
             return false;
         }
     }
