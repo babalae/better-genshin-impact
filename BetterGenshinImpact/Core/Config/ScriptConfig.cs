@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Windows;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -31,4 +32,19 @@ public partial class ScriptConfig : ObservableObject
 
     // 自定义渠道的URL
     [ObservableProperty] private string _customRepoUrl = "";
+    
+    // 仓库页面宽度
+    [ObservableProperty] private double _webviewWidth = 0;
+    
+    // 仓库页面高度
+    [ObservableProperty] private double _webviewHeight = 0;
+    
+    // 仓库页面横向位置
+    [ObservableProperty] private double _webviewLeft = 0;
+    
+    // 仓库页面纵向位置
+    [ObservableProperty] private double _webviewTop = 0;
+    
+    // 仓库页面是否最大化
+    [ObservableProperty] private WindowState _webviewState = WindowState.Normal;
 }
