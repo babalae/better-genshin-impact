@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -21,6 +21,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -36,28 +37,25 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Windows.System;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ViewModel
 {
-    [ObservableProperty]
-    private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
+    [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
-    [ObservableProperty]
-    private string? _selectedMode = CaptureModes.BitBlt.ToString();
+    [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty]
-    private bool _taskDispatcherEnabled = false;
+    [ObservableProperty] private bool _taskDispatcherEnabled = false;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
 
     public AllConfig Config { get; set; }
@@ -71,14 +69,19 @@ public partial class HomePageViewModel : ViewModel
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
 
-    [ObservableProperty]
-    private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
+    [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
+
+    [ObservableProperty] private ImageSource _bannerImageSource;
+
+    private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
+    private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         _taskDispatcher = taskTriggerDispatcher;
         Config = configService.Get();
         ReadGameInstallPath();
+        InitializeBannerImage();
 
 
         // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
@@ -127,6 +130,7 @@ public partial class HomePageViewModel : ViewModel
         {
             return;
         }
+
         _autoRun = false;
 
         var args = Environment.GetCommandLineArgs();
@@ -467,9 +471,9 @@ public partial class HomePageViewModel : ViewModel
         var titleBar = new TitleBar
         {
             Title = "启动参数说明",
-            Icon = new ImageIcon 
-            { 
-                Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute)) 
+            Icon = new ImageIcon
+            {
+                Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute))
             },
         };
         System.Windows.Controls.Grid.SetRow(titleBar, 0);
@@ -491,10 +495,7 @@ public partial class HomePageViewModel : ViewModel
             WindowBackdropType = WindowBackdropType.Mica,
             ExtendsContentIntoTitleBar = true,
         };
-        dialogWindow.SourceInitialized += (s, e) =>
-        {
-            WindowHelper.TryApplySystemBackdrop(dialogWindow);
-        };
+        dialogWindow.SourceInitialized += (s, e) => { WindowHelper.TryApplySystemBackdrop(dialogWindow); };
         dialogWindow.ShowDialog();
     }
 
@@ -510,4 +511,112 @@ public partial class HomePageViewModel : ViewModel
         };
         var result = dialogWindow.ShowDialog();
     }
+
+    #region 背景图片管理
+
+    private void InitializeBannerImage()
+    {
+        try
+        {
+            // 检查是否存在自定义图片
+            if (File.Exists(_customBannerImagePath))
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(Path.GetFullPath(_customBannerImagePath));
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                BannerImageSource = bitmap;
+                _logger.LogInformation("已加载自定义背景图片");
+            }
+            else
+            {
+                // 使用默认图片
+                BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
+                _logger.LogInformation("已加载默认背景图片");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "初始化背景图片失败，使用默认图片");
+            BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
+        }
+    }
+
+    [RelayCommand]
+    private void ChangeBannerImage()
+    {
+        try
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Title = "选择背景图片",
+                Filter = "图片文件|*.jpg;*.jpeg;*.png;*.bmp;*.gif|所有文件|*.*",
+                Multiselect = false
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                ResetBannerImage();
+                
+                var selectedFile = openFileDialog.FileName;
+
+                // 确保目标目录存在
+                var directory = Path.GetDirectoryName(_customBannerImagePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // 复制图片到自定义路径
+                File.Copy(selectedFile, _customBannerImagePath, true);
+
+                // 更新UI
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(Path.GetFullPath(_customBannerImagePath));
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                BannerImageSource = bitmap;
+                Toast.Success("背景图片更换成功！");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "更换背景图片失败");
+            Toast.Error($"更换背景图片失败: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ResetBannerImage()
+    {
+        try
+        {
+            // 获取自定义图片的完整路径
+            var customImageFullPath = Path.GetFullPath(_customBannerImagePath);
+            _logger.LogInformation("尝试恢复默认背景图片，自定义图片路径: {CustomPath}", customImageFullPath);
+
+            // 先切换到默认图片，释放自定义图片的文件锁
+            var defaultBitmap = new BitmapImage();
+            defaultBitmap.BeginInit();
+            defaultBitmap.UriSource = new Uri(DefaultBannerImagePath, UriKind.Absolute);
+            defaultBitmap.CacheOption = BitmapCacheOption.OnLoad;
+            defaultBitmap.EndInit();
+            BannerImageSource = defaultBitmap;
+            
+            if (File.Exists(customImageFullPath))
+            {
+                File.Delete(customImageFullPath);
+                Toast.Success("已恢复为默认背景图片！");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "恢复默认背景图片失败");
+            Toast.Warning("已恢复为默认背景图片！但清除自定义图片失败，请手动删除文件。");
+        }
+    }
+
+    #endregion
 }
