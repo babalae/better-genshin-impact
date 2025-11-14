@@ -26,6 +26,7 @@
 
         <!-- 标题栏 -->
         <ui:TitleBar Grid.Row="0"
+                     x:Name="TitleBar"
                      Title="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
                      ShowMaximize="False"
                      ShowMinimize="False" />

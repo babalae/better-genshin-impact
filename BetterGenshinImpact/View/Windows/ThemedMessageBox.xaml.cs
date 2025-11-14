@@ -193,10 +193,11 @@ public partial class ThemedMessageBox : FluentWindow
         if (icon == MessageBoxIcon.None)
         {
             messageBox.MessageIcon.Visibility = Visibility.Collapsed;
+            messageBox.TitleBar.Icon = null;
             return;
         }
 
-        messageBox.MessageIcon.Symbol = icon switch
+        var symbol = icon switch
         {
             MessageBoxIcon.Information => SymbolRegular.Info24,
             MessageBoxIcon.Warning => SymbolRegular.Warning24,
@@ -205,16 +206,29 @@ public partial class ThemedMessageBox : FluentWindow
             MessageBoxIcon.Success => SymbolRegular.CheckmarkCircle24,
             _ => SymbolRegular.Info24
         };
+
+        messageBox.MessageIcon.Symbol = symbol;
+        messageBox.TitleBar.Icon = new SymbolIcon(symbol);
+
         var colorKey = icon switch
         {
             MessageBoxIcon.Information => "SystemFillColorAttentionBrush",
             MessageBoxIcon.Warning => "SystemFillColorCautionBrush",
             MessageBoxIcon.Error => "SystemFillColorCriticalBrush",
-            MessageBoxIcon.Question => "SystemFillColorCautionBrush",
+            MessageBoxIcon.Question => "SystemFillColorNeutralBrush",
             MessageBoxIcon.Success => "SystemFillColorSuccessBrush",
             _ => "SystemFillColorAttentionBrush"
         };
-        messageBox.MessageIcon.Foreground = (System.Windows.Media.Brush)Application.Current.Resources[colorKey];
+
+        if (Application.Current != null)
+        {
+            var brush = Application.Current.TryFindResource(colorKey) as System.Windows.Media.Brush;
+            if (brush != null)
+            {
+                messageBox.MessageIcon.Foreground = brush;
+                messageBox.TitleBar.Icon.Foreground = brush;
+            }
+        }
     }
 
     private static void SetButtons(ThemedMessageBox messageBox, MessageBoxButton button)
