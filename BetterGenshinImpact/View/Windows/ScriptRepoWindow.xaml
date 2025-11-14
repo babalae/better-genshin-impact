@@ -315,7 +315,8 @@
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Content="打开仓库"
                            Icon="{ui:SymbolIcon BookStar24}"
-                           HorizontalAlignment="Center" />
+                           HorizontalAlignment="Center"
+                           IsEnabled="{Binding IsUpdating, Converter={StaticResource InverseBooleanConverter}}" />
             </Grid>
         </Grid>
     </Grid>
