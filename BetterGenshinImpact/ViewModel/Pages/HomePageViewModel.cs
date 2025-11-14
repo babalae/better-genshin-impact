@@ -232,6 +232,10 @@ public partial class HomePageViewModel : ViewModel
                 {
                     TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
                 }
+                else
+                {
+                    return;
+                }
             }
 
             if (hWnd == IntPtr.Zero)

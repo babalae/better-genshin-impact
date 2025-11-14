@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.ViewModel.Pages;
 using OpenCvSharp;
 using System;
 using System.Globalization;
@@ -14,7 +15,7 @@ using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Windows;
 
-public partial class OcrDialog
+public partial class ArtifactOcrDialog
 {
     private readonly double xRatio;
     private readonly double yRatio;
@@ -23,7 +24,7 @@ public partial class OcrDialog
     private readonly string? javaScript;
     private readonly AutoArtifactSalvageTask autoArtifactSalvageTask;
 
-    public OcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? javaScript = null)
+    public ArtifactOcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? javaScript = null)
     {
         this.xRatio = xRatio;
         this.yRatio = yRatio;
@@ -36,17 +37,23 @@ public partial class OcrDialog
         SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         MyTitleBar.Title = title;
-        Capture();
+
+        _ = CaptureAsync();
     }
 
-    public void Capture()
+    public async Task CaptureAsync()
     {
+        // 没启动时候，启动截图器
+        var homePageViewModel = App.GetService<HomePageViewModel>();
+        if (!homePageViewModel!.TaskDispatcherEnabled) { await homePageViewModel.OnStartTriggerAsync(); }
+
         using var ra = TaskControl.CaptureToRectArea();
         using var card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
-        //Cv2.ImWrite($"{DateTime.Now.ToString("yyyyMMddHHmm")}_GetArtifactStat.png", card.SrcMat);
         var bitmapImage = card.SrcMat.ToWriteableBitmap();
 
         this.Screenshot.Source = bitmapImage;
+        this.InvalidateVisual();
+        this.UpdateLayout();
 
         try
         {
@@ -62,34 +69,32 @@ public partial class OcrDialog
         }
         catch (Exception e)
         {
-            var multilineTextBox = new TextBox
-            {
-                TextWrapping = TextWrapping.Wrap,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Text = e.ToString(),
-                IsReadOnly = true
-            };
-            var p = new PromptDialog($"出错了：{e.Message}\r\n\r\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）", $"异常处理", multilineTextBox, null);
-            p.Height = 600;
-            p.MaxWidth = 800;
-            p.ShowDialog();
-
-            if (p.DialogResult == true)
-            {
-                string directory = Path.Combine(AppContext.BaseDirectory, "log/autoArtifactSalvageException");
-                Directory.CreateDirectory(directory);
-                string filePath = Path.Combine(directory, $"{DateTime.Now.ToString("yyyyMMddHHmmss")}_GetArtifactStat.png");
-                Cv2.ImWrite(filePath, card.SrcMat);
-            }
-
-            throw;
+            await HandleOcrExceptionAsync(e, card.SrcMat);
         }
-        this.UpdateLayout();
     }
 
-    private void BtnOkClick(object sender, RoutedEventArgs e)
+    private static async Task HandleOcrExceptionAsync(Exception e, Mat srcMat)
     {
-        Capture();
+        var result = ThemedMessageBox.Error(
+            $"{e.Message}\n\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）",
+            "异常处理",
+            MessageBoxButton.YesNo,
+            MessageBoxResult.No
+        );
+
+        if (result == MessageBoxResult.Yes)
+        {
+            string directory = Path.Combine(AppContext.BaseDirectory, "log/autoArtifactSalvageException");
+            Directory.CreateDirectory(directory);
+            string filePath = Path.Combine(directory, $"{DateTime.Now:yyyyMMddHHmmss}_GetArtifactStat.png");
+            Cv2.ImWrite(filePath, srcMat);
+        }
+        await Task.CompletedTask;
+    }
+
+    private async void BtnOkClick(object sender, RoutedEventArgs e)
+    {
+        _ = CaptureAsync();
     }
 
     private void BtnCancelClick(object sender, RoutedEventArgs e)
