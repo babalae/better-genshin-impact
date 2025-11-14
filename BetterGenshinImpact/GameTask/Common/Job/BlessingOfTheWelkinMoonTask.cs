@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -27,24 +28,33 @@ public class BlessingOfTheWelkinMoonTask
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra))
                 {
                     Logger.LogInformation("检测到空月祝福界面，自动点击");
-                    GameCaptureRegion.GameRegion1080PPosMove(100,100);
-                    TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                    await Delay(5000, ct);
-
-                    // 重新判断一次，因为界面刚出来的点击可能无效
-                    if (Bv.IsInBlessingOfTheWelkinMoon(ra))
+                    GameCaptureRegion.GameRegion1080PPosMove(100, 100);
+                    for (int i = 0, j = 0; i < 20 && j < 3; ++i)
                     {
-                        TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                        await Delay(5000, ct);
+                        if (j == 0)
+                        {
+                            // 双击快速跳过
+                            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                        }
+                        await Delay(500, ct);
+                        using var ra2 = CaptureToRectArea();
+                        if (Bv.IsInBlessingOfTheWelkinMoon(ra2))
+                        {
+                            // 仍在空月祝福界面
+                            j = 0;
+                        }
+                        else if (ra2.Find(ElementAssets.Instance.PrimogemRo).IsExist())
+                        {
+                            // 仍在原石界面
+                            j = 0;
+                        }
+                        else
+                        {
+                            // 连续3次没检测到才认为处理完毕，避免淡出/淡入特效影响
+                            ++j;
+                        }
                     }
-
-                    await Delay(2000, ct);
-
-                    TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-
-                    await Delay(2000, ct);
-
-                    TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
                     Logger.LogInformation("空月祝福处理完毕");
                 }
             }
