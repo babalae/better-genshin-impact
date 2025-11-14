@@ -187,10 +187,12 @@ public partial class ThemedMessageBox : FluentWindow
         };
         var colorKey = icon switch
         {
-            MessageBoxIcon.Warning => "SystemFillColorAttentionBrush",
+            MessageBoxIcon.Information => "SystemFillColorAttentionBrush",
+            MessageBoxIcon.Warning => "SystemFillColorCautionBrush",
             MessageBoxIcon.Error => "SystemFillColorCriticalBrush",
+            MessageBoxIcon.Question => "SystemFillColorCautionBrush",
             MessageBoxIcon.Success => "SystemFillColorSuccessBrush",
-            _ => "SystemFillColorCautionBrush"
+            _ => "SystemFillColorAttentionBrush"
         };
         messageBox.MessageIcon.Foreground = (System.Windows.Media.Brush)Application.Current.Resources[colorKey];
     }
