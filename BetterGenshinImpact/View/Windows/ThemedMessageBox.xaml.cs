@@ -14,6 +14,7 @@ namespace BetterGenshinImpact.View.Windows;
 public partial class ThemedMessageBox : FluentWindow
 {
     private TaskCompletionSource<MessageBoxResult>? _taskCompletionSource;
+    private MessageBoxButton _buttonType;
 
     /// <summary>
     /// 消息框图标类型
@@ -47,7 +48,16 @@ public partial class ThemedMessageBox : FluentWindow
 
     private void OnClosed(object? sender, EventArgs e)
     {
-        _taskCompletionSource?.TrySetResult(MessageBoxResult.None);
+        // 根据按钮类型返回正确的关闭结果
+        var result = _buttonType switch
+        {
+            MessageBoxButton.OK => MessageBoxResult.OK,
+            MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
+            MessageBoxButton.YesNo => MessageBoxResult.No,
+            MessageBoxButton.YesNoCancel => MessageBoxResult.Cancel,
+            _ => MessageBoxResult.None
+        };
+        _taskCompletionSource?.TrySetResult(result);
     }
 
     /// <summary>
@@ -62,19 +72,37 @@ public partial class ThemedMessageBox : FluentWindow
 
     private void PrimaryButton_Click(object sender, RoutedEventArgs e)
     {
-        _taskCompletionSource?.TrySetResult(MessageBoxResult.Yes);
+        // 根据按钮类型返回正确的主按钮结果
+        var result = _buttonType switch
+        {
+            MessageBoxButton.OK => MessageBoxResult.OK,
+            MessageBoxButton.OKCancel => MessageBoxResult.OK,
+            MessageBoxButton.YesNo => MessageBoxResult.Yes,
+            MessageBoxButton.YesNoCancel => MessageBoxResult.Yes,
+            _ => MessageBoxResult.OK
+        };
+        _taskCompletionSource?.TrySetResult(result);
         Close();
     }
 
     private void SecondaryButton_Click(object sender, RoutedEventArgs e)
     {
-        _taskCompletionSource?.TrySetResult(MessageBoxResult.Cancel);
+        // 根据按钮类型返回正确的次按钮结果
+        var result = _buttonType switch
+        {
+            MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
+            MessageBoxButton.YesNo => MessageBoxResult.No,
+            MessageBoxButton.YesNoCancel => MessageBoxResult.No,
+            _ => MessageBoxResult.Cancel
+        };
+        _taskCompletionSource?.TrySetResult(result);
         Close();
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        _taskCompletionSource?.TrySetResult(MessageBoxResult.None);
+        // 关闭按钮仅在 YesNoCancel 时显示，始终返回 Cancel
+        _taskCompletionSource?.TrySetResult(MessageBoxResult.Cancel);
         Close();
     }
 
@@ -108,7 +136,8 @@ public partial class ThemedMessageBox : FluentWindow
         // 设置图标
         SetIcon(messageBox, icon);
 
-        // 设置按钮
+        // 设置按钮并保存按钮类型
+        messageBox._buttonType = button;
         SetButtons(messageBox, button);
         var result = await messageBox.ShowDialogAsync();
         if (result == MessageBoxResult.None)
@@ -118,7 +147,7 @@ public partial class ThemedMessageBox : FluentWindow
         return result;
     }
 
-    public static MessageBoxResult Show(string message, string title, MessageBoxButton button, MessageBoxIcon icon, MessageBoxResult defaultResult = MessageBoxResult.None, Window? owner = null)
+    public static MessageBoxResult Show(string message, string title, MessageBoxButton button, MessageBoxIcon icon, MessageBoxResult defaultResult = MessageBoxResult.None)
     {
         if (Application.Current.Dispatcher.CheckAccess())
         {
