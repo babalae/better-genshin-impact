@@ -19,14 +19,13 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="硬件加速设置">
+        <ui:TitleBar Grid.Row="0" Title="配置组设置">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
         <ScrollViewer Grid.Row="1"
-                      Height="800"
                     d:DesignHeight="1600"
                     HorizontalScrollBarVisibility="Auto"
                     VerticalScrollBarVisibility="Auto">
