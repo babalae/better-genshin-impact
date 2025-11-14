@@ -193,10 +193,11 @@ public partial class ThemedMessageBox : FluentWindow
         if (icon == MessageBoxIcon.None)
         {
             messageBox.MessageIcon.Visibility = Visibility.Collapsed;
+            messageBox.TitleBar.Icon = null;
             return;
         }
 
-        messageBox.MessageIcon.Symbol = icon switch
+        var symbol = icon switch
         {
             MessageBoxIcon.Information => SymbolRegular.Info24,
             MessageBoxIcon.Warning => SymbolRegular.Warning24,
@@ -205,6 +206,9 @@ public partial class ThemedMessageBox : FluentWindow
             MessageBoxIcon.Success => SymbolRegular.CheckmarkCircle24,
             _ => SymbolRegular.Info24
         };
+
+        messageBox.MessageIcon.Symbol = symbol;
+
         var colorKey = icon switch
         {
             MessageBoxIcon.Information => "SystemFillColorAttentionBrush",
@@ -215,6 +219,9 @@ public partial class ThemedMessageBox : FluentWindow
             _ => "SystemFillColorAttentionBrush"
         };
         messageBox.MessageIcon.Foreground = (System.Windows.Media.Brush)Application.Current.Resources[colorKey];
+
+        // 设置 TitleBar 图标
+        messageBox.TitleBar.Icon = new SymbolIcon { Symbol = symbol };
     }
 
     private static void SetButtons(ThemedMessageBox messageBox, MessageBoxButton button)
