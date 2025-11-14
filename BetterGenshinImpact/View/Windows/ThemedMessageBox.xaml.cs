@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.View.Windows;
 /// </summary>
 public partial class ThemedMessageBox : FluentWindow
 {
-    private TaskCompletionSource<MessageBoxResult>? _taskCompletionSource;
+    private MessageBoxResult _result;
     private MessageBoxButton _buttonType;
 
     /// <summary>
@@ -30,7 +30,7 @@ public partial class ThemedMessageBox : FluentWindow
     }
 
     /// <summary>
-    /// 初始化自定义消息对话框
+    /// 初始化主题色消息对话框
     /// </summary>
     private ThemedMessageBox()
     {
@@ -48,32 +48,34 @@ public partial class ThemedMessageBox : FluentWindow
 
     private void OnClosed(object? sender, EventArgs e)
     {
-        // 根据按钮类型返回正确的关闭结果
-        var result = _buttonType switch
+        // 如果没有明确设置结果，根据按钮类型返回默认的关闭结果
+        if (_result == MessageBoxResult.None)
         {
-            MessageBoxButton.OK => MessageBoxResult.OK,
-            MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
-            MessageBoxButton.YesNo => MessageBoxResult.No,
-            MessageBoxButton.YesNoCancel => MessageBoxResult.Cancel,
-            _ => MessageBoxResult.None
-        };
-        _taskCompletionSource?.TrySetResult(result);
+            _result = _buttonType switch
+            {
+                MessageBoxButton.OK => MessageBoxResult.OK,
+                MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
+                MessageBoxButton.YesNo => MessageBoxResult.No,
+                MessageBoxButton.YesNoCancel => MessageBoxResult.Cancel,
+                _ => MessageBoxResult.None
+            };
+        }
     }
 
     /// <summary>
-    /// 显示对话框并等待结果
+    /// 显示对话框并返回结果
     /// </summary>
-    public Task<MessageBoxResult> ShowDialogAsync()
+    private MessageBoxResult ShowDialogWithResult()
     {
-        _taskCompletionSource = new TaskCompletionSource<MessageBoxResult>();
+        _result = MessageBoxResult.None;
         ShowDialog();
-        return _taskCompletionSource.Task;
+        return _result;
     }
 
     private void PrimaryButton_Click(object sender, RoutedEventArgs e)
     {
         // 根据按钮类型返回正确的主按钮结果
-        var result = _buttonType switch
+        _result = _buttonType switch
         {
             MessageBoxButton.OK => MessageBoxResult.OK,
             MessageBoxButton.OKCancel => MessageBoxResult.OK,
@@ -81,28 +83,26 @@ public partial class ThemedMessageBox : FluentWindow
             MessageBoxButton.YesNoCancel => MessageBoxResult.Yes,
             _ => MessageBoxResult.OK
         };
-        _taskCompletionSource?.TrySetResult(result);
         Close();
     }
 
     private void SecondaryButton_Click(object sender, RoutedEventArgs e)
     {
         // 根据按钮类型返回正确的次按钮结果
-        var result = _buttonType switch
+        _result = _buttonType switch
         {
             MessageBoxButton.OKCancel => MessageBoxResult.Cancel,
             MessageBoxButton.YesNo => MessageBoxResult.No,
             MessageBoxButton.YesNoCancel => MessageBoxResult.No,
             _ => MessageBoxResult.Cancel
         };
-        _taskCompletionSource?.TrySetResult(result);
         Close();
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         // 关闭按钮仅在 YesNoCancel 时显示，始终返回 Cancel
-        _taskCompletionSource?.TrySetResult(MessageBoxResult.Cancel);
+        _result = MessageBoxResult.Cancel;
         Close();
     }
 
@@ -116,7 +116,7 @@ public partial class ThemedMessageBox : FluentWindow
     /// <param name="defaultResult">默认结果</param>
     /// <param name="owner">父窗口</param>
     /// <returns>用户选择的结果</returns>
-    public static async Task<MessageBoxResult> ShowAsync(
+    public static MessageBoxResult Show(
         string content,
         string title = "提示",
         MessageBoxButton button = MessageBoxButton.OK,
@@ -124,40 +124,45 @@ public partial class ThemedMessageBox : FluentWindow
         MessageBoxResult defaultResult = MessageBoxResult.None,
         Window? owner = null)
     {
-        var messageBox = new ThemedMessageBox
-        {
-            Title = title,
-            Owner = owner ?? Application.Current.MainWindow
-        };
-
-        // 设置消息内容
-        messageBox.MessageTextBlock.Text = content;
-
-        // 设置图标
-        SetIcon(messageBox, icon);
-
-        // 设置按钮并保存按钮类型
-        messageBox._buttonType = button;
-        SetButtons(messageBox, button);
-        var result = await messageBox.ShowDialogAsync();
-        if (result == MessageBoxResult.None)
-        {
-            return defaultResult;
-        }
-        return result;
-    }
-
-    public static MessageBoxResult Show(string message, string title, MessageBoxButton button, MessageBoxIcon icon, MessageBoxResult defaultResult = MessageBoxResult.None)
-    {
         if (Application.Current.Dispatcher.CheckAccess())
         {
-            return ShowAsync(message, title, button, icon, defaultResult).GetAwaiter().GetResult();
+            var messageBox = new ThemedMessageBox
+            {
+                Title = title,
+                Owner = owner ?? Application.Current.MainWindow
+            };
+
+            // 设置消息内容
+            messageBox.MessageTextBlock.Text = content;
+
+            // 设置图标
+            SetIcon(messageBox, icon);
+
+            // 设置按钮并保存按钮类型
+            messageBox._buttonType = button;
+            SetButtons(messageBox, button);
+
+            var result = messageBox.ShowDialogWithResult();
+            return result == MessageBoxResult.None ? defaultResult : result;
         }
         else
         {
-            return Application.Current.Dispatcher.Invoke(() =>
-                ShowAsync(message, title, button, icon, defaultResult).GetAwaiter().GetResult());
+            return Application.Current.Dispatcher.Invoke(() => Show(content, title, button, icon, defaultResult, owner));
         }
+    }
+
+    /// <summary>
+    /// 异步显示主题色消息框
+    /// </summary>
+    public static Task<MessageBoxResult> ShowAsync(
+        string content,
+        string title = "提示",
+        MessageBoxButton button = MessageBoxButton.OK,
+        MessageBoxIcon icon = MessageBoxIcon.Information,
+        MessageBoxResult defaultResult = MessageBoxResult.None,
+        Window? owner = null)
+    {
+        return Task.Run(() => Show(content, title, button, icon, defaultResult, owner));
     }
 
     /// <summary>
@@ -165,7 +170,12 @@ public partial class ThemedMessageBox : FluentWindow
     /// </summary>
     private static void SetIcon(ThemedMessageBox messageBox, MessageBoxIcon icon)
     {
-        if (icon == MessageBoxIcon.None) { messageBox.MessageIcon.Visibility = Visibility.Collapsed; return; }
+        if (icon == MessageBoxIcon.None)
+        {
+            messageBox.MessageIcon.Visibility = Visibility.Collapsed;
+            return;
+        }
+
         messageBox.MessageIcon.Symbol = icon switch
         {
             MessageBoxIcon.Information => SymbolRegular.Info24,
@@ -222,20 +232,10 @@ public partial class ThemedMessageBox : FluentWindow
     #region Error 方法
 
     public static void Error(string message, string title = "错误") =>
-        Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Error));
+        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Error));
 
-    public static MessageBoxResult Error(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
-    {
-        if (Application.Current.Dispatcher.CheckAccess())
-        {
-            return ShowAsync(message, title, button, MessageBoxIcon.Error, defaultResult).GetAwaiter().GetResult();
-        }
-        else
-        {
-            return Application.Current.Dispatcher.Invoke(() =>
-                ShowAsync(message, title, button, MessageBoxIcon.Error, defaultResult).GetAwaiter().GetResult());
-        }
-    }
+    public static MessageBoxResult Error(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        Show(message, title, button, MessageBoxIcon.Error, defaultResult);
 
     public static Task<MessageBoxResult> ErrorAsync(string message, string title = "错误") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Error);
@@ -248,20 +248,10 @@ public partial class ThemedMessageBox : FluentWindow
     #region Warning 方法
 
     public static void Warning(string message, string title = "警告") =>
-        Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning));
+        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning));
 
-    public static MessageBoxResult Warning(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
-    {
-        if (Application.Current.Dispatcher.CheckAccess())
-        {
-            return ShowAsync(message, title, button, MessageBoxIcon.Warning, defaultResult).GetAwaiter().GetResult();
-        }
-        else
-        {
-            return Application.Current.Dispatcher.Invoke(() =>
-                ShowAsync(message, title, button, MessageBoxIcon.Warning, defaultResult).GetAwaiter().GetResult());
-        }
-    }
+    public static MessageBoxResult Warning(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        Show(message, title, button, MessageBoxIcon.Warning, defaultResult);
 
     public static Task<MessageBoxResult> WarningAsync(string message, string title = "警告") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning);
@@ -274,20 +264,10 @@ public partial class ThemedMessageBox : FluentWindow
     #region Information 方法
 
     public static void Information(string message, string title = "信息") =>
-        Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Information));
+        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Information));
 
-    public static MessageBoxResult Information(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
-    {
-        if (Application.Current.Dispatcher.CheckAccess())
-        {
-            return ShowAsync(message, title, button, MessageBoxIcon.Information, defaultResult).GetAwaiter().GetResult();
-        }
-        else
-        {
-            return Application.Current.Dispatcher.Invoke(() =>
-                ShowAsync(message, title, button, MessageBoxIcon.Information, defaultResult).GetAwaiter().GetResult());
-        }
-    }
+    public static MessageBoxResult Information(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        Show(message, title, button, MessageBoxIcon.Information, defaultResult);
 
     public static Task<MessageBoxResult> InformationAsync(string message, string title = "信息") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Information);
@@ -300,20 +280,10 @@ public partial class ThemedMessageBox : FluentWindow
     #region Success 方法
 
     public static void Success(string message, string title = "成功") =>
-        Application.Current.Dispatcher.InvokeAsync(async () => await ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Success));
+        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Success));
 
-    public static MessageBoxResult Success(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
-    {
-        if (Application.Current.Dispatcher.CheckAccess())
-        {
-            return ShowAsync(message, title, button, MessageBoxIcon.Success, defaultResult).GetAwaiter().GetResult();
-        }
-        else
-        {
-            return Application.Current.Dispatcher.Invoke(() =>
-                ShowAsync(message, title, button, MessageBoxIcon.Success, defaultResult).GetAwaiter().GetResult());
-        }
-    }
+    public static MessageBoxResult Success(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        Show(message, title, button, MessageBoxIcon.Success, defaultResult);
 
     public static Task<MessageBoxResult> SuccessAsync(string message, string title = "成功") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Success);
@@ -325,18 +295,8 @@ public partial class ThemedMessageBox : FluentWindow
 
     #region Question 方法
 
-    public static MessageBoxResult Question(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None)
-    {
-        if (Application.Current.Dispatcher.CheckAccess())
-        {
-            return ShowAsync(message, title, button, MessageBoxIcon.Question, defaultResult).GetAwaiter().GetResult();
-        }
-        else
-        {
-            return Application.Current.Dispatcher.Invoke(() =>
-                ShowAsync(message, title, button, MessageBoxIcon.Question, defaultResult).GetAwaiter().GetResult());
-        }
-    }
+    public static MessageBoxResult Question(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
+        Show(message, title, button, MessageBoxIcon.Question, defaultResult);
 
     public static Task<MessageBoxResult> QuestionAsync(string message, string title = "确认") =>
         ShowAsync(message, title, MessageBoxButton.YesNo, MessageBoxIcon.Question);
