@@ -28,7 +28,11 @@
         <ui:TitleBar Grid.Row="0"
                      Title="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}"
                      ShowMaximize="False"
-                     ShowMinimize="False" />
+                     ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
         <!-- 内容区域 -->
         <Grid Grid.Row="1" Margin="24,12,24,12">
