@@ -499,7 +499,7 @@ public partial class HomePageViewModel : ViewModel
             WindowBackdropType = WindowBackdropType.Mica,
             ExtendsContentIntoTitleBar = true,
         };
-        dialogWindow.SourceInitialized += (s, e) => { WindowHelper.TryApplySystemBackdrop(dialogWindow); };
+        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
         dialogWindow.ShowDialog();
     }
 
