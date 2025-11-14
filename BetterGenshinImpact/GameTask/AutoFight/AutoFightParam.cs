@@ -105,8 +105,10 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         {
             CombatStrategyPath =  Global.Absolute(@"User\AutoFight\");
         }
-
-        CombatStrategyPath =  Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        else
+        {
+            CombatStrategyPath =  Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        }
     }
 
     public void SetDefault()
