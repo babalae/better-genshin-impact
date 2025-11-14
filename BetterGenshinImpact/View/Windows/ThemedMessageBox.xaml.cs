@@ -208,6 +208,7 @@ public partial class ThemedMessageBox : FluentWindow
         };
 
         messageBox.MessageIcon.Symbol = symbol;
+        messageBox.TitleBar.Icon = new SymbolIcon(symbol);
 
         var colorKey = icon switch
         {
@@ -225,7 +226,7 @@ public partial class ThemedMessageBox : FluentWindow
             if (brush != null)
             {
                 messageBox.MessageIcon.Foreground = brush;
-                messageBox.TitleBar.Icon = new SymbolIcon { Symbol = symbol, Foreground = brush };
+                messageBox.TitleBar.Icon.Foreground = brush;
             }
         }
     }
