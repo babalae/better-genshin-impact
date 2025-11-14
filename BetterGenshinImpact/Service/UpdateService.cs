@@ -73,7 +73,7 @@ public class UpdateService : IUpdateService
             {
                 if (option.Trigger == UpdateTrigger.Manual)
                 {
-                    await MessageBox.InformationAsync("当前已是最新版本！");
+                    await ThemedMessageBox.InformationAsync("当前已是最新版本！");
                 }
 
                 return;
@@ -130,7 +130,7 @@ public class UpdateService : IUpdateService
                         string updaterExePath = Global.Absolute("BetterGI.update.exe");
                         if (!File.Exists(updaterExePath))
                         {
-                            await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+                            await ThemedMessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
                             return;
                         }
 

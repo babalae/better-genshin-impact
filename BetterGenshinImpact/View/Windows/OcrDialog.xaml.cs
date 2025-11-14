@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Helpers.Ui;
 using OpenCvSharp;
 using System;
 using System.Globalization;
@@ -32,6 +33,7 @@ public partial class OcrDialog
         this.autoArtifactSalvageTask = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, null, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName)));
 
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         MyTitleBar.Title = title;
         Capture();

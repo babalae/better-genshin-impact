@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.ViewModel.Windows;
+﻿using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.ViewModel.Windows;
 using System.Windows;
 using Wpf.Ui.Controls;
 
@@ -12,6 +13,7 @@ public partial class JsonMonoDialog : FluentWindow
     {
         DataContext = ViewModel = new(path);
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         // Manual MVVM binding
         JsonCodeBox.TextChanged += (_, _) => ViewModel.JsonText = JsonCodeBox.Text;

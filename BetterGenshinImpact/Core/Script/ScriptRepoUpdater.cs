@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.View.Controls.Webview;
@@ -684,6 +685,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Owner = Application.Current.MainWindow,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
+                uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
 
                 var result = await uiMessageBox.ShowDialogAsync();
                 if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
@@ -758,7 +760,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch
         {
-            await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+            await ThemedMessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
             return;
         }
 

@@ -315,7 +315,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
 
-            MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
+            await ThemedMessageBox.ErrorAsync("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
         }
     }
     */
@@ -338,15 +338,15 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
-                    System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var res = await ThemedMessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
+                    System.Windows.MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
                     // 迁移配置，拷贝整个目录并覆盖
                     DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
-                    await MessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
+                    await ThemedMessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
                     Application.Current.Shutdown();
                 }
             }
@@ -412,7 +412,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            MessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
+            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(
                 new ProcessStartInfo(

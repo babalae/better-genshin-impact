@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterGenshinImpact.Helpers.Ui;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +13,7 @@ public partial class WelcomeDialog
     public WelcomeDialog()
     {
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
         this.Loaded += WelcomeDialogLoaded;
     }
 

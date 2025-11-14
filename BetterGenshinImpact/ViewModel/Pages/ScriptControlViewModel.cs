@@ -117,10 +117,10 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void ClearTasks()
+    private async Task ClearTasks()
     {
         // 确认？
-        var result = MessageBox.Show("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var result = await ThemedMessageBox.ShowAsync("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
