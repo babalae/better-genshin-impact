@@ -116,6 +116,11 @@ public partial class ThemedMessageBox : FluentWindow
     /// <param name="defaultResult">默认结果</param>
     /// <param name="owner">父窗口</param>
     /// <returns>用户选择的结果</returns>
+    /// <remarks>
+    /// 此方法必须在 UI 线程上调用。它会阻塞调用线程直到用户关闭对话框。
+    /// 对话框使用 ShowDialog() 显示，内部会创建嵌套消息循环来处理用户交互。
+    /// 如果需要从非 UI 线程调用，请使用 ShowAsync 方法。
+    /// </remarks>
     public static MessageBoxResult Show(
         string content,
         string title = "提示",
@@ -124,36 +129,50 @@ public partial class ThemedMessageBox : FluentWindow
         MessageBoxResult defaultResult = MessageBoxResult.None,
         Window? owner = null)
     {
-        if (Application.Current.Dispatcher.CheckAccess())
+        var messageBox = new ThemedMessageBox
         {
-            var messageBox = new ThemedMessageBox
-            {
-                Title = title,
-                Owner = owner ?? Application.Current.MainWindow
-            };
+            Title = title
+        };
 
-            // 设置消息内容
-            messageBox.MessageTextBlock.Text = content;
-
-            // 设置图标
-            SetIcon(messageBox, icon);
-
-            // 设置按钮并保存按钮类型
-            messageBox._buttonType = button;
-            SetButtons(messageBox, button);
-
-            var result = messageBox.ShowDialogWithResult();
-            return result == MessageBoxResult.None ? defaultResult : result;
-        }
-        else
+        // 设置父窗口，需要防止将自己设置为父窗口，以及处理 MainWindow 未初始化的情况
+        if (owner != null && owner != messageBox)
         {
-            return Application.Current.Dispatcher.Invoke(() => Show(content, title, button, icon, defaultResult, owner));
+            messageBox.Owner = owner;
         }
+        else if (Application.Current?.MainWindow != null && Application.Current.MainWindow != messageBox)
+        {
+            messageBox.Owner = Application.Current.MainWindow;
+        }
+
+        // 设置消息内容
+        messageBox.MessageTextBlock.Text = content;
+
+        // 设置图标
+        SetIcon(messageBox, icon);
+
+        // 设置按钮并保存按钮类型
+        messageBox._buttonType = button;
+        SetButtons(messageBox, button);
+
+        var result = messageBox.ShowDialogWithResult();
+        return result == MessageBoxResult.None ? defaultResult : result;
     }
 
     /// <summary>
     /// 异步显示主题色消息框
     /// </summary>
+    /// <param name="content">消息内容</param>
+    /// <param name="title">标题</param>
+    /// <param name="button">按钮类型</param>
+    /// <param name="icon">图标类型</param>
+    /// <param name="defaultResult">默认结果</param>
+    /// <param name="owner">父窗口</param>
+    /// <returns>用户选择结果的 Task</returns>
+    /// <remarks>
+    /// 此方法可以从任何线程安全调用。它会将对话框的显示调度到 UI 线程，
+    /// 并返回一个 Task 以便调用者可以 await 等待用户响应。
+    /// 推荐在异步上下文中使用此方法以避免阻塞调用线程。
+    /// </remarks>
     public static Task<MessageBoxResult> ShowAsync(
         string content,
         string title = "提示",
@@ -234,8 +253,11 @@ public partial class ThemedMessageBox : FluentWindow
 
     #region Error 方法
 
+    /// <summary>
+    /// 显示错误消息框（同步，阻塞调用）
+    /// </summary>
     public static void Error(string message, string title = "错误") =>
-        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Error));
+        Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Error);
 
     public static MessageBoxResult Error(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
         Show(message, title, button, MessageBoxIcon.Error, defaultResult);
@@ -250,8 +272,11 @@ public partial class ThemedMessageBox : FluentWindow
 
     #region Warning 方法
 
+    /// <summary>
+    /// 显示警告消息框（同步，阻塞调用）
+    /// </summary>
     public static void Warning(string message, string title = "警告") =>
-        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning));
+        Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning);
 
     public static MessageBoxResult Warning(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
         Show(message, title, button, MessageBoxIcon.Warning, defaultResult);
@@ -266,8 +291,11 @@ public partial class ThemedMessageBox : FluentWindow
 
     #region Information 方法
 
+    /// <summary>
+    /// 显示信息消息框（同步，阻塞调用）
+    /// </summary>
     public static void Information(string message, string title = "信息") =>
-        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Information));
+        Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Information);
 
     public static MessageBoxResult Information(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
         Show(message, title, button, MessageBoxIcon.Information, defaultResult);
@@ -282,8 +310,11 @@ public partial class ThemedMessageBox : FluentWindow
 
     #region Success 方法
 
+    /// <summary>
+    /// 显示成功消息框（同步，阻塞调用）
+    /// </summary>
     public static void Success(string message, string title = "成功") =>
-        Application.Current.Dispatcher.InvokeAsync(() => Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Success));
+        Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Success);
 
     public static MessageBoxResult Success(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
         Show(message, title, button, MessageBoxIcon.Success, defaultResult);
