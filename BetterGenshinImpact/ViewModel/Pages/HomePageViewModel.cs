@@ -45,21 +45,16 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class HomePageViewModel : ViewModel
 {
-    [ObservableProperty]
-    private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
+    [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
-    [ObservableProperty]
-    private string? _selectedMode = CaptureModes.BitBlt.ToString();
+    [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty]
-    private bool _taskDispatcherEnabled = false;
+    [ObservableProperty] private bool _taskDispatcherEnabled = false;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StopTriggerCommand))]
     private bool _stopButtonEnabled = true;
 
     public AllConfig Config { get; set; }
@@ -73,14 +68,12 @@ public partial class HomePageViewModel : ViewModel
     // 记录上次使用原神的句柄
     private IntPtr _hWnd;
 
-    [ObservableProperty]
-    private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
+    [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
-    [ObservableProperty]
-    private ImageSource _bannerImageSource;
+    [ObservableProperty] private ImageSource _bannerImageSource;
 
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
-    private const string CustomBannerImagePath = "UserData/Images/custom_banner.jpg";
+    private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -130,12 +123,13 @@ public partial class HomePageViewModel : ViewModel
     private void OnLoaded()
     {
         // OnTest();
-        
+
         // 组件首次加载时运行一次。
         if (!_autoRun)
         {
             return;
         }
+
         _autoRun = false;
 
         var args = Environment.GetCommandLineArgs();
@@ -476,9 +470,9 @@ public partial class HomePageViewModel : ViewModel
         var titleBar = new TitleBar
         {
             Title = "启动参数说明",
-            Icon = new ImageIcon 
-            { 
-                Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute)) 
+            Icon = new ImageIcon
+            {
+                Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute))
             },
         };
         System.Windows.Controls.Grid.SetRow(titleBar, 0);
@@ -500,10 +494,7 @@ public partial class HomePageViewModel : ViewModel
             WindowBackdropType = WindowBackdropType.Mica,
             ExtendsContentIntoTitleBar = true,
         };
-        dialogWindow.SourceInitialized += (s, e) =>
-        {
-            WindowHelper.TryApplySystemBackdrop(dialogWindow);
-        };
+        dialogWindow.SourceInitialized += (s, e) => { WindowHelper.TryApplySystemBackdrop(dialogWindow); };
         dialogWindow.ShowDialog();
     }
 
@@ -527,9 +518,14 @@ public partial class HomePageViewModel : ViewModel
         try
         {
             // 检查是否存在自定义图片
-            if (File.Exists(CustomBannerImagePath))
+            if (File.Exists(_customBannerImagePath))
             {
-                BannerImageSource = new BitmapImage(new Uri(Path.GetFullPath(CustomBannerImagePath)));
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(Path.GetFullPath(_customBannerImagePath));
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                BannerImageSource = bitmap;
                 _logger.LogInformation("已加载自定义背景图片");
             }
             else
@@ -560,25 +556,28 @@ public partial class HomePageViewModel : ViewModel
 
             if (openFileDialog.ShowDialog() == true)
             {
+                ResetBannerImage();
+                
                 var selectedFile = openFileDialog.FileName;
-                _logger.LogInformation("用户选择了图片: {ImagePath}", selectedFile);
 
                 // 确保目标目录存在
-                var directory = Path.GetDirectoryName(CustomBannerImagePath);
+                var directory = Path.GetDirectoryName(_customBannerImagePath);
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
-                    _logger.LogInformation("创建了自定义图片目录: {Directory}", directory);
                 }
 
                 // 复制图片到自定义路径
-                File.Copy(selectedFile, CustomBannerImagePath, true);
-                _logger.LogInformation("图片已复制到: {CustomPath}", CustomBannerImagePath);
+                File.Copy(selectedFile, _customBannerImagePath, true);
 
                 // 更新UI
-                BannerImageSource = new BitmapImage(new Uri(Path.GetFullPath(CustomBannerImagePath)));
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(Path.GetFullPath(_customBannerImagePath));
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                BannerImageSource = bitmap;
                 Toast.Success("背景图片更换成功！");
-                _logger.LogInformation("背景图片更换成功");
             }
         }
         catch (Exception ex)
@@ -594,46 +593,27 @@ public partial class HomePageViewModel : ViewModel
         try
         {
             // 获取自定义图片的完整路径
-            var customImageFullPath = Path.GetFullPath(CustomBannerImagePath);
+            var customImageFullPath = Path.GetFullPath(_customBannerImagePath);
             _logger.LogInformation("尝试恢复默认背景图片，自定义图片路径: {CustomPath}", customImageFullPath);
 
+            // 先切换到默认图片，释放自定义图片的文件锁
+            var defaultBitmap = new BitmapImage();
+            defaultBitmap.BeginInit();
+            defaultBitmap.UriSource = new Uri(DefaultBannerImagePath, UriKind.Absolute);
+            defaultBitmap.CacheOption = BitmapCacheOption.OnLoad;
+            defaultBitmap.EndInit();
+            BannerImageSource = defaultBitmap;
+            
             if (File.Exists(customImageFullPath))
             {
                 File.Delete(customImageFullPath);
-                _logger.LogInformation("已删除自定义背景图片: {CustomPath}", customImageFullPath);
+                Toast.Success("已恢复为默认背景图片！");
             }
-            else
-            {
-                _logger.LogInformation("自定义背景图片不存在: {CustomPath}", customImageFullPath);
-            }
-
-            // 恢复为默认图片
-            _logger.LogInformation("正在恢复为默认背景图片，默认路径: {DefaultPath}", DefaultBannerImagePath);
-            BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
-            Toast.Success("已恢复为默认背景图片！");
-            _logger.LogInformation("背景图片已恢复为默认");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "恢复默认背景图片失败，尝试使用备用方案");
-            
-            // 备用方案：尝试重新创建默认图片的BitmapImage
-            try
-            {
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(DefaultBannerImagePath, UriKind.Absolute);
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.EndInit();
-                BannerImageSource = bitmap;
-                Toast.Success("已恢复为默认背景图片！");
-                _logger.LogInformation("使用备用方案恢复默认背景图片成功");
-            }
-            catch (Exception fallbackEx)
-            {
-                _logger.LogError(fallbackEx, "备用方案也失败");
-                Toast.Error($"恢复默认背景图片失败: {ex.Message}");
-            }
+            _logger.LogError(ex, "恢复默认背景图片失败");
+            Toast.Warning("已恢复为默认背景图片！但清除自定义图片失败，请手动删除文件。");
         }
     }
 
