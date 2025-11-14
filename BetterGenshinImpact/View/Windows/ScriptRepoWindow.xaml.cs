@@ -327,9 +327,9 @@ public partial class ScriptRepoWindow
             var repoJsonFile = new FileInfo(repoJsonPath);
             DateTime lastUpdateTime = repoJsonFile.LastWriteTime;
 
-            // 检查是否超过 2 天
+            // 检查是否超过 30 天
             timeSinceUpdate = DateTime.Now - lastUpdateTime;
-            if (timeSinceUpdate.TotalDays <= 2)
+            if (timeSinceUpdate.TotalDays <= 30)
             {
                 return true;
             }
@@ -340,7 +340,7 @@ public partial class ScriptRepoWindow
             return true;
         }
 
-        // 超过 2 天，提示用户更新
+        // 提示用户更新
         var dialog = new RepoUpdateDialog((int)timeSinceUpdate.TotalDays);
         var result = await dialog.ShowDialogAsync();
 

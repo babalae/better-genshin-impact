@@ -44,8 +44,8 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // 计算倒计时秒数：几天没更新就几秒
-        _remainingSeconds = _daysSinceUpdate;
+        // 计算倒计时秒数：30 天为 5 秒，超过 30 天每多 2 天增加 1 秒
+        _remainingSeconds = 5 + (_daysSinceUpdate - 30) / 2;
         SecondaryButton.Content = $"直接打开 ({_remainingSeconds}s)";
         StartDialogTimer();
     }
