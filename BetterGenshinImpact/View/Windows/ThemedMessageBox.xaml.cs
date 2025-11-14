@@ -214,14 +214,20 @@ public partial class ThemedMessageBox : FluentWindow
             MessageBoxIcon.Information => "SystemFillColorAttentionBrush",
             MessageBoxIcon.Warning => "SystemFillColorCautionBrush",
             MessageBoxIcon.Error => "SystemFillColorCriticalBrush",
-            MessageBoxIcon.Question => "SystemFillColorCautionBrush",
+            MessageBoxIcon.Question => "SystemFillColorNeutralBrush",
             MessageBoxIcon.Success => "SystemFillColorSuccessBrush",
             _ => "SystemFillColorAttentionBrush"
         };
-        messageBox.MessageIcon.Foreground = (System.Windows.Media.Brush)Application.Current.Resources[colorKey];
 
-        // 设置 TitleBar 图标
-        messageBox.TitleBar.Icon = new SymbolIcon { Symbol = symbol };
+        if (Application.Current != null)
+        {
+            var brush = Application.Current.TryFindResource(colorKey) as System.Windows.Media.Brush;
+            if (brush != null)
+            {
+                messageBox.MessageIcon.Foreground = brush;
+                messageBox.TitleBar.Icon = new SymbolIcon { Symbol = symbol, Foreground = brush };
+            }
+        }
     }
 
     private static void SetButtons(ThemedMessageBox messageBox, MessageBoxButton button)
