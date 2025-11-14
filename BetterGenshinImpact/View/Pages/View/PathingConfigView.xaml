@@ -16,6 +16,8 @@
                  d:DataContext="{d:DesignInstance Type=view:PathingConfigViewModel}"
                  d:DesignHeight="1000"
                  d:DesignWidth="500"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Auto"
                  mc:Ignorable="d">
 
     <b:Interaction.Triggers>
@@ -291,7 +293,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <ui:TitleBar Name="MyTitleBar" Grid.Row="0">
+        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="地图追踪设置">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

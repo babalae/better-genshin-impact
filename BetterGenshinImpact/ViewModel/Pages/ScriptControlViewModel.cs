@@ -2007,13 +2007,16 @@ public partial class ScriptControlViewModel : ViewModel
         //
         // await uiMessageBox.ShowDialogAsync();
 
-        var dialogWindow = new Window
+        var dialogWindow = new FluentWindow
         {
             Title = "配置组设置",
             Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedScriptGroup.Config)),
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ExtendsContentIntoTitleBar = true,
+            WindowBackdropType = WindowBackdropType.Auto,
         };
+        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
 
         // var dialogWindow = new WpfUiWindow(new ScriptGroupConfigView(SelectedScriptGroup.Config))
         // {
