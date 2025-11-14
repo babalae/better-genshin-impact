@@ -162,7 +162,8 @@ public partial class ThemedMessageBox : FluentWindow
         MessageBoxResult defaultResult = MessageBoxResult.None,
         Window? owner = null)
     {
-        return Task.Run(() => Show(content, title, button, icon, defaultResult, owner));
+        return Application.Current.Dispatcher.InvokeAsync(() =>
+            Show(content, title, button, icon, defaultResult, owner)).Task;
     }
 
     /// <summary>
