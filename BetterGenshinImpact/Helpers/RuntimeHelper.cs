@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -88,7 +89,19 @@ internal static class RuntimeHelper
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
-                ThemedMessageBox.Error("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI");
+                // 延迟显示错误对话框，等待 Config 初始化完成
+                Application.Current?.Dispatcher.InvokeAsync(async () =>
+                {
+                    // 轮询等待 Config 初始化完成（最多等待 3 秒）
+                    var timeout = TimeSpan.FromSeconds(3);
+                    var startTime = DateTime.Now;
+                    while (ConfigService.Config == null && DateTime.Now - startTime < timeout)
+                    {
+                        await Task.Delay(50);
+                    }
+
+                    ThemedMessageBox.Error("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI");
+                }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                 return;
             }
         }
