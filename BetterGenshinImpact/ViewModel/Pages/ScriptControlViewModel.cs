@@ -2012,8 +2012,11 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Title = "配置组设置",
             Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedScriptGroup.Config)),
-            SizeToContent = SizeToContent.WidthAndHeight,
-            ResizeMode = ResizeMode.NoResize,
+            Width = 800,
+            Height = 600,
+            MinWidth = 800,
+            MaxWidth = 800,
+            MinHeight = 600,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ExtendsContentIntoTitleBar = true,
             WindowBackdropType = WindowBackdropType.Auto,
