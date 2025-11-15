@@ -61,7 +61,7 @@ public class SetTimeTask
         if (skipTimeAdjustmentAnimation)
         {
             // 跳过调整动画
-            await Delay(1, ct);
+            await Delay(10, ct);
             await CancelAnimation(ct);
             await Delay(1010, ct);
             GameCaptureRegion.GameRegion1080PPosClick(45, 715);
