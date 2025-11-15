@@ -20,7 +20,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
-using Windows.UI.Xaml.Automation;
 using BetterGenshinImpact.View.Windows;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
@@ -40,7 +39,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     // 仓储临时目录 用于下载与解压
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
-
+    
     // // 中央仓库信息地址
     // public static readonly List<string> CenterRepoInfoUrls =
     // [
