@@ -61,11 +61,13 @@ public class SetTimeTask
         if (skipTimeAdjustmentAnimation)
         {
             // 跳过调整动画
-            await Delay(1, ct);
+            await Delay(10, ct);
             await CancelAnimation(ct);
-            await Delay(200, ct);
+            await Delay(1010, ct);
             GameCaptureRegion.GameRegion1080PPosClick(45, 715);
-            await Delay(400, ct);
+            await Delay(100, ct);
+            GameCaptureRegion.GameRegion1080PPosClick(45, 715);
+            await Delay(200, ct);
             await _returnMainUiTask.Start(ct);
             // 跳过动画不总能成功
             if (Bv.IsInMainUi(CaptureToRectArea()))
@@ -82,10 +84,9 @@ public class SetTimeTask
     // 取消动画函数
     private async Task CancelAnimation(CancellationToken ct)
     {
-        GameCaptureRegion.GameRegion1080PPosMove(200, 200);
-        Simulation.SendInput.Mouse.LeftButtonDown();
-        await Delay(10, ct);
-        Simulation.SendInput.Mouse.LeftButtonUp();
+        GameCaptureRegion.GameRegion1080PPosClick(200, 200);
+        await Delay(5, ct);
+        GameCaptureRegion.GameRegion1080PPosClick(200, 200);
     }
 
     double[] GetPosition(double r, double index)
