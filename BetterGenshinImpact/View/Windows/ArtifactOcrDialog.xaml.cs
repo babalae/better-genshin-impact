@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Globalization;
@@ -38,15 +39,17 @@ public partial class ArtifactOcrDialog
         SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         MyTitleBar.Title = title;
-
-        _ = CaptureAsync();
     }
 
-    public async Task CaptureAsync()
+    public async Task<bool> CaptureAsync()
     {
         // 没启动时候，启动截图器
         var homePageViewModel = App.GetService<HomePageViewModel>();
-        if (!homePageViewModel!.TaskDispatcherEnabled) { await homePageViewModel.OnStartTriggerAsync(); }
+        if (!homePageViewModel!.TaskDispatcherEnabled)
+        {
+            _ = homePageViewModel.OnStartTriggerAsync();
+            return false;
+        }
 
         using var ra = TaskControl.CaptureToRectArea();
         using var card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
@@ -58,28 +61,35 @@ public partial class ArtifactOcrDialog
 
         try
         {
-            ArtifactStat artifact = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+            // 将CPU密集的OCR操作放到后台线程执行
+            var (artifact, allText) = await Task.Run(() =>
+            {
+                ArtifactStat art = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string text);
+                return (art, text);
+            });
 
+            // 回到UI线程更新界面
             this.TxtRecognized.Text = allText;
             this.ModelStructure.Text = artifact.ToStructuredString();
             if (this.javaScript != null)
             {
-                bool isMatch = Task.Run(() => AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript)).Result;
+                bool isMatch = await AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
                 this.RegexResult.Text = isMatch ? "匹配" : "不匹配";
             }
         }
         catch (Exception e)
         {
-            await HandleOcrExceptionAsync(e, card.SrcMat);
+            _ = Task.Run(() => HandleOcrExceptionAsync(e, card.SrcMat));
         }
+        return true;
     }
 
     private static async Task HandleOcrExceptionAsync(Exception e, Mat srcMat)
     {
         Logger.LogError(e, "自动分解圣遗物-OCR识别异常");
-        var result = ThemedMessageBox.Error(
-            $"{e.Message}\n\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）",
-            "异常处理",
+        var result = await ThemedMessageBox.ErrorAsync(
+            $"{e.Message}\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）",
+            "识别失败",
             MessageBoxButton.YesNo,
             MessageBoxResult.No
         );
@@ -91,7 +101,6 @@ public partial class ArtifactOcrDialog
             string filePath = Path.Combine(directory, $"{DateTime.Now:yyyyMMddHHmmss}_GetArtifactStat.png");
             Cv2.ImWrite(filePath, srcMat);
         }
-        await Task.CompletedTask;
     }
 
     private async void BtnOkClick(object sender, RoutedEventArgs e)
