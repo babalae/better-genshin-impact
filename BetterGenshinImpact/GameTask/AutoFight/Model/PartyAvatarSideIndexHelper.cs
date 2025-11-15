@@ -370,33 +370,44 @@ public class PartyAvatarSideIndexHelper
             return 1;
         }
 
-        var whiteCount = 0;
-        var notWhiteRectNum = 0;
-        var mat = imageRegion.CacheGreyMat;
         Mat[] mats = new Mat[rectArray.Length];
-        for (int i = 0; i < rectArray.Length; i++)
+        try
         {
-            using var indexMat = new Mat(mat, rectArray[i]);
-            mats[i] = indexMat;
-            if (IsWhiteRect(indexMat))
+            var whiteCount = 0;
+            var notWhiteRectNum = 0;
+            var mat = imageRegion.CacheGreyMat;
+            for (int i = 0; i < rectArray.Length; i++)
             {
-                whiteCount++;
+                var indexMat = new Mat(mat, rectArray[i]);
+                mats[i] = indexMat;
+                if (IsWhiteRect(indexMat))
+                {
+                    whiteCount++;
+                }
+                else
+                {
+                    notWhiteRectNum = i + 1;
+                }
+            }
+
+            if (whiteCount == rectArray.Length - 1)
+            {
+                return notWhiteRectNum;
             }
             else
             {
-                notWhiteRectNum = i + 1;
+                // 使用更加靠谱的差值识别（-1是未识别）
+                return ImageDifferenceDetector.FindMostDifferentImage(mats);
+            }
+        }
+        finally
+        {
+            foreach (var mat in mats)
+            {
+                mat?.Dispose();
             }
         }
 
-        if (whiteCount == rectArray.Length - 1)
-        {
-            return notWhiteRectNum;
-        }
-        else
-        {
-            // 使用更加靠谱的差值识别（-1是未识别）
-            return ImageDifferenceDetector.FindMostDifferentImage(mats);
-        }
     }
 
     public static bool IsWhiteRect(Mat indexMat)
