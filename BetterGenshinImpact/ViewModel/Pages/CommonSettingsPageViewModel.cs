@@ -282,11 +282,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
                 DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
-                MessageBox.Information("脚本仓库离线包导入成功！");
+                ThemedMessageBox.Information("脚本仓库离线包导入成功！");
             }
             else
             {
-                MessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                ThemedMessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }
@@ -322,7 +322,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
-        MessageBoxResult result = await MessageBox.ShowAsync("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？", "警告", System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Exclamation, System.Windows.MessageBoxResult.None);
+        var result = await ThemedMessageBox.ShowAsync("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？", "警告", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
         if (result != MessageBoxResult.Yes)
         {
             return;

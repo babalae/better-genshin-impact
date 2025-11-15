@@ -49,6 +49,26 @@
   },
   {
     "alias": [
+      "奇偶(男)",
+      "MannequinBoy"
+    ],
+    "id": "20000001",
+    "name": "奇偶(男)",
+    "nameEn": "MannequinBoy",
+    "weapon": "1"
+  },
+  {
+    "alias": [
+      "奇偶(女)",
+      "MannequinGirl"
+    ],
+    "id": "20000002",
+    "name": "奇偶(女)",
+    "nameEn": "MannequinGirl",
+    "weapon": "1"
+  },
+  {
+    "alias": [
       "神里绫华",
       "Kamisato Ayaka",
       "Ayaka",
@@ -1949,5 +1969,17 @@
     "nameEn": "Aino",
     "skillCD": 10,
     "weapon": "11"
+  },
+  {
+    "alias": [
+      "奈芙尔",
+      "Nefer"
+    ],
+    "burstCD": 15,
+    "id": "10000122",
+    "name": "奈芙尔",
+    "nameEn": "Nefer",
+    "skillCD": 9,
+    "weapon": "10"
   }
 ]

@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -83,56 +84,66 @@ public class GetGridIconsTask : ISoloTask
     private async Task GetInventoryGridIcons(int count, string directory)
     {
         GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
+        gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
         HashSet<string> fileNames = new HashSet<string>();
-        await foreach (ImageRegion itemRegion in gridScreen)
+        try
         {
-            itemRegion.Click();
-            await Delay(300, ct);
-
-            using var ra1 = CaptureToRectArea();
-            using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
-            var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
-            string itemName = ocrResult.Text;
-            string itemStar = "";
-            if (this.starAsSuffix)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
-                using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
-                itemStar = String.Join(string.Empty, Enumerable.Repeat("★", GetStars(starRegion.SrcMat)));
-            }
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
+                itemRegion.Click();
+                await Delay(300, ct);
 
-            string fileName = itemName + itemStar;
-            if (fileNames.Add(fileName))
-            {
-                string filePath = Path.Combine(directory, $"{fileName}.png");
-                Thread saveThread = new Thread(() =>
+                using var ra1 = CaptureToRectArea();
+                using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
+                var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
+                string itemName = ocrResult.Text;
+                string itemStar = "";
+                if (this.starAsSuffix)
                 {
-                    try
-                    {
-                        using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                        {
-                            itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
-                        }
-                        logger.LogInformation("图片保存成功：{Text}", fileName);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogError(e, "图片保存失败：{Text}", fileName);
-                    }
-                });
-                saveThread.IsBackground = true; // 设置为后台线程
-                saveThread.Start();
-            }
-            else
-            {
-                logger.LogInformation("重复的物品：{Text}", fileName);
-            }
+                    using ImageRegion starRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.1823), (int)(ra1.Width * 0.105), (int)(ra1.Width * 0.02345)));
+                    itemStar = String.Join(string.Empty, Enumerable.Repeat("★", GetStars(starRegion.SrcMat)));
+                }
 
-            count--;
-            if (count <= 0)
-            {
-                logger.LogInformation("检查次数已耗尽");
-                break;
+                string fileName = itemName + itemStar;
+                if (fileNames.Add(fileName))
+                {
+                    string filePath = Path.Combine(directory, $"{fileName}.png");
+                    Thread saveThread = new Thread(() =>
+                    {
+                        try
+                        {
+                            using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                            }
+                            logger.LogInformation("图片保存成功：{Text}", fileName);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.LogError(e, "图片保存失败：{Text}", fileName);
+                        }
+                    });
+                    saveThread.IsBackground = true; // 设置为后台线程
+                    saveThread.Start();
+                }
+                else
+                {
+                    logger.LogInformation("重复的物品：{Text}", fileName);
+                }
+
+                count--;
+                if (count <= 0)
+                {
+                    logger.LogInformation("检查次数已耗尽");
+                    break;
+                }
             }
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
     }
 
@@ -140,8 +151,9 @@ public class GetGridIconsTask : ISoloTask
     {
         ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
         HashSet<string> fileNames = new HashSet<string>();
-        await foreach (ImageRegion itemRegion in gridScreen)
+        await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
         {
+            using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
             itemRegion.Click();
             await Delay(300, ct);
 
@@ -165,7 +177,7 @@ public class GetGridIconsTask : ISoloTask
 
                 // 截取没有符号的区域再识别一次
                 Rect flowerWithoutGlyph = new Rect((int)(ra1.Width * 0.028), (int)(flowerWithGlyphRect.Y - flowerWithGlyphRect.Height * 0), (int)(ra1.Width * 0.228), (int)(flowerWithGlyphRect.Height * 1));
-                Mat roi = nameRegion.SrcMat.SubMat(flowerWithoutGlyph);
+                using Mat roi = nameRegion.SrcMat.SubMat(flowerWithoutGlyph);
                 var whiteOcrResult = OcrFactory.Paddle.OcrResult(roi);
                 flowerName = whiteOcrResult.Text;
                 // 所以只好识别两次，Trim后根据字数取原截图OCR的结果……
@@ -232,7 +244,7 @@ public class GetGridIconsTask : ISoloTask
         double width = 60;
         double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
         Rect iconRect = new Rect((int)(itemRegion.Width / 2 - 237 * scale - width / 2), (int)(itemRegion.Height / 2 - height / 2), (int)width, (int)height);
-        Mat crop = itemRegion.SrcMat.SubMat(iconRect);
+        using Mat crop = itemRegion.SrcMat.SubMat(iconRect);
         return crop.Resize(new Size(125, 125));
     }
 

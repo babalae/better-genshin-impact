@@ -26,6 +26,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -152,7 +153,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             _logger.LogInformation($"{Name}：{{Text}}", "5. 领取奖励");
             if (!await GettingTreasure())
             {
-                _logger.LogInformation($"体力耗尽或者设置轮次已达标，{Name}");
+                _logger.LogInformation($"{Name}：体力耗尽或者设置轮次已达标");
                 break;
             }
 
@@ -323,9 +324,11 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 while (!cts.Token.IsCancellationRequested)
                 {
                     // 通用化战斗策略
-                    foreach (var command in combatCommands)
+                    for (var i = 0; i < combatCommands.Count; i++)
                     {
-                        command.Execute(combatScenes);
+                        var command = combatCommands[i];
+                        var lastCommand = i == 0 ? command : combatCommands[i - 1];
+                        command.Execute(combatScenes, lastCommand);
                     }
                 }
             }
@@ -419,26 +422,24 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
                 {
                     _logger.LogWarning("树脂不足");
-                    await ExitDomain();
                     return false;
                 }
 
                 bool resinUsed = false;
                 if (resinStatus.CondensedResinCount > 0)
                 {
-                    resinUsed = PressUseResin(ra3, "浓缩树脂");
+                    (resinUsed, _) = AutoDomainTask.PressUseResin(ra3, "浓缩树脂");
                     resinStatus.CondensedResinCount -= 1;
                 }
                 else if (resinStatus.OriginalResinCount >= 20)
                 {
-                    resinUsed = PressUseResin(ra3, "原粹树脂");
-                    resinStatus.OriginalResinCount -= 20;
+                    (resinUsed, var num) = AutoDomainTask.PressUseResin(ra3, "原粹树脂");
+                    resinStatus.OriginalResinCount -= num;
                 }
 
                 if (!resinUsed)
                 {
                     _logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
-                    await ExitDomain();
                     return false;
                 }
 
@@ -453,18 +454,19 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 // 指定使用树脂
                 var textListInPrompt2 = ra3.FindMulti(RecognitionObject.Ocr(ra3.Width * 0.25, ra3.Height * 0.2, ra3.Width * 0.5, ra3.Height * 0.6));
                 // 按优先级使用
-                var failCount = 0;
+                int successCount = 0;
                 foreach (var record in _resinPriorityListWhenSpecifyUse)
                 {
-                    if (record.RemainCount > 0 && PressUseResin(textListInPrompt2, record.Name))
+                    if (record.RemainCount > 0)
                     {
-                        record.RemainCount -= 1;
-                        _logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
-                        break;
-                    }
-                    else
-                    {
-                        failCount++;
+                        var (success, _) = AutoDomainTask.PressUseResin(textListInPrompt2, record.Name);
+                        if (success)
+                        {
+                            record.RemainCount -= 1;
+                            Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
+                            successCount++;
+                            break;
+                        }
                     }
                 }
 
@@ -474,12 +476,11 @@ public class AutoStygianOnslaughtTask : ISoloTask
                     isLastTurn = true;
                 }
 
-                if (failCount == _resinPriorityListWhenSpecifyUse.Count)
+                if (successCount == 0)
                 {
                     // 没有找到对应的树脂
                     _logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
                     _logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
-                    await ExitDomain();
                     return false;
                 }
             }
@@ -552,62 +553,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await ExitDomain(new BvPage(_ct));
     }
 
-    private bool PressUseResin(ImageRegion ra, string resinName)
-    {
-        var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-        return PressUseResin(regionList, resinName);
-    }
-
-    private bool PressUseResin(List<Region> regionList, string resinName)
-    {
-        var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
-        if (resinKey != null)
-        {
-            // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
-            var useList = regionList.Where(t => t.Text.Contains("使用")).ToList();
-            if (useList.Count != 0)
-            {
-                // 找到使用按键
-                var useKey = useList.FirstOrDefault(t => t.X > TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width / 2
-                                                         && IsHeightOverlap(t, resinKey));
-                if (useKey != null)
-                {
-                    // 点击使用
-                    useKey.Click();
-                    // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了。使用双击
-                    Sleep(60, _ct);
-                    useKey.Click();
-                    _logger.LogInformation("自动秘境：使用 {ResinName}", resinName);
-                    return true;
-                }
-                else
-                {
-                    _logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// 判断两个区域在垂直方向上是否有重叠
-    /// </summary>
-    private bool IsHeightOverlap(Region region1, Region region2)
-    {
-        int region1Top = region1.Y;
-        int region1Bottom = region1.Y + region1.Height;
-        int region2Top = region2.Y;
-        int region2Bottom = region2.Y + region2.Height;
-
-        // 检查区域是否在垂直方向上重叠
-        return (region1Top <= region2Bottom && region1Bottom >= region2Top);
-    }
-
     private async Task ArtifactSalvage()
     {
         if (!_taskParam.AutoArtifactSalvage)
@@ -626,16 +571,25 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task ExitDomain(BvPage page)
     {
-        await Delay(1000, _ct);
+        
+        var exitDoor = await NewRetry.WaitForElementAppear(
+            ElementAssets.Instance.BtnExitDoor.Value,
+            () => Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE),// 点击队伍选择按钮
+            _ct,
+            4,
+            1000
+        );
+        if (exitDoor)
+        {
+            await page.Locator(ElementAssets.Instance.BtnExitDoor.Value).Click();
+            // 等待传送完成
+            await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
 
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-        await Delay(1000, _ct);
-
-        await page.Locator(ElementAssets.Instance.BtnExitDoor.Value).Click();
-
-        // 等待传送完成
-        await page.Locator(ElementAssets.Instance.PaimonMenuRo).WaitFor(60000);
-
-        await Delay(3000, _ct);
+            await Delay(3000, _ct);
+        }
+        else
+        {
+            Logger.LogWarning("未能找到退出秘境按钮，可能已经退出秘境");
+        }
     }
 }

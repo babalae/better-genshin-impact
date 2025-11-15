@@ -4000,6 +4000,83 @@
         ]
     },
     {
+        "id": 1415,
+        "nameEn": "varesa",
+        "type": "character",
+        "name": "瓦雷莎",
+        "hp": 10,
+        "energy": 3,
+        "element": "雷元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "by_the_horns",
+                "name": "角力搏摔",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "riding_the_nightrainbow",
+                "name": "夜虹逐跃",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "guardian_vent",
+                "name": "闪烈降临！",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "tagteam_triple_jump",
+                "name": "连势，三重腾跃！",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1501,
         "nameEn": "sucrose",
         "type": "character",
@@ -4961,6 +5038,75 @@
             {
                 "nameEn": "anraku_secret_spring_therapy",
                 "name": "安乐秘汤疗法",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 1515,
+        "nameEn": "ifa",
+        "type": "character",
+        "name": "伊法",
+        "hp": 10,
+        "energy": 2,
+        "element": "风元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "rite_of_dispelling_winds",
+                "name": "祛风妙仪",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "airborne_disease_prevention",
+                "name": "空天疾护",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "compound_sedation_field",
+                "name": "复合镇静域",
                 "skillTag": [
                     "元素爆发"
                 ],
@@ -7157,6 +7303,83 @@
                         "count": 2
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 2206,
+        "nameEn": "hydro_tulpa",
+        "type": "character",
+        "name": "水形幻人",
+        "hp": 12,
+        "energy": 3,
+        "element": "水元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "savage_swell",
+                "name": "涌浪",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "storm_surge",
+                "name": "汛波",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "thundering_tide",
+                "name": "洪啸",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "branching_flow",
+                "name": "分流",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },

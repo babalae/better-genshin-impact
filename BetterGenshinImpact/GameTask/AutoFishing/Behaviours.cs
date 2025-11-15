@@ -18,13 +18,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using static Vanara.PInvoke.User32;
 using Color = System.Drawing.Color;
-using Pen = System.Drawing.Pen;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -151,7 +151,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             // 寻找鱼饵
             var boxAndBaits = FindBait(imageRegion);
-                ;
+            ;
             foreach ((Rect box, string? predName) in boxAndBaits)
             {
                 if (predName == blackboard.selectedBait.GetDescription())
@@ -232,9 +232,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 using ImageRegion resRa = singleRowGrid.DeriveCrop(box);
                 using Mat img125 = resRa.SrcMat.GetGridIcon();
                 (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, this.session, this.prototypes);
+                if (predName != null && !availableBaitNames.Contains(predName))
+                {
+                    predName = null;
+                }
                 yield return (new Rect(singleRowGrid.X + box.X, singleRowGrid.Y + box.Y, box.Width, box.Height), predName);
             }
         }
+
+        private static readonly FrozenSet<string> availableBaitNames = Enum.GetValues(typeof(BaitType)).Cast<BaitType>().Select(bt => bt.GetDescription()).ToFrozenSet();
     }
 
     [Obsolete]
@@ -450,7 +456,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             else
             {
                 noTargetFishTimes = 0;
-                imageRegion.DrawRect(fishpondTargetRect, "Target", new Pen(Color.White));
+                imageRegion.DrawRect(fishpondTargetRect, "Target", System.Drawing.Pens.White);
                 imageRegion.Derive(currentFish.Rect).DrawSelf("Fish");
 
                 // drawContent.PutRect("Target", fishpond.TargetRect.ToRectDrawable());
@@ -855,7 +861,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                      (topMat.Width / 2 - _cur.X) * 2 + hExtra * 2, _cur.Height + vExtra * 2);
                 // VisionContext.Instance().DrawContent.PutRect("FishBox", _fishBoxRect.ToRectDrawable(new Pen(Color.LightPink, 2)));
                 using var boxRa = imageRegion.Derive(blackboard.fishBoxRect);
-                boxRa.DrawSelf("FishBox", new Pen(Color.LightPink, 2));
+                using var pen = new System.Drawing.Pen(Color.LightPink, 2);
+                boxRa.DrawSelf("FishBox", pen);
                 logger.LogInformation("  识别到钓鱼框");
                 return BehaviourStatus.Succeeded;
             }
@@ -1018,21 +1025,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             return BehaviourStatus.Running;
         }
 
-        private readonly Pen _pen = new(Color.Red, 1);
         private void PutRects(ImageRegion imageRegion, Rect left, Rect cur, Rect right)
         {
             //var list = new List<RectDrawable>
             //{
-            //    left.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen),
-            //    cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen),
-            //    right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(_pen)
+            //    left.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(System.Drawing.Pens.Red),
+            //    cur.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(System.Drawing.Pens.Red),
+            //    right.ToWindowsRectangleOffset(_fishBoxRect.X, _fishBoxRect.Y).ToRectDrawable(System.Drawing.Pens.Red)
             //};
             using var fishBoxRa = imageRegion.Derive(blackboard.fishBoxRect);
             var list = new List<RectDrawable>
                 {
-                    fishBoxRa.ToRectDrawable(left, "left", _pen),
-                    fishBoxRa.ToRectDrawable(cur, "cur", _pen),
-                    fishBoxRa.ToRectDrawable(right, "right", _pen),
+                    fishBoxRa.ToRectDrawable(left, "left", System.Drawing.Pens.Red),
+                    fishBoxRa.ToRectDrawable(cur, "cur", System.Drawing.Pens.Red),
+                    fishBoxRa.ToRectDrawable(right, "right", System.Drawing.Pens.Red),
                 }.Where(r => r.Rect.Height != 0).ToList();
             drawContent.PutOrRemoveRectList("FishingBarAll", list);
         }

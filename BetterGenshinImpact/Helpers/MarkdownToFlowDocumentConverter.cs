@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -1168,7 +1169,7 @@ public static class MarkdownToFlowDocumentConverter
                         try
                         {
                             Clipboard.SetText(RestoreEscapeCharacters(codeText));
-                            MessageBox.Show("代码已复制到剪贴板！", "复制成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                            ThemedMessageBox.Information("代码已复制到剪贴板！", "复制成功");
                         }
                         catch (Exception ex)
                         {

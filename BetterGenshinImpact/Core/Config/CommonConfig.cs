@@ -73,4 +73,11 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private List<string> _onceHadRunDeviceIdList = new();
+    
+    
+    /// <summary>
+    /// 当前看过的兑换码推送版本
+    /// </summary>
+    [ObservableProperty]
+    private string _redeemCodeFeedsUpdateVersion = "20251013";
 }

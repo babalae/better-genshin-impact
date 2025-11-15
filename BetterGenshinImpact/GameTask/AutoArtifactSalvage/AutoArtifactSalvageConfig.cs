@@ -8,11 +8,10 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
 {
     // JavaScript
     [ObservableProperty]
-    private string _javaScript = @"(async function (artifact) {
-    var hasATK = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'ATK');
-    var hasDEF = Array.from(artifact.MinorAffixes).some(affix => affix.Type == 'DEF');
-    Output = hasATK && hasDEF;
-})(ArtifactStat);";
+    private string _javaScript = @"var hasATK = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'ATK');
+var hasDEF = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'DEF');
+var hasHP = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'HP');
+Output = (hasATK && hasDEF) || (hasHP && hasDEF);";
 
     // JavaScript
     [ObservableProperty]
@@ -32,7 +31,7 @@ public partial class AutoArtifactSalvageConfig : ObservableObject
     [ObservableProperty]
     private int _maxNumToCheck = 100;
 
-    // 单次识别失败政策
+    // 单次识别失败策略
     [ObservableProperty]
     private RecognitionFailurePolicy _recognitionFailurePolicy = RecognitionFailurePolicy.Skip;
 }

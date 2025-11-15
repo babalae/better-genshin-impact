@@ -56,7 +56,7 @@ public class PathingTaskInfo
     /// SIFT 老的匹配方式
     /// TemplateMatch 支持分层地图
     /// </summary>
-    public string MapMatchMethod { get; set; } = "SIFT";
+    public string MapMatchMethod { get; set; } = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
     
     
     public List<MaterialInfo> Items { get; set; } = [];

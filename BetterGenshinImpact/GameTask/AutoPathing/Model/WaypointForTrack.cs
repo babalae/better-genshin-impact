@@ -20,6 +20,9 @@ public class WaypointForTrack : Waypoint
     public double MatY { get; set; }
     
     public string MapName { get; set; }
+    
+    public string MapMatchMethod { get; set; }
+    
     //异常识别
     public Misidentification Misidentification { get; set; } = new();
     
@@ -38,7 +41,7 @@ public class WaypointForTrack : Waypoint
     /// </summary>
     public string? LogInfo { get; set; }
 
-    public WaypointForTrack(Waypoint waypoint, string mapName)
+    public WaypointForTrack(Waypoint waypoint, string mapName, string? mapMatchMethod)
     {
         Type = waypoint.Type;
         MoveMode = waypoint.MoveMode;
@@ -48,7 +51,9 @@ public class WaypointForTrack : Waypoint
         GameY = waypoint.Y;
         MapName = mapName;
         // 坐标系转换
-        (MatX, MatY) = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)waypoint.X, (float)waypoint.Y);
+        mapMatchMethod ??= TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        MapMatchMethod = mapMatchMethod;
+        (MatX, MatY) = MapManager.GetMap(mapName, MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates((float)waypoint.X, (float)waypoint.Y);
         X = MatX;
         Y = MatY;
         if (waypoint.Action == ActionEnum.CombatScript.Code)

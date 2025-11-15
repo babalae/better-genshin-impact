@@ -390,19 +390,19 @@ internal class GoToSereniteaPotTask
         }
 
         Logger.LogInformation("领取尘歌壶奖励:{text}", "购买商店物品最大数量");
-        var numberBtn = ra.Find(ElementAssets.Instance.SereniteapotShopNumberBtn);
-        if (numberBtn.IsExist())
-        {
-            numberBtn.Move();
-            await Delay(600, ct);//减慢速度，设备差异导致的延迟
-            Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(600, ct);
-            numberBtn.MoveTo(ra.Width/7,0);//moveby会超出边界，改用MoveTo
-            await Delay(600, ct);
-            Simulation.SendInput.Mouse.LeftButtonUp();
-        }
+        // var numberBtn = ra.Find(ElementAssets.Instance.SereniteapotShopNumberBtn);
+        // if (numberBtn.IsExist())
+        // {
+        //     numberBtn.Move();
+        //     await Delay(600, ct);//减慢速度，设备差异导致的延迟
+        //     Simulation.SendInput.Mouse.LeftButtonDown();
+        //     await Delay(600, ct);
+        //     numberBtn.MoveTo(ra.Width/7,0);//moveby会超出边界，改用MoveTo
+        //     await Delay(600, ct);
+        //     Simulation.SendInput.Mouse.LeftButtonUp();
+        // }
 
-        await Delay(600, ct);
+        // await Delay(600, ct);
         ra.Find(ElementAssets.Instance.BtnWhiteConfirm).Click();
         await Delay(600, ct);
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenPaimonMenu); // ESC 

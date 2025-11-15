@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -13,13 +13,15 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -38,11 +40,14 @@ public class AutoFightTask : ISoloTask
     private DateTime _lastFightFlagTime = DateTime.Now; // 战斗标志最近一次出现的时间
 
     private readonly double _dpi = TaskContext.Instance().DpiScale;
-
-    public static OtherConfig Config { get; set; } = TaskContext.Instance().Config.OtherConfig;
     
     public static bool FightStatusFlag { get; set; } = false;
+    
+    private static readonly object PickLock = new object(); 
 
+    // 战斗点位
+    public static WaypointForTrack? FightWaypoint  {get; set;} = null;
+    
     private class TaskFightFinishDetectConfig
     {
         public int DelayTime = 1500;
@@ -279,6 +284,9 @@ public class AutoFightTask : ISoloTask
         //所有角色是否都可被跳过
         var allCanBeSkipped = commandAvatarNames.All(a => canBeSkippedAvatarNames.Contains(a));
         
+        var delayTime = _finishDetectConfig.DelayTime;
+        var detectDelayTime = _finishDetectConfig.DetectDelayTime;
+        
         //盾奶优先功能角色预处理
         var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
         
@@ -322,13 +330,23 @@ public class AutoFightTask : ISoloTask
                         
                         #region 盾奶位技能优先功能
                         
-                        var skipModel = _taskParam.SkipModel? (guardianAvatar != null) : (guardianAvatar != null && lastFightName != command.Name);
-                        if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,_taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct);
+                        var skipModel = guardianAvatar != null && lastFightName != command.Name;
+                        if (skipModel) await AutoFightSkill.EnsureGuardianSkill(guardianAvatar,lastCommand,lastFightName,
+                            _taskParam.GuardianAvatar,_taskParam.GuardianAvatarHold,5,ct,_taskParam.GuardianCombatSkip,_taskParam.BurstEnabled);
                         var avatar = combatScenes.SelectAvatar(command.Name);
                         
                         #endregion
                         
-                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && _taskParam.GuardianCombatSkip))
+                        #region 初始寻敌处理
+                        
+                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
+                        {
+                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,true,_taskParam.RotaryFactor);
+                        }
+                        
+                        #endregion
+                        
+                        if (avatar is null || (avatar.Name == guardianAvatar?.Name && (_taskParam.GuardianCombatSkip || _taskParam.BurstEnabled)))
                         {
                             continue;
                         }
@@ -386,8 +404,15 @@ public class AutoFightTask : ISoloTask
                             timeOutFlag = true;
                             break;
                         }
+
+                        #region Q前寻敌处理
+                        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.CheckBeforeBurst && (command.Method == Method.Burst || command.Args.Contains("q") || command.Args.Contains("Q")))
+                        {
+                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                        }
+                        #endregion
                         
-                        command.Execute(combatScenes);
+                        command.Execute(combatScenes, lastCommand);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
                         {
@@ -408,8 +433,7 @@ public class AutoFightTask : ISoloTask
                                 ))
                             {
                                 checkFightFinishStopwatch.Restart();
-                                var delayTime = _finishDetectConfig.DelayTime;
-                                var detectDelayTime = _finishDetectConfig.DetectDelayTime;
+
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
                                 {
                                     delayTime = time;
@@ -460,11 +484,11 @@ public class AutoFightTask : ISoloTask
         if (_taskParam.KazuhaPickupEnabled)
         {
             // 队伍中存在万叶的时候使用一次长E
-            var kazuha = combatScenes.SelectAvatar("枫原万叶");
+            var picker = combatScenes.SelectAvatar("枫原万叶") ?? combatScenes.SelectAvatar("琴");
             
             var oldPartyName = RunnerContext.Instance.PartyName;
             var switchPartyFlag = false;
-            if (kazuha == null && !timeOutFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
+            if (picker == null && !timeOutFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
             {
                 try
                 {
@@ -477,7 +501,7 @@ public class AutoFightTask : ISoloTask
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
                         var cs = await RunnerContext.Instance.GetCombatScenes(ct);
-                        kazuha = cs.SelectAvatar("枫原万叶");
+                        picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
                     }
                 }
                 catch (Exception e)
@@ -486,28 +510,100 @@ public class AutoFightTask : ISoloTask
                 }
 
             }
-          
             
-            if (kazuha != null)
+            if (picker != null)
             {
-                var time = TimeSpan.FromSeconds(kazuha.GetSkillCdSeconds());
-                //当万叶cd大于3时，此时不再触发万叶拾取，
-                if (!(lastFightName == "枫原万叶" && time.TotalSeconds > 3))
+                if (picker.Name == "枫原万叶")
                 {
-                    Logger.LogInformation("使用枫原万叶长E拾取掉落物");
-                    await Delay(300, ct);
-                    if (kazuha.TrySwitch())
+                    var time = TimeSpan.FromSeconds(picker.GetSkillCdSeconds());
+                    if (!(lastFightName == picker.Name && time.TotalSeconds > 3))
                     {
-                        await kazuha.WaitSkillCd(ct);
-                        kazuha.UseSkill(true);
-                        await Task.Delay(100);
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                        await Delay(1500, ct);
+                        Logger.LogInformation("使用 枫原万叶-长E 拾取掉落物");
+                        await Delay(200, ct);
+                        if (picker.TrySwitch(10))
+                        {
+                            await picker.WaitSkillCd(ct);
+                            picker.UseSkill(true);
+                            await Delay(50, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                            await Delay(1500, ct);
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogInformation("距最近一次万叶出招，时间过短，跳过此次万叶拾取！");
                     }
                 }
-                else
+                else if (picker.Name == "琴")
                 {
-                    Logger.LogInformation("距最近一次万叶出招，时间过短，跳过此次万叶拾取！");
+                    Logger.LogInformation("使用 琴-长E 拾取掉落物");
+                    
+                    var actionsToUse = PickUpCollectHandler.PickUpActions
+                        .Where(action => action.StartsWith("琴-长E" + " ", StringComparison.OrdinalIgnoreCase))
+                        .Select(action => action.Replace("琴-长E","琴", StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+
+                    var find = _taskParam.QinDoublePickUp;
+                    await Delay(150, ct);
+                    if (picker.TrySwitch(10))
+                    {
+                        foreach (var miningActionStr in actionsToUse)
+                        {
+                            var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);
+
+                            for (int i = 0; i < 2; i++)
+                            {
+                                await picker.WaitSkillCd(ct);
+                                foreach (var command in pickUpAction.CombatCommands)
+                                {
+                                    command.Execute(combatScenes);
+                                    //异步执行，防止卡顿
+                                    Task.Run(() =>
+                                    {
+                                        if (Monitor.TryEnter(PickLock))
+                                        {
+                                            try
+                                            {
+                                                if (find)
+                                                {
+                                                    using (var imagePick = CaptureToRectArea())
+                                                    {
+                                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                                        {
+                                                            find = false;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            finally
+                                            {
+                                                Monitor.Exit(PickLock);
+                                            }
+                                        }
+                                        // 后面没代码了，不用写return？
+                                    });
+                                }
+
+                                if (!find)
+                                {
+                                    break;
+                                }
+
+                                if (i == 0)
+                                {
+                                    Logger.LogInformation("自动拾取；尝试再次执行 琴-长E 拾取");
+                                    // picker.LastSkillTime = DateTime.Now;不正确
+                                    picker.AfterUseSkill();
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+                            
+                            Simulation.ReleaseAllKey();
+                        }
+                    }
                 }
             }
             //切换过队伍的，需要再切回来
@@ -586,7 +682,7 @@ public class AutoFightTask : ISoloTask
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
         
-        var ra = CaptureToRectArea();
+        using var ra = CaptureToRectArea();
         //判断整个界面是否有红色色块，如果有，则战继续，否则战斗结束
         // 只提取橙色
         

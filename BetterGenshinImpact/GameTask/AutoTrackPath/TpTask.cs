@@ -43,6 +43,9 @@ public class TpTask
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
+    private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+
     private readonly CancellationToken ct;
     private readonly CultureInfo cultureInfo;
     private readonly IStringLocalizer stringLocalizer;
@@ -116,7 +119,7 @@ public class TpTask
                 Type = WaypointType.Path.Code,
                 MoveMode = MoveModeEnum.Walk.Code
             };
-            var waypointForTrack = new WaypointForTrack(waypoint, MapTypes.Teyvat.ToString());
+            var waypointForTrack = new WaypointForTrack(waypoint, nameof(MapTypes.Teyvat), _mapMatchingMethod);
             await new PathExecutor(ct).MoveTo(waypointForTrack);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
@@ -334,6 +337,8 @@ public class TpTask
             //增加容错，小概率情况下碰到，前面点击传送失败
             capture.Find(_assets.TeleportButtonRo, rg => rg.Click());
             await Delay(delayMs, ct);
+            // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
+            await _blessingOfTheWelkinMoonTask.Start(ct);
         }
 
         Logger.LogWarning("传送等待超时，换台电脑吧");
@@ -384,8 +389,8 @@ public class TpTask
     /// <returns></returns>
     private (double clickX, double clickY) ConvertToGameRegionPosition(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
-        var (picX, picY) = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)x, (float)y);
-        var picRect = MapManager.GetMap(mapName).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
+        var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates((float)x, (float)y);
+        var picRect = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
         Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
         var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
         var clickY = (picY - picRect.Y) / picRect.Height * _captureRect.Height;
@@ -736,7 +741,7 @@ public class TpTask
             using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
             if (mapScaleButtonRa.IsExist())
             {
-                rect = MapManager.GetMap(mapName).GetBigMapRect(ra.CacheGreyMat);
+                rect = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapRect(ra.CacheGreyMat);
                 if (rect == default)
                 {
                     // 滚轮调整后再次识别
@@ -764,7 +769,7 @@ public class TpTask
             rect = new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s);
         }
 
-        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(rect);
+        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect);
     }
 
     public Point2f GetBigMapCenterPoint(string mapName)
@@ -774,7 +779,7 @@ public class TpTask
         using var mapScaleButtonRa = ra.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (mapScaleButtonRa.IsExist())
         {
-            var p = MapManager.GetMap(mapName).GetBigMapPosition(ra.CacheGreyMat);
+            var p = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapPosition(ra.CacheGreyMat);
             if (p.IsEmpty())
             {
                 throw new InvalidOperationException("识别大地图位置失败");
@@ -788,7 +793,7 @@ public class TpTask
                 (x, y) = (p.X * TeyvatMap.BigMap256ScaleTo2048, p.Y * TeyvatMap.BigMap256ScaleTo2048);
             }
 
-            return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y));
+            return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y));
         }
         else
         {
@@ -878,7 +883,7 @@ public class TpTask
         var list = ra.FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(ra.Width / 2, 0, ra.Width / 2, ra.Height),
+            RegionOfInterest = new Rect(ra.Width * 2 / 3, 0, ra.Width / 3, ra.Height),
             ReplaceDictionary = new Dictionary<string, string[]>
             {
                 ["渊下宫"] = ["渊下宮"],

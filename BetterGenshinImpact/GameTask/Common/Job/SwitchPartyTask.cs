@@ -151,7 +151,7 @@ public class SwitchPartyTask
             RegionOfInterest = regionOfInterest,
             DrawOnWindow = true,
             Name = "队伍名称",
-            DrawOnWindowPen= new System.Drawing.Pen(System.Drawing.Color.White)
+            DrawOnWindowPen= System.Drawing.Pens.White
         };
         // 逐页查找
         try

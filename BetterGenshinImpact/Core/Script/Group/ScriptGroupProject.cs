@@ -106,6 +106,22 @@ public partial class ScriptGroupProject : ObservableObject
     [ObservableProperty]
     private bool? _allowJsNotification = true;
 
+    [ObservableProperty]
+    private string? _allowJsHTTPHash = "";
+
+    /// <summary>
+    /// 是否允许JS脚本发送HTTP请求，通过验证Hash来控制
+    /// </summary>
+    [JsonIgnore]
+    public bool AllowJsHTTP
+    {
+        get
+        {
+            return GetHttpAllowedUrlsHash() == AllowJsHTTPHash;
+        }
+    }
+
+
     public ScriptGroupProject()
     {
     }
@@ -161,6 +177,19 @@ public partial class ScriptGroupProject : ObservableObject
             throw new Exception("FolderName 为空");
         }
         Project = new ScriptProject(FolderName);
+    }
+
+    public string GetHttpAllowedUrlsHash()
+    {
+        if (Project == null)
+        {
+            BuildScriptProjectRelation();
+        }
+        if (Project == null)
+        {
+            return "";
+        }
+        return string.Join("|", Project.Manifest.HttpAllowedUrls);
     }
 
     public async Task Run()

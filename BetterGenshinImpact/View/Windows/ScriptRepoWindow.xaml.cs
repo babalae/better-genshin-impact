@@ -3,8 +3,10 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Helpers.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Meziantou.Framework.Win32;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -16,6 +18,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
+using System.Globalization;
 using System.Windows.Navigation;
 using Wpf.Ui.Violeta.Controls;
 
@@ -53,20 +57,47 @@ public partial class ScriptRepoWindow
     [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
     [ObservableProperty] private ScriptConfig _config = TaskContext.Instance().Config.ScriptConfig;
 
+    // Git 凭据相关属性
+    private const string GitCredentialAppName = "BetterGenshinImpact.GitCredentials";
+
+    [ObservableProperty] private string _gitUsername = "";
+    [ObservableProperty] private string _gitToken = "";
+
     // 在线更新相关属性
     [ObservableProperty] private string _onlineDownloadUrl = "";
+
+    // 获取当前仓库URL（用于界面显示）
+    public string CurrentRepoUrl
+    {
+        get
+        {
+            if (SelectedRepoChannel == null)
+            {
+                return "";
+            }
+            return SelectedRepoChannel.Name == "自定义" ? Config.CustomRepoUrl : SelectedRepoChannel.Url;
+        }
+    }
 
     public ScriptRepoWindow()
     {
         InitializeRepoChannels();
+        LoadCredentialsFromManager();
         InitializeComponent();
         DataContext = this;
         Config.PropertyChanged += OnConfigPropertyChanged;
         PropertyChanged += OnPropertyChanged;
+
+        // 设置 PasswordBox 的初始值
+        Loaded += (s, e) => GitTokenPasswordBox.Password = GitToken;
+
         SourceInitialized += (s, e) =>
         {
             // 应用系统背景
             WindowHelper.TryApplySystemBackdrop(this);
+
+            // 设置仓库地址的只读状态
+            IsRepoUrlReadOnly = SelectedRepoChannel == null || SelectedRepoChannel.Name != "自定义";
         };
     }
 
@@ -82,6 +113,34 @@ public partial class ScriptRepoWindow
         {
             OnIsUpdatingChanged();
         }
+        // 监听 GitUsername 和 GitToken 变化，保存到凭据管理器
+        else if (e.PropertyName == nameof(GitUsername) || e.PropertyName == nameof(GitToken))
+        {
+            SaveCredentialsToManager();
+        }
+    }
+
+    /// <summary>
+    /// 从 Windows 凭据管理器加载 Git 凭据
+    /// </summary>
+    private void LoadCredentialsFromManager()
+    {
+        var credential = CredentialManagerHelper.ReadCredential(GitCredentialAppName);
+        GitUsername = credential?.UserName ?? "";
+        GitToken = credential?.Password ?? "";
+    }
+
+    /// <summary>
+    /// 保存 Git 凭据到 Windows 凭据管理器
+    /// </summary>
+    private void SaveCredentialsToManager()
+    {
+        CredentialManagerHelper.SaveCredential(
+            GitCredentialAppName,
+            GitUsername,
+            GitToken,
+            "Git credentials for BetterGenshinImpact script repository",
+            CredentialPersistence.LocalMachine);
     }
 
     ~ScriptRepoWindow()
@@ -92,9 +151,10 @@ public partial class ScriptRepoWindow
 
     private void OnConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ScriptConfig.SelectedRepoUrl))
+        // 监听CustomRepoUrl变化，通知界面更新显示
+        if (e.PropertyName == nameof(ScriptConfig.CustomRepoUrl))
         {
-            OnConfigSelectedRepoUrlChanged();
+            OnPropertyChanged(nameof(CurrentRepoUrl));
         }
     }
 
@@ -114,33 +174,28 @@ public partial class ScriptRepoWindow
         {
             new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
             new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
-            // 暂时无法使用
-            // new("Gitee", "https://gitee.com/babalae/bettergi-scripts-list"),
             new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
             new("自定义", "https://example.com/custom-repo")
         };
 
-        if (string.IsNullOrEmpty(Config.SelectedRepoUrl))
+        // 根据配置中保存的渠道名称恢复选择
+        if (string.IsNullOrEmpty(Config.SelectedChannelName))
         {
             // 默认选中第一个渠道
             SelectedRepoChannel = _repoChannels[0];
-            Config.SelectedRepoUrl = SelectedRepoChannel.Url;
+            Config.SelectedChannelName = SelectedRepoChannel.Name;
         }
         else
         {
-            // 尝试根据配置中的URL找到对应的渠道
-            OnConfigSelectedRepoUrlChanged();
-        }
-    }
+            // 根据保存的渠道名称找到对应的渠道
+            var savedChannel = _repoChannels.FirstOrDefault(c => c.Name == Config.SelectedChannelName);
+            SelectedRepoChannel = savedChannel ?? _repoChannels[0];
 
-    // Config.SelectedRepoUrl 变化
-    private void OnConfigSelectedRepoUrlChanged()
-    {
-        // 如果配置中的URL与当前选中渠道不一致，更新选中渠道
-        if (string.IsNullOrEmpty(SelectedRepoChannel?.Url) || SelectedRepoChannel.Url != Config.SelectedRepoUrl)
-        {
-            SelectedRepoChannel = _repoChannels.FirstOrDefault(c => c.Url == Config.SelectedRepoUrl) ??
-                                  _repoChannels.FirstOrDefault(c => c.Name == "自定义") ?? _repoChannels[0];
+            // 如果找不到保存的渠道，更新配置为默认渠道
+            if (savedChannel == null)
+            {
+                Config.SelectedChannelName = _repoChannels[0].Name;
+            }
         }
     }
 
@@ -151,15 +206,14 @@ public partial class ScriptRepoWindow
             return;
         }
 
+        // 保存选择的渠道名称
+        Config.SelectedChannelName = SelectedRepoChannel.Name;
+
         // 更新仓库地址只读状态
         IsRepoUrlReadOnly = SelectedRepoChannel.Name != "自定义";
 
-        // 更新配置中的选中仓库URL
-        if (SelectedRepoChannel.Name != "自定义")
-        {
-            // 如果不是自定义渠道，直接使用选中渠道的URL
-            Config.SelectedRepoUrl = SelectedRepoChannel.Url;
-        }
+        // 通知界面更新CurrentRepoUrl
+        OnPropertyChanged(nameof(CurrentRepoUrl));
     }
 
     [RelayCommand]
@@ -170,11 +224,31 @@ public partial class ScriptRepoWindow
             Toast.Warning("请选择一个脚本仓库更新渠道。");
             return;
         }
+
+        // 获取当前仓库URL
+        string repoUrl = CurrentRepoUrl;
+
+        // 验证URL
+        if (string.IsNullOrWhiteSpace(repoUrl))
+        {
+            Toast.Warning("请输入自定义仓库URL。");
+            return;
+        }
+
+        if (repoUrl == "https://example.com/custom-repo")
+        {
+            Toast.Warning("请修改默认的自定义URL为有效的仓库地址。");
+            return;
+        }
+
+        if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out _))
+        {
+            Toast.Warning("请输入有效的URL地址。");
+            return;
+        }
+
         try
         {
-            // 使用选定渠道的URL进行更新
-            string repoUrl = SelectedRepoChannel.Url;
-
             // 显示更新中提示
             Toast.Information("正在更新脚本仓库，请耐心等待...");
 
@@ -182,7 +256,8 @@ public partial class ScriptRepoWindow
             IsUpdating = true;
             UpdateProgressValue = 0;
             UpdateProgressText = "准备更新，请耐心等待...";
-            // 执行更新  (repoPath, updated) 
+
+            // 执行更新
             var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
                 {
@@ -191,7 +266,6 @@ public partial class ScriptRepoWindow
                     UpdateProgressValue = (int)progressPercentage;
                     UpdateProgressText = $"{path}";
                 });
-
 
             // 更新结果提示
             if (updated)
@@ -205,7 +279,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            await MessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：: {ex.Message}");
+            await ThemedMessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
         }
         finally
         {
@@ -215,11 +289,77 @@ public partial class ScriptRepoWindow
     }
 
     [RelayCommand]
-    private void OpenLocalScriptRepo()
+    private async Task OpenLocalScriptRepo()
     {
-        TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
-        ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
-        Close();
+        // 检查是否需要提示用户更新仓库
+        var shouldContinue = await CheckAndPromptRepoUpdate();
+        if (shouldContinue)
+        {
+            TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+            ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
+            Close();
+        }
+    }
+
+    /// <summary>
+    /// 检查仓库更新时间并提示用户
+    /// </summary>
+    /// <returns>是否继续打开仓库（true: 继续打开, false: 取消操作）</returns>
+    private async Task<bool> CheckAndPromptRepoUpdate()
+    {
+        TimeSpan timeSinceUpdate;
+        try
+        {
+            // 检查仓库文件夹是否存在
+            if (!Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
+            {
+                return true;
+            }
+
+            // 查找 repo.json 文件
+            var repoJsonPath = Directory.GetFiles(ScriptRepoUpdater.CenterRepoPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (repoJsonPath == null || !File.Exists(repoJsonPath))
+            {
+                return true;
+            }
+
+            // 获取 repo.json 文件的最后修改时间
+            var repoJsonFile = new FileInfo(repoJsonPath);
+            DateTime lastUpdateTime = repoJsonFile.LastWriteTime;
+
+            // 检查是否超过 30 天
+            timeSinceUpdate = DateTime.Now - lastUpdateTime;
+            if (timeSinceUpdate.TotalDays <= 30)
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            // 出现异常时，继续打开仓库
+            return true;
+        }
+
+        // 提示用户更新
+        var dialog = new RepoUpdateDialog((int)timeSinceUpdate.TotalDays);
+        var result = await dialog.ShowDialogAsync();
+
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            // 用户选择"立即更新"
+            await UpdateRepo();
+            return false;
+        }
+        else if (result == Wpf.Ui.Controls.MessageBoxResult.Secondary)
+        {
+            // 用户选择"直接打开"
+            return true;
+        }
+        else
+        {
+            // 用户关闭对话框（点击 X 或按 ESC）
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -232,11 +372,11 @@ public partial class ScriptRepoWindow
         }
 
         // 添加确认对话框
-        var result = await MessageBox.ShowAsync(
+        var result = await ThemedMessageBox.ShowAsync(
             "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
             "确认重置",
             MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            ThemedMessageBox.MessageBoxIcon.Warning);
 
         if (result == MessageBoxResult.Yes)
         {
@@ -462,8 +602,20 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"无法打开链接: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ThemedMessageBox.Warning($"无法打开链接: {ex.Message}", "错误");
         }
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// 处理 PasswordBox 的密码变化事件
+    /// </summary>
+    private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.PasswordBox passwordBox)
+        {
+            // 更新 GitToken 属性，触发自动保存到凭据管理器
+            GitToken = passwordBox.Password;
+        }
     }
 }

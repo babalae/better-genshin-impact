@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.GameTask.Model;
 
 public class BaseIndependentTask
 {
-    protected SystemInfo Info => TaskContext.Instance().SystemInfo;
+    protected ISystemInfo Info => TaskContext.Instance().SystemInfo;
     protected Rect CaptureRect => TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     protected double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
 }

@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -99,7 +100,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑/白名单失败");
-            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
 
         return [];
@@ -119,7 +120,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑/白名单失败");
-            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
 
         return [];
@@ -139,7 +140,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑/白名单失败");
-            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
 
         return [];

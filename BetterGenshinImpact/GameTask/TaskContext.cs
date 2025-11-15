@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Genshin.Settings;
@@ -52,7 +52,7 @@ namespace BetterGenshinImpact.GameTask
 
         public float DpiScale { get; set; }
 
-        public SystemInfo SystemInfo { get; set; }
+        public ISystemInfo SystemInfo { get; set; }
 
         public AllConfig Config
         {

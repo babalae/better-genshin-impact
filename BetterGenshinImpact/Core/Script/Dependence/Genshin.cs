@@ -45,7 +45,8 @@ public class Genshin
     
     public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
     {
-        Navigation.WarmUp();
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        Navigation.WarmUp(matchingMethod);
         return new NavigationInstance();
     });
 
@@ -227,7 +228,10 @@ public class Genshin
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
-        return MapManager.GetMap(mapName).ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value.GetPositionStableByCache(imageRegion, mapName, cacheTimeMs));
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        return MapManager.GetMap(mapName, matchingMethod)
+            .ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value
+                .GetPositionStableByCache(imageRegion, mapName, matchingMethod, cacheTimeMs));
     }
     
     /// <summary>
@@ -244,11 +248,12 @@ public class Genshin
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        var sceneMap = MapManager.GetMap(mapName);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var sceneMap = MapManager.GetMap(mapName, matchingMethod);
         var navigationInstance = LazyNavigationInstance.Value;
         var pos = sceneMap.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(x, y));
         navigationInstance.SetPrevPosition(pos.X, pos.Y);
-        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName));
+        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName, matchingMethod));
     }
 
     #endregion 大地图操作
@@ -371,5 +376,37 @@ public class Genshin
     public async Task Relogin()
     {
         await new ExitAndReloginJob().Start(CancellationContext.Instance.Cts.Token);
+    }
+
+    /// <summary>
+    /// 调整时间
+    /// </summary>
+    /// <param name="hour">目标小时(0-24)</param>
+    /// <param name="minute">目标分钟(0-59)</param>
+    /// <param name="skip">是否跳过动画（默认为否）</param>
+    /// <returns></returns>
+    public async Task SetTime(int hour, int minute, bool skip = false)
+    {
+        if ( hour < 0 || hour > 24)
+            throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
+        if (minute < 0 || minute > 59)
+            throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
+        await new SetTimeTask().Start(hour, minute, CancellationContext.Instance.Cts.Token, skip);
+    }
+    
+    /// <summary>
+    /// 调整时间
+    /// </summary>
+    /// <param name="hour">目标小时(0-24的字符类型)</param>
+    /// <param name="minute">目标分钟(0-59的字符类型)</param>
+    /// <param name="skip">是否跳过动画（默认为否）</param>
+    /// <returns></returns>
+    public async Task SetTime(string hour, string minute, bool skip = false)
+    {
+        if (!int.TryParse(hour, out var h) || h < 0 || h > 24)
+            throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
+        if (!int.TryParse(minute, out var m) || m < 0 || m > 59)
+            throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
+        await new SetTimeTask().Start(h, m, CancellationContext.Instance.Cts.Token, skip);
     }
 }
