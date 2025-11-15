@@ -23,6 +23,7 @@ public partial class ArtifactOcrDialog
     private readonly double heightRatio;
     private readonly string? javaScript;
     private readonly AutoArtifactSalvageTask autoArtifactSalvageTask;
+    public static ILogger Logger { get; } = App.GetLogger<ArtifactOcrDialog>();
 
     public ArtifactOcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? javaScript = null)
     {
@@ -75,6 +76,7 @@ public partial class ArtifactOcrDialog
 
     private static async Task HandleOcrExceptionAsync(Exception e, Mat srcMat)
     {
+        Logger.LogError(e, "自动分解圣遗物-OCR识别异常");
         var result = ThemedMessageBox.Error(
             $"{e.Message}\n\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）",
             "异常处理",
