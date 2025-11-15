@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
@@ -499,20 +499,25 @@ public partial class HomePageViewModel : ViewModel
             WindowBackdropType = WindowBackdropType.Mica,
             ExtendsContentIntoTitleBar = true,
         };
-        dialogWindow.SourceInitialized += (s, e) => { WindowHelper.TryApplySystemBackdrop(dialogWindow); };
+        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
         dialogWindow.ShowDialog();
     }
 
     [RelayCommand]
     public void OnOpenHardwareAccelerationSettings()
     {
-        var dialogWindow = new Window
+        var dialogWindow = new FluentWindow
         {
             Title = "硬件加速设置",
             Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
             SizeToContent = SizeToContent.WidthAndHeight,
+            ResizeMode = ResizeMode.NoResize,
+            Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ExtendsContentIntoTitleBar = true,
+            WindowBackdropType = WindowBackdropType.Auto,
         };
+        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
         var result = dialogWindow.ShowDialog();
     }
 

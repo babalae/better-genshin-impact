@@ -117,10 +117,10 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
-    private async Task ClearTasks()
+    private void ClearTasks()
     {
         // 确认？
-        var result = await ThemedMessageBox.ShowAsync("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
+        var result = ThemedMessageBox.Question("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, System.Windows.MessageBoxResult.No);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
@@ -2007,13 +2007,17 @@ public partial class ScriptControlViewModel : ViewModel
         //
         // await uiMessageBox.ShowDialogAsync();
 
-        var dialogWindow = new Window
+        var dialogWindow = new FluentWindow
         {
             Title = "配置组设置",
             Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedScriptGroup.Config)),
             SizeToContent = SizeToContent.WidthAndHeight,
+            ResizeMode = ResizeMode.NoResize,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ExtendsContentIntoTitleBar = true,
+            WindowBackdropType = WindowBackdropType.Auto,
         };
+        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
 
         // var dialogWindow = new WpfUiWindow(new ScriptGroupConfigView(SelectedScriptGroup.Config))
         // {
