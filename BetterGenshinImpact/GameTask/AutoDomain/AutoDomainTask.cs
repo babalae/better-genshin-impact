@@ -533,7 +533,7 @@ public class AutoDomainTask : ISoloTask
             var ocrListLeft = ra.Find(AutoFightAssets.Instance.AbnormalIconRa);
             return (ocrList.Any(t => t.Text.Contains(leyLineDisorderLocalizedString) ||
                                      t.Text.Contains(clickanywheretocloseLocalizedString))) || ocrListLeft.IsExist();
-        }, _ct, 20, 500);
+        }, _ct, 40, 500);
         if (!domainTipFound)
         {
             Logger.LogWarning("秘境提示未出现或未能点击。");
