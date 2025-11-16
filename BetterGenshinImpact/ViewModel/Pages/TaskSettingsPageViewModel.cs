@@ -555,7 +555,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private async Task OnOpenArtifactSalvageTestOCRWindow()
     {
         ArtifactOcrDialog ocrDialog = new ArtifactOcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
-        ocrDialog.ShowDialog();
+        if (await ocrDialog.CaptureAsync()) { ocrDialog.ShowDialog(); }
     }
 
     [RelayCommand]
