@@ -115,6 +115,7 @@ public partial class App : Application
                 services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
                 services.AddSingleton<QuartzSchedulerService>();
                 services.AddHostedService(sp => sp.GetRequiredService<QuartzSchedulerService>());
+                services.AddGearTaskServices();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();

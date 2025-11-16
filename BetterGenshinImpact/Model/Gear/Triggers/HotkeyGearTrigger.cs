@@ -17,23 +17,4 @@ public class HotkeyGearTrigger : GearBaseTrigger
     /// 热键配置
     /// </summary>
     public HotKey? Hotkey { get; set; }
-    
-
-    private DateTime _lastExecutionTime = DateTime.MinValue;
-    
-
-    /// <summary>
-    /// 热键触发时执行任务
-    /// </summary>
-    public async Task OnHotkeyPressed()
-    {
-    }
-
-    /// <summary>
-    /// 获取热键显示文本
-    /// </summary>
-    public string GetHotkeyText()
-    {
-        return Hotkey?.ToString() ?? "未设置";
-    }
 }

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Model.Gear.Triggers.QuartzJob;
+using BetterGenshinImpact.Service.GearTask;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -12,39 +14,63 @@ namespace BetterGenshinImpact.Service;
 /// <summary>
 /// Quartz.NET 调度器服务
 /// </summary>
-public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger, ISchedulerFactory schedulerFactory) : IHostedService
+public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger,
+    ISchedulerFactory schedulerFactory,
+    GearTriggerStorageService triggerStorageService) : IHostedService
 {
+    private readonly ILogger<QuartzSchedulerService> _logger = logger;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        List<QuartzCronGearTrigger> allData = new List<QuartzCronGearTrigger>();
-        
-        Dictionary<IJobDetail, IReadOnlyCollection<ITrigger>> jobsDictionary = new();
+        var (timedTriggers, _) = await triggerStorageService.LoadTriggersAsync();
+
+        var allData = timedTriggers
+            .Where(t => t.IsEnabled && !string.IsNullOrWhiteSpace(t.CronExpression))
+            .Select(t => t.ToTrigger())
+            .OfType<QuartzCronGearTrigger>()
+            .ToList();
+
+        var jobsDictionary = new Dictionary<IJobDetail, IReadOnlyCollection<ITrigger>>();
+
         foreach (var data in allData)
         {
             if (string.IsNullOrEmpty(data.CronExpression) || !data.IsEnabled)
             {
                 continue;
             }
-            
-            var triggerSet = new HashSet<ITrigger>();
-            IJobDetail job = JobBuilder.Create<QuartzGearTaskJob>()
-                .UsingJobData("jobData", data.ToString())
+
+            var jobDataMap = new JobDataMap
+            {
+                { "TriggerName", data.Name },
+                { "TriggerId", System.Guid.NewGuid().ToString() },
+                { "ShouldInterruptOthers", false },
+                { "TaskDefinitionName", data.TaskDefinitionName }
+            };
+
+            var job = JobBuilder.Create<QuartzGearTaskJob>()
+                .WithIdentity($"job:{data.Name}", "gear")
+                .UsingJobData(jobDataMap)
                 .Build();
-            ITrigger trigger = TriggerBuilder.Create()
+
+            var trigger = TriggerBuilder.Create()
+                .WithIdentity($"trigger:{data.Name}", "gear")
                 .WithCronSchedule(data.CronExpression)
                 .ForJob(job)
                 .Build();
-            triggerSet.Add(trigger);
-            jobsDictionary.Add(job, triggerSet);
+
+            jobsDictionary.Add(job, new HashSet<ITrigger> { trigger });
         }
 
         var scheduler = await schedulerFactory.GetScheduler(cancellationToken);
-        await scheduler.ScheduleJobs(jobsDictionary, replace: true, cancellationToken);
+        if (jobsDictionary.Count > 0)
+        {
+            await scheduler.ScheduleJobs(jobsDictionary, replace: true, cancellationToken);
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
+
 }

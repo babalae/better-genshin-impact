@@ -11,13 +11,6 @@ namespace BetterGenshinImpact.Model.Gear.Triggers;
 /// </summary>
 public class QuartzCronGearTrigger : GearBaseTrigger
 {
-    private readonly ILogger<QuartzCronGearTrigger> _logger = App.GetLogger<QuartzCronGearTrigger>();
-
-    /// <summary>
-    /// 是否在执行时中断其他同类型定时任务
-    /// </summary>
-    public bool ShouldInterruptOthers { get; set; } = true;
-
     /// <summary>
     /// 使用 Cron 表达式（如果设置，将覆盖 IntervalMs 设置）
     /// </summary>
