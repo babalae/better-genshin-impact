@@ -34,7 +34,7 @@ public class BigFishType
 
     public static readonly BigFishType MaulerShark = new ("mauler shark", BaitType.RefreshingLakkaBait, "凶凶鲨", 9);
     public static readonly BigFishType CrystalEye = new("crystal eye", BaitType.RefreshingLakkaBait, "明眼鱼", 9);
-    public static readonly BigFishType AxeheadFish = new ("axehead fish", BaitType.BerryBait, "巨斧鱼", 9);
+    public static readonly BigFishType AxeheadFish = new ("axehead", BaitType.BerryBait, "巨斧鱼", 9);
 
     public static IEnumerable<BigFishType> Values
     {
