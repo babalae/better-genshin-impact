@@ -1,0 +1,39 @@
+{
+  "name": "@types/bettergi",
+  "version": "0.51.2-alpha.2",
+  "homepage": "https://github.com/babalae/better-genshin-impact/tree/main/BetterGenshinImpact/Core/Script/JsTypeDef",
+  "author": "babalae",
+  "license": "GPL-3.0",
+  "description": "Types for BetterGI JS Scripts",
+  "types": "dist/bettergi.d.ts",
+  "files": [
+    "dist/bettergi.d.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/babalae/better-genshin-impact.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "typescript",
+    "types",
+    "bettergi",
+    "bgi",
+    "better-genshin-impact"
+  ],
+  "devDependencies": {
+    "@babel/parser": "^7.28.4",
+    "@typescript-eslint/parser": "^8.46.1",
+    "recast": "^0.23.11",
+    "typescript": "<5.0.0"
+  },
+  "scripts": {
+    "check": "npx tsc bettergi.d.ts",
+    "check-dist": "npx tsc dist/bettergi.d.ts",
+    "transform": "node checker/add-capitalize-method.mjs bettergi.d.ts dist/bettergi.d.ts",
+    "build": "npm run check && npm run transform && npm run check-dist",
+    "publish:prepare": "npm run build"
+  }
+}
