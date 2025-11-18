@@ -1,0 +1,588 @@
+<Project>
+  <PropertyGroup>
+    <AssemblyName>BetterGI</AssemblyName>
+    <IntermediateOutputPath>obj\x64\Debug\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\</MSBuildProjectExtensionsPath>
+    <_TargetAssemblyProjectName>BetterGenshinImpact</_TargetAssemblyProjectName>
+    <RootNamespace>BetterGenshinImpact</RootNamespace>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <Version>0.51.1-alpha.1</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>12.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Resources\Images\logo.ico</ApplicationIcon>
+    <Platforms>x64</Platforms>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <!--	<ItemGroup>
+		<None Remove="Assets\Images\*.jpg" />
+		<None Remove="Assets\Images\*" />
+		<None Remove="Assets\Images\*.png" />
+		<None Remove="Assets\Images\*.ico" />
+		<None Remove="Assets\Fonts\*.ttf" />
+		<None Remove="Assets\Highlighting\*.xshd" />
+		<None Remove="Assets\Strings\*.html" />
+		<None Remove="Assets\Strings\*.md" />
+		<None Remove="Assets\Audios\*.mp3" />
+		<None Update="Assets\Config\*"/>
+	</ItemGroup>-->
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+    <PackageReference Include="BehaviourTree" Version="1.0.73" />
+    <PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
+    <PackageReference Include="BetterGI.Assets.Map" Version="1.0.12" />
+    <PackageReference Include="BetterGI.Assets.Model" Version="1.0.12" />
+    <PackageReference Include="BetterGI.Assets.Other" Version="1.0.9" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="DeviceId" Version="6.9.0" />
+    <PackageReference Include="DeviceId.Windows" Version="6.9.0" />
+    <PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
+    <PackageReference Include="Emoji.Wpf" Version="0.3.4" />
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+    <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+    <!--排除掉cpu的runtime dll-->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+    <PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
+    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.11.0.20250507" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
+    <PackageReference Include="Microsoft.ClearScript.V8" Version="7.4.5" />
+    <PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.4.5" />
+    <PackageReference Include="MouseKeyHook" Version="5.7.1" />
+    <PackageReference Include="PresentMonFps" Version="2.0.5" />
+    <PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
+    <PackageReference Include="Semver" Version="3.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.5" />
+    <PackageReference Include="System.IO.Hashing" Version="9.0.4" />
+    <PackageReference Include="TorchSharp" Version="0.105.0" />
+    <PackageReference Include="Vanara.PInvoke.NtDll" Version="4.1.3" />
+    <PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
+    <PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
+    <PackageReference Include="WPF-UI" Version="4.0.2" />
+    <PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.2" />
+    <PackageReference Include="WPF-UI.Tray" Version="4.0.2" />
+    <PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
+    <PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="YoloSharp" Version="6.0.3" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Debug'">
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
+    <ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
+    <ProjectReference Include="..\Fischless.WindowsInput\Fischless.WindowsInput.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Assets\Map\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Model\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Config\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoFight\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoFight\Assets\combat_avatar.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoFishing\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\LogParse\Assets\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoGeniusInvokation\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoGeniusInvokation\Assets\tcg_character_card.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoPick\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoSkip\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoSkip\Assets\hangout.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoTrackPath\Assets\tp.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\Common\Element\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\Common\Element\Assets\Json\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoWood\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoMusicGame\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\GameLoading\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\QuickTeleport\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\QuickSereniteaPot\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\AutoEat\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\QuickBuy\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\UseRedeemCode\Assets\1920x1080\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="User\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\LogParse\Assets\log.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\LogParse\Assets\log.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\GameLoading\Assets\1920x1080\enter_game.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="GameTask\Common\Element\Assets\1920x1080\in_domain.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="GameTask\OneDragon\" />
+    <Folder Include="GameTask\UseRedeemCode\Assets\1920x1080\" />
+    <Folder Include="Resources\" />
+    <Folder Include="Service\Notification\Builder\" />
+    <Folder Include="User\AutoPathing\" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="View\Windows\WelcomeDialog.xaml.cs">
+      <SubType>Code</SubType>
+      <DependentUpon>WelcomeDialog.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\Accessibility.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\behaviourtree\1.0.73\lib\netstandard1.0\BehaviourTree.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\bettergi.assets.map\1.0.12\lib\net8.0\BetterGI.Assets.Map.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\bettergi.assets.model\1.0.12\lib\net8.0\BetterGI.Assets.Model.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\bettergi.assets.other\1.0.9\lib\net8.0\BetterGI.Assets.Other.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\bettergi.vcruntime\14.44.35208\lib\net8.0\BetterGI.VCRuntime.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.clearscript.core\7.4.5\lib\net5.0\ClearScript.Core.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.clearscript.v8\7.4.5\lib\net5.0\ClearScript.V8.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.clearscript.v8.icudata\7.4.5\lib\netstandard1.0\ClearScript.V8.ICUData.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\clipper2\1.4.0\lib\netstandard2.0\Clipper2Lib.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\communitytoolkit.mvvm\8.2.2\lib\net6.0\CommunityToolkit.Mvvm.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\deviceid\6.9.0\lib\net8.0\DeviceId.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\deviceid.windows\6.9.0\lib\net8.0-windows10.0.17763\DeviceId.Windows.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\deviceid.windows.wmi\6.9.0\lib\net8.0\DeviceId.Windows.Wmi.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.diagnostics.tracing.traceevent\3.1.13\lib\netstandard2.0\Dia2Lib.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\emoji.wpf\0.3.4\lib\netcoreapp3.1\Emoji.Wpf.dll" />
+    <ReferencePath Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\Fischless.GameCapture\bin\x64\Debug\net8.0-windows10.0.22621.0\Fischless.GameCapture.dll" />
+    <ReferencePath Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\Fischless.HotkeyCapture\bin\x64\Debug\net8.0-windows10.0.22621.0\Fischless.HotkeyCapture.dll" />
+    <ReferencePath Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\Fischless.WindowsInput\bin\x64\Debug\netstandard2.0\Fischless.WindowsInput.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\mousekeyhook\5.7.1\lib\net7.0-windows7.0\Gma.System.MouseKeyHook.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\gong-wpf-dragdrop\3.2.1\lib\net6.0-windows7.0\GongSolutions.WPF.DragDrop.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\google.protobuf\3.21.9\lib\net5.0\Google.Protobuf.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\avalonedit\6.3.1.120\lib\net8.0-windows7.0\ICSharpCode.AvalonEdit.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sharpziplib\1.4.0\lib\net6.0\ICSharpCode.SharpZipLib.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\libgit2sharp\0.31.0\lib\net8.0\LibGit2Sharp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\meziantou.framework.win32.credentialmanager\1.7.4\lib\net8.0\Meziantou.Framework.Win32.CredentialManager.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\Microsoft.CSharp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.diagnostics.tracing.traceevent\3.1.13\lib\netstandard2.0\Microsoft.Diagnostics.FastSerialization.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.diagnostics.tracing.traceevent\3.1.13\lib\netstandard2.0\Microsoft.Diagnostics.Tracing.TraceEvent.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.abstractions\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.binder\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.Binder.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.commandline\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.CommandLine.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.environmentvariables\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.EnvironmentVariables.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.fileextensions\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.FileExtensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.json\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.Json.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.configuration.usersecrets\9.0.4\lib\net8.0\Microsoft.Extensions.Configuration.UserSecrets.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.dependencyinjection.abstractions\9.0.4\lib\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.dependencyinjection\9.0.4\lib\net8.0\Microsoft.Extensions.DependencyInjection.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.diagnostics.abstractions\9.0.4\lib\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.diagnostics\9.0.4\lib\net8.0\Microsoft.Extensions.Diagnostics.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.fileproviders.abstractions\9.0.4\lib\net8.0\Microsoft.Extensions.FileProviders.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.fileproviders.physical\9.0.4\lib\net8.0\Microsoft.Extensions.FileProviders.Physical.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.filesystemglobbing\9.0.4\lib\net8.0\Microsoft.Extensions.FileSystemGlobbing.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.hosting.abstractions\9.0.4\lib\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.hosting\9.0.4\lib\net8.0\Microsoft.Extensions.Hosting.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.localization.abstractions\9.0.4\lib\netstandard2.0\Microsoft.Extensions.Localization.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.localization\9.0.4\lib\netstandard2.0\Microsoft.Extensions.Localization.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.abstractions\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.configuration\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.Configuration.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.console\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.Console.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.debug\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.Debug.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.eventlog\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.EventLog.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.eventsource\9.0.4\lib\net8.0\Microsoft.Extensions.Logging.EventSource.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.options.configurationextensions\9.0.4\lib\net8.0\Microsoft.Extensions.Options.ConfigurationExtensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.options\9.0.4\lib\net8.0\Microsoft.Extensions.Options.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.extensions.primitives\9.0.4\lib\net8.0\Microsoft.Extensions.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.ml.onnxruntime.managed\1.21.0\lib\net8.0\Microsoft.ML.OnnxRuntime.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.toolkit.uwp.notifications\7.1.3\lib\net5.0-windows10.0.17763\Microsoft.Toolkit.Uwp.Notifications.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\Microsoft.VisualBasic.Core.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\Microsoft.VisualBasic.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\Microsoft.VisualBasic.Forms.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.web.webview2\1.0.2592.51\lib\netcoreapp3.0\Microsoft.Web.WebView2.Core.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.web.webview2\1.0.2592.51\lib\netcoreapp3.0\Microsoft.Web.WebView2.WinForms.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.web.webview2\1.0.2592.51\lib\netcoreapp3.0\Microsoft.Web.WebView2.Wpf.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\Microsoft.Win32.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\Microsoft.Win32.Registry.AccessControl.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\Microsoft.Win32.Registry.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.win32.systemevents\9.0.5\lib\net8.0\Microsoft.Win32.SystemEvents.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windows.sdk.net.ref\10.0.22621.54\lib\net8.0\Microsoft.Windows.SDK.NET.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.xaml.behaviors.wpf\1.1.122\lib\net6.0-windows7.0\Microsoft.Xaml.Behaviors.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\mscorlib.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\netstandard.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\newtonsoft.json\13.0.3\lib\net6.0\Newtonsoft.Json.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\ookii.dialogs.wpf\5.0.1\lib\net6.0-windows7.0\Ookii.Dialogs.Wpf.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\opencvsharp4\4.11.0.20250507\lib\net6.0\OpenCvSharp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\opencvsharp4.extensions\4.11.0.20250507\lib\net6.0\OpenCvSharp.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\opencvsharp4.wpfextensions\4.11.0.20250507\lib\net6.0\OpenCvSharp.WpfExtensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationCore.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.Aero.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.Aero2.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.AeroLite.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.Classic.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.Luna.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationFramework.Royale.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\PresentationUI.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\presentmonfps\2.0.5\lib\netstandard2.0\PresentMonFps.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\ReachFramework.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sdl.multiselectcombobox\1.0.103\lib\net6.0-windows7.0\Sdl.MultiSelectComboBox.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\semver\3.0.0\lib\net5.0\Semver.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\serilog\4.2.0\lib\net8.0\Serilog.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\serilog.extensions.logging\9.0.1\lib\net8.0\Serilog.Extensions.Logging.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\serilog.sinks.console\6.0.0\lib\net8.0\Serilog.Sinks.Console.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\serilog.sinks.file\6.0.0\lib\net8.0\Serilog.Sinks.File.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\serilog.sinks.richtextboxex.wpf\1.1.0.1\lib\net8.0-windows7.0\Serilog.Sinks.RichTextBoxEx.Wpf.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sharpdx.d3dcompiler\4.2.0\lib\netstandard1.1\SharpDX.D3DCompiler.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sharpdx.direct3d11\4.2.0\lib\netstandard1.1\SharpDX.Direct3D11.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sharpdx.directinput\4.2.0\lib\netstandard1.3\SharpDX.DirectInput.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sharpdx\4.2.0\lib\netstandard1.1\SharpDX.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sharpdx.dxgi\4.2.0\lib\netstandard1.1\SharpDX.DXGI.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sixlabors.fonts\2.0.8\lib\net6.0\SixLabors.Fonts.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sixlabors.imagesharp\3.1.7\lib\net6.0\SixLabors.ImageSharp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\sixlabors.imagesharp.drawing\2.1.5\lib\net6.0\SixLabors.ImageSharp.Drawing.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\skiasharp\2.88.6\lib\net6.0\SkiaSharp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\stfu\0.1.1\lib\netcoreapp3.1\Stfu.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.AppContext.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Buffers.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.codedom\9.0.3\lib\net8.0\System.CodeDom.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Collections.Concurrent.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Collections.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Collections.Immutable.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Collections.NonGeneric.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Collections.Specialized.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ComponentModel.Annotations.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ComponentModel.DataAnnotations.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ComponentModel.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ComponentModel.EventBasedAsync.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ComponentModel.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ComponentModel.TypeConverter.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Configuration.ConfigurationManager.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Configuration.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Console.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Core.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Data.Common.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Data.DataSetExtensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Data.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Design.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.Contracts.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.Debug.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.diagnostics.diagnosticsource\9.0.4\lib\net8.0\System.Diagnostics.DiagnosticSource.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.diagnostics.eventlog\9.0.4\lib\net8.0\System.Diagnostics.EventLog.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.FileVersionInfo.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Diagnostics.PerformanceCounter.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.Process.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.StackTrace.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.TextWriterTraceListener.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.Tools.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.TraceSource.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Diagnostics.Tracing.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.DirectoryServices.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.drawing.common\9.0.5\lib\net8.0\System.Drawing.Common.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Drawing.Design.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Drawing.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Drawing.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Dynamic.Runtime.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Formats.Asn1.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Formats.Tar.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Globalization.Calendars.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Globalization.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Globalization.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.Compression.Brotli.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.Compression.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.Compression.FileSystem.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.Compression.ZipFile.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.FileSystem.AccessControl.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.FileSystem.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.FileSystem.DriveInfo.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.FileSystem.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.FileSystem.Watcher.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.io.hashing\9.0.4\lib\net8.0\System.IO.Hashing.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.IsolatedStorage.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.MemoryMappedFiles.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.IO.Packaging.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.io.pipelines\9.0.4\lib\net8.0\System.IO.Pipelines.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.Pipes.AccessControl.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.Pipes.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.IO.UnmanagedMemoryStream.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Linq.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Linq.Expressions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Linq.Parallel.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Linq.Queryable.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.management\9.0.3\lib\net8.0\System.Management.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Memory.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Http.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Http.Json.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.HttpListener.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Mail.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.NameResolution.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.NetworkInformation.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Ping.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Quic.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Requests.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Security.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.ServicePoint.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.Sockets.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.WebClient.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.WebHeaderCollection.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.WebProxy.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.WebSockets.Client.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Net.WebSockets.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Numerics.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.numerics.tensors\9.0.0\lib\net8.0\System.Numerics.Tensors.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Numerics.Vectors.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ObjectModel.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Printing.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.drawing.common\9.0.5\lib\net8.0\System.Private.Windows.Core.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.DispatchProxy.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.Emit.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.Emit.ILGeneration.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.Emit.Lightweight.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.Metadata.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Reflection.TypeExtensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Resources.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Resources.Reader.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Resources.ResourceManager.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Resources.Writer.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.CompilerServices.Unsafe.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.CompilerServices.VisualC.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Handles.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.InteropServices.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.InteropServices.JavaScript.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.InteropServices.RuntimeInformation.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Intrinsics.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Loader.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Numerics.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Serialization.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Serialization.Formatters.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Serialization.Json.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Serialization.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Runtime.Serialization.Xml.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.AccessControl.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Claims.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Algorithms.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Cng.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Csp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Encoding.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.OpenSsl.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Pkcs.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.ProtectedData.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.X509Certificates.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Security.Cryptography.Xml.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Security.Permissions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Principal.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.Principal.Windows.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Security.SecureString.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ServiceModel.Web.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ServiceProcess.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Text.Encoding.CodePages.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Text.Encoding.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Text.Encoding.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.text.encodings.web\9.0.4\lib\net8.0\System.Text.Encodings.Web.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\system.text.json\9.0.4\lib\net8.0\System.Text.Json.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Text.RegularExpressions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Threading.AccessControl.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Channels.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Overlapped.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Tasks.Dataflow.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Tasks.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Tasks.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Tasks.Parallel.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Thread.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.ThreadPool.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Threading.Timer.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Transactions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Transactions.Local.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.ValueTuple.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Web.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Web.HttpUtility.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Controls.Ribbon.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Windows.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Forms.Design.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Forms.Design.Editors.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Forms.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Forms.Primitives.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Input.Manipulations.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Windows.Presentation.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\System.Xaml.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.Linq.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.ReaderWriter.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.Serialization.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.XDocument.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.XmlDocument.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.XmlSerializer.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.XPath.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\ref\net8.0\System.Xml.XPath.XDocument.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\torchsharp\0.105.0\lib\net6.0\TorchSharp.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.diagnostics.tracing.traceevent\3.1.13\lib\netstandard2.0\TraceReloggerLib.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\emoji.wpf\0.3.4\lib\netcoreapp3.1\Typography.GlyphLayout.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\emoji.wpf\0.3.4\lib\netcoreapp3.1\Typography.OpenFont.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\UIAutomationClient.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\UIAutomationClientSideProviders.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\UIAutomationProvider.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\UIAutomationTypes.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.core\4.1.3\lib\net8.0-windows7.0\Vanara.Core.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.dwmapi\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.DwmApi.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.gdi32\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.Gdi32.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.kernel32\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.Kernel32.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.ntdll\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.NtDll.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.shared\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.Shared.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.shcore\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.SHCore.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.pinvoke.user32\4.1.3\lib\net8.0-windows7.0\Vanara.PInvoke.User32.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\vanara.windows.extensions\4.1.3\lib\net8.0-windows7.0\Vanara.Windows.Extensions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\WindowsBase.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\ref\net8.0\WindowsFormsIntegration.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\microsoft.windows.sdk.net.ref\10.0.22621.54\lib\net8.0\WinRT.Runtime.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\wpf-ui.abstractions\4.0.2\lib\net8.0\Wpf.Ui.Abstractions.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\wpf-ui.dependencyinjection\4.0.2\lib\net8.0\Wpf.Ui.DependencyInjection.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\wpf-ui\4.0.2\lib\net8.0-windows7.0\Wpf.Ui.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\wpf-ui.tray\4.0.2\lib\net8.0-windows7.0\Wpf.Ui.Tray.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\wpf-ui.violeta\4.0.2.3\lib\net8.0-windows7.0\Wpf.Ui.Violeta.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\yamldotnet\16.3.0\lib\net8.0\YamlDotNet.dll" />
+    <ReferencePath Include="E:\HuiSomething\NugetPackages\yolosharp\6.0.3\lib\net8.0\YoloSharp.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\CaptureTestWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\MainWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\MaskWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\CommonSettingsPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\HomePage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\HotkeyPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\JsListPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\KeyBindingsSettingsPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\KeyMouseRecordPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\MacroSettingsPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\MapPathingPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\NotificationSettingsPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragonFlowPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\CraftPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\DailyCommissionPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\DailyRewardPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\DomainPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\ForgingPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\LeyLineBlossomPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\MailPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\SereniteaPotPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\OneDragon\TcgPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\ScriptControlPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\TaskSettingsPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\TriggerSettingsPage.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\View\HardwareAccelerationView.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\View\PathingConfigView.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Pages\View\ScriptGroupConfigView.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\PickerWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\AboutWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\CheckUpdateWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\Editable\ScriptGroupProjectEditor.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\JsonMonoDialog.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\KeyBindingsWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\MapPathingDevWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\MapViewer.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\OcrDialog.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\PromptDialog.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\ScriptRepoWindow.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\View\Windows\WelcomeDialog.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\App.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\BetterGI_Content.g.cs" />
+    <Compile Include="D:\HuiPrograming\Projects\CSharp\MiHoYo\BetterGenshinImpact\BetterGenshinImpact\obj\x64\Debug\net8.0-windows10.0.22621.0\GeneratedInternalTypeHelper.g.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="C:\Users\huiyadanli\.dotnet\sdk\9.0.100\Sdks\Microsoft.NET.Sdk\targets\..\analyzers\Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll" />
+    <Analyzer Include="C:\Users\huiyadanli\.dotnet\sdk\9.0.100\Sdks\Microsoft.NET.Sdk\targets\..\analyzers\Microsoft.CodeAnalysis.NetAnalyzers.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\communitytoolkit.mvvm\8.2.2\analyzers\dotnet\roslyn4.3\cs\CommunityToolkit.Mvvm.CodeFixers.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\communitytoolkit.mvvm\8.2.2\analyzers\dotnet\roslyn4.3\cs\CommunityToolkit.Mvvm.SourceGenerators.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.extensions.logging.abstractions\9.0.4\analyzers\dotnet\roslyn4.4\cs\Microsoft.Extensions.Logging.Generators.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.extensions.options\9.0.4\analyzers\dotnet\roslyn4.4\cs\Microsoft.Extensions.Options.SourceGeneration.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\system.text.json\9.0.4\analyzers\dotnet\roslyn4.4\cs\System.Text.Json.SourceGeneration.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\analyzers/dotnet/cs/Microsoft.Interop.ComInterfaceGenerator.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\analyzers/dotnet/cs/Microsoft.Interop.JavaScript.JSImportGenerator.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\analyzers/dotnet/cs/Microsoft.Interop.LibraryImportGenerator.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\analyzers/dotnet/cs/Microsoft.Interop.SourceGeneration.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.netcore.app.ref\8.0.11\analyzers/dotnet/cs/System.Text.RegularExpressions.Generator.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\analyzers/dotnet/System.Windows.Forms.Analyzers.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.windowsdesktop.app.ref\8.0.11\analyzers/dotnet/cs/System.Windows.Forms.Analyzers.CSharp.dll" />
+    <Analyzer Include="E:\HuiSomething\NugetPackages\microsoft.windows.sdk.net.ref\10.0.22621.54\analyzers/dotnet/cs/WinRT.SourceGenerator.dll" />
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

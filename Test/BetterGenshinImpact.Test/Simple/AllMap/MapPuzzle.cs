@@ -27,18 +27,21 @@ public class MapPuzzle
 
     public static void PutAll()
     {
+        var folder = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.0";
+        Directory.CreateDirectory(folder);
+        
         // 保存2048大图
         var img2048 = Put(2048);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8\map_2048.png", img2048);
+        Cv2.ImWrite(@$"{folder}\map_2048.png", img2048);
         
         // 保存1024
         var img1024 = Put(1024);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8\map_1024.png", img1024);
+        Cv2.ImWrite(@$"{folder}\map_1024.png", img1024);
         
         // 保存256
         var grayImage = new Mat();
         Cv2.CvtColor(img2048.Resize(new Size(img2048.Width / 8, img2048.Height / 8), 0, 0, InterpolationFlags.Cubic), grayImage, ColorConversionCodes.BGR2GRAY);
-        Cv2.ImWrite(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\5.8\map_256.png", grayImage);
+        Cv2.ImWrite(@$"{folder}\Teyvat_0_256.png", grayImage);
 
     }
     

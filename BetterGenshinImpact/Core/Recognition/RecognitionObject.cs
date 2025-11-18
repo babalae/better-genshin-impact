@@ -84,6 +84,16 @@ public class RecognitionObject
     /// </summary>
     public int MaxMatchCount { get; set; } = -1;
 
+    /// <summary>
+    /// 是否启用二值化后模板匹配
+    /// </summary>
+    public bool UseBinaryMatch { get; set; } = false;
+
+    /// <summary>
+    /// 二值化阈值，默认 128
+    /// </summary>
+    public int BinaryThreshold { get; set; } = 128;
+
     public RecognitionObject InitTemplate()
     {
         if (TemplateImageMat != null && TemplateImageGreyMat == null)

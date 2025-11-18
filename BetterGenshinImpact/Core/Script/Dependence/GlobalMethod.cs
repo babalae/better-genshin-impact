@@ -161,6 +161,11 @@ public class GlobalMethod
         _dpi = dpi;
     }
 
+    public static double[] GetGameMetrics()
+    {
+        return [_gameWidth, _gameHeight, _dpi];
+    }
+
     public static void MoveMouseBy(int x, int y)
     {
         var realDpi = TaskContext.Instance().DpiScale;

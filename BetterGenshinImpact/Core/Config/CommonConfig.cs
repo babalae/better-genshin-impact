@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using Wpf.Ui.Controls;
@@ -35,7 +36,7 @@ public partial class CommonConfig : ObservableObject
     ///     UID遮盖是否启用
     /// </summary>
     [ObservableProperty]
-    private bool _screenshotUidCoverEnabled;
+    private bool _screenshotUidCoverEnabled = true;
 
     /// <summary>
     ///     退出时最小化至托盘
@@ -47,7 +48,7 @@ public partial class CommonConfig : ObservableObject
     /// 当前主题类型（新版主题）
     /// </summary>
     [ObservableProperty]
-    private ThemeType _currentThemeType = ThemeType.DarkMica;
+    private ThemeType _currentThemeType = OsVersionHelper.IsWindows11_22523_OrGreater ? ThemeType.DarkMica : ThemeType.DarkNone;
 
     /// <summary>
     /// 主题（旧版主题，兼容性保留）
@@ -72,4 +73,11 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private List<string> _onceHadRunDeviceIdList = new();
+    
+    
+    /// <summary>
+    /// 当前看过的兑换码推送版本
+    /// </summary>
+    [ObservableProperty]
+    private string _redeemCodeFeedsUpdateVersion = "20251013";
 }

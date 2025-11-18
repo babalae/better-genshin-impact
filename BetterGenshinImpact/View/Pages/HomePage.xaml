@@ -1,4 +1,4 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.HomePage"
+<Page x:Class="BetterGenshinImpact.View.Pages.HomePage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -26,10 +26,16 @@
     <StackPanel Margin="42,16,42,12">
 
         <Border Height="200" CornerRadius="8">
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <ui:MenuItem Header="更换背景图片" Command="{Binding ChangeBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />
+                    <ui:MenuItem Header="恢复默认图片" Command="{Binding ResetBannerImageCommand}" Icon="{ui:SymbolIcon ArrowCounterclockwise24}" />
+                </ContextMenu>
+            </Border.ContextMenu>
             <Grid>
                 <Border ClipToBounds="True" CornerRadius="8">
                     <Border.Background>
-                        <ImageBrush ImageSource="pack://application:,,,/Resources/Images/banner.jpg"
+                        <ImageBrush ImageSource="{Binding BannerImageSource}"
                                     RenderOptions.BitmapScalingMode="HighQuality"
                                     Stretch="UniformToFill" />
                     </Border.Background>

@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickBuy.Assets;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
@@ -52,6 +53,7 @@ public class QuickBuyTask
 
                 return;
             }
+
             // 点击购买/兑换 右下225x60
             GameCaptureRegion.GameRegionClick((size, scale) => (size.Width - 225 * scale, size.Height - 60 * scale));
             TaskControl.CheckAndSleep(100); // 等待窗口弹出
@@ -77,6 +79,10 @@ public class QuickBuyTask
         catch (Exception e)
         {
             TaskControl.Logger.LogWarning(e.Message);
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
     }
 }

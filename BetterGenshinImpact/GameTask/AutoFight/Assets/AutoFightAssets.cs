@@ -1,7 +1,9 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
 
@@ -11,6 +13,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect TeamRect;
     public List<Rect> AvatarSideIconRectList; // 侧边栏角色头像 非联机状态下
     public List<Rect> AvatarIndexRectList; // 侧边栏角色头像对应的白色块 非联机状态下
+    public List<Rect> AvatarQRectListMap; // 角色头像对应的Q技能图标 
+
     public Rect ERect;
     public Rect ECooldownRect;
     public Rect QRect;
@@ -23,15 +27,9 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public RecognitionObject ArtifactAreaRa;
     public RecognitionObject ExitRa;
     public RecognitionObject ClickAnyCloseTipRa;
-    public RecognitionObject UseCondensedResinRa;
 
-    // 树脂状态
-    public RecognitionObject CondensedResinCountRa;
-    public RecognitionObject FragileResinCountRa;
     // 自动秘境
     // public RecognitionObject LockIconRa; // 锁定辅助图标
-    public RecognitionObject CondensedResinTopIconRa;
-    public RecognitionObject OriginalResinTopIconRa;
 
     public Dictionary<string, string> AvatarCostumeMap;
 
@@ -44,10 +42,22 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
     // 小道具位置
     public Rect GadgetRect;
-    
+
     public RecognitionObject AbnormalIconRa;
 
-    private AutoFightAssets()
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
+    private AutoFightAssets() : base()
+    {
+        Initialization(this.systemInfo);
+    }
+
+    protected AutoFightAssets(ISystemInfo systemInfo) : base(systemInfo)
+    {
+        Initialization(systemInfo);
+    }
+#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
+
+    private void Initialization(ISystemInfo systemInfo)
     {
         TeamRectNoIndex = new Rect(CaptureRect.Width - (int)(355 * AssetScale), (int)(220 * AssetScale),
             (int)((355 - 85) * AssetScale), (int)(465 * AssetScale));
@@ -59,7 +69,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             (int)(41 * AssetScale), (int)(18 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
-        ZCooldownRect = new Rect(CaptureRect.Width - (int)(130 * AssetScale),  (int)(814 * AssetScale),
+        ZCooldownRect = new Rect(CaptureRect.Width - (int)(130 * AssetScale), (int)(814 * AssetScale),
             (int)(60 * AssetScale), (int)(24 * AssetScale));
         // 小道具位置 1920-133,800,60,50
         GadgetRect = new Rect(CaptureRect.Width - (int)(133 * AssetScale), (int)(800 * AssetScale),
@@ -76,6 +86,14 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(352 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(448 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
             new Rect(CaptureRect.Width - (int)(61 * AssetScale), (int)(544 * AssetScale), (int)(28 * AssetScale), (int)(24 * AssetScale)),
+        ];
+
+        AvatarQRectListMap =
+        [
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(216 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(316 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(416 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
+            new Rect(CaptureRect.Width - (int)(336 * AssetScale), (int)(516 * AssetScale), (int)(64 * AssetScale), (int)(84 * AssetScale)),
         ];
 
         AvatarSideIconRectList =
@@ -162,7 +180,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "1P",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "1p.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "1p.png", this.systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 7),
             DrawOnWindow = false
         }.InitTemplate();
@@ -171,7 +189,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "P",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "p.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "p.png", this.systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(CaptureRect.Width / 12.5), CaptureRect.Height / 5, (int)(CaptureRect.Width / 12.5), CaptureRect.Height / 2 - CaptureRect.Width / 7),
             DrawOnWindow = false
         }.InitTemplate();
@@ -180,14 +198,14 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "WandererIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon.png", this.systemInfo),
             DrawOnWindow = false
         }.InitTemplate();
         WandererIconNoActiveRa = new RecognitionObject
         {
             Name = "WandererIconNoActive",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon_no_active.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "wanderer_icon_no_active.png", this.systemInfo),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -196,7 +214,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "Confirm",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "confirm.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "confirm.png", this.systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
@@ -204,8 +222,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "ArtifactArea",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "artifact_flower_logo.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2,0,CaptureRect.Width / 2, CaptureRect.Height),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "artifact_flower_logo.png", this.systemInfo),
+            RegionOfInterest = new Rect(CaptureRect.Width / 2, 0, CaptureRect.Width / 2, CaptureRect.Height),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -214,17 +232,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "ClickAnyCloseTip",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "click_any_close_tip.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "click_any_close_tip.png", this.systemInfo),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height / 2),
-            DrawOnWindow = false
-        }.InitTemplate();
-
-        UseCondensedResinRa = new RecognitionObject
-        {
-            Name = "UseCondensedResin",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "use_condensed_resin.png"),
-            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -232,61 +241,28 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
         {
             Name = "Exit",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "exit.png"),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "exit.png", this.systemInfo),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
-        CondensedResinCountRa = new RecognitionObject
-        {
-            Name = "CondensedResinCount",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_count.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 3 * 2, CaptureRect.Width / 2, CaptureRect.Height / 3),
-            DrawOnWindow = false
-        }.InitTemplate();
-        FragileResinCountRa = new RecognitionObject
-        {
-            Name = "FragileResinCount",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "fragile_resin_count.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 3 * 2, CaptureRect.Width / 2, CaptureRect.Height / 3),
-            DrawOnWindow = false
-        }.InitTemplate();
-        
         // 自动秘境
         // LockIconRa = new RecognitionObject
         // {
         //     Name = "LockIcon",
         //     RecognitionType = RecognitionTypes.TemplateMatch,
-        //     TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "lock_icon.png"),
+        //     TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "lock_icon.png", this.systemInfo),
         //     RegionOfInterest = new Rect(CaptureRect.Width - (int)(215 * AssetScale), 0, (int)(215 * AssetScale), (int)(80 * AssetScale)),
         //     DrawOnWindow = false
         // }.InitTemplate();
-        CondensedResinTopIconRa = new RecognitionObject
-        {
-            Name = "CondensedResinTopIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "condensed_resin_top_icon.png"),
-            RegionOfInterest = new Rect((int)(1270 * AssetScale), (int)(25 * AssetScale), (int)(520 * AssetScale), (int)(45 * AssetScale)),
-            DrawOnWindow = false
-        }.InitTemplate();
-        OriginalResinTopIconRa = new RecognitionObject
-        {
-            Name = "OriginalResinTopIcon",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "original_resin_top_icon.png"),
-            RegionOfInterest = new Rect(CaptureRect.Width - (int)(450 * AssetScale), (int)(25 * AssetScale), (int)(265 * AssetScale), (int)(45 * AssetScale)),
-            DrawOnWindow = false
-        }.InitTemplate();
+
         AbnormalIconRa = new RecognitionObject
         {
             Name = "AbnormalIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "abnormal_icon.png"),
-            RegionOfInterest = new Rect(0,(int)(CaptureRect.Height*0.08), (int)(CaptureRect.Width*0.04), (int)(CaptureRect.Height*0.07)),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", "abnormal_icon.png", this.systemInfo),
+            RegionOfInterest = new Rect(0, (int)(CaptureRect.Height * 0.08), (int)(CaptureRect.Width * 0.04), (int)(CaptureRect.Height * 0.07)),
             DrawOnWindow = false
         }.InitTemplate();
-        
     }
 }

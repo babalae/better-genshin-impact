@@ -43,10 +43,12 @@ public class CombatScriptHandler : IActionHandler
             try
             {
                 // 通用化战斗策略
-                foreach (var command in combatScript.CombatCommands)
+                for (var i = 0; i < combatScript.CombatCommands.Count; i++)
                 {
+                    var command = combatScript.CombatCommands[i];
+                    var lastCommand = i == 0 ? command : combatScript.CombatCommands[i - 1];
                     ct.ThrowIfCancellationRequested();
-                    command.Execute(combatScenes);
+                    command.Execute(combatScenes, lastCommand);
                 }
             }
             catch (RetryException e)

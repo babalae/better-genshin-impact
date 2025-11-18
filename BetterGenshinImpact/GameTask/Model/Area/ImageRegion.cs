@@ -124,8 +124,17 @@ public class ImageRegion : Region
             }
             else
             {
+                if (ro.UseBinaryMatch)
+                {
+                    roi = new Mat();
+                    Cv2.Threshold(CacheGreyMat, roi, ro.BinaryThreshold, 255, ThresholdTypes.Binary);
+                }
+                else
+                {
+                    roi = CacheGreyMat;
+                }
+                
                 template = ro.TemplateImageGreyMat;
-                roi = CacheGreyMat;
             }
 
             if (template == null)
@@ -193,7 +202,7 @@ public class ImageRegion : Region
             {
                 foreach (var replaceStr in entry.Value)
                 {
-                    text = text.Replace(entry.Key, replaceStr);
+                    text = text.Replace(replaceStr, entry.Key);
                 }
             }
 
@@ -417,6 +426,13 @@ public class ImageRegion : Region
                 {
                     var newRa = this.Derive(r.Rect.BoundingRect() + ro.RegionOfInterest.Location);
                     newRa.Text = r.Text;
+                    foreach (var entry in ro.ReplaceDictionary)
+                    {
+                        foreach (var replaceStr in entry.Value)
+                        {
+                            newRa.Text = newRa.Text.Replace(replaceStr, entry.Key);
+                        }
+                    }
                     return newRa;
                 }).ToList();
                 if (ro.DrawOnWindow && !string.IsNullOrEmpty(ro.Name))

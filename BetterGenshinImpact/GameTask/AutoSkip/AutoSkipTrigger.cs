@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -112,7 +113,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情默认暂停点击关键词列表失败");
-            MessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！");
+            ThemedMessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！");
         }
 
         try
@@ -126,7 +127,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情暂停点击关键词列表失败");
-            MessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！");
+            ThemedMessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！");
         }
 
         try
@@ -140,7 +141,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取自动剧情优先点击选项列表失败");
-            MessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！");
+            ThemedMessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！");
         }
     }
 
@@ -179,6 +180,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
             if (_config.ClosePopupPagedEnabled)
             {
                 ClosePopupPage(content);
+                CloseItemPopup(content);
+                CloseCharacterPopup(content);
             }
 
             // 自动剧情点击3s内判断
@@ -712,6 +715,133 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
         });
     }
+    
+    private DateTime _prevCloseItemTime = DateTime.MinValue;
+    /// <summary>
+    /// 关闭剧情中弹出的道具页面
+    /// </summary>
+    /// <param name="content"></param>
+    private void CloseItemPopup(CaptureContent content)
+    {
+        if ((DateTime.Now - _prevCloseItemTime).TotalMilliseconds < 1000)
+        {
+            return; 
+        }
+        
+        if (Bv.IsInMainUi(content.CaptureRectArea))  
+        {  
+            return;  
+        }  
+        //屏幕底部中间，实心三角的位置
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        using var croppedRegion = content.CaptureRectArea.DeriveCrop(900 * scale, 960 * scale, 120 * scale, 120 * scale);
+
+        using var hsv = new Mat();
+        Cv2.CvtColor(croppedRegion.SrcMat, hsv, ColorConversionCodes.BGR2HSV);
+
+        using var yellowMask = new Mat();
+        using var buleMask = new Mat();
+        Cv2.InRange(hsv, new Scalar(0, 222, 173), new Scalar(33, 255, 255), yellowMask);
+        Cv2.InRange(hsv, new Scalar(87, 131, 142), new Scalar(124, 255, 255), buleMask);  //活动玩法介绍会有出现蓝色三角，但不一定在对话流程中出现，先加上
+
+        Cv2.FindContours(yellowMask, out var yellowContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+        Cv2.FindContours(buleMask, out var buleMaskContours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+        var mergedContours = yellowContours.Concat(buleMaskContours).ToArray();
+        foreach (var contour in mergedContours)
+        {
+            var area = Cv2.ContourArea(contour);
+            var approx = Cv2.ApproxPolyDP(contour, 0.04 * Cv2.ArcLength(contour, true), true);
+            
+            if (area < 10 || area > 50 || approx.Length != 3) continue; 
+
+            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            {
+                croppedRegion.Derive(Cv2.BoundingRect(approx)).BackgroundClick();
+            }
+            else
+            {
+                croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
+            }
+            _prevCloseItemTime = DateTime.Now;
+            _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// 关闭剧情中弹出的初见角色信息弹窗
+    /// </summary>
+    /// <param name="content"></param>
+    private void CloseCharacterPopup(CaptureContent content)
+    {
+        using var srcMat = content.CaptureRectArea.SrcMat.Clone();
+        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        // 把被角色头像遮挡的矩形闭合（假设矩形存在）
+        Cv2.Rectangle(srcMat, new Rect((int)(240 * scale), (int)(395 * scale), (int)(300 * scale), (int)(50 * scale)), new Scalar(229, 241, 245), -1);
+        Cv2.Rectangle(srcMat, new Rect((int)(290 * scale), (int)(660 * scale), (int)(210 * scale), (int)(40 * scale)), new Scalar(101, 82, 74), -1);
+        
+        using var hsv = new Mat();
+        Cv2.CvtColor(srcMat, hsv, ColorConversionCodes.BGR2HSV);
+
+        // 颜色阈值分割 - 背景色中的黄跟藏青
+        using var maskLight = new Mat();
+        using var maskDark = new Mat();
+        Cv2.InRange(hsv, new Scalar(18, 16, 234), new Scalar(27, 19, 250), maskLight);
+        Cv2.InRange(hsv, new Scalar(101, 57, 95), new Scalar(118, 85, 106), maskDark);
+
+        // 合并掩码并进行形态学操作 - 减少背景中的噪点
+        using var combinedMask = new Mat();
+        using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(21, 21));
+        Cv2.BitwiseOr(maskLight, maskDark, combinedMask);
+        Cv2.MorphologyEx(combinedMask, combinedMask, MorphTypes.Close, kernel);
+        Cv2.MorphologyEx(combinedMask, combinedMask, MorphTypes.Open, kernel);
+
+        // 查找轮廓  
+        Cv2.FindContours(combinedMask, out var contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+        var imgHeight = srcMat.Height;
+        var imgWidth = srcMat.Width;
+
+        // 筛选弹窗轮廓 
+        foreach (var contour in contours)
+        {
+            var bbox = Cv2.BoundingRect(contour);
+            if (bbox.Height == 0) continue;
+
+            // 面积检查
+            var areaRatio = (double)(bbox.Width * bbox.Height) / (imgWidth * imgHeight);
+            if (areaRatio <= 0.24 || areaRatio >= 0.3) continue; // 弹窗高约300，面积比约等于0.27
+            _logger.LogDebug("自动剧情：关闭角色弹窗-面积检查通过");
+
+            // 宽高比检查
+            var aspectRatio = (double)bbox.Width / bbox.Height;
+            if (aspectRatio < 5.6 || aspectRatio > 7.2) continue;
+            _logger.LogDebug("自动剧情：关闭角色弹窗-宽高比检查通过");
+
+            // 位置检查
+            if (bbox.Y <= imgHeight * 0.3 || bbox.Y + bbox.Height >= imgHeight * 0.7) continue;
+            _logger.LogDebug("自动剧情：关闭角色弹窗-位置检查通过");
+
+
+            // 检查是否包含两种颜色  
+            var lightCount = Cv2.CountNonZero(new Mat(maskLight, bbox));
+            var darkCount = Cv2.CountNonZero(new Mat(maskDark, bbox));
+            if (lightCount <= 0 || darkCount <= 0) continue;
+
+            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            {
+                content.CaptureRectArea.Derive(bbox).BackgroundClick();
+            }
+            else
+            {
+                content.CaptureRectArea.ClickTo(100, 100); // 点击角色横幅外的区域才能跳过
+            }
+
+            _logger.LogInformation("自动剧情：关闭角色弹窗");
+            return;
+        }
+    }
 
     private bool SubmitGoods(CaptureContent content)
     {
@@ -720,7 +850,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             // var rects = MatchTemplateHelper.MatchOnePicForOnePic(content.CaptureRectArea.SrcMat.CvtColor(ColorConversionCodes.BGRA2BGR),
             //     _autoSkipAssets.SubmitGoodsMat, TemplateMatchModes.SqDiffNormed, null, 0.9, 4);
-            var rects = ContoursHelper.FindSpecifyColorRects(content.CaptureRectArea.SrcMat, new Scalar(233, 229, 220), 100, 20);
+            var param = new MorphologyParam(new Size(5,5), MorphTypes.Close, 2);
+            var rects = ContoursHelper.FindSpecifyColorRects(content.CaptureRectArea.SrcMat, new Scalar(233, 229, 220), 100, 20, param);
             if (rects.Count == 0)
             {
                 return false;
