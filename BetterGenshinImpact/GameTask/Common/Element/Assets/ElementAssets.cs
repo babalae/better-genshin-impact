@@ -87,6 +87,8 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject FingerIconRo;
 
     public RecognitionObject LeylineDisorderIconRo;
+    
+    public RecognitionObject MiMenuRo;
 
     public RecognitionObject Index1;
     public RecognitionObject Index2;
@@ -678,7 +680,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = new Rect(0, 0, (int)(200 * AssetScale), (int)(200 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
-
+        
+        MiMenuRo = new RecognitionObject
+        {   
+            Name = "MiMenu",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "mi_menu.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width *8/10, CaptureRect.Height *8/10, CaptureRect.Width *2/10, CaptureRect.Height *2/10),
+            DrawOnWindow = false
+        }.InitTemplate();
 
         Rect partyRect = new Rect(CaptureRect.Width - (int)(65 * AssetScale), (int)(155 * AssetScale), (int)(35 * AssetScale), (int)(600 * AssetScale));
         // 1 2 3 4 按键
