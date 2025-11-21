@@ -101,20 +101,14 @@ public class GeniusInvokationControl
 
     public void CheckTask()
     {
-        NewRetry.Do(() =>
+        if (_ct is { IsCancellationRequested: true })
         {
-            if (_ct is { IsCancellationRequested: true })
-            {
-                return;
-            }
+            throw new TaskCanceledException("任务取消");
+        }
 
-            TaskControl.TrySuspend();
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
-        }, TimeSpan.FromSeconds(1), 100);
+        // The new PausableDelayManager already handles suspend checking and window focus
+        // We can just trigger it with a minimal sleep
+        TaskControl.CheckAndSleep(0);
 
         if (_ct is { IsCancellationRequested: true })
         {
