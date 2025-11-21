@@ -1,0 +1,435 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using BetterGenshinImpact.Model.MaskMap;
+using BetterGenshinImpact.Service;
+
+namespace BetterGenshinImpact.View.Controls;
+
+/// <summary>
+/// 高性能点位绘制控件，使用 DrawingVisual
+/// </summary>
+public class PointsCanvas : FrameworkElement
+{
+    private readonly VisualCollection _children;
+    private readonly DrawingVisual _drawingVisual;
+    private readonly Dictionary<string, Brush> _colorBrushCache;
+    private readonly Random _random;
+
+    // 私有字段
+    private ObservableCollection<MaskMapPoint> _points;
+    private List<MaskMapPoint> _allPoints = new();
+    private Dictionary<string, MaskMapPointLabel> _labelMap = new();
+    private Rect _viewportRect = Rect.Empty;
+
+    #region 依赖属性
+
+    public static readonly DependencyProperty PointClickCommandProperty =
+        DependencyProperty.Register(
+            nameof(PointClickCommand),
+            typeof(ICommand),
+            typeof(PointsCanvas),
+            new PropertyMetadata(null));
+
+    public static readonly DependencyProperty PointRightClickCommandProperty =
+        DependencyProperty.Register(
+            nameof(PointRightClickCommand),
+            typeof(ICommand),
+            typeof(PointsCanvas),
+            new PropertyMetadata(null));
+
+    public static readonly DependencyProperty PointHoverCommandProperty =
+        DependencyProperty.Register(
+            nameof(PointHoverCommand),
+            typeof(ICommand),
+            typeof(PointsCanvas),
+            new PropertyMetadata(null));
+
+    /// <summary>
+    /// 点击命令
+    /// </summary>
+    public ICommand PointClickCommand
+    {
+        get => (ICommand)GetValue(PointClickCommandProperty);
+        set => SetValue(PointClickCommandProperty, value);
+    }
+
+    /// <summary>
+    /// 右键点击命令
+    /// </summary>
+    public ICommand PointRightClickCommand
+    {
+        get => (ICommand)GetValue(PointRightClickCommandProperty);
+        set => SetValue(PointRightClickCommandProperty, value);
+    }
+
+    /// <summary>
+    /// 悬停命令
+    /// </summary>
+    public ICommand PointHoverCommand
+    {
+        get => (ICommand)GetValue(PointHoverCommandProperty);
+        set => SetValue(PointHoverCommandProperty, value);
+    }
+
+    #endregion
+
+    public PointsCanvas()
+    {
+        _children = new VisualCollection(this);
+        _drawingVisual = new DrawingVisual();
+        _children.Add(_drawingVisual);
+        _colorBrushCache = new Dictionary<string, Brush>();
+        _random = new Random();
+
+        // 注册鼠标事件
+        MouseLeftButtonDown += OnMouseLeftButtonDown;
+        MouseRightButtonDown += OnMouseRightButtonDown;
+        MouseMove += OnMouseMove;
+        
+        // 启用命中测试
+        IsHitTestVisible = true;
+    }
+
+    #region 集合和属性变更处理
+
+    private void OnPointsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (MaskMapPoint point in e.OldItems)
+                UnsubscribePoint(point);
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (MaskMapPoint point in e.NewItems)
+                SubscribePoint(point);
+        }
+
+        // 更新内部点位列表
+        _allPoints = _points?.ToList() ?? new List<MaskMapPoint>();
+        RenderPoints();
+    }
+
+    private void SubscribePoint(MaskMapPoint point)
+    {
+        if (point is INotifyPropertyChanged notifyPoint)
+        {
+            notifyPoint.PropertyChanged += OnPointPropertyChanged;
+        }
+    }
+
+    private void UnsubscribePoint(MaskMapPoint point)
+    {
+        if (point is INotifyPropertyChanged notifyPoint)
+        {
+            notifyPoint.PropertyChanged -= OnPointPropertyChanged;
+        }
+    }
+
+    private void OnPointPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        // 点位属性变化时重绘
+        // 可以根据 e.PropertyName 做更细粒度的优化
+        RenderPoints();
+    }
+
+    #endregion
+
+    #region Visual 相关
+
+    protected override int VisualChildrenCount => _children.Count;
+
+    protected override Visual GetVisualChild(int index)
+    {
+        if (index < 0 || index >= _children.Count)
+            throw new ArgumentOutOfRangeException(nameof(index));
+        return _children[index];
+    }
+
+    #endregion
+
+    #region 渲染逻辑
+
+    /// <summary>
+    /// 渲染所有点位
+    /// </summary>
+    private void RenderPoints()
+    {
+        using (var dc = _drawingVisual.RenderOpen())
+        {
+            if (_allPoints == null || _allPoints.Count == 0)
+                return;
+
+            // 如果没有设置视口，则渲染所有点
+            if (_viewportRect.IsEmpty)
+            {
+                foreach (var point in _allPoints)
+                {
+                    DrawPoint(dc, point);
+                }
+            }
+            else
+            {
+                // 扩展可视区域，避免边缘闪烁
+                var expandedViewport = _viewportRect;
+                expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
+
+                // 只渲染可视区域内的点
+                foreach (var point in _allPoints)
+                {
+                    if (expandedViewport.Contains(point.X, point.Y))
+                    {
+                        DrawPoint(dc, point);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 绘制单个点
+    /// </summary>
+    private void DrawPoint(DrawingContext dc, MaskMapPoint point)
+    {
+        var centerPoint = new Point(point.X, point.Y);
+        var rect = new Rect(
+            point.X - MaskMapPointStatic.Width / 2.0,
+            point.Y - MaskMapPointStatic.Height / 2.0,
+            MaskMapPointStatic.Width,
+            MaskMapPointStatic.Height);
+
+        // 获取点位标签
+        if (_labelMap.TryGetValue(point.LabelId, out var label))
+        {
+            // 尝试从缓存获取图片
+            var image = PointImageCacheManager.Instance.GetImage(label.LabelId, label.IconUrl);
+            
+            if (image != null)
+            {
+                // 绘制图片
+                dc.DrawImage(image, rect);
+            }
+            else
+            {
+                // 绘制颜色圆点
+                var brush = GetColorBrush(label);
+                dc.DrawEllipse(brush, null, centerPoint, 
+                    MaskMapPointStatic.Width / 2.0, 
+                    MaskMapPointStatic.Height / 2.0);
+            }
+        }
+        else
+        {
+            // 没有标签信息，绘制默认随机颜色圆点
+            var color = GenerateRandomColor(point.Id);
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            
+            dc.DrawEllipse(brush, null, centerPoint, 
+                MaskMapPointStatic.Width / 2.0, 
+                MaskMapPointStatic.Height / 2.0);
+        }
+    }
+
+    /// <summary>
+    /// 获取颜色画刷（带缓存）
+    /// </summary>
+    private Brush GetColorBrush(MaskMapPointLabel label)
+    {
+        if (_colorBrushCache.TryGetValue(label.LabelId, out var cachedBrush))
+            return cachedBrush;
+
+        Color color;
+        if (label.Color.HasValue)
+        {
+            var c = label.Color.Value;
+            color = Color.FromArgb(c.A, c.R, c.G, c.B);
+        }
+        else
+        {
+            color = GenerateRandomColor(label.LabelId);
+        }
+
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        _colorBrushCache[label.LabelId] = brush;
+
+        return brush;
+    }
+
+    /// <summary>
+    /// 根据字符串生成一致的随机颜色
+    /// </summary>
+    private Color GenerateRandomColor(string seed)
+    {
+        var hash = seed?.GetHashCode() ?? 0;
+        var random = new Random(hash);
+        return Color.FromRgb(
+            (byte)random.Next(80, 256),
+            (byte)random.Next(80, 256),
+            (byte)random.Next(80, 256));
+    }
+
+    #endregion
+
+    #region 鼠标交互
+
+    private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        var point = HitTest(position);
+
+        if (point != null && PointClickCommand?.CanExecute(point) == true)
+        {
+            PointClickCommand.Execute(point);
+            e.Handled = true;
+        }
+    }
+
+    private void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        var point = HitTest(position);
+
+        if (point != null && PointRightClickCommand?.CanExecute(point) == true)
+        {
+            PointRightClickCommand.Execute(point);
+            e.Handled = true;
+        }
+    }
+
+    private void OnMouseMove(object sender, MouseEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        var point = HitTest(position);
+
+        if (point != null)
+        {
+            Cursor = Cursors.Hand;
+            
+            if (PointHoverCommand?.CanExecute(point) == true)
+            {
+                PointHoverCommand.Execute(point);
+            }
+        }
+        else
+        {
+            Cursor = Cursors.Arrow;
+        }
+    }
+
+    /// <summary>
+    /// 命中测试 - 查找被点击的点位
+    /// </summary>
+    private MaskMapPoint HitTest(Point position)
+    {
+        if (_allPoints == null || _allPoints.Count == 0)
+            return null;
+
+        // 从后往前查找，优先返回上层的点
+        for (int i = _allPoints.Count - 1; i >= 0; i--)
+        {
+            var point = _allPoints[i];
+            
+            // 如果设置了视口，只检测可视区域内的点
+            if (!_viewportRect.IsEmpty && !_viewportRect.Contains(point.X, point.Y))
+                continue;
+
+            if (point.Contains(position.X, position.Y))
+                return point;
+        }
+
+        return null;
+    }
+
+    #endregion
+
+    #region 公共方法
+
+    /// <summary>
+    /// 更新点位数据
+    /// </summary>
+    public void UpdatePoints(ObservableCollection<MaskMapPoint> points)
+    {
+        // 取消订阅旧集合
+        if (_points != null)
+        {
+            _points.CollectionChanged -= OnPointsCollectionChanged;
+            foreach (var point in _points)
+                UnsubscribePoint(point);
+        }
+
+        // 设置新集合
+        _points = points;
+
+        // 订阅新集合
+        if (_points != null)
+        {
+            _points.CollectionChanged += OnPointsCollectionChanged;
+            foreach (var point in _points)
+                SubscribePoint(point);
+            
+            _allPoints = _points.ToList();
+        }
+        else
+        {
+            _allPoints.Clear();
+        }
+
+        RenderPoints();
+    }
+
+    /// <summary>
+    /// 更新标签数据
+    /// </summary>
+    public void UpdateLabels(IEnumerable<MaskMapPointLabel> labels)
+    {
+        if (labels != null)
+        {
+            _labelMap = labels.ToDictionary(l => l.LabelId, l => l);
+            _colorBrushCache.Clear(); // 清除颜色缓存
+        }
+        else
+        {
+            _labelMap.Clear();
+            _colorBrushCache.Clear();
+        }
+
+        RenderPoints();
+    }
+
+    /// <summary>
+    /// 更新可视区域
+    /// </summary>
+    public void UpdateViewport(double x, double y, double width, double height)
+    {
+        _viewportRect = new Rect(x, y, width, height);
+        RenderPoints();
+    }
+
+    /// <summary>
+    /// 强制重绘
+    /// </summary>
+    public void Refresh()
+    {
+        RenderPoints();
+    }
+
+    /// <summary>
+    /// 获取指定位置的点位
+    /// </summary>
+    public MaskMapPoint GetPointAt(double x, double y)
+    {
+        return HitTest(new Point(x, y));
+    }
+
+    #endregion
+}

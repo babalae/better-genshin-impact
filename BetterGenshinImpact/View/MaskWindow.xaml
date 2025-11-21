@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+        xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -272,6 +273,11 @@
                     </TextBlock.Foreground>
                 </TextBlock>
             </Border>
+            
+            <controls:PointsCanvas Grid.Row="0" Grid.Column="0" x:Name="PointsCanvasControl"
+                                        PointClickCommand="{Binding PointClickCommand}"
+                                        PointRightClickCommand="{Binding PointRightClickCommand}"
+                                        PointHoverCommand="{Binding PointHoverCommand}" />
         </Grid>
     </AdornerDecorator>
 

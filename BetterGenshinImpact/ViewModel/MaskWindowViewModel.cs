@@ -12,7 +12,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Model.MaskMap;
 using Vanara.PInvoke;
+using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -25,6 +27,9 @@ namespace BetterGenshinImpact.ViewModel
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private string _fps = "0";
+        
+        public ObservableCollection<MaskMapPoint> Points { get; } = new ObservableCollection<MaskMapPoint>();
+
 
         public MaskWindowViewModel()
         {
@@ -94,6 +99,34 @@ namespace BetterGenshinImpact.ViewModel
                         Fps = $"{result.Fps:0}";
                     });
                 });
+            }
+        }
+        
+        [RelayCommand]
+        private void OnPointClick(MaskMapPoint? point)
+        {
+            if (point != null)
+            {
+                // 在这里触发 UI 或逻辑（示例：弹窗）
+                MessageBox.Show($"点击了点: {point.Id}");
+            }
+        }
+
+        [RelayCommand]
+        private void OnPointRightClick(MaskMapPoint? point)
+        {
+            if (point != null)
+            {
+                // 自定义右键逻辑
+            }
+        }
+
+        [RelayCommand]
+        private void OnPointHover(MaskMapPoint? point)
+        {
+            if (point != null)
+            {
+                // 悬停逻辑
             }
         }
     }

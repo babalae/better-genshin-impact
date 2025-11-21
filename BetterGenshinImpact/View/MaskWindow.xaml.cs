@@ -8,6 +8,8 @@ using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -18,6 +20,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.Genshin.Settings2;
+using BetterGenshinImpact.Model.MaskMap;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -143,6 +146,26 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
+        
+        // 设置标签数据
+        var labels = new List<MaskMapPointLabel>
+        {
+            new() { LabelId = "1", Name = "宝箱" },
+            new() { LabelId = "2", Name = "敌人" },
+            // ... 更多标签
+        };
+        PointsCanvasControl.UpdateLabels(labels);
+    
+        // 设置点位数据
+        var points = new ObservableCollection<MaskMapPoint>
+        {
+            new() { Id = "1", X = 100, Y = 200, LabelId = "1" },
+            new() { Id = "2", X = 300, Y = 400, LabelId = "2" },
+            // ... 更多点位
+        };
+        PointsCanvasControl.UpdatePoints(points);
+        
+        PointsCanvasControl.UpdateViewport(0, 0, 1920, 1080);
     }
 
     private void PrintSystemInfo()
