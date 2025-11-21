@@ -159,8 +159,9 @@ public partial class MaskWindow : Window
         // 设置点位数据
         var points = new ObservableCollection<MaskMapPoint>
         {
-            new() { Id = "1", X = 100, Y = 200, LabelId = "1" },
-            new() { Id = "2", X = 300, Y = 400, LabelId = "2" },
+            new() { Id = "1", X = 3750, Y = 1500, LabelId = "1" },
+            new() { Id = "2", X = 3500, Y = 1300, LabelId = "2" },
+            new() { Id = "2", X = 3500, Y = 1400, LabelId = "2" },
             // ... 更多点位
         };
         PointsCanvasControl.UpdatePoints(points);

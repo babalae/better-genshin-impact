@@ -66,7 +66,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
         // 1.判断是否在地图界面
         content.CaptureRectArea.Find(_assets.MapScaleButtonRo, _ =>
         {
-            IsExclusive = true;
+            // IsExclusive = true;
 
             // 2. 判断是否有传送按钮
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);

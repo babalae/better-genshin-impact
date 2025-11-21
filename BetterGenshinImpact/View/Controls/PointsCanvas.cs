@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -412,6 +413,7 @@ public class PointsCanvas : FrameworkElement
     public void UpdateViewport(double x, double y, double width, double height)
     {
         _viewportRect = new Rect(x, y, width, height);
+        Debug.WriteLine($"Viewport updated: {_viewportRect}");
         RenderPoints();
     }
 
