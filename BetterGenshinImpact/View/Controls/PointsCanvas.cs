@@ -116,7 +116,7 @@ public class PointsCanvas : FrameworkElement
 
         // 更新内部点位列表
         _allPoints = _points?.ToList() ?? new List<MaskMapPoint>();
-        RenderPoints();
+        Refresh();
     }
 
     private void SubscribePoint(MaskMapPoint point)
@@ -139,7 +139,7 @@ public class PointsCanvas : FrameworkElement
     {
         // 点位属性变化时重绘
         // 可以根据 e.PropertyName 做更细粒度的优化
-        RenderPoints();
+        Refresh();
     }
 
     #endregion
@@ -164,32 +164,35 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     private void RenderPoints()
     {
-        using (var dc = _drawingVisual.RenderOpen())
+        using var dc = _drawingVisual.RenderOpen();
+        if (_allPoints.Count == 0)
         {
-            if (_allPoints == null || _allPoints.Count == 0)
+            return;
+        }
+
+        if (!_viewportRect.IsEmpty)
+        {
+            // 扩展可视区域，避免边缘闪烁
+            var expandedViewport = _viewportRect;
+            expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
+
+            var aw = ActualWidth;
+            var ah = ActualHeight;
+            if (aw <= 0 || ah <= 0)
+            {
                 return;
-
-            // 如果没有设置视口，则渲染所有点
-            if (_viewportRect.IsEmpty)
-            {
-                foreach (var point in _allPoints)
-                {
-                    DrawPoint(dc, point);
-                }
             }
-            else
-            {
-                // 扩展可视区域，避免边缘闪烁
-                var expandedViewport = _viewportRect;
-                expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
 
-                // 只渲染可视区域内的点
-                foreach (var point in _allPoints)
+            var scaleX = aw / _viewportRect.Width;
+            var scaleY = ah / _viewportRect.Height;
+
+            foreach (var point in _allPoints)
+            {
+                if (expandedViewport.Contains(point.X, point.Y))
                 {
-                    if (expandedViewport.Contains(point.X, point.Y))
-                    {
-                        DrawPoint(dc, point);
-                    }
+                    var localX = (point.X - _viewportRect.X) * scaleX;
+                    var localY = (point.Y - _viewportRect.Y) * scaleY;
+                    DrawPoint(dc, point, localX, localY, MaskMapPointStatic.Width, MaskMapPointStatic.Height);
                 }
             }
         }
@@ -198,21 +201,20 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 绘制单个点
     /// </summary>
-    private void DrawPoint(DrawingContext dc, MaskMapPoint point)
+    private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
     {
-        var centerPoint = new Point(point.X, point.Y);
         var rect = new Rect(
-            point.X - MaskMapPointStatic.Width / 2.0,
-            point.Y - MaskMapPointStatic.Height / 2.0,
-            MaskMapPointStatic.Width,
-            MaskMapPointStatic.Height);
-
+            centerX - width / 2.0,
+            centerY - height / 2.0,
+            width,
+            height);
+        
         // 获取点位标签
         if (_labelMap.TryGetValue(point.LabelId, out var label))
         {
             // 尝试从缓存获取图片
             var image = PointImageCacheManager.Instance.GetImage(label.LabelId, label.IconUrl);
-            
+
             if (image != null)
             {
                 // 绘制图片
@@ -222,9 +224,7 @@ public class PointsCanvas : FrameworkElement
             {
                 // 绘制颜色圆点
                 var brush = GetColorBrush(label);
-                dc.DrawEllipse(brush, null, centerPoint, 
-                    MaskMapPointStatic.Width / 2.0, 
-                    MaskMapPointStatic.Height / 2.0);
+                dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
             }
         }
         else
@@ -233,10 +233,8 @@ public class PointsCanvas : FrameworkElement
             var color = GenerateRandomColor(point.Id);
             var brush = new SolidColorBrush(color);
             brush.Freeze();
-            
-            dc.DrawEllipse(brush, null, centerPoint, 
-                MaskMapPointStatic.Width / 2.0, 
-                MaskMapPointStatic.Height / 2.0);
+
+            dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
         }
     }
 
@@ -335,16 +333,37 @@ public class PointsCanvas : FrameworkElement
         if (_allPoints == null || _allPoints.Count == 0)
             return null;
 
-        // 从后往前查找，优先返回上层的点
         for (int i = _allPoints.Count - 1; i >= 0; i--)
         {
             var point = _allPoints[i];
-            
-            // 如果设置了视口，只检测可视区域内的点
-            if (!_viewportRect.IsEmpty && !_viewportRect.Contains(point.X, point.Y))
+
+            if (_viewportRect.IsEmpty)
+            {
+                if (point.Contains(position.X, position.Y))
+                    return point;
+                continue;
+            }
+
+            if (!_viewportRect.Contains(point.X, point.Y))
                 continue;
 
-            if (point.Contains(position.X, position.Y))
+            var aw = ActualWidth;
+            var ah = ActualHeight;
+            if (aw <= 0 || ah <= 0)
+            {
+                if (point.Contains(position.X, position.Y))
+                    return point;
+                continue;
+            }
+
+            var scaleX = aw / _viewportRect.Width;
+            var scaleY = ah / _viewportRect.Height;
+            var localX = (point.X - _viewportRect.X) * scaleX;
+            var localY = (point.Y - _viewportRect.Y) * scaleY;
+            var localW = MaskMapPointStatic.Width * scaleX;
+            var localH = MaskMapPointStatic.Height * scaleY;
+            var rect = new Rect(localX - localW / 2.0, localY - localH / 2.0, localW, localH);
+            if (rect.Contains(position))
                 return point;
         }
 
@@ -385,7 +404,7 @@ public class PointsCanvas : FrameworkElement
             _allPoints.Clear();
         }
 
-        RenderPoints();
+        Refresh();
     }
 
     /// <summary>
@@ -404,7 +423,7 @@ public class PointsCanvas : FrameworkElement
             _colorBrushCache.Clear();
         }
 
-        RenderPoints();
+        Refresh();
     }
 
     /// <summary>
@@ -412,9 +431,14 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     public void UpdateViewport(double x, double y, double width, double height)
     {
-        _viewportRect = new Rect(x, y, width, height);
+        var newRect = new Rect(x, y, width, height);
+        if (newRect.Equals(_viewportRect))
+        {
+            return;
+        }
+        _viewportRect = newRect;
         Debug.WriteLine($"Viewport updated: {_viewportRect}");
-        RenderPoints();
+        Refresh();
     }
 
     /// <summary>
@@ -422,7 +446,16 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     public void Refresh()
     {
-        RenderPoints();
+        Visibility = Visibility.Hidden;
+        try
+        {
+            RenderPoints();
+        }
+        finally
+        {
+            Visibility = Visibility.Visible;
+        }
+
     }
 
     /// <summary>

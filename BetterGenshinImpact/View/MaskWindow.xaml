@@ -1,4 +1,4 @@
-﻿<Window x:Class="BetterGenshinImpact.View.MaskWindow"
+<Window x:Class="BetterGenshinImpact.View.MaskWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -274,10 +274,11 @@
                 </TextBlock>
             </Border>
             
-            <controls:PointsCanvas Grid.Row="0" Grid.Column="0" x:Name="PointsCanvasControl"
-                                        PointClickCommand="{Binding PointClickCommand}"
-                                        PointRightClickCommand="{Binding PointRightClickCommand}"
-                                        PointHoverCommand="{Binding PointHoverCommand}" />
+            <controls:PointsCanvas Grid.Row="0" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="6" x:Name="PointsCanvasControl"
+                                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                   PointClickCommand="{Binding PointClickCommand}"
+                                   PointRightClickCommand="{Binding PointRightClickCommand}"
+                                   PointHoverCommand="{Binding PointHoverCommand}" />
         </Grid>
     </AdornerDecorator>
 

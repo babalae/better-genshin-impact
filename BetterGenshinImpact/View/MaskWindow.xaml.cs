@@ -161,12 +161,15 @@ public partial class MaskWindow : Window
         {
             new() { Id = "1", X = 3750, Y = 1500, LabelId = "1" },
             new() { Id = "2", X = 3500, Y = 1300, LabelId = "2" },
-            new() { Id = "2", X = 3500, Y = 1400, LabelId = "2" },
+            new() { Id = "2", X = 100, Y = 200, LabelId = "2" },
             // ... 更多点位
         };
         PointsCanvasControl.UpdatePoints(points);
         
         PointsCanvasControl.UpdateViewport(0, 0, 1920, 1080);
+        // PointsCanvasControl.UpdateViewport(0, 0, 1600, 900);
+        // PointsCanvasControl.UpdateViewport(0, 0, 200, 400);
+
     }
 
     private void PrintSystemInfo()
