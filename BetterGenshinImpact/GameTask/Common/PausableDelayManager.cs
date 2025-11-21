@@ -156,16 +156,15 @@ public class PausableDelayManager
 
     private void CheckAndActivateGameWindow()
     {
+        // If RestoreFocusOnLostEnabled is disabled, we require the game window to be active
+        // Keep retrying until it is active
         if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
         {
-            if (!SystemControl.IsGenshinImpactActiveByProcess())
-            {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
-            }
+            // Just proceed to the retry loop below which will ensure window is active
         }
 
         var count = 0;
+        // Keep retrying until window is active
         while (!SystemControl.IsGenshinImpactActiveByProcess())
         {
             if (count >= 10 && count % 10 == 0)
