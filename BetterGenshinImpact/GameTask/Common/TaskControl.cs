@@ -26,6 +26,14 @@ public class TaskControl
         _delayManager.Sleep(millisecondsTimeout);
     }
 
+    /// <summary>
+    /// Checks and handles pause/suspend state and window focus without sleeping.
+    /// </summary>
+    public static void CheckPauseAndWindowFocus()
+    {
+        _delayManager.CheckPauseAndWindowFocus();
+    }
+
     public static void Sleep(int millisecondsTimeout)
     {
         _delayManager.Sleep(millisecondsTimeout);
@@ -128,7 +136,14 @@ public class TaskControl
             throw new NormalEndException("取消自动任务");
         }
 
-        _delayManager.Sleep(millisecondsTimeout, ct);
+        try
+        {
+            _delayManager.Sleep(millisecondsTimeout, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new NormalEndException("取消自动任务");
+        }
     }
 
     public static async Task Delay(int millisecondsTimeout, CancellationToken ct)
@@ -138,7 +153,14 @@ public class TaskControl
             throw new NormalEndException("取消自动任务");
         }
 
-        await _delayManager.DelayAsync(millisecondsTimeout, ct);
+        try
+        {
+            await _delayManager.DelayAsync(millisecondsTimeout, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new NormalEndException("取消自动任务");
+        }
     }
 
     public static Mat CaptureGameImage(IGameCapture? gameCapture)

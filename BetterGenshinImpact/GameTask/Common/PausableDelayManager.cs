@@ -35,13 +35,27 @@ public class PausableDelayManager
     }
 
     /// <summary>
+    /// Only checks and handles pause/suspend state and window focus without sleeping.
+    /// Useful for ensuring the game is in the correct state before proceeding.
+    /// </summary>
+    public void CheckPauseAndWindowFocus()
+    {
+        CheckAndHandleSuspend();
+        CheckAndActivateGameWindow();
+    }
+
+    /// <summary>
     /// Performs a pausable sleep with cancellation support.
     /// </summary>
     /// <param name="millisecondsTimeout">Time to sleep in milliseconds</param>
     /// <param name="ct">Cancellation token</param>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled</exception>
     public void Sleep(int millisecondsTimeout, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
+        if (ct.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(ct);
+        }
 
         if (millisecondsTimeout <= 0)
         {
@@ -55,7 +69,10 @@ public class PausableDelayManager
         // Perform the actual sleep with periodic pause checks
         SleepWithPauseCheck(millisecondsTimeout, ct);
         
-        ct.ThrowIfCancellationRequested();
+        if (ct.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(ct);
+        }
     }
 
     /// <summary>
@@ -63,9 +80,13 @@ public class PausableDelayManager
     /// </summary>
     /// <param name="millisecondsTimeout">Time to delay in milliseconds</param>
     /// <param name="ct">Cancellation token</param>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled</exception>
     public async Task DelayAsync(int millisecondsTimeout, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
+        if (ct.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(ct);
+        }
 
         if (millisecondsTimeout <= 0)
         {
@@ -79,7 +100,10 @@ public class PausableDelayManager
         // Perform the actual delay with periodic pause checks
         await DelayWithPauseCheckAsync(millisecondsTimeout, ct);
         
-        ct.ThrowIfCancellationRequested();
+        if (ct.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(ct);
+        }
     }
 
     /// <summary>
@@ -170,7 +194,10 @@ public class PausableDelayManager
 
         while (remaining > 0)
         {
-            ct.ThrowIfCancellationRequested();
+            if (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
+            }
 
             var sleepTime = Math.Min(checkInterval, remaining);
             Thread.Sleep(sleepTime);
@@ -195,7 +222,10 @@ public class PausableDelayManager
 
         while (remaining > 0)
         {
-            ct.ThrowIfCancellationRequested();
+            if (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
+            }
 
             var delayTime = Math.Min(checkInterval, remaining);
             await Task.Delay(delayTime, ct);

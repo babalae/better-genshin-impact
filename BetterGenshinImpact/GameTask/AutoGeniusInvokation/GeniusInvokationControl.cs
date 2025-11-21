@@ -106,9 +106,8 @@ public class GeniusInvokationControl
             throw new TaskCanceledException("任务取消");
         }
 
-        // The new PausableDelayManager already handles suspend checking and window focus
-        // We can just trigger it with a minimal sleep
-        TaskControl.CheckAndSleep(0);
+        // Check pause state and window focus without sleeping
+        TaskControl.CheckPauseAndWindowFocus();
 
         if (_ct is { IsCancellationRequested: true })
         {
