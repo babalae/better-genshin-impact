@@ -1,4 +1,6 @@
 using System;
+using System.Windows;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
@@ -24,7 +26,12 @@ public class MapMaskTrigger : ITaskTrigger
     private readonly MapMaskConfig _config = TaskContext.Instance().Config.MapMaskConfig;
     private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
 
+    private readonly TemplateMatchStabilityDetector _detector = new();
+
     private DateTime _prevExecute = DateTime.MinValue;
+
+    // 图像连续稳定次数
+    private int _stableCount = 0;
 
     public void Init()
     {
@@ -45,8 +52,24 @@ public class MapMaskTrigger : ITaskTrigger
             var region = content.CaptureRectArea;
             if (Bv.IsInBigMapUi(region))
             {
-                var rect = MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod).GetBigMapRect(region.CacheGreyMat);
-                UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().PointsCanvasControl.UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height); });
+                if (_detector.IsStable(region.CacheGreyMat))
+                {
+                    _stableCount++;
+                    if (_stableCount >= 20)
+                    {
+                        _stableCount = 0;
+                    }
+                }
+                else
+                {
+                    _stableCount = 0;
+                }
+
+                if (_stableCount == 0)
+                {
+                    var rect = MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod).GetBigMapRect(region.CacheGreyMat);
+                    UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().PointsCanvasControl.UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height); });
+                }
             }
         }
         catch (Exception e)

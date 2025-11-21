@@ -446,16 +446,7 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     public void Refresh()
     {
-        Visibility = Visibility.Hidden;
-        try
-        {
-            RenderPoints();
-        }
-        finally
-        {
-            Visibility = Visibility.Visible;
-        }
-
+        RenderPoints();
     }
 
     /// <summary>
