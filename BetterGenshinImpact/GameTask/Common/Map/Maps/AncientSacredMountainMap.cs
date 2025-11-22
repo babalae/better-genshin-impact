@@ -27,7 +27,6 @@ public class AncientSacredMountainMap : SceneBaseMap
         splitRow: 0,
         splitCol: 0)
     {
-        Layers = BaseMapLayer.LoadLayers(this);
     }
 
 }

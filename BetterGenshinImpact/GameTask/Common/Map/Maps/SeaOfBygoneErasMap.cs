@@ -28,7 +28,6 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         splitRow: 0,
         splitCol: 0)
     {
-        Layers = BaseMapLayer.LoadLayers(this);
     }
 
 }

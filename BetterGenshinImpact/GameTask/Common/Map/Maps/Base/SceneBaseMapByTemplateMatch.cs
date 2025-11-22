@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv.TemplateMatch;
 using OpenCvSharp;
 using BetterGenshinImpact.GameTask.Common.Map.MiniMap;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -15,7 +16,28 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
 {
     private readonly MiniMapPreprocessor _miniMapPreprocessor = new();
     
-    public new List<BaseMapLayerByTemplateMatch> Layers { get; set; } = [];
+    private List<BaseMapLayerByTemplateMatch> _layers = [];
+    private readonly object _layersLock = new();
+    public new List<BaseMapLayerByTemplateMatch> Layers
+    {
+        get
+        {
+            if (_layers.Count == 0)
+            {
+                lock (_layersLock)
+                {
+                    if (_layers.Count == 0)
+                    {
+                        TaskControl.Logger.LogInformation("[TemplateMatch]提瓦特大陆地图模板加载中，可能耗时较久，请耐心等待...");
+                        Layers = BaseMapLayerByTemplateMatch.LoadLayers(this);
+                        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+                    }
+                }
+            }
+            return _layers;
+        }
+        set => _layers = value ?? [];
+    }
     
     public MatchResult PrevSuccessResult;
     
@@ -43,10 +65,10 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         : base(type, mapSize, mapOriginInImageCoordinate, mapImageBlockWidth, splitRow, splitCol)
     {
     }
-
-    protected void SetBaseLayers(List<BaseMapLayer> layers)
+    
+    public override void WarmUp()
     {
-        base.Layers = layers;
+        Console.WriteLine("提前加载地图，层数：" + Layers.Count);
     }
     
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat)

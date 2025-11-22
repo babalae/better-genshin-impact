@@ -32,14 +32,10 @@ public class TeyvatMapTest : SceneBaseMapByTemplateMatch
         splitRow: GameMapRows * 2,
         splitCol: GameMapCols * 2)
     {
-        TaskControl.Logger.LogInformation("[TemplateMatch]提瓦特大陆地图模板加载中，可能耗时较久，请耐心等待...");
-        
-        Layers = BaseMapLayerByTemplateMatch.LoadLayers(this);
-        var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
-
         // 256用于大地图匹配
+        var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
         _teyvat256MapLayer = BaseMapLayer.LoadLayer(this, Path.Combine(layerDir, "Teyvat_0_256_SIFT.kp.bin"), Path.Combine(layerDir, "Teyvat_0_256_SIFT.mat.png"));
-        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+
 
     }
     
