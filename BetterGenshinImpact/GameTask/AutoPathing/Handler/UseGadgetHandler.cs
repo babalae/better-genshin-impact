@@ -35,6 +35,13 @@ public class UseGadgetHandler : IActionHandler
         }
         else
         {
+            double maxWaitSeconds = 100;
+            if (waypointForTrack != null
+                && !string.IsNullOrEmpty(waypointForTrack.ActionParams))
+            {
+                double.TryParse(waypointForTrack.ActionParams, out maxWaitSeconds); // 最大等待时间，单位秒
+            }
+
             var screen = CaptureToRectArea();
             var cd = GetCurrentCd(screen);
             if (cd > 100)
@@ -46,7 +53,17 @@ public class UseGadgetHandler : IActionHandler
             {
                 Logger.LogInformation("小道具正在CD中，等待CD结束 ：{Cd}秒", cd);
                 // 等待小道具CD结束
-                var waitTime = (int)(cd * 1000) + 100; // 等待CD结束后再继续
+                int waitTime; // 等待CD结束后再继续
+                if (cd > maxWaitSeconds)
+                {
+                    waitTime = (int)(maxWaitSeconds * 1000);
+                    Logger.LogInformation("CD过长，使用最大CD：{Max}秒", maxWaitSeconds);
+                }
+                else
+                {
+                    waitTime = (int)(cd * 1000) + 100; // 等待CD结束后再继续
+                }
+
                 await Delay(waitTime, ct);
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
             }
@@ -55,6 +72,7 @@ public class UseGadgetHandler : IActionHandler
                 Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
             }
         }
+
         Logger.LogInformation("使用小道具");
         await Delay(300, ct);
     }
