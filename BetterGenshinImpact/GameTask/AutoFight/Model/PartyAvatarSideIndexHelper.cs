@@ -397,7 +397,14 @@ public class PartyAvatarSideIndexHelper
             else
             {
                 // 使用更加靠谱的差值识别（-1是未识别）
-                return ImageDifferenceDetector.FindMostDifferentImage(mats);
+                if (mats.Length == 4)
+                {
+                    return ImageDifferenceDetector.FindMostDifferentImage(mats);
+                }
+                else
+                {
+                    return -1;
+                }
             }
         }
         finally

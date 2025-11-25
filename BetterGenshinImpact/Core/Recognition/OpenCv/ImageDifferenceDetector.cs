@@ -14,71 +14,79 @@ public class ImageDifferenceDetector
     /// <returns>差异最大的图片索引（0-3），如果没有图片获得3票则返回-1</returns>
     public static int FindMostDifferentImage(Mat[] images)
     {
-        if (images is not { Length: 4 })
+        try
         {
-            throw new ArgumentException("必须提供4张图片");
-        }
-
-        // 验证所有图片尺寸相同
-        Size firstSize = images[0].Size();
-        for (int i = 1; i < 4; i++)
-        {
-            if (images[i].Size() != firstSize)
+            if (images is not { Length: 4 })
             {
-                throw new ArgumentException("所有图片必须具有相同的尺寸");
+                throw new ArgumentException("必须提供4张图片");
             }
-        }
 
-        // 存储每张图片获得的投票数
-        int[] votes = new int[4];
-
-        // 每张图片投票给与它差异最大的图片
-        for (int i = 0; i < 4; i++)
-        {
-            int maxDiffImageIndex = -1;
-            double maxDifference = 0;
-
-            // 找出与图片i差异最大的图片
-            for (int j = 0; j < 4; j++)
+            // 验证所有图片尺寸相同
+            Size firstSize = images[0].Size();
+            for (int i = 1; i < 4; i++)
             {
-                if (i != j)
+                if (images[i].Size() != firstSize)
                 {
-                    double difference = CalculateDifference(images[i], images[j]);
-                    Debug.WriteLine($"{i} vs {j} 差异像素数量: {difference}");
-                    
-                    if (difference > maxDifference)
-                    {
-                        maxDifference = difference;
-                        maxDiffImageIndex = j;
-                    }
+                    throw new ArgumentException("所有图片必须具有相同的尺寸");
                 }
             }
 
-            // 图片i投票给差异最大的图片
-            if (maxDiffImageIndex != -1)
-            {
-                votes[maxDiffImageIndex]++;
-                Debug.WriteLine($"图片 {i} 投票给图片 {maxDiffImageIndex} (差异值: {maxDifference:F2})");
-            }
-        }
+            // 存储每张图片获得的投票数
+            int[] votes = new int[4];
 
-        // 输出投票结果
-        Debug.WriteLine("\n投票结果：");
-        for (int i = 0; i < 4; i++)
-        {
-            Debug.WriteLine($"图片 {i}: {votes[i]} 票");
-        }
-
-        // 检查是否有图片获得3票
-        for (int i = 0; i < 4; i++)
-        {
-            if (votes[i] >= 3)
+            // 每张图片投票给与它差异最大的图片
+            for (int i = 0; i < 4; i++)
             {
-                return i;
+                int maxDiffImageIndex = -1;
+                double maxDifference = 0;
+
+                // 找出与图片i差异最大的图片
+                for (int j = 0; j < 4; j++)
+                {
+                    if (i != j)
+                    {
+                        double difference = CalculateDifference(images[i], images[j]);
+                        Debug.WriteLine($"{i} vs {j} 差异像素数量: {difference}");
+
+                        if (difference > maxDifference)
+                        {
+                            maxDifference = difference;
+                            maxDiffImageIndex = j;
+                        }
+                    }
+                }
+
+                // 图片i投票给差异最大的图片
+                if (maxDiffImageIndex != -1)
+                {
+                    votes[maxDiffImageIndex]++;
+                    Debug.WriteLine($"图片 {i} 投票给图片 {maxDiffImageIndex} (差异值: {maxDifference:F2})");
+                }
             }
+
+            // 输出投票结果
+            Debug.WriteLine("\n投票结果：");
+            for (int i = 0; i < 4; i++)
+            {
+                Debug.WriteLine($"图片 {i}: {votes[i]} 票");
+            }
+
+            // 检查是否有图片获得3票
+            for (int i = 0; i < 4; i++)
+            {
+                if (votes[i] >= 3)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
-        
-        return -1;
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"FindMostDifferentImage 出错: {ex.Message}");
+            return -1;
+        }
     }
 
     /// <summary>
