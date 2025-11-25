@@ -1,16 +1,19 @@
-﻿using BetterGenshinImpact.Core.Script.Dependence;
+﻿using System;
+using System.Collections.Generic;
+using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -75,13 +78,30 @@ public class EngineExtend
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
 
-        // 导入 CommonJS 模块
+        // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
         // https://github.com/microsoft/ClearScript/blob/master/ClearScriptTest/V8ModuleTest.cs
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading | DocumentAccessFlags.AllowCategoryMismatch;
         if (searchPaths != null)
         {
-            engine.DocumentSettings.SearchPath = string.Join(';', searchPaths);
+            var normalizedPaths = new List<string>();
+            foreach (var path in searchPaths)
+            {
+                try
+                {
+                    var normalizedPath = ScriptUtils.NormalizePath(workDir, path);
+                    normalizedPaths.Add(normalizedPath);
+                }
+                catch (ArgumentException ex)
+                {
+                    TaskControl.Logger.LogWarning("无效的 library 路径 '{Path}': {Message}", path, ex.Message);
+                }
+            }
+
+            if (normalizedPaths.Count > 0)
+            {
+                engine.DocumentSettings.SearchPath = string.Join(';', normalizedPaths);
+            }
         }
     }
 
