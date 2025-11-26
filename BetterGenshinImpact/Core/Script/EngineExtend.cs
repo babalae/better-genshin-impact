@@ -12,8 +12,6 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
-using BetterGenshinImpact.GameTask.Common;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -92,9 +90,9 @@ public class EngineExtend
                     var normalizedPath = ScriptUtils.NormalizePath(workDir, path);
                     normalizedPaths.Add(normalizedPath);
                 }
-                catch (ArgumentException ex)
+                catch (Exception ex)
                 {
-                    TaskControl.Logger.LogWarning("无效的 library 路径 '{Path}': {Message}", path, ex.Message);
+                    throw new Exception($"从 library 字段读取路径 '{path}' 失败: {ex.Message}", ex);
                 }
             }
 
