@@ -115,6 +115,12 @@ public partial class AutoSkipConfig : ObservableObject
     private bool _submitGoodsEnabled = true;
 
     /// <summary>
+    /// 游戏失焦时显示画中画
+    /// </summary>
+    [ObservableProperty]
+    private bool _pictureInPictureEnabled = false;
+
+    /// <summary>
     /// 关闭弹出层
     /// </summary>
     [ObservableProperty]
