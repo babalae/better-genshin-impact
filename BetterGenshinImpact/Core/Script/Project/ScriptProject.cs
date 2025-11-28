@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
+using Microsoft.ClearScript.JavaScript;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -89,7 +90,14 @@ public class ScriptProject
         }
         try
         {
-            await (Task)engine.Evaluate(code);
+            if (Manifest.Library.Length != 0)
+            {
+                await (Task)engine.Evaluate(new DocumentInfo { Category = ModuleCategory.Standard }, code);
+            }
+            else
+            {
+                await (Task)engine.Evaluate(code);
+            }
         }
         catch (Exception e)
         {
