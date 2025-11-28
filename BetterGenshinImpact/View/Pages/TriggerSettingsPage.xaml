@@ -328,7 +328,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先选择第一个选项、选择最后一个选项、不选择选项"
+                                  Text="进入对话后，对话选项的选择方式"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -336,6 +336,47 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding ClickChatOptionNames}"
                               SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16" x:Name="CustomPriorityOptionsGrid">
+                    <Grid.Style>  
+                        <Style TargetType="Grid">  
+                            <Setter Property="Visibility" Value="Collapsed"/>  
+                            <Style.Triggers>  
+                                <DataTrigger Binding="{Binding Config.AutoSkipConfig.ClickChatOption}" Value="自定义优先选项">  
+                                    <Setter Property="Visibility" Value="Visible"/>  
+                                </DataTrigger>  
+                            </Style.Triggers>  
+                        </Style>  
+                    </Grid.Style>    
+                    <Grid.RowDefinitions>  
+                        <RowDefinition Height="Auto" />  
+                        <RowDefinition Height="Auto" />  
+                    </Grid.RowDefinitions>  
+                    <Grid.ColumnDefinitions>  
+                        <ColumnDefinition Width="*" />  
+                        <ColumnDefinition Width="Auto" />  
+                    </Grid.ColumnDefinitions>  
+                    <ui:TextBlock Grid.Row="0"  
+                                  Grid.Column="0"  
+                                  FontTypography="Body"  
+                                  Text="自定义优先选项（后台模式无效）"  
+                                  TextWrapping="Wrap" />  
+                    <ui:TextBlock Grid.Row="1"  
+                                  Grid.Column="0"  
+                                  Margin="0,-10,0,0"  
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"  
+                                  Text="多个选项用分号(中英文)分隔，或者换行"  
+                                  TextWrapping="Wrap" />  
+                    <ui:TextBox Grid.Row="0"  
+                                Grid.RowSpan="2"  
+                                Grid.Column="1"  
+                                MinWidth="250"  
+                                MinHeight="60"  
+                                Margin="0,0,24,0"  
+                                AcceptsReturn="True"  
+                                TextWrapping="Wrap"  
+                                VerticalScrollBarVisibility="Auto"  
+                                Text="{Binding Config.AutoSkipConfig.CustomPriorityOptions, Mode=TwoWay}" />  
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

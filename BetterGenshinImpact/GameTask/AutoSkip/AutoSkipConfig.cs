@@ -62,6 +62,12 @@ public partial class AutoSkipConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _clickChatOption = "优先选择第一个选项";
+    
+    /// <summary>  
+    /// 自定义优先选项文本，每行一个或用分号分隔  
+    /// </summary>  
+    [ObservableProperty]  
+    private string _customPriorityOptions = "";
 
     /// <summary>
     /// 自动邀约启用
@@ -96,7 +102,10 @@ public partial class AutoSkipConfig : ObservableObject
     {
         return ClickChatOption == "随机选择选项";
     }
-
+    public bool IsClickCustomPriorityOption()  
+    {  
+        return ClickChatOption == "自定义优先选项";  
+    }
     public bool IsClickNoneChatOption()
     {
         return ClickChatOption == "不选择选项";
