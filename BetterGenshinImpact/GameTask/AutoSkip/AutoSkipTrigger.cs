@@ -544,7 +544,28 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
             if (rs.Count > 0)
             {
-                // 用户自定义关键词 匹配
+                // 自定义优先选项匹配  
+                if (_config.IsClickCustomPriorityOption() && !string.IsNullOrEmpty(_config.CustomPriorityOptions))  
+                {  
+                    var customOptions = _config.CustomPriorityOptions  
+                        .Split(new[] { '\r', '\n', ';', '；' }, StringSplitOptions.RemoveEmptyEntries)  
+                        .Select(s => s.Trim())  
+                        .Where(s => !string.IsNullOrEmpty(s))  
+                        .ToList();  
+      
+                    foreach (var item in rs)  
+                    {
+                        foreach (var customOption in customOptions)  
+                        {
+                            if (item.Text.Contains(customOption))  
+                            {
+                                ClickOcrRegion(item);
+                                return true;  
+                            }  
+                        }  
+                    }  
+                }
+                // 内置关键词 匹配
                 foreach (var item in rs)
                 {
                     // 选择关键词
