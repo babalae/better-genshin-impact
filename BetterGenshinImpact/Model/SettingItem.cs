@@ -22,10 +22,11 @@ public class SettingItem
     {
         var list = new List<UIElement>();
 
-        var label = new Label
+        var label = new TextBlock
         {
-            Content = Label,
-            Margin = new Thickness(0, 0, 0, 5)
+            Text = Label,
+            Margin = new Thickness(0, 0, 0, 5),
+            TextWrapping = TextWrapping.Wrap
         };
         list.Add(label);
 
@@ -40,7 +41,8 @@ public class SettingItem
                 var textBox = new TextBox
                 {
                     Name = Name,
-                    Margin = new Thickness(0, 0, 0, 10)
+                    Margin = new Thickness(0, 0, 0, 10),
+                    TextWrapping = TextWrapping.Wrap
                 };
                 if (Default != null)
                 {
