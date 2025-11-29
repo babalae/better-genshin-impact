@@ -18,52 +18,45 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 public static partial class Bv
 {
     /// <summary>
+    /// 通用方法：查找识别对象，如果存在则点击
+    /// </summary>
+    /// <param name="captureRa">截图区域</param>
+    /// <param name="ro">识别对象</param>
+    /// <returns>是否找到并点击</returns>
+    public static bool FindAndClick(ImageRegion captureRa, RecognitionObject ro)
+    {
+        var ra = captureRa.Find(ro);
+        if (ra.IsExist())
+        {
+            ra.Click();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// 点击减少按钮
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickReduceButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.Keyreduce);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }         
-        return false;
-    }
-    
+        => FindAndClick(captureRa, ElementAssets.Instance.Keyreduce);
+
     /// <summary>
     /// 点击增加按钮
+    /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickAddButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.Keyincrease);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }         
-        return false;
-    }
-    
+        => FindAndClick(captureRa, ElementAssets.Instance.Keyincrease);
+
     /// <summary>
     /// 点击白色确认按钮
     /// </summary>
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickWhiteConfirmButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnWhiteConfirm);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }
-
-        return false;
-    }
+        => FindAndClick(captureRa, ElementAssets.Instance.BtnWhiteConfirm);
 
     /// <summary>
     /// 点击白色取消按钮
@@ -71,16 +64,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickWhiteCancelButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnWhiteCancel);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }
-
-        return false;
-    }
+        => FindAndClick(captureRa, ElementAssets.Instance.BtnWhiteCancel);
 
     /// <summary>
     /// 点击黑色确认按钮
@@ -88,16 +72,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickBlackConfirmButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnBlackConfirm);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }
-
-        return false;
-    }
+        => FindAndClick(captureRa, ElementAssets.Instance.BtnBlackConfirm);
 
     /// <summary>
     /// 点击黑色取消按钮
@@ -105,16 +80,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickBlackCancelButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnBlackCancel);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }
-
-        return false;
-    }
+        => FindAndClick(captureRa, ElementAssets.Instance.BtnBlackCancel);
 
     /// <summary>
     /// 点击联机确认按钮
@@ -122,16 +88,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickOnlineYesButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnOnlineYes);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }
-
-        return false;
-    }
+        => FindAndClick(captureRa, ElementAssets.Instance.BtnOnlineYes);
 
     /// <summary>
     /// 点击联机取消按钮
@@ -139,16 +96,7 @@ public static partial class Bv
     /// <param name="captureRa"></param>
     /// <returns></returns>
     public static bool ClickOnlineNoButton(ImageRegion captureRa)
-    {
-        var ra = captureRa.Find(ElementAssets.Instance.BtnOnlineNo);
-        if (ra.IsExist())
-        {
-            ra.Click();
-            return true;
-        }
-
-        return false;
-    }
+        => FindAndClick(captureRa, ElementAssets.Instance.BtnOnlineNo);
 
     /// <summary>
     /// 点击确认按钮（优先点击白色背景的确认按钮）
