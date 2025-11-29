@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.WindowsInput;
 using OpenCvSharp;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -28,6 +29,7 @@ public static partial class Bv
         var ra = captureRa.Find(ro);
         if (ra.IsExist())
         {
+            Thread.Sleep(500);
             ra.Click();
             return true;
         }
