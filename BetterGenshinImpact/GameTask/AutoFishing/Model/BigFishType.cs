@@ -59,6 +59,7 @@ public class BigFishType
             yield return Rapidfish;
             yield return PhonyUnihornfish;
             yield return MagmaRapidfish;
+            yield return SecretSourceScoutSweeper;
             yield return MaulerShark;
             yield return CrystalEye;
             yield return AxeheadFish;
