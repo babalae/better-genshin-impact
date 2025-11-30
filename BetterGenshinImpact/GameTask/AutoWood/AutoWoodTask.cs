@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+﻿using 曲线BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
@@ -528,9 +528,8 @@ public partial class AutoWoodTask : ISoloTask
             using var ra = contentRegion.Find(_assets.EnterGameRo);
             if (!ra.IsEmpty())
             {
-                var dpiScale = TaskContext.Instance().DpiScale;
                 clickCnt++;
-                GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
+                GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                 Debug.WriteLine("[AutoWood] Click entry");
             }
             else
