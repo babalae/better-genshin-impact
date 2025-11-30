@@ -528,8 +528,9 @@ public partial class AutoWoodTask : ISoloTask
             using var ra = contentRegion.Find(_assets.EnterGameRo);
             if (!ra.IsEmpty())
             {
+                var dpiScale = TaskContext.Instance().DpiScale;
                 clickCnt++;
-                GameCaptureRegion.GameRegion1080PPosClick(960, 630);
+                GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
                 Debug.WriteLine("[AutoWood] Click entry");
             }
             else
