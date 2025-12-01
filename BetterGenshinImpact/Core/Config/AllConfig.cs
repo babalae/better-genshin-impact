@@ -84,12 +84,19 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     [JsonIgnore]
     public string NextScriptGroupName { get; set; }= string.Empty;
-    
+
     /// <summary>
     /// 一条龙选中使用的配置
     /// </summary>
     [ObservableProperty]
     private string _selectedOneDragonFlowConfigName = string.Empty;
+
+    /// <summary>
+    /// 一条龙当前正在执行的配置组任务名称
+    /// 供外部看门狗或重启逻辑通过 User/config.json 读取并恢复执行
+    /// </summary>
+    [ObservableProperty]
+    private string _currentOneDragonScriptGroupName = string.Empty;
 
     /// <summary>
     ///     遮罩窗口配置
@@ -265,6 +272,7 @@ public partial class AllConfig : ObservableObject
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
+        OtherConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
     }

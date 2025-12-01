@@ -1,39 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
-using BetterGenshinImpact.Model;
-using CommunityToolkit.Mvvm.ComponentModel;
-using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using ABI.Windows.UI.UIAutomation;
+using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
+using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
-using System.Windows.Controls;
-using ABI.Windows.UI.UIAutomation;
-using Wpf.Ui;
 using StackPanel = Wpf.Ui.Controls.StackPanel;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Script.Project;
-using BetterGenshinImpact.Service.Interface;
 using TextBlock = Wpf.Ui.Controls.TextBlock;
-using System.Collections.Specialized;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -487,6 +487,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         if (SelectedConfig != null)
         {
             TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+            // 切换一条龙配置时，重置当前正在执行的配置组任务名称
+            TaskContext.Instance().Config.CurrentOneDragonScriptGroupName = string.Empty;
             foreach (var task in TaskList)
             {
                 if (SelectedConfig.TaskEnabledList.TryGetValue(task.Name, out var value))
@@ -574,7 +576,37 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择一条龙配置");
+            _logger.LogWarning("未选择一条龙配置, 不执行一条龙。");
+            return;
+        }
+
+        // 记录当前正在执行的一条龙配置名称，供崩溃后看门狗恢复使用
+        TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+
+        // 一条龙启动前，按配置自动启动看门狗
+        TryStartWatchdogIfNeeded();
+
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
+
+        // 处理命令行参数中的配置组任务名称，用于从指定任务位置继续执行
+        var args = Environment.GetCommandLineArgs();
+        var resumeGroupName = TaskContext.Instance().Config.CurrentOneDragonScriptGroupName;
+        if (args.Length > 3 && args[1].Contains("startOneDragon"))
+        {
+            var cmdGroupName = args[3];
+            if (!string.IsNullOrWhiteSpace(cmdGroupName))
+            {
+                resumeGroupName = cmdGroupName;
+                TaskContext.Instance().Config.CurrentOneDragonScriptGroupName = cmdGroupName;
+            }
+        }
+
+        var hasResumeGroup = !string.IsNullOrEmpty(resumeGroupName);
+        var resumeReached = !hasResumeGroup; // 没有恢复点时，从第一个任务开始执行
+
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
         foreach (var task in taskListCopy)
         {
@@ -623,6 +655,19 @@ public partial class OneDragonFlowViewModel : ViewModel
         Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
         foreach (var task in taskListCopy)
         {
+            // 如果指定了恢复的配置组任务，则跳过之前的任务
+            if (hasResumeGroup && !resumeReached)
+            {
+                if (task.Name == resumeGroupName)
+                {
+                    resumeReached = true;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+
             if (task is { IsEnabled: true, Action: not null })
             {
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
@@ -645,6 +690,8 @@ public partial class OneDragonFlowViewModel : ViewModel
                         }
 
                         Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
+                        // 记录当前正在执行的配置组任务名称，供崩溃恢复使用
+                        TaskContext.Instance().Config.CurrentOneDragonScriptGroupName = task.Name;
 
                         if (SelectedConfig.TaskEnabledList[task.Name])
                         {
@@ -671,6 +718,14 @@ public partial class OneDragonFlowViewModel : ViewModel
                     {
                         Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
                     }
+                    // 用户手动停止一条龙时，清理恢复点（配置名 + 配置组名），避免看门狗继续重启
+                    if (CancellationContext.Instance.IsManualStop)
+                    {
+                        TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = string.Empty;
+                        TaskContext.Instance().Config.CurrentOneDragonScriptGroupName = string.Empty;
+                        // 一条龙被用户手动停止后，当前已不再需要看门狗，看门狗仅在一条龙运行期间提供保护
+                        TryStopWatchdogIfRunning();
+                    }
                     return; // 后续的检查任务也不执行
                 }
             }
@@ -686,6 +741,12 @@ public partial class OneDragonFlowViewModel : ViewModel
                 Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
             }
             _logger.LogInformation("一条龙和配置组任务结束");
+
+            // 一条龙正常执行完成时，清理恢复点（配置名 + 配置组名），避免看门狗继续重启
+            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = string.Empty;
+            TaskContext.Instance().Config.CurrentOneDragonScriptGroupName = string.Empty;
+            // 一条龙正常执行完成后，当前已不再需要看门狗，看门狗仅在一条龙运行期间提供保护
+            TryStopWatchdogIfRunning();
 
             // 执行完成后操作
             if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
@@ -706,6 +767,92 @@ public partial class OneDragonFlowViewModel : ViewModel
                 }
             }
         });
+    }
+
+    /// <summary>
+    /// 启动一条龙前，根据配置自动启动看门狗（BetterGI.Watchdog），避免忘记手动运行。
+    /// </summary>
+    private void TryStartWatchdogIfNeeded()
+    {
+        try
+        {
+            var allConfig = TaskContext.Instance().Config;
+            if (allConfig?.OtherConfig == null || !allConfig.OtherConfig.AutoStartOneDragonWatchdog)
+            {
+                return;
+            }
+
+            // 已有看门狗进程则不再重复启动
+            if (Process.GetProcessesByName("BetterGI.Watchdog").Length > 0)
+            {
+                _logger.LogInformation("BetterGI.Watchdog 已在运行，跳过自动启动。");
+                return;
+            }
+
+            var currentExePath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(currentExePath))
+            {
+                _logger.LogWarning("无法获取当前 BetterGI.exe 路径，无法自动启动看门狗。");
+                return;
+            }
+
+            var currentDir = Path.GetDirectoryName(currentExePath)!;
+            var candidatePaths = new[]
+            {
+                    Path.Combine(currentDir, "BetterGI.Watchdog.exe"),
+                    Path.Combine(currentDir, "Watchdog", "BetterGI.Watchdog.exe")
+                };
+
+            var watchdogExe = candidatePaths.FirstOrDefault(File.Exists);
+            if (watchdogExe == null)
+            {
+                _logger.LogWarning("未找到 BetterGI.Watchdog.exe，无法自动启动看门狗。");
+                return;
+            }
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = watchdogExe,
+                // 将当前 BetterGI.exe 的完整路径传给看门狗，便于在同目录下重启本体
+                Arguments = $"\"{currentExePath}\"",
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(watchdogExe) ?? currentDir
+            };
+
+            Process.Start(psi);
+            _logger.LogInformation("已自动启动一条龙看门狗: {Exe}", watchdogExe);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "自动启动一条龙看门狗失败");
+        }
+    }
+
+    /// <summary>
+    /// 一条龙结束后（正常结束或手动停止），尝试关闭正在运行的一条龙看门狗。
+    /// </summary>
+    private void TryStopWatchdogIfRunning()
+    {
+        try
+        {
+            var processes = Process.GetProcessesByName("BetterGI.Watchdog");
+            foreach (var p in processes)
+            {
+                try
+                {
+                    _logger.LogInformation("尝试关闭一条龙看门狗 BetterGI.Watchdog, PID={Pid}", p.Id);
+                    p.Kill();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "关闭一条龙看门狗 BetterGI.Watchdog 失败");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "查询/关闭一条龙看门狗 BetterGI.Watchdog 失败");
+        }
     }
 
     [RelayCommand]

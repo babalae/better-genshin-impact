@@ -20,6 +20,12 @@ public partial class OtherConfig : ObservableObject
     private TimeSpan _serverTimeZoneOffset = TimeSpan.FromHours(8);
     [ObservableProperty]
     private AutoRestart _autoRestartConfig = new();
+
+    /// <summary>
+    /// 启动一条龙时自动启动看门狗
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoStartOneDragonWatchdog = false;
     //锄地规划
     [ObservableProperty]
     private FarmingPlan _farmingPlanConfig = new();

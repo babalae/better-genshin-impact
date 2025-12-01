@@ -70,8 +70,16 @@ public class ScriptProject
 
     public IScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig = null)
     {
-        IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
-        EngineExtend.InitHost(engine, ProjectPath, Manifest.Library,partyConfig);
+        var constraints = new V8RuntimeConstraints
+        {
+            // 单位为 MiB；这里限制旧生代最大约 2GB，新生代约 256MB，可根据需要在配置层调整
+            MaxOldSpaceSize = 2048,
+            MaxNewSpaceSize = 256
+        };
+        IScriptEngine engine = new V8ScriptEngine(
+            constraints,
+            V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
+        EngineExtend.InitHost(engine, ProjectPath, Manifest.Library, partyConfig);
         return engine;
     }
 
