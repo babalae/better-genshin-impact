@@ -997,6 +997,83 @@
         ]
     },
     {
+        "id": 1115,
+        "nameEn": "escoffier",
+        "type": "character",
+        "name": "爱可菲",
+        "hp": 11,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "kitchen_skills",
+                "name": "后厨手艺",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "lowtemperature_cooking",
+                "name": "低温烹饪",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "scoring_cuts",
+                "name": "花刀技法",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "constant_offthecuff_cookery",
+                "name": "时时刻刻的即兴料理",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1201,
         "nameEn": "barbara",
         "type": "character",
@@ -1715,7 +1792,7 @@
         "nameEn": "furina",
         "type": "character",
         "name": "芙宁娜",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "水元素",
         "weapon": "单手剑",
@@ -3002,6 +3079,75 @@
         ]
     },
     {
+        "id": 1316,
+        "nameEn": "gaming",
+        "type": "character",
+        "name": "嘉明",
+        "hp": 10,
+        "energy": 3,
+        "element": "火元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "stellar_rend",
+                "name": "刃爪悬星",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "bestial_ascent",
+                "name": "瑞兽登高楼",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "suannis_gilded_dance",
+                "name": "璨焰金猊舞",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1401,
         "nameEn": "fischl",
         "type": "character",
@@ -3927,7 +4073,7 @@
         "nameEn": "iansan",
         "type": "character",
         "name": "伊安珊",
-        "hp": 12,
+        "hp": 11,
         "energy": 2,
         "element": "雷元素",
         "weapon": "长柄武器",
@@ -8687,6 +8833,83 @@
                         "count": 2
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 2604,
+        "nameEn": "black_serpent_knight_rockbreaker_ax",
+        "type": "character",
+        "name": "黑蛇骑士·摧岩之钺",
+        "hp": 12,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "supreme_strike",
+                "name": "顶位迅斩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "axe_and_aegis",
+                "name": "斧盾震击",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "stone_stance",
+                "name": "坚岩姿态",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "attacking_momentum",
+                "name": "攻阵气势",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },
