@@ -650,6 +650,16 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
             return true;
         }
+        else
+        {
+            // 没有气泡的时候识别 F 选项
+            using var pickRa = region.Find(AutoPickAssets.Instance.ChatPickRo);
+            if (pickRa.IsExist())
+            {
+                _postMessageSimulator?.KeyPressBackground(AutoPickAssets.Instance.PickVk);
+                AutoSkipLog("无气泡图标，但存在交互键，直接按下交互键");
+            }
+        }
 
         return false;
     }
