@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+		<!-- 使用 .NET 8 NativeAOT 生成本机可执行文件，体积更小且无需安装运行时 -->
+		<PublishAot>true</PublishAot>
+		<!-- 使用 Invariant Globalization 以进一步减小体积（不依赖复杂本地化时安全） -->
+		<InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>
+
