@@ -18,25 +18,28 @@ public class TaskControl
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
 
+    private static readonly PausableDelayManager _delayManager = new();
+
 
     public static void CheckAndSleep(int millisecondsTimeout)
     {
-        TrySuspend();
-        CheckAndActivateGameWindow();
+        _delayManager.Sleep(millisecondsTimeout);
+    }
 
-        Thread.Sleep(millisecondsTimeout);
+    /// <summary>
+    /// Checks and handles pause/suspend state and window focus without sleeping.
+    /// </summary>
+    public static void CheckPauseAndWindowFocus()
+    {
+        _delayManager.CheckPauseAndWindowFocus();
     }
 
     public static void Sleep(int millisecondsTimeout)
     {
-        NewRetry.Do(() =>
-        {
-            TrySuspend();
-            CheckAndActivateGameWindow();
-        }, TimeSpan.FromSeconds(1), 100);
-        Thread.Sleep(millisecondsTimeout);
+        _delayManager.Sleep(millisecondsTimeout);
     }
 
+    [Obsolete("Use CheckAndSleep or Sleep instead")]
     private static bool IsKeyPressed(User32.VK key)
     {
         // 获取按键状态
@@ -46,6 +49,7 @@ public class TaskControl
         return (state & 0x8000) != 0;
     }
 
+    [Obsolete("This method is now handled internally by PausableDelayManager")]
     public static void TrySuspend()
     {
         
@@ -93,6 +97,7 @@ public class TaskControl
         }
     }
 
+    [Obsolete("This method is now handled internally by PausableDelayManager")]
     private static void CheckAndActivateGameWindow()
     {
         if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
@@ -131,23 +136,11 @@ public class TaskControl
             throw new NormalEndException("取消自动任务");
         }
 
-        if (millisecondsTimeout <= 0)
+        try
         {
-            return;
+            _delayManager.Sleep(millisecondsTimeout, ct);
         }
-
-        NewRetry.Do(() =>
-        {
-            if (ct.IsCancellationRequested)
-            {
-                throw new NormalEndException("取消自动任务");
-            }
-
-            TrySuspend();
-            CheckAndActivateGameWindow();
-        }, TimeSpan.FromSeconds(1), 100);
-        Thread.Sleep(millisecondsTimeout);
-        if (ct.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
             throw new NormalEndException("取消自动任务");
         }
@@ -160,23 +153,11 @@ public class TaskControl
             throw new NormalEndException("取消自动任务");
         }
 
-        if (millisecondsTimeout <= 0)
+        try
         {
-            return;
+            await _delayManager.DelayAsync(millisecondsTimeout, ct);
         }
-
-        NewRetry.Do(() =>
-        {
-            if (ct is { IsCancellationRequested: true })
-            {
-                throw new NormalEndException("取消自动任务");
-            }
-
-            TrySuspend();
-            CheckAndActivateGameWindow();
-        }, TimeSpan.FromSeconds(1), 100);
-        await Task.Delay(millisecondsTimeout, ct);
-        if (ct is { IsCancellationRequested: true })
+        catch (OperationCanceledException)
         {
             throw new NormalEndException("取消自动任务");
         }
