@@ -1559,7 +1559,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     private List<FileInfo> LoadAllKmScripts()
     {
-        var folder = Global.Absolute(@"User\KeyMouseScript");
+        var folder = KeyMouseRecordPageViewModel.ScriptPath;
         Directory.CreateDirectory(folder);
         // 获取所有脚本项目
         var files = Directory.GetFiles(folder, "*.*",
@@ -1744,7 +1744,7 @@ public partial class ScriptControlViewModel : ViewModel
                     path = Path.Combine(Global.ScriptPath(), item.FolderName);
                     break;
                 case "KeyMouse":
-                    path = Global.Absolute(@"User\KeyMouseScript");
+                    path = KeyMouseRecordPageViewModel.ScriptPath;
                     break;
                 case "Pathing":
                     path = Path.Combine(MapPathingViewModel.PathJsonPath, item.FolderName);
