@@ -71,7 +71,7 @@ public class EngineExtend
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
         
-
+        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); // 键鼠hook守卫类型
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
