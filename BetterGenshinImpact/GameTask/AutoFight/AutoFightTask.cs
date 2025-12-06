@@ -13,15 +13,25 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
 using BetterGenshinImpact.Helpers;
 using Vanara;
 using Microsoft.Extensions.DependencyInjection;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
+using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -44,6 +54,8 @@ public class AutoFightTask : ISoloTask
     public static bool FightStatusFlag { get; set; } = false;
     
     private static readonly object PickLock = new object(); 
+    
+    private static volatile bool _isExperiencePickup = false;
 
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
@@ -291,6 +303,10 @@ public class AutoFightTask : ISoloTask
         var guardianAvatar = string.IsNullOrWhiteSpace(_taskParam.GuardianAvatar) ? null : combatScenes.SelectAvatar(int.Parse(_taskParam.GuardianAvatar));
         
         AutoFightSeek.RotationCount= 0; // 重置旋转次数
+
+        var avatarName = combatScenes.Avatars.Select(a => a.Name).ToArray();
+        var requiredAvatars = new HashSet<string> { "枫原万叶", "琴" };//后续方便添加
+        var findExpAvatar = requiredAvatars.Any(a => avatarName.Contains(a));
         
         // 战斗操作
         var fightTask = Task.Run(async () =>
@@ -298,6 +314,12 @@ public class AutoFightTask : ISoloTask
             try
             {
                 FightStatusFlag = true;
+                
+                #region 基于战斗检测经验值开关万叶拾取功能同步任务
+            
+                if (_taskParam.ExpKazuhaPickup && findExpAvatar) FindExp(cts2.Token);
+            
+                #endregion
                 
                 while (!cts2.Token.IsCancellationRequested)
                 {
@@ -470,18 +492,27 @@ public class AutoFightTask : ISoloTask
             finally
             {
                 Simulation.ReleaseAllKey();
+                
+                if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpKazuhaPickup && !_isExperiencePickup)//可能刚死亡，等待经验显示
+                {
+                    TaskControl.Logger.LogInformation("基于怪物经验判断：{text} 经验值显示","等待");
+                    await Delay(1000, ct);
+                }
                 FightStatusFlag = false;
             }
         }, cts2.Token);
 
         await fightTask;
-        if (_taskParam.BattleThresholdForLoot>=2 && countFight < _taskParam.BattleThresholdForLoot)
+        
+        if ((_taskParam.BattleThresholdForLoot >= 2 && countFight < _taskParam.BattleThresholdForLoot) && (!_taskParam.ExpKazuhaPickup || !_isExperiencePickup))
         {
             Logger.LogInformation($"战斗人次（{countFight}）低于配置人次（{_taskParam.BattleThresholdForLoot}），跳过此次拾取！");
             return;
         }
+      
+        if(_taskParam.KazuhaPickupEnabled && _taskParam.ExpKazuhaPickup) Logger.LogInformation("基于怪物经验判断：{text} 聚集拾取", _isExperiencePickup? "执行" : "不执行");
         
-        if (_taskParam.KazuhaPickupEnabled)
+        if (_taskParam.KazuhaPickupEnabled && (!_taskParam.ExpKazuhaPickup || _isExperiencePickup))
         {
             // 队伍中存在万叶的时候使用一次长E
             var picker = combatScenes.SelectAvatar("枫原万叶") ?? combatScenes.SelectAvatar("琴");
@@ -732,6 +763,85 @@ public class AutoFightTask : ISoloTask
         return (r >= 240 && r <= 255) &&
                (g >= 240 && g <= 255) &&
                (b >= 240 && b <= 255);
+    }
+    
+    //基于万叶经验值判断是否拾取
+    private static Task FindExp(CancellationToken cts2)
+    {
+        var autoFightAssets = AutoFightAssets.Instance;
+
+        try  
+        {
+            Task.Run(() =>
+            {
+                _isExperiencePickup = false;
+                var expLogo = false;
+                
+                var experienceRas = new[]
+                {
+                   autoFightAssets.InitializeRecognitionObject(60), 
+                   autoFightAssets.InitializeRecognitionObject(58), 
+                   autoFightAssets.InitializeRecognitionObject(57),
+                };
+                
+                while (!(_isExperiencePickup || !FightStatusFlag) && !cts2.IsCancellationRequested)
+                {
+                    try
+                    {
+                        cts2.ThrowIfCancellationRequested();
+
+                        var result = NewRetry.WaitForAction(() =>
+                        {
+                            using (var ra = CaptureToRectArea())
+                            {
+                                _isExperiencePickup = experienceRas.Any(experienceRa => 
+                                {
+                                    var isExist = ra.Find(experienceRa);
+                                    if (!isExist.IsExist())
+                                    {
+                                        return false;
+                                    }
+                
+                                    var pixelValue1 = ra.SrcMat.At<Vec3b>(isExist.Y, isExist.X - 147); //经验值图标，在2K以上时匹配度0.6，这个经验值颜色尤为重要
+                                    expLogo = pixelValue1[0] == 253 && pixelValue1[1] == 247 && pixelValue1[2] == 172;
+
+                                    return expLogo;
+                                });
+                            }
+                            return _isExperiencePickup;
+                        }, cts2, 1, 100).Result;
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        Console.WriteLine($"检测经验发生异常: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // Console.WriteLine($"检测怪物经验发生异常: {ex.Message}");
+                    }
+                    
+                    if (_isExperiencePickup) Logger.LogInformation("基于怪物经验判断：识别到 {text1} 经验值，{text2} 聚集拾取","精英","启用" );
+
+                }
+                
+                cts2.ThrowIfCancellationRequested();
+                
+            }, cts2); 
+        }
+        catch (OperationCanceledException ex)
+        {
+            Console.WriteLine($"检测经验发生异常: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"检测怪物经验发生异常: {ex.Message}");
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
+        }
+        
+        return Task.CompletedTask;
     }
 
     static double FindMax(double[] numbers)
