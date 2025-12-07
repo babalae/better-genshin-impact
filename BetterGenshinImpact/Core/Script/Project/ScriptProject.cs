@@ -92,6 +92,8 @@ public class ScriptProject
         {
             if (Manifest.Library.Length != 0)
             {
+                // 清除Document缓存
+                DocumentLoader.Default.DiscardCachedDocuments();
                 await (Task)engine.Evaluate(new DocumentInfo { Category = ModuleCategory.Standard }, code);
             }
             else
