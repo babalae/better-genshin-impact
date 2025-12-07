@@ -281,8 +281,10 @@ public class PaddleOcrService : IOcrService, IDisposable
     /// </summary>
     public string OcrWithoutDetector(Mat mat)
     {
+        var startTime = Stopwatch.GetTimestamp();
         var str = _localRecModel.Run(mat).Text;
-        Debug.WriteLine($"PaddleOcrWithoutDetector 结果: {str}");
+        var time = Stopwatch.GetElapsedTime(startTime);
+        Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
         return str;
     }
 

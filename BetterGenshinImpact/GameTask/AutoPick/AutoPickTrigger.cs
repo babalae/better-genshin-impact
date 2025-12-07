@@ -262,7 +262,6 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        // var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
         using var gradMat = new Mat(content.CaptureRectArea.CacheGreyMat,
             new Rect(textRect.X, textRect.Y, textRect.Width, Math.Min(textRect.Height, 3)));
         var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
@@ -281,8 +280,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         else
         {
             using var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            // var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
-            var boundingRect = new Rect(); // 默认不裁剪
+            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
+            // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
             // 如果找到有效区域
             if (boundingRect.X <20 && boundingRect.Width > 5 && boundingRect.Height > 5)
             {
