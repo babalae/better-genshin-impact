@@ -721,6 +721,7 @@ public class PathExecutor
         var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.MinValue;
+        var prevNotTooFarPosition = position;
         int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
 
         // 按下w，一直走
@@ -790,10 +791,22 @@ public class PathExecutor
                         {
                             Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
                         }
+                        // 取余减少判断频率
+                        if (distanceTooFarRetryCount % 10 == 0)
+                        {
+                            await ResolveAnomalies(screen);
+                            Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
+                            Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
+                            // 淡入淡出特效
+                            await Delay(500, ct);
+                        }
                         await Delay(50, ct);
                         continue;
                     }
                 }
+            } else
+            {
+                prevNotTooFarPosition = position;
             }
 
             // 非攀爬状态下，检测是否卡死（脱困触发器）
