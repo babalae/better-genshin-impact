@@ -52,7 +52,7 @@
       "奇偶(男)",
       "MannequinBoy"
     ],
-    "id": "20000001",
+    "id": "10000117",
     "name": "奇偶(男)",
     "nameEn": "MannequinBoy",
     "weapon": "1"
@@ -62,7 +62,7 @@
       "奇偶(女)",
       "MannequinGirl"
     ],
-    "id": "20000002",
+    "id": "10000118",
     "name": "奇偶(女)",
     "nameEn": "MannequinGirl",
     "weapon": "1"
@@ -1980,6 +1980,46 @@
     "name": "奈芙尔",
     "nameEn": "Nefer",
     "skillCD": 9,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "杜林",
+      "Durin"
+    ],
+    "burstCD": 18,
+    "id": "10000123",
+    "name": "杜林",
+    "nameEn": "Durin",
+    "skillCD": 12,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "雅珂达",
+      "Jahoda"
+    ],
+    "burstCD": 18,
+    "id": "10000124",
+    "name": "雅珂达",
+    "nameEn": "Jahoda",
+    "skillCD": 15,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "哥伦比娅",
+      "Columbina",
+      "少女",
+      "库塔尔",
+      "月神",
+      "月之少女"
+    ],
+    "burstCD": 15,
+    "id": "10000125",
+    "name": "哥伦比娅",
+    "nameEn": "Columbina",
+    "skillCD": 17,
     "weapon": "10"
   }
 ]

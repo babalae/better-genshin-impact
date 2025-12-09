@@ -16,6 +16,8 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
     public RecognitionObject FRo;
     public RecognitionObject ChatIconRo;
     public RecognitionObject SettingsIconRo;
+    public RecognitionObject LRo;
+
 
     public User32.VK PickVk = User32.VK.VK_F;
     public RecognitionObject PickRo;
@@ -51,6 +53,18 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             DrawOnWindow = false,
             DrawOnWindowPen = new Pen(Color.Chocolate, 2)
         }.InitTemplate();
+        
+        LRo = new RecognitionObject
+        {
+            Name = "L",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "L.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width-(int)(110 * AssetScale),
+                (int)(550 * AssetScale),
+                (int)(70 * AssetScale),
+                (int)(100 * AssetScale)),
+        }.InitTemplate();
+
 
         PickRo = FRo;
         var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
