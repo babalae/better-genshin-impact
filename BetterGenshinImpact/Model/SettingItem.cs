@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -22,13 +24,16 @@ public class SettingItem
     {
         var list = new List<UIElement>();
 
-        var label = new TextBlock
+        if (!String.IsNullOrEmpty(Label))
         {
-            Text = Label,
-            Margin = new Thickness(0, 0, 0, 5),
-            TextWrapping = TextWrapping.Wrap
-        };
-        list.Add(label);
+            var label = new TextBlock
+            {
+                Text = Label,
+                Margin = new Thickness(0, 0, 0, 5),
+                TextWrapping = TextWrapping.Wrap
+            };
+            list.Add(label);
+        }
 
         var binding = new Binding
         {
@@ -37,6 +42,13 @@ public class SettingItem
         };
         switch (Type)
         {
+            case "separator":
+                list.Add(new Separator
+                {
+                    Margin = new Thickness(0, 0, 0, 2)
+                });
+                break;
+
             case "input-text":
                 var textBox = new TextBox
                 {
@@ -102,6 +114,62 @@ public class SettingItem
                 BindingOperations.SetBinding(checkBox, ToggleButton.IsCheckedProperty, binding);
                 list.Add(checkBox);
                 break;
+
+            case "multi-checkbox":
+                {
+                    var checkedValues = new List<string>();
+                    if (context is IDictionary<string, object?> ctx)
+                    {
+                        if (!ctx.ContainsKey(Name))
+                        {
+                            if (Default is JsonElement j)
+                            {
+                                ctx[Name] = j.Deserialize<List<string>>();
+                            }
+                            else
+                            {
+                                ctx[Name] = new List<string>();
+                            }
+                        }
+                        else if (ctx[Name] is List<object> listOfObjects)
+                        {
+                            ctx[Name] = listOfObjects.Select(i => (string)i).ToList();
+                        }
+                        checkedValues = (List<string>)ctx[Name]!;
+                    }
+                    var wrapPanel = new WrapPanel
+                    {
+                        Orientation = Orientation.Horizontal
+                    };
+                    if (Options != null)
+                    {
+                        foreach (var option in Options)
+                        {
+                            var box = new CheckBox
+                            {
+                                Content = option,
+                                IsChecked = checkedValues.Contains(option),
+                            };
+                            RoutedEventHandler callback = (sender, e) =>
+                            {
+                                bool isChecked = ((CheckBox)sender).IsChecked ?? false;
+                                if (isChecked && !checkedValues.Contains(option))
+                                {
+                                    checkedValues.Add(option);
+                                }
+                                else if (!isChecked)
+                                {
+                                    checkedValues.Remove(option);
+                                }
+                            };
+                            box.Checked += callback;
+                            box.Unchecked += callback;
+                            wrapPanel.Children.Add(box);
+                        }
+                    }
+                    list.Add(wrapPanel);
+                    break;
+                }
 
             default:
                 throw new Exception($"Unknown setting type: {Type}");
