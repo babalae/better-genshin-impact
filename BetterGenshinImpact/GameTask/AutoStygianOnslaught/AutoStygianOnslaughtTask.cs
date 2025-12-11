@@ -94,6 +94,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // 前置进入秘境
         await TpToDomain(page);
+        await SelectDifficulty(page);
         await EnterDomain(page);
         await ChooseBoss(page);
 
@@ -246,7 +247,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task EnterDomain(BvPage page)
     {
-        await Delay(4000, _ct); // 等待动画完成
         await page.Locator(ElementAssets.Instance.BtnWhiteConfirm)
             .WithRoi(r => r.CutRight(0.5))
             .ClickUntilDisappears();
@@ -568,6 +568,35 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
     }
 
+    private async Task SelectDifficulty(BvPage page)
+    {
+        await Delay(4000, _ct); // 等待动画完成
+
+        // 检查是否需要从至危挑战切换到困难
+        if (page.GetByText("至危挑战").WithRoi(r => r.CutLeftTop(0.5, 0.2)).IsExist())
+        {
+            _logger.LogInformation($"{Name}：找到至危挑战，尝试切换到困难模式");
+            await Delay(500, _ct);
+            await page.GetByText("至危挑战").WithRoi(r => r.CutLeftTop(0.5, 0.2)).Click();
+            await Delay(500, _ct);
+        }
+
+        // 检查困难模式是否已选中
+        var hardMode = page.GetByText("困难").WithRoi(r => r.CutRightTop(0.5, 0.2)).IsExist();
+
+        if (hardMode)
+        {
+            _logger.LogInformation($"{Name}：确认困难模式");
+        }
+        else
+        {
+            _logger.LogWarning("未找到困难模式，尝试切换");
+            await Delay(500, _ct);
+            page.Click(1096, 186);
+            await Delay(500, _ct);
+            page.Click(1093, 399);
+        }
+    }
 
     private async Task ExitDomain(BvPage page)
     {
