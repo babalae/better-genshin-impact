@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -204,6 +205,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
             {
+                await Delay(500, _ct);
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                 _logger.LogInformation($"{Name}：交互秘境");
                 return;
@@ -217,6 +219,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3, 0.2)).WaitFor();
         await Delay(500, _ct);
 
+        // 查找并点击幽境危战 - 前往挑战
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
         {
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
@@ -227,11 +230,33 @@ public class AutoStygianOnslaughtTask : ISoloTask
             await Delay(1500, _ct);
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
         }
+        else
+        {
+            throw new Exception("未找到幽境危战选项");
+        }
 
         _logger.LogInformation($"{Name}：点击前往挑战");
 
         // 传送
         await Delay(1000, _ct);
+
+        try
+        {
+            await page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo)
+                .WaitFor();
+        }
+        catch
+        {
+            // 未找到传送按钮，先返回主界面再重新进入
+            _logger.LogWarning($"{Name}：未找到传送按钮，返回七天神像重新开始");
+            var tpTask = new TpTask(_ct);
+            tpTask.TpToStatueOfTheSeven().Wait(_ct);
+
+            // 重新执行从打开活动界面开始的流程
+            await TpToDomain(page);
+            return;
+        }
+
         await page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo).Click();
         _logger.LogInformation($"{Name}：点击传送");
         await Delay(800, _ct);
