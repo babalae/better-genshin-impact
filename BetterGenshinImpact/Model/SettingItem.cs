@@ -157,7 +157,7 @@ public class SettingItem
                                 {
                                     checkedValues.Add(option);
                                 }
-                                else
+                                else if (!isChecked)
                                 {
                                     checkedValues.Remove(option);
                                 }
