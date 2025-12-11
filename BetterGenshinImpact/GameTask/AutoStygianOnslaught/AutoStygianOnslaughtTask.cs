@@ -362,10 +362,19 @@ public class AutoStygianOnslaughtTask : ISoloTask
     /// </summary>
     private Task DomainEndDetectionTask(CancellationTokenSource cts)
     {
-        return new Task(async () =>
+        return new Task(async void () =>
         {
-            await Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 150, 1000);
-            await cts.CancelAsync();
+            try
+            {
+                await Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 300, 1000);
+                _logger.LogInformation("检测到战斗结束，结束战斗操作线程");
+                await cts.CancelAsync();
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation("对局结束检测线程异常结束：{Msg}", e.Message);
+                _logger.LogDebug(e, "对局结束检测线程异常结束");
+            }
         }, cts.Token);
     }
 
