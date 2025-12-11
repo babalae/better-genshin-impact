@@ -313,7 +313,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             }
 
             // 切换战斗队伍
-            await SwitchTeam(_taskParam.FightTeamName);
+            await SwitchTeam(page);
 
             await Delay(120, _ct);
 
@@ -628,8 +628,9 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
     }
 
-    private async Task SwitchTeam(string? fightTeamName)
+    private async Task SwitchTeam(BvPage page)
     {
+        var fightTeamName = _taskParam.FightTeamName;
         if (string.IsNullOrEmpty(fightTeamName))
         {
             _logger.LogInformation($"{Name}：不更换战斗队伍");
@@ -639,37 +640,28 @@ public class AutoStygianOnslaughtTask : ISoloTask
         _logger.LogInformation($"{Name}：配置战斗队伍为：{fightTeamName}");
 
         // 查找预设队伍按钮并点击它打开面板
-        Region? teamButton = null;
-        for (int i = 0; i < 2; i++)
+        var teamButton = page.GetByText("预设队伍").WithRoi(r => r.CutRightBottom(0.3, 0.1)).FindAll().FirstOrDefault();
+
+        if (teamButton == null)
         {
-            using var ra = CaptureToRectArea();
-            var ocrList1 = ra.FindMulti(RecognitionObject.Ocr(1360, 985, 200, 70));
-            teamButton = ocrList1.FirstOrDefault(o => o.Text.Contains("预设队伍"));
-
-            if (teamButton == null)
-            {
-                var ocrList2 = ra.FindMulti(RecognitionObject.Ocr(1, 0, 160, 80));
-                teamButton = ocrList2.FirstOrDefault(o => o.Text.Contains("预设队伍"));
-            }
-
-            if (teamButton != null)
-            {
-                break;
-            }
-
-            if (i == 1)
+            // 如果按钮未找到，检查列表面板是否已打开
+            var panelTitle = page.GetByText("预设队伍").WithRoi(r => r.CutLeftTop(0.15, 0.075)).FindAll().FirstOrDefault();
+            if (panelTitle == null)
             {
                 _logger.LogWarning("未找到预设队伍按钮，不执行切换操作");
                 return;
             }
+            // 列表面板已打开，跳过点击按钮步骤
+        }
+        else
+        {
+            // 点击预设队伍按钮打开队伍选择面板
+            teamButton.Click();
+            await Delay(100, _ct);
         }
 
-        // 点击预设队伍按钮打开队伍选择面板
-        teamButton!.Click();
-        await Delay(100, _ct);
-
         // 此时面板已打开，点击滚动条准备拖动
-        GameCaptureRegion.GameRegion1080PPosClick(936, 150);
+        page.Click(936, 150);
         await Delay(100, _ct);
 
         // 滚轮预操作 - 按住左键准备拖动列表
@@ -684,11 +676,9 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         for (int retries = 0; retries < maxRetries; retries++)
         {
-            // 查找队伍名称，OCR区域: x=50, y=108, w=350, h=900
-            using var ra = CaptureToRectArea();
-            var ocrList = ra.FindMulti(RecognitionObject.Ocr(50, 108, 350, 900));
-            var foundTeam = ocrList.FirstOrDefault(t => t.Text.Contains(fightTeamName));
-
+            // 查找队伍名称，OCR区域: 左侧竖列队伍列表
+            var teamRegionList = page.GetByText(fightTeamName).WithRoi(r => r.CutLeft(0.18)).FindAll();
+            var foundTeam = teamRegionList.FirstOrDefault();
             if (foundTeam != null)
             {
                 Simulation.SendInput.Mouse.LeftButtonUp();
