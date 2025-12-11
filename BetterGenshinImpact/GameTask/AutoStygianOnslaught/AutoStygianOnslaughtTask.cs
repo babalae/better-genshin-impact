@@ -195,7 +195,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
     }
 
-    private async Task TpToDomain(BvPage page)
+    private async Task TpToDomain(BvPage page, bool isRetry = false)
     {
         await new ReturnMainUiTask().Start(_ct);
         await Delay(100, _ct);
@@ -247,13 +247,15 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
         catch
         {
-            // 未找到传送按钮，先返回主界面再重新进入
-            _logger.LogWarning($"{Name}：未找到传送按钮，返回七天神像重新开始");
-            var tpTask = new TpTask(_ct);
-            tpTask.TpToStatueOfTheSeven().Wait(_ct);
-
-            // 重新执行从打开活动界面开始的流程
-            await TpToDomain(page);
+            if (!isRetry)
+            {
+                // 未找到传送按钮，先返回主界面再重新进入
+                _logger.LogWarning($"{Name}：未找到传送按钮，返回七天神像重新开始");
+                var tpTask = new TpTask(_ct);
+                tpTask.TpToStatueOfTheSeven().Wait(_ct);
+                // 重新执行从打开活动界面开始的流程
+                await TpToDomain(page, isRetry: true);
+            }
             return;
         }
 
