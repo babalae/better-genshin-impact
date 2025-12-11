@@ -251,8 +251,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 // 未找到传送按钮，先返回主界面再重新进入
                 _logger.LogWarning($"{Name}：未找到传送按钮，返回七天神像重新开始");
-                var tpTask = new TpTask(_ct);
-                tpTask.TpToStatueOfTheSeven().Wait(_ct);
+                await new TpTask(_ct).TpToStatueOfTheSeven();
                 // 重新执行从打开活动界面开始的流程
                 await TpToDomain(page, isRetry: true);
             }
