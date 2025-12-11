@@ -628,12 +628,12 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
     }
 
-    private async Task<bool> SwitchTeam(string? fightTeamName)
+    private async Task SwitchTeam(string? fightTeamName)
     {
         if (string.IsNullOrEmpty(fightTeamName))
         {
             _logger.LogInformation($"{Name}：不更换战斗队伍");
-            return true;
+            return;
         }
 
         _logger.LogInformation($"{Name}：配置战斗队伍为：{fightTeamName}");
@@ -660,7 +660,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
             if (i == 1)
             {
                 _logger.LogWarning("未找到预设队伍按钮，不执行切换操作");
-                return false;
+                return;
             }
         }
 
@@ -684,7 +684,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         for (int retries = 0; retries < maxRetries; retries++)
         {
-            // 按照JS逻辑查找队伍名称，OCR区域: x=50, y=108, w=350, h=900
+            // 查找队伍名称，OCR区域: x=50, y=108, w=350, h=900
             using var ra = CaptureToRectArea();
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(50, 108, 350, 900));
             var foundTeam = ocrList.FirstOrDefault(t => t.Text.Contains(fightTeamName));
@@ -695,28 +695,25 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 await Delay(300, _ct);
                 foundTeam.Click();
                 await Delay(500, _ct);
-                return true;
+                return;
             }
 
-            retries++;
             // 滚轮操作 - 在滚动条(936, y)位置拖动
             yOffset += 100;
-            if (retries >= maxRetries || 130 + yOffset > 1080)
+            if (130 + yOffset > 1080)
             {
                 Simulation.SendInput.Mouse.LeftButtonUp();
                 await Delay(100, _ct);
                 _logger.LogWarning("未找到预设战斗队伍名称，保持原有队伍");
                 Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
                 await Delay(500, _ct);
-                return false;
+                return;
             }
 
-            // JS: await click(936,130+YOffset);
+            // 移动滚动条
             GameCaptureRegion.GameRegion1080PPosMove(936, 130 + yOffset);
             await Delay(200, _ct);
         }
-
-        return true;
     }
 
     private async Task ExitDomain(BvPage page)
