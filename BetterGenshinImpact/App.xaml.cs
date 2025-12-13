@@ -12,14 +12,17 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -29,6 +32,8 @@ using Serilog.Sinks.RichTextBox.Abstraction;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Controls;
+using Quartz;
+using BetterGenshinImpact.Model.Gear.Triggers;
 
 namespace BetterGenshinImpact;
 
@@ -96,6 +101,21 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
+                
+                // Quartz.NET 调度器配置
+                services.AddQuartz(q =>
+                {
+                    q.UseSimpleTypeLoader();
+                    q.UseInMemoryStore();
+                    q.UseDefaultThreadPool(tp =>
+                    {
+                        tp.MaxConcurrency = 1;
+                    });
+                });
+                services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+                services.AddSingleton<QuartzSchedulerService>();
+                services.AddHostedService(sp => sp.GetRequiredService<QuartzSchedulerService>());
+                services.AddGearTaskServices();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();
@@ -113,6 +133,12 @@ public partial class App : Application
                 services.AddSingleton<PathingConfigViewModel>();
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
+                services.AddView<SchedulerPage, SchedulerViewModel>();
+                services.AddView<GearTaskListPage, GearTaskListPageViewModel>();
+                services.AddView<GearTriggerPage, GearTriggerPageViewModel>();
+                services.AddTransient<TaskDefinitionEditWindow>();
+                services.AddTransient<TaskDefinitionEditWindowViewModel>();
+
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
@@ -134,6 +160,10 @@ public partial class App : Application
                 services.AddSingleton<HutaoNamedPipe>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
+                services.AddSingleton<GearTaskStorageService>();
+                services.AddSingleton<GearTriggerStorageService>();
+
+
                 
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();
@@ -159,6 +189,11 @@ public partial class App : Application
     public static T? GetService<T>() where T : class
     {
         return _host.Services.GetService(typeof(T)) as T;
+    }
+    
+    public static T GetRequiredService<T>() where T : class
+    {
+        return _host.Services.GetRequiredService<T>();
     }
 
     /// <summary>
