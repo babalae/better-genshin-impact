@@ -205,6 +205,11 @@ public partial class AutoSkipTrigger : ITaskTrigger
             _prevPlayingTime = DateTime.Now;
             if (TaskContext.Instance().Config.AutoSkipConfig.QuicklySkipConversationsEnabled)
             {
+                if (_config.BeforeClickConfirmDelay > 0)
+                {
+                    // 在触发点击动作之前延迟时间
+                    Thread.Sleep(_config.BeforeClickConfirmDelay);
+                }
                 if (IsUseInteractionKey)
                 {
                     _postMessageSimulator? .SimulateActionBackground(GIActions.PickUpOrInteract); // 注意这里不是交互键 NOTE By Ayu0K: 这里确实是交互键
