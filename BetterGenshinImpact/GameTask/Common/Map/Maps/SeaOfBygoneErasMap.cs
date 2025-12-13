@@ -104,7 +104,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
     {
         // It's fine to miss some, but definitely no false positive results.
         const double threshold = 0.99;
-        Mat result = new Mat();
+        using Mat result = new Mat();
         Cv2.MatchTemplate(greyBigMapMat, TeleportTemplate, result, TemplateMatchModes.CCorrNormed, TeleportTemplateMask);
 
         var teleportPoints = new List<Point>();
@@ -202,7 +202,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
             }
             Cv2.DrawMarker(debugMat, rp0, new Scalar(0, 255, 0), MarkerTypes.TriangleUp, 20, 2);
             Cv2.DrawMarker(debugMat, rp1, new Scalar(0, 255, 0), MarkerTypes.TriangleUp, 20, 2);
-            Cv2.ImWrite("C:/" + ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds().ToString() + ".png", debugMat);
+            Cv2.ImWrite(((DateTimeOffset)DateTime.UtcNow).ToUnixTimeMilliseconds().ToString() + ".png", debugMat);
             */
         }
 
@@ -220,7 +220,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
                 var angle = GetAngleOfTwoPoints(mp0, mp1);
                 if (Math.Abs(angle - refAngle) < 5)
                 {
-                    // Step 4: Assuming this pair correspond to the reference points
+                    // Step 4: Assuming this pair corresponds to the reference points
                     var mpDist = mp0.DistanceTo(mp1);
                     var rpDist = rp0.DistanceTo(rp1);
                     var scale = mpDist / rpDist;
