@@ -11,6 +11,7 @@ using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1151,10 +1152,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                 _webWindow = null;
             };
+
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
-            _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
+            // _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
             {
+                var assetsPath = Global.Absolute(@"Assets\Web\ScriptRepo");
+                _webWindow.Panel!.WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    "bettergi.local",
+                    assetsPath,
+                    CoreWebView2HostResourceAccessKind.Allow
+                );
+
+                // _webWindow.Panel!.WebView.CoreWebView2.Navigate("https://bettergi.local/index.html");
+
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
 
                 // 允许内部外链使用默认浏览器打开
@@ -1170,6 +1181,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     e.Handled = true;
                 };
             };
+
+            _webWindow.NavigateToUri(new Uri("https://bettergi.local/index.html"));
             _webWindow.Show();
         }
         else
