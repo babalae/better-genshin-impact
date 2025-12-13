@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using BetterGenshinImpact.GameTask.GameLoading;
 using Fischless.GameCapture.Graphics;
+using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.GameTask
@@ -195,6 +196,7 @@ namespace BetterGenshinImpact.GameTask
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                     }
 
+                    PictureInPictureService.Hide(resetManual: true);
                     UiTaskStopTickEvent?.Invoke(sender, e);
                     maskWindow.Invoke(maskWindow.Hide);
                     return;
@@ -202,6 +204,8 @@ namespace BetterGenshinImpact.GameTask
 
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
+                var autoSkipConfig = TaskContext.Instance().Config.AutoSkipConfig;
+                var shouldShowPictureInPicture = autoSkipConfig.Enabled && autoSkipConfig.PictureInPictureEnabled && !PictureInPictureService.IsManuallyClosed;
                 var active = SystemControl.IsGenshinImpactActive();
                 if (!active)
                 {
@@ -210,6 +214,7 @@ namespace BetterGenshinImpact.GameTask
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                         UiTaskStopTickEvent?.Invoke(sender, e);
+                        PictureInPictureService.Hide(resetManual: true);
                         return;
                     }
 
@@ -244,15 +249,21 @@ namespace BetterGenshinImpact.GameTask
                             }
                         }
                     }
+                    if (!hasBackgroundTriggerToRun && shouldShowPictureInPicture)
+                    {
+                        hasBackgroundTriggerToRun = true;
+                    }
 
                     if (!hasBackgroundTriggerToRun)
                     {
                         // 没有后台运行的触发器，这次不再进行截图
+                        PictureInPictureService.Hide();
                         return;
                     }
                 }
                 else
                 {
+                    PictureInPictureService.Hide(resetManual: true);
                     if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
                     {
                         // if (!_prevGameActive)
@@ -297,6 +308,15 @@ namespace BetterGenshinImpact.GameTask
                 {
                     _logger.LogWarning("截图失败!");
                     return;
+                }
+
+                if (shouldShowPictureInPicture && !active)
+                {
+                    PictureInPictureService.Update(bitmap);
+                }
+                else
+                {
+                    PictureInPictureService.Hide();
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
