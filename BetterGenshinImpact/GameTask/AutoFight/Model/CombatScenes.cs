@@ -34,7 +34,7 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 当前配队
     /// </summary>
-    private Avatar[] Avatars { set; get; } = [];
+    public Avatar[] Avatars { set; get; } = [];
 
     public int AvatarCount => Avatars.Length;
 
