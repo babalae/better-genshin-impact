@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -28,6 +29,11 @@ public class NotificationService : IHostedService, IDisposable
     private readonly HttpClient _notifyHttpClient;
     private readonly CancellationTokenSource? _webSocketCts;
 
+    // 通知顺序队列相关
+    private readonly ConcurrentQueue<BaseNotificationData> _notificationQueue = new();
+    private readonly SemaphoreSlim _queueSignal = new(0);
+    private readonly CancellationTokenSource _queueCts = new();
+
     // 缓存配置对象引用
     private NotificationConfig? _notificationConfig;
 
@@ -44,6 +50,9 @@ public class NotificationService : IHostedService, IDisposable
         {
             _instance = this;
         }
+
+        // 启动后台任务，顺序消费通知队列
+        Task.Run(() => ProcessNotificationQueueAsync(_queueCts.Token));
     }
 
     /// <summary>
@@ -51,8 +60,12 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public void Dispose()
     {
-        // _webSocketCts?.Cancel();
+        // 停止 WebSocket 与通知队列
+        _webSocketCts?.Cancel();
         _webSocketCts?.Dispose();
+        _queueCts.Cancel();
+        _queueSignal.Dispose();
+        _queueCts.Dispose();
         _notifyHttpClient?.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -73,6 +86,7 @@ public class NotificationService : IHostedService, IDisposable
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _webSocketCts?.Cancel();
+        _queueCts.Cancel();
         return Task.CompletedTask;
     }
 
@@ -400,7 +414,7 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     向所有通知器发送通知（异步方法）
+    ///     向所有通知器发送通知（异步方法，真正执行发送逻辑）
     /// </summary>
     public async Task NotifyAllNotifiersAsync(BaseNotificationData notificationData)
     {
@@ -416,6 +430,41 @@ public class NotificationService : IHostedService, IDisposable
         catch (Exception ex)
         {
             TaskControl.Logger.LogError(ex, "发送通知时发生错误");
+        }
+    }
+
+    /// <summary>
+    ///     后台顺序处理通知队列
+    /// </summary>
+    private async Task ProcessNotificationQueueAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                await _queueSignal.WaitAsync(token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            while (_notificationQueue.TryDequeue(out var data))
+            {
+                try
+                {
+                    await NotifyAllNotifiersAsync(data);
+                }
+                catch (Exception ex)
+                {
+                    TaskControl.Logger.LogError(ex, "处理通知队列时发生错误");
+                }
+
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
         }
     }
 
@@ -458,22 +507,13 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     向所有通知器发送通知（非阻塞方法）
+    ///     向所有通知器发送通知（非阻塞方法，入队等待顺序发送）
     /// </summary>
     public void NotifyAllNotifiers(BaseNotificationData notificationData)
     {
         if (notificationData == null) throw new ArgumentNullException(nameof(notificationData));
 
-        Task.Run(async () =>
-        {
-            try
-            {
-                await NotifyAllNotifiersAsync(notificationData);
-            }
-            catch (Exception ex)
-            {
-                TaskControl.Logger.LogError(ex, "后台发送通知时发生错误");
-            }
-        });
+        _notificationQueue.Enqueue(notificationData);
+        _queueSignal.Release();
     }
 }
