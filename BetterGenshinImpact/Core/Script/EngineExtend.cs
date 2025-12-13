@@ -12,6 +12,8 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using System;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -68,10 +70,14 @@ public class EngineExtend
 
         engine.AddHostType("ServerTime", typeof(ServerTime));
         
-        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
-        engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
-        
+        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));
+        engine.AddHostType("AutoFightParam", typeof(AutoFightParam));
 
+        // 添加ClearScript辅助类
+        engine.AllowReflection = true; // 允许反射
+        engine.AddHostObject("HostFunctions", new HostFunctions());
+        // 用于辅助JsTypeDef创建空对象导出JS类型信息
+        engine.AddHostObject("TypeHelper", new TypeHelper(engine));
 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
