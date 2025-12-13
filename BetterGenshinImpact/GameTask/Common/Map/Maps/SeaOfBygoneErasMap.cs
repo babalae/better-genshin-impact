@@ -131,7 +131,6 @@ public class SeaOfBygoneErasMap : SceneBaseMap
                         bool tooClose = false;
                         foreach (var p in teleportPoints)
                         {
-                            var dist = p.DistanceTo(newPoint);
                             if (p.DistanceTo(newPoint) < 50)
                             {
                                 tooClose = true;
