@@ -35,10 +35,12 @@ public class PartyAvatarSideIndexHelper
         {
             autoFightAssets = AutoFightAssets.Instance;
         }
+
         if (logger == null)
         {
             logger = TaskControl.Logger;
         }
+
         var status = new MultiGameStatus();
         // 判断当前联机人数
         var pRaList = imageRegion.FindMulti(autoFightAssets.PRa);
@@ -246,7 +248,7 @@ public class PartyAvatarSideIndexHelper
 
     public static List<Rect> GetAvatarSideIconRectFromIndexRect(List<Rect> indexRect, ISystemInfo systemInfo)
     {
-        return indexRect.Select(r=> GetAvatarSideIconRectFromIndexRect(r, systemInfo)).ToList();
+        return indexRect.Select(r => GetAvatarSideIconRectFromIndexRect(r, systemInfo)).ToList();
     }
 
     public static bool IsIntersecting(double y1, double h1, double y2, double h2)
@@ -373,8 +375,7 @@ public class PartyAvatarSideIndexHelper
         Mat[] mats = new Mat[rectArray.Length];
         try
         {
-            var whiteCount = 0;
-            var notWhiteRectNum = 0;
+            int whiteCount = 0, notWhiteRectNum = 0;
             var mat = imageRegion.CacheGreyMat;
             for (int i = 0; i < rectArray.Length; i++)
             {
@@ -396,8 +397,22 @@ public class PartyAvatarSideIndexHelper
             }
             else
             {
-                // 使用更加靠谱的差值识别（-1是未识别）
-                return ImageDifferenceDetector.FindMostDifferentImage(mats);
+                // 方法2：边缘像素白色比例
+                int m2 = FindActiveIndexRectByEdgeColor(mats);
+                if (m2 > 0)
+                {
+                    return m2;
+                }
+                
+                // 方法3：使用更加靠谱的差值识别（-1是未识别），但是不支持非满队
+                if (mats.Length == 4)
+                {
+                    return ImageDifferenceDetector.FindMostDifferentImage(mats);
+                }
+                else
+                {
+                    return -1;
+                }
             }
         }
         finally
@@ -407,15 +422,13 @@ public class PartyAvatarSideIndexHelper
                 mat?.Dispose();
             }
         }
-
     }
 
     public static bool IsWhiteRect(Mat indexMat)
     {
-
         var count1 = OpenCvCommonHelper.CountGrayMatColor(indexMat, 251, 255); // 白
         var count2 = OpenCvCommonHelper.CountGrayMatColor(indexMat, 50, 54); // 黑色文字
-        if ((count1 + count2) * 1.0 / (indexMat.Width * indexMat.Height) > 0.4)
+        if ((count1 + count2) * 1.0 / (indexMat.Width * indexMat.Height) > 0.35)
         {
             // Debug.WriteLine($"白色矩形占比{(count1 + count2) * 1.0 / (indexMat.Width * indexMat.Height)}");
             return true;
@@ -443,7 +456,7 @@ public class PartyAvatarSideIndexHelper
         {
             return -1;
         }
-        
+
         for (int i = 0; i < rectArray.Length; i++)
         {
             if (IsIntersecting(curr.Y, curr.Height, rectArray[i].Y, rectArray[i].Height))
@@ -453,5 +466,99 @@ public class PartyAvatarSideIndexHelper
         }
 
         return -1;
+    }
+
+    /// <summary>
+    ///  通过边缘像素颜色识别出战角色编号
+    /// </summary>
+    /// <param name="mats"></param>
+    /// <returns></returns>
+    public static int FindActiveIndexRectByEdgeColor(Mat[] mats)
+    {
+        try
+        {
+            int whiteCount = 0, notWhiteRectNum = 0;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                if (CalculateWhiteEdgePixelsRatio(mats[i]) > 0.5)
+                {
+                    whiteCount++;
+                }
+                else
+                {
+                    notWhiteRectNum = i + 1;
+                }
+            }
+
+            if (whiteCount == mats.Length - 1)
+            {
+                return notWhiteRectNum;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// 计算灰度图最边缘一圈中纯白色(255)像素的占比
+    /// </summary>
+    /// <returns>返回纯白像素占比 (0.0 到 1.0)</returns>
+    public static double CalculateWhiteEdgePixelsRatio(Mat image)
+    {
+        int whiteCount = 0;
+        int height = image.Height;
+        int width = image.Width;
+
+        // 如果图片太小，无法获取边缘
+        if (height < 1 || width < 1)
+        {
+            return 0.0;
+        }
+
+        // 计算总边缘像素数
+        int totalCount = 2 * (width + height - 2);
+
+        // 顶边和底边
+        for (int x = 0; x < width; x++)
+        {
+            // 顶边
+            if (image.At<byte>(0, x) >= 251)
+            {
+                whiteCount++;
+            }
+
+            // 底边（避免只有一行时重复计数）
+            if (height > 1 && image.At<byte>(height - 1, x) >= 251)
+            {
+                whiteCount++;
+            }
+        }
+
+        // 左边和右边（不包括四个角，因为已经在顶边和底边中计算过）
+        for (int y = 1; y < height - 1; y++)
+        {
+            // 左边
+            if (image.At<byte>(y, 0) >= 251)
+            {
+                whiteCount++;
+            }
+
+            // 右边（避免只有一列时重复计数）
+            if (width > 1 && image.At<byte>(y, width - 1) >= 251)
+            {
+                whiteCount++;
+            }
+        }
+
+        // 计算并返回占比
+        return totalCount > 0 ? (double)whiteCount / totalCount : 0.0;
     }
 }

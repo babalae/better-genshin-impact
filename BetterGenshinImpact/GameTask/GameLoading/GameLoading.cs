@@ -316,15 +316,16 @@ public class GameLoadingTrigger : ITaskTrigger
 
             if (process != null && loginWindow != IntPtr.Zero)
             {
+                var dpiScale = TaskContext.Instance().DpiScale;
                 if (windowType.Contains("协议"))
                 {
-                    GameCaptureRegion.GameRegion1080PPosClick(1030, 615);
+                    GameCaptureRegion.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
                 }
 
                 if (windowType.Contains("登录"))
                 {
                     Thread.Sleep(2000);
-                    GameCaptureRegion.GameRegion1080PPosClick(960, 630);
+                    GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
                     Thread.Sleep(2000);
 
                     // 检查窗口是否还存在

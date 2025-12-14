@@ -40,6 +40,15 @@ namespace BetterGenshinImpact.GameTask
 
         private static readonly object _triggerListLocker = new();
 
+        private User32.HWINEVENTHOOK _winEventHookMoveSize;
+        private User32.HWINEVENTHOOK _winEventHookLocation;
+        private User32.WinEventProc _winEventProc;
+        private const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
+        private const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
+        private const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+        private const uint WINEVENT_SKIPOWNTHREAD = 0x0001;
+        private const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
+
         public event EventHandler? UiTaskStopTickEvent;
 
         public event EventHandler? UiTaskStartTickEvent;
@@ -133,6 +142,12 @@ namespace BetterGenshinImpact.GameTask
                 }
             );
             
+            // 使用 SetWinEventHook 监听窗口移动和大小变化事件
+            _winEventProc = WinEventCallback;
+            var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
+            _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
+            _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
+            
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
@@ -148,6 +163,16 @@ namespace BetterGenshinImpact.GameTask
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
+            if (_winEventHookMoveSize != default)
+            {
+                User32.UnhookWinEvent(_winEventHookMoveSize);
+                _winEventHookMoveSize = default;
+            }
+            if (_winEventHookLocation != default)
+            {
+                User32.UnhookWinEvent(_winEventHookLocation);
+                _winEventHookLocation = default;
+            }
         }
 
         public void StartTimer()
@@ -283,11 +308,11 @@ namespace BetterGenshinImpact.GameTask
                     }
 
                     _prevGameActive = active;
-                    // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
-                    if (SyncMaskWindowPosition())
-                    {
-                        return;
-                    }
+                    // // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
+                    // if (SyncMaskWindowPosition())
+                    // {
+                    //     return;
+                    // }
                 }
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
@@ -400,6 +425,24 @@ namespace BetterGenshinImpact.GameTask
         private bool SizeIsZero(RECT rect)
         {
             return rect.Width == 0 || rect.Height == 0;
+        }
+
+        private void WinEventCallback(User32.HWINEVENTHOOK hWinEventHook, uint @event, HWND hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        {
+            var target = TaskContext.Instance().GameHandle;
+            if (target == IntPtr.Zero)
+            {
+                return;
+            }
+            if (idObject != 0)
+            {
+                return;
+            }
+            var hwndPtr = hwnd.DangerousGetHandle();
+            if (hwndPtr == target)
+            {
+                SyncMaskWindowPosition();
+            }
         }
 
         public void TakeScreenshot()

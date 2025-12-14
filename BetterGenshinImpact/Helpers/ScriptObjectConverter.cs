@@ -57,8 +57,8 @@ public class ScriptObjectConverter
 
     /// <summary>
     /// <para>适用集合的重载</para>
-    /// 如果<paramref name="propertyName"/>解析失败，默认返回一个空集合；
-    /// 如果集合元素解析失败，将跳过该元素
+    /// 如果<paramref name="propertyName"/>解析失败，返回null；
+    /// 如果集合元素解析失败，将跳过该元素，因此有可能返回空集合
     /// <para>仅支持一层集合，<typeparamref name="T"/>不能再是集合</para>
     /// <para>避开反射，享受健康生活</para>
     /// </summary>
@@ -66,7 +66,7 @@ public class ScriptObjectConverter
     /// <param name="source"></param>
     /// <param name="propertyName"></param>
     /// <returns></returns>
-    public static IEnumerable<T> GetValue<T>(ScriptObject source, string propertyName)
+    public static IEnumerable<T>? GetValue<T>(ScriptObject source, string propertyName)
     {
         if (source[propertyName] is not Undefined && source[propertyName] != null)
         {
@@ -74,7 +74,7 @@ public class ScriptObjectConverter
 
             return TryMap<T>(v8Value);
         }
-        return new T[0];
+        return null;
     }
 
     /// <summary>

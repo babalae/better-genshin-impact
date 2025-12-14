@@ -157,7 +157,7 @@ public partial class ChooseTalkOptionTask
 
             // 通过最下面的气泡框来文字识别
             var lowest = chatOptionResultList[0];
-            var ocrRect = new Rect((int)(lowest.X + lowest.Width + 8 * assetScale), region.Height / 12,
+            var ocrRect = new Rect((int)(lowest.X + lowest.Width + 8 * assetScale), region.Height / 8,
                 (int)(535 * assetScale), (int)(lowest.Y + lowest.Height + 30 * assetScale - region.Height / 12d));
             var ocrResList = region.FindMulti(RecognitionObject.Ocr(ocrRect));
 
