@@ -28,11 +28,11 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private double _logMaskLeft = 0;
 
-        [ObservableProperty] private double _logMaskTop = 280;
+        [ObservableProperty] private double _logMaskTop = 880;
 
         [ObservableProperty] private double _logMaskWidth = 500;
 
-        [ObservableProperty] private double _logMaskHeight = 800;
+        [ObservableProperty] private double _logMaskHeight = 200;
 
         [ObservableProperty] private double _logFontSize = 12;
         public MaskWindowViewModel()

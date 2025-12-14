@@ -86,7 +86,7 @@ public partial class MaskWindowConfig : ObservableObject
     ///     日志遮罩顶部位置
     /// </summary>
     [ObservableProperty]
-    private double _logMaskTop = 280;
+    private double _logMaskTop = 880;
 
     /// <summary>
     ///     日志遮罩宽度
@@ -98,7 +98,7 @@ public partial class MaskWindowConfig : ObservableObject
     ///     日志遮罩高度
     /// </summary>
     [ObservableProperty]
-    private double _logMaskHeight = 800;
+    private double _logMaskHeight = 200;
 
     /// <summary>
     ///     日志字体大小

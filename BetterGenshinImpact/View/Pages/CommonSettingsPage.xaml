@@ -372,6 +372,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -397,11 +398,18 @@
                     <TextBlock Grid.Row="0"
                                Grid.Column="3"
                                VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
                                Margin="0,0,36,0"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskLeft, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskLeftCommand}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -410,6 +418,7 @@
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -438,11 +447,18 @@
                     <TextBlock Grid.Row="0"
                                Grid.Column="3"
                                VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
                                Margin="0,0,36,0"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskTop, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskTopCommand}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -451,6 +467,7 @@
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -479,11 +496,18 @@
                     <TextBlock Grid.Row="0"
                                Grid.Column="3"
                                VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
                                Margin="0,0,36,0"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskWidth, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskWidthCommand}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -492,6 +516,7 @@
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -504,14 +529,14 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="高度(800~1080)"
+                                  Text="高度(200~1080)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
                             Width="200"
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Minimum="800"
+                            Minimum="200"
                             Maximum="1080"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
@@ -520,11 +545,18 @@
                     <TextBlock Grid.Row="0"
                                Grid.Column="3"
                                VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
                                Margin="0,0,36,0"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskHeight, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskHeightCommand}" />
                 </Grid>                
                
                 <Grid Margin="16">
@@ -534,6 +566,7 @@
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -562,11 +595,18 @@
                     <TextBlock Grid.Row="0"
                                Grid.Column="3"
                                VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
                                Margin="0,0,36,0"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogFontSize, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogFontSizeCommand}" />
                 </Grid>  
                 
 

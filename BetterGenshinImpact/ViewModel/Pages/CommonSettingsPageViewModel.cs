@@ -354,4 +354,34 @@ public partial class CommonSettingsPageViewModel : ViewModel
         Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
+
+    [RelayCommand]
+    private void ResetLogMaskLeft()
+    {
+        Config.MaskWindowConfig.LogMaskLeft = 0;
+    }
+
+    [RelayCommand]
+    private void ResetLogMaskTop()
+    {
+        Config.MaskWindowConfig.LogMaskTop = 880;
+    }
+
+    [RelayCommand]
+    private void ResetLogMaskWidth()
+    {
+        Config.MaskWindowConfig.LogMaskWidth = 500;
+    }
+
+    [RelayCommand]
+    private void ResetLogMaskHeight()
+    {
+        Config.MaskWindowConfig.LogMaskHeight = 200;
+    }
+
+    [RelayCommand]
+    private void ResetLogFontSize()
+    {
+        Config.MaskWindowConfig.LogFontSize = 12;
+    }
 }
