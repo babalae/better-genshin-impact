@@ -81,7 +81,8 @@
                 </Grid.RowDefinitions>
                 <ContentControl x:Name="LogTextBoxWrapper"
                                 Grid.Row="1"
-                                Width="477" Height="188"
+                                Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                                Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Style="{StaticResource OuterDraggableResizableItemStyle}">
                     <ContentControl.Effect>

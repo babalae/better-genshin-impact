@@ -423,7 +423,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Y坐标(0~10800)"
+                                  Text="Y坐标(0~1080)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -431,7 +431,7 @@
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
                             Minimum="0"
-                            Maximum="10800"
+                            Maximum="1080"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
                             Value="{Binding Config.MaskWindowConfig.LogMaskTop, Mode=TwoWay}" />
