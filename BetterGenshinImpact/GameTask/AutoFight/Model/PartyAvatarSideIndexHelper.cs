@@ -403,7 +403,7 @@ public class PartyAvatarSideIndexHelper
                 {
                     return m2;
                 }
-                
+
                 // 方法3：使用更加靠谱的差值识别（-1是未识别），但是不支持非满队
                 if (mats.Length == 4)
                 {
@@ -494,6 +494,29 @@ public class PartyAvatarSideIndexHelper
             {
                 return notWhiteRectNum;
             }
+            else if (whiteCount == mats.Length)
+            {
+                // 如果四个都是白色，那就找内部有没有黑色
+                int blackCount = 0, notBlackRectNum = -1;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var count = OpenCvCommonHelper.CountGrayMatColorC1(mats[i], 50, 50); // 黑字
+                    if (count > 0)
+                    {
+                        blackCount++;
+                    }
+                    else
+                    {
+                        notBlackRectNum = i + 1;
+                    }
+                }
+
+                if (notBlackRectNum >= 1)
+                {
+                    TaskControl.Logger.LogDebug("当前所有编号边缘均为白色（背景过白），通过内部黑色像素识别出战编号为{Index}，存在黑色数字的角色编号有{C1}个，总角色数量{C2}", notBlackRectNum, blackCount, mats.Length);
+                    return notBlackRectNum;
+                }
+            }
             else
             {
                 return -1;
@@ -530,13 +553,13 @@ public class PartyAvatarSideIndexHelper
         for (int x = 0; x < width; x++)
         {
             // 顶边
-            if (image.At<byte>(0, x) >= 251)
+            if (image.At<byte>(0, x) == 255)
             {
                 whiteCount++;
             }
 
             // 底边（避免只有一行时重复计数）
-            if (height > 1 && image.At<byte>(height - 1, x) >= 251)
+            if (height > 1 && image.At<byte>(height - 1, x) == 255)
             {
                 whiteCount++;
             }
@@ -546,13 +569,13 @@ public class PartyAvatarSideIndexHelper
         for (int y = 1; y < height - 1; y++)
         {
             // 左边
-            if (image.At<byte>(y, 0) >= 251)
+            if (image.At<byte>(y, 0) == 255)
             {
                 whiteCount++;
             }
 
             // 右边（避免只有一列时重复计数）
-            if (width > 1 && image.At<byte>(y, width - 1) >= 251)
+            if (width > 1 && image.At<byte>(y, width - 1) == 255)
             {
                 whiteCount++;
             }
