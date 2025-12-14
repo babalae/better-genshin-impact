@@ -381,16 +381,16 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="X坐标(0~1920)"
+                                  Text="X坐标(-1920~1920)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
                             Width="200"
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Minimum="0"
+                            Minimum="-1920"
                             Maximum="1920"
-                            TickFrequency="1"
+                            TickFrequency="100"
                             IsSnapToTickEnabled="True"
                             Value="{Binding Config.MaskWindowConfig.LogMaskLeft, Mode=TwoWay}" />
                     
@@ -423,7 +423,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Y坐标(0~1080)"
+                                  Text="Y坐标(-1080~1080)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -432,7 +432,7 @@
                             VerticalAlignment="Center"
                             Minimum="-1080"
                             Maximum="1080"
-                            TickFrequency="1"
+                            TickFrequency="100"
                             IsSnapToTickEnabled="True"
                             Value="{Binding Config.MaskWindowConfig.LogMaskTop, Mode=TwoWay}" />
                     
