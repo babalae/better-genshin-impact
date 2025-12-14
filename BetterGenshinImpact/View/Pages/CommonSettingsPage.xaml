@@ -540,7 +540,7 @@
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Left"
-                            Minimum="200"
+                            Minimum="100"
                             Maximum="1080"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
