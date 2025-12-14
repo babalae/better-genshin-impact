@@ -26,9 +26,9 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _fps = "0";
 
-        [ObservableProperty] private double _logMaskLeft = 100;
+        [ObservableProperty] private double _logMaskLeft = 0;
 
-        [ObservableProperty] private double _logMaskTop = 100;
+        [ObservableProperty] private double _logMaskTop = 280;
 
         [ObservableProperty] private double _logMaskWidth = 500;
 
