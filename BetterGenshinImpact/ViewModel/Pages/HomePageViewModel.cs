@@ -588,6 +588,7 @@ public partial class HomePageViewModel : ViewModel
                 bitmap.BeginInit();
                 bitmap.UriSource = new Uri(Path.GetFullPath(_customBannerImagePath));
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; 
                 bitmap.EndInit();
                 BannerImageSource = bitmap;
                 Toast.Success("背景图片更换成功！");
@@ -614,6 +615,7 @@ public partial class HomePageViewModel : ViewModel
             defaultBitmap.BeginInit();
             defaultBitmap.UriSource = new Uri(DefaultBannerImagePath, UriKind.Absolute);
             defaultBitmap.CacheOption = BitmapCacheOption.OnLoad;
+            defaultBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; 
             defaultBitmap.EndInit();
             BannerImageSource = defaultBitmap;
             
