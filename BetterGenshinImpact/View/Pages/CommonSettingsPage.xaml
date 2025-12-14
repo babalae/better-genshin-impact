@@ -430,7 +430,7 @@
                             Width="200"
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Minimum="0"
+                            Minimum="-1080"
                             Maximum="1080"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
@@ -446,8 +446,6 @@
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskTop, StringFormat=F2}" />
                 </Grid>
-                <!--没效果先注释-->
-                <!--
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -467,7 +465,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="宽度(0~19200)"
+                                  Text="宽度(0~1920)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -475,7 +473,7 @@
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
                             Minimum="0"
-                            Maximum="19200"
+                            Maximum="1920"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
                             Value="{Binding Config.MaskWindowConfig.LogMaskWidth, Mode=TwoWay}" />
@@ -532,7 +530,6 @@
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskHeight, StringFormat=F2}" />
                 </Grid>                
-                -->
                
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
