@@ -361,6 +361,113 @@
                                Text="{Binding Config.MaskWindowConfig.TextOpacity, StringFormat=F2}" />
                 </Grid>
 
+                <!-- 日志遮罩设置（应放置在遮罩相关设置区域） -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩X坐标"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="X坐标"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="2"
+                            MinWidth="120"
+                            Margin="0,0,36,0"
+                            Minimum="0"
+                            Maximum="1920"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskLeft, Mode=TwoWay}" />
+                    
+
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩Y坐标"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="Y坐标"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="1"
+                            Grid.Column="2"
+                            MinWidth="120"
+                            Margin="0,0,36,0"
+                            Minimum="0"
+                            Maximum="1080"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskTop, Mode=TwoWay}" />
+                    
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩宽度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="宽度"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="2"
+                            Grid.Column="2"
+                            MinWidth="120"
+                            Margin="0,0,36,0"
+                            Minimum="100"
+                            Maximum="800"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskWidth, Mode=TwoWay}" />
+                    
+                    <ui:TextBlock Grid.Row="3"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩高度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="高度"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="3"
+                            Grid.Column="1"
+                            MinWidth="120"
+                            Margin="0,0,36,0"
+                            Minimum="100"
+                            Maximum="800"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskHeight, Mode=TwoWay}" />
+                    
+                    <ui:TextBlock Grid.Row="4"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志字体大小"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="字体大小"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="4"
+                            Grid.Column="1"
+                            MinWidth="120"
+                            Margin="0,0,36,0"
+                            Minimum="8"
+                            Maximum="24"
+                            Value="{Binding Config.MaskWindowConfig.LogFontSize, Mode=TwoWay}" />
+                </Grid>
+
+
 
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>

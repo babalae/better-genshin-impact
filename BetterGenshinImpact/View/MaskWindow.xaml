@@ -7,8 +7,11 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         Title="MaskWindow"
-        Width="500"
-        Height="800"
+        Left="{Binding Config.MaskWindowConfig.LogMaskLeft, FallbackValue=100}"
+        Top="{Binding Config.MaskWindowConfig.LogMaskTop, FallbackValue=100}"
+        Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=500}"
+        Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=800}"
+        ResizeMode="CanResizeWithGrip"
         d:DesignWidth="1920"
         d:DesignHeight="1080"
         AllowsTransparency="True"
@@ -16,7 +19,7 @@
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None"
-        mc:Ignorable="d">
+        mc:Ignorable="d"><!--Width="500"--><!--Height="800"-->
     <Window.DataContext>
         <viewModel:MaskWindowViewModel />
     </Window.DataContext>
@@ -89,7 +92,7 @@
                                  Background="Transparent"
                                  BorderThickness="0"
                                  FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                 FontSize="12"
+                                 FontSize="{Binding Config.MaskWindowConfig.LogFontSize, FallbackValue=12}"
                                  IsHitTestVisible="False"
                                  VerticalScrollBarVisibility="Hidden"
                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
