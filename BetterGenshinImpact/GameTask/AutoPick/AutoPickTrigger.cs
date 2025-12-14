@@ -38,7 +38,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 拾取黑名单
     /// </summary>
     private HashSet<string> _blackList = [];
-    
+
     /// <summary>
     /// 拾取黑名单(模糊匹配)
     /// </summary>
@@ -78,7 +78,8 @@ public partial class AutoPickTrigger : ITaskTrigger
             {
                 _blackList.UnionWith(userBlackList);
             }
-            _fuzzyBlackList  = ReadTextList(@"User\pick_black_lists.txt");
+
+            _fuzzyBlackList = ReadTextList(@"User\pick_black_lists.txt");
         }
 
         if (config.WhiteListEnabled)
@@ -125,7 +126,7 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         return [];
     }
-    
+
     private List<string> ReadTextList(string textFilePath)
     {
         try
@@ -194,7 +195,7 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
         var config = TaskContext.Instance().Config.AutoPickConfig;
-        
+
         // 存在 L 键位是千星奇遇，无需拾取
         using var lKeyRa = content.CaptureRectArea.Find(_autoPickAssets.LRo);
         if (lKeyRa.IsExist())
@@ -283,13 +284,13 @@ public partial class AutoPickTrigger : ITaskTrigger
             var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
             // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
             // 如果找到有效区域
-            if (boundingRect.X <20 && boundingRect.Width > 5 && boundingRect.Height > 5)
+            if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
             {
                 // 截取只包含文字的区域
                 using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
                     boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
                 text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
-                
+
                 // if (RuntimeHelper.IsDebug)
                 // {
                 //     // 如果不等于正确文字，则保存图片
@@ -351,7 +352,8 @@ public partial class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
-                if (_fuzzyBlackList.Count>0)
+
+                if (_fuzzyBlackList.Count > 0)
                 {
                     if (_fuzzyBlackList.Any(item => text.Contains(item)))
                     {
@@ -367,8 +369,6 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
-
-
     }
 
     private bool DoNotPick(string text)
@@ -385,18 +385,24 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             return true;
         }
+
         // 挪德卡莱聚所中文名特殊处理，不拾取
         if (text.Contains("聚所"))
         {
             return true;
         }
-        
+
         if (text.Contains("霜月") && text.Contains("坊"))
         {
             return true;
         }
 
         if (text.Contains("叮铃") || text.Contains("眶螂") || (text.Contains("蛋卷") && text.Contains("坊")))
+        {
+            return true;
+        }
+
+        if (text.Contains("西风成垒") || text.Contains("望崖营壁") || text.Contains("魔女的花园"))
         {
             return true;
         }
@@ -475,21 +481,21 @@ public partial class AutoPickTrigger : ITaskTrigger
         // 0. 首先替换相似的括号字符并删除换行符、空格，使用Span<char>进行原地替换以获得最佳性能
         Span<char> chars = stackalloc char[text.Length];
         text.AsSpan().CopyTo(chars);
-        
+
         int writeIndex = 0;
         bool hasChanges = false;
-        
+
         for (int i = 0; i < chars.Length; i++)
         {
             char c = chars[i];
-            
+
             // 跳过换行符、回车符、空格、制表符等空白字符
             if (char.IsWhiteSpace(c))
             {
                 hasChanges = true;
                 continue;
             }
-            
+
             // 替换括号字符
             if (c == '【' || c == '[')
             {
@@ -536,11 +542,11 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 获取清理后的文字
         var cleanedSpan = span.Slice(start, end - start + 1);
-        
+
         // 3. 检查并补充引号配对
         bool hasLeftQuote = false;
         bool hasRightQuote = false;
-        
+
         // 快速扫描是否存在引号
         for (int i = 0; i < cleanedSpan.Length; i++)
         {
@@ -563,9 +569,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             Debug.WriteLine("补充缺失的左引号");
             return string.Concat("「", cleanedSpan);
         }
-        
+
         return cleanedSpan.ToString();
     }
-    
-    
 }
