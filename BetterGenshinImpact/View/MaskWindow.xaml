@@ -91,6 +91,8 @@
                                  Padding="0,5,0,0"
                                  Background="Transparent"
                                  BorderThickness="0"
+                                 Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                                 Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
                                  FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
                                  FontSize="{Binding Config.MaskWindowConfig.LogFontSize, FallbackValue=12}"
                                  IsHitTestVisible="False"
