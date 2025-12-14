@@ -9,8 +9,8 @@
         Title="MaskWindow"
         Left="{Binding Config.MaskWindowConfig.LogMaskLeft, FallbackValue=0}"
         Top="{Binding Config.MaskWindowConfig.LogMaskTop, FallbackValue=280}"
-        Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=500}"
-        Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=800}"
+        Width="500"
+        Height="800"
         ResizeMode="CanResizeWithGrip"
         d:DesignWidth="1920"
         d:DesignHeight="1080"
@@ -19,7 +19,7 @@
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None"
-        mc:Ignorable="d"><!--Width="500"--><!--Height="800"-->
+        mc:Ignorable="d">
     <Window.DataContext>
         <viewModel:MaskWindowViewModel />
     </Window.DataContext>
@@ -81,8 +81,7 @@
                 </Grid.RowDefinitions>
                 <ContentControl x:Name="LogTextBoxWrapper"
                                 Grid.Row="1"
-                                Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
-                                Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
+                                Width="477" Height="188"
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Style="{StaticResource OuterDraggableResizableItemStyle}">
                     <ContentControl.Effect>

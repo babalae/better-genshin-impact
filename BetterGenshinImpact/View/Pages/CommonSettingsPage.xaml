@@ -446,6 +446,8 @@
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskTop, StringFormat=F2}" />
                 </Grid>
+                <!--没效果先注释-->
+                <!--
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -530,6 +532,7 @@
                                MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.LogMaskHeight, StringFormat=F2}" />
                 </Grid>                
+                -->
                
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
