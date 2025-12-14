@@ -550,15 +550,15 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="字体大小(8~24)"
+                                  Text="字体大小(12~40)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
                             Width="200"
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Minimum="8"
-                            Maximum="24"
+                            Minimum="12"
+                            Maximum="40"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
                             Value="{Binding Config.MaskWindowConfig.LogFontSize, Mode=TwoWay}" />
