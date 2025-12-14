@@ -532,7 +532,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="高度(200~1080)(移动窗口时请重新设置此值)"
+                                  Text="高度(100~1080)(移动窗口时请重新设置此值)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
