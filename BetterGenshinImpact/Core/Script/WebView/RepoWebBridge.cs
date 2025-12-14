@@ -8,6 +8,7 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -81,7 +82,7 @@ public sealed class RepoWebBridge
         try
         {
             // URL 解码路径（处理中文文件名）
-            relPath = System.Web.HttpUtility.UrlDecode(relPath);
+            relPath = WebUtility.UrlDecode(relPath);
         
             string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
                 .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
