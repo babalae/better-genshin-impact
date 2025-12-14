@@ -75,4 +75,34 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private double _textOpacity = 1.0;
+    
+    /// <summary>
+    ///     日志遮罩左侧位置
+    /// </summary>
+    [ObservableProperty]
+    private double _logMaskLeft = 100;
+
+    /// <summary>
+    ///     日志遮罩顶部位置
+    /// </summary>
+    [ObservableProperty]
+    private double _logMaskTop = 100;
+
+    /// <summary>
+    ///     日志遮罩宽度
+    /// </summary>
+    [ObservableProperty]
+    private double _logMaskWidth = 500;
+
+    /// <summary>
+    ///     日志遮罩高度
+    /// </summary>
+    [ObservableProperty]
+    private double _logMaskHeight = 800;
+
+    /// <summary>
+    ///     日志字体大小
+    /// </summary>
+    [ObservableProperty]
+    private double _logFontSize = 12;
 }

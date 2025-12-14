@@ -8,6 +8,7 @@ using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -120,6 +121,9 @@ public partial class MaskWindow : Window
         LogTextBox.TextChanged += LogTextBoxTextChanged;
         //AddAreaSettingsControl("测试识别窗口");
         Loaded += OnLoaded;
+        
+        // 监听配置变更
+        TaskContext.Instance().Config.MaskWindowConfig.PropertyChanged += OnMaskConfigChanged;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -143,6 +147,39 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
+    }
+    
+    private bool _isUpdatingFromConfig = false;
+
+    private void OnMaskConfigChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (_isUpdatingFromConfig) return;
+    
+        switch (e.PropertyName)
+        {
+            case nameof(MaskWindowConfig.LogMaskLeft):
+            case nameof(MaskWindowConfig.LogMaskTop):
+                _isUpdatingFromConfig = true;
+                this.Left = TaskContext.Instance().Config.MaskWindowConfig.LogMaskLeft;
+                this.Top = TaskContext.Instance().Config.MaskWindowConfig.LogMaskTop;
+                _isUpdatingFromConfig = false;
+                break;
+            case nameof(MaskWindowConfig.LogMaskWidth):
+            case nameof(MaskWindowConfig.LogMaskHeight):
+                _isUpdatingFromConfig = true;
+                this.Width = TaskContext.Instance().Config.MaskWindowConfig.LogMaskWidth;
+                this.Height = TaskContext.Instance().Config.MaskWindowConfig.LogMaskHeight;
+                _isUpdatingFromConfig = false;
+                break;
+            case nameof(MaskWindowConfig.LogFontSize):
+                _isUpdatingFromConfig = true;
+                if (LogTextBox != null)
+                {
+                    LogTextBox.FontSize = TaskContext.Instance().Config.MaskWindowConfig.LogFontSize;
+                }
+                _isUpdatingFromConfig = false;
+                break;
+        }
     }
 
     private void PrintSystemInfo()

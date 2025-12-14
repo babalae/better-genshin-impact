@@ -26,6 +26,15 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _fps = "0";
 
+        [ObservableProperty] private double _logMaskLeft = 100;
+
+        [ObservableProperty] private double _logMaskTop = 100;
+
+        [ObservableProperty] private double _logMaskWidth = 500;
+
+        [ObservableProperty] private double _logMaskHeight = 800;
+
+        [ObservableProperty] private double _logFontSize = 12;
         public MaskWindowViewModel()
         {
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -55,6 +64,8 @@ namespace BetterGenshinImpact.ViewModel
             RefreshSettings();
             InitializeStatusList();
             InitFps();
+            // 从配置初始化日志遮罩位置和字体大小
+            InitializeLogMaskFromConfig();
         }
 
         private void RefreshSettings()
@@ -94,6 +105,59 @@ namespace BetterGenshinImpact.ViewModel
                         Fps = $"{result.Fps:0}";
                     });
                 });
+            }
+        }
+        
+        
+        private void InitializeLogMaskFromConfig()
+        {
+            if (Config != null)
+            {
+                LogMaskLeft = Config.MaskWindowConfig.LogMaskLeft;
+                LogMaskTop = Config.MaskWindowConfig.LogMaskTop;
+                LogMaskWidth = Config.MaskWindowConfig.LogMaskWidth;
+                LogMaskHeight = Config.MaskWindowConfig.LogMaskHeight;
+                LogFontSize = Config.MaskWindowConfig.LogFontSize;
+            }
+        }
+        
+        partial void OnLogMaskLeftChanged(double value)
+        {
+            if (Config != null)
+            {
+                Config.MaskWindowConfig.LogMaskLeft = value;
+            }
+        }
+
+        partial void OnLogMaskTopChanged(double value)
+        {
+            if (Config != null)
+            {
+                Config.MaskWindowConfig.LogMaskTop = value;
+            }
+        }
+
+        partial void OnLogMaskWidthChanged(double value)
+        {
+            if (Config != null)
+            {
+                Config.MaskWindowConfig.LogMaskWidth = value;
+            }
+        }
+
+        partial void OnLogMaskHeightChanged(double value)
+        {
+            if (Config != null)
+            {
+                Config.MaskWindowConfig.LogMaskHeight = value;
+            }
+        }
+
+        partial void OnLogFontSizeChanged(double value)
+        {
+            if (Config != null)
+            {
+                Config.MaskWindowConfig.LogFontSize = value;
             }
         }
     }
