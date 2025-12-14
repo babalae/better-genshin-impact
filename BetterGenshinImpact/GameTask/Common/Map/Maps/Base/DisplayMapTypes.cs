@@ -13,4 +13,7 @@ public enum DisplayMapTypes
 
     [Description("渊下宫")]
     Enkanomiya,
+
+    [Description("旧日之海")]
+    SeaOfBygoneEras,
 }
