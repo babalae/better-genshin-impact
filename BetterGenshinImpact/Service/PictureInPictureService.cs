@@ -2,6 +2,8 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Windows;
 using OpenCvSharp;
 using System;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Service;
 
@@ -19,13 +21,17 @@ public static class PictureInPictureService
             return;
         }
 
-        var copy = frame.Clone();
+        Mat? copy = null;
+        if (TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType == nameof(PictureSourceType.TriggerDispatcher))
+        {
+            copy = frame.Clone();
+        }
         UIDispatcherHelper.BeginInvoke(() =>
         {
             EnsureWindow();
             if (_window == null)
             {
-                copy.Dispose();
+                copy?.Dispose();
                 return;
             }
 

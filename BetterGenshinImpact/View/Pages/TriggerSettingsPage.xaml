@@ -268,20 +268,29 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="画中画预览（建议和后台模式同时开启使用）"
+                                  Text="画中画窗口（建议和后台模式同时开启）"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏失焦时在桌面显示小窗，滚轮缩放，左键唤回游戏，右键关闭预览"
+                                  Text="游戏失焦时展示小窗，滚轮缩放，左键返回游戏，右键关闭"
                                   TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Margin="0,0,12,0"
+                              DisplayMemberPath="Value"
+                              ItemsSource="{Binding PictureInPictureSourceTypeDict}"
+                              SelectedValue="{Binding Config.AutoSkipConfig.PictureInPictureSourceType, Mode=TwoWay}"
+                              SelectedValuePath="Key" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
-                                     Grid.Column="1"
+                                     Grid.Column="2"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.PictureInPictureEnabled, Mode=TwoWay}" />
                 </Grid>

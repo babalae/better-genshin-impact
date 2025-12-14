@@ -2,6 +2,7 @@
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -28,6 +29,13 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     [ObservableProperty] private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
 
     [ObservableProperty] private List<string> _pickButtonNames;
+
+    [ObservableProperty] private Dictionary<string, string> _pictureInPictureSourceTypeDict =
+        new()
+        {
+            { nameof(PictureSourceType.CaptureLoop), "60帧模式" },
+            { nameof(PictureSourceType.TriggerDispatcher), "截图器供图" }
+        };
 
     public AllConfig Config { get; set; }
 

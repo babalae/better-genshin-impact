@@ -3,6 +3,7 @@ using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.Helpers.Extensions;
 using Mat = OpenCvSharp.Mat;
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
@@ -12,6 +13,8 @@ using System.Windows.Interop;
 using Vanara.PInvoke;
 using Size = OpenCvSharp.Size;
 using System.Windows.Media.Imaging;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -36,6 +39,7 @@ public partial class PictureInPictureWindow : Window
         ShowActivated = false;
         Opacity = 0;
         Loaded += OnLoaded;
+        CompositionTarget.Rendering += Loop;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -45,8 +49,44 @@ public partial class PictureInPictureWindow : Window
         UpdateClip();
     }
 
-    public void SetFrame(Mat frame)
+    private void Loop(object? sender, EventArgs e)
     {
+        if (PictureInPictureService.IsManuallyClosed || !IsVisible || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.CaptureLoop))
+        {
+            return;
+        }
+
+        using var mat = TaskTriggerDispatcher.GlobalGameCapture?.Capture();
+        if (mat != null)
+        {
+            if (_cacheSize != mat.Size() || PreviewImage.Source == null)
+            {
+                PreviewImage.Source = mat.ToWriteableBitmap();
+                _cacheSize = mat.Size();
+                if (!_initializedPosition)
+                {
+                    PositionNearGame(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+                    _initializedPosition = true;
+                }
+            }
+            else
+            {
+                mat.UpdateWriteableBitmap((WriteableBitmap)PreviewImage.Source);
+            }
+        }
+        else
+        {
+            Debug.WriteLine("截图失败");
+        }
+    }
+
+    public void SetFrame(Mat? frame)
+    {
+        if (frame == null || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.TriggerDispatcher))
+        {
+            return;
+        }
+
         if (!Dispatcher.CheckAccess())
         {
             // 转移所有权：后台线程把 frame 交给 UI 线程处理并释放

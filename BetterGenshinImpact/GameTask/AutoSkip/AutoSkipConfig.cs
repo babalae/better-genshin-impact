@@ -134,6 +134,14 @@ public partial class AutoSkipConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _pictureInPictureEnabled = false;
+    
+    /// <summary>
+    /// 画中画的源图像类型
+    /// TriggerDispatcher：来自于截图器50ms一次
+    /// CaptureLoop：主动获取（60帧）
+    /// </summary>
+    [ObservableProperty]
+    private string _pictureInPictureSourceType = nameof(PictureSourceType.CaptureLoop);
 
     /// <summary>
     /// 关闭弹出层
@@ -147,4 +155,11 @@ public partial class AutoSkipConfig : ObservableObject
     // /// </summary>
     // [ObservableProperty]
     // private string _selectChatOptionType = SelectChatOptionTypes.UseMouse;
+}
+
+
+public enum PictureSourceType
+{
+    TriggerDispatcher,
+    CaptureLoop
 }
