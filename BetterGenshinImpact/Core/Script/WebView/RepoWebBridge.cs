@@ -25,6 +25,11 @@ public sealed class RepoWebBridge
         ".vue", ".css", ".html", ".csv", ".xml",
         ".yaml", ".yml", ".ini", ".config"
     };
+    
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"
+    };
 
     public async Task<string> GetRepoJson()
     {
@@ -80,6 +85,14 @@ public sealed class RepoWebBridge
         
             string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
                 .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            
+            // 验证解析后的路径在允许的目录范围内
+            string normalizedBasePath = Path.GetFullPath(Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo"));
+            string normalizedFilePath = Path.GetFullPath(filePath);
+            if (!normalizedFilePath.StartsWith(normalizedBasePath, StringComparison.OrdinalIgnoreCase))
+            {
+                   return "404";
+            }
 
             if (!File.Exists(filePath))
             {
@@ -92,7 +105,7 @@ public sealed class RepoWebBridge
             {
                 return await File.ReadAllTextAsync(filePath);
             }
-            else if (new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico" }.Contains(extension))
+            else if (AllowedImageExtensions.Contains(extension))
             {
                 byte[] bytes = await File.ReadAllBytesAsync(filePath);
                 return Convert.ToBase64String(bytes);
