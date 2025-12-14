@@ -47,6 +47,13 @@ public partial class PictureInPictureWindow : Window
 
     public void SetFrame(Mat frame)
     {
+        if (!Dispatcher.CheckAccess())
+        {
+            // 转移所有权：后台线程把 frame 交给 UI 线程处理并释放
+            _ = Dispatcher.BeginInvoke(new Action(() => SetFrame(frame)));
+            return;
+        }
+
         try
         {
             var size = new Size(frame.Width, frame.Height);
