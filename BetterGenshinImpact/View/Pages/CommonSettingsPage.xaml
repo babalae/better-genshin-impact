@@ -554,7 +554,7 @@
                             VerticalAlignment="Center"
                             Minimum="8"
                             Maximum="24"
-                            TickFrequency="8"
+                            TickFrequency="1"
                             IsSnapToTickEnabled="True"
                             Value="{Binding Config.MaskWindowConfig.LogMaskHeight, Mode=TwoWay}" />
                     
