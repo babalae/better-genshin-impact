@@ -80,13 +80,13 @@ public partial class MaskWindowConfig : ObservableObject
     ///     日志遮罩左侧位置
     /// </summary>
     [ObservableProperty]
-    private double _logMaskLeft = 100;
+    private double _logMaskLeft = 0;
 
     /// <summary>
     ///     日志遮罩顶部位置
     /// </summary>
     [ObservableProperty]
-    private double _logMaskTop = 100;
+    private double _logMaskTop = 280;
 
     /// <summary>
     ///     日志遮罩宽度
