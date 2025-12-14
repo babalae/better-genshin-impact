@@ -74,14 +74,17 @@
             <!--  日志和状态  -->
             <Grid Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="5"
                   HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                  Height="213" Width="477">
+                  Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                  Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
+                  >
                 <Grid.RowDefinitions>
                     <RowDefinition Height="25" />
                     <RowDefinition Height="188" />
                 </Grid.RowDefinitions>
                 <ContentControl x:Name="LogTextBoxWrapper"
                                 Grid.Row="1"
-                                Width="477" Height="188"
+                                Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                                Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Style="{StaticResource OuterDraggableResizableItemStyle}">
                     <ContentControl.Effect>
