@@ -75,6 +75,9 @@ public sealed class RepoWebBridge
     {
         try
         {
+            // URL 解码路径（处理中文文件名）
+            relPath = System.Web.HttpUtility.UrlDecode(relPath);
+        
             string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
                 .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
 
@@ -83,17 +86,26 @@ public sealed class RepoWebBridge
                 return "404";
             }
 
-            string extension = Path.GetExtension(filePath);
-            return AllowedTextExtensions.Contains(extension) 
-                ? await File.ReadAllTextAsync(filePath) 
-                : "404";
+            string extension = Path.GetExtension(filePath).ToLower();
+    
+            if (AllowedTextExtensions.Contains(extension)) 
+            {
+                return await File.ReadAllTextAsync(filePath);
+            }
+            else if (new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico" }.Contains(extension))
+            {
+                byte[] bytes = await File.ReadAllBytesAsync(filePath);
+                return Convert.ToBase64String(bytes);
+            }
+
+            return "404";
         }
         catch
         {
             return "404";
         }
     }
-
+    
     public async Task<bool> UpdateSubscribed(string path)
     {
         try
