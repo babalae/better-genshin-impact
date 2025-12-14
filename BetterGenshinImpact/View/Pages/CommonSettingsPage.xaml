@@ -423,14 +423,14 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Y坐标(0~1080)"
+                                  Text="Y坐标(280~1080)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
                             Width="200"
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Minimum="0"
+                            Minimum="280"
                             Maximum="1080"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
@@ -561,53 +561,19 @@
                             Maximum="24"
                             TickFrequency="1"
                             IsSnapToTickEnabled="True"
-                            Value="{Binding Config.MaskWindowConfig.LogMaskHeight, Mode=TwoWay}" />
+                            Value="{Binding Config.MaskWindowConfig.LogFontSize, Mode=TwoWay}" />
                     
                     <TextBlock Grid.Row="0"
                                Grid.Column="3"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Right"
+                               HorizontalAlignment="Left"
                                Margin="0,0,36,0"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
                                MinWidth="40"
-                               Text="{Binding Config.MaskWindowConfig.LogMaskHeight, StringFormat=F2}" />
+                               Text="{Binding Config.MaskWindowConfig.LogFontSize, StringFormat=F2}" />
                 </Grid>  
                 
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    
-                    <ui:TextBlock Grid.Row="4"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="日志字体大小"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="4"
-                                  Grid.Column="1"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="字体大小"
-                                  TextWrapping="Wrap" />
-                    <Slider Grid.Row="4"
-                            Grid.Column="2"
-                            MinWidth="120"
-                            Margin="0,0,36,0"
-                            Minimum="8"
-                            Maximum="24"
-                            Value="{Binding Config.MaskWindowConfig.LogFontSize, Mode=TwoWay}" />
-                </Grid>
-
-
 
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
