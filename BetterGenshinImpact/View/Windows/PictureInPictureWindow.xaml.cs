@@ -10,6 +10,8 @@ using BetterGenshinImpact.Helpers;
 using System.Windows.Media;
 using System.Windows.Interop;
 using Vanara.PInvoke;
+using Size = OpenCvSharp.Size;
+using System.Windows.Media.Imaging;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -24,6 +26,7 @@ public partial class PictureInPictureWindow : Window
     private bool _pointerDown;
     private bool _dragging;
     private Point _downPoint;
+    private Size _cacheSize;
 
     public event Action? ClosedByUser;
 
@@ -46,14 +49,23 @@ public partial class PictureInPictureWindow : Window
     {
         try
         {
-            var bitmap = frame.ToWriteableBitmap();
-            PreviewImage.Source = bitmap;
-            UpdateSizeFromFrame(frame.Width, frame.Height);
-            UpdateClip();
-            if (!_initializedPosition)
+            var size = new Size(frame.Width, frame.Height);
+            if (_cacheSize != size || PreviewImage.Source is not WriteableBitmap wb)
             {
-                PositionNearGame(TaskContext.Instance().SystemInfo.CaptureAreaRect);
-                _initializedPosition = true;
+                var bitmap = frame.ToWriteableBitmap();
+                PreviewImage.Source = bitmap;
+                _cacheSize = size;
+                UpdateSizeFromFrame(frame.Width, frame.Height);
+                UpdateClip();
+                if (!_initializedPosition)
+                {
+                    PositionNearGame(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+                    _initializedPosition = true;
+                }
+            }
+            else
+            {
+                frame.UpdateWriteableBitmap(wb);
             }
         }
         finally

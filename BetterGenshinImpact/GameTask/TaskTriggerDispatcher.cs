@@ -163,6 +163,7 @@ namespace BetterGenshinImpact.GameTask
             GameCapture?.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
+            PictureInPictureService.Hide(resetManual: true);
             if (_winEventHookMoveSize != default)
             {
                 User32.UnhookWinEvent(_winEventHookMoveSize);
@@ -239,7 +240,6 @@ namespace BetterGenshinImpact.GameTask
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
                         UiTaskStopTickEvent?.Invoke(sender, e);
-                        PictureInPictureService.Hide(resetManual: true);
                         return;
                     }
 

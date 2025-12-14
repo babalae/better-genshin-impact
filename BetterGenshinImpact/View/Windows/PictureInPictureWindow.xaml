@@ -19,10 +19,9 @@
         MouseMove="OnMouseMove"
         MouseRightButtonUp="OnMouseRightButtonUp">
     <Border x:Name="ContainerBorder"
-            Background="#CC101010"
             BorderBrush="#40FFFFFF"
             BorderThickness="1"
-            CornerRadius="32"
+            CornerRadius="16"
             SnapsToDevicePixels="True"
             SizeChanged="OnBorderSizeChanged">
         <Image x:Name="PreviewImage"
