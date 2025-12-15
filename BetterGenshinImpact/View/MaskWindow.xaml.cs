@@ -121,9 +121,6 @@ public partial class MaskWindow : Window
         LogTextBox.TextChanged += LogTextBoxTextChanged;
         //AddAreaSettingsControl("测试识别窗口");
         Loaded += OnLoaded;
-        
-        // 监听配置变更
-        TaskContext.Instance().Config.MaskWindowConfig.PropertyChanged += OnMaskConfigChanged;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -147,32 +144,6 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
-    }
-    
-    private bool _isUpdatingFromConfig = false;
-
-    private void OnMaskConfigChanged(object sender, PropertyChangedEventArgs e)
-    {
-        if (_isUpdatingFromConfig) return;
-    
-        switch (e.PropertyName)
-        {
-           case nameof(MaskWindowConfig.LogMaskLeft):
-            case nameof(MaskWindowConfig.LogMaskTop):
-                _isUpdatingFromConfig = true;
-                Left = TaskContext.Instance().Config.MaskWindowConfig.LogMaskLeft;
-                Top = TaskContext.Instance().Config.MaskWindowConfig.LogMaskTop;
-                _isUpdatingFromConfig = false;
-                break;
-            case nameof(MaskWindowConfig.LogFontSize):
-                _isUpdatingFromConfig = true;
-                if (LogTextBox != null)
-                {
-                    LogTextBox.FontSize = TaskContext.Instance().Config.MaskWindowConfig.LogFontSize;
-                }
-                _isUpdatingFromConfig = false;
-                break;
-        }
     }
 
     private void PrintSystemInfo()
