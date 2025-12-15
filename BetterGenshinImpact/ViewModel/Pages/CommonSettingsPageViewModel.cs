@@ -376,7 +376,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void ResetLogMaskHeight()
     {
-        Config.MaskWindowConfig.LogMaskHeight = 200;
+        Config.MaskWindowConfig.LogMaskHeight = 100;
     }
 
     [RelayCommand]
