@@ -382,7 +382,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="X坐标(-1920~1920)(受显示器大小影响)(移动窗口时请重新设置此值)"
+                                  Text="X坐标(-1920~1920)(受显示器大小影响)(移动窗口时请重置后重新设置此值)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -432,7 +432,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Y坐标(-1080~1080)(受显示器大小影响)(移动窗口时请重新设置此值)"
+                                  Text="Y坐标(-1080~1080)(受显示器大小影响)(移动窗口时请重置后重新设置此值)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -482,7 +482,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="宽度(500~1920)(移动窗口时请重新设置此值)"
+                                  Text="宽度(500~1920)(移动窗口时请重置后重新设置此值)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -532,7 +532,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="高度(100~1080)(移动窗口时请重新设置此值)"
+                                  Text="高度(100~1080)(移动窗口时请重置后重新设置此值)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
@@ -583,7 +583,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="字体大小(12~40)(移动窗口时请重新设置此值)"
+                                  Text="字体大小(12~40)(移动窗口时请重置后重新设置此值)"
                                   TextWrapping="Wrap" />
                     <Slider Grid.Row="0"
                             Grid.Column="2"
