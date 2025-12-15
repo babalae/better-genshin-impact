@@ -448,6 +448,11 @@ public class NotificationService : IHostedService, IDisposable
             {
                 break;
             }
+            catch (ObjectDisposedException)
+            {
+                // SemaphoreSlim 可能在后台任务使用时被释放，优雅退出
+                break;
+            }
 
             while (_notificationQueue.TryDequeue(out var data))
             {

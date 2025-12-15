@@ -30,7 +30,7 @@ namespace BetterGI.Watchdog
 
             // 日志文件路径（基础路径 + 本次看门狗启动时间戳后缀）：
             // 1. LogFileName 为空时，使用默认 "watchdog.log"；
-            // 2. 相对路径（默认 watchdog.log）先映射到 BetterGI/User 目录；
+            // 2. 相对路径（默认 watchdog.log）先映射到 BetterGI/log 目录；
             // 3. 然后在文件名后追加一次性的启动时间戳后缀 -yyyyMMdd-HHmmss，
             //    例如 watchdog-20250101-120000.log，每次启动生成一个新的日志文件。
             var logFileName = string.IsNullOrWhiteSpace(watchdogConfig.LogFileName)
@@ -224,9 +224,13 @@ namespace BetterGI.Watchdog
             }
 
             // 构造命令行：startOneDragon <ConfigName> <GroupName?>
+            // 转义参数中的引号以防止参数解析问题
+            string escapedConfigName = configName.Replace("\"", "\\\"");
+            string escapedGroupName = groupName.Replace("\"", "\\\"");
+
             string arguments = string.IsNullOrWhiteSpace(groupName)
-                ? $"startOneDragon \"{configName}\""
-                : $"startOneDragon \"{configName}\" \"{groupName}\"";
+                ? $"startOneDragon \"{escapedConfigName}\""
+                : $"startOneDragon \"{escapedConfigName}\" \"{escapedGroupName}\"";
 
             var psi = new ProcessStartInfo
             {
@@ -237,7 +241,8 @@ namespace BetterGI.Watchdog
             };
 
             Console.WriteLine($"[Watchdog] Start BetterGI: \"{psi.FileName}\" {psi.Arguments}");
-            Process.Start(psi);
+            // 释放 Process 对象避免资源泄漏
+            using var process = Process.Start(psi);
         }
 
         /// <summary>
@@ -501,7 +506,7 @@ internal class WatchdogConfig
     public long BetterGIMemoryThresholdMB { get; set; } = 0;
 
     /// <summary>
-    /// 日志文件名或完整路径。默认 "watchdog.log"，会写入 BetterGI/User 目录。
+    /// 日志文件名或完整路径。默认 "watchdog.log"，会写入 BetterGI/log 目录。
     /// 如果设置为绝对路径，则直接写入该路径。
     /// </summary>
     public string? LogFileName { get; set; } = "watchdog.log";

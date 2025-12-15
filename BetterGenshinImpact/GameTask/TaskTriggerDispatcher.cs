@@ -36,7 +36,6 @@ namespace BetterGenshinImpact.GameTask
         private bool _prevGameActive;
 
         private DateTime _prevManualGc = DateTime.MinValue;
-        private DateTime _lastMemLogTime = DateTime.MinValue;
 
         private static readonly object _triggerListLocker = new();
 
