@@ -157,18 +157,11 @@ public partial class MaskWindow : Window
     
         switch (e.PropertyName)
         {
-            case nameof(MaskWindowConfig.LogMaskLeft):
+           case nameof(MaskWindowConfig.LogMaskLeft):
             case nameof(MaskWindowConfig.LogMaskTop):
                 _isUpdatingFromConfig = true;
-                this.Left = TaskContext.Instance().Config.MaskWindowConfig.LogMaskLeft;
-                this.Top = TaskContext.Instance().Config.MaskWindowConfig.LogMaskTop;
-                _isUpdatingFromConfig = false;
-                break;
-            case nameof(MaskWindowConfig.LogMaskWidth):
-            case nameof(MaskWindowConfig.LogMaskHeight):
-                _isUpdatingFromConfig = true;
-                this.Width = TaskContext.Instance().Config.MaskWindowConfig.LogMaskWidth;
-                this.Height = TaskContext.Instance().Config.MaskWindowConfig.LogMaskHeight;
+                Left = TaskContext.Instance().Config.MaskWindowConfig.LogMaskLeft;
+                Top = TaskContext.Instance().Config.MaskWindowConfig.LogMaskTop;
                 _isUpdatingFromConfig = false;
                 break;
             case nameof(MaskWindowConfig.LogFontSize):
