@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
@@ -11,10 +12,10 @@ public class AncientSacredMountainMap : SceneBaseMap
 {
     #region 地图参数
 
-    static readonly int GameMapRows = 2; // 游戏坐标下地图块的行数
-    static readonly int GameMapCols = 2; // 游戏坐标下地图块的列数
-    static readonly int GameMapUpRows = 0; // 游戏坐标下 左上角离地图原点的行数(注意原点在块的右下角)
-    static readonly int GameMapLeftCols = 0; // 游戏坐标下 左上角离地图原点的列数(注意原点在块的右下角)
+    static readonly int GameMapRows = 4; // 游戏坐标下地图块的行数
+    static readonly int GameMapCols = 4; // 游戏坐标下地图块的列数
+    static readonly int GameMapUpRows = 1; // 游戏坐标下 左上角离地图原点的行数(注意原点在块的右下角)
+    static readonly int GameMapLeftCols = 1; // 游戏坐标下 左上角离地图原点的列数(注意原点在块的右下角)
 
     #endregion 地图参数
 
@@ -27,6 +28,8 @@ public class AncientSacredMountainMap : SceneBaseMap
         splitRow: 0,
         splitCol: 0)
     {
+        ExtractAndSaveFeature(Global.Absolute("Assets/Map/AncientSacredMountain/AncientSacredMountain_0_1024.png"));
+        ExtractAndSaveFeature(Global.Absolute("Assets/Map/AncientSacredMountain/AncientSacredMountain_-1_1024.webp"));
         Layers = BaseMapLayer.LoadLayers(this);
     }
 
