@@ -43,7 +43,7 @@
 
 		
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.13" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.14" />
         <PackageReference Include="BetterGI.Assets.Model" Version="1.0.17" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.10" />
 		
