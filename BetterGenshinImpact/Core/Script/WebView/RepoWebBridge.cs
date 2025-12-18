@@ -8,6 +8,7 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -24,6 +25,11 @@ public sealed class RepoWebBridge
         ".txt", ".md", ".json", ".js", ".ts",
         ".vue", ".css", ".html", ".csv", ".xml",
         ".yaml", ".yml", ".ini", ".config"
+    };
+    
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"
     };
 
     public async Task<string> GetRepoJson()
@@ -75,25 +81,45 @@ public sealed class RepoWebBridge
     {
         try
         {
+            // URL 解码路径（处理中文文件名）
+            relPath = WebUtility.UrlDecode(relPath);
+        
             string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
                 .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            
+            // 验证解析后的路径在允许的目录范围内
+            string normalizedBasePath = Path.GetFullPath(Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo"));
+            string normalizedFilePath = Path.GetFullPath(filePath);
+            if (!normalizedFilePath.StartsWith(normalizedBasePath, StringComparison.OrdinalIgnoreCase))
+            {
+                   return "404";
+            }
 
             if (!File.Exists(filePath))
             {
                 return "404";
             }
 
-            string extension = Path.GetExtension(filePath);
-            return AllowedTextExtensions.Contains(extension) 
-                ? await File.ReadAllTextAsync(filePath) 
-                : "404";
+            string extension = Path.GetExtension(filePath).ToLower();
+    
+            if (AllowedTextExtensions.Contains(extension)) 
+            {
+                return await File.ReadAllTextAsync(filePath);
+            }
+            else if (AllowedImageExtensions.Contains(extension))
+            {
+                byte[] bytes = await File.ReadAllBytesAsync(filePath);
+                return Convert.ToBase64String(bytes);
+            }
+
+            return "404";
         }
         catch
         {
             return "404";
         }
     }
-
+    
     public async Task<bool> UpdateSubscribed(string path)
     {
         try
