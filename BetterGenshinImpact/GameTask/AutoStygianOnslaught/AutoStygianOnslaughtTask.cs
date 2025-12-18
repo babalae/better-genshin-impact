@@ -143,7 +143,12 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
             Bv.ClickWhiteCancelButton(ra); // 点击返回后是主角
             await Bv.WaitUntilFound(ElementAssets.Instance.LeylineDisorderIconRo, _ct);
-            await Delay(6000, _ct); // 等待载入完成
+            await Delay(2500, _ct); // 等待载入完成
+            // 走一步防止在地脉花上
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            await Delay(200, _ct);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            await Delay(3400, _ct); // 等待载入完成
 
             // 4. 寻找地脉花
             _logger.LogInformation($"{Name}：{{Text}}", "3. 寻找地脉花");
