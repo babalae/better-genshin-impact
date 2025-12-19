@@ -50,6 +50,8 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         splitCol: 0)
     {
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_0_1024.png"));
+        ExtractAndSaveFeature(Global.Absolute("Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_-1_1024.webp"));
+        ExtractAndSaveFeature(Global.Absolute("Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_-2_1024.webp"));
         Layers = BaseMapLayer.LoadLayers(this);
 
         var mapTeleports = new List<Point>();
