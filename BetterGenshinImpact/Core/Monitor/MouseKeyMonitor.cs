@@ -10,10 +10,13 @@ using System.Windows.Forms;
 using Vanara.PInvoke;
 using Timer = System.Timers.Timer;
 
+// Wine 平台适配
+using BetterGenshinImpact.Platform.Wine;
 namespace BetterGenshinImpact.Core.Monitor;
 
-public class MouseKeyMonitor
+public partial class  MouseKeyMonitor
 {
+
     /// <summary>
     ///     长按F变F连发
     /// </summary>
@@ -50,12 +53,15 @@ public class MouseKeyMonitor
         // Note: for the application hook, use the Hook.AppEvents() instead
         _globalHook = Hook.GlobalEvents();
 
-        _globalHook.KeyDown += GlobalHookKeyDown;
-        _globalHook.KeyUp += GlobalHookKeyUp;
-        _globalHook.MouseDownExt += GlobalHookMouseDownExt;
-        _globalHook.MouseUpExt += GlobalHookMouseUpExt;
-        _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
-        _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+        if (!WinePlatformAddon.IsRunningOnWine){        
+          _globalHook.KeyDown += GlobalHookKeyDown;
+          _globalHook.KeyUp += GlobalHookKeyUp;
+          _globalHook.MouseDownExt += GlobalHookMouseDownExt;
+          _globalHook.MouseUpExt += GlobalHookMouseUpExt;
+          _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+          _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+        }
+        TrySubscribeWinePolling();
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
@@ -190,7 +196,7 @@ public class MouseKeyMonitor
 
     public void Unsubscribe()
     {
-        if (_globalHook != null)
+        if (_globalHook != null && !WinePlatformAddon.IsRunningOnWine)
         {
             _globalHook.KeyDown -= GlobalHookKeyDown;
             _globalHook.KeyUp -= GlobalHookKeyUp;
@@ -200,6 +206,9 @@ public class MouseKeyMonitor
             _globalHook.MouseWheelExt -= GlobalHookMouseWheelExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
+        }
+        if (WinePlatformAddon.IsRunningOnWine){
+          DisposeWineAddon();
         }
     }
 }
