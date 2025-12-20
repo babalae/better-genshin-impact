@@ -13,8 +13,10 @@ public class KeyMouseHook: IDisposable
     private IKeyboardMouseEvents? _appEvents;
     private IKeyboardMouseEvents AppHook => _appEvents ??= MouseKeyMonitor.GlobalHook;
     
-    private readonly List<ScriptObject> _keyDownCallbacks = new();
-    private readonly List<ScriptObject> _keyUpCallbacks = new();
+    private readonly List<ScriptObject> _keyDownDataCallbacks = new();
+    private readonly List<ScriptObject> _keyUpDataCallbacks = new();
+    private readonly List<ScriptObject> _keyDownCodeCallbacks = new();
+    private readonly List<ScriptObject> _keyUpCodeCallbacks = new();
     private readonly List<ScriptObject> _mouseDownCallbacks = new();
     private readonly List<ScriptObject> _mouseUpCallbacks = new();
     private readonly List<ScriptObject> _mouseMoveCallbacks = new();
@@ -34,7 +36,8 @@ public class KeyMouseHook: IDisposable
         // 初始化事件处理程序
         _keyDownHandler = (_, args) =>
         {
-            foreach (var callback in _keyDownCallbacks)
+            // 调用KeyData回调
+            foreach (var callback in _keyDownDataCallbacks)
             {
                 try
                 {
@@ -46,11 +49,40 @@ public class KeyMouseHook: IDisposable
                     // 忽略回调执行异常，不影响其他回调
                 }
             }
+            
+            // 调用KeyCode回调
+            foreach (var callback in _keyDownCodeCallbacks)
+            {
+                try
+                {
+                    callback.InvokeAsFunction(args.KeyCode.ToString());
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
+                    // 忽略回调执行异常，不影响其他回调
+                }
+            }
         };
         
         _keyUpHandler = (_, args) =>
         {
-            foreach (var callback in _keyUpCallbacks)
+            // 调用KeyData回调
+            foreach (var callback in _keyUpDataCallbacks)
+            {
+                try
+                {
+                    callback.InvokeAsFunction(args.KeyData.ToString());
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
+                    // 忽略回调执行异常，不影响其他回调
+                }
+            }
+            
+            // 调用KeyCode回调
+            foreach (var callback in _keyUpCodeCallbacks)
             {
                 try
                 {
@@ -137,14 +169,30 @@ public class KeyMouseHook: IDisposable
         AppHook.MouseWheelExt += _mouseWheelExtHandler;
     }
     
-    public void OnKeyDown(ScriptObject callback)
+    /// <summary>
+    /// 注册键盘按下事件回调
+    /// </summary>
+    /// <param name="callback">回调函数</param>
+    /// <param name="useCodeOnly">是否仅返回KeyCode，默认为true（仅返回KeyCode）</param>
+    public void OnKeyDown(ScriptObject callback, bool useCodeOnly = true)
     {
-        _keyDownCallbacks.Add(callback);
+        if (useCodeOnly)
+            _keyDownCodeCallbacks.Add(callback);
+        else
+            _keyDownDataCallbacks.Add(callback);
     }
-
-    public void OnKeyUp(ScriptObject callback)
+    
+    /// <summary>
+    /// 注册键盘释放事件回调
+    /// </summary>
+    /// <param name="callback">回调函数</param>
+    /// <param name="useCodeOnly">是否仅返回KeyCode，默认为true（仅返回KeyCode）</param>
+    public void OnKeyUp(ScriptObject callback, bool useCodeOnly = true)
     {
-        _keyUpCallbacks.Add(callback);
+        if (useCodeOnly)
+            _keyUpCodeCallbacks.Add(callback);
+        else
+            _keyUpDataCallbacks.Add(callback);
     }
 
     public void OnMouseDown(ScriptObject callback)
@@ -169,8 +217,10 @@ public class KeyMouseHook: IDisposable
     
     public void RemoveAllListeners()
     {
-        _keyDownCallbacks.Clear();
-        _keyUpCallbacks.Clear();
+        _keyDownDataCallbacks.Clear();
+        _keyUpDataCallbacks.Clear();
+        _keyDownCodeCallbacks.Clear();
+        _keyUpCodeCallbacks.Clear();
         _mouseDownCallbacks.Clear();
         _mouseUpCallbacks.Clear();
         _mouseMoveCallbacks.Clear();
