@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+        xmlns:platform="clr-namespace:BetterGenshinImpact.Platform.Wine"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -27,7 +28,7 @@
     </b:Interaction.Triggers>
 
     <Window.Background>
-        <SolidColorBrush Opacity="0" Color="#FFB0B0B0" />
+        <SolidColorBrush Opacity="0.00001" Color="Transparent" />
     </Window.Background>
     <Window.Style>
         <Style TargetType="Window">
@@ -271,6 +272,24 @@
                         <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
                     </TextBlock.Foreground>
                 </TextBlock>
+            </Border>
+            <!--  用于支持wine  -->
+            <Border Grid.Row="0" Grid.Column="0"
+                    Grid.RowSpan="4" Grid.ColumnSpan="6"
+                    IsHitTestVisible="False">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="Background" Value="Transparent"/>
+
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Source={x:Static platform:WinePlatformAddon.IsRunningOnWine}}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Setter Property="Background" Value="#11000000"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
             </Border>
         </Grid>
     </AdornerDecorator>

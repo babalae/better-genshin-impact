@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using BetterGenshinImpact.Platform.Wine;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Helpers.DpiAwareness;
@@ -20,7 +21,28 @@ internal class DpiAwarenessController
 
     static DpiAwarenessController()
     {
-        SHCore.SetProcessDpiAwareness(SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE).ThrowIfFailed();
+        if (WinePlatformAddon.IsRunningOnWine)
+        {
+            try
+            {
+                SHCore
+                    .SetProcessDpiAwareness(
+                        SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE
+                    )
+                    .ThrowIfFailed();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Failed to set DPI awareness in Wine: {ex.Message}"
+                );
+            }
+        }
+        else{
+          SHCore
+              .SetProcessDpiAwareness(SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE)
+              .ThrowIfFailed();
+        }
     }
 
     /// <summary>

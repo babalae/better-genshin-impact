@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using Wpf.Ui.Controls;
 
+using BetterGenshinImpact.Platform.Wine;
 namespace BetterGenshinImpact.Helpers.Ui;
 
 public class WindowHelper
@@ -11,7 +12,23 @@ public class WindowHelper
     public static void TryApplySystemBackdrop(System.Windows.Window window)
     {
         var themeType = TaskContext.Instance().Config.CommonConfig.CurrentThemeType;
-        ApplyThemeToWindow(window, themeType);
+
+        // Wine 平台适配
+        if (WinePlatformAddon.IsRunningOnWine)
+        {
+            try
+            {
+                ApplyThemeToWindow(window, themeType);
+            }
+            catch 
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to apply theme in Wine");
+            }
+        }
+        else
+        {        
+          ApplyThemeToWindow(window, themeType);
+        };
     }
 
     /// <summary>

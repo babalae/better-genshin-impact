@@ -30,6 +30,9 @@ using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Controls;
 
+// Wine 平台适配
+using BetterGenshinImpact.Platform.Wine;
+
 namespace BetterGenshinImpact;
 
 public partial class App : Application
@@ -176,6 +179,8 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Wine 平台适配
+        WinePlatformAddon.ApplyApplicationConfig();
         base.OnStartup(e);
 
         try
