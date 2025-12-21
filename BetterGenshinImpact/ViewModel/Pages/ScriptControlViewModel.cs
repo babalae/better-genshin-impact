@@ -920,6 +920,7 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Content = "深度搜索",
             VerticalAlignment = VerticalAlignment.Center,
+            IsChecked = true,
         };
         TextBox filterTextBox = new()
         {
@@ -955,6 +956,20 @@ public partial class ScriptControlViewModel : ViewModel
                 _debounceTimer.Stop();
                 _debounceTimer.Tick -= OnDebounceTimerTick;
                 _ = ApplyFilterToExistingNodesAsync(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked);
+            }
+        };
+        
+        // 回车键刷新搜索结果并取消焦点，不触发确定按钮
+        filterTextBox.KeyDown += (sender, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                _ = ApplyFilterToExistingNodesAsync(list, filterTextBox.Text, excludeCheckBox.IsChecked, deepCheckBox.IsChecked);
+                if (sender is TextBox textBox)
+                {
+                    textBox.MoveFocus(new System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next));
+                }
+                e.Handled = true;
             }
         };
 
