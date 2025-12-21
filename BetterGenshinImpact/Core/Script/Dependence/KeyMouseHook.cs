@@ -22,6 +22,16 @@ public class KeyMouseHook: IDisposable
     private readonly List<ScriptObject> _mouseMoveCallbacks = new();
     private readonly List<ScriptObject> _mouseWheelCallbacks = new();
     
+    /// <summary>
+    /// 存储每个鼠标移动回调的间隔时间（毫秒）
+    /// </summary>
+    private readonly Dictionary<ScriptObject, int> _mouseMoveCallbackIntervals = new();
+    
+    /// <summary>
+    /// 存储每个鼠标移动回调的上次调用时间
+    /// </summary>
+    private readonly Dictionary<ScriptObject, DateTime> _lastMouseMoveCallbackTimes = new();
+    
     private KeyEventHandler? _keyDownHandler;
     private KeyEventHandler? _keyUpHandler;
     private EventHandler<MouseEventExtArgs>? _mouseDownExtHandler;
@@ -36,127 +46,158 @@ public class KeyMouseHook: IDisposable
         // 初始化事件处理程序
         _keyDownHandler = (_, args) =>
         {
-            // 调用KeyData回调
-            foreach (var callback in _keyDownDataCallbacks)
+            try
             {
-                try
+                // 调用KeyData回调
+                foreach (var callback in _keyDownDataCallbacks)
                 {
                     callback.InvokeAsFunction(args.KeyData.ToString());
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
-            }
-            
-            // 调用KeyCode回调
-            foreach (var callback in _keyDownCodeCallbacks)
-            {
-                try
+                
+                // 调用KeyCode回调
+                foreach (var callback in _keyDownCodeCallbacks)
                 {
                     callback.InvokeAsFunction(args.KeyCode.ToString());
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+            {
+                _logger.LogDebug("V8对象已释放，清除所有回调");
+                RemoveAllListeners();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
+                // 忽略其他回调执行异常，不影响其他回调
             }
         };
         
         _keyUpHandler = (_, args) =>
         {
-            // 调用KeyData回调
-            foreach (var callback in _keyUpDataCallbacks)
+            try
             {
-                try
+                // 调用KeyData回调
+                foreach (var callback in _keyUpDataCallbacks)
                 {
                     callback.InvokeAsFunction(args.KeyData.ToString());
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
-            }
-            
-            // 调用KeyCode回调
-            foreach (var callback in _keyUpCodeCallbacks)
-            {
-                try
+                
+                // 调用KeyCode回调
+                foreach (var callback in _keyUpCodeCallbacks)
                 {
                     callback.InvokeAsFunction(args.KeyCode.ToString());
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+            {
+                _logger.LogDebug("V8对象已释放，清除所有按键回调");
+                RemoveAllListeners();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
+                // 忽略其他回调执行异常，不影响其他回调
             }
         };
         
         _mouseDownExtHandler = (_, args) =>
         {
-            foreach (var callback in _mouseDownCallbacks)
+            try
             {
-                try
+                foreach (var callback in _mouseDownCallbacks)
                 {
                     callback.InvokeAsFunction(args.Button.ToString(), args.X, args.Y);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行鼠标按下事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+            {
+                _logger.LogDebug("V8对象已释放，清除所有回调");
+                RemoveAllListeners();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行鼠标按下事件回调时发生错误");
+                // 忽略其他回调执行异常，不影响其他回调
             }
         };
         
         _mouseUpExtHandler = (_, args) =>
         {
-            foreach (var callback in _mouseUpCallbacks)
+            try
             {
-                try
+                foreach (var callback in _mouseUpCallbacks)
                 {
                     callback.InvokeAsFunction(args.Button.ToString(), args.X, args.Y);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行鼠标释放事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+            {
+                _logger.LogDebug("V8对象已释放，清除所有鼠标回调");
+                RemoveAllListeners();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行鼠标释放事件回调时发生错误");
+                // 忽略其他回调执行异常，不影响其他回调
             }
         };
         
         _mouseMoveExtHandler = (_, args) =>
         {
-            foreach (var callback in _mouseMoveCallbacks)
+            var now = DateTime.Now;
+            try
             {
-                try
+                foreach (var callback in _mouseMoveCallbacks)
                 {
-                    callback.InvokeAsFunction(args.X, args.Y);
+                    // 获取回调的间隔时间
+                    if (_mouseMoveCallbackIntervals.TryGetValue(callback, out var interval))
+                    {
+                        // 获取上次调用时间
+                        if (_lastMouseMoveCallbackTimes.TryGetValue(callback, out var lastTime))
+                        {
+                            // 计算时间差
+                            var timeSpan = now - lastTime;
+                            // 如果时间差大于等于间隔时间，则执行回调
+                            if (timeSpan.TotalMilliseconds >= interval)
+                            {
+                                callback.InvokeAsFunction(args.X, args.Y);
+                                // 更新上次调用时间
+                                _lastMouseMoveCallbackTimes[callback] = now;
+                            }
+                        }
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行鼠标移动事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+            {
+                _logger.LogDebug("V8对象已释放，清除所有鼠标回调");
+                RemoveAllListeners();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行鼠标移动事件回调时发生错误");
+                // 忽略其他回调执行异常，不影响其他回调
             }
         };
         
         _mouseWheelExtHandler = (_, args) =>
         {
-            foreach (var callback in _mouseWheelCallbacks)
+            try
             {
-                try
+                foreach (var callback in _mouseWheelCallbacks)
                 {
                     callback.InvokeAsFunction(args.Delta, args.X, args.Y);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "执行鼠标滚轮事件回调时发生错误");
-                    // 忽略回调执行异常，不影响其他回调
-                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+            {
+                _logger.LogDebug("V8对象已释放，清除所有鼠标回调");
+                RemoveAllListeners();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行鼠标滚轮事件回调时发生错误");
+                // 忽略其他回调执行异常，不影响其他回调
             }
         };
         
@@ -205,9 +246,16 @@ public class KeyMouseHook: IDisposable
         _mouseUpCallbacks.Add(callback);
     }
     
-    public void OnMouseMove(ScriptObject callback)
+    /// <summary>
+    /// 注册鼠标移动事件回调
+    /// </summary>
+    /// <param name="callback">回调函数</param>
+    /// <param name="interval">回调间隔时间（毫秒），默认200ms</param>
+    public void OnMouseMove(ScriptObject callback, int interval = 200)
     {
         _mouseMoveCallbacks.Add(callback);
+        _mouseMoveCallbackIntervals[callback] = interval;
+        _lastMouseMoveCallbackTimes[callback] = DateTime.MinValue;
     }
     
     public void OnMouseWheel(ScriptObject callback)
@@ -225,6 +273,9 @@ public class KeyMouseHook: IDisposable
         _mouseUpCallbacks.Clear();
         _mouseMoveCallbacks.Clear();
         _mouseWheelCallbacks.Clear();
+        
+        _mouseMoveCallbackIntervals.Clear();
+        _lastMouseMoveCallbackTimes.Clear();
     }
     
     public void Dispose()

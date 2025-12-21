@@ -218,6 +218,7 @@ public class MouseKeyMonitor
             _globalHook.MouseWheelExt -= GlobalHookMouseWheelExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
+            _globalHook = null;
         }
     }
 }
