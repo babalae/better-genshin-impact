@@ -46,108 +46,157 @@ public class KeyMouseHook: IDisposable
         // 初始化事件处理程序
         _keyDownHandler = (_, args) =>
         {
-            try
+            // 创建回调列表的副本，避免迭代期间修改集合导致异常
+            var keyDownDataCallbacksCopy = new List<ScriptObject>(_keyDownDataCallbacks);
+            var keyDownCodeCallbacksCopy = new List<ScriptObject>(_keyDownCodeCallbacks);
+            
+            // 调用KeyData回调
+            foreach (var callback in keyDownDataCallbacksCopy)
             {
-                // 调用KeyData回调
-                foreach (var callback in _keyDownDataCallbacks)
+                try
                 {
                     callback.InvokeAsFunction(args.KeyData.ToString());
                 }
-                
-                // 调用KeyCode回调
-                foreach (var callback in _keyDownCodeCallbacks)
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
+            }
+            
+            // 调用KeyCode回调
+            foreach (var callback in keyDownCodeCallbacksCopy)
+            {
+                try
                 {
                     callback.InvokeAsFunction(args.KeyCode.ToString());
                 }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-            {
-                _logger.LogDebug("V8对象已释放，清除所有回调");
-                RemoveAllListeners();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
-                // 忽略其他回调执行异常，不影响其他回调
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
             }
         };
         
         _keyUpHandler = (_, args) =>
         {
-            try
+            // 创建回调列表的副本，避免迭代期间修改集合导致异常
+            var keyUpDataCallbacksCopy = new List<ScriptObject>(_keyUpDataCallbacks);
+            var keyUpCodeCallbacksCopy = new List<ScriptObject>(_keyUpCodeCallbacks);
+            
+            // 调用KeyData回调
+            foreach (var callback in keyUpDataCallbacksCopy)
             {
-                // 调用KeyData回调
-                foreach (var callback in _keyUpDataCallbacks)
+                try
                 {
                     callback.InvokeAsFunction(args.KeyData.ToString());
                 }
-                
-                // 调用KeyCode回调
-                foreach (var callback in _keyUpCodeCallbacks)
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
+            }
+            
+            // 调用KeyCode回调
+            foreach (var callback in keyUpCodeCallbacksCopy)
+            {
+                try
                 {
                     callback.InvokeAsFunction(args.KeyCode.ToString());
                 }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-            {
-                _logger.LogDebug("V8对象已释放，清除所有按键回调");
-                RemoveAllListeners();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
-                // 忽略其他回调执行异常，不影响其他回调
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
             }
         };
         
         _mouseDownExtHandler = (_, args) =>
         {
-            try
+            // 创建回调列表的副本，避免迭代期间修改集合导致异常
+            var mouseDownCallbacksCopy = new List<ScriptObject>(_mouseDownCallbacks);
+            
+            foreach (var callback in mouseDownCallbacksCopy)
             {
-                foreach (var callback in _mouseDownCallbacks)
+                try
                 {
                     callback.InvokeAsFunction(args.Button.ToString(), args.X, args.Y);
                 }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-            {
-                _logger.LogDebug("V8对象已释放，清除所有回调");
-                RemoveAllListeners();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "执行鼠标按下事件回调时发生错误");
-                // 忽略其他回调执行异常，不影响其他回调
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行鼠标按下事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
             }
         };
         
         _mouseUpExtHandler = (_, args) =>
         {
-            try
+            // 创建回调列表的副本，避免迭代期间修改集合导致异常
+            var mouseUpCallbacksCopy = new List<ScriptObject>(_mouseUpCallbacks);
+            
+            foreach (var callback in mouseUpCallbacksCopy)
             {
-                foreach (var callback in _mouseUpCallbacks)
+                try
                 {
                     callback.InvokeAsFunction(args.Button.ToString(), args.X, args.Y);
                 }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-            {
-                _logger.LogDebug("V8对象已释放，清除所有鼠标回调");
-                RemoveAllListeners();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "执行鼠标释放事件回调时发生错误");
-                // 忽略其他回调执行异常，不影响其他回调
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行鼠标释放事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
             }
         };
         
         _mouseMoveExtHandler = (_, args) =>
         {
             var now = DateTime.Now;
-            try
+            // 创建回调列表的副本，避免迭代期间修改集合导致异常
+            var mouseMoveCallbacksCopy = new List<ScriptObject>(_mouseMoveCallbacks);
+            
+            foreach (var callback in mouseMoveCallbacksCopy)
             {
-                foreach (var callback in _mouseMoveCallbacks)
+                try
                 {
                     // 获取回调的间隔时间
                     if (_mouseMoveCallbackIntervals.TryGetValue(callback, out var interval))
@@ -167,37 +216,42 @@ public class KeyMouseHook: IDisposable
                         }
                     }
                 }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-            {
-                _logger.LogDebug("V8对象已释放，清除所有鼠标回调");
-                RemoveAllListeners();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "执行鼠标移动事件回调时发生错误");
-                // 忽略其他回调执行异常，不影响其他回调
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行鼠标移动事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
             }
         };
         
         _mouseWheelExtHandler = (_, args) =>
         {
-            try
+            // 创建回调列表的副本，避免迭代期间修改集合导致异常
+            var mouseWheelCallbacksCopy = new List<ScriptObject>(_mouseWheelCallbacks);
+            
+            foreach (var callback in mouseWheelCallbacksCopy)
             {
-                foreach (var callback in _mouseWheelCallbacks)
+                try
                 {
                     callback.InvokeAsFunction(args.Delta, args.X, args.Y);
                 }
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-            {
-                _logger.LogDebug("V8对象已释放，清除所有鼠标回调");
-                RemoveAllListeners();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "执行鼠标滚轮事件回调时发生错误");
-                // 忽略其他回调执行异常，不影响其他回调
+                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
+                {
+                    _logger.LogDebug("V8对象已释放，清除所有回调");
+                    RemoveAllListeners();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "执行鼠标滚轮事件回调时发生错误");
+                    // 忽略单个回调执行异常，不影响其他回调
+                }
             }
         };
         
