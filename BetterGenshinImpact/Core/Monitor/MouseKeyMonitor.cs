@@ -6,6 +6,7 @@ using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Windows.Forms;
 using Vanara.PInvoke;
 using Timer = System.Timers.Timer;
@@ -42,7 +43,24 @@ public class MouseKeyMonitor
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
     private static IKeyboardMouseEvents? _globalHook;
-    public static IKeyboardMouseEvents GlobalHook => _globalHook ??= Hook.GlobalEvents();
+    private static readonly object GlobalHookLock = new object();
+    public static IKeyboardMouseEvents GlobalHook
+    {
+        get
+        {
+            if (_globalHook == null)
+            {
+                lock (GlobalHookLock)
+                {
+                    if (_globalHook == null)
+                    {
+                        _globalHook = Hook.GlobalEvents();
+                    }
+                }
+            }
+            return _globalHook;
+        }
+    }
     private nint _hWnd;
 
     public void Subscribe(nint gameHandle)
