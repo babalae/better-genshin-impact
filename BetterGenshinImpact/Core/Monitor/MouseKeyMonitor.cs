@@ -6,6 +6,7 @@ using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Windows.Forms;
 using Vanara.PInvoke;
 using Timer = System.Timers.Timer;
@@ -41,21 +42,38 @@ public class MouseKeyMonitor
     /// </summary>
     private DateTime _firstSpaceKeyDownTime = DateTime.MaxValue;
 
-    private IKeyboardMouseEvents? _globalHook;
+    private static IKeyboardMouseEvents? _globalHook;
+    private static readonly object GlobalHookLock = new object();
+    public static IKeyboardMouseEvents GlobalHook
+    {
+        get
+        {
+            if (_globalHook == null)
+            {
+                lock (GlobalHookLock)
+                {
+                    if (_globalHook == null)
+                    {
+                        _globalHook = Hook.GlobalEvents();
+                    }
+                }
+            }
+            return _globalHook;
+        }
+    }
     private nint _hWnd;
 
     public void Subscribe(nint gameHandle)
     {
         _hWnd = gameHandle;
         // Note: for the application hook, use the Hook.AppEvents() instead
-        _globalHook = Hook.GlobalEvents();
 
-        _globalHook.KeyDown += GlobalHookKeyDown;
-        _globalHook.KeyUp += GlobalHookKeyUp;
-        _globalHook.MouseDownExt += GlobalHookMouseDownExt;
-        _globalHook.MouseUpExt += GlobalHookMouseUpExt;
-        _globalHook.MouseMoveExt += GlobalHookMouseMoveExt;
-        _globalHook.MouseWheelExt += GlobalHookMouseWheelExt;
+        GlobalHook.KeyDown += GlobalHookKeyDown;
+        GlobalHook.KeyUp += GlobalHookKeyUp;
+        GlobalHook.MouseDownExt += GlobalHookMouseDownExt;
+        GlobalHook.MouseUpExt += GlobalHookMouseUpExt;
+        GlobalHook.MouseMoveExt += GlobalHookMouseMoveExt;
+        GlobalHook.MouseWheelExt += GlobalHookMouseWheelExt;
         //_globalHook.KeyPress += GlobalHookKeyPress;
 
         _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
@@ -200,6 +218,7 @@ public class MouseKeyMonitor
             _globalHook.MouseWheelExt -= GlobalHookMouseWheelExt;
             //_globalHook.KeyPress -= GlobalHookKeyPress;
             _globalHook.Dispose();
+            _globalHook = null;
         }
     }
 }
