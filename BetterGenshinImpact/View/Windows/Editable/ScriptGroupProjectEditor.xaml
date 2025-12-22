@@ -21,9 +21,10 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </UserControl.Resources>
     <Grid>
-        <StackPanel>
+        <ScrollViewer MaxHeight="350" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,20,0">
 
-            <!--<TextBlock Margin="0,0,0,10" Text="执行周期" />
+                <!--<TextBlock Margin="0,0,0,10" Text="执行周期" />
             <ComboBox Margin="0,0,0,20"
                       DisplayMemberPath="Value"
                       ItemsSource="{Binding Source={StaticResource ScheduleDescriptionsProvider}}"
@@ -33,64 +34,65 @@
             <TextBlock Margin="0,0,0,10" Text="执行次数" />
             <TextBox Margin="0,0,0,20" Text="{Binding RunNum, Mode=TwoWay}" />-->
 
-            <TextBlock Margin="0,0,0,10" Text="状态" />
-            <ComboBox DisplayMemberPath="Value"
-                      ItemsSource="{Binding Source={StaticResource StatusDescriptionsProvider}}"
-                      SelectedValue="{Binding Status, Mode=TwoWay}"
-                      SelectedValuePath="Key" />
-            <TextBlock Margin="0,10,0,5" Text="JS 通知权限"
-                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
-            <ComboBox Margin="0,0,0,10"
-                      ItemsSource="{Binding JsNotificationOptions}"
-                      DisplayMemberPath="Value"
-                      SelectedValuePath="Key"
-                      IsEnabled="{Binding GlobalJsNotificationEnabled}"
-                      ToolTip="{Binding JsNotificationToolTip}"
-                      SelectedValue="{Binding AllowJsNotification, Mode=TwoWay}"
-                      Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
-            </ComboBox>
-
-            <TextBlock Margin="0,10,0,5" Text="JS HTTP权限"
-                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
-            <TextBlock Margin="0,0,0,5"
-                       Text="允许脚本发送HTTP请求，可能会带来安全风险，请谨慎开启。"
-                       Foreground="Orange"
-                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
-            <TextBlock Margin="0,0,0,5"
-                       Text="注意：脚本更新http_allowed_urls后，需手动重新启用权限。"
-                       Foreground="Orange"
-                       Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
-            <ItemsControl Margin="0,0,0,0" ItemsSource="{Binding JsHTTPInfoText}"
+                <TextBlock Margin="0,0,0,10" Text="状态" />
+                <ComboBox DisplayMemberPath="Value"
+                          ItemsSource="{Binding Source={StaticResource StatusDescriptionsProvider}}"
+                          SelectedValue="{Binding Status, Mode=TwoWay}"
+                          SelectedValuePath="Key" />
+                <TextBlock Margin="0,10,0,5" Text="JS 通知权限"
+                           Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
+                <ComboBox Margin="0,0,0,10"
+                          ItemsSource="{Binding JsNotificationOptions}"
+                          DisplayMemberPath="Value"
+                          SelectedValuePath="Key"
+                          IsEnabled="{Binding GlobalJsNotificationEnabled}"
+                          ToolTip="{Binding JsNotificationToolTip}"
+                          SelectedValue="{Binding AllowJsNotification, Mode=TwoWay}"
                           Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Text}"
-                                Foreground="{Binding Color}"
-                                FontSize="11"
-                                TextWrapping="NoWrap"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <ItemsControl Margin="0,0,0,10" ItemsSource="{Binding JsHTTPInfo}"
-                          Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <TextBox Text="{Binding Text}"
-                                IsReadOnly="True"
-                                Foreground="{Binding Color}"
-                                FontSize="11"
-                                FontFamily="Consolas"
-                                TextWrapping="NoWrap"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <ComboBox DisplayMemberPath="Value"
-                      ItemsSource="{Binding JsNotificationOptions}"
-                      SelectedValue="{Binding AllowJsHTTP, Mode=TwoWay}"
-                      SelectedValuePath="Key"
-                      Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
-            </ComboBox>
+                </ComboBox>
 
-        </StackPanel>
+                <TextBlock Margin="0,10,0,5" Text="JS HTTP权限"
+                           Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
+                <TextBlock Margin="0,0,0,5"
+                           Text="允许脚本发送HTTP请求，可能会带来安全风险，请谨慎开启。"
+                           Foreground="Orange"
+                           Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
+                <TextBlock Margin="0,0,0,5"
+                           Text="注意：脚本更新http_allowed_urls后，需手动重新启用权限。"
+                           Foreground="Orange"
+                           Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}"/>
+                <ItemsControl Margin="0,0,0,0" ItemsSource="{Binding JsHTTPInfoText}"
+                              Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Text}"
+                                    Foreground="{Binding Color}"
+                                    FontSize="11"
+                                    TextWrapping="NoWrap"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl Margin="0,0,0,10" ItemsSource="{Binding JsHTTPInfo}"
+                              Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Text}"
+                                    IsReadOnly="True"
+                                    Foreground="{Binding Color}"
+                                    FontSize="11"
+                                    FontFamily="Consolas"
+                                    TextWrapping="NoWrap"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ComboBox DisplayMemberPath="Value"
+                          ItemsSource="{Binding JsNotificationOptions}"
+                          SelectedValue="{Binding AllowJsHTTP, Mode=TwoWay}"
+                          SelectedValuePath="Key"
+                          Visibility="{Binding IsJsScript, Converter={StaticResource BoolToVisConverter}}">
+                </ComboBox>
+
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>

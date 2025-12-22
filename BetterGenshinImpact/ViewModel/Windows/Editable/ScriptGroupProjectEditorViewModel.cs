@@ -125,6 +125,20 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
     public ScriptGroupProjectEditorViewModel(ScriptGroupProject project)
     {
         _project = project ?? throw new ArgumentNullException(nameof(project));
+
+        // 如果是JS脚本，每次打开配置窗口时强制重新加载项目信息，以读取最新的manifest.json
+        if (_project.Type == "Javascript")
+        {
+            try
+            {
+                _project.BuildScriptProjectRelation();
+            }
+            catch
+            {
+                // 忽略加载失败，避免无法打开窗口，界面上会显示相关错误或为空
+            }
+        }
+
         _globalNotificationConfig = TaskContext.Instance().Config.NotificationConfig;
         // 监听全局配置变更
         _project.PropertyChanged += (s, e) =>

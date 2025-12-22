@@ -407,6 +407,11 @@ public class BgiOnnxFactory
                         break;
                     case ProviderType.Cpu:
                         sessionOptions.AppendExecutionProvider_CPU();
+                        if (model.Name.Contains("PpOcr") || model.Name.Contains("Yap"))
+                        {
+                            sessionOptions.IntraOpNumThreads = 2;  // 限制算子内部并行线程数
+                            sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）  
+                        }
                         break;
                     case ProviderType.Dnnl:
                         sessionOptions.AppendExecutionProvider_Dnnl();

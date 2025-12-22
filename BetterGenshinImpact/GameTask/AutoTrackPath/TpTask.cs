@@ -894,7 +894,7 @@ public class TpTask
         if (matchRect == null)
         {
             Logger.LogWarning("切换区域失败：{Country}", areaName);
-            if (areaName == MapTypes.TheChasm.GetDescription() || areaName == MapTypes.Enkanomiya.GetDescription())
+            if (areaName == MapTypes.TheChasm.GetDescription() || areaName == MapTypes.Enkanomiya.GetDescription() || areaName == MapTypes.SeaOfBygoneEras.GetDescription() || areaName == MapTypes.AncientSacredMountain.GetDescription())
             {
                 throw new Exception($"切换独立地图区域[{areaName}]失败");
             }

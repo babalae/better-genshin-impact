@@ -399,47 +399,41 @@
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        <ui:TextBlock.Inlines>
-                            <Run Text="启动参数" />
-                            <ui:HyperlinkButton Grid.Row="1"
-                                                Margin="0,0,0,0"
-                                                Padding="0"
-                                                Command="{Binding OpenGameCommandLineDocumentCommand}"
-                                                Cursor="Hand">
-                                <ui:HyperlinkButton.Content>
-                                    <TextBlock FontSize="11" Text="打开文档" />
-                                </ui:HyperlinkButton.Content>
-                            </ui:HyperlinkButton>
-                        </ui:TextBlock.Inlines>
-                    </ui:TextBlock>
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你不知道什么是启动参数请不要填写。"
-                                  TextWrapping="Wrap" />
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Top">
+
+                        <ui:TextBlock FontTypography="Body" TextWrapping="Wrap">
+                            <ui:TextBlock.Inlines>
+                                <Run Text="启动参数" />
+                                <ui:HyperlinkButton Margin="4,0,0,0"
+                                                    Padding="0"
+                                                    Command="{Binding OpenGameCommandLineDocumentCommand}"
+                                                    Cursor="Hand">
+                                    <ui:HyperlinkButton.Content>
+                                        <TextBlock FontSize="11" Text="打开文档" />
+                                    </ui:HyperlinkButton.Content>
+                                </ui:HyperlinkButton>
+                            </ui:TextBlock.Inlines>
+                        </ui:TextBlock>
+
+                        <ui:TextBlock Margin="0,4,0,0"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                    Text="如果你不知道什么是启动参数请不要填写。"
+                                    TextWrapping="Wrap" />
+                    </StackPanel>
                     <!--  常见启动参数：无边框 -popupwindow 指定分辨率 -screen-width 1920 -screen-height 1080  -->
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="800"
+                    <ui:TextBox Grid.Column="1"
+                                Width="300"
                                 Margin="0,0,36,0"
+                                VerticalAlignment="Top"
                                 PlaceholderText="示例：-screen-width 1920"
                                 Text="{Binding Config.GenshinStartConfig.GenshinStartArgs, Mode=TwoWay}"
-                                TextWrapping="Wrap" />
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">

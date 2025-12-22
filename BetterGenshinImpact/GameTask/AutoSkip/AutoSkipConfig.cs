@@ -37,6 +37,12 @@ public partial class AutoSkipConfig : ObservableObject
     private int _afterChooseOptionSleepDelay = 0;
 
     /// <summary>
+    /// 点击对话框前的延迟（毫秒）
+    /// </summary>
+    [ObservableProperty]
+    private int _beforeClickConfirmDelay = 0;
+    
+    /// <summary>
     /// 自动领取每日委托奖励
     /// </summary>
     [ObservableProperty]
@@ -62,6 +68,12 @@ public partial class AutoSkipConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _clickChatOption = "优先选择第一个选项";
+    
+    /// <summary>  
+    /// 自定义优先选项文本，每行一个或用分号分隔  
+    /// </summary>  
+    [ObservableProperty]  
+    private string _customPriorityOptions = "";
 
     /// <summary>
     /// 自动邀约启用
@@ -96,7 +108,10 @@ public partial class AutoSkipConfig : ObservableObject
     {
         return ClickChatOption == "随机选择选项";
     }
-
+    public bool IsClickCustomPriorityOption()  
+    {  
+        return ClickChatOption == "自定义优先选项";  
+    }
     public bool IsClickNoneChatOption()
     {
         return ClickChatOption == "不选择选项";
@@ -115,6 +130,20 @@ public partial class AutoSkipConfig : ObservableObject
     private bool _submitGoodsEnabled = true;
 
     /// <summary>
+    /// 游戏失焦时显示画中画
+    /// </summary>
+    [ObservableProperty]
+    private bool _pictureInPictureEnabled = false;
+    
+    /// <summary>
+    /// 画中画的源图像类型
+    /// TriggerDispatcher：来自于截图器50ms一次
+    /// CaptureLoop：主动获取（60帧）
+    /// </summary>
+    [ObservableProperty]
+    private string _pictureInPictureSourceType = nameof(PictureSourceType.CaptureLoop);
+
+    /// <summary>
     /// 关闭弹出层
     /// </summary>
     [ObservableProperty]
@@ -126,4 +155,11 @@ public partial class AutoSkipConfig : ObservableObject
     // /// </summary>
     // [ObservableProperty]
     // private string _selectChatOptionType = SelectChatOptionTypes.UseMouse;
+}
+
+
+public enum PictureSourceType
+{
+    TriggerDispatcher,
+    CaptureLoop
 }

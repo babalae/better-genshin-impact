@@ -138,7 +138,7 @@ public class SwitchPartyTask
 
         // 点击到最上方
         await Task.Delay(50, ct);
-        GameCaptureRegion.GameRegion1080PPosClick(700, 120);
+        GameCaptureRegion.GameRegion1080PPosClick(700, 125);
         await Task.Delay(50, ct);
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
