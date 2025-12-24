@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "须弥8-折胫谷-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 5778.48,
+      "y": -1146.22,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 5797.6,
+      "y": -1131.76,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 5826.57,
+      "y": -1129.32,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 5852.13,
+      "y": -1116.87,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 5887.09,
+      "y": -1120.65,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

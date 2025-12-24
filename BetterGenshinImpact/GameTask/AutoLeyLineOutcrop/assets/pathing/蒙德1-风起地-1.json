@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "蒙德1-风起地-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -1166.84,
+      "y": 2132.83,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": -1173.85,
+      "y": 2124.6,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": -1213.32,
+      "y": 2116.66,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": -1228.49,
+      "y": 2145.92,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 5,
+      "x": -1233.84,
+      "y": 2148.55,
+      "action": "",
+      "move_mode": "jump",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 6,
+      "x": -1274.26,
+      "y": 2165.31,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 7,
+      "x": -1284.75,
+      "y": 2168.62,
+      "action": "",
+      "move_mode": "jump",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 8,
+      "x": -1298.03,
+      "y": 2172.37,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    }
+  ]
+}

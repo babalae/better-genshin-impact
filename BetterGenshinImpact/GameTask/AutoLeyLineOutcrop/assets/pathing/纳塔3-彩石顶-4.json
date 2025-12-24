@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "纳塔3-彩石顶-4",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 8205.71,
+      "y": -2073.22,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "attack(0.6)"
+    },
+    {
+      "id": 2,
+      "x": 8186.0,
+      "y": -2070.25,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 8172.33,
+      "y": -2049.22,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 8153.1,
+      "y": -2036.12,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 8131.47,
+      "y": -2026.08,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 6,
+      "x": 8119.83,
+      "y": -2033.27,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 7,
+      "x": 8117.42,
+      "y": -2047.72,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 8,
+      "x": 8088.21,
+      "y": -2053.56,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

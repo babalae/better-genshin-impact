@@ -1,0 +1,33 @@
+{
+  "info": {
+    "name": "璃月7-遁玉陵-2",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749399385367
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 611.74,
+      "y": -284.65,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 721.94,
+      "y": -106.43,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": ""
+    }
+  ]
+}

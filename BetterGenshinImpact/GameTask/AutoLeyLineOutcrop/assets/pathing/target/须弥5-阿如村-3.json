@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "须弥5-阿如村-3",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "佬记得检查这一篇代码",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 4144.29,
+      "y": -2014.19,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

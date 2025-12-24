@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-7-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 253.05,
+      "y": 1284.9,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 281.07,
+      "y": 1350.27,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 294.14,
+      "y": 1389.32,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 303.53,
+      "y": 1452.32,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 285.79,
+      "y": 1457.93,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

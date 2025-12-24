@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "须弥6-荼诃落谷-4",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 4810.42,
+      "y": -2732.88,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4795.5,
+      "y": -2746.79,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4774.5,
+      "y": -2747.88,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 4756.03,
+      "y": -2742.32,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

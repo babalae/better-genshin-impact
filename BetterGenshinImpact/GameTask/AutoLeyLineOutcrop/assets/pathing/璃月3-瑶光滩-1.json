@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "璃月3-瑶光滩-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -57.41,
+      "y": 656.94,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -55.27,
+      "y": 603.84,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

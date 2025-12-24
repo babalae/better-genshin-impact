@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月4-璃月港-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 146.03,
+      "y": 220.07,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "璃月9-南天门东-1",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 1389.08,
+      "y": 516.44,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 1370.02,
+      "y": 471.47,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 1484.37,
+      "y": 458.69,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

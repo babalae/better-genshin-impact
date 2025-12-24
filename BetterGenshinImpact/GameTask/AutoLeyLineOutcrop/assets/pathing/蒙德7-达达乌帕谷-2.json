@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "蒙德7-达达乌帕谷-2",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -1432.63,
+      "y": 1464.61,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -1449.68,
+      "y": 1477.5,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -1456.7,
+      "y": 1483.39,
+      "type": "path",
+      "move_mode": "jump",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": -1482.28,
+      "y": 1492.06,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": -1517.07,
+      "y": 1513.97,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

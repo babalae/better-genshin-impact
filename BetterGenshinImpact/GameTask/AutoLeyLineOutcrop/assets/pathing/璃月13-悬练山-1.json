@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "璃月13-悬练山-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 2257.04,
+      "y": 934.92,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 2254.49,
+      "y": 970.92,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

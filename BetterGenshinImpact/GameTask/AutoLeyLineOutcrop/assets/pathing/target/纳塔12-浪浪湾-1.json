@@ -1,0 +1,26 @@
+{
+  "info": {
+    "name": "纳塔12-浪浪湾-1",
+    "bgi_version": "0.45.0",
+    "type": "collect",
+    "order": 0,
+    "tags": [],
+    "enable_monster_loot_split": false,
+    "map_name": "Teyvat",
+    "map_match_method": "",
+    "items": [],
+    "authors": [],
+    "version": "1.0",
+    "description": "",
+    "last_modified_time": 1754569850355
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 14799.513671875,
+      "y": 631.3671875,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

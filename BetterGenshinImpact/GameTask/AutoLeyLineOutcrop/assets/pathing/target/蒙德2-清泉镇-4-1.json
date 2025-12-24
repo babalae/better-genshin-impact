@@ -1,0 +1,22 @@
+{
+  "info": {
+    "name": "蒙德2-清泉镇-4-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749595981247
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -347.95,
+      "y": 1902.51,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

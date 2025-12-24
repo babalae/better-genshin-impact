@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "枫丹1-秋分山西侧-1-rerun",
+    "type": "collect",
+    "author": "平面镜",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 4146.91,
+      "y": 2606.27,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4191.61,
+      "y": 2522.25,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4183.27,
+      "y": 2502.37,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

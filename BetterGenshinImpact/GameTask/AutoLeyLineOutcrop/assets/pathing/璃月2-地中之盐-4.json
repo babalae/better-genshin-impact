@@ -1,0 +1,39 @@
+{
+  "info": {
+    "name": "璃月2-地中之盐-4",
+    "type": "collect",
+    "author": "起个名字好难的喵",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -57.41,
+      "y": 656.93,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -48.85,
+      "y": 655.28,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -10.67,
+      "y": 683.67,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

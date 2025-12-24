@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "稻妻5-清籁岛-5-rerun",
+    "type": "collect",
+    "author": "起个名字好难的喵",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -3684.76,
+      "y": -4278.4,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": -3677.5,
+      "y": -4293.6,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": -3703.34,
+      "y": -4343.16,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": -3697.79,
+      "y": -4384.0,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 5,
+      "x": -3671.61,
+      "y": -4414.03,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "target"
+    }
+  ]
+}

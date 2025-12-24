@@ -1,0 +1,50 @@
+{
+  "info": {
+    "name": "纳塔1-隆崛坡-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 7796.08,
+      "y": -1873.18,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 7820.1,
+      "y": -1865.8,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 7864.95,
+      "y": -1823.96,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 4,
+      "x": 7864.95,
+      "y": -1823.96,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

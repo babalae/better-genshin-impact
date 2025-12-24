@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-9-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 455.04,
+      "y": 546.38,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

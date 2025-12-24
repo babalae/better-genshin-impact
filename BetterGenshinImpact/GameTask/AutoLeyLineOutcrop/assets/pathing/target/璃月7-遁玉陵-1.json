@@ -1,0 +1,22 @@
+{
+  "info": {
+    "name": "璃月7-遁玉陵-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749399134857
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 824.28,
+      "y": -325.68,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

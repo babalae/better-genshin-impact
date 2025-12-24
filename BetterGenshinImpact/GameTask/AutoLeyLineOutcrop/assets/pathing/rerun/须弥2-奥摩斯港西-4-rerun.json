@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "须弥2-奥摩斯港西-4-rerun",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "在战斗结束后，刷了两波怪，不确定是否稳定触发",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 3128.76,
+      "y": -1734.63,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 3129.43,
+      "y": -1725.33,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 3020.38,
+      "y": -1651.07,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 2980.42,
+      "y": -1630.5,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 2982.6,
+      "y": -1640.87,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "info": {
+    "name": "璃月3-瑶光滩-4-rerun",
+    "type": "collect",
+    "author": "起个名字好难的喵",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 341.3,
+      "y": 548.35,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 319.48,
+      "y": 536.14,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 276.12,
+      "y": 542.51,
+      "type": "target",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

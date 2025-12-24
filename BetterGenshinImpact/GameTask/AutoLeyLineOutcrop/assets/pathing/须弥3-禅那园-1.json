@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "须弥3-禅那园-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 3199.51,
+      "y": -911.7,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": 3194.17,
+      "y": -817.89,
+      "action": "stop_flying",
+      "move_mode": "fly",
+      "action_params": "2500",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": 3195.78,
+      "y": -806.97,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "纳塔2-硫晶支脉-3",
+    "type": "collect",
+    "author": "起个名字好难的喵",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 8706.51,
+      "y": -1575.03,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 8733.62,
+      "y": -1528.95,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "枫丹3-新枫丹科学院-2-rerun",
+    "type": "collect",
+    "author": "平面镜",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 4498.15,
+      "y": 4710.78,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4494.08,
+      "y": 4762.04,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4499.02,
+      "y": 4825.24,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 4517.81,
+      "y": 4866.48,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}
