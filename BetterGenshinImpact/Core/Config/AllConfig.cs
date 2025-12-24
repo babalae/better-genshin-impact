@@ -22,6 +22,7 @@ using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.AutoEat;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -171,6 +172,11 @@ public partial class AllConfig : ObservableObject
     ///     自动吃药配置
     /// </summary>
     public AutoEatConfig AutoEatConfig { get; set; } = new();
+
+    /// <summary>
+    ///     自动地脉花配置
+    /// </summary>
+    public AutoLeyLineOutcropConfig AutoLeyLineOutcropConfig { get; set; } = new();
     
     /// <summary>
     /// 自动使用
@@ -261,6 +267,7 @@ public partial class AllConfig : ObservableObject
         AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoRedeemCodeConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoLeyLineOutcropConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
