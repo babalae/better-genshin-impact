@@ -105,8 +105,7 @@ public partial class MaskWindow : Window
     {
         nint targetHWnd = TaskContext.Instance().GameHandle;
         _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        float x = DpiHelper.GetScale(targetHWnd).X;
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
+        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, targetRect.Width, targetRect.Height, User32.SetWindowPosFlags.SWP_SHOWWINDOW);
     }
 
     public MaskWindow()
