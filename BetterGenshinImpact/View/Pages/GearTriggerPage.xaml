@@ -8,6 +8,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:component="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Component"
+             xmlns:triggers="clr-namespace:BetterGenshinImpact.Model.Gear.Triggers"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=pages:GearTriggerPageViewModel}"
              d:DesignHeight="850"
@@ -277,104 +278,210 @@
                     </Grid>
                 </Border>
             </DataTemplate>
+
+            <!-- 历史记录表格头部模板 -->
+            <DataTemplate x:Key="HistoryTableHeaderTemplate">
+                <Border Padding="10,12" Background="Transparent">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80" />   <!-- 时间 -->
+                            <ColumnDefinition Width="80" />  <!-- 任务 -->
+                            <ColumnDefinition Width="50" />   <!-- 状态 -->
+                            <ColumnDefinition Width="*" />    <!-- 信息 -->
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBlock Grid.Column="0" Text="时间" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="1" Text="任务" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="2" Text="状态" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="3" Text="信息" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+            <!-- 历史记录数据项模板 -->
+            <DataTemplate x:Key="HistoryItemTemplate" DataType="{x:Type triggers:TriggerExecutionRecord}">
+                <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        Padding="10,12"
+                        Background="Transparent">
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftDoubleClick" 
+                                      Command="{Binding DataContext.ViewHistoryDetailsCommand, RelativeSource={RelativeSource AncestorType=ui:ListView}}" 
+                                      CommandParameter="{Binding}" />
+                    </Border.InputBindings>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="50" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <ui:TextBlock Grid.Column="0" Text="{Binding StartTime, StringFormat='HH:mm:ss'}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="1" Text="{Binding TaskName}" HorizontalAlignment="Center" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <ui:TextBlock Grid.Column="2" Text="{Binding Status}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <ui:TextBlock Grid.Column="3" Text="{Binding Message}" HorizontalAlignment="Left" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Message}" Padding="5,0"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <!-- 简化的双Tab布局 -->
-    <ui:Border Background="{DynamicResource CardBackground}"
-               BorderBrush="{DynamicResource CardBorderBrush}"
-               BorderThickness="1"
-               CornerRadius="8"
-               Margin="10">
-        <TabControl Style="{StaticResource ConsistentTabControlStyle}">
-            <TabItem Header="定时触发" Style="{StaticResource ConsistentTabItemStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    
-                    <!-- 工具栏 -->
-                    <Border Grid.Row="0" 
-                            Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
-                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                            BorderThickness="0,0,0,1"
-                            Padding="12,8">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:Button Content="新增定时触发器"
-                                       Command="{Binding AddTimedTriggerCommand}"
-                                       Icon="{ui:SymbolIcon Add24}"
-                                       Appearance="Primary"
-                                       Margin="0,0,8,0" />
-                            <ui:Button Content="删除选中项"
-                                       Command="{Binding DeleteTriggerCommand}"
+    <!-- 左右分栏布局 -->
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" /> <!-- 左侧触发器设置 -->
+            <ColumnDefinition Width="10" /> <!-- 分隔 -->
+            <ColumnDefinition Width="2*" /> <!-- 右侧执行历史 -->
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：触发器设置 -->
+        <ui:Border Grid.Column="0"
+                   Background="{DynamicResource CardBackground}"
+                   BorderBrush="{DynamicResource CardBorderBrush}"
+                   BorderThickness="1"
+                   CornerRadius="8">
+            <TabControl Style="{StaticResource ConsistentTabControlStyle}">
+                <TabItem Header="定时触发" Style="{StaticResource ConsistentTabItemStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <!-- 工具栏 -->
+                        <Border Grid.Row="0" 
+                                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="新增定时触发器"
+                                           Command="{Binding AddTimedTriggerCommand}"
+                                           Icon="{ui:SymbolIcon Add24}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,0" />
+                                <ui:Button Content="删除选中项"
+                                           Command="{Binding DeleteTriggerCommand}"
+                                           Icon="{ui:SymbolIcon Delete24}"
+                                           Appearance="Secondary" />
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- 固定表格头部 -->
+                        <ContentPresenter Grid.Row="1" 
+                                          ContentTemplate="{StaticResource TimedTableHeaderTemplate}" />
+                        
+                        <!-- 可滚动的列表内容 -->
+                        <ScrollViewer Grid.Row="2"
+                                      VerticalScrollBarVisibility="Auto" 
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ui:ListView ItemsSource="{Binding TimedTriggers}"
+                                         SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                         ItemTemplate="{StaticResource TimedTriggerItemTemplate}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         BorderThickness="0"
+                                         Margin="0" />
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="快捷键触发" Style="{StaticResource ConsistentTabItemStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        
+                        <!-- 工具栏 -->
+                        <Border Grid.Row="0" 
+                                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Content="新增快捷键触发器"
+                                           Command="{Binding AddHotkeyTriggerCommand}"
+                                           Icon="{ui:SymbolIcon Add24}"
+                                           Appearance="Primary"
+                                           Margin="0,0,8,0" />
+                                <ui:Button Content="删除选中项"
+                                           Command="{Binding DeleteTriggerCommand}"
+                                           Icon="{ui:SymbolIcon Delete24}"
+                                           Appearance="Secondary" />
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- 固定表格头部 -->
+                        <ContentPresenter Grid.Row="1" 
+                                          ContentTemplate="{StaticResource TableHeaderTemplate}" />
+                        
+                        <!-- 可滚动的列表内容 -->
+                        <ScrollViewer Grid.Row="2"
+                                      VerticalScrollBarVisibility="Auto" 
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
+                                         SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
+                                         ItemTemplate="{StaticResource TriggerItemTemplate}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         BorderThickness="0"
+                                         Margin="0" />
+                        </ScrollViewer>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </ui:Border>
+
+        <!-- 右侧：执行历史 -->
+        <ui:Border Grid.Column="2"
+                   Background="{DynamicResource CardBackground}"
+                   BorderBrush="{DynamicResource CardBorderBrush}"
+                   BorderThickness="1"
+                   CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 标题栏 -->
+                <Border Grid.Row="0"
+                        Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="12,8">
+                    <Grid>
+                        <ui:TextBlock Text="执行历史" 
+                                      FontWeight="SemiBold" 
+                                      VerticalAlignment="Center" 
+                                      FontSize="14"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ui:Button Content="清空"
+                                       Command="{Binding ClearHistoryCommand}"
                                        Icon="{ui:SymbolIcon Delete24}"
-                                       Appearance="Secondary" />
+                                       Appearance="Secondary" 
+                                       Padding="8,4" />
                         </StackPanel>
-                    </Border>
-                    
-                    <!-- 固定表格头部 -->
-                    <ContentPresenter Grid.Row="1" 
-                                      ContentTemplate="{StaticResource TimedTableHeaderTemplate}" />
-                    
-                    <!-- 可滚动的列表内容 -->
-                    <ScrollViewer Grid.Row="2"
-                                  VerticalScrollBarVisibility="Auto" 
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <ui:ListView ItemsSource="{Binding TimedTriggers}"
-                                     SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
-                                     ItemTemplate="{StaticResource TimedTriggerItemTemplate}"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     BorderThickness="0"
-                                     Margin="0" />
-                    </ScrollViewer>
-                </Grid>
-            </TabItem>
-            <TabItem Header="快捷键触发" Style="{StaticResource ConsistentTabItemStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    
-                    <!-- 工具栏 -->
-                    <Border Grid.Row="0" 
-                            Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
-                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                            BorderThickness="0,0,0,1"
-                            Padding="12,8">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:Button Content="新增快捷键触发器"
-                                       Command="{Binding AddHotkeyTriggerCommand}"
-                                       Icon="{ui:SymbolIcon Add24}"
-                                       Appearance="Primary"
-                                       Margin="0,0,8,0" />
-                            <ui:Button Content="删除选中项"
-                                       Command="{Binding DeleteTriggerCommand}"
-                                       Icon="{ui:SymbolIcon Delete24}"
-                                       Appearance="Secondary" />
-                        </StackPanel>
-                    </Border>
-                    
-                    <!-- 固定表格头部 -->
-                    <ContentPresenter Grid.Row="1" 
-                                      ContentTemplate="{StaticResource TableHeaderTemplate}" />
-                    
-                    <!-- 可滚动的列表内容 -->
-                    <ScrollViewer Grid.Row="2"
-                                  VerticalScrollBarVisibility="Auto" 
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
-                                     SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
-                                     ItemTemplate="{StaticResource TriggerItemTemplate}"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     BorderThickness="0"
-                                     Margin="0" />
-                    </ScrollViewer>
-                </Grid>
-            </TabItem>
-        </TabControl>
-    </ui:Border>
+                    </Grid>
+                </Border>
+
+                <!-- 固定表格头部 -->
+                <ContentPresenter Grid.Row="1" 
+                                  ContentTemplate="{StaticResource HistoryTableHeaderTemplate}" />
+
+                <!-- 可滚动的列表内容 -->
+                <ScrollViewer Grid.Row="2"
+                              VerticalScrollBarVisibility="Auto" 
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ui:ListView ItemsSource="{Binding ExecutionHistory}"
+                                 ItemTemplate="{StaticResource HistoryItemTemplate}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 BorderThickness="0"
+                                 Margin="0" />
+                </ScrollViewer>
+            </Grid>
+        </ui:Border>
+    </Grid>
 </UserControl>

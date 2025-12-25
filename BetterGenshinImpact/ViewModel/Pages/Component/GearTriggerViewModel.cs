@@ -6,6 +6,7 @@ using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Helpers.Extensions;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Quartz;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Component;
 
@@ -25,6 +26,11 @@ public partial class GearTriggerViewModel : ObservableObject
     
     [ObservableProperty]
     private string? _cronExpression;
+
+    partial void OnCronExpressionChanged(string? value)
+    {
+        UpdateNextRunTime();
+    }
 
     [ObservableProperty]
     private DateTime _createdTime = DateTime.Now;
@@ -59,6 +65,36 @@ public partial class GearTriggerViewModel : ObservableObject
     /// 快捷键类型名称 (中文显示)
     /// </summary>
     public string HotkeyTypeName => HotkeyType.ToChineseName();
+
+    [ObservableProperty]
+    private DateTime? _nextRunTime;
+
+    [ObservableProperty]
+    private DateTime? _lastRunTime;
+
+    [ObservableProperty]
+    private TriggerExecutionStatus? _lastRunStatus;
+
+    public void UpdateNextRunTime()
+    {
+        if (TriggerType == TriggerType.Timed && !string.IsNullOrWhiteSpace(CronExpression))
+        {
+            try
+            {
+                var cron = new CronExpression(CronExpression);
+                var next = cron.GetNextValidTimeAfter(DateTimeOffset.Now);
+                NextRunTime = next?.LocalDateTime;
+            }
+            catch
+            {
+                NextRunTime = null;
+            }
+        }
+        else
+        {
+            NextRunTime = null;
+        }
+    }
 
     public GearTriggerViewModel()
     {

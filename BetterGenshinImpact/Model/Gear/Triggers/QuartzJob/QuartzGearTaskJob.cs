@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.GearTask;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using Serilog.Context;
 
 namespace BetterGenshinImpact.Model.Gear.Triggers.QuartzJob;
 
@@ -19,34 +21,77 @@ public class QuartzGearTaskJob : IJob
     
     public async Task Execute(IJobExecutionContext context)
     {
-        try
+        var jobDataMap = context.MergedJobDataMap;
+        var triggerName = jobDataMap.GetString("TriggerName") ?? "Unknown";
+        var triggerId = jobDataMap.GetString("TriggerId") ?? Guid.NewGuid().ToString();
+        var taskDefinitionName = jobDataMap.GetString("TaskDefinitionName");
+        var correlationId = Guid.NewGuid().ToString();
+        
+        using (LogContext.PushProperty("CorrelationId", correlationId))
         {
-            var jobDataMap = context.MergedJobDataMap;
-            var triggerName = jobDataMap.GetString("TriggerName") ?? "Unknown";
-            var triggerId = jobDataMap.GetString("TriggerId") ?? Guid.NewGuid().ToString();
-            var taskDefinitionName = jobDataMap.GetString("TaskDefinitionName");
-
-            if (string.IsNullOrWhiteSpace(taskDefinitionName))
+            var historyService = App.GetService<ITriggerHistoryService>();
+            var record = new TriggerExecutionRecord
             {
-                _logger.LogWarning("触发器 {TriggerName} 未配置任务定义名称", triggerName);
-                return;
+                TriggerName = triggerName,
+                TriggerId = triggerId,
+                TaskName = taskDefinitionName ?? "Unknown",
+                StartTime = DateTime.Now,
+                Status = TriggerExecutionStatus.Running,
+                CorrelationId = correlationId
+            };
+
+            if (historyService != null)
+            {
+                await historyService.AddRecordAsync(record);
             }
 
-            var shouldInterrupt = jobDataMap.GetBooleanValue("ShouldInterruptOthers");
-            if (shouldInterrupt)
+            try
             {
-                await InterruptOtherJobs(context, triggerId);
+                if (string.IsNullOrWhiteSpace(taskDefinitionName))
+                {
+                    _logger.LogWarning("触发器 {TriggerName} 未配置任务定义名称", triggerName);
+                    if (historyService != null)
+                    {
+                        record.EndTime = DateTime.Now;
+                        record.Status = TriggerExecutionStatus.Failed;
+                        record.Message = "未配置任务定义名称";
+                        await historyService.UpdateRecordAsync(record);
+                    }
+                    return;
+                }
+
+                var shouldInterrupt = jobDataMap.GetBooleanValue("ShouldInterruptOthers");
+                if (shouldInterrupt)
+                {
+                    await InterruptOtherJobs(context, triggerId);
+                }
+
+                var executor = App.GetRequiredService<GearTaskExecutor>();
+                await executor.ExecuteTaskDefinitionAsync(taskDefinitionName, context.CancellationToken);
+
+                _logger.LogInformation("触发器 {TriggerName} 的任务定义执行完成", triggerName);
+                
+                if (historyService != null)
+                {
+                    record.EndTime = DateTime.Now;
+                    record.Status = TriggerExecutionStatus.Success;
+                    record.Message = "执行成功";
+                    await historyService.UpdateRecordAsync(record);
+                }
             }
-
-            var executor = App.GetRequiredService<GearTaskExecutor>();
-            await executor.ExecuteTaskDefinitionAsync(taskDefinitionName, context.CancellationToken);
-
-            _logger.LogInformation("触发器 {TriggerName} 的任务定义执行完成", triggerName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "执行定时任务时发生错误");
-            throw;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "执行定时任务时发生错误");
+                if (historyService != null)
+                {
+                    record.EndTime = DateTime.Now;
+                    record.Status = TriggerExecutionStatus.Failed;
+                    record.Message = ex.Message;
+                    record.LogDetails = ex.ToString();
+                    await historyService.UpdateRecordAsync(record);
+                }
+                throw;
+            }
         }
     }
 

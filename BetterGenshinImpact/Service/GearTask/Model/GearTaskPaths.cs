@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Service.GearTask.Model;
@@ -14,4 +14,5 @@ public class GearTaskPaths
     
     public static readonly string TaskTriggerPath = Path.Combine(TaskV2Path, "trigger");
 
+    public static readonly string TaskHistoryPath = Path.Combine(TaskV2Path, "history");
 }

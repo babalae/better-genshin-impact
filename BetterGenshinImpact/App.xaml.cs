@@ -65,9 +65,10 @@ public partial class App : Application
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
                 var loggerConfiguration = new LoggerConfiguration()
+                    .Enrich.FromLogContext() // Enable LogContext
                     .WriteTo.File(logFile,
                         outputTemplate:
-                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
+                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] [{CorrelationId}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
                         rollingInterval: RollingInterval.Day,
                         retainedFileCountLimit: 31,
                         retainedFileTimeLimit: TimeSpan.FromDays(21))
@@ -162,6 +163,8 @@ public partial class App : Application
                 services.AddSingleton<OcrFactory>();
                 services.AddSingleton<GearTaskStorageService>();
                 services.AddSingleton<GearTriggerStorageService>();
+                services.AddSingleton<ITriggerHistoryService, TriggerHistoryService>();
+                services.AddSingleton<LogReaderService>();
 
 
                 
