@@ -125,7 +125,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<int> BossNumList = [1, 2, 3];
 
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
-    public static List<string> LeyLineOutcropTypeList = ["蓝花（经验书）", "黄花（摩拉）"];
+    public static List<string> LeyLineOutcropTypeList = ["启示之花", "藏金之花"];
     public static List<string> LeyLineOutcropCountryList = ["蒙德", "璃月", "稻妻", "须弥", "枫丹", "纳塔", "挪德卡莱"];
 
     [ObservableProperty]
@@ -207,6 +207,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         Config = configService.Get();
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
+        NormalizeLeyLineOutcropType();
 
         //_strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
 
@@ -215,6 +216,27 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+    }
+
+    private void NormalizeLeyLineOutcropType()
+    {
+        var type = Config.AutoLeyLineOutcropConfig.LeyLineOutcropType;
+        if (type == "蓝花（经验书）")
+        {
+            Config.AutoLeyLineOutcropConfig.LeyLineOutcropType = "启示之花";
+            return;
+        }
+
+        if (type == "黄花（摩拉）")
+        {
+            Config.AutoLeyLineOutcropConfig.LeyLineOutcropType = "藏金之花";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(type) || !LeyLineOutcropTypeList.Contains(type))
+        {
+            Config.AutoLeyLineOutcropConfig.LeyLineOutcropType = LeyLineOutcropTypeList[0];
+        }
     }
 
 

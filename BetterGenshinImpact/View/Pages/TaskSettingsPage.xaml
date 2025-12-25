@@ -2379,7 +2379,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动定位并刷取地脉花，支持路线、自动战斗、领奖与树脂用量策略。
+                        自动定位并刷取地脉花
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -2411,7 +2411,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        选择刷取经验书（蓝花）或摩拉（黄花）。
+                        选择刷取的地脉花，启示之花（经验书）或藏金之花（摩拉）。
                     </ui:TextBlock>
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2439,7 +2439,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        按国家选择对应的路线与传送点位置。
+                        按国家选择刷取对应的地脉花。
                     </ui:TextBlock>
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2601,6 +2601,8 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
                         进入战斗前切换到该队伍，留空则不切换。
+                        <LineBreak/>
+                        如果配置了好感队则必须填写。
                     </ui:TextBlock>
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -2658,7 +2660,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        单次战斗超时（秒），超时将结束战斗流程并进入重试。
+                        到达指定时间后，自动停止战斗。
                     </ui:TextBlock>
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -2681,13 +2683,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用冒险之证寻路"
+                                  Text="不使用冒险之证寻路"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        通过冒险之证标记目标点来定位地脉花。
+                        勾选后改用内置路线，不通过冒险之证定位地脉花。
                     </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"

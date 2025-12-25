@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 public partial class AutoLeyLineOutcropConfig : ObservableObject
 {
     [ObservableProperty]
-    private string _leyLineOutcropType = "蓝花（经验书）";
+    private string _leyLineOutcropType = "启示之花";
 
     [ObservableProperty]
     private string _country = "稻妻";

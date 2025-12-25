@@ -6,10 +6,11 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask;
@@ -39,7 +40,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private TpTask _tpTask = null!;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private SwitchPartyTask? _switchPartyTask;
-    private readonly AutoFightHandler _autoFightHandler = new();
     private ISystemInfo _systemInfo = null!;
 
     private CancellationToken _ct;
@@ -52,6 +52,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private bool _marksStatus = true;
     private int _recheckCount;
     private int _consecutiveFailureCount;
+    private DateTime _lastRewardNavLog = DateTime.MinValue;
 
     private RecognitionObject? _openRo;
     private RecognitionObject? _closeRo;
@@ -103,7 +104,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 Notify.Event("AutoLeyLineOutcrop").Error($"任务失败: {e.Message}");
             }
-            throw;
+            throw new Exception($"自动地脉花执行失败: {e.Message}", e);
         }
         finally
         {
@@ -136,7 +137,12 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         if (string.IsNullOrWhiteSpace(_config.LeyLineOutcropType))
         {
-            throw new Exception("地脉花类型未配置");
+            throw new Exception("地脉花类型未选择");
+        }
+
+        if (_config.LeyLineOutcropType != "启示之花" && _config.LeyLineOutcropType != "藏金之花")
+        {
+            throw new Exception("地脉花类型无效，请重新选择");
         }
 
         if (string.IsNullOrWhiteSpace(_config.Country))
@@ -157,6 +163,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void LoadConfigData()
     {
+        // Load and validate the static ley line route config from disk.
         var workDir = Global.Absolute(@"GameTask\AutoLeyLineOutcrop");
         var configPath = Path.Combine(workDir, "config.json");
         if (!File.Exists(configPath))
@@ -171,6 +178,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void LoadRecognitionObjects()
     {
+        // Template ROIs are tuned for the 1080p capture region.
         _openRo = BuildTemplate("assets/icon/open.png");
         _closeRo = BuildTemplate("assets/icon/close.png");
         _paimonMenuRo = BuildTemplate("assets/icon/paimon_menu.png", new Rect(0, 0, ScaleTo1080(640), ScaleTo1080(216)));
@@ -189,6 +197,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private RecognitionObject BuildTemplate(string relativePath, Rect? roi = null, double threshold = 0.8)
     {
+        // Cache + scale templates to the current asset scale to keep matching stable.
         var mat = LoadTemplate(relativePath);
         var ro = RecognitionObject.TemplateMatch(mat);
         ro.Threshold = threshold;
@@ -214,6 +223,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         var mat = Mat.FromStream(File.OpenRead(fullPath), ImreadModes.Color);
+        // Resize once and reuse to avoid repeated scaling during recognition.
         var scaled = ResizeHelper.Resize(mat, _systemInfo.AssetScale);
         _templateCache[relativePath] = scaled;
         return scaled;
@@ -271,8 +281,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await _switchPartyTask.Start(_config.Team, _ct);
         }
 
-        if (!_config.UseAdventurerHandbook)
+        if (_config.UseAdventurerHandbook)
         {
+            // The config flag means "do NOT use handbook"; close custom marks for manual navigation.
             await CloseCustomMarks();
         }
 
@@ -283,12 +294,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         while (_currentRunTimes < _config.Count)
         {
-            if (_config.UseAdventurerHandbook)
+            if (!_config.UseAdventurerHandbook)
             {
+                // Handbook flow: open the book and track a ley line target.
                 await FindLeyLineOutcropByBook(_config.Country, _config.LeyLineOutcropType);
             }
             else
             {
+                // Manual flow: detect the ley line on the big map.
                 await FindLeyLineOutcrop(_config.Country, _config.LeyLineOutcropType);
             }
 
@@ -335,6 +348,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         try
         {
+            // Map node graph provides the walking routes for each ley line position.
             var nodeData = await LoadNodeData();
             var targetNode = FindTargetNodeByPosition(nodeData, position.X, position.Y);
             if (targetNode == null)
@@ -384,6 +398,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 }
                 else
                 {
+                    // Multiple branches: re-locate the ley line position before deciding the route.
                     var originalX = _leyLineX;
                     var originalY = _leyLineY;
 
@@ -502,6 +517,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         foreach (var startNode in teleportNodes)
         {
             var queue = new Queue<(Node Node, PathInfo Path, HashSet<int> Visited)>();
+            // BFS ensures we prefer shorter paths from each teleport node.
             queue.Enqueue((startNode, new PathInfo
             {
                 StartNode = startNode,
@@ -553,6 +569,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return [];
         }
 
+        // Fallback: allow a single hop into the target when no forward path exists.
         var reversePaths = new List<PathInfo>();
         var nodeMap = nodeData.Nodes.ToDictionary(n => n.Id, n => n);
 
@@ -733,7 +750,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         await EnsureExitRewardPage();
-        throw new Exception("寻找地脉花失败");
+        if (_config.UseAdventurerHandbook)
+        {
+            _logger.LogWarning("寻找地脉花失败：当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
+            throw new Exception("寻找地脉花失败：未在地图上识别到地脉花图标。当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
+        }
+
+        throw new Exception("寻找地脉花失败：未在地图上识别到地脉花图标");
     }
 
     private async Task<bool> LocateLeyLineOutcrop(string type)
@@ -742,7 +765,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var currentZoom = _tpTask.GetBigMapZoomLevel(CaptureToRectArea());
         await _tpTask.AdjustMapZoomLevel(currentZoom, 3.0);
 
-        var iconPath = type == "蓝花（经验书）"
+        var iconPath = type == "启示之花"
             ? "assets/icon/Blossom_of_Revelation.png"
             : "assets/icon/Blossom_of_Wealth.png";
 
@@ -851,6 +874,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private static Rect ClampRect(Rect roi, int maxWidth, int maxHeight)
     {
+        // Clamp ROI to avoid OpenCV exceptions when the rectangle is out of bounds.
         var x = Math.Clamp(roi.X, 0, Math.Max(0, maxWidth - 1));
         var y = Math.Clamp(roi.Y, 0, Math.Max(0, maxHeight - 1));
         var w = Math.Clamp(roi.Width, 0, Math.Max(0, maxWidth - x));
@@ -861,7 +885,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<bool> AutoFight(int timeoutSeconds)
     {
         var fightCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
-        var fightTask = _autoFightHandler.RunAsyncByScript(fightCts.Token, null, null);
+        // Ley line uses OCR-based finish detection; disable auto-fight finish detect.
+        var fightTask = StartAutoFightWithoutFinishDetect(fightCts.Token);
         var fightResult = await RecognizeTextInRegion(timeoutSeconds * 1000);
         fightCts.Cancel();
 
@@ -881,6 +906,37 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return fightResult;
     }
 
+    private Task StartAutoFightWithoutFinishDetect(CancellationToken ct)
+    {
+        var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+        var strategyPath = BuildAutoFightStrategyPath(autoFightConfig);
+        var taskParam = new AutoFightParam(strategyPath, autoFightConfig)
+        {
+            FightFinishDetectEnabled = false,
+            CheckBeforeBurst = false
+        };
+        // Avoid false finish signals for ley line fights.
+        taskParam.FinishDetectConfig.FastCheckEnabled = false;
+        taskParam.FinishDetectConfig.RotateFindEnemyEnabled = false;
+        return new AutoFightTask(taskParam).Start(ct);
+    }
+
+    private static string BuildAutoFightStrategyPath(AutoFightConfig config)
+    {
+        var path = Global.Absolute(@"User\AutoFight\" + config.StrategyName + ".txt");
+        if ("根据队伍自动选择".Equals(config.StrategyName))
+        {
+            path = Global.Absolute(@"User\AutoFight\");
+        }
+
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            throw new Exception("战斗策略文件不存在");
+        }
+
+        return path;
+    }
+
     private async Task<bool> RecognizeTextInRegion(int timeoutMs)
     {
         var start = DateTime.UtcNow;
@@ -896,11 +952,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
             if (successKeywords.Any(text.Contains))
             {
+                // OCR recognizes victory text; treat as success.
                 return true;
             }
 
             if (failureKeywords.Any(text.Contains))
             {
+                // OCR recognizes failure text; stop early.
                 return false;
             }
 
@@ -938,6 +996,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         const int maxRetry = 3;
         for (var retry = 0; retry < maxRetry; retry++)
         {
+            // Reset camera and move in short bursts to re-acquire the chest icon.
             _logger.LogInformation("开始导航到地脉花奖励，尝试 {Retry}/{Max}", retry + 1, maxRetry);
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Delay(300, _ct);
@@ -957,29 +1016,42 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await Delay(500, _ct);
         }
 
-        throw new Exception("导航到地脉花失败");
+        throw new Exception("导航到地脉花失败：超时未检测到奖励或交互文字");
     }
 
     private async Task<bool> NavigateTowardReward(int timeoutMs)
     {
         var start = DateTime.UtcNow;
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         try
         {
             while ((DateTime.UtcNow - start).TotalMilliseconds < timeoutMs)
             {
+                // If reward UI is detected, stop moving.
                 if (await DetectRewardPage())
                 {
+                    _logger.LogInformation("检测到奖励/交互文字，停止导航");
                     return true;
                 }
 
                 using var capture = CaptureToRectArea();
                 if (_paimonMenuRo != null && capture.Find(_paimonMenuRo).IsEmpty())
                 {
+                    LogRewardNav("误入其他界面，尝试返回主界面");
                     await _returnMainUiTask.Start(_ct);
                 }
 
-                await Delay(500, _ct);
+                if (!AdjustViewForReward(capture))
+                {
+                    // Wait for the icon to re-enter view before moving forward.
+                    LogRewardNav("未对正地脉花图标，等待重新定位");
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    await Delay(1000, _ct);
+                    continue;
+                }
+
+                LogRewardNav("地脉花图标已对正，开始前进");
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                await Delay(200, _ct);
             }
         }
         finally
@@ -990,9 +1062,61 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return false;
     }
 
+    private bool AdjustViewForReward(ImageRegion capture)
+    {
+        if (_boxIconRo == null)
+        {
+            return false;
+        }
+
+        // Use the chest icon position to align the camera before moving forward.
+        var iconRes = capture.Find(_boxIconRo);
+        if (iconRes.IsEmpty())
+        {
+            LogRewardNav("未找到地脉花图标");
+            return false;
+        }
+
+        const int screenCenterX = 960;
+        const int screenCenterY = 540;
+        const double maxAngle = 10;
+
+        var xOffset = iconRes.X - screenCenterX;
+        var yOffset = screenCenterY - iconRes.Y;
+        var angleInRadians = Math.Atan2(Math.Abs(xOffset), yOffset);
+        var angleInDegrees = angleInRadians * (180 / Math.PI);
+        var isAboveCenter = iconRes.Y < screenCenterY;
+        var isWithinAngle = angleInDegrees <= maxAngle;
+
+        if (isAboveCenter && isWithinAngle)
+        {
+            LogRewardNav("地脉花图标已对正，角度: {Angle}", angleInDegrees);
+            return true;
+        }
+
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+
+        var moveX = Math.Clamp(xOffset, -300, 300);
+        LogRewardNav("调整视角，xOffset={XOffset}, yOffset={YOffset}, angle={Angle}", xOffset, yOffset, angleInDegrees);
+        Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+
+        if (!isAboveCenter)
+        {
+            Simulation.SendInput.Mouse.MoveMouseBy(0, 500);
+        }
+
+        return false;
+    }
+
     private async Task<bool> DetectRewardPage()
     {
         using var capture = CaptureToRectArea();
+        // Bv.FindF is faster for common keywords and avoids OCR misses.
+        if (Bv.FindF(capture, "接触") || Bv.FindF(capture, "地脉") || Bv.FindF(capture, "之花"))
+        {
+            return true;
+        }
+
         var list = capture.FindMulti(_ocrRoThis);
         foreach (var res in list)
         {
@@ -1000,9 +1124,36 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 return true;
             }
+
+            if (res.Text.Contains("接触", StringComparison.Ordinal)
+                || res.Text.Contains("地脉", StringComparison.Ordinal)
+                || res.Text.Contains("之花", StringComparison.Ordinal))
+            {
+                return true;
+            }
         }
 
         return false;
+    }
+
+    private void LogRewardNav(string message, params object[] args)
+    {
+        var now = DateTime.UtcNow;
+        // Throttle log spam during navigation loops.
+        if ((now - _lastRewardNavLog).TotalSeconds < 3)
+        {
+            return;
+        }
+
+        _lastRewardNavLog = now;
+        if (args.Length == 0)
+        {
+            _logger.LogInformation(message);
+        }
+        else
+        {
+            _logger.LogInformation(message, args);
+        }
     }
 
     private async Task<bool> ProcessResurrect()
@@ -1311,7 +1462,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         GameCaptureRegion.GameRegion1080PPosClick(500, 500);
         await Delay(1000, _ct);
 
-        if (type == "蓝花（经验书）")
+        if (type == "启示之花")
         {
             GameCaptureRegion.GameRegion1080PPosClick(700, 350);
         }
