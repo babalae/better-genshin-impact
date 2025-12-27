@@ -11908,6 +11908,66 @@
                 "area": "刺梨岩"
             },
             {
+                "id": "1622",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1416.627,
+                    66.34088,
+                    14227.44
+                ],
+                "tranPosition": [
+                    1419.7568,
+                    65.44593,
+                    14227.67
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
+                "id": "1623",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1444.299,
+                    128.6889,
+                    13984.66
+                ],
+                "tranPosition": [
+                    1441.9055,
+                    128.4382,
+                    13982.096
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
+                "id": "1624",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1531.633,
+                    94.35979,
+                    13921.42
+                ],
+                "tranPosition": [
+                    1525.5068,
+                    94.35979,
+                    13922.6045
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
                 "id": "1604",
                 "gadgetId": "70580004",
                 "gadgetType": "TransPointSecond",
