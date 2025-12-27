@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-5-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 1045.56,
+      "y": 950.61,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 900.15,
+      "y": 896.96,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

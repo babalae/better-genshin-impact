@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "须弥2-奥摩斯港西-3",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 2980.23,
+      "y": -1758.59,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 2984.38,
+      "y": -1751.38,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 3007.27,
+      "y": -1711.11,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "400"
+    },
+    {
+      "id": 4,
+      "x": 3013.06,
+      "y": -1700.54,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

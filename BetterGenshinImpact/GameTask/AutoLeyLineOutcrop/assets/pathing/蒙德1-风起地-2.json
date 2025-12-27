@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "蒙德1-风起地-2",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -1266.59,
+      "y": 1933.52,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -1223.18,
+      "y": 2032.04,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

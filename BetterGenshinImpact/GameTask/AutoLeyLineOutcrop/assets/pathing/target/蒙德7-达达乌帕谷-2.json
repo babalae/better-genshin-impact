@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "蒙德7-达达乌帕谷-2",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -1517.07,
+      "y": 1513.97,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "info": {
+    "name": "枫丹4-柔灯港-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0",
+    "tags": [],
+    "last_modified_time": 1749820845188
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 3091.88,
+      "y": 3654.47,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}
