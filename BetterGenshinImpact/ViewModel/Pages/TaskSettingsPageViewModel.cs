@@ -433,6 +433,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/stygian.html"));
     }
 
+    [RelayCommand]
+    public async Task OnGoToAutoLeyLineOutcropUrlAsync()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://example.com/leyline.html"));
+    }
+
 
     [RelayCommand]
     public void OnOpenFightFolder()

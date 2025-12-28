@@ -37,6 +37,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 {
     private readonly ILogger<AutoLeyLineOutcropTask> _logger = App.GetLogger<AutoLeyLineOutcropTask>();
     private readonly AutoLeyLineOutcropConfig _config;
+    private readonly bool _oneDragonMode;
     private TpTask _tpTask = null!;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
     private SwitchPartyTask? _switchPartyTask;
@@ -71,9 +72,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     public string Name => "自动地脉花";
 
-    public AutoLeyLineOutcropTask(AutoLeyLineOutcropConfig config)
+    public AutoLeyLineOutcropTask(AutoLeyLineOutcropConfig config, bool oneDragonMode = false)
     {
         _config = config;
+        _oneDragonMode = oneDragonMode;
     }
 
     public async Task Start(CancellationToken ct)
@@ -270,7 +272,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         await EnsureExitRewardPage();
         await _returnMainUiTask.Start(_ct);
-        if (!_config.OneDragonMode)
+        if (!_oneDragonMode)
         {
             await _tpTask.TpToStatueOfTheSeven();
         }

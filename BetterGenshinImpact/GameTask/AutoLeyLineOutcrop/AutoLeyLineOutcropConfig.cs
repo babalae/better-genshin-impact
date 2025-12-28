@@ -43,8 +43,5 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     private bool _isNotification = false;
 
     [ObservableProperty]
-    private bool _oneDragonMode = false;
-
-    [ObservableProperty]
     private bool _isGoToSynthesizer = false;
 }
