@@ -49,22 +49,14 @@ public class KeyMouseHook: IDisposable
     /// <param name="eventType">事件类型描述</param>
     private void HandleCallbackException(Exception ex, string eventType)
     {
-        if (ex is InvalidOperationException invalidEx && invalidEx.Message.Contains("V8 object has been released"))
-        {
-            _logger.LogDebug("V8 object已释放，可能脚本已结束，清除所有回调");
-        }
-        else if (ex is ObjectDisposedException disposedEx && disposedEx.Message.Contains("Object name: 'Microsoft.ClearScript.V8.V8ScriptEngine'"))
-        {
-            _logger.LogDebug("V8ScriptEngine 已释放，可能脚本已结束，清除所有回调");
-        }
-        else if (ex is ScriptEngineException scriptEx)
+        if (ex is ScriptEngineException scriptEx)
         {
             _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message); ;
             _logger.LogDebug("{scriptEx}",scriptEx);
         }
         else
         {
-            _logger.LogError("执行{eventType}回调时发生错误:{ex.Message}，清除所有回调",eventType,ex.Message);
+            _logger.LogError("执行{eventType}回调时发生错误:{ex.Message}，清除所有回调,如果此异常出现在JS脚本结束时,请在JS脚本结束前手动调用Dispose()方法",eventType,ex.Message);
             _logger.LogDebug("{ex}",ex);
         }
 
