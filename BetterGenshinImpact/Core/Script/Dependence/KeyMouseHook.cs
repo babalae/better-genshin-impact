@@ -51,7 +51,7 @@ public class KeyMouseHook: IDisposable
     {
         if (ex is ScriptEngineException scriptEx)
         {
-            _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message); ;
+            _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message); 
             _logger.LogDebug("{scriptEx}",scriptEx);
         }
         else
