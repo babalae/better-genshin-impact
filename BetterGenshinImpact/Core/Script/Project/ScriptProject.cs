@@ -94,11 +94,14 @@ public class ScriptProject
             {
                 // 清除Document缓存
                 DocumentLoader.Default.DiscardCachedDocuments();
-                await (Task)engine.Evaluate(new DocumentInfo { Category = ModuleCategory.Standard }, code);
+
+                var evaluation = engine.Evaluate(new DocumentInfo { Category = ModuleCategory.Standard }, code);
+                if (evaluation is Task task) await task;
             }
             else
             {
-                await (Task)engine.Evaluate(code);
+                var evaluation = engine.Evaluate(code);
+                if (evaluation is Task task) await task;
             }
         }
         catch (Exception e)
