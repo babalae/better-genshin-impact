@@ -95,7 +95,7 @@ internal class GameTaskManager
                 break;
             case "AutoSkip":
                 triggerName = "AutoSkip";
-                trigger = new AutoSkip.AutoSkipTrigger(externalConfig as AutoSkipConfig);
+                trigger = externalConfig is null ? new AutoSkip.AutoSkipTrigger() : new AutoSkip.AutoSkipTrigger(externalConfig as AutoSkipConfig);
                 break;
             case "AutoEat":
                 triggerName = "AutoEat";
