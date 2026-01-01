@@ -44,7 +44,7 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonDown(0x0001);
                 break;
             case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
+                Simulation.SendInput.Mouse.XButtonDown(0x0002);
                 break;
             default:
                 if (InputBuilder.IsExtendedKey(vk))
@@ -78,7 +78,7 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonUp(0x0001);
                 break;
             case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
+                Simulation.SendInput.Mouse.XButtonUp(0x0002);
                 break;
             default:
                 if (InputBuilder.IsExtendedKey(vk))
@@ -112,7 +112,7 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonClick(0x0001);
                 break;
             case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
+                Simulation.SendInput.Mouse.XButtonClick(0x0002);
                 break;
             default:
                 if (InputBuilder.IsExtendedKey(vk))

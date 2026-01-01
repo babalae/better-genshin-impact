@@ -45,7 +45,7 @@ public partial class PathingConditionConfig : ObservableObject
             new Condition
             {
                 Subject = "队伍中角色",
-                Object = ["绮良良", "莱依拉", "茜特菈莉", "芭芭拉", "七七"],
+                Object = ["绮良良", "莱依拉", "茜特菈莉", "芭芭拉", "七七", "久岐忍"],
                 Result = "循环短E"
             },
 

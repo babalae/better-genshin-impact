@@ -875,7 +875,7 @@ public class Avatar
                 Simulation.SendInput.Mouse.XButtonDown(0x0001);
                 break;
             case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
+                Simulation.SendInput.Mouse.XButtonDown(0x0002);
                 break;
             default:
                 Simulation.SendInput.Keyboard.KeyDown(vk);
@@ -901,7 +901,7 @@ public class Avatar
                 Simulation.SendInput.Mouse.XButtonUp(0x0001);
                 break;
             case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
+                Simulation.SendInput.Mouse.XButtonUp(0x0002);
                 break;
             default:
                 Simulation.SendInput.Keyboard.KeyUp(vk);
@@ -927,7 +927,7 @@ public class Avatar
                 Simulation.SendInput.Mouse.XButtonClick(0x0001);
                 break;
             case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
+                Simulation.SendInput.Mouse.XButtonClick(0x0002);
                 break;
             default:
                 Simulation.SendInput.Keyboard.KeyPress(vk);

@@ -68,7 +68,7 @@ public static class InputSimulatorExtension
                 self.Mouse.XButtonClick(0x0001);
                 break;
             case KeyId.MouseSideButton2:
-                self.Mouse.XButtonClick(0x0001);
+                self.Mouse.XButtonClick(0x0002);
                 break;
             default:
                 var k = key.ToVK();
@@ -105,7 +105,7 @@ public static class InputSimulatorExtension
                 self.Mouse.XButtonDown(0x0001);
                 break;
             case KeyId.MouseSideButton2:
-                self.Mouse.XButtonDown(0x0001);
+                self.Mouse.XButtonDown(0x0002);
                 break;
             default:
                 var k = key.ToVK();
@@ -142,7 +142,7 @@ public static class InputSimulatorExtension
                 self.Mouse.XButtonUp(0x0001);
                 break;
             case KeyId.MouseSideButton2:
-                self.Mouse.XButtonUp(0x0001);
+                self.Mouse.XButtonUp(0x0002);
                 break;
             default:
                 var k = key.ToVK();
