@@ -8,8 +8,11 @@
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         xmlns:platform="clr-namespace:BetterGenshinImpact.Platform.Wine"
         Title="MaskWindow"
+        Left="{Binding Config.MaskWindowConfig.LogMaskLeft, FallbackValue=0}"
+        Top="{Binding Config.MaskWindowConfig.LogMaskTop, FallbackValue=280}"
         Width="500"
         Height="800"
+        ResizeMode="CanResizeWithGrip"
         d:DesignWidth="1920"
         d:DesignHeight="1080"
         AllowsTransparency="True"
@@ -72,14 +75,17 @@
             <!--  日志和状态  -->
             <Grid Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="5"
                   HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                  Height="213" Width="477">
+                  Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                  Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
+                  >
                 <Grid.RowDefinitions>
                     <RowDefinition Height="25" />
                     <RowDefinition Height="188" />
                 </Grid.RowDefinitions>
                 <ContentControl x:Name="LogTextBoxWrapper"
                                 Grid.Row="1"
-                                Width="477" Height="188"
+                                Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                                Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
                                 HorizontalAlignment="Left" VerticalAlignment="Top"
                                 Style="{StaticResource OuterDraggableResizableItemStyle}">
                     <ContentControl.Effect>
@@ -89,8 +95,10 @@
                                  Padding="0,5,0,0"
                                  Background="Transparent"
                                  BorderThickness="0"
+                                 Width="{Binding Config.MaskWindowConfig.LogMaskWidth, FallbackValue=477}"
+                                 Height="{Binding Config.MaskWindowConfig.LogMaskHeight, FallbackValue=188}"
                                  FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                 FontSize="12"
+                                 FontSize="{Binding Config.MaskWindowConfig.LogFontSize, FallbackValue=12}"
                                  IsHitTestVisible="False"
                                  VerticalScrollBarVisibility="Hidden"
                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
