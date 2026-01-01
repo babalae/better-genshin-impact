@@ -68,6 +68,7 @@ jobs:
         with:
           name: web_map_editor
           path: dist/
+          ref: main
 
   build_web_scripts_list:
     runs-on: ubuntu-latest
