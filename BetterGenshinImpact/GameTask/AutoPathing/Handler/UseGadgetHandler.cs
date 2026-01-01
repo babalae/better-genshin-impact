@@ -44,6 +44,13 @@ public class UseGadgetHandler : IActionHandler
 
             var screen = CaptureToRectArea();
             var cd = GetCurrentCd(screen);
+            if (cd > 5)
+            {
+                Logger.LogWarning("识别到小道具CD时间：{Cd}秒，可能是识别错误。重试！", cd);
+                await Delay(1000, ct);
+                screen = CaptureToRectArea();
+                cd = GetCurrentCd(screen);
+            }
             if (cd > 100)
             {
                 Logger.LogWarning("小道具正在CD中，当前剩余时间：{Cd}秒，时间过长，可能是识别错误。跳过！", cd);
