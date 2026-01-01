@@ -231,7 +231,10 @@ namespace BetterGenshinImpact.GameTask
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
                 var autoSkipConfig = TaskContext.Instance().Config.AutoSkipConfig;
-                var shouldShowPictureInPicture = autoSkipConfig.Enabled && autoSkipConfig.PictureInPictureEnabled && !PictureInPictureService.IsManuallyClosed;
+                var shouldShowPictureInPicture = autoSkipConfig.Enabled 
+                                                 && autoSkipConfig.PictureInPictureEnabled 
+                                                 && !PictureInPictureService.IsManuallyClosed
+                                                 && TaskControl.TaskSemaphore.CurrentCount == 1; // 没有任务持有锁（也就是没有任务正在运行）
                 var active = SystemControl.IsGenshinImpactActive();
                 if (!active)
                 {

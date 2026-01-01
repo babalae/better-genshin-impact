@@ -35,7 +35,7 @@ public class EngineExtend
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
         engine.AddHostObject("http", new Http()); // 限制文件访问
         engine.AddHostObject("notification", new Notification());
-
+        
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
@@ -70,9 +70,8 @@ public class EngineExtend
         
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
-        
-
-
+        //鼠标回调
+        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
 

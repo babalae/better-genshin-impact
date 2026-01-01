@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
@@ -104,7 +105,8 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                         itemRegion.Click();
 
                         #region 识别数量
-                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
                         if (int.TryParse(numStr, out int num))
                         {
                             count = num - 1;    // 算上吃掉的1个
