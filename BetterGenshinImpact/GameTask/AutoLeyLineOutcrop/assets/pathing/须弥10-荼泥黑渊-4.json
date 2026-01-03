@@ -1,0 +1,111 @@
+{
+  "info": {
+    "name": "须弥10-荼泥黑渊-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "也许是探索度不满导致缺少捷径，此路线完全可以用道阻且长来形容。",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 6339.59,
+      "y": 738.39,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 6313.89,
+      "y": 716.15,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 6293.14,
+      "y": 684.53,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 6270.56,
+      "y": 673.75,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 6237.06,
+      "y": 651.24,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 6,
+      "x": 6207.31,
+      "y": 629.93,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 7,
+      "x": 6181.21,
+      "y": 608.3,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 8,
+      "x": 6169.15,
+      "y": 603.37,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 9,
+      "x": 6170.17,
+      "y": 603.18,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 10,
+      "x": 6164.25,
+      "y": 615.41,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 11,
+      "x": 6280.81,
+      "y": 616.8,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

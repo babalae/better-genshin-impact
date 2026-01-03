@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "璃月6-奥藏山-7-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 285.79,
+      "y": 1457.93,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

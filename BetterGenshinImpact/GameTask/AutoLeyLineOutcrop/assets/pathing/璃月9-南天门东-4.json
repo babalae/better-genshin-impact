@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "璃月9-南天门东-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "河边的冰史莱姆",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 1665.93,
+      "y": 386.6,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 1712.45,
+      "y": 480.86,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 1686.66,
+      "y": 567.55,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

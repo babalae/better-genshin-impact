@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月8-南天门南-5",
+    "type": "collect",
+    "author": "火山",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 815.31,
+      "y": 137.31,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

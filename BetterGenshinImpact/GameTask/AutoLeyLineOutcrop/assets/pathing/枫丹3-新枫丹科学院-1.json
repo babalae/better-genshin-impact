@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "枫丹3-新枫丹科学院-1",
+    "type": "collect",
+    "author": "平面镜",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 4498.18,
+      "y": 4710.79,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4496.67,
+      "y": 4741.03,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4539.94,
+      "y": 4771.01,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 4556.1,
+      "y": 4762.42,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

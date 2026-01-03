@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月4-璃月港-6",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "防止卡墙",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 276.55,
+      "y": 543.11,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

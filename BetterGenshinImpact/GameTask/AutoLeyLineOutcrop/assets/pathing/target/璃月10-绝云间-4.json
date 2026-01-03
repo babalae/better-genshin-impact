@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月10-绝云间-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "河边有冰雾花",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 683.19,
+      "y": 529.0,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}
