@@ -167,9 +167,10 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             return new Task(() =>
             {
-                Logger.LogInformation("→ {Name}执行宏", activeAvatar.Name);
+                var round = 1;
                 while (!ct.IsCancellationRequested && IsEnabled())
                 {
+                    Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
                     if (IsHoldOnMode() && !_isKeyDown)
                     {
                         break;
@@ -178,8 +179,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                     // 通用化战斗策略
                     foreach (var command in combatCommands)
                     {
+                        if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
+                        {
+                            // 跳过强制首轮指令
+                            continue;
+                        }
                         command.Execute(activeAvatar);
                     }
+                    round++;
                 }
 
                 Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);

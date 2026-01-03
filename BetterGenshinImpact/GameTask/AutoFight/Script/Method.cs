@@ -31,6 +31,7 @@ public class Method
     public static readonly Method KeyDown = new(["keydown"]);
     public static readonly Method KeyUp = new(["keyup"]);
     public static readonly Method KeyPress = new(["keypress"]);
+    public static readonly Method Round = new(["round"]);
 
     public static IEnumerable<Method> Values
     {
@@ -60,6 +61,7 @@ public class Method
             yield return KeyDown;
             yield return KeyUp;
             yield return KeyPress;
+            yield return Round;
         }
     }
 
