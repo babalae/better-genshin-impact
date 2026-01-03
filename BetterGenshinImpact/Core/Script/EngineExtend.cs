@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -40,6 +41,7 @@ public class EngineExtend
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
+        engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
         
         // 添加取消令牌相关类型
         engine.AddHostType("CancellationTokenSource", typeof(CancellationTokenSource));
