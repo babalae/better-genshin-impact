@@ -14,6 +14,8 @@ public class CombatCommand
 
     public List<string>? Args { get; set; }
 
+    public List<int> ActivatingRound { get; set; }
+
     public CombatCommand(string name, string command)
     {
         Name = name.Trim();
@@ -62,6 +64,11 @@ public class CombatCommand
                 throw new ArgumentException($"{Method.Alias[0]}方法的入参必须是VirtualKeyCodes枚举中的值，当前入参 {Args[0]} 不合法");
             }
         }
+    }
+    
+    public override string ToString()
+    {
+        return $"<CombatCommand {Name}, {Method}({Args}) (rounds {ActivatingRound})>";
     }
 
     public void Execute(CombatScenes combatScenes, CombatCommand? lastCommand = null)
@@ -263,6 +270,10 @@ public class CombatCommand
         else if (Method == Method.KeyPress)
         {
             avatar.KeyPress(Args![0]);
+        }
+        else if (Method == Method.Round)
+        {
+            // 作为回合标记使用，不做任何操作
         }
         else
         {
