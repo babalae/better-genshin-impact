@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -37,7 +38,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 拾取黑名单
     /// </summary>
     private HashSet<string> _blackList = [];
-    
+
     /// <summary>
     /// 拾取黑名单(模糊匹配)
     /// </summary>
@@ -77,7 +78,8 @@ public partial class AutoPickTrigger : ITaskTrigger
             {
                 _blackList.UnionWith(userBlackList);
             }
-            _fuzzyBlackList  = ReadTextList(@"User\pick_black_lists.txt");
+
+            _fuzzyBlackList = ReadTextList(@"User\pick_black_lists.txt");
         }
 
         if (config.WhiteListEnabled)
@@ -99,7 +101,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑/白名单失败");
-            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
 
         return [];
@@ -119,12 +121,12 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑/白名单失败");
-            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
 
         return [];
     }
-    
+
     private List<string> ReadTextList(string textFilePath)
     {
         try
@@ -139,7 +141,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         catch (Exception e)
         {
             _logger.LogError(e, "读取拾取黑/白名单失败");
-            MessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
         }
 
         return [];
@@ -194,12 +196,19 @@ public partial class AutoPickTrigger : ITaskTrigger
         var scale = TaskContext.Instance().SystemInfo.AssetScale;
         var config = TaskContext.Instance().Config.AutoPickConfig;
 
+        // 存在 L 键位是千星奇遇，无需拾取
+        using var lKeyRa = content.CaptureRectArea.Find(_autoPickAssets.LRo);
+        if (lKeyRa.IsExist())
+        {
+            return;
+        }
+
         // 识别到拾取键，开始识别物品图标
         var isExcludeIcon = false;
         _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
             foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
             (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-        var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+        using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
         speedTimer.Record("识别聊天图标");
         if (!chatIconRa.IsEmpty())
         {
@@ -209,7 +218,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         else
         {
             _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
-            var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
+            using var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
             speedTimer.Record("识别设置图标");
             if (!settingsIconRa.IsEmpty())
             {
@@ -254,8 +263,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        // var textMat = new Mat(content.CaptureRectArea.SrcGreyMat, textRect);
-        var gradMat = new Mat(content.CaptureRectArea.CacheGreyMat,
+        using var gradMat = new Mat(content.CaptureRectArea.CacheGreyMat,
             new Rect(textRect.X, textRect.Y, textRect.Width, Math.Min(textRect.Height, 3)));
         var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
         if (avgGrad < -3)
@@ -272,16 +280,17 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         else
         {
-            var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
+            using var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
             var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
+            // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
             // 如果找到有效区域
-            if (boundingRect.X <20 && boundingRect.Width > 5 && boundingRect.Height > 5)
+            if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
             {
                 // 截取只包含文字的区域
-                var textOnlyMat = new Mat(textMat, new Rect(0, 0,
+                using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
                     boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
                 text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
-                
+
                 // if (RuntimeHelper.IsDebug)
                 // {
                 //     // 如果不等于正确文字，则保存图片
@@ -343,7 +352,8 @@ public partial class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
-                if (_fuzzyBlackList.Count>0)
+
+                if (_fuzzyBlackList.Count > 0)
                 {
                     if (_fuzzyBlackList.Any(item => text.Contains(item)))
                     {
@@ -359,8 +369,6 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
-
-
     }
 
     private bool DoNotPick(string text)
@@ -377,18 +385,24 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             return true;
         }
+
         // 挪德卡莱聚所中文名特殊处理，不拾取
         if (text.Contains("聚所"))
         {
             return true;
         }
-        
+
         if (text.Contains("霜月") && text.Contains("坊"))
         {
             return true;
         }
 
         if (text.Contains("叮铃") || text.Contains("眶螂") || (text.Contains("蛋卷") && text.Contains("坊")))
+        {
+            return true;
+        }
+
+        if (text.Contains("西风成垒") || text.Contains("望崖营壁") || text.Contains("魔女的花园"))
         {
             return true;
         }
@@ -467,21 +481,21 @@ public partial class AutoPickTrigger : ITaskTrigger
         // 0. 首先替换相似的括号字符并删除换行符、空格，使用Span<char>进行原地替换以获得最佳性能
         Span<char> chars = stackalloc char[text.Length];
         text.AsSpan().CopyTo(chars);
-        
+
         int writeIndex = 0;
         bool hasChanges = false;
-        
+
         for (int i = 0; i < chars.Length; i++)
         {
             char c = chars[i];
-            
+
             // 跳过换行符、回车符、空格、制表符等空白字符
             if (char.IsWhiteSpace(c))
             {
                 hasChanges = true;
                 continue;
             }
-            
+
             // 替换括号字符
             if (c == '【' || c == '[')
             {
@@ -528,11 +542,11 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 获取清理后的文字
         var cleanedSpan = span.Slice(start, end - start + 1);
-        
+
         // 3. 检查并补充引号配对
         bool hasLeftQuote = false;
         bool hasRightQuote = false;
-        
+
         // 快速扫描是否存在引号
         for (int i = 0; i < cleanedSpan.Length; i++)
         {
@@ -555,9 +569,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             Debug.WriteLine("补充缺失的左引号");
             return string.Concat("「", cleanedSpan);
         }
-        
+
         return cleanedSpan.ToString();
     }
-    
-    
 }

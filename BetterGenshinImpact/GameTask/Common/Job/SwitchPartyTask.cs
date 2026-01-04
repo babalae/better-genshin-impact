@@ -138,7 +138,7 @@ public class SwitchPartyTask
 
         // 点击到最上方
         await Task.Delay(50, ct);
-        GameCaptureRegion.GameRegion1080PPosClick(700, 120);
+        GameCaptureRegion.GameRegion1080PPosClick(700, 125);
         await Task.Delay(50, ct);
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
@@ -151,7 +151,7 @@ public class SwitchPartyTask
             RegionOfInterest = regionOfInterest,
             DrawOnWindow = true,
             Name = "队伍名称",
-            DrawOnWindowPen= new System.Drawing.Pen(System.Drawing.Color.White)
+            DrawOnWindowPen= System.Drawing.Pens.White
         };
         // 逐页查找
         try

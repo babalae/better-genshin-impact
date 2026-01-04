@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.View.Pages;
 using Wpf.Ui.Controls;
 using Grid = System.Windows.Controls.Grid;
@@ -33,6 +34,7 @@ public partial class KeyBindingsWindow : FluentWindow
     public KeyBindingsWindow()
     {
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         var page = App.GetService<KeyBindingsSettingsPage>();
         Grid.SetRow(page!, 1);

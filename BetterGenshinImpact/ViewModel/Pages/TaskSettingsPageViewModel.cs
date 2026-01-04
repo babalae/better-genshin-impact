@@ -433,7 +433,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         // }
         // catch (Exception ex)
         // {
-        //     MessageBox.Error(ex.Message);
+        //     ThemedMessageBox.Error(ex.Message);
         // }
     }
 
@@ -468,7 +468,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         // }
         // catch (Exception ex)
         // {
-        //     MessageBox.Error(ex.Message);
+        //     ThemedMessageBox.Error(ex.Message);
         // }
     }
 
@@ -552,10 +552,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OnOpenArtifactSalvageTestOCRWindow()
+    private async Task OnOpenArtifactSalvageTestOCRWindow()
     {
-        OcrDialog ocrDialog = new OcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
-        ocrDialog.ShowDialog();
+        ArtifactOcrDialog ocrDialog = new ArtifactOcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
+        if (await ocrDialog.CaptureAsync()) { ocrDialog.ShowDialog(); }
     }
 
     [RelayCommand]
@@ -633,7 +633,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToGetGridIconsUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/dev/getGridIcons.html"));
     }
 
     [RelayCommand]

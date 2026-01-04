@@ -20,9 +20,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
 
         [Theory]
         [InlineData(@"AutoArtifactSalvage\ArtifactGrid.png", 4, 2)]
+        [InlineData(@"GetGridIcons\FoodGrid.png", 32, 8)]
+        [InlineData(@"GetGridIcons\WeaponGrid.png", 4, 2)]
         [InlineData(@"GetGridIcons\WeaponGrid3.png", 32, 8)]
         /// <summary>
-        /// 测试获取各种界面中的物品图标，结果应正确
+        /// 测试获取各种界面中的物品图标，经过算法的后处理，结果应正确
         /// </summary>
         public void GetGridIcons_ShouldBeRight(string screenshot, int count, int columns)
         {
@@ -30,18 +32,20 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
             using Mat mat = new Mat(@$"..\..\..\Assets\{screenshot}");
 
             //
-            var result = GridScreen.GridEnumerator.GetGridItems(mat, columns);
+            var rects = GridScreen.GridEnumerator.GetGridItems(mat, columns);
+            var cells = GridScreen.GridEnumerator.PostProcess(mat, rects, (int)(0.025 * mat.Height));
 
             //
-            Assert.Equal(count, result.Count());
+            Assert.Equal(count, cells.Count());
         }
 
         [Theory]
+        [InlineData(@"AutoArtifactSalvage\ArtifactGrid.png", 4, 2)]
         [InlineData(@"GetGridIcons\FoodGrid.png", 32, 8)]
         [InlineData(@"GetGridIcons\WeaponGrid.png", 4, 2)]
         [InlineData(@"GetGridIcons\WeaponGrid3.png", 32, 8)]
         /// <summary>
-        /// 测试获取各种界面中的物品图标，使用复杂的cv算法，结果应正确
+        /// 测试获取各种界面中的物品图标，使用复杂的cv算法，经过算法的后处理，结果应正确
         /// </summary>
         public void GetGridIconsAlpha_ShouldBeRight(string screenshot, int count, int columns)
         {
@@ -49,10 +53,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
             using Mat mat = new Mat(@$"..\..\..\Assets\{screenshot}");
 
             //
-            var result = GridScreen.GridEnumerator.GetGridItems(mat, columns, findContoursAlpha: true);
+            var rects = GridScreen.GridEnumerator.GetGridItems(mat, columns, findContoursAlpha: true);
+            var cells = GridScreen.GridEnumerator.PostProcess(mat, rects, (int)(0.025 * mat.Height));
 
             //
-            Assert.Equal(count, result.Count());
+            Assert.Equal(count, cells.Count());
         }
 
         [Fact]
@@ -101,17 +106,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
 
             //
             var gridItems = GridScreen.GridEnumerator.GetGridItems(mat, columns, findContoursAlpha: true);
-            var rows = GridScreen.GridEnumerator.ClusterRows(gridItems, 10);
+            var cells = GridCell.ClusterToCells(gridItems, 10).OrderBy(c => c.RowNum).ThenBy(c => c.ColNum);
 
             var result = new List<string>();
-            foreach (var row in rows)
+            foreach (var cell in cells)
             {
-                foreach (Rect rect in row)
-                {
-                    Mat gridItemMat = mat.SubMat(rect);
-                    string numStr = gridItemMat.GetGridItemIconText(paddle.Get());
-                    result.Add(numStr);
-                }
+                using Mat gridItemMat = mat.SubMat(cell.Rect);
+                string numStr = gridItemMat.GetGridItemIconText(paddle.Get());
+                result.Add(numStr);
             }
 
             //

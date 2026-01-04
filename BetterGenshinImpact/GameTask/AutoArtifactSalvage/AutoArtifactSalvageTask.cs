@@ -313,11 +313,11 @@ public class AutoArtifactSalvageTask : ISoloTask
                 var drawRectList = new List<RectDrawable>();
                 var drawTextList = new List<TextDrawable>();
                 gridScreen.OnBeforeScroll += () => { VisionContext.Instance().DrawContent.RemoveRect(drawKey); drawRectList.Clear(); drawTextList.Clear(); };
-                System.Drawing.Pen greenPen = new System.Drawing.Pen(System.Drawing.Color.Lime);
                 try
                 {
-                    await foreach (ImageRegion itemRegion in gridScreen)
+                    await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                     {
+                        using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                         using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
                         (string? predName, _) = GridIconsAccuracyTestTask.Infer(img125, session, prototypes);
                         if (predName == null)
@@ -330,7 +330,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         }
                         else
                         {
-                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, greenPen);
+                            var rectDrawable = itemRegion.SelfToRectDrawable(drawKey, System.Drawing.Pens.Lime);
                             drawRectList.Add(rectDrawable);
                             VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
                             drawTextList.Add(new TextDrawable(predName, new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
@@ -380,59 +380,69 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         GridParams gridParams = GridParams.Templates[GridScreenName.ArtifactSalvage];
         GridScreen gridScreen = new GridScreen(gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
-        await foreach (ImageRegion itemRegion in gridScreen)
+        gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
+        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        try
         {
-            Rect gridRect = itemRegion.ToRect();
-            if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
+            await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
-                itemRegion.Click();
-                await Delay(300, ct);
-
-                using var ra1 = CaptureToRectArea();
-                using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridParams.Roi.X, gridParams.Roi.Y));
-                if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
+                using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
+                Rect gridRect = itemRegion.ToRect();
+                if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
                 {
-                    using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
+                    itemRegion.Click();
+                    await Delay(300, ct);
 
-                    ArtifactStat artifact;
-                    try
+                    using var ra1 = CaptureToRectArea();
+                    using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridParams.Roi.X, gridParams.Roi.Y));
+                    if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                     {
-                        artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
-                    }
-                    catch (Exception e)
-                    {
-                        if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
+                        using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
+
+                        ArtifactStat artifact;
+                        try
                         {
-                            logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
+                            artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+                        }
+                        catch (Exception e)
+                        {
+                            if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
+                            {
+                                logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
 
-                            itemRegion.Click(); // 反选取消
-                            await Delay(100, ct);
-                            continue;
+                                itemRegion.Click(); // 反选取消
+                                await Delay(100, ct);
+                                continue;
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+
+                        if (await IsMatchJavaScript(artifact, javaScript))
+                        {
+                            // logger.LogInformation(message: msg);
                         }
                         else
                         {
-                            throw;
+                            itemRegion.Click(); // 反选取消
+                            await Delay(100, ct);
                         }
                     }
 
-                    if (await IsMatchJavaScript(artifact, javaScript))
+                    count--;
+                    if (count <= 0)
                     {
-                        // logger.LogInformation(message: msg);
+                        logger.LogInformation("检查次数已耗尽");
+                        break;
                     }
-                    else
-                    {
-                        itemRegion.Click(); // 反选取消
-                        await Delay(100, ct);
-                    }
-                }
-
-                count--;
-                if (count <= 0)
-                {
-                    logger.LogInformation("检查次数已耗尽");
-                    break;
                 }
             }
+        }
+        finally
+        {
+            VisionContext.Instance().DrawContent.ClearAll();
         }
     }
 
@@ -518,25 +528,25 @@ public class AutoArtifactSalvageTask : ISoloTask
     public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
         using Mat gray = src.CvtColor(ColorConversionCodes.BGR2GRAY);
-        Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
+        using Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核
 
-        Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
+        using Mat nameRoi = gray.SubMat(new Rect(0, 0, src.Width, (int)(src.Height * 0.106)));
         //Cv2.ImShow("name", nameRoi);
-        Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
+        using Mat typeRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.106), src.Width, (int)(src.Height * 0.106)));
         #region 主词条预处理 去除背景干扰
-        Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
+        using Mat mainAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.22), (int)(src.Width * 0.55), (int)(src.Height * 0.30)));
         using Mat mainAffixRoiBottomHat = mainAffixRoi.MorphologyEx(MorphTypes.TopHat, hatKernel);
         using Mat mainAffixRoiThreshold = mainAffixRoiBottomHat.Threshold(30, 255, ThresholdTypes.Binary);
         //Cv2.ImShow("mainAffix", mainAffixRoiThreshold);
         #endregion
         #region 副词条预处理 还是不处理效果最好……
-        Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
-        //using Mat levelAndMinorAffixRoiThreshold = new Mat();
+        using Mat levelAndMinorAffixRoi = gray.SubMat(new Rect(0, (int)(src.Height * 0.52), src.Width, (int)(src.Height * 0.48)));
+        //using Mat levelAndMinorAffixRoiThreshold = new Mat(); // otsu确定阈值大概在170
         //double otsu = Cv2.Threshold(levelAndMinorAffixRoi, levelAndMinorAffixRoiThreshold, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
-        // //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
         //Cv2.ImShow($"levelAndMinorAffixRoi = {otsu}", levelAndMinorAffixRoiThreshold);
-        #endregion
         //Cv2.WaitKey();
+        //using Mat levelAndMinorAffixRoiThreshold = levelAndMinorAffixRoi.Threshold(170, 255, ThresholdTypes.Binary);
+        #endregion
 
         var nameOcrResult = ocrService.OcrResult(nameRoi);
         var typeOcrResult = ocrService.OcrResult(typeRoi);
@@ -599,7 +609,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         #region 副词条
         var minorAffixes = new List<ArtifactAffix>();
-        string pattern = @"^([^+:：]+)\+([\d., ]*)(%?).*$";
+        string pattern = @"^([^+:：]+)\+([\d., 。]*)(%?).*$";
         pattern = pattern.Replace("%", percentStr);
         foreach (var r in levelAndMinorAffixResult)
         {
@@ -664,7 +674,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
             }
 
-            if (!float.TryParse(match.Groups[2].Value, NumberStyles.Any, cultureInfo, out float affixValue))
+            if (!float.TryParse(match.Groups[2].Value.Replace("。", "."), NumberStyles.Any, cultureInfo, out float affixValue))
             {
                 throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
             }

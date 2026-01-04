@@ -44,7 +44,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         [InlineData(@"20250225101300361_ChooseBait_Succeeded.png", new string[] { "medaka", "butterflyfish", "butterflyfish", "pufferfish" })]
         [InlineData(@"20250226161354285_ChooseBait_Succeeded.png", new string[] { "medaka" })]  // 不稳定的测试用例，因未学习被照亮的场景
         [InlineData(@"202503160917566615@900p.png", new string[] { "pufferfish" })]
-        [InlineData(@"202509141339218213_ChooseBait.png", new string[] { "axehead fish" })]
+        [InlineData(@"202509141339218213_ChooseBait.png", new string[] { "axehead" })]
         [InlineData(@"202509141339218213_ChooseBait.png", new string[] { "mauler shark", "crystal eye", "medaka", "medaka", "medaka" })]
         /// <summary>
         /// 测试各种选取鱼饵，结果为成功

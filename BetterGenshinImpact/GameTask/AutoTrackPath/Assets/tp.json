@@ -11908,6 +11908,66 @@
                 "area": "刺梨岩"
             },
             {
+                "id": "1622",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1416.627,
+                    66.34088,
+                    14227.44
+                ],
+                "tranPosition": [
+                    1419.7568,
+                    65.44593,
+                    14227.67
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
+                "id": "1623",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1444.299,
+                    128.6889,
+                    13984.66
+                ],
+                "tranPosition": [
+                    1441.9055,
+                    128.4382,
+                    13982.096
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
+                "id": "1624",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1531.633,
+                    94.35979,
+                    13921.42
+                ],
+                "tranPosition": [
+                    1525.5068,
+                    94.35979,
+                    13922.6045
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
                 "id": "1604",
                 "gadgetId": "70580004",
                 "gadgetType": "TransPointSecond",
@@ -14475,6 +14535,393 @@
                 "name": "传送锚点",
                 "area": "旧日之海",
                 "areaId": 600
+            }
+        ]
+    },
+    {
+        "mapName": "AncientSacredMountain",
+        "sceneId": 101,
+        "description": "远古圣山",
+        "points": [
+            {
+                "id": "11",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5.254,
+                    770.154,
+                    -544.8
+                ],
+                "tranPosition": [
+                    8.071999,
+                    770.3726,
+                    -546.2424
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "12",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    301.3517,
+                    201.98,
+                    -158.3329
+                ],
+                "tranPosition": [
+                    308.8704,
+                    201.54634,
+                    -151.29555
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "13",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    100.683,
+                    210.202,
+                    -143.976
+                ],
+                "tranPosition": [
+                    105.01541,
+                    210.202,
+                    -152.21004
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80005
+            },
+            {
+                "id": "14",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    305.55,
+                    138.782,
+                    108.762
+                ],
+                "tranPosition": [
+                    312.97974,
+                    141.13326,
+                    102.69159
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80006
+            },
+            {
+                "id": "15",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    345.413,
+                    259.0234,
+                    264.3909
+                ],
+                "tranPosition": [
+                    346.47064,
+                    259.45032,
+                    270.15018
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80006
+            },
+            {
+                "id": "16",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    512.608,
+                    106.953,
+                    7.501
+                ],
+                "tranPosition": [
+                    508.58472,
+                    107.43931,
+                    19.718029
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "17",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    640.53,
+                    89.07455,
+                    -89.7999
+                ],
+                "tranPosition": [
+                    645.846,
+                    88.50239,
+                    -85.27797
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "18",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    261.4832,
+                    57.82032,
+                    -138.0443
+                ],
+                "tranPosition": [
+                    264.99072,
+                    57.53672,
+                    -152.49945
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80004
+            },
+            {
+                "id": "19",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    541.595,
+                    77.494,
+                    -287.768
+                ],
+                "tranPosition": [
+                    534.5397,
+                    74.56176,
+                    -293.87283
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "2",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    747.23,
+                    857.58,
+                    44.91
+                ],
+                "tranPosition": [
+                    752.04047,
+                    857.8871,
+                    40.86717
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80001
+            },
+            {
+                "id": "20",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    474.239,
+                    115.454,
+                    -497.752
+                ],
+                "tranPosition": [
+                    469.06088,
+                    115.62647,
+                    -501.97424
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "21",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    251.6618,
+                    146.964,
+                    -424.2064
+                ],
+                "tranPosition": [
+                    253.07848,
+                    147.8764,
+                    -432.8027
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "22",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    427.1338,
+                    -635.1426,
+                    -434.3028
+                ],
+                "tranPosition": [
+                    450.01736,
+                    -635.4016,
+                    -424.52426
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80009
+            },
+            {
+                "id": "3",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    365.439,
+                    751.873,
+                    -185.486
+                ],
+                "tranPosition": [
+                    363.01917,
+                    751.1264,
+                    -182.49893
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "4",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    207.5441,
+                    693.96,
+                    196.1411
+                ],
+                "tranPosition": [
+                    209.92026,
+                    694.134,
+                    202.46678
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80002
+            },
+            {
+                "id": "5",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -42.25665,
+                    822.063,
+                    193.6675
+                ],
+                "tranPosition": [
+                    -42.84648,
+                    821.274,
+                    185.37282
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "6",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    37.49844,
+                    737.135,
+                    383.0565
+                ],
+                "tranPosition": [
+                    35.7756,
+                    736.75525,
+                    387.55582
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80002
+            },
+            {
+                "id": "7",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -246.441,
+                    831.017,
+                    -90.849
+                ],
+                "tranPosition": [
+                    -248.21928,
+                    828.3109,
+                    -80.89331
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "8",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -292.383,
+                    885.409,
+                    -249.987
+                ],
+                "tranPosition": [
+                    -290.66766,
+                    885.0531,
+                    -245.20038
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
             }
         ]
     }

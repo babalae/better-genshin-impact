@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+        xmlns:platform="clr-namespace:BetterGenshinImpact.Platform.Wine"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -27,7 +28,7 @@
     </b:Interaction.Triggers>
 
     <Window.Background>
-        <SolidColorBrush Opacity="0" Color="#FFB0B0B0" />
+        <SolidColorBrush Opacity="0.00001" Color="Transparent" />
     </Window.Background>
     <Window.Style>
         <Style TargetType="Window">
@@ -90,10 +91,13 @@
                                  BorderThickness="0"
                                  FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
                                  FontSize="12"
-                                 Foreground="LightGray"
                                  IsHitTestVisible="False"
                                  VerticalScrollBarVisibility="Hidden"
+                                 Opacity="{Binding Config.MaskWindowConfig.TextOpacity}"
                                  Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <RichTextBox.Foreground>
+                            <SolidColorBrush Color="LightGray" />
+                        </RichTextBox.Foreground>
                         <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}" FontSize="{Binding FontSize, ElementName=LogTextBox}">
                             <Paragraph>
                                 <Run>[00:00:00 INF] 更好的原神</Run>
@@ -143,10 +147,18 @@
                                                    Text="{Binding Name}">
                                         <TextBlock.Style>
                                             <Style TargetType="{x:Type TextBlock}">
-                                                <Setter Property="Foreground" Value="LightGray" />
+                                                <Setter Property="Foreground">
+                                                    <Setter.Value>
+                                                        <SolidColorBrush Color="LightGray" Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    </Setter.Value>
+                                                </Setter>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsEnabled}" Value="True">
-                                                        <Setter Property="Foreground" Value="LightGreen" />
+                                                        <Setter Property="Foreground">
+                                                            <Setter.Value>
+                                                                <SolidColorBrush Color="LightGreen" Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -196,8 +208,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="西" />
+                               Text="西">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="4"
                                HorizontalAlignment="Center"
@@ -206,8 +221,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="南" />
+                               Text="南">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Grid.Column="4"
                                Grid.Row="2"
                                HorizontalAlignment="Center"
@@ -216,8 +234,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="东" />
+                               Text="东">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="0"
                                HorizontalAlignment="Center"
@@ -226,8 +247,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="北" />
+                               Text="北">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                 </Grid>
             </Viewbox>
 
@@ -243,8 +267,29 @@
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource DigitalThemeFontFamily}"
                            FontSize="16"
-                           Foreground="White"
-                           Text="{Binding Fps}" />
+                           Text="{Binding Fps}">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                    </TextBlock.Foreground>
+                </TextBlock>
+            </Border>
+            <!--  用于支持wine  -->
+            <Border Grid.Row="0" Grid.Column="0"
+                    Grid.RowSpan="4" Grid.ColumnSpan="6"
+                    IsHitTestVisible="False">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="Background" Value="Transparent"/>
+
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Source={x:Static platform:WinePlatformAddon.IsRunningOnWine}}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Setter Property="Background" Value="#11000000"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
             </Border>
         </Grid>
     </AdornerDecorator>

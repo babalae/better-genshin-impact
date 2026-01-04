@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.ViewModel.Pages.View;
+﻿using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.ViewModel.Pages.View;
 
 namespace BetterGenshinImpact.View.Pages.View;
 
@@ -13,5 +14,6 @@ public partial class PathingConfigView
     {
         DataContext = ViewModel = viewModel;
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
     }
 }

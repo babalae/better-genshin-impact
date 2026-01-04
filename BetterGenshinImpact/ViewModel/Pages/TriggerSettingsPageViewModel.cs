@@ -2,6 +2,7 @@
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
@@ -21,13 +22,20 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TriggerSettingsPageViewModel : ViewModel
 {
-    [ObservableProperty] private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
+    [ObservableProperty] private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项","自定义优先选项", "优先选择最后一个选项", "不选择选项"];
 
     [ObservableProperty] private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
 
     [ObservableProperty] private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
 
     [ObservableProperty] private List<string> _pickButtonNames;
+
+    [ObservableProperty] private Dictionary<string, string> _pictureInPictureSourceTypeDict =
+        new()
+        {
+            { nameof(PictureSourceType.CaptureLoop), "60帧模式" },
+            { nameof(PictureSourceType.TriggerDispatcher), "截图器供图" }
+        };
 
     public AllConfig Config { get; set; }
 

@@ -22,6 +22,10 @@ public static class MapManager
     /// <returns>地图实例</returns>
     public static ISceneMap GetMap(MapTypes mapType, string matchingMethod)
     {
+        if (string.IsNullOrEmpty(matchingMethod))
+        {
+            matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        }
         string key = $"{mapType}_{matchingMethod}";
 
         if (_maps.TryGetValue(key, out var map))

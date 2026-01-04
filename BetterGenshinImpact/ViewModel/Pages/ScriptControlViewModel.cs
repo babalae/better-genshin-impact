@@ -120,7 +120,7 @@ public partial class ScriptControlViewModel : ViewModel
     private void ClearTasks()
     {
         // 确认？
-        var result = MessageBox.Show("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var result = ThemedMessageBox.Question("是否清空所有任务？", "清空任务", MessageBoxButton.YesNo, System.Windows.MessageBoxResult.No);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
@@ -315,6 +315,7 @@ public partial class ScriptControlViewModel : ViewModel
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
 
         void OnQuestionButtonOnClick(object sender, RoutedEventArgs args)
         {
@@ -2007,13 +2008,20 @@ public partial class ScriptControlViewModel : ViewModel
         //
         // await uiMessageBox.ShowDialogAsync();
 
-        var dialogWindow = new Window
+        var dialogWindow = new FluentWindow
         {
             Title = "配置组设置",
             Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedScriptGroup.Config)),
-            SizeToContent = SizeToContent.WidthAndHeight,
+            Width = 800,
+            Height = 600,
+            MinWidth = 800,
+            MaxWidth = 800,
+            MinHeight = 600,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ExtendsContentIntoTitleBar = true,
+            WindowBackdropType = WindowBackdropType.Auto,
         };
+        dialogWindow.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
 
         // var dialogWindow = new WpfUiWindow(new ScriptGroupConfigView(SelectedScriptGroup.Config))
         // {

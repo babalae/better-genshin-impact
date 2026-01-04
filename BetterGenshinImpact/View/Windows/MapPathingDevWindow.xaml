@@ -11,6 +11,8 @@
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  Width="320"
                  Height="260"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Auto"
                  mc:Ignorable="d">
     <StackPanel>
         <ui:TitleBar Title="地图追踪开发者工具">

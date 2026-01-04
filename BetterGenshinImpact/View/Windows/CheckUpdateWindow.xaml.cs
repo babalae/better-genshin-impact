@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Windows.System;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using Meziantou.Framework.Win32;
@@ -45,6 +46,7 @@ public partial class CheckUpdateWindow : FluentWindow
         _option = option ?? throw new ArgumentNullException(nameof(option));
         DataContext = this;
         InitializeComponent();
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
 
         // 存在CDK则显示修改按钮
         if (string.IsNullOrEmpty(MirrorChyanHelper.GetCdk()))
@@ -169,8 +171,8 @@ public partial class CheckUpdateWindow : FluentWindow
         if (source == "github")
         {
             // 提示用户这个是国外服务器，可能会很慢
-            var result = await MessageBox.ShowAsync("您已选择「Github」作为更新源。\n请确认：您当前网络可正常访问 Github 文件服务？\n若不确定能否访问，建议切换至其他更新渠道。\n是否继续使用 Github 渠道更新？",
-                "警告", System.Windows.MessageBoxButton.OKCancel, MessageBoxImage.Exclamation, System.Windows.MessageBoxResult.None);
+            var result = await ThemedMessageBox.ShowAsync("您已选择「Github」作为更新源。\n请确认：您当前网络可正常访问 Github 文件服务？\n若不确定能否访问，建议切换至其他更新渠道。\n是否继续使用 Github 渠道更新？",
+                "警告", System.Windows.MessageBoxButton.OKCancel, ThemedMessageBox.MessageBoxIcon.Warning);
             if (result != MessageBoxResult.OK)
             {
                 return;
@@ -218,7 +220,7 @@ public partial class CheckUpdateWindow : FluentWindow
         string updaterExePath = Global.Absolute("BetterGI.update.exe");
         if (!File.Exists(updaterExePath))
         {
-            await MessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+            await ThemedMessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
             return;
         }
 

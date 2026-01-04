@@ -144,6 +144,10 @@
                         <MenuItem Command="{Binding RefreshCommand}"
                                   CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                   Header="刷新" />
+                        <Separator />
+                        <MenuItem Command="{Binding DeleteScriptCommand}"
+                                  CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                  Header="删除" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
                 <ListView.Style>

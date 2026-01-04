@@ -27,8 +27,8 @@ public class PickUpCollectHandler : IActionHandler
     [
         "枫原万叶-长E keydown(E),wait(0.7),keyup(E),attack(0.2),wait(0.5)",
         "枫原万叶-短E e,attack(0.15)",
-        "琴-短E keydown(E),wait(0.4),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,-3500),wait(1.8),keyup(E),wait(0.3),click(middle)",
-        "琴-长E click(middle),keydown(E),click(middle),wait(0.4),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
+        "琴-短E wait(0.1),keydown(E),wait(0.4),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,-3500),wait(1.8),keyup(E),wait(0.3),click(middle)",
+        "琴-长E wait(0.1),click(middle),keydown(E),click(middle),wait(0.4),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
         "moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
         "moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
         "moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
@@ -57,33 +57,29 @@ public class PickUpCollectHandler : IActionHandler
             Logger.LogError("队伍识别未初始化成功！");
             return;
         }
-        
-        var alias= string.Empty;
+
         Avatar? picker = null;
+        var commandsList = new List<string>();
         
         if (waypointForTrack != null)
         {
             if (!string.IsNullOrEmpty(waypointForTrack.ActionParams))
             {
-                // 尝试别名转换为标准名称
-                try
-                {
-                    alias = DefaultAutoFightConfig.AvatarAliasToStandardName(waypointForTrack.ActionParams);
-                }
-                catch (Exception e)
-                {
-                    alias = waypointForTrack.ActionParams;
-                    Console.WriteLine(e);
-                }
+                var commands = waypointForTrack.ActionParams.Split(',');
                 
-                if (CharacterNames.Contains(alias))
+                foreach (var command in commands)
                 {
-                    picker = combatScenes.SelectAvatar(alias);
-                }
-                else
-                {
-                    var characterName = GetCharacterName(alias);
-                    picker = combatScenes.SelectAvatar(characterName);
+   
+                    try
+                    {
+                        var alias = DefaultAutoFightConfig.AvatarAliasToStandardName(command);
+                        commandsList.Add(!string.IsNullOrEmpty(alias) ? alias : command);
+                    }
+                    catch (Exception e)
+                    {
+                        commandsList.Add(command);
+                        Console.WriteLine(e);
+                    }
                 }
             }
             else
@@ -91,29 +87,41 @@ public class PickUpCollectHandler : IActionHandler
                 // 1、ActionParams没填参数，尝试选择，如果找到，后续会执行第一个找到该角色的相关命令
                 foreach (var characterName in CharacterNames)
                 {
-                    picker = combatScenes.SelectAvatar(characterName);
-                    if (picker is null)
+                    var pickerNull = combatScenes.SelectAvatar(characterName);
+                    if (pickerNull is null)
                     {
                         continue;
                     }
-                    alias = characterName;
+                    commandsList.Add(characterName);
                     break;
                 }
             }
         }
 
-        if (picker is not null)
+        foreach (var commands in commandsList)
         {
-            picker.TrySwitch();
-            await picker.WaitSkillCd(ct);
+            if (CharacterNames.Contains(commands))
+            {
+                picker = combatScenes.SelectAvatar(commands);
+            }
+            else
+            {
+                var characterName = GetCharacterName(commands);
+                picker = combatScenes.SelectAvatar(characterName);
+            }
+
+            if (picker is not null)
+            {
+                picker.TrySwitch();
+                await picker.WaitSkillCd(ct);
+            }
+            else
+            {
+                continue;
+            }
+            
+            PickUpMaterial(combatScenes,commands); // 开始执行动作
         }
-        else
-        {
-            Logger.LogError("未找到角色可执行聚集材料动作:{t}",CharacterNames);
-            return;
-        }
-        
-        PickUpMaterial(combatScenes,alias); // 开始执行动作
     }
     
     /// <summary>
@@ -187,9 +195,10 @@ public class PickUpCollectHandler : IActionHandler
                 if (foundAvatar)
                 {
                     var selectedAvatar = combatScenes.SelectAvatar(characterName);
-                    if (selectedAvatar != null)
-                    {
-                        selectedAvatar.AfterUseSkill();// 使用技能后更新技能CD
+                    if (selectedAvatar is not null)
+                    { 
+                        Sleep(200);//等待CD显示
+                        selectedAvatar.AfterUseSkill();
                     }
                     break;
                 }

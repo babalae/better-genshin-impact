@@ -4,11 +4,14 @@ using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -171,7 +174,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var fetchOptions = new FetchOptions
                     {
                         ProxyOptions = { ProxyType = ProxyType.None },
-                        Depth = 1 // 浅拉取，只获取最新的提交
+                        Depth = 1, // 浅拉取，只获取最新的提交
+                        CredentialsProvider = CreateCredentialsHandler() // 添加凭据处理器
                     };
 
                     // 拉取到远程追踪分支
@@ -428,6 +432,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             OnCheckoutProgress = onCheckoutProgress
         };
         // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
+        // 设置凭据处理器
+        options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
         // 克隆仓库
         Repository.Clone(repoUrl, repoPath, options);
     }
@@ -462,7 +468,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 TagFetchMode = TagFetchMode.None,
                 ProxyOptions = { ProxyType = ProxyType.None },
-                Depth = 1 // 浅拉取，只获取最新的提交
+                Depth = 1, // 浅拉取，只获取最新的提交
+                CredentialsProvider = CreateCredentialsHandler() // 添加凭据处理器
             };
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
@@ -897,6 +904,28 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         repo.Config.Unset("https.proxy");
     }
 
+    /// <summary>
+    /// 创建凭据处理器（用于私有仓库身份验证）
+    /// </summary>
+    /// <returns>凭据处理器</returns>
+    private CredentialsHandler? CreateCredentialsHandler()
+    {
+        // 从凭据管理器读取 Git 凭据
+        var credential = CredentialManagerHelper.ReadCredential("BetterGenshinImpact.GitCredentials");
+
+
+        // 返回凭据处理器
+        return (url, usernameFromUrl, types) =>
+        {
+            _logger.LogInformation($"使用配置的Git凭据进行身份验证");
+            return new UsernamePasswordCredentials
+            {
+                Username = credential?.UserName ?? "",
+                Password = credential?.Password ?? ""
+            };
+        };
+    }
+
     // [Obsolete]
     // public async Task<(string, bool)> UpdateCenterRepo()
     // {
@@ -1085,6 +1114,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     Owner = Application.Current.MainWindow,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
+                uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
 
                 var result = await uiMessageBox.ShowDialogAsync();
                 if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
@@ -1159,7 +1189,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch
         {
-            await MessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+            await ThemedMessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
             return;
         }
 
@@ -1518,17 +1548,81 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         UpdateSubscribedScriptPaths();
         if (_webWindow is not { IsVisible: true })
         {
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+            // 计算宽高（默认0.7屏幕宽高）
+            double width = scriptConfig.WebviewWidth == 0
+                ? SystemParameters.WorkArea.Width * 0.7
+                : scriptConfig.WebviewWidth;
+
+            double height = scriptConfig.WebviewHeight == 0
+                ? SystemParameters.WorkArea.Height * 0.7
+                : scriptConfig.WebviewHeight;
+
+            // 计算位置（默认居中）
+            double left = scriptConfig.WebviewLeft == 0
+                ? (SystemParameters.WorkArea.Width - width) / 2
+                : scriptConfig.WebviewLeft;
+
+            double top = scriptConfig.WebviewTop == 0
+                ? (SystemParameters.WorkArea.Height - height) / 2
+                : scriptConfig.WebviewTop;
+            
+            WindowState state = scriptConfig.WebviewState;
+            var screen = SystemParameters.WorkArea;
+            bool isSmallScreen = screen.Width <= 1600 || screen.Height <= 900;
+            // 如果未设置或非法值，则默认 Normal，小屏则直接最大化
+            if (isSmallScreen)
+            {
+                state = WindowState.Maximized;
+            }
+            else if (!Enum.IsDefined(typeof(WindowState), scriptConfig.WebviewState))
+            {
+                state = WindowState.Normal;
+            }
+            else
+            {
+                state = scriptConfig.WebviewState;
+            }
+            
             _webWindow = new WebpageWindow
             {
                 Title = "Genshin Copilot Scripts | BetterGI 脚本本地中央仓库",
-                Width = 1366,
-                Height = 768,
+                Width = width,
+                Height = height,
+                Left = left,
+                Top = top,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                WindowState = state
             };
-            _webWindow.Closed += (s, e) => _webWindow = null;
+            // 关闭时保存窗口位置与大小
+            _webWindow.Closed += (s, e) =>
+            {
+                if (_webWindow != null)
+                {
+                    scriptConfig.WebviewLeft = _webWindow.Left;
+                    scriptConfig.WebviewTop = _webWindow.Top;
+                    scriptConfig.WebviewWidth = _webWindow.Width;
+                    scriptConfig.WebviewHeight = _webWindow.Height;
+                    scriptConfig.WebviewState = _webWindow.WindowState;
+                }
+
+                _webWindow = null;
+            };
+
             _webWindow.Panel!.DownloadFolderPath = MapPathingViewModel.PathJsonPath;
-            _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
+            // _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
             {
+                var assetsPath = Global.Absolute(@"Assets\Web\ScriptRepo");
+                _webWindow.Panel!.WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    "bettergi.local",
+                    assetsPath,
+                    CoreWebView2HostResourceAccessKind.Allow
+                );
+
+                // _webWindow.Panel!.WebView.CoreWebView2.Navigate("https://bettergi.local/index.html");
+
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
 
                 // 允许内部外链使用默认浏览器打开
@@ -1544,6 +1638,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     e.Handled = true;
                 };
             };
+
+            _webWindow.NavigateToUri(new Uri("https://bettergi.local/index.html"));
             _webWindow.Show();
         }
         else

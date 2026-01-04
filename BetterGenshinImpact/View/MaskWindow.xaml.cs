@@ -68,6 +68,11 @@ public partial class MaskWindow : Window
         return _maskWindow != null && PresentationSource.FromVisual(_maskWindow) != null;
     }
 
+    public void BringToTop()
+    {
+        User32.BringWindowToTop(new WindowInteropHelper(this).Handle);
+    }
+
     public void RefreshPosition()
     {
         if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
@@ -92,6 +97,7 @@ public partial class MaskWindow : Window
             Top = currentRect.Top / dpiScale;
             Width = currentRect.Width / dpiScale;
             Height = currentRect.Height / dpiScale;
+            BringToTop();
         });
     }
 
@@ -99,8 +105,7 @@ public partial class MaskWindow : Window
     {
         nint targetHWnd = TaskContext.Instance().GameHandle;
         _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        float x = DpiHelper.GetScale(targetHWnd).X;
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
+        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, targetRect.Width, targetRect.Height, User32.SetWindowPosFlags.SWP_SHOWWINDOW);
     }
 
     public MaskWindow()
@@ -199,6 +204,10 @@ public partial class MaskWindow : Window
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
+        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 100)
+        {
+            (p.Inlines as System.Collections.IList).RemoveAt(0);
+        }
         var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
         if (textRange.Text.Length > 10000)
         {

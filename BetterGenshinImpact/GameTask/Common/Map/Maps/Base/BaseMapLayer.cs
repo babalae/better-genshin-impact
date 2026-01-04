@@ -117,7 +117,7 @@ public class BaseMapLayer(SceneBaseMap baseMap)
                 return 0;
             }
 
-            return a.Floor > b.Floor ? 1 : -1;
+            return a.Floor < b.Floor ? 1 : -1;
         });
         return layers;
     }
