@@ -77,7 +77,7 @@ public sealed class RepoWebBridge
         return await File.ReadAllTextAsync(userConfigPath);
     }
 
-    public async Task<string> GetFile(string relPath)
+    public Task<string> GetFile(string relPath)
     {
         try
         {
@@ -92,12 +92,7 @@ public sealed class RepoWebBridge
             string normalizedFilePath = Path.GetFullPath(filePath);
             if (!normalizedFilePath.StartsWith(normalizedBasePath, StringComparison.OrdinalIgnoreCase))
             {
-                   return "404";
-            }
-
-            if (!File.Exists(filePath))
-            {
-                return "404";
+                return Task.FromResult("404");
             }
 
             string extension = Path.GetExtension(filePath).ToLower();
@@ -106,7 +101,7 @@ public sealed class RepoWebBridge
             {
                 // 读取文本文件
                 string? content = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(relPath);
-                return string.IsNullOrEmpty(content) ? "404" : content;
+                return Task.FromResult(string.IsNullOrEmpty(content) ? "404" : content);
             }
             else if (AllowedImageExtensions.Contains(extension))
             {
@@ -114,19 +109,18 @@ public sealed class RepoWebBridge
                 byte[]? bytes = ScriptRepoUpdater.Instance.ReadBinaryFileFromCenterRepo(relPath);
                 if (bytes == null || bytes.Length == 0)
                 {
-                    return "404";
+                    return Task.FromResult("404");
                 }
 
                 string base64 = Convert.ToBase64String(bytes);
-                string mimeType = GetMimeType(extension);
-                return $"data:{mimeType};base64,{base64}";
+                return Task.FromResult(base64);
             }
 
-            return "404";
+            return Task.FromResult("404");
         }
         catch
         {
-            return "404";
+            return Task.FromResult("404");
         }
     }
 
