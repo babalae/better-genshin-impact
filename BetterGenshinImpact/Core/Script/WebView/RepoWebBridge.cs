@@ -31,7 +31,7 @@ public sealed class RepoWebBridge
     {
         ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"
     };
-
+    
     public async Task<string> GetRepoJson()
     {
         try
@@ -104,12 +104,22 @@ public sealed class RepoWebBridge
     
             if (AllowedTextExtensions.Contains(extension)) 
             {
-                return await File.ReadAllTextAsync(filePath);
+                // 读取文本文件
+                string? content = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(relPath);
+                return string.IsNullOrEmpty(content) ? "404" : content;
             }
             else if (AllowedImageExtensions.Contains(extension))
             {
-                byte[] bytes = await File.ReadAllBytesAsync(filePath);
-                return Convert.ToBase64String(bytes);
+                // 读取图片文件，返回 Base64 编码
+                byte[]? bytes = ScriptRepoUpdater.Instance.ReadBinaryFileFromCenterRepo(relPath);
+                if (bytes == null || bytes.Length == 0)
+                {
+                    return "404";
+                }
+
+                string base64 = Convert.ToBase64String(bytes);
+                string mimeType = GetMimeType(extension);
+                return $"data:{mimeType};base64,{base64}";
             }
 
             return "404";
@@ -119,7 +129,22 @@ public sealed class RepoWebBridge
             return "404";
         }
     }
-    
+
+    private static string GetMimeType(string extension)
+    {
+        return extension.ToLower() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            ".ico" => "image/x-icon",
+            _ => "application/octet-stream"
+        };
+    }
+
     public async Task<bool> UpdateSubscribed(string path)
     {
         try
