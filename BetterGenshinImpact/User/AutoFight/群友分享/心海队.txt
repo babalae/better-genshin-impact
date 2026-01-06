@@ -1,5 +1,0 @@
-钟离 e(hold)
-夜兰 e,e,wait(0.2),q
-芙宁娜 e,wait(0.3),q
-夜兰 e,e
-心海 e,wait(0.2),q,attack(6)
