@@ -187,10 +187,10 @@ public class CombatScriptParser
             }
             fullCombatCommands.AddRange(combatCommands);
         }
-        foreach (var combatCommand in fullCombatCommands)
-        {
-            Logger.LogDebug("解析战斗脚本命令：{cmd}", combatCommand.ToString());
-        }
+        // foreach (var combatCommand in fullCombatCommands)
+        // {
+        //     Logger.LogDebug("解析战斗脚本命令：{cmd}", combatCommand.ToString());
+        // }
         return fullCombatCommands;
     }
 
