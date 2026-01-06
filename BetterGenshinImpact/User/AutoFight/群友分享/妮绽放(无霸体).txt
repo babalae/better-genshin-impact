@@ -1,6 +1,0 @@
-白术 e,q
-纳西妲 e(hold),wait(0.3),q
-妮露 e,e,e,e,e,e,e,e
-珊瑚宫心海 e,attack(2)
-白术 e
-珊瑚宫心海 q,attack(2)

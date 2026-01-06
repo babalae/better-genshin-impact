@@ -1,4 +1,0 @@
-钟离 s(0.2),e(hold)
-八重神子 e,wait(0.5),s(0.6),wait(0.2),e,wait(0.5),s(0.6),wait(0.2),w(0.2),wait(0.2),e
-枫原万叶 w(0.3),wait(0.1),e(hold),attack,q,e,attack
-白术 e,wait(0.3),q
