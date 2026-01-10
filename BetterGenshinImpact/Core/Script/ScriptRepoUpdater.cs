@@ -208,6 +208,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha?[..7] ?? "无"} -> 远程 {remoteCommitSha[..7]}");
                         repo?.Dispose();
+                        repo = null;
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                     }
@@ -218,6 +219,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 _logger.LogError(ex, "Git仓库更新失败");
                 UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
                 repo?.Dispose();
+                repo = null;
                 CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                 updated = true;
             }
