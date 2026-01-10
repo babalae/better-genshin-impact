@@ -52,7 +52,12 @@ public class SystemControl
     public static bool IsGenshinImpactActiveByProcess()
     {
         var name = GetActiveProcessName();
-        return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
+        return name is "YuanShen" or "yuanshen" or "GenshinImpact" or "Genshin Impact Cloud Game";
+    }
+    
+    public static string GetActiveByProcess()
+    {
+        return GetActiveProcessName() ?? "Unknown";
     }
 
     public static bool IsGenshinImpactActive()
