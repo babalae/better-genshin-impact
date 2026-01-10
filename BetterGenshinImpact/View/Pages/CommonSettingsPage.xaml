@@ -361,6 +361,259 @@
                                Text="{Binding Config.MaskWindowConfig.TextOpacity, StringFormat=F2}" />
                 </Grid>
 
+                <!-- 日志遮罩设置（应放置在遮罩相关设置区域） -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩X坐标"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="X坐标(-1920~1920)(受显示器大小影响)(移动窗口时请重置后重新设置此值)"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="2"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Minimum="-1920"
+                            Maximum="1920"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskLeft, Mode=TwoWay}" />
+                    
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="3"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.LogMaskLeft, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskLeftCommand}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩Y坐标"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="Y坐标(-1080~1080)(受显示器大小影响)(移动窗口时请重置后重新设置此值)"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="2"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Minimum="-1080"
+                            Maximum="1080"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskTop, Mode=TwoWay}" />
+                    
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="3"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.LogMaskTop, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskTopCommand}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩宽度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="宽度(500~1920)(移动窗口时请重置后重新设置此值)"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="2"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Minimum="500"
+                            Maximum="1920"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskWidth, Mode=TwoWay}" />
+                    
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="3"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.LogMaskWidth, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskWidthCommand}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志遮罩高度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="高度(100~1080)(移动窗口时请重置后重新设置此值)"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="2"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Minimum="100"
+                            Maximum="1080"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.LogMaskHeight, Mode=TwoWay}" />
+                    
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="3"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.LogMaskHeight, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogMaskHeightCommand}" />
+                </Grid>                
+               
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="日志字体大小"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="字体大小(12~40)(移动窗口时请重置后重新设置此值)"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="2"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left"
+                            Minimum="12"
+                            Maximum="40"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.LogFontSize, Mode=TwoWay}" />
+                    
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="3"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.LogFontSize, StringFormat=F2}" />
+                    
+                    <ui:Button Grid.Row="0"
+                               Grid.Column="4"
+                               VerticalAlignment="Center"
+                               Content="重置"
+                               Command="{Binding ResetLogFontSizeCommand}" />
+                </Grid>  
+                
 
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
