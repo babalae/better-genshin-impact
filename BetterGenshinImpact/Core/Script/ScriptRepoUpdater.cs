@@ -207,15 +207,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     else
                     {
                         _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha?[..7] ?? "无"} -> 远程 {remoteCommitSha[..7]}");
-
-                        // 更新本地分支引用指向远程分支的 commit
-                        repo.Refs.UpdateTarget(localBranch.Reference, remoteBranch.Tip.Id);
-                        _logger.LogInformation("本地分支引用已更新到远程分支");
-
-                        // 检出 repo.json 文件到工作目录
-                        CheckoutRepoJson(repo, remoteBranch.Tip);
-                        _logger.LogInformation("已更新工作目录中的 repo.json 文件");
-
+                        repo?.Dispose();
+                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                     }
                 }
