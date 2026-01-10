@@ -175,7 +175,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         ProxyOptions = { ProxyType = ProxyType.None },
                         Depth = 1, // 浅拉取，只获取最新的提交
-                        CredentialsProvider = CreateCredentialsHandler() // 添加凭据处理器
+                        CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
+                        OnTransferProgress = progress =>
+                        {
+                            onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
+                            return true;
+                        }
                     };
 
                     // 拉取到远程追踪分支
@@ -429,6 +434,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 设置凭据处理器
         options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
+        options.FetchOptions.OnTransferProgress = progress =>
+        {
+            onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
+            return true;
+        };
         // 克隆仓库
         Repository.Clone(repoUrl, repoPath, options);
     }
@@ -464,7 +474,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 TagFetchMode = TagFetchMode.None,
                 ProxyOptions = { ProxyType = ProxyType.None },
                 Depth = 1, // 浅拉取，只获取最新的提交
-                CredentialsProvider = CreateCredentialsHandler() // 添加凭据处理器
+                CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
+                OnTransferProgress = progress =>
+                {
+                    onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
+                    return true;
+                }
             };
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
