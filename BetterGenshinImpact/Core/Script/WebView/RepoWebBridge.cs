@@ -9,6 +9,7 @@ using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
 using System.Net;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -191,6 +192,36 @@ public sealed class RepoWebBridge
         catch (Exception ex)
         {
             await ThemedMessageBox.ErrorAsync($"清空更新标记失败: {ex.Message}", "操作失败");
+            return false;
+        }
+    }
+
+    // 设置新手引导标志位
+    public bool SetGuideStatus(bool status)
+    {
+        try
+        {
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            scriptConfig.GuideStatus = status;
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
+    }
+    
+    // 获取新手引导标志位
+    public bool GetGuideStatus()
+    {
+        try
+        {
+            return TaskContext.Instance().Config.ScriptConfig.GuideStatus;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
             return false;
         }
     }
