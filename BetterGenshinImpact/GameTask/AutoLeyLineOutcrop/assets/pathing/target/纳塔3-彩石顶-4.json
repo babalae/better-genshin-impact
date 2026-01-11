@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "纳塔3-彩石顶-4",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 8088.21,
+      "y": -2053.56,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

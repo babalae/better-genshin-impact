@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "纳塔5-安饶之野-3",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.0",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 9778.7,
+      "y": -2856.31,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

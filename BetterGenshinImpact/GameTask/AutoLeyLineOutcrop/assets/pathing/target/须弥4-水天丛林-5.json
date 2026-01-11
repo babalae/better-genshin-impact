@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "须弥4-水天丛林-5",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 3721.99,
+      "y": -1507.71,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}
