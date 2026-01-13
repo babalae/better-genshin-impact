@@ -13394,6 +13394,646 @@
                 "country": "挪德卡莱",
                 "name": "传送锚点",
                 "area": "月矩力试验设计局"
+            },
+            {
+                "id": "1625",
+                "gadgetId": 70130009,
+                "gadgetType": "TransPointFirst",
+                "type": "Goddess",
+                "position": [
+                    4974.03,
+                    219.34,
+                    9633.44
+                ],
+                "tranPosition": [
+                    4976.812,
+                    218.37158,
+                    9638.071
+                ],
+                "country": "挪德卡莱",
+                "name": "新月神像",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1626",
+                "gadgetId": 70130011,
+                "gadgetType": "TransPointFirst",
+                "type": "Goddess",
+                "position": [
+                    5565.878,
+                    246.31,
+                    9664.909
+                ],
+                "tranPosition": [
+                    5564.5205,
+                    247.2711,
+                    9681.538
+                ],
+                "country": "挪德卡莱",
+                "name": "新月神像",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1627",
+                "gadgetId": 70130011,
+                "gadgetType": "TransPointFirst",
+                "type": "Goddess",
+                "position": [
+                    6080.89,
+                    223.07,
+                    9870.67
+                ],
+                "tranPosition": [
+                    6076.124,
+                    223.44057,
+                    9870.319
+                ],
+                "country": "挪德卡莱",
+                "name": "新月神像",
+                "area": "TBD",
+                "areaId": 75
+            },
+            {
+                "id": "1665",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    4944.084,
+                    203.43,
+                    9759.771
+                ],
+                "tranPosition": [
+                    4946.8013,
+                    203.67488,
+                    9758.903
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1666",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5232.729,
+                    341.984,
+                    9452.989
+                ],
+                "tranPosition": [
+                    5235.2485,
+                    342.08243,
+                    9452.3
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7302
+            },
+            {
+                "id": "1667",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5321,
+                    243.214,
+                    9564.529
+                ],
+                "tranPosition": [
+                    5322.2793,
+                    243.42404,
+                    9562.006
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1668",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5421.173,
+                    233.674,
+                    9550.923
+                ],
+                "tranPosition": [
+                    5417.4995,
+                    235.23416,
+                    9547.103
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7303
+            },
+            {
+                "id": "1669",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5522.131,
+                    212.5043,
+                    9496.041
+                ],
+                "tranPosition": [
+                    5526.7075,
+                    208.37251,
+                    9492.233
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7303
+            },
+            {
+                "id": "1670",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5445.849,
+                    252.4566,
+                    9724.226
+                ],
+                "tranPosition": [
+                    5442.0386,
+                    252.4,
+                    9727.726
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1671",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5630.542,
+                    211.397,
+                    10056.84
+                ],
+                "tranPosition": [
+                    5629.222,
+                    212.235,
+                    10069.1
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7406
+            },
+            {
+                "id": "1672",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5759.933,
+                    200.352,
+                    10275.25
+                ],
+                "tranPosition": [
+                    5753.903,
+                    200.51938,
+                    10265.69
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7405
+            },
+            {
+                "id": "1673",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5863.657,
+                    260.4117,
+                    9541.175
+                ],
+                "tranPosition": [
+                    5868.8184,
+                    260.82626,
+                    9541.722
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1674",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6262.288,
+                    200.3076,
+                    9548.759
+                ],
+                "tranPosition": [
+                    6260.5522,
+                    200.52245,
+                    9545.525
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7505
+            },
+            {
+                "id": "1675",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5811.407,
+                    269.8461,
+                    9777.187
+                ],
+                "tranPosition": [
+                    5817.818,
+                    268.361,
+                    9775.385
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1676",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6352.47,
+                    224.434,
+                    10289.7
+                ],
+                "tranPosition": [
+                    6356.9746,
+                    224.50026,
+                    10286.954
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 75
+            },
+            {
+                "id": "1677",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6217.454,
+                    228.875,
+                    9964.374
+                ],
+                "tranPosition": [
+                    6220.651,
+                    229.65024,
+                    9961.27
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7507
+            },
+            {
+                "id": "1678",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6341.936,
+                    241.0631,
+                    10101.98
+                ],
+                "tranPosition": [
+                    6344.371,
+                    241.132,
+                    10101.95
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7507
+            },
+            {
+                "id": "1679",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5734.079,
+                    220.2581,
+                    9513.032
+                ],
+                "tranPosition": [
+                    5729.3506,
+                    220.36047,
+                    9515.775
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1680",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5911.66,
+                    241.4545,
+                    9905.04
+                ],
+                "tranPosition": [
+                    5918.857,
+                    241.389,
+                    9898.238
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 75
+            },
+            {
+                "id": "1698",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5341.135,
+                    8.744677,
+                    9777.647
+                ],
+                "tranPosition": [
+                    5337.3174,
+                    7.9476347,
+                    9777.236
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7401
+            },
+            {
+                "id": "1760",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5696.751,
+                    198.6516,
+                    9666.249
+                ],
+                "tranPosition": [
+                    5693.0723,
+                    198.42331,
+                    9671.311
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1761",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6380.936,
+                    -254.6875,
+                    9903.156
+                ],
+                "tranPosition": [
+                    6381.8853,
+                    -254.70729,
+                    9900.887
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7504
+            },
+            {
+                "id": "1803",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5440.255,
+                    201.442,
+                    9352.813
+                ],
+                "tranPosition": [
+                    5442.8677,
+                    201.57214,
+                    9351.525
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1829",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5271.795,
+                    200.2807,
+                    9848.254
+                ],
+                "tranPosition": [
+                    5271.1567,
+                    200.50378,
+                    9852.172
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1830",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5480.807,
+                    200.277,
+                    10030.25
+                ],
+                "tranPosition": [
+                    5482.05,
+                    200.3948,
+                    10027.925
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1831",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5156.021,
+                    237.2479,
+                    9552.812
+                ],
+                "tranPosition": [
+                    5153.0776,
+                    237.16643,
+                    9554.542
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1873",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5677.237,
+                    278.3242,
+                    9702.766
+                ],
+                "tranPosition": [
+                    5674.04,
+                    277.91226,
+                    9707.631
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1953",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6215.33,
+                    294.522,
+                    9782.777
+                ],
+                "tranPosition": [
+                    6213.2227,
+                    294.6113,
+                    9780.7
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7507
+            },
+            {
+                "id": "1954",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5529.75,
+                    90.282,
+                    9447.972
+                ],
+                "tranPosition": [
+                    5531.3184,
+                    90.18029,
+                    9451.202
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7305
+            },
+            {
+                "id": "1956",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5548.43,
+                    232.418,
+                    9771.714
+                ],
+                "tranPosition": [
+                    5539.8613,
+                    237.36768,
+                    9774.191
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7406
+            },
+            {
+                "id": "1957",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5719.461,
+                    222.838,
+                    9926.973
+                ],
+                "tranPosition": [
+                    5728.6426,
+                    221.1158,
+                    9920.595
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7406
+            },
+            {
+                "id": "1960",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6049.194,
+                    282.8203,
+                    9673.524
+                ],
+                "tranPosition": [
+                    6046.3574,
+                    282.2899,
+                    9669.12
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7403
             }
         ]
     },
