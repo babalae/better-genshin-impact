@@ -168,40 +168,17 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         return;
                     }
 
-                    // 获取远程分支信息并拉取最新数据
-                    var remote = repo.Network.Remotes["origin"];
+                    // 直接获取远程分支的 Commit SHA
+                    var remoteReferences = repo.Network.ListReferences(repoUrl, CreateCredentialsHandler());
+                    var remoteBranch = remoteReferences.FirstOrDefault(r => r.CanonicalName == "refs/heads/release");
 
-                    var fetchOptions = new FetchOptions
-                    {
-                        ProxyOptions = { ProxyType = ProxyType.None },
-                        Depth = 1, // 浅拉取，只获取最新的提交
-                        CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
-                        OnTransferProgress = progress =>
-                        {
-                            onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
-                            return true;
-                        }
-                    };
-
-                    // 拉取到远程追踪分支
-                    string refSpec = $"+refs/heads/release:refs/remotes/origin/release";
-                    Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "拉取最新更新");
-
-                    // 获取本地和远程commit
-                    var localBranch = repo.Branches["release"];
-                    if (localBranch == null)
-                    {
-                        throw new Exception("未找到本地release分支");
-                    }
-
-                    var remoteBranch = repo.Branches["origin/release"];
                     if (remoteBranch == null)
                     {
                         throw new Exception("未找到远程release分支");
                     }
 
-                    var currentCommitSha = localBranch.Tip?.Sha;
-                    var remoteCommitSha = remoteBranch.Tip.Sha;
+                    var remoteCommitSha = remoteBranch.TargetIdentifier;
+                    var currentCommitSha = repo.Branches["release"]?.Tip?.Sha;
 
                     // 比较本地和远程commit
                     if (currentCommitSha == remoteCommitSha)
