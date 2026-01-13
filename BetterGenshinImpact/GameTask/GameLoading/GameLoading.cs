@@ -343,8 +343,7 @@ public class GameLoadingTrigger : ITaskTrigger
             }
         }
 
-        var wmRa = content.CaptureRectArea.Find(_assets.WelkinMoonRo);
-        if (!wmRa.IsEmpty())
+        if (Bv.IsInBlessingOfTheWelkinMoon(content.CaptureRectArea))
         {
             GameCaptureRegion.GameRegion1080PPosMove(100, 100);
             TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
