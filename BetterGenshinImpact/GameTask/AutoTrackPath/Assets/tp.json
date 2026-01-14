@@ -14034,6 +14034,47 @@
                 "name": "传送锚点",
                 "area": "TBD",
                 "areaId": 7403
+            },
+            {
+                "id": "1811",
+                "gadgetId": 70120016,
+                "gadgetType": "",
+                "type": "Dungeon",
+                "position": [
+                    5945.359,
+                    200.3035,
+                    10043.97
+                ],
+                "tranPosition": [
+                    5938.7,
+                    200.6,
+                    10043.404
+                ],
+                "country": "挪德卡莱",
+                "name": "月童的库藏",
+                "description": "圣遗物本",
+                "area": "",
+                "areaId": 75
+            },
+            {
+                "id": "1827",
+                "gadgetId": 70950010,
+                "gadgetType": "",
+                "type": "Teleport",
+                "position": [
+                    6394.153,
+                    216.631,
+                    9532.071
+                ],
+                "tranPosition": [
+                    6393.7954,
+                    216.6302,
+                    9531.251
+                ],
+                "country": "挪德卡莱",
+                "name": "",
+                "area": "",
+                "areaId": 7505
             }
         ]
     },
