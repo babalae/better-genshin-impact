@@ -40,7 +40,7 @@ public class DesktopRegion : Region
             throw new System.NullReferenceException();
         }
         mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
-            (y + (h * 1d / 2)) * 65535 / Height).LeftButtonClick().Sleep(50).LeftButtonUp();
+            (y + (h * 1d / 2)) * 65535 / Height).LeftButtonDown().Sleep(50).LeftButtonUp();
     }
 
     public void DesktopRegionMove(int x, int y, int w, int h)
