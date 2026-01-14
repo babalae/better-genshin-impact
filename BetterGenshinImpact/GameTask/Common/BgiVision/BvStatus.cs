@@ -258,12 +258,12 @@ public static partial class Bv
     {
         var ra = captureRa;
 
-        if (ra.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist())
+        if (ra.Find(GameLoadingAssets.Instance.GirlMoonRo).IsExist())
         {
             return true;
         }
-
-        return ra.Find(GameLoadingAssets.Instance.GirlMoonRo).IsExist();
+        
+        return ra.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
     }
 
     /// <summary>
