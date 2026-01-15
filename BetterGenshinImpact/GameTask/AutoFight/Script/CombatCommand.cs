@@ -192,7 +192,7 @@ public class CombatCommand
             var s = double.Parse(Args![0]);
             avatar.Wait((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
-        else if (Method == Method.WaitForDone)
+        else if (Method == Method.Ready)
         {
             avatar.Ready();
         }
