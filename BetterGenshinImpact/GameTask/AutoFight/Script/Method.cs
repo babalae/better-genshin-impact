@@ -12,7 +12,7 @@ public class Method
     public static readonly Method Attack = new(["attack", "普攻", "普通攻击"]);
     public static readonly Method Charge = new(["charge", "重击"]);
     public static readonly Method Wait = new(["wait", "after", "等待"]);
-    public static readonly Method WaitForDone = new(["ready", "完成"]);
+    public static readonly Method Ready = new(["ready", "完成"]);
 
     public static readonly Method Walk = new(["walk", "行走"]);
     public static readonly Method W = new(["w"]);
@@ -43,7 +43,7 @@ public class Method
             yield return Attack;
             yield return Charge;
             yield return Wait;
-            yield return WaitForDone;
+            yield return Ready;
 
             yield return Walk;
             yield return W;
