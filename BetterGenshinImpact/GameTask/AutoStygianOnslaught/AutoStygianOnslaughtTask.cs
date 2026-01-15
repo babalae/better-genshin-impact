@@ -31,6 +31,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
@@ -260,6 +261,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
                 // 重新执行从打开活动界面开始的流程
                 await TpToDomain(page, isRetry: true);
             }
+
             return;
         }
 
@@ -400,7 +402,33 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             try
             {
-                await Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 300, 1000);
+                var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+                var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+                RecognitionObject whiteCancelRo = new RecognitionObject
+                {
+                    Name = "BtnWhiteCancel",
+                    RecognitionType = RecognitionTypes.TemplateMatch,
+                    TemplateImageMat = ElementAssets.Instance.BtnWhiteCancel.TemplateImageMat,
+                    RegionOfInterest = new Rect(captureRect.Width / 3, captureRect.Height - (int)(captureRect.Height * 0.22), captureRect.Width / 3, (int)(captureRect.Height * 0.22)),
+                    Use3Channels = true
+                }.InitTemplate();
+
+                await NewRetry.WaitForAction(() =>
+                {
+                    using var ra = CaptureToRectArea();
+                    using var ret = ra.Find(whiteCancelRo);
+                    if (ret.IsExist())
+                    {
+                        // OCR 保证识别不出错
+                        var list = ra.FindMulti(RecognitionObject.Ocr(ret.X + 40 * assetScale, ret.Y - 20 * assetScale, 270 * assetScale, ret.Height * 2));
+                        if (list.Any(o => o.Text.Contains("返回")))
+                        {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }, cts.Token, 300, 1000);
                 _logger.LogInformation("检测到战斗结束，结束战斗操作线程");
                 await cts.CancelAsync();
             }
@@ -721,10 +749,9 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task ExitDomain(BvPage page)
     {
-        
         var exitDoor = await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.BtnExitDoor.Value,
-            () => Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE),// 点击队伍选择按钮
+            () => Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE), // 点击队伍选择按钮
             _ct,
             4,
             1000

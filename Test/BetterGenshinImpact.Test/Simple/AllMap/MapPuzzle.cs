@@ -27,7 +27,7 @@ public class MapPuzzle
 
     public static void PutAll()
     {
-        var folder = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.0";
+        var folder = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4";
         Directory.CreateDirectory(folder);
         
         // 保存2048大图

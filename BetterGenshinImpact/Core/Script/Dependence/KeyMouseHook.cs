@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.GameTask;
 using Gma.System.MouseKeyHook;
 using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
@@ -41,6 +42,74 @@ public class KeyMouseHook: IDisposable
     
     private readonly ILogger<KeyMouseHook> _logger = App.GetLogger<KeyMouseHook>();
     
+    /// <summary>
+    /// 统一处理回调函数执行过程中的异常
+    /// </summary>
+    /// <param name="ex">捕获到的异常</param>
+    /// <param name="eventType">事件类型描述</param>
+    private void HandleCallbackException(Exception ex, string eventType)
+    {
+        if (ex is ScriptEngineException scriptEx)
+        {
+            _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message); 
+            _logger.LogDebug("{scriptEx}",scriptEx);
+        }
+        else
+        {
+            _logger.LogError("执行{eventType}回调时发生错误:{ex.Message}，清除所有回调,如果此异常出现在JS脚本结束时,请在JS脚本结束前手动调用Dispose()方法",eventType,ex.Message);
+            _logger.LogDebug("{ex}",ex);
+        }
+
+        Dispose();
+    }
+    
+    /// <summary>
+    /// 将全局屏幕坐标转换为游戏窗口局部坐标
+    /// </summary>
+    /// <param name="globalX">全局X坐标</param>
+    /// <param name="globalY">全局Y坐标</param>
+    /// <returns>游戏窗口局部坐标(X, Y)，转换失败时返回(-1, -1)</returns>
+    private (int X, int Y) ConvertToLocalCoordinates(int globalX, int globalY)
+    {
+        try
+        {
+            // 检查TaskContext是否已初始化
+            if (!TaskContext.Instance().IsInitialized)
+            {
+                _logger.LogError("TaskContext未初始化，无法获取游戏窗口信息");
+                return (-1, -1); 
+            }
+            
+            var gameHandle = TaskContext.Instance().GameHandle;
+            if (gameHandle == IntPtr.Zero)
+            {
+                _logger.LogError("游戏窗口句柄无效，无法获取游戏窗口位置");
+                return (-1, -1); 
+            }
+            
+            // 获取游戏窗口捕获区域
+            var captureRect = SystemControl.GetCaptureRect(gameHandle);
+            
+            // 检查捕获区域是否有效
+            if (captureRect.Width <= 0 || captureRect.Height <= 0)
+            {
+                _logger.LogError("获取的游戏窗口捕获区域无效，宽度或高度为0");
+                return (-1, -1); 
+            }
+            
+            // 计算局部坐标
+            int localX = globalX - captureRect.Left;
+            int localY = globalY - captureRect.Top;
+            
+            return (localX, localY);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "转换鼠标坐标时发生错误");
+            return (-1, -1); 
+        }
+    }
+    
     public KeyMouseHook()
     {
         // 初始化事件处理程序
@@ -57,16 +126,10 @@ public class KeyMouseHook: IDisposable
                 {
                     callback.InvokeAsFunction(args.KeyData.ToString());
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
-                }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "键盘按下事件");
+                    return;
                 }
             }
             
@@ -77,17 +140,12 @@ public class KeyMouseHook: IDisposable
                 {
                     callback.InvokeAsFunction(args.KeyCode.ToString());
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
-                }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行键盘按下事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "键盘按下事件");
+                    return;
                 }
+                
             }
         };
         
@@ -104,16 +162,10 @@ public class KeyMouseHook: IDisposable
                 {
                     callback.InvokeAsFunction(args.KeyData.ToString());
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
-                }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "键盘释放事件");
+                    return;
                 }
             }
             
@@ -124,16 +176,10 @@ public class KeyMouseHook: IDisposable
                 {
                     callback.InvokeAsFunction(args.KeyCode.ToString());
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
-                }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行键盘释放事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "键盘释放事件");
+                    return;
                 }
             }
         };
@@ -143,22 +189,19 @@ public class KeyMouseHook: IDisposable
             // 创建回调列表的副本，避免迭代期间修改集合导致异常
             var mouseDownCallbacksCopy = new List<ScriptObject>(_mouseDownCallbacks);
             
+            // 转换为局部坐标
+            var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
+            
             foreach (var callback in mouseDownCallbacksCopy)
             {
                 try
                 {
-                    callback.InvokeAsFunction(args.Button.ToString(), args.X, args.Y);
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
+                    callback.InvokeAsFunction(args.Button.ToString(), localX, localY);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行鼠标按下事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "鼠标按下事件");
+                    return;
                 }
             }
         };
@@ -168,22 +211,19 @@ public class KeyMouseHook: IDisposable
             // 创建回调列表的副本，避免迭代期间修改集合导致异常
             var mouseUpCallbacksCopy = new List<ScriptObject>(_mouseUpCallbacks);
             
+            // 转换为局部坐标
+            var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
+            
             foreach (var callback in mouseUpCallbacksCopy)
             {
                 try
                 {
-                    callback.InvokeAsFunction(args.Button.ToString(), args.X, args.Y);
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
+                    callback.InvokeAsFunction(args.Button.ToString(), localX, localY);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行鼠标释放事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "鼠标释放事件");
+                    return;
                 }
             }
         };
@@ -193,6 +233,9 @@ public class KeyMouseHook: IDisposable
             var now = DateTime.Now;
             // 创建回调列表的副本，避免迭代期间修改集合导致异常
             var mouseMoveCallbacksCopy = new List<ScriptObject>(_mouseMoveCallbacks);
+            
+            // 转换为局部坐标
+            var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
             
             foreach (var callback in mouseMoveCallbacksCopy)
             {
@@ -209,23 +252,17 @@ public class KeyMouseHook: IDisposable
                             // 如果时间差大于等于间隔时间，则执行回调
                             if (timeSpan.TotalMilliseconds >= interval)
                             {
-                                callback.InvokeAsFunction(args.X, args.Y);
+                                callback.InvokeAsFunction(localX, localY);
                                 // 更新上次调用时间
                                 _lastMouseMoveCallbackTimes[callback] = now;
                             }
                         }
                     }
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
-                }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行鼠标移动事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "鼠标移动事件");
+                    return;
                 }
             }
         };
@@ -235,22 +272,19 @@ public class KeyMouseHook: IDisposable
             // 创建回调列表的副本，避免迭代期间修改集合导致异常
             var mouseWheelCallbacksCopy = new List<ScriptObject>(_mouseWheelCallbacks);
             
+            // 转换为局部坐标
+            var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
+            
             foreach (var callback in mouseWheelCallbacksCopy)
             {
                 try
                 {
-                    callback.InvokeAsFunction(args.Delta, args.X, args.Y);
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("V8 object has been released"))
-                {
-                    _logger.LogDebug("V8对象已释放，清除所有回调");
-                    RemoveAllListeners();
-                    return;
+                    callback.InvokeAsFunction(args.Delta, localX, localY);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "执行鼠标滚轮事件回调时发生错误");
-                    // 忽略单个回调执行异常，不影响其他回调
+                    HandleCallbackException(ex, "鼠标滚轮事件");
+                    return;
                 }
             }
         };

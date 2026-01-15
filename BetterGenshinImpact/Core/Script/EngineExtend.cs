@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -35,12 +36,12 @@ public class EngineExtend
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
         engine.AddHostObject("http", new Http()); // 限制文件访问
         engine.AddHostObject("notification", new Notification());
-        engine.AddHostObject("keyMouseHook", new KeyMouseHook()); 
         
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
+        engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
         
         // 添加取消令牌相关类型
         engine.AddHostType("CancellationTokenSource", typeof(CancellationTokenSource));
@@ -71,8 +72,8 @@ public class EngineExtend
         
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
-        
-
+        //鼠标回调
+        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
 

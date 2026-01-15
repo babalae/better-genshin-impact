@@ -23,6 +23,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -94,7 +95,7 @@ internal class GameTaskManager
                 break;
             case "AutoSkip":
                 triggerName = "AutoSkip";
-                trigger = new AutoSkip.AutoSkipTrigger();
+                trigger = externalConfig is null ? new AutoSkip.AutoSkipTrigger() : new AutoSkip.AutoSkipTrigger(externalConfig as AutoSkipConfig);
                 break;
             case "AutoEat":
                 triggerName = "AutoEat";

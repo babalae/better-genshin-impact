@@ -256,7 +256,14 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInBlessingOfTheWelkinMoon(ImageRegion captureRa)
     {
-        return captureRa.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
+        var ra = captureRa;
+
+        if (ra.Find(GameLoadingAssets.Instance.GirlMoonRo).IsExist())
+        {
+            return true;
+        }
+        
+        return ra.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
     }
 
     /// <summary>

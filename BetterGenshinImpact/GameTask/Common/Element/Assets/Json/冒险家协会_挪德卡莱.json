@@ -1,0 +1,40 @@
+﻿{
+  "info": {
+    "authors": [
+      {
+        "links": "",
+        "name": "蜜柑魚"
+      }
+    ],
+    "bgi_version": "0.53.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1762368339000,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "冒险家协会_挪德卡莱",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9458.0341796875,
+      "y": 1660.66455078125
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 2,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 9461.4208984375,
+      "y": 1663.5849609375
+    }
+  ]
+}
