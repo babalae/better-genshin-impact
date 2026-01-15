@@ -192,6 +192,10 @@ public class CombatCommand
             var s = double.Parse(Args![0]);
             avatar.Wait((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
+        else if (Method == Method.WaitForDone)
+        {
+            avatar.WaitForDone();
+        }
         else if (Method == Method.Aim)
         {
             throw new NotImplementedException();
