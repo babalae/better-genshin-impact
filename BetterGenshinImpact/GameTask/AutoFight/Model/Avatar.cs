@@ -633,7 +633,7 @@ public class Avatar
     /// <summary>
     /// 等待完成
     /// </summary>
-    public void WaitForDone()
+    public void Ready()
     {
         Sleep(200, Ct);
 

@@ -194,7 +194,7 @@ public class CombatCommand
         }
         else if (Method == Method.WaitForDone)
         {
-            avatar.WaitForDone();
+            avatar.Ready();
         }
         else if (Method == Method.Aim)
         {
