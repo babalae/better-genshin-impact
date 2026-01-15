@@ -28,7 +28,7 @@
     </b:Interaction.Triggers>
 
     <Window.Background>
-        <SolidColorBrush Opacity="0" Color="Transparent" />
+        <SolidColorBrush Opacity="0.00001" Color="Transparent" />
     </Window.Background>
     <Window.Style>
         <Style TargetType="Window">
