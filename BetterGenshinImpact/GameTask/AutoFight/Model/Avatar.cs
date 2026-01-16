@@ -629,6 +629,32 @@ public class Avatar
     {
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
+    
+    /// <summary>
+    /// 等待完成
+    /// </summary>
+    public void Ready()
+    {
+        Sleep(200, Ct);
+
+        for (int i = 0; i < 20; i++)
+        {
+            if (Ct is { IsCancellationRequested: true })
+            {
+                return;
+            }
+
+            using var region = CaptureToRectArea();
+            // 等待角色编号块出现
+            if (PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
+            {
+                region.Dispose();
+                return;
+            }
+
+            Sleep(150, Ct);
+        }
+    }
 
     /// <summary>
     ///
