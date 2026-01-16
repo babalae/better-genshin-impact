@@ -773,10 +773,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 if (entry == null)
                 {
                     // 调试信息：列出当前树中的所有条目
-                    var availableEntries = string.Join(", ", currentTree.Select(e => e.Name));
-                    _logger.LogError($"在路径 '{string.Join("/", pathParts.Take(i))}' 中未找到 '{pathParts[i]}'");
-                    _logger.LogError($"可用的条目: {availableEntries}");
-                    throw new Exception($"仓库中不存在路径: {sourcePath}");
+                    // var availableEntries = string.Join(", ", currentTree.Select(e => e.Name));
+                    // _logger.LogError($"在路径 '{string.Join("/", pathParts.Take(i))}' 中未找到 '{pathParts[i]}'");
+                    // _logger.LogError($"可用的条目: {availableEntries}");
+                    // throw new Exception($"仓库中不存在路径: {sourcePath}");
+                    return;
                 }
 
                 if (i < pathParts.Length - 1)
@@ -792,7 +793,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 检出文件或目录
             if (entry == null)
             {
-                throw new Exception($"未找到路径: {sourcePath}");
+                // throw new Exception($"未找到路径: {sourcePath}");
+                return;
             }
 
             if (entry.TargetType == TreeEntryTargetType.Blob)
