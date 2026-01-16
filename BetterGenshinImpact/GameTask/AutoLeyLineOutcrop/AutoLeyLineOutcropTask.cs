@@ -826,7 +826,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
             await Delay(500, _ct);
         }
-        else if (!result1.Text.Contains("打倒", StringComparison.Ordinal))
+        else if (!ContainsFightText(result1.Text))
         {
             _logger.LogDebug("未识别到战斗提示，执行路径: {Path}", targetPath);
             await RunPathingFile(targetPath);
@@ -988,9 +988,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         var result = captureRegion.Find(_ocrRo2!);
         var text = result.Text;
-        return text.Contains("打倒", StringComparison.Ordinal)
-               && text.Contains("所有", StringComparison.Ordinal)
-               && text.Contains("敌人", StringComparison.Ordinal);
+        return ContainsFightText(text);
+    }
+
+    private static bool ContainsFightText(string text)
+    {
+        var keywords = new[] { "打倒", "所有", "敌人" };
+        return keywords.Any(text.Contains);
     }
 
     private async Task AutoNavigateToReward()
@@ -1183,8 +1187,15 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-        _switchPartyTask ??= new SwitchPartyTask();
-        await _switchPartyTask.Start(_config.FriendshipTeam, _ct);
+        try
+        {
+            _switchPartyTask ??= new SwitchPartyTask();
+            await _switchPartyTask.Start(_config.FriendshipTeam, _ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "切换好感队失败！");
+        }
     }
 
     private async Task SwitchBackToCombatTeam()
