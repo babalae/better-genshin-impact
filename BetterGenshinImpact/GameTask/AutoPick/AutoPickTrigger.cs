@@ -79,7 +79,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 _blackList.UnionWith(userBlackList);
             }
 
-            _fuzzyBlackList = ReadTextList(@"User\pick_black_lists.txt");
+            _fuzzyBlackList = ReadTextList(@"User\pick_fuzzy_black_lists.txt");
         }
 
         if (config.WhiteListEnabled)
