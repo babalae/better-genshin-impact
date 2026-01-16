@@ -143,6 +143,7 @@ public class SwitchPartyTask
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
         Simulation.SendInput.Mouse.LeftButtonUp();
+        await Task.Delay(200, ct);
 
         Rect regionOfInterest = new Rect(0, (int)(80 * _assetScale), partyDeleteBtn.Right, partyDeleteBtn.Top - (int)(80 * _assetScale));
         RecognitionObject recognitionObject = new RecognitionObject
