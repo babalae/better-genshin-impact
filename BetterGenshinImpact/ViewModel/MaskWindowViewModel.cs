@@ -127,5 +127,17 @@ namespace BetterGenshinImpact.ViewModel
                     break;
             }
         }
+
+        [RelayCommand]
+        private void OnExitOverlayLayoutEditMode()
+        {
+            if (Config == null)
+            {
+                return;
+            }
+
+            Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
+            SystemControl.ActivateWindow();
+        }
     }
 }

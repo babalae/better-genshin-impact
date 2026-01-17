@@ -95,6 +95,9 @@
                         <b:EventTrigger EventName="LayoutCommitted">
                             <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
                         </b:EventTrigger>
+                        <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                            <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
+                        </b:EventTrigger>
                     </b:Interaction.Triggers>
                     <overlay:AdjustableOverlayItem.Effect>
                         <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" Color="LightGray" />
@@ -170,6 +173,9 @@
                         <b:EventTrigger EventName="LayoutCommitted">
                             <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
                         </b:EventTrigger>
+                        <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                            <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
+                        </b:EventTrigger>
                     </b:Interaction.Triggers>
                     <overlay:AdjustableOverlayItem.Effect>
                         <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
@@ -200,6 +206,46 @@
                     </RichTextBox>
                 </overlay:AdjustableOverlayItem>
             </Canvas>
+
+            <Grid Grid.Row="0"
+                  Grid.RowSpan="4"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="6"
+                  IsHitTestVisible="False"
+                  Panel.ZIndex="999"
+                  Visibility="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="当前处于编辑模式"
+                               FontSize="72"
+                               FontWeight="DemiBold"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="可以调整日志框、状态栏控件的位置和大小"
+                               Margin="0,8,0,0"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="右键相关控件可退出编辑状态"
+                               Margin="0,8,0,0"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
 
             <!--  uid遮盖  -->
             <Rectangle Grid.Column="4"

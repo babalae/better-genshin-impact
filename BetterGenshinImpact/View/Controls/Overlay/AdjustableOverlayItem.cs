@@ -128,8 +128,8 @@ public class AdjustableOverlayItem : ContentControl
         var nextLeft = left + e.HorizontalChange;
         var nextTop = top + e.VerticalChange;
 
-        Canvas.SetLeft(this, nextLeft);
-        Canvas.SetTop(this, nextTop);
+        SetCurrentValue(Canvas.LeftProperty, nextLeft);
+        SetCurrentValue(Canvas.TopProperty, nextTop);
     }
 
     private void ResizeThumbOnDragDelta(object sender, DragDeltaEventArgs e)
@@ -191,10 +191,10 @@ public class AdjustableOverlayItem : ContentControl
         var nextWidth = nextRight - nextLeft;
         var nextHeight = nextBottom - nextTop;
 
-        Canvas.SetLeft(this, nextLeft);
-        Canvas.SetTop(this, nextTop);
-        Width = nextWidth;
-        Height = nextHeight;
+        SetCurrentValue(Canvas.LeftProperty, nextLeft);
+        SetCurrentValue(Canvas.TopProperty, nextTop);
+        SetCurrentValue(WidthProperty, nextWidth);
+        SetCurrentValue(HeightProperty, nextHeight);
     }
 
     private void OnAnyThumbDragCompleted(object sender, DragCompletedEventArgs e)
