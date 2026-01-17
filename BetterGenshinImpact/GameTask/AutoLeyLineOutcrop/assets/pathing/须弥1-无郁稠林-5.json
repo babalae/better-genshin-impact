@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "须弥1-无郁稠林-5",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "dash",
+      "type": "path",
+      "x": 2234.46,
+      "y": -178.95,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 2244.55,
+      "y": -194.46,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 2257.93,
+      "y": -216.63,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 2279.14,
+      "y": -237.53,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 2269.0,
+      "y": -251.14,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

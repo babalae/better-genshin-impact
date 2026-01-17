@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "枫丹1-秋分山西侧-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "dash",
+      "type": "path",
+      "x": 4184.03,
+      "y": 2502.11,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4175.17,
+      "y": 2468.65,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4189.34,
+      "y": 2427.77,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "info": {
+    "name": "纳塔8-花羽会-2",
+    "type": "collect",
+    "author": "起个名字好难的喵",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9548.25,
+      "y": -1116.55,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 9518.17,
+      "y": -1039.99,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "3000"
+    },
+    {
+      "id": 3,
+      "x": 9517.92,
+      "y": -1029.8,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}
