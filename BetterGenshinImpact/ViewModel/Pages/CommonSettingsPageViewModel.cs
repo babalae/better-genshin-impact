@@ -213,15 +213,15 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private void OnResetMaskOverlayLayout()
     {
         var c = Config.MaskWindowConfig;
-        c.StatusListLeft = 20;
-        c.StatusListTop = 807;
-        c.StatusListWidth = 477;
-        c.StatusListHeight = 24;
+        c.StatusListLeftRatio = 20.0 / 1920;
+        c.StatusListTopRatio = 807.0 / 1080;
+        c.StatusListWidthRatio = 477.0 / 1920;
+        c.StatusListHeightRatio = 24.0 / 1080;
 
-        c.LogTextBoxLeft = 20;
-        c.LogTextBoxTop = 832;
-        c.LogTextBoxWidth = 477;
-        c.LogTextBoxHeight = 188;
+        c.LogTextBoxLeftRatio = 20.0 / 1920;
+        c.LogTextBoxTopRatio = 832.0 / 1080;
+        c.LogTextBoxWidthRatio = 477.0 / 1920;
+        c.LogTextBoxHeightRatio = 188.0 / 1080;
 
         OnRefreshMaskSettings();
     }

@@ -27,6 +27,10 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _fps = "0";
 
+        [ObservableProperty] private double _maskWindowWidth;
+
+        [ObservableProperty] private double _maskWindowHeight;
+
         public MaskWindowViewModel()
         {
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -111,21 +115,38 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
+            if (MaskWindowWidth <= 0 || MaskWindowHeight <= 0)
+            {
+                return;
+            }
+
+            var leftRatio = ToRatio(args.Left, MaskWindowWidth);
+            var topRatio = ToRatio(args.Top, MaskWindowHeight);
+            var widthRatio = ToRatio(args.Width, MaskWindowWidth);
+            var heightRatio = ToRatio(args.Height, MaskWindowHeight);
+
             switch (args.LayoutKey)
             {
                 case "LogTextBox":
-                    Config.MaskWindowConfig.LogTextBoxLeft = args.Left;
-                    Config.MaskWindowConfig.LogTextBoxTop = args.Top;
-                    Config.MaskWindowConfig.LogTextBoxWidth = args.Width;
-                    Config.MaskWindowConfig.LogTextBoxHeight = args.Height;
+                    Config.MaskWindowConfig.LogTextBoxLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.LogTextBoxTopRatio = topRatio;
+                    Config.MaskWindowConfig.LogTextBoxWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.LogTextBoxHeightRatio = heightRatio;
                     break;
                 case "StatusList":
-                    Config.MaskWindowConfig.StatusListLeft = args.Left;
-                    Config.MaskWindowConfig.StatusListTop = args.Top;
-                    Config.MaskWindowConfig.StatusListWidth = args.Width;
-                    Config.MaskWindowConfig.StatusListHeight = args.Height;
+                    Config.MaskWindowConfig.StatusListLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.StatusListTopRatio = topRatio;
+                    Config.MaskWindowConfig.StatusListWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.StatusListHeightRatio = heightRatio;
                     break;
             }
+        }
+
+        [RelayCommand]
+        private void OnWindowSizeChanged(SizeChangedEventArgs args)
+        {
+            MaskWindowWidth = args.NewSize.Width;
+            MaskWindowHeight = args.NewSize.Height;
         }
 
         [RelayCommand]
@@ -138,6 +159,22 @@ namespace BetterGenshinImpact.ViewModel
 
             Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
             SystemControl.ActivateWindow();
+        }
+
+        private static double ToRatio(double value, double baseSize)
+        {
+            if (double.IsNaN(value) || double.IsNaN(baseSize) || baseSize <= 0)
+            {
+                return 0;
+            }
+
+            var ratio = value / baseSize;
+            return ratio switch
+            {
+                < 0 => 0,
+                > 1 => 1,
+                _ => ratio
+            };
         }
     }
 }

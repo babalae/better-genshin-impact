@@ -8,6 +8,7 @@
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
         xmlns:platform="clr-namespace:BetterGenshinImpact.Platform.Wine"
         xmlns:overlay="clr-namespace:BetterGenshinImpact.View.Controls.Overlay"
+        xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -27,6 +28,9 @@
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="SizeChanged">
+            <b:InvokeCommandAction Command="{Binding WindowSizeChangedCommand}" PassEventArgsToCommand="True" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
@@ -51,6 +55,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
         </ResourceDictionary>
     </Window.Resources>
 
@@ -78,10 +83,6 @@
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
                 <overlay:AdjustableOverlayItem x:Name="StatusWrapper"
-                                               Canvas.Left="{Binding Config.MaskWindowConfig.StatusListLeft, Mode=OneWay}"
-                                               Canvas.Top="{Binding Config.MaskWindowConfig.StatusListTop, Mode=OneWay}"
-                                               Width="{Binding Config.MaskWindowConfig.StatusListWidth, Mode=OneWay}"
-                                               Height="{Binding Config.MaskWindowConfig.StatusListHeight, Mode=OneWay}"
                                                Padding="4,2"
                                                Background="#00000000"
                                                BorderBrush="#33000000"
@@ -91,6 +92,30 @@
                                                IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
                                                LayoutKey="StatusList"
                                                Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <overlay:AdjustableOverlayItem.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListWidthRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Width>
+                    <overlay:AdjustableOverlayItem.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListHeightRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Height>
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="LayoutCommitted">
                             <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
@@ -156,10 +181,6 @@
                 </overlay:AdjustableOverlayItem>
 
                 <overlay:AdjustableOverlayItem x:Name="LogTextBoxWrapper"
-                                               Canvas.Left="{Binding Config.MaskWindowConfig.LogTextBoxLeft, Mode=OneWay}"
-                                               Canvas.Top="{Binding Config.MaskWindowConfig.LogTextBoxTop, Mode=OneWay}"
-                                               Width="{Binding Config.MaskWindowConfig.LogTextBoxWidth, Mode=OneWay}"
-                                               Height="{Binding Config.MaskWindowConfig.LogTextBoxHeight, Mode=OneWay}"
                                                Padding="0"
                                                Background="#00000000"
                                                BorderBrush="#33000000"
@@ -169,6 +190,30 @@
                                                IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
                                                LayoutKey="LogTextBox"
                                                Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <overlay:AdjustableOverlayItem.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxWidthRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Width>
+                    <overlay:AdjustableOverlayItem.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxHeightRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Height>
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="LayoutCommitted">
                             <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using OpenCvSharp;
 using System;
 
@@ -80,26 +80,26 @@ public partial class MaskWindowConfig : ObservableObject
     private bool _overlayLayoutEditEnabled = false;
 
     [ObservableProperty]
-    private double _logTextBoxLeft = 20;
+    private double _logTextBoxLeftRatio = 20.0 / 1920;
 
     [ObservableProperty]
-    private double _logTextBoxTop = 832;
+    private double _logTextBoxTopRatio = 832.0 / 1080;
 
     [ObservableProperty]
-    private double _logTextBoxWidth = 477;
+    private double _logTextBoxWidthRatio = 477.0 / 1920;
 
     [ObservableProperty]
-    private double _logTextBoxHeight = 188;
+    private double _logTextBoxHeightRatio = 188.0 / 1080;
 
     [ObservableProperty]
-    private double _statusListLeft = 20;
+    private double _statusListLeftRatio = 20.0 / 1920;
 
     [ObservableProperty]
-    private double _statusListTop = 807;
+    private double _statusListTopRatio = 807.0 / 1080;
 
     [ObservableProperty]
-    private double _statusListWidth = 477;
+    private double _statusListWidthRatio = 477.0 / 1920;
 
     [ObservableProperty]
-    private double _statusListHeight = 24;
+    private double _statusListHeightRatio = 24.0 / 1080;
 }
