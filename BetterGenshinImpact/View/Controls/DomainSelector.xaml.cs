@@ -39,30 +39,30 @@ public partial class DomainSelector : UserControl
         var country = (string)e.NewValue;
         if (string.IsNullOrEmpty(country))
         {
-            control.FilteredDomains = new List<GiTpPosition>();
+            control.FilteredDomains = new List<System.Tuple<string, GiTpPosition>>();
         }
         else
         {
             if (MapLazyAssets.Instance.CountryToDomains.TryGetValue(country, out var domains))
             {
                 // Reverse the list for display
-                control.FilteredDomains = domains.AsEnumerable().Reverse().ToList();
+                control.FilteredDomains = domains.Select(i => new System.Tuple<string, GiTpPosition>(i.Name! + " | " + string.Join(" ", i.Rewards), i)).Reverse().ToList();
             }
             else
             {
-                control.FilteredDomains = new List<GiTpPosition>();
+                control.FilteredDomains = new List<System.Tuple<string, GiTpPosition>>();
             }
         }
     }
 
-    public List<GiTpPosition> FilteredDomains
+    public List<System.Tuple<string, GiTpPosition>> FilteredDomains
     {
-        get { return (List<GiTpPosition>)GetValue(FilteredDomainsProperty); }
+        get { return (List<System.Tuple<string, GiTpPosition>>)GetValue(FilteredDomainsProperty); }
         set { SetValue(FilteredDomainsProperty, value); }
     }
 
     public static readonly DependencyProperty FilteredDomainsProperty =
-        DependencyProperty.Register("FilteredDomains", typeof(List<GiTpPosition>), typeof(DomainSelector), new PropertyMetadata(null));
+        DependencyProperty.Register("FilteredDomains", typeof(List<System.Tuple<string, GiTpPosition>>), typeof(DomainSelector), new PropertyMetadata(null));
 
     public string SelectedDomain
     {
@@ -77,7 +77,7 @@ public partial class DomainSelector : UserControl
     {
         var control = (DomainSelector)d;
         var domain = (string)e.NewValue;
-        
+
         if (string.IsNullOrEmpty(domain)) return;
 
         // Verify if domain matches current country, if not, update country

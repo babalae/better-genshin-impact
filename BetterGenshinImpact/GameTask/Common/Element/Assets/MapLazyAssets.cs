@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model;
 using Newtonsoft.Json;
@@ -37,13 +36,13 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
     public MapLazyAssets()
     {
         var json = File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-        var worldScenes = JsonConvert.DeserializeObject<List<GiWorldScene>>(json) ?? throw new Exception("tp.json deserialize failed");
+        var worldScenes = Newtonsoft.Json.Linq.JObject.Parse(json)["data"]?.ToObject<List<GiWorldScene>>() ?? throw new Exception("tp.json deserialization failed");
         ScenesDic = worldScenes.ToDictionary(x => x.MapName, x => x);
 
 
         // 取出秘境 description=Domain
         var teyvatTpPositions = ScenesDic[nameof(MapTypes.Teyvat)].Points;
-        foreach (var tp in teyvatTpPositions.Where(tp => tp.Description != null && (tp.Description == "天赋" || tp.Description == "武器" || tp.Description.StartsWith("圣遗物"))))
+        foreach (var tp in teyvatTpPositions.Where(tp => tp.Type == "BlessDomain" || tp.Type == "ForgeryDomain" || tp.Type == "MasteryDomain"))
         {
             DomainPositionMap[tp.Name!] = tp;
             DomainNameList.Add(tp.Name!);
