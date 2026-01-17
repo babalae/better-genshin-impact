@@ -143,7 +143,7 @@ public class SwitchPartyTask
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
         Simulation.SendInput.Mouse.LeftButtonUp();
-        await Task.Delay(200, ct);
+        await Task.Delay(100, ct);
 
         Rect regionOfInterest = new Rect(0, (int)(80 * _assetScale), partyDeleteBtn.Right, partyDeleteBtn.Top - (int)(80 * _assetScale));
         RecognitionObject recognitionObject = new RecognitionObject
@@ -198,6 +198,7 @@ public class SwitchPartyTask
                 {
                     // #ebe4d8 首次点一下第一个，防止第五个被点击过
                     page.ClickTo(600 * _assetScale, 200 * _assetScale);
+                    await Task.Delay(300, ct); // 等待动画
                 }
 
                 page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移
