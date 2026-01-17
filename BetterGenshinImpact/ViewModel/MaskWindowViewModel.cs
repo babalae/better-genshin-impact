@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls.Overlay;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -94,6 +95,36 @@ namespace BetterGenshinImpact.ViewModel
                         Fps = $"{result.Fps:0}";
                     });
                 });
+            }
+        }
+
+        [RelayCommand]
+        private void OnOverlayLayoutCommitted(OverlayLayoutCommittedEventArgs args)
+        {
+            if (Config == null)
+            {
+                return;
+            }
+
+            if (args.Width <= 0 || args.Height <= 0)
+            {
+                return;
+            }
+
+            switch (args.LayoutKey)
+            {
+                case "LogTextBox":
+                    Config.MaskWindowConfig.LogTextBoxLeft = args.Left;
+                    Config.MaskWindowConfig.LogTextBoxTop = args.Top;
+                    Config.MaskWindowConfig.LogTextBoxWidth = args.Width;
+                    Config.MaskWindowConfig.LogTextBoxHeight = args.Height;
+                    break;
+                case "StatusList":
+                    Config.MaskWindowConfig.StatusListLeft = args.Left;
+                    Config.MaskWindowConfig.StatusListTop = args.Top;
+                    Config.MaskWindowConfig.StatusListWidth = args.Width;
+                    Config.MaskWindowConfig.StatusListHeight = args.Height;
+                    break;
             }
         }
     }

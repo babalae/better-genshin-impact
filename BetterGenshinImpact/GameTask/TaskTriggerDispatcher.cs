@@ -224,7 +224,7 @@ namespace BetterGenshinImpact.GameTask
 
                     PictureInPictureService.Hide(resetManual: true);
                     UiTaskStopTickEvent?.Invoke(sender, e);
-                    maskWindow.Invoke(maskWindow.Hide);
+                    maskWindow.Invoke(maskWindow.HideSelf);
                     return;
                 }
 
@@ -256,7 +256,7 @@ namespace BetterGenshinImpact.GameTask
                         var pName = SystemControl.GetActiveProcessName();
                         if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
                         {
-                            maskWindow.Invoke(() => { maskWindow.Hide(); });
+                            maskWindow.Invoke(() => { maskWindow.HideSelf(); });
                         }
                     }
 

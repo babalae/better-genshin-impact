@@ -210,6 +210,23 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void OnResetMaskOverlayLayout()
+    {
+        var c = Config.MaskWindowConfig;
+        c.StatusListLeft = 20;
+        c.StatusListTop = 807;
+        c.StatusListWidth = 477;
+        c.StatusListHeight = 24;
+
+        c.LogTextBoxLeft = 20;
+        c.LogTextBoxTop = 832;
+        c.LogTextBoxWidth = 477;
+        c.LogTextBoxHeight = 188;
+
+        OnRefreshMaskSettings();
+    }
+
+    [RelayCommand]
     private void OnSwitchMaskEnabled()
     {
         // if (Config.MaskWindowConfig.MaskEnabled)

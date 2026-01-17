@@ -75,4 +75,31 @@ public partial class MaskWindowConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private double _textOpacity = 1.0;
+
+    [ObservableProperty]
+    private bool _overlayLayoutEditEnabled = false;
+
+    [ObservableProperty]
+    private double _logTextBoxLeft = 20;
+
+    [ObservableProperty]
+    private double _logTextBoxTop = 832;
+
+    [ObservableProperty]
+    private double _logTextBoxWidth = 477;
+
+    [ObservableProperty]
+    private double _logTextBoxHeight = 188;
+
+    [ObservableProperty]
+    private double _statusListLeft = 20;
+
+    [ObservableProperty]
+    private double _statusListTop = 807;
+
+    [ObservableProperty]
+    private double _statusListWidth = 477;
+
+    [ObservableProperty]
+    private double _statusListHeight = 24;
 }
