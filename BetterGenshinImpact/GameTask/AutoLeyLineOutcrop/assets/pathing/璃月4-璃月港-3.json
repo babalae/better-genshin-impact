@@ -1,0 +1,41 @@
+{
+  "info": {
+    "name": "璃月4-璃月港-3",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "花旁边有炸药桶",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 114.4,
+      "y": 49.73,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 115.28,
+      "y": 58.3,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 3,
+      "x": 127.05,
+      "y": 113.87,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

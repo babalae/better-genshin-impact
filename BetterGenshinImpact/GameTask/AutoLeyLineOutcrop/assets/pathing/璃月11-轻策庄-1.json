@@ -1,0 +1,44 @@
+{
+  "info": {
+    "name": "璃月11-轻策庄-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 839.82,
+      "y": 1532.39,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": 803.7,
+      "y": 1558.19,
+      "action": "",
+      "move_mode": "jump",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": 781.46,
+      "y": 1594.07,
+      "action": "",
+      "move_mode": "dash",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": 802.19,
+      "y": 1634.03,
+      "action": "",
+      "move_mode": "dash",
+      "type": "path"
+    }
+  ]
+}

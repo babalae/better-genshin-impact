@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "蒙德3-奔狼领-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -281.79,
+      "y": 2310.78,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

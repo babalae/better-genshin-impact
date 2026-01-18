@@ -1,0 +1,24 @@
+{
+  "info": {
+    "authors": [],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1768391840526,
+    "map_match_method": "SIFT",
+    "map_name": "Teyvat",
+    "name": "挪德卡莱4-望崖营垒-2",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 10039.93359375,
+      "y": 5999.8994140625,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

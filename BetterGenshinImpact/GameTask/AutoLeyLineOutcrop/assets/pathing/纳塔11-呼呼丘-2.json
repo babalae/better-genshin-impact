@@ -1,0 +1,60 @@
+{
+  "info": {
+    "name": "纳塔11-呼呼丘-2",
+    "bgi_version": "0.45.0",
+    "type": "collect",
+    "order": 0,
+    "tags": [],
+    "enable_monster_loot_split": false,
+    "map_name": "Teyvat",
+    "map_match_method": "",
+    "items": [],
+    "authors": [],
+    "version": "1.0",
+    "description": "",
+    "last_modified_time": 1754200241832
+  },
+  "config": {
+    "realtime_triggers": {
+      "AutoPick": true
+    }
+  },
+  "farming_info": {
+    "allow_farming_count": false,
+    "normal_mob_count": 0,
+    "elite_mob_count": 0,
+    "primary_target": "",
+    "duration_seconds": 0,
+    "elite_details": "",
+    "total_mora": 0
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 14303.0166015625,
+      "y": 475.6171875,
+      "action": "",
+      "move_mode": "dash",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 2,
+      "x": 14309.2685546875,
+      "y": 462.38916015625,
+      "action": "stop_flying",
+      "move_mode": "fly",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": 14309.2685546875,
+      "y": 462.38916015625,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "target"
+    }
+  ]
+}
