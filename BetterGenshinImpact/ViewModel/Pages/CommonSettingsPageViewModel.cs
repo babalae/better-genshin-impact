@@ -176,7 +176,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         var areas = MapLazyAssets.Instance.GoddessPositions.Values
             .Where(g => g.Country == country)
             .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
-            .GroupBy(g => g.Area)
+            .GroupBy(g => g.Level1Area)
             .Select(grp => grp.Key);
         foreach (var area in areas)
         {
@@ -193,7 +193,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         if (string.IsNullOrEmpty(country) || string.IsNullOrEmpty(area)) return;
 
         var goddess = MapLazyAssets.Instance.GoddessPositions.Values
-            .FirstOrDefault(g => g.Country == country && g.Area == area);
+            .FirstOrDefault(g => g.Country == country && g.Level1Area == area);
         if (goddess == null) return;
         _tpConfig.ReviveStatueOfTheSevenCountry = country;
         _tpConfig.ReviveStatueOfTheSevenArea = area;

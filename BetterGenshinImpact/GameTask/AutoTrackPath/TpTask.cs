@@ -101,7 +101,7 @@ public class TpTask
             var center = GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
             var giTpPoint = GetNearestGoddess(center.X, center.Y);
             country = giTpPoint.Country;
-            area = giTpPoint.Area;
+            area = giTpPoint.Level1Area;
             x = giTpPoint.X;
             y = giTpPoint.Y;
             revivePoint = giTpPoint;

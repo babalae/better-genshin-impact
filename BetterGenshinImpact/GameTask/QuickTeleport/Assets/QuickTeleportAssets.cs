@@ -36,6 +36,8 @@ public class QuickTeleportAssets : BaseAssets<QuickTeleportAssets>
             BuildMapChooseIconRo("PortableWaypoint.png"),
             BuildMapChooseIconRo("Mansion.png"),
             BuildMapChooseIconRo("SubSpaceWaypoint.png"),
+            BuildMapChooseIconRo("NodKraiMeetingPoint.png"),
+            BuildMapChooseIconRo("TabletOfTona.png"),
         ];
         MapChooseIconGreyMatList = MapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat());
 
