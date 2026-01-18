@@ -119,7 +119,8 @@
                     </overlay:AdjustableOverlayItem.Height>
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="LayoutCommitted">
-                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
+                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}"
+                                                   PassEventArgsToCommand="True" />
                         </b:EventTrigger>
                         <b:EventTrigger EventName="PreviewMouseRightButtonDown">
                             <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
@@ -167,7 +168,7 @@
                                                         <Setter Property="Foreground">
                                                             <Setter.Value>
                                                                 <SolidColorBrush Color="LightGreen"
-                                                                                 Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                                        Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
                                                             </Setter.Value>
                                                         </Setter>
                                                     </DataTrigger>
@@ -217,7 +218,8 @@
                     </overlay:AdjustableOverlayItem.Height>
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="LayoutCommitted">
-                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
+                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}"
+                                                   PassEventArgsToCommand="True" />
                         </b:EventTrigger>
                         <b:EventTrigger EventName="PreviewMouseRightButtonDown">
                             <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
@@ -238,7 +240,8 @@
                         <RichTextBox.Foreground>
                             <SolidColorBrush Color="LightGray" />
                         </RichTextBox.Foreground>
-                        <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}" FontSize="{Binding FontSize, ElementName=LogTextBox}">
+                        <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}"
+                                        FontSize="{Binding FontSize, ElementName=LogTextBox}">
                             <Paragraph>
                                 <Run>[00:00:00 INF] 更好的原神</Run>
                                 <LineBreak />
@@ -403,20 +406,23 @@
                     IsHitTestVisible="False">
                 <Border.Style>
                     <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Setter Property="Background" Value="Transparent" />
 
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Source={x:Static platform:WinePlatformAddon.IsRunningOnWine}}" Value="True">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Setter Property="Background" Value="#11000000"/>
+                            <DataTrigger
+                                Binding="{Binding Source={x:Static platform:WinePlatformAddon.IsRunningOnWine}}"
+                                Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Setter Property="Background" Value="#11000000" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
             </Border>
-            
-            <controls:PointsCanvas Grid.Row="0" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="6" x:Name="PointsCanvasControl"
+
+            <controls:PointsCanvas Grid.Row="0" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="6"
+                                   x:Name="PointsCanvasControl"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
@@ -428,19 +434,23 @@
                   Grid.Column="0"
                   Grid.ColumnSpan="6"
                   Panel.ZIndex="2001"
-                  Margin="16"
+                  Margin="108,10,10,32"
                   HorizontalAlignment="Left"
-                  VerticalAlignment="Top"
+                  VerticalAlignment="Bottom"
                   Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <StackPanel>
-                    <ui:Button Width="96"
-                               Height="32"
-                               Background="#FF2B2F37"
-                               Foreground="White"
-                               Content="地图点位"
-                               Command="{Binding ToggleMapPointPickerCommand}" />
+                <Grid HorizontalAlignment="Left" VerticalAlignment="Bottom">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                    <Border Margin="0,8,0,0"
+                    <Border Grid.Row="0"
+                            Grid.Column="1"
+                            Margin="12,0,0,12"
                             Width="540"
                             Height="640"
                             Background="#C81F232A"
@@ -564,7 +574,7 @@
                                                                     <Image Width="28"
                                                                            Height="28"
                                                                            Stretch="Uniform"
-                                                                               Source="{Binding IconImage}" />
+                                                                           Source="{Binding IconImage}" />
                                                                 </Border>
 
                                                                 <TextBlock DockPanel.Dock="Right"
@@ -602,7 +612,38 @@
                             </Grid>
                         </Grid>
                     </Border>
-                </StackPanel>
+
+                    <Grid Grid.Row="1" Grid.Column="0"
+                          Width="58"
+                          Height="58"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Bottom">
+                        <Border BorderBrush="#80969696"
+                                BorderThickness="6"
+                                CornerRadius="28.5">
+                            <Border.Effect>
+                                <DropShadowEffect Opacity="0.25" BlurRadius="2" ShadowDepth="0" Color="#8C8C8C" />
+                            </Border.Effect>
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="46"
+                                        Height="46"
+                                        Background="#ECE5D8"
+                                        Opacity="1"
+                                        CornerRadius="23">
+                                    <ui:Button Appearance="Transparent"
+                                               Background="Transparent"
+                                               Foreground="#3B4255"
+                                               BorderBrush="Transparent"
+                                               BorderThickness="0"
+                                               Padding="8,0,0,0"
+                                               FontSize="30"
+                                               Icon="{ui:SymbolIcon GlobeLocation24}"
+                                               Command="{Binding ToggleMapPointPickerCommand}" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
             </Grid>
         </Grid>
     </AdornerDecorator>
