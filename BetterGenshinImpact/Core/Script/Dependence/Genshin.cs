@@ -192,26 +192,29 @@ public class Genshin
     /// 获取当前在大地图上的位置坐标
     /// </summary>
     /// <param name="mapName">大地图名称</param>
+    /// <param name="matchingMethod">地图匹配方式</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f? GetPositionFromBigMap(string mapName)
+    public Point2f? GetPositionFromBigMap(string mapName, string? matchingMethod = null)
     {
-        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
+        var method = matchingMethod ?? TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token, method);
         return tpTask.GetPositionFromBigMap(mapName);
     }
-
+    
+    public float GetCameraOrientation()
+    {
+        var imageRegion = CaptureToRectArea();
+        return CameraOrientation.Compute(imageRegion.SrcMat);
+    }
+    
     /// <summary>
     /// 获取当前在小地图上的位置坐标
     /// </summary>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromMap()
     {
-        return GetPositionFromMap(MapTypes.Teyvat.ToString());
-    }
-
-    public float GetCameraOrientation()
-    {
-        var imageRegion = CaptureToRectArea();
-        return CameraOrientation.Compute(imageRegion.SrcMat);
+        var method = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        return GetPositionFromMap(mapName: MapTypes.Teyvat.ToString(), matchingMethod: method);
     }
 
     /// <summary>
@@ -219,8 +222,9 @@ public class Genshin
     /// </summary>
     /// <param name="mapName">大地图名称</param>
     /// <param name="cacheTimeMs">缓存时间，单位毫秒，默认900ms</param>
+    /// <param name="matchingMethod">地图匹配方式</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f? GetPositionFromMap(string mapName, int cacheTimeMs = 900)
+    public Point2f? GetPositionFromMap(string mapName, int cacheTimeMs = 900, string? matchingMethod = null)
     {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
@@ -228,32 +232,33 @@ public class Genshin
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        return MapManager.GetMap(mapName, matchingMethod)
+        var method = matchingMethod ?? TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        return MapManager.GetMap(mapName, method)
             .ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value
-                .GetPositionStableByCache(imageRegion, mapName, matchingMethod, cacheTimeMs));
+                .GetPositionStableByCache(imageRegion, mapName, method, cacheTimeMs));
     }
-    
+
     /// <summary>
     /// 获取当前在小地图上的位置坐标, 局部匹配, 需要世界坐标, 在坐标附近匹配, 失败不进行全局匹配
     /// </summary>
     /// <param name="mapName">大地图名称</param>
     /// <param name="x">世界坐标x</param>
     /// <param name="y">世界坐标y</param>
+    /// <param name="matchingMethod">地图匹配方式</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f? GetPositionFromMap(string mapName, float x, float y)
+    public Point2f? GetPositionFromMap(string mapName, float x, float y, string? matchingMethod = null)
     {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        var sceneMap = MapManager.GetMap(mapName, matchingMethod);
+        var method = matchingMethod ?? TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var sceneMap = MapManager.GetMap(mapName, method);
         var navigationInstance = LazyNavigationInstance.Value;
         var pos = sceneMap.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(x, y));
         navigationInstance.SetPrevPosition(pos.X, pos.Y);
-        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName, matchingMethod));
+        return sceneMap.ConvertImageCoordinatesToGenshinMapCoordinates(navigationInstance.GetPosition(imageRegion, mapName, method));
     }
 
     #endregion 大地图操作
