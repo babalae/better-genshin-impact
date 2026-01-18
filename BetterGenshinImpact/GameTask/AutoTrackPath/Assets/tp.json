@@ -12,7 +12,7 @@
           "type": "OneTimeDomain",
           "name": "北风之狼的庙宇",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "千风神殿"
           ],
@@ -32,7 +32,7 @@
           "type": "Goddess",
           "name": "七天神像-风",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地"
           ],
           "position": [
@@ -51,7 +51,7 @@
           "type": "Goddess",
           "name": "七天神像-风",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡",
             "风起地"
           ],
@@ -71,7 +71,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地",
             "清泉镇"
           ],
@@ -91,7 +91,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "坠星山谷"
           ],
@@ -111,7 +111,7 @@
           "type": "Goddess",
           "name": "七天神像-风",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "星落湖"
           ],
@@ -131,7 +131,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷"
           ],
           "position": [
@@ -150,7 +150,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "蒙德城"
           ],
@@ -170,7 +170,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "摘星崖"
           ],
@@ -190,7 +190,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷"
           ],
           "position": [
@@ -209,7 +209,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡",
             "誓言岬"
           ],
@@ -229,7 +229,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡",
             "达达乌帕谷"
           ],
@@ -249,7 +249,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地",
             "清泉镇"
           ],
@@ -269,7 +269,7 @@
           "type": "OneTimeDomain",
           "name": "西风之鹰的庙宇",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷"
           ],
           "position": [
@@ -288,7 +288,7 @@
           "type": "OneTimeDomain",
           "name": "南风之狮的庙宇",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡"
           ],
           "position": [
@@ -307,7 +307,7 @@
           "type": "Goddess",
           "name": "七天神像-风",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地",
             "风龙废墟"
           ],
@@ -327,7 +327,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地",
             "风龙废墟"
           ],
@@ -347,7 +347,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地"
           ],
           "position": [
@@ -366,7 +366,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地",
             "风龙废墟"
           ],
@@ -386,7 +386,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地",
             "风龙废墟"
           ],
@@ -406,7 +406,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地",
             "风龙废墟"
           ],
@@ -426,7 +426,7 @@
           "type": "TrounceDomain",
           "name": "深入风龙废墟",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地",
             "风龙废墟"
           ],
@@ -451,7 +451,7 @@
           "type": "OneTimeDomain",
           "name": "鹰之门",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡",
             "誓言岬"
           ],
@@ -471,7 +471,7 @@
           "type": "BlessDomain",
           "name": "铭记之谷",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地"
           ],
           "position": [
@@ -494,7 +494,7 @@
           "type": "MasteryDomain",
           "name": "忘却之峡",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地"
           ],
           "position": [
@@ -518,7 +518,7 @@
           "type": "Other",
           "name": "深境螺旋",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡",
             "马斯克礁"
           ],
@@ -538,7 +538,7 @@
           "type": "BlessDomain",
           "name": "仲夏庭园",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "摘星崖"
           ],
@@ -562,7 +562,7 @@
           "type": "ForgeryDomain",
           "name": "塞西莉亚苗圃",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地",
             "奔狼领"
           ],
@@ -587,7 +587,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地",
             "奔狼领"
           ],
@@ -607,7 +607,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地",
             "奔狼领"
           ],
@@ -627,7 +627,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "望风山地"
           ],
@@ -647,7 +647,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "望风山地"
           ],
@@ -667,7 +667,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地"
           ],
           "position": [
@@ -686,7 +686,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "明冠山地"
           ],
           "position": [
@@ -705,7 +705,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "荻花洲"
           ],
@@ -725,7 +725,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海"
           ],
           "position": [
@@ -744,7 +744,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "庆云顶"
           ],
@@ -764,7 +764,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "璃沙郊",
             "遁玉陵"
           ],
@@ -784,7 +784,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "石门"
           ],
@@ -804,7 +804,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -823,7 +823,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "翠玦坡"
           ],
@@ -843,7 +843,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "望舒客栈"
           ],
@@ -863,7 +863,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野",
             "归离原"
           ],
@@ -883,7 +883,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野",
             "归离原"
           ],
@@ -903,7 +903,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -922,7 +922,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "绝云间"
           ],
@@ -942,7 +942,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "琥牢山"
           ],
@@ -962,7 +962,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "奥藏山"
           ],
@@ -982,7 +982,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "孤云阁"
           ],
@@ -1002,7 +1002,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野"
           ],
           "position": [
@@ -1021,7 +1021,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海"
           ],
           "position": [
@@ -1040,7 +1040,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -1059,7 +1059,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "绝云间"
           ],
@@ -1079,7 +1079,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -1098,7 +1098,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原"
           ],
           "position": [
@@ -1117,7 +1117,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原"
           ],
           "position": [
@@ -1136,7 +1136,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "璃沙郊"
           ],
           "position": [
@@ -1155,7 +1155,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "璃沙郊"
           ],
           "position": [
@@ -1174,7 +1174,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "璃沙郊",
             "灵矩关"
           ],
@@ -1194,7 +1194,7 @@
           "type": "BlessDomain",
           "name": "无妄引咎密宫",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "无妄坡"
           ],
@@ -1218,7 +1218,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野"
           ],
           "position": [
@@ -1237,7 +1237,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "地中之盐"
           ],
@@ -1257,7 +1257,7 @@
           "type": "OneTimeDomain",
           "name": "华清归藏密宫",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野",
             "渌华池"
           ],
@@ -1277,7 +1277,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -1296,7 +1296,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "坠星山谷",
             "蒙德城"
           ],
@@ -1316,7 +1316,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "璃月港"
           ],
@@ -1336,7 +1336,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "璃月港"
           ],
@@ -1356,7 +1356,7 @@
           "type": "MasteryDomain",
           "name": "太山府",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "绝云间"
           ],
@@ -1381,7 +1381,7 @@
           "type": "OneTimeDomain",
           "name": "墟散人离之处",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野",
             "归离原"
           ],
@@ -1401,7 +1401,7 @@
           "type": "ForgeryDomain",
           "name": "震雷连山密宫",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野"
           ],
           "position": [
@@ -1425,7 +1425,7 @@
           "type": "BlessDomain",
           "name": "孤云凌霄之处",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "孤云阁"
           ],
@@ -1449,7 +1449,7 @@
           "type": "BlessDomain",
           "name": "华池岩岫",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -1472,7 +1472,7 @@
           "type": "OneTimeDomain",
           "name": "曲径通幽之处",
           "country": "璃月",
-          "area": [
+          "areas": [
             "璃沙郊"
           ],
           "position": [
@@ -1491,7 +1491,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "庆云顶"
           ],
@@ -1511,7 +1511,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原"
           ],
           "position": [
@@ -1530,7 +1530,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "轻策庄"
           ],
@@ -1550,7 +1550,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "璃月港"
           ],
@@ -1570,7 +1570,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "天衡山"
           ],
@@ -1590,7 +1590,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原"
           ],
           "position": [
@@ -1609,7 +1609,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野",
             "瑶光滩"
           ],
@@ -1629,7 +1629,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "璃沙郊"
           ],
           "position": [
@@ -1648,7 +1648,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "天衡山"
           ],
@@ -1668,7 +1668,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海"
           ],
           "position": [
@@ -1687,7 +1687,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原",
             "无妄坡"
           ],
@@ -1707,7 +1707,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野",
             "渌华池"
           ],
@@ -1727,7 +1727,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "琼玑野"
           ],
           "position": [
@@ -1746,7 +1746,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -1765,7 +1765,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林"
           ],
           "position": [
@@ -1784,7 +1784,7 @@
           "type": "Goddess",
           "name": "七天神像-风",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山",
             "雪葬之都·旧宫"
           ],
@@ -1804,7 +1804,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山",
             "雪葬之都·近郊"
           ],
@@ -1824,7 +1824,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山",
             "雪葬之都·旧宫"
           ],
@@ -1844,7 +1844,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -1863,7 +1863,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "苍风高地"
           ],
           "position": [
@@ -1882,7 +1882,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -1901,7 +1901,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -1920,7 +1920,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山",
             "覆雪之路"
           ],
@@ -1940,7 +1940,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -1959,7 +1959,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山",
             "雪葬之都·近郊"
           ],
@@ -1979,7 +1979,7 @@
           "type": "TrounceDomain",
           "name": "进入「黄金屋」",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "天衡山"
           ],
@@ -2004,7 +2004,7 @@
           "type": "BlessDomain",
           "name": "芬德尼尔之顶",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -2027,7 +2027,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -2046,7 +2046,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山"
           ],
           "position": [
@@ -2065,7 +2065,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "龙脊雪山",
             "寒天之钉"
           ],
@@ -2085,7 +2085,7 @@
           "type": "Goddess",
           "name": "七天神像-雷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "离岛"
           ],
@@ -2105,7 +2105,7 @@
           "type": "Goddess",
           "name": "七天神像-雷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢",
             "踏鞴砂"
           ],
@@ -2125,7 +2125,7 @@
           "type": "Goddess",
           "name": "七天神像-雷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛",
             "绯木村"
           ],
@@ -2145,7 +2145,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "离岛"
           ],
@@ -2165,7 +2165,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "稻妻城"
           ],
@@ -2185,7 +2185,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "鸣神大社"
           ],
@@ -2205,7 +2205,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "荒海"
           ],
@@ -2225,7 +2225,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "神里屋敷"
           ],
@@ -2245,7 +2245,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢",
             "九条阵屋"
           ],
@@ -2265,7 +2265,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢"
           ],
           "position": [
@@ -2284,7 +2284,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢"
           ],
           "position": [
@@ -2303,7 +2303,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢",
             "踏鞴砂"
           ],
@@ -2323,7 +2323,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢",
             "踏鞴砂"
           ],
@@ -2343,7 +2343,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛",
             "名椎滩"
           ],
@@ -2363,7 +2363,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛"
           ],
           "position": [
@@ -2382,7 +2382,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢",
             "踏鞴砂"
           ],
@@ -2402,7 +2402,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛",
             "藤兜砦"
           ],
@@ -2422,7 +2422,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛"
           ],
           "position": [
@@ -2441,7 +2441,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛"
           ],
           "position": [
@@ -2460,7 +2460,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛",
             "名椎滩"
           ],
@@ -2480,7 +2480,7 @@
           "type": "TrounceDomain",
           "name": "「伏龙树」之底",
           "country": "璃月",
-          "area": [
+          "areas": [
             "珉林",
             "南天门"
           ],
@@ -2505,7 +2505,7 @@
           "type": "BlessDomain",
           "name": "山脊守望",
           "country": "璃月",
-          "area": [
+          "areas": [
             "碧水原"
           ],
           "position": [
@@ -2528,7 +2528,7 @@
           "type": "Goddess",
           "name": "七天神像-雷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛",
             "越石村"
           ],
@@ -2548,7 +2548,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "绀田村"
           ],
@@ -2568,7 +2568,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "镇守之森"
           ],
@@ -2588,7 +2588,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "刃连岛"
           ],
@@ -2608,7 +2608,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "白狐之野"
           ],
@@ -2628,7 +2628,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛"
           ],
           "position": [
@@ -2647,7 +2647,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛"
           ],
           "position": [
@@ -2666,7 +2666,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "稻妻城"
           ],
@@ -2686,7 +2686,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢"
           ],
           "position": [
@@ -2705,7 +2705,7 @@
           "type": "OneTimeDomain",
           "name": "借景之馆",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢",
             "踏鞴砂"
           ],
@@ -2725,7 +2725,7 @@
           "type": "MasteryDomain",
           "name": "菫色之庭",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "神无冢"
           ],
           "position": [
@@ -2749,7 +2749,7 @@
           "type": "Goddess",
           "name": "七天神像-雷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观"
           ],
           "position": [
@@ -2768,7 +2768,7 @@
           "type": "Goddess",
           "name": "七天神像-雷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛",
             "曚云神社"
           ],
@@ -2788,7 +2788,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛"
           ],
           "position": [
@@ -2807,7 +2807,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛"
           ],
           "position": [
@@ -2826,7 +2826,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛"
           ],
           "position": [
@@ -2845,7 +2845,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛",
             "珊瑚宫"
           ],
@@ -2865,7 +2865,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛"
           ],
           "position": [
@@ -2884,7 +2884,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛",
             "浅濑神社"
           ],
@@ -2904,7 +2904,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛"
           ],
           "position": [
@@ -2923,7 +2923,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛"
           ],
           "position": [
@@ -2942,7 +2942,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛"
           ],
           "position": [
@@ -2961,7 +2961,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛",
             "平海砦"
           ],
@@ -2981,7 +2981,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛",
             "天云峠"
           ],
@@ -3001,7 +3001,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "离岛"
           ],
@@ -3021,7 +3021,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛"
           ],
           "position": [
@@ -3040,7 +3040,7 @@
           "type": "OneTimeDomain",
           "name": "千门虚舟",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛"
           ],
           "position": [
@@ -3059,7 +3059,7 @@
           "type": "OneTimeDomain",
           "name": "池中宅邸",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "海祇岛",
             "水月池"
           ],
@@ -3079,7 +3079,7 @@
           "type": "OneTimeDomain",
           "name": "阵代屋敷",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛"
           ],
           "position": [
@@ -3098,7 +3098,7 @@
           "type": "BlessDomain",
           "name": "椛染之庭",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "八酝岛"
           ],
           "position": [
@@ -3121,7 +3121,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛",
             "天云峠"
           ],
@@ -3141,7 +3141,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛",
             "天云峠"
           ],
@@ -3161,7 +3161,7 @@
           "type": "ForgeryDomain",
           "name": "砂流之庭",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "影向山"
           ],
@@ -3186,7 +3186,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观"
           ],
           "position": [
@@ -3205,7 +3205,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观",
             "千来神祠"
           ],
@@ -3225,7 +3225,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观",
             "逢岳之野"
           ],
@@ -3245,7 +3245,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观",
             "知比山"
           ],
@@ -3265,7 +3265,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观"
           ],
           "position": [
@@ -3284,7 +3284,7 @@
           "type": "TrounceDomain",
           "name": "鸣神岛·天守",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "稻妻城"
           ],
@@ -3309,7 +3309,7 @@
           "type": "OneTimeDomain",
           "name": "茂知之壳",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观"
           ],
           "position": [
@@ -3328,7 +3328,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观"
           ],
           "position": [
@@ -3347,7 +3347,7 @@
           "type": "BlessDomain",
           "name": "沉眠之庭",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "清籁岛"
           ],
           "position": [
@@ -3370,7 +3370,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鹤观"
           ],
           "position": [
@@ -3389,7 +3389,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊"
           ],
           "position": [
@@ -3408,7 +3408,7 @@
           "type": "Other",
           "name": "南十字·死兆星",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海"
           ],
           "position": [
@@ -3427,7 +3427,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊",
             "丹砂崖"
           ],
@@ -3447,7 +3447,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊"
           ],
           "position": [
@@ -3466,7 +3466,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊"
           ],
           "position": [
@@ -3485,7 +3485,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊",
             "天工峡"
           ],
@@ -3505,7 +3505,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊",
             "采樵谷"
           ],
@@ -3525,7 +3525,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "无郁稠林"
           ],
@@ -3545,7 +3545,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷"
           ],
           "position": [
@@ -3564,7 +3564,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "桓那兰那",
             "桓那兰那"
           ],
@@ -3584,7 +3584,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -3603,7 +3603,7 @@
           "type": "Other",
           "name": "群玉阁",
           "country": "璃月",
-          "area": [
+          "areas": [
             "云来海",
             "天衡山"
           ],
@@ -3623,7 +3623,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "化城郭"
           ],
@@ -3643,7 +3643,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "失落的苗圃",
             "往昔的桓那兰那"
           ],
@@ -3663,7 +3663,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "失落的苗圃",
             "往昔的桓那兰那"
           ],
@@ -3683,7 +3683,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "失落的苗圃",
             "往昔的桓那兰那·沙中故里"
           ],
@@ -3703,7 +3703,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "寂静园"
           ],
@@ -3723,7 +3723,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "茸蕈窟"
           ],
@@ -3743,7 +3743,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森"
           ],
           "position": [
@@ -3762,7 +3762,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "无郁稠林"
           ],
@@ -3782,7 +3782,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -3801,7 +3801,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -3820,7 +3820,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -3839,7 +3839,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "桓那兰那",
             "桓那兰那"
           ],
@@ -3859,7 +3859,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -3878,7 +3878,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -3897,7 +3897,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "雨的尽头",
             "雨的尽头"
@@ -3918,7 +3918,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -3937,7 +3937,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -3956,7 +3956,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "水天丛林"
           ],
@@ -3976,7 +3976,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "水天丛林"
           ],
@@ -3996,7 +3996,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷"
           ],
           "position": [
@@ -4015,7 +4015,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林"
           ],
           "position": [
@@ -4034,7 +4034,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷"
           ],
           "position": [
@@ -4053,7 +4053,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷",
             "奥摩斯港"
           ],
@@ -4073,7 +4073,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷",
             "奥摩斯港"
           ],
@@ -4093,7 +4093,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷",
             "降诸魔山"
           ],
@@ -4113,7 +4113,7 @@
           "type": "TrounceDomain",
           "name": "梦想乐土之殁",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "鸣神岛",
             "影向山"
           ],
@@ -4138,7 +4138,7 @@
           "type": "MasteryDomain",
           "name": "昏识塔",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森"
           ],
           "position": [
@@ -4162,7 +4162,7 @@
           "type": "BlessDomain",
           "name": "缘觉塔",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "香醉坡"
           ],
@@ -4186,7 +4186,7 @@
           "type": "ForgeryDomain",
           "name": "有顶塔",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -4210,7 +4210,7 @@
           "type": "BlessDomain",
           "name": "岩中幽谷",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊",
             "伏鳌谷"
           ],
@@ -4234,7 +4234,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷"
           ],
           "position": [
@@ -4253,7 +4253,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷",
             "降诸魔山",
             "旧窟暗道"
@@ -4274,7 +4274,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷"
           ],
           "position": [
@@ -4293,7 +4293,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地",
             "阿如村"
           ],
@@ -4313,7 +4313,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原"
           ],
           "position": [
@@ -4332,7 +4332,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "上风蚀地"
           ],
           "position": [
@@ -4351,7 +4351,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -4370,7 +4370,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -4389,7 +4389,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -4408,7 +4408,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -4427,7 +4427,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -4446,7 +4446,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地",
             "沙之眼"
           ],
@@ -4466,7 +4466,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -4485,7 +4485,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "秘仪圣殿",
             "秘仪圣殿·地下区域"
@@ -4506,7 +4506,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原"
           ],
           "position": [
@@ -4525,7 +4525,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵西南·岩窟区域"
           ],
@@ -4545,7 +4545,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵西北·岩窟下层"
           ],
@@ -4565,7 +4565,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵西北·岩窟中层"
           ],
@@ -4585,7 +4585,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵东部·权杖厅"
           ],
@@ -4605,7 +4605,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "铄石之丘"
           ],
@@ -4625,7 +4625,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原"
           ],
           "position": [
@@ -4644,7 +4644,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵",
             "赤王陵·中层"
@@ -4665,7 +4665,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "上风蚀地"
           ],
           "position": [
@@ -4684,7 +4684,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "上风蚀地"
           ],
           "position": [
@@ -4703,7 +4703,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "上风蚀地"
           ],
           "position": [
@@ -4722,7 +4722,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地",
             "舍身步道"
           ],
@@ -4742,7 +4742,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "须弥城"
           ],
@@ -4762,7 +4762,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "失落的苗圃",
             "失梦的国土",
             "往昔的桓那兰那·失梦的国土"
@@ -4783,7 +4783,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "香醉坡"
           ],
@@ -4803,7 +4803,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森"
           ],
           "position": [
@@ -4822,7 +4822,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "香醉坡"
           ],
@@ -4842,7 +4842,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林"
           ],
           "position": [
@@ -4861,7 +4861,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "须弥城"
           ],
@@ -4881,7 +4881,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "喀万驿"
           ],
@@ -4901,7 +4901,7 @@
           "type": "OneTimeDomain",
           "name": "河谷的黯道",
           "country": "须弥",
-          "area": [
+          "areas": [
             "阿陀河谷"
           ],
           "position": [
@@ -4920,7 +4920,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -4939,7 +4939,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -4958,7 +4958,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -4977,7 +4977,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森"
           ],
           "position": [
@@ -4996,7 +4996,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "无郁稠林"
           ],
@@ -5016,7 +5016,7 @@
           "type": "OneTimeDomain",
           "name": "童梦的切片",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地"
           ],
           "position": [
@@ -5035,7 +5035,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "禅那园"
           ],
@@ -5055,7 +5055,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林"
           ],
           "position": [
@@ -5074,7 +5074,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "须弥城"
           ],
@@ -5094,7 +5094,7 @@
           "type": "OneTimeDomain",
           "name": "伞盖的荫蔽",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "无郁稠林"
           ],
@@ -5114,7 +5114,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -5133,7 +5133,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -5152,7 +5152,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地",
             "阿如村"
           ],
@@ -5172,7 +5172,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "塔尼特露营地"
           ],
@@ -5192,7 +5192,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "神弃殿阁"
           ],
@@ -5212,7 +5212,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "巨人峡谷"
           ],
@@ -5232,7 +5232,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "神弃殿阁"
           ],
@@ -5252,7 +5252,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "啁哳之沙"
           ],
@@ -5272,7 +5272,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5291,7 +5291,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "「三运河之地」"
           ],
@@ -5311,7 +5311,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5330,7 +5330,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5349,7 +5349,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5368,7 +5368,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "「五绿洲」的孑遗"
           ],
@@ -5388,7 +5388,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5407,7 +5407,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5426,7 +5426,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5445,7 +5445,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "愚妄行宫"
           ],
@@ -5465,7 +5465,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -5484,7 +5484,7 @@
           "type": "OneTimeDomain",
           "name": "晴雨的经纬",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "雨的尽头"
           ],
@@ -5504,7 +5504,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "二净甸"
           ],
           "position": [
@@ -5523,7 +5523,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵西南·岩窟区域"
           ],
@@ -5543,7 +5543,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "善见地",
             "水天丛林"
           ],
@@ -5563,7 +5563,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "茸蕈窟"
           ],
@@ -5583,7 +5583,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "君王之殿"
           ],
@@ -5603,7 +5603,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "酣乐之殿"
           ],
@@ -5623,7 +5623,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "生命之殿"
           ],
@@ -5643,7 +5643,7 @@
           "type": "OneTimeDomain",
           "name": "蜃景祭场",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原",
             "赤王陵东部·权杖厅"
           ],
@@ -5663,7 +5663,7 @@
           "type": "OneTimeDomain",
           "name": "赤沙之槛",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地",
             "舍身步道"
           ],
@@ -5683,7 +5683,7 @@
           "type": "OneTimeDomain",
           "name": "千柱的花园",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原"
           ],
           "position": [
@@ -5702,7 +5702,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊"
           ],
           "position": [
@@ -5721,7 +5721,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "上风蚀地"
           ],
           "position": [
@@ -5740,7 +5740,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原"
           ],
           "position": [
@@ -5759,7 +5759,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地"
           ],
           "position": [
@@ -5778,7 +5778,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "上风蚀地"
           ],
           "position": [
@@ -5797,7 +5797,7 @@
           "type": "OneTimeDomain",
           "name": "「亡者之城」",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "沙虫隧道"
           ],
@@ -5817,7 +5817,7 @@
           "type": "OneTimeDomain",
           "name": "五绿洲之殿堂",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "「三运河之地」"
           ],
@@ -5837,7 +5837,7 @@
           "type": "TrounceDomain",
           "name": "净琉璃工坊",
           "country": "须弥",
-          "area": [
+          "areas": [
             "道成林",
             "离渡谷"
           ],
@@ -5862,7 +5862,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠",
             "铁穆山"
           ],
@@ -5882,7 +5882,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠",
             "逾渊地墟",
             "逾渊地墟·上层"
@@ -5903,7 +5903,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠",
             "荼泥黑渊"
           ],
@@ -5923,7 +5923,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠",
             "逾渊地墟",
             "逾渊地墟·上层"
@@ -5944,7 +5944,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠",
             "逾渊地墟"
           ],
@@ -5964,7 +5964,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿"
           ],
           "position": [
@@ -5983,7 +5983,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠"
           ],
           "position": [
@@ -6002,7 +6002,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "甘露花海"
           ],
@@ -6022,7 +6022,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "跋松顶"
           ],
@@ -6042,7 +6042,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "锋刃林泽"
           ],
@@ -6062,7 +6062,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "精石铜城·上层"
           ],
@@ -6082,7 +6082,7 @@
           "type": "BlessDomain",
           "name": "赤金的城墟",
           "country": "须弥",
-          "area": [
+          "areas": [
             "下风蚀地",
             "沙之眼"
           ],
@@ -6106,7 +6106,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "甘露花海"
           ],
@@ -6126,7 +6126,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠"
           ],
           "position": [
@@ -6145,7 +6145,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "白露区",
             "海露港"
           ],
@@ -6165,7 +6165,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区"
           ],
           "position": [
@@ -6184,7 +6184,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "枫丹廷·沫芒宫"
           ],
@@ -6204,7 +6204,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "居尔城墟神殿·下层"
           ],
@@ -6224,7 +6224,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地"
           ],
           "position": [
@@ -6243,7 +6243,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "列柱沙原"
           ],
           "position": [
@@ -6262,7 +6262,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠",
             "阻勒隘"
           ],
@@ -6282,7 +6282,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "甘露花海",
             "万种母树"
@@ -6303,7 +6303,7 @@
           "type": "BlessDomain",
           "name": "熔铁的孤塞",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠"
           ],
           "position": [
@@ -6326,7 +6326,7 @@
           "type": "OneTimeDomain",
           "name": "净罪之井",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "跋松顶"
           ],
@@ -6346,7 +6346,7 @@
           "type": "OneTimeDomain",
           "name": "地中的香海",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿"
           ],
           "position": [
@@ -6365,7 +6365,7 @@
           "type": "Goddess",
           "name": "七天神像-草",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "甘露花海"
           ],
@@ -6385,7 +6385,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区"
           ],
           "position": [
@@ -6404,7 +6404,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区",
             "玛丽安纪念公园"
           ],
@@ -6424,7 +6424,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区",
             "学术会堂"
           ],
@@ -6444,7 +6444,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区",
             "芒索斯山东麓"
           ],
@@ -6464,7 +6464,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6483,7 +6483,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6502,7 +6502,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区",
             "中央实验室遗址"
           ],
@@ -6522,7 +6522,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6541,7 +6541,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6560,7 +6560,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6579,7 +6579,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区",
             "新枫丹科学院"
           ],
@@ -6599,7 +6599,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6618,7 +6618,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6637,7 +6637,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -6656,7 +6656,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区"
           ],
           "position": [
@@ -6675,7 +6675,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区"
           ],
           "position": [
@@ -6694,7 +6694,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区"
           ],
           "position": [
@@ -6713,7 +6713,7 @@
           "type": "Other",
           "name": "梅洛彼得堡",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区",
             "管理区"
           ],
@@ -6733,7 +6733,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区"
           ],
           "position": [
@@ -6752,7 +6752,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塞洛海原"
           ],
@@ -6772,7 +6772,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塞洛海原"
           ],
@@ -6792,7 +6792,7 @@
           "type": "TrounceDomain",
           "name": "肇始之乡",
           "country": "须弥",
-          "area": [
+          "areas": [
             "千壑沙地",
             "阿佩普的行宫花园"
           ],
@@ -6817,7 +6817,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿",
             "甘露花海"
           ],
@@ -6837,7 +6837,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -6856,7 +6856,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -6875,7 +6875,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "安眠处",
             "安眠处"
@@ -6896,7 +6896,7 @@
           "type": "ForgeryDomain",
           "name": "深潮的余响",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -6920,7 +6920,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塔拉塔海谷"
           ],
@@ -6940,7 +6940,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塔拉塔海谷"
           ],
@@ -6960,7 +6960,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -6979,7 +6979,7 @@
           "type": "MasteryDomain",
           "name": "苍白的遗荣",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塞洛海原"
           ],
@@ -7004,7 +7004,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "希望之路"
           ],
@@ -7024,7 +7024,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "白露区",
             "秋分山西侧"
           ],
@@ -7044,7 +7044,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -7063,7 +7063,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "自然哲学学院",
             "水下城墟·中心区域"
@@ -7084,7 +7084,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塞洛海原"
           ],
@@ -7104,7 +7104,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -7123,7 +7123,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "茉洁站"
           ],
@@ -7143,7 +7143,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "露景泉"
           ],
@@ -7163,7 +7163,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "「特别温暖的地方」"
           ],
@@ -7183,7 +7183,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "海沫村"
           ],
@@ -7203,7 +7203,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "厄里那斯"
           ],
@@ -7223,7 +7223,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "厄里那斯"
           ],
@@ -7243,7 +7243,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区"
           ],
           "position": [
@@ -7262,7 +7262,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区"
           ],
           "position": [
@@ -7281,7 +7281,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区"
           ],
           "position": [
@@ -7300,7 +7300,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "埃尔顿海沟"
           ],
@@ -7320,7 +7320,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塞洛海原"
           ],
@@ -7340,7 +7340,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "埃尔顿海沟"
           ],
@@ -7360,7 +7360,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "荒石苍漠"
           ],
           "position": [
@@ -7379,7 +7379,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "白露区",
             "白淞镇"
           ],
@@ -7399,7 +7399,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "枫丹廷·利奥奈区"
           ],
@@ -7419,7 +7419,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "枫丹廷·纳博内区"
           ],
@@ -7439,7 +7439,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "枫丹廷·灰河"
           ],
@@ -7459,7 +7459,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -7478,7 +7478,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "安眠处",
             "安眠处"
@@ -7499,7 +7499,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿"
           ],
           "position": [
@@ -7518,7 +7518,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "枫丹廷"
           ],
@@ -7538,7 +7538,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "自然哲学学院",
             "水下城墟·中心区域"
@@ -7559,7 +7559,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -7578,7 +7578,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -7597,7 +7597,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -7616,7 +7616,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "白露区"
           ],
           "position": [
@@ -7635,7 +7635,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区",
             "管理区"
           ],
@@ -7655,7 +7655,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区",
             "生产区"
           ],
@@ -7675,7 +7675,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区",
             "废弃生产区"
           ],
@@ -7695,7 +7695,7 @@
           "type": "Other",
           "name": "水仙十字结社",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "自然哲学学院",
             "水下城墟·中心区域"
@@ -7716,7 +7716,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷"
           ],
           "position": [
@@ -7735,7 +7735,7 @@
           "type": "Goddess",
           "name": "七天神像-岩",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "赤璋城垣"
           ],
@@ -7755,7 +7755,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷"
           ],
           "position": [
@@ -7774,7 +7774,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "翘英庄"
           ],
@@ -7794,7 +7794,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷"
           ],
           "position": [
@@ -7813,7 +7813,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "遗珑埠"
           ],
@@ -7833,7 +7833,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "灵濛山"
           ],
@@ -7853,7 +7853,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "古茶树坡"
           ],
@@ -7873,7 +7873,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "药蝶谷"
           ],
@@ -7893,7 +7893,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "悬练山"
           ],
@@ -7913,7 +7913,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵"
           ],
           "position": [
@@ -7932,7 +7932,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "赤璋城垣"
           ],
@@ -7952,7 +7952,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "来歆山",
             "来歆山"
           ],
@@ -7972,7 +7972,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "来歆山",
             "来歆山"
           ],
@@ -7992,7 +7992,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "暝垣山"
           ],
@@ -8012,7 +8012,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "灵濛山"
           ],
@@ -8032,7 +8032,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "灵濛山"
           ],
@@ -8052,7 +8052,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵"
           ],
           "position": [
@@ -8071,7 +8071,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "宝玦口"
           ],
@@ -8091,7 +8091,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "来歆山",
             "锦落庭"
           ],
@@ -8111,7 +8111,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹动能工程科学研究院区"
           ],
           "position": [
@@ -8130,7 +8130,7 @@
           "type": "BlessDomain",
           "name": "罪祸的终末",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "白露区"
           ],
           "position": [
@@ -8153,7 +8153,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "白露区",
             "秋分山西侧"
           ],
@@ -8173,7 +8173,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "厄里那斯"
           ],
@@ -8193,7 +8193,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区"
           ],
           "position": [
@@ -8212,7 +8212,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵"
           ],
           "position": [
@@ -8231,7 +8231,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷"
           ],
           "position": [
@@ -8250,7 +8250,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8269,7 +8269,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵"
           ],
           "position": [
@@ -8288,7 +8288,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区",
             "湖中垂柳"
           ],
@@ -8308,7 +8308,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8327,7 +8327,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8346,7 +8346,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8365,7 +8365,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8384,7 +8384,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "浮罗囿"
           ],
           "position": [
@@ -8403,7 +8403,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区",
             "伊黎耶之根"
           ],
@@ -8423,7 +8423,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8442,7 +8442,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区",
             "卡布狄斯堡遗迹"
           ],
@@ -8462,7 +8462,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8481,7 +8481,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8500,7 +8500,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区",
             "柔灯港"
           ],
@@ -8520,7 +8520,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区"
           ],
           "position": [
@@ -8539,7 +8539,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8558,7 +8558,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8577,7 +8577,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "「很明亮的地方」"
           ],
@@ -8597,7 +8597,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区"
           ],
           "position": [
@@ -8616,7 +8616,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8635,7 +8635,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区",
             "卡布狄斯堡遗迹"
           ],
@@ -8655,7 +8655,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8674,7 +8674,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区",
             "幽林雾道"
           ],
@@ -8694,7 +8694,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8713,7 +8713,7 @@
           "type": "TrounceDomain",
           "name": "异界余影",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "枫丹廷区",
             "塞洛海原"
           ],
@@ -8738,7 +8738,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "伊黎耶林区"
           ],
           "position": [
@@ -8757,7 +8757,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区",
             "秋分山东侧"
           ],
@@ -8777,7 +8777,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区"
           ],
           "position": [
@@ -8796,7 +8796,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区",
             "卡布狄斯堡遗迹"
           ],
@@ -8816,7 +8816,7 @@
           "type": "Other",
           "name": "揭示之书",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "苍晶区",
             "「特别温暖的地方」"
           ],
@@ -8836,7 +8836,7 @@
           "type": "Goddess",
           "name": "七天神像-水",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "佩特莉可镇"
           ],
@@ -8856,7 +8856,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区"
           ],
           "position": [
@@ -8875,7 +8875,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "佩特莉可镇"
           ],
@@ -8895,7 +8895,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "佩特莉可镇"
           ],
@@ -8915,7 +8915,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "褪色古堡"
           ],
@@ -8935,7 +8935,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "褪色古堡"
           ],
@@ -8955,7 +8955,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "褪色古堡"
           ],
@@ -8975,7 +8975,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "褪色古堡"
           ],
@@ -8995,7 +8995,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "宝玦口"
           ],
@@ -9015,7 +9015,7 @@
           "type": "BlessDomain",
           "name": "临瀑之城",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "莫尔泰区",
             "秋分山东侧"
           ],
@@ -9039,7 +9039,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷"
           ],
           "position": [
@@ -9058,7 +9058,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "暝垣山"
           ],
@@ -9078,7 +9078,7 @@
           "type": "BlessDomain",
           "name": "褪色的剧场",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "诺思托伊区",
             "佩特莉可镇"
           ],
@@ -9102,7 +9102,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "宝玦口"
           ],
@@ -9122,7 +9122,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷",
             "遗珑埠"
           ],
@@ -9142,7 +9142,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -9161,7 +9161,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -9180,7 +9180,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "溶水域"
           ],
@@ -9200,7 +9200,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山"
           ],
           "position": [
@@ -9219,7 +9219,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -9238,7 +9238,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -9257,7 +9257,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "硫晶支脉"
           ],
@@ -9277,7 +9277,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -9296,7 +9296,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -9315,7 +9315,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "硫晶支脉"
           ],
@@ -9335,7 +9335,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -9354,7 +9354,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地"
           ],
           "position": [
@@ -9373,7 +9373,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "彩石顶"
           ],
@@ -9393,7 +9393,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山"
           ],
           "position": [
@@ -9412,7 +9412,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "隆崛坡"
           ],
@@ -9432,7 +9432,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山"
           ],
           "position": [
@@ -9451,7 +9451,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -9470,7 +9470,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -9489,7 +9489,7 @@
           "type": "MasteryDomain",
           "name": "蕴火的幽墟",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山"
           ],
           "position": [
@@ -9513,7 +9513,7 @@
           "type": "ForgeryDomain",
           "name": "深古瞭望所",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山"
           ],
           "position": [
@@ -9537,7 +9537,7 @@
           "type": "BlessDomain",
           "name": "虹灵的净土",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地"
           ],
           "position": [
@@ -9560,7 +9560,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵",
             "悬练山"
           ],
@@ -9580,7 +9580,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·南陵"
           ],
           "position": [
@@ -9599,7 +9599,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "沉玉谷·上谷"
           ],
           "position": [
@@ -9618,7 +9618,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "彩石顶"
           ],
@@ -9638,7 +9638,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -9657,7 +9657,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "祖遗庙宇"
           ],
@@ -9677,7 +9677,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地"
           ],
           "position": [
@@ -9696,7 +9696,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -9715,7 +9715,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -9734,7 +9734,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "分道誓约之厅",
             "圣途试炼遗迹·分道誓约之地"
@@ -9755,7 +9755,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "浮土静界"
           ],
@@ -9775,7 +9775,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "圣途试炼遗迹·入口长廊"
           ],
@@ -9795,7 +9795,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "须弥",
-          "area": [
+          "areas": [
             "护世森",
             "拜达港"
           ],
@@ -9815,7 +9815,7 @@
           "type": "TrounceDomain",
           "name": "零落丘墟",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "黎翡区",
             "芒索斯山东麓"
           ],
@@ -9840,7 +9840,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖",
             "「花羽会」"
           ],
@@ -9860,7 +9860,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖"
           ],
           "position": [
@@ -9879,7 +9879,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "火鹦之塔"
           ],
@@ -9899,7 +9899,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -9918,7 +9918,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯",
             "圣火竞技场·楚汶市集"
           ],
@@ -9938,7 +9938,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯",
             "圣火竞技场"
           ],
@@ -9958,7 +9958,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯",
             "圣火竞技场·帕克斯神庙"
           ],
@@ -9978,7 +9978,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "「回声之子」"
           ],
@@ -9998,7 +9998,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "「悬木人」"
           ],
@@ -10018,7 +10018,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "「流泉之众」"
           ],
@@ -10038,7 +10038,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "流灰之街"
           ],
@@ -10058,7 +10058,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "旧日的统律之心"
           ],
@@ -10078,7 +10078,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "溶水域"
           ],
@@ -10098,7 +10098,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山"
           ],
           "position": [
@@ -10117,7 +10117,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "溶水域"
           ],
@@ -10137,7 +10137,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -10156,7 +10156,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -10175,7 +10175,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖",
             "「花羽会」"
           ],
@@ -10195,7 +10195,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "浮土静界"
           ],
@@ -10215,7 +10215,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -10234,7 +10234,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖"
           ],
           "position": [
@@ -10253,7 +10253,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山",
             "「烟谜主」"
           ],
@@ -10273,7 +10273,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山",
             "「烟谜主」"
           ],
@@ -10293,7 +10293,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -10312,7 +10312,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -10331,7 +10331,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "火榴树根系·温热洞窟"
           ],
@@ -10351,7 +10351,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "空梦的起始"
           ],
@@ -10371,7 +10371,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯"
           ],
           "position": [
@@ -10390,7 +10390,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "？？？"
           ],
@@ -10410,7 +10410,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -10429,7 +10429,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -10448,7 +10448,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -10467,7 +10467,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -10486,7 +10486,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "窃火者密岛"
           ],
@@ -10506,7 +10506,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山",
             "？？？"
           ],
@@ -10526,7 +10526,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "燃素开采研究所"
           ],
@@ -10546,7 +10546,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖"
           ],
           "position": [
@@ -10565,7 +10565,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "托佐兹之岛"
           ],
@@ -10585,7 +10585,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "烬火炽燃所"
           ],
@@ -10605,7 +10605,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -10624,7 +10624,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "祖遗庙宇"
           ],
@@ -10644,7 +10644,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "众岩之里",
             "众岩之里"
@@ -10665,7 +10665,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "彩石顶"
           ],
@@ -10685,7 +10685,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -10704,7 +10704,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖"
           ],
           "position": [
@@ -10723,7 +10723,7 @@
           "type": "NatlanObsidianTotemPole",
           "name": "曜石图腾柱·「悬木人」",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "踞石山",
             "「悬木人」"
           ],
@@ -10743,7 +10743,7 @@
           "type": "NatlanObsidianTotemPole",
           "name": "曜石图腾柱·「流泉之众」",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "「流泉之众」"
           ],
@@ -10763,7 +10763,7 @@
           "type": "NatlanObsidianTotemPole",
           "name": "曜石图腾柱·「回声之子」",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷",
             "「回声之子」"
           ],
@@ -10783,7 +10783,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -10802,7 +10802,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "噩梦的温床"
           ],
@@ -10822,7 +10822,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯",
             "柴薪之丘"
           ],
@@ -10842,7 +10842,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野",
             "孑遗的留迹"
           ],
@@ -10862,7 +10862,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -10881,7 +10881,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野",
             "「天火之冠」"
           ],
@@ -10901,7 +10901,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野",
             "「天火之冠」"
           ],
@@ -10921,7 +10921,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -10940,7 +10940,7 @@
           "type": "Other",
           "name": "神庙·煅石之轮",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "万火之瓯",
             "圣火竞技场·帕克斯神庙"
           ],
@@ -10960,7 +10960,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -10979,7 +10979,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -10998,7 +10998,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11017,7 +11017,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11036,7 +11036,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11055,7 +11055,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地"
           ],
           "position": [
@@ -11074,7 +11074,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地"
           ],
           "position": [
@@ -11093,7 +11093,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "空梦的起始"
           ],
@@ -11113,7 +11113,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "涌流地",
             "溶水域"
           ],
@@ -11133,7 +11133,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "坚岩隘谷"
           ],
           "position": [
@@ -11152,7 +11152,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -11171,7 +11171,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -11190,7 +11190,7 @@
           "type": "NatlanObsidianTotemPole",
           "name": "曜石图腾柱·「花羽会」",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖",
             "「花羽会」"
           ],
@@ -11210,7 +11210,7 @@
           "type": "NatlanObsidianTotemPole",
           "name": "曜石图腾柱·「烟谜主」",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山",
             "谜土祭祀场"
           ],
@@ -11230,7 +11230,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -11249,7 +11249,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11268,7 +11268,7 @@
           "type": "Goddess",
           "name": "七天神像-火",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "翘枝崖"
           ],
           "position": [
@@ -11287,7 +11287,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -11306,7 +11306,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11325,7 +11325,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11344,7 +11344,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11363,7 +11363,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11382,7 +11382,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11401,7 +11401,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -11420,7 +11420,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11439,7 +11439,7 @@
           "type": "BlessDomain",
           "name": "荒废砌造坞",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11462,7 +11462,7 @@
           "type": "Other",
           "name": "天蛇船",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "？？？"
           ],
@@ -11482,7 +11482,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -11501,7 +11501,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔",
             "空梦的起始"
           ],
@@ -11521,7 +11521,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山",
             "漫曛谷"
           ],
@@ -11541,7 +11541,7 @@
           "type": "TrounceDomain",
           "name": "碑碣的记录",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "镜璧山"
           ],
           "position": [
@@ -11565,7 +11565,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "奥奇卡纳塔"
           ],
           "position": [
@@ -11584,7 +11584,7 @@
           "type": "Goddess",
           "name": "新月神像",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "绯沙盐沼"
           ],
@@ -11604,7 +11604,7 @@
           "type": "Goddess",
           "name": "新月神像",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -11623,7 +11623,7 @@
           "type": "Goddess",
           "name": "新月神像",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛"
           ],
           "position": [
@@ -11642,7 +11642,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11661,7 +11661,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野",
             "「天火之冠」"
           ],
@@ -11681,7 +11681,7 @@
           "type": "NatlanObsidianTotemPole",
           "name": "曜石图腾柱·「沃陆之邦」",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野",
             "「沃陆之邦」"
           ],
@@ -11701,7 +11701,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野",
             "觐山古道"
           ],
@@ -11721,7 +11721,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "安饶之野"
           ],
           "position": [
@@ -11740,7 +11740,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "霜月之坊"
           ],
@@ -11760,7 +11760,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "沐光之台"
           ],
@@ -11780,7 +11780,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "守誓者的圣所"
           ],
@@ -11800,7 +11800,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "雷图礁"
           ],
@@ -11820,7 +11820,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛"
           ],
           "position": [
@@ -11839,7 +11839,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -11859,7 +11859,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -11879,7 +11879,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "南港"
           ],
@@ -11899,7 +11899,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "南港"
           ],
@@ -11919,7 +11919,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -11939,7 +11939,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -11959,7 +11959,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -11979,7 +11979,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -11999,7 +11999,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "北港"
           ],
@@ -12019,7 +12019,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "银月之庭"
           ],
@@ -12039,7 +12039,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "绯沙盐沼"
           ],
@@ -12059,7 +12059,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "「蟹之主的宫殿」"
           ],
@@ -12079,7 +12079,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛"
           ],
           "position": [
@@ -12098,7 +12098,7 @@
           "type": "TrounceDomain",
           "name": "待解「弈局」",
           "country": "蒙德",
-          "area": [
+          "areas": [
             "风啸山坡",
             "鹰翔海滩"
           ],
@@ -12123,7 +12123,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -12143,7 +12143,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "苔骨荒原"
           ],
@@ -12163,7 +12163,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "苔骨荒原"
           ],
@@ -12183,7 +12183,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "蓝珀湖"
           ],
@@ -12203,7 +12203,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "空寂走廊"
           ],
@@ -12223,7 +12223,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -12242,7 +12242,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "苔骨荒原"
           ],
@@ -12262,7 +12262,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "刻拉蒂之眼"
           ],
@@ -12282,7 +12282,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -12301,7 +12301,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -12321,7 +12321,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -12341,7 +12341,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -12361,7 +12361,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "月矩力试验设计局"
           ],
@@ -12381,7 +12381,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "悠悠集市"
           ],
@@ -12401,7 +12401,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "悠悠集市"
           ],
@@ -12421,7 +12421,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12440,7 +12440,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12459,7 +12459,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "呼呼丘"
           ],
@@ -12479,7 +12479,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "彩彩崖"
           ],
@@ -12499,7 +12499,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "彩彩崖"
           ],
@@ -12519,7 +12519,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12538,7 +12538,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "浪浪湾"
           ],
@@ -12558,7 +12558,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12577,7 +12577,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "浪浪湾"
           ],
@@ -12597,7 +12597,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12616,7 +12616,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12635,7 +12635,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "刺梨镇"
           ],
@@ -12655,7 +12655,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "刺梨镇"
           ],
@@ -12675,7 +12675,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "刺梨镇"
           ],
@@ -12695,7 +12695,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "刺梨岩"
           ],
@@ -12715,7 +12715,7 @@
           "type": "Goddess",
           "name": "新月神像",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望"
           ],
           "position": [
@@ -12734,7 +12734,7 @@
           "type": "Goddess",
           "name": "新月神像",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -12753,7 +12753,7 @@
           "type": "Goddess",
           "name": "新月神像",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰"
           ],
           "position": [
@@ -12772,7 +12772,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "浪浪湾"
           ],
@@ -12792,7 +12792,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12811,7 +12811,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村"
           ],
           "position": [
@@ -12830,7 +12830,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "提提岛"
           ],
@@ -12850,7 +12850,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "提提岛"
           ],
@@ -12870,7 +12870,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "提提岛"
           ],
@@ -12890,7 +12890,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "悠悠度假村",
             "提提岛"
           ],
@@ -12910,7 +12910,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望"
           ],
           "position": [
@@ -12929,7 +12929,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望",
             "皮拉米达城"
           ],
@@ -12949,7 +12949,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望"
           ],
           "position": [
@@ -12968,7 +12968,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望",
             "噩影泽地"
           ],
@@ -12988,7 +12988,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望",
             "噩影泽地"
           ],
@@ -13008,7 +13008,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望"
           ],
           "position": [
@@ -13027,7 +13027,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "厄布拉神柱"
           ],
@@ -13047,7 +13047,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "凯雷丝之翼"
           ],
@@ -13067,7 +13067,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13086,7 +13086,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "特辖地研究所"
           ],
@@ -13106,7 +13106,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13125,7 +13125,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰"
           ],
           "position": [
@@ -13144,7 +13144,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "苦壑崖"
           ],
@@ -13164,7 +13164,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "苦壑崖"
           ],
@@ -13184,7 +13184,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13203,7 +13203,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰"
           ],
           "position": [
@@ -13222,7 +13222,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "那夏镇"
           ],
@@ -13242,7 +13242,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "那夏镇"
           ],
@@ -13262,7 +13262,7 @@
           "type": "MasteryDomain",
           "name": "无光的深都",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -13286,7 +13286,7 @@
           "type": "BlessDomain",
           "name": "霜凝的机枢",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "绯沙盐沼"
           ],
@@ -13310,7 +13310,7 @@
           "type": "ForgeryDomain",
           "name": "失落的月庭",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "守誓者的圣所"
           ],
@@ -13335,7 +13335,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "「末日后的乐园」"
           ],
@@ -13355,7 +13355,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13374,7 +13374,7 @@
           "type": "NodKraiMeetingPoint",
           "name": "「聚所·终夜长茔」",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "终夜长茔"
           ],
@@ -13394,7 +13394,7 @@
           "type": "NodKraiMeetingPoint",
           "name": "「聚所·霜月之坊」",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "霜月之坊"
           ],
@@ -13414,7 +13414,7 @@
           "type": "NodKraiMeetingPoint",
           "name": "「聚所·叮铃哐啷蛋卷工坊」",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "叮铃哐啷蛋卷工坊"
           ],
@@ -13434,7 +13434,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "蓝珀湖"
           ],
@@ -13454,7 +13454,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "叮铃哐啷蛋卷工坊"
           ],
@@ -13474,7 +13474,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛",
             "雷图礁"
           ],
@@ -13494,7 +13494,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "希汐岛"
           ],
           "position": [
@@ -13513,7 +13513,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "北方训练场"
           ],
@@ -13533,7 +13533,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "北方训练场"
           ],
@@ -13553,7 +13553,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -13572,7 +13572,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "星砂滩"
           ],
@@ -13592,7 +13592,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "那夏镇"
           ],
@@ -13612,7 +13612,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "苔骨荒原"
           ],
@@ -13632,7 +13632,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "蓝珀湖"
           ],
@@ -13652,7 +13652,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -13671,7 +13671,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛",
             "绯沙盐沼"
           ],
@@ -13691,7 +13691,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛",
             "苔骨荒原"
           ],
@@ -13711,7 +13711,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "伦波岛"
           ],
           "position": [
@@ -13730,7 +13730,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "靡穷深壑"
           ],
@@ -13750,7 +13750,7 @@
           "type": "NodKraiMeetingPoint",
           "name": "「聚所·望崖营壁」",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "望崖营壁"
           ],
@@ -13770,7 +13770,7 @@
           "type": "NodKraiMeetingPoint",
           "name": "「聚所·西风戍垒」",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "西风戍垒"
           ],
@@ -13790,7 +13790,7 @@
           "type": "NodKraiMeetingPoint",
           "name": "「聚所·魔女的花园」",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望",
             "魔女的花园"
           ],
@@ -13810,7 +13810,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望"
           ],
           "position": [
@@ -13829,7 +13829,7 @@
           "type": "BlessDomain",
           "name": "月童的库藏",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰"
           ],
           "position": [
@@ -13852,7 +13852,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13871,7 +13871,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13890,7 +13890,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望"
           ],
           "position": [
@@ -13909,7 +13909,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "帕哈岛"
           ],
           "position": [
@@ -13928,7 +13928,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野"
           ],
           "position": [
@@ -13947,7 +13947,7 @@
           "type": "TrounceDomain",
           "name": "赝月的研究所",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "特辖地研究所"
           ],
@@ -13972,7 +13972,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "烟硌山峰",
             "苦壑崖"
           ],
@@ -13992,7 +13992,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "虚海望",
             "雷德·米勒的「伟大财宝」"
           ],
@@ -14012,7 +14012,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "厄布拉神柱"
           ],
@@ -14032,7 +14032,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "厄布拉神柱"
           ],
@@ -14052,7 +14052,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "挪德卡莱",
-          "area": [
+          "areas": [
             "逐浪野",
             "安瓦蒂尼尔湖"
           ],
@@ -14079,7 +14079,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "蛇肠之路"
           ],
@@ -14099,7 +14099,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "蛇肠之路"
           ],
@@ -14119,7 +14119,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫"
           ],
           "position": [
@@ -14138,7 +14138,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "狭间之街"
           ],
@@ -14158,7 +14158,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "狭间之街"
           ],
@@ -14178,7 +14178,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "狭间之街"
           ],
@@ -14198,7 +14198,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "狭间之街"
           ],
@@ -14218,7 +14218,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "大日御舆"
           ],
@@ -14238,7 +14238,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "常夜灵庙"
           ],
@@ -14258,7 +14258,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "常夜灵庙"
           ],
@@ -14278,7 +14278,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "常夜灵庙"
           ],
@@ -14298,7 +14298,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "常夜灵庙"
           ],
@@ -14318,7 +14318,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫"
           ],
           "position": [
@@ -14337,7 +14337,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "蛇心之地"
           ],
@@ -14357,7 +14357,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "蛇心之地"
           ],
@@ -14377,7 +14377,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "蛇心之地"
           ],
@@ -14397,7 +14397,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "蛇心之地"
           ],
@@ -14417,7 +14417,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "大日御舆"
           ],
@@ -14437,7 +14437,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "大日御舆"
           ],
@@ -14457,7 +14457,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "大日御舆"
           ],
@@ -14477,7 +14477,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "大日御舆"
           ],
@@ -14497,7 +14497,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "八衢彦之地"
           ],
@@ -14517,7 +14517,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫"
           ],
           "position": [
@@ -14536,7 +14536,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "稻妻",
-          "area": [
+          "areas": [
             "渊下宫",
             "歧之地"
           ],
@@ -14563,7 +14563,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "临时主矿道"
           ],
@@ -14583,7 +14583,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "临时主矿道"
           ],
@@ -14603,7 +14603,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "巨蛇岩洞"
           ],
@@ -14623,7 +14623,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "巨渊主矿区"
           ],
@@ -14643,7 +14643,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "巨渊主矿区"
           ],
@@ -14663,7 +14663,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "临时主矿道"
           ],
@@ -14683,7 +14683,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "崎岖石厅"
           ],
@@ -14703,7 +14703,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "无名遗迹"
           ],
@@ -14723,7 +14723,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "无名遗迹"
           ],
@@ -14743,7 +14743,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区"
           ],
           "position": [
@@ -14762,7 +14762,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "无名遗迹"
           ],
@@ -14782,7 +14782,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "荧光狭道"
           ],
@@ -14802,7 +14802,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区"
           ],
           "position": [
@@ -14821,7 +14821,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区",
             "无名遗迹"
           ],
@@ -14841,7 +14841,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "璃月",
-          "area": [
+          "areas": [
             "层岩巨渊·地下矿区"
           ],
           "position": [
@@ -14867,7 +14867,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "雅努斯之门"
           ],
@@ -14887,7 +14887,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海"
           ],
           "position": [
@@ -14906,7 +14906,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "雅努斯之门"
           ],
@@ -14926,7 +14926,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "优恩花园"
           ],
@@ -14946,7 +14946,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海"
           ],
           "position": [
@@ -14965,7 +14965,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "切萨勒姆宫"
           ],
@@ -14985,7 +14985,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "安提库旧港"
           ],
@@ -15005,7 +15005,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "崇高大道"
           ],
@@ -15025,7 +15025,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "卡皮托林山"
           ],
@@ -15045,7 +15045,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海"
           ],
           "position": [
@@ -15064,7 +15064,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "黄金的大宫"
           ],
@@ -15084,7 +15084,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "安息之殿"
           ],
@@ -15104,7 +15104,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "卡皮托林山"
           ],
@@ -15124,7 +15124,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "崇高大道"
           ],
@@ -15144,7 +15144,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "谐律院"
           ],
@@ -15164,7 +15164,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海",
             "卡皮托林山"
           ],
@@ -15184,7 +15184,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "枫丹",
-          "area": [
+          "areas": [
             "旧日之海"
           ],
           "position": [
@@ -15210,7 +15210,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "候召的厅堂"
           ],
@@ -15230,7 +15230,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15249,7 +15249,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "分流识海"
           ],
@@ -15269,7 +15269,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15288,7 +15288,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "分流识海"
           ],
@@ -15308,7 +15308,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15327,7 +15327,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15346,7 +15346,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15365,7 +15365,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15384,7 +15384,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "衍术阵列"
           ],
@@ -15404,7 +15404,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "力向逆心"
           ],
@@ -15424,7 +15424,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "力向逆心"
           ],
@@ -15444,7 +15444,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15463,7 +15463,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15482,7 +15482,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "审议之庭"
           ],
@@ -15502,7 +15502,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15521,7 +15521,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15540,7 +15540,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山"
           ],
           "position": [
@@ -15559,7 +15559,7 @@
           "type": "TeleportWaypoint",
           "name": "传送锚点",
           "country": "纳塔",
-          "area": [
+          "areas": [
             "远古圣山",
             "圣山之心"
           ],
