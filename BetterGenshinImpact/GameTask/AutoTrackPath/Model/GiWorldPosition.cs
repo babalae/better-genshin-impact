@@ -31,11 +31,11 @@ public class GiTpPosition: GiWorldPosition
     public string? Name { get; set; } // tp 名称
     public string? Type { get; set; } // tp 类型
     public string? Country { get; set; }  // 所在国家
-    public string[] Area { get; set; } = []; // 所在区域
+    public string[] Areas { get; set; } = []; // 所在区域
 
     public string[] Rewards { get; set; } = [];
 
-    public string Level1Area => Area[0]; // 一级区域
+    public string Level1Area => Areas[0]; // 一级区域
     // 实际传送的坐标
     public decimal[] TranPosition { get; set; } = new decimal[3];
     public double TranX => (double)TranPosition[2];
