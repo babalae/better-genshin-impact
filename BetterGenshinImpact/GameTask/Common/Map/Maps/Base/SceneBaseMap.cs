@@ -151,47 +151,54 @@ public abstract class SceneBaseMap : ISceneMap
 
     #region 坐标系转换
 
-    public Point2f ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates)
+    public Point2f? ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates)
     {
+        if (imageCoordinates.X == 0 && imageCoordinates.Y == 0)
+        {
+            return null;
+        }
         // 原神坐标系是 1024 级别的，当图像坐标系不是 1024 级别的时候要做转换
         return new Point2f((MapOriginInImageCoordinate.X - imageCoordinates.X) / _mapImageBlockWidthScale,
             (MapOriginInImageCoordinate.Y - imageCoordinates.Y) / _mapImageBlockWidthScale);
     }
 
-    public (float x, float y) ConvertImageCoordinatesToGenshinMapCoordinates(float x, float y)
+    public Rect? ConvertImageCoordinatesToGenshinMapCoordinates(Rect rect)
     {
-        return new((MapOriginInImageCoordinate.X - x) / _mapImageBlockWidthScale,
-            (MapOriginInImageCoordinate.Y - y) / _mapImageBlockWidthScale);
-    }
-
-    public Rect ConvertImageCoordinatesToGenshinMapCoordinates(Rect rect)
-    {
+        if (rect.X == 0 && rect.Y == 0 && rect.Width == 0 && rect.Height == 0)
+        {
+            return null;
+        }
         var center = rect.GetCenterPoint();
-        var (x, y) = ConvertImageCoordinatesToGenshinMapCoordinates(center.X, center.Y);
-        return new Rect((int)(x - rect.Width / 2f / _mapImageBlockWidthScale), (int)(y - rect.Height / 2f / _mapImageBlockWidthScale),
-            (int)(rect.Width / _mapImageBlockWidthScale), (int)(rect.Height / _mapImageBlockWidthScale));
+        var nullablePoint = ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(center.X, center.Y));
+        if (nullablePoint is Point2f p)
+        {
+            return new Rect((int)(p.X - rect.Width / 2f / _mapImageBlockWidthScale), (int)(p.Y - rect.Height / 2f / _mapImageBlockWidthScale),
+                (int)(rect.Width / _mapImageBlockWidthScale), (int)(rect.Height / _mapImageBlockWidthScale));
+        }
+        return null;
     }
 
-    public Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates)
+    public Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f? genshinMapCoordinates)
     {
-        return new Point2f(MapOriginInImageCoordinate.X - genshinMapCoordinates.X * _mapImageBlockWidthScale,
-            MapOriginInImageCoordinate.Y - genshinMapCoordinates.Y * _mapImageBlockWidthScale);
+        if (genshinMapCoordinates is Point2f p)
+        {
+            return new Point2f(MapOriginInImageCoordinate.X - p.X * _mapImageBlockWidthScale,
+           MapOriginInImageCoordinate.Y - p.Y * _mapImageBlockWidthScale);
+        }
+        return default;
     }
 
-    public (float x, float y) ConvertGenshinMapCoordinatesToImageCoordinates(float c, float a)
+    public Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect? genshinMapRect)
     {
-        return new(MapOriginInImageCoordinate.X - c * _mapImageBlockWidthScale,
-            MapOriginInImageCoordinate.Y - a * _mapImageBlockWidthScale);
-    }
-
-    public Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect rect)
-    {
-        var center = rect.GetCenterPoint();
-        var (x, y) = ConvertGenshinMapCoordinatesToImageCoordinates(center.X, center.Y);
-        return new Rect((int)Math.Round(x - rect.Width / 2f * _mapImageBlockWidthScale),
-            (int)Math.Round(y - rect.Height / 2f * _mapImageBlockWidthScale),
-            (int)Math.Round(rect.Width * _mapImageBlockWidthScale),
-            (int)Math.Round(rect.Height * _mapImageBlockWidthScale));
+        if (genshinMapRect is Rect rect)
+        {
+            var (x, y) = ConvertGenshinMapCoordinatesToImageCoordinates(rect.GetCenterPoint());
+            return new Rect((int)Math.Round(x - rect.Width / 2f * _mapImageBlockWidthScale),
+             (int)Math.Round(y - rect.Height / 2f * _mapImageBlockWidthScale),
+             (int)Math.Round(rect.Width * _mapImageBlockWidthScale),
+             (int)Math.Round(rect.Height * _mapImageBlockWidthScale));
+        }
+        return default;
     }
 
     #endregion

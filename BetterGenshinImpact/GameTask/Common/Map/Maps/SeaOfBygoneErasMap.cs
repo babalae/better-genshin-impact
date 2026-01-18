@@ -71,7 +71,7 @@ public class SeaOfBygoneErasMap : SceneBaseMap
                     }
                     var x = (float)p["position"]![2]!;
                     var y = (float)p["position"]![0]!;
-                    var (x1, y1) = ConvertGenshinMapCoordinatesToImageCoordinates(x, y);
+                    var (x1, y1) = ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f (x, y));
                     mapTeleports.Add(new Point(x1, y1));
                 }
             }

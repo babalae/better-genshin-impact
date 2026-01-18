@@ -47,22 +47,18 @@ public interface ISceneMap
     /// </summary>
     /// <param name="imageCoordinates"></param>
     /// <returns></returns>
-    Point2f ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates);
+    Point2f? ConvertImageCoordinatesToGenshinMapCoordinates(Point2f imageCoordinates);
     
-    (float x, float y) ConvertImageCoordinatesToGenshinMapCoordinates(float x, float y);
-    
-    Rect ConvertImageCoordinatesToGenshinMapCoordinates(Rect rect);
+    Rect? ConvertImageCoordinatesToGenshinMapCoordinates(Rect rect);
 
     /// <summary>
     /// 原神游戏坐标系 -> 地图图像坐标系
     /// </summary>
     /// <param name="genshinMapCoordinates"></param>
     /// <returns></returns>
-    Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f genshinMapCoordinates);
-
-    (float x, float y) ConvertGenshinMapCoordinatesToImageCoordinates(float c, float a);
+    Point2f ConvertGenshinMapCoordinatesToImageCoordinates(Point2f? genshinMapCoordinates);
     
-    Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect rect);
+    Rect ConvertGenshinMapCoordinatesToImageCoordinates(Rect? rect);
 
     #endregion
 }
