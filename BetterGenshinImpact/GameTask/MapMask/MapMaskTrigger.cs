@@ -78,8 +78,10 @@ public class MapMaskTrigger : ITaskTrigger
 
                 if (_stableCount == 0)
                 {
-                    var rect = MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod).GetBigMapRect(region.CacheGreyMat);
-                    UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().PointsCanvasControl.UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height); });
+                    var rect256 = MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod).GetBigMapRect(region.CacheGreyMat);
+                    const int s = TeyvatMap.BigMap256ScaleTo2048; // 相对2048做8倍缩放
+                    var rect2048 = new Rect(rect256.X * s, rect256.Y * s, rect256.Width * s, rect256.Height * s);
+                    UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().PointsCanvasControl.UpdateViewport(rect2048.X, rect2048.Y, rect2048.Width, rect2048.Height); });
                 }
             }
         }

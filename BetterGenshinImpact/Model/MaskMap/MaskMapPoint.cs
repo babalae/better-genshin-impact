@@ -8,6 +8,26 @@ public class MaskMapPoint
     public double X { get; set; }
     public double Y { get; set; }
     
+    /// <summary>
+    /// 游戏中的坐标 X
+    /// </summary>
+    public double GameX { get; set; }
+    
+    /// <summary>
+    /// 游戏中的坐标 Y
+    /// </summary>
+    public double GameY { get; set; }
+    
+    /// <summary>
+    /// 游戏图像地图的坐标 X
+    /// </summary>
+    public double ImageX { get; set; }
+    
+    /// <summary>
+    /// 游戏图像地图的坐标 Y
+    /// </summary>
+    public double ImageY { get; set; }
+    
     public string LabelId { get; set; } = string.Empty;
 
     public bool Contains(double px, double py)

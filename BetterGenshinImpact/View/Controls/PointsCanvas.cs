@@ -215,10 +215,10 @@ public class PointsCanvas : FrameworkElement
 
             foreach (var point in _allPoints)
             {
-                if (expandedViewport.Contains(point.X, point.Y))
+                if (expandedViewport.Contains(point.ImageX, point.ImageY))
                 {
-                    var localX = (point.X - _viewportRect.X) * scaleX;
-                    var localY = (point.Y - _viewportRect.Y) * scaleY;
+                    var localX = (point.ImageX - _viewportRect.X) * scaleX;
+                    var localY = (point.ImageY - _viewportRect.Y) * scaleY;
                     DrawPoint(dc, point, localX, localY, MaskMapPointStatic.Width, MaskMapPointStatic.Height);
                 }
             }

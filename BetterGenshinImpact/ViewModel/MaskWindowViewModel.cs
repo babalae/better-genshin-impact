@@ -26,10 +26,14 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model.MaskMap;
+using OpenCvSharp;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
+using Rect = System.Windows.Rect;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -415,12 +419,20 @@ namespace BetterGenshinImpact.ViewModel
 
                 var points = resp.Data.PointList
                     .Where(x => selectedSecondLevelIds.Contains(x.LabelId))
-                    .Select(x => new MaskMapPoint
+                    .Select(x =>
                     {
-                        Id = x.Id.ToString(),
-                        X = x.XPos,
-                        Y = x.YPos,
-                        LabelId = x.LabelId.ToString()
+                        MaskMapPoint m = new MaskMapPoint
+                        {
+                            Id = x.Id.ToString(),
+                            X = x.XPos,
+                            Y = x.YPos,
+                            LabelId = x.LabelId.ToString()
+                        };
+                        (m.GameX, m.GameY) = GameWebMapCoordinateConverter.MysWebToGame(m.X, m.Y);
+                        var imageCoordinates  = MapManager.GetMap(MapTypes.Teyvat, 
+                            TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
+                        (m.ImageX, m.ImageY) = (imageCoordinates.X, imageCoordinates.Y);
+                        return m;
                     })
                     .ToList();
 
