@@ -82,16 +82,16 @@
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 		<PackageReference Include="Serilog.Sinks.RichTextBoxEx.Wpf" Version="1.1.0.1" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.5" />
+		<PackageReference Include="System.Drawing.Common" Version="10.0.0" />
 		<PackageReference Include="System.IO.Hashing" Version="9.0.4" />
 		<PackageReference Include="TorchSharp" Version="0.105.0" />
 		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.1.3" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
-		<PackageReference Include="WPF-UI" Version="4.0.2" />
-		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.0.2" />
-		<PackageReference Include="WPF-UI.Tray" Version="4.0.2" />
-		<PackageReference Include="WPF-UI.Violeta" Version="4.0.2.3" />
+		<PackageReference Include="WPF-UI" Version="4.2.0" />
+		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.2.0" />
+		<PackageReference Include="WPF-UI.Tray" Version="4.2.0" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.2.0" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YamlDotNet" Version="16.3.0" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />

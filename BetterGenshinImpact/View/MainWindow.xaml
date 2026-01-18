@@ -54,6 +54,8 @@
                            Margin="0,0,0,5"
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
+                           IsTopSeparatorVisible="False"
+                           IsFooterSeparatorVisible="False"
                            OpenPaneLength="160">
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
