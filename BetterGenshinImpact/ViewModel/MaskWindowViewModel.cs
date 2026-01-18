@@ -29,6 +29,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Model.MaskMap;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
+using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
 
 namespace BetterGenshinImpact.ViewModel
 {
@@ -66,8 +67,15 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private MapLabelCategoryVm? _selectedMapLabelCategory;
 
+        [ObservableProperty] private ObservableCollection<MapLabelItemVm> _selectedMapLabelItems = [];
+
+        [ObservableProperty] private ObservableCollection<MaskMapPoint> _mapPoints = [];
+
+        [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
+
         private bool _isMapLabelTreeLoaded;
         private CancellationTokenSource? _mapLabelItemsCts;
+        private CancellationTokenSource? _mapPointListCts;
         private readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
 
         public MaskWindowViewModel()
@@ -125,14 +133,40 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private void SelectMapLabelItem(MapLabelItemVm? item)
+        private async Task SelectMapLabelItem(MapLabelItemVm? item)
         {
             if (item == null)
             {
                 return;
             }
 
-            _logger.LogInformation("选择地图点位分类: {Name}({Id}) Count={Count}", item.Name, item.Id, item.PointCount);
+            var existing = SelectedMapLabelItems.FirstOrDefault(x => x.Id == item.Id);
+            if (existing != null)
+            {
+                SelectedMapLabelItems.Remove(existing);
+            }
+            else
+            {
+                SelectedMapLabelItems.Add(item);
+                await EnsureIconLoadedAsync(item, CancellationToken.None);
+            }
+
+            _logger.LogInformation("切换二级Label选择: {Name}({Id}) Parent={ParentId} Count={Count} Selected={SelectedCount}",
+                item.Name, item.Id, item.ParentId, item.PointCount, SelectedMapLabelItems.Count);
+
+            StartRefreshSelectedMapPoints();
+        }
+
+        [RelayCommand]
+        private void ResetSelectedMapLabelSelection()
+        {
+            if (SelectedMapLabelItems.Count == 0)
+            {
+                return;
+            }
+
+            SelectedMapLabelItems.Clear();
+            StartRefreshSelectedMapPoints();
         }
 
         private void RefreshSettings()
@@ -315,6 +349,96 @@ namespace BetterGenshinImpact.ViewModel
             }
         }
 
+        private void StartRefreshSelectedMapPoints()
+        {
+            _mapPointListCts?.Cancel();
+            _mapPointListCts?.Dispose();
+            _mapPointListCts = new CancellationTokenSource();
+            var ct = _mapPointListCts.Token;
+            _ = RefreshSelectedMapPointsAsync(ct);
+        }
+
+        private async Task RefreshSelectedMapPointsAsync(CancellationToken ct)
+        {
+            try
+            {
+                await Task.Delay(120, ct);
+
+                var selectedItems = await Application.Current.Dispatcher.InvokeAsync(
+                    () => SelectedMapLabelItems.ToList(),
+                    DispatcherPriority.Background);
+                ct.ThrowIfCancellationRequested();
+                if (selectedItems.Count == 0)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        MapPointLabels = [];
+                        MapPoints = [];
+                    }, DispatcherPriority.Background);
+                    return;
+                }
+
+                var selectedSecondLevelIds = selectedItems.Select(x => x.Id).ToHashSet();
+                var parentLabelIds = selectedItems
+                    .Select(x => x.ParentId)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToList();
+
+                var labels = selectedItems
+                    .GroupBy(x => x.Id)
+                    .Select(g => g.First())
+                    .Select(x => new MaskMapPointLabel
+                    {
+                        LabelId = x.Id.ToString(),
+                        Name = x.Name,
+                        // IconUrl = x.IconUrl
+                    })
+                    .ToList();
+
+                var apiService = App.GetService<IMihoyoMapApiService>();
+                if (apiService == null)
+                {
+                    return;
+                }
+
+                var resp = await apiService.GetPointListCacheAsync(new PointListRequest
+                {
+                    LabelIds = parentLabelIds
+                }, ct);
+
+                if (resp.Retcode != 0 || resp.Data == null)
+                {
+                    _logger.LogWarning("获取地图点位列表失败: {Retcode} {Message}", resp.Retcode, resp.Message);
+                    return;
+                }
+
+                var points = resp.Data.PointList
+                    .Where(x => selectedSecondLevelIds.Contains(x.LabelId))
+                    .Select(x => new MaskMapPoint
+                    {
+                        Id = x.Id.ToString(),
+                        X = x.XPos,
+                        Y = x.YPos,
+                        LabelId = x.LabelId.ToString()
+                    })
+                    .ToList();
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MapPointLabels = new ObservableCollection<MaskMapPointLabel>(labels);
+                    MapPoints = new ObservableCollection<MaskMapPoint>(points);
+                }, DispatcherPriority.Background);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "刷新地图点位列表时发生异常");
+            }
+        }
+
         private void StartPopulateRightList(MapLabelCategoryVm? category, string? searchText)
         {
             _mapLabelItemsCts?.Cancel();
@@ -489,7 +613,7 @@ namespace BetterGenshinImpact.ViewModel
             var list = (node.Children != null && node.Children.Count > 0 ? node.Children : [node])
                 .OrderBy(x => x.Sort)
                 .ThenBy(x => x.DisplayPriority)
-                .Select(x => new MapLabelItemVm(x))
+                .Select(x => new MapLabelItemVm(x, node.Id))
                 .ToList();
 
             Items = new ObservableCollection<MapLabelItemVm>(list);
@@ -502,15 +626,17 @@ namespace BetterGenshinImpact.ViewModel
         public string Name { get; }
         public string IconUrl { get; }
         public int PointCount { get; }
+        public int ParentId { get; }
 
         [ObservableProperty] private ImageSource? _iconImage;
 
-        public MapLabelItemVm(LabelNode node)
+        public MapLabelItemVm(LabelNode node, int parentId)
         {
             Id = node.Id;
             Name = node.Name;
             IconUrl = node.Icon;
             PointCount = node.PointCount;
+            ParentId = parentId;
         }
 
         public async Task LoadIconAsync(CancellationToken ct)

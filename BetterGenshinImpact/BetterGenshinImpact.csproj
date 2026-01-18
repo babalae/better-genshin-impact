@@ -53,9 +53,11 @@
 		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
 		<PackageReference Include="Emoji.Wpf" Version="0.3.4" />
 		<PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+		<PackageReference Include="LazyCache" Version="2.4.0" />
 		<PackageReference Include="MailKit" Version="4.14.0" />
 		<PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.4" />

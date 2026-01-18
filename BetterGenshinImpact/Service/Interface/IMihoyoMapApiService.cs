@@ -9,5 +9,6 @@ namespace BetterGenshinImpact.Service.Interface
     {
         Task<ApiResponse<LabelTreeData>> GetLabelTreeAsync(LabelTreeRequest request, CancellationToken ct = default);
         Task<ApiResponse<PointListData>> GetPointListAsync(PointListRequest request, CancellationToken ct = default);
+        Task<ApiResponse<PointListData>> GetPointListCacheAsync(PointListRequest request, CancellationToken ct = default);
     }
 }

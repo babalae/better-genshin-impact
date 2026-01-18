@@ -492,14 +492,22 @@
                                                 PlaceholderText="搜索当前区域下的标点分类"
                                                 Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                    <ui:Button Grid.Column="1"
-                                               Margin="8,0,0,0"
-                                               Width="32"
-                                               Height="32"
-                                               Background="#FF2B2F37"
-                                               Foreground="White"
-                                               Icon="{ui:SymbolIcon Dismiss24}"
-                                               Command="{Binding ToggleMapPointPickerCommand}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
+                                        <ui:Button Height="32"
+                                                   Padding="12,0"
+                                                   Background="#FF2B2F37"
+                                                   Foreground="White"
+                                                   Content="重置选择"
+                                                   Command="{Binding ResetSelectedMapLabelSelectionCommand}" />
+
+                                        <ui:Button Margin="8,0,0,0"
+                                                   Width="32"
+                                                   Height="32"
+                                                   Background="#FF2B2F37"
+                                                   Foreground="White"
+                                                   Icon="{ui:SymbolIcon Dismiss24}"
+                                                   Command="{Binding ToggleMapPointPickerCommand}" />
+                                    </StackPanel>
                                 </Grid>
 
                                 <Grid Grid.Row="1" Margin="12,0,12,12">
@@ -624,8 +632,82 @@
                                         </Grid>
                                     </Border>
                                 </Grid>
+
                             </Grid>
                         </Border>
+
+                        <ItemsControl Grid.Row="1"
+                                      Grid.Column="3"
+                                      Width="64"
+                                      MaxHeight="640"
+                                      HorizontalAlignment="Left"
+                                      VerticalAlignment="Top"
+                                      Margin="12,0,0,0"
+                                      ItemsSource="{Binding SelectedMapLabelItems}">
+                            <ItemsControl.Style>
+                                <Style TargetType="ItemsControl">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <Trigger Property="HasItems" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsMapPointPickerOpen}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ItemsControl.Style>
+                            <ItemsControl.Template>
+                                <ControlTemplate TargetType="ItemsControl">
+                                    <Border Background="#C81F232A"
+                                            BorderBrush="#26FFFFFF"
+                                            BorderThickness="1"
+                                            CornerRadius="12"
+                                            Padding="8">
+                                        <Border.Effect>
+                                            <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
+                                        </Border.Effect>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      Padding="0"
+                                                      Margin="0">
+                                            <ItemsPresenter />
+                                        </ScrollViewer>
+                                    </Border>
+                                </ControlTemplate>
+                            </ItemsControl.Template>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Vertical" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Width="40"
+                                            Height="40"
+                                            Margin="0,0,0,8"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="0"
+                                            HorizontalContentAlignment="Center"
+                                            VerticalContentAlignment="Center"
+                                            Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}">
+                                        <Border Width="40"
+                                                Height="40"
+                                                CornerRadius="20"
+                                                Background="#C82C323C"
+                                                BorderBrush="#403A424F"
+                                                BorderThickness="1">
+                                            <Image Width="30"
+                                                   Height="30"
+                                                   Stretch="Uniform"
+                                                   Source="{Binding IconImage}" />
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
                         <Viewbox Grid.Row="3" Grid.Column="0"
                                 Stretch="Uniform"
@@ -660,6 +742,7 @@
                             </Grid>
                         </Viewbox>
                     </Grid>
+
                 </Grid>
             </Grid>
         </Grid>

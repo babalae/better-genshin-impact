@@ -162,30 +162,11 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
-        
-        // 设置标签数据
-        var labels = new List<MaskMapPointLabel>
+        if (_viewModel != null)
         {
-            new() { LabelId = "1", Name = "宝箱" },
-            new() { LabelId = "2", Name = "敌人" },
-            // ... 更多标签
-        };
-        PointsCanvasControl.UpdateLabels(labels);
-    
-        // 设置点位数据
-        var points = new ObservableCollection<MaskMapPoint>
-        {
-            new() { Id = "1", X = 3750, Y = 1500, LabelId = "1" },
-            new() { Id = "2", X = 3500, Y = 1300, LabelId = "2" },
-            new() { Id = "2", X = 100, Y = 200, LabelId = "2" },
-            // ... 更多点位
-        };
-        PointsCanvasControl.UpdatePoints(points);
-        
-        PointsCanvasControl.UpdateViewport(0, 0, 1920, 1080);
-        // PointsCanvasControl.UpdateViewport(0, 0, 1600, 900);
-        // PointsCanvasControl.UpdateViewport(0, 0, 200, 400);
-
+            PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
+            PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
+        }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -217,6 +198,28 @@ public partial class MaskWindow : Window
             e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
         {
             Dispatcher.Invoke(UpdateClickThroughState);
+        }
+
+        if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel != null)
+                {
+                    PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
+                }
+            });
+        }
+
+        if (e.PropertyName == nameof(MaskWindowViewModel.MapPoints))
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel != null)
+                {
+                    PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
+                }
+            });
         }
     }
 

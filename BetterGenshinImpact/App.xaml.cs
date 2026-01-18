@@ -21,6 +21,8 @@ using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using LazyCache;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -139,6 +141,8 @@ public partial class App : Application
                 services.AddSingleton<HutaoNamedPipe>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
+                services.AddMemoryCache();
+                services.AddSingleton<IAppCache, CachingService>();
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 
                 services.AddSingleton(TimeProvider.System);
