@@ -43,7 +43,7 @@ public class TpTask
     private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
     private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
-    private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+    private string _mapMatchingMethod;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
 
     private readonly CancellationToken ct;
@@ -62,9 +62,10 @@ public class TpTask
 
     private const double DisplayTpPointZoomLevel = 4.4; // 传送点显示的时候的地图比例
 
-    public TpTask(CancellationToken ct)
+    public TpTask(CancellationToken ct, string? matchingMethod = null)
     {
         this.ct = ct;
+        this._mapMatchingMethod = matchingMethod ?? TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         TpTaskParam param = new TpTaskParam();
         this.cultureInfo = param.GameCultureInfo;
         this.stringLocalizer = param.StringLocalizer;
