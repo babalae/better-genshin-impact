@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,7 +13,7 @@ using Wpf.Ui.Tray.Controls;
 
 namespace BetterGenshinImpact.View;
 
-public partial class MainWindow : INavigationWindow
+public partial class MainWindow : FluentWindow, INavigationWindow
 {
     private readonly ILogger<MainWindow> _logger = App.GetLogger<MainWindow>();
 

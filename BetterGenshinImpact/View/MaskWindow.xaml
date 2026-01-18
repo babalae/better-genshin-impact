@@ -443,11 +443,13 @@
                     <Border Margin="0,8,0,0"
                             Width="540"
                             Height="640"
-                            Background="#FF1F232A"
+                            Background="#C81F232A"
+                            BorderBrush="#26FFFFFF"
+                            BorderThickness="1"
                             CornerRadius="12"
                             Visibility="{Binding IsMapPointPickerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Border.Effect>
-                            <DropShadowEffect Opacity="0.55" BlurRadius="18" ShadowDepth="0" />
+                            <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
                         </Border.Effect>
                         <Grid>
                             <Grid.RowDefinitions>
@@ -459,7 +461,6 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
                                 <ui:TextBox Grid.Column="0"
@@ -469,18 +470,11 @@
 
                                 <ui:Button Grid.Column="1"
                                            Margin="8,0,0,0"
+                                           Width="32"
                                            Height="32"
                                            Background="#FF2B2F37"
                                            Foreground="White"
-                                           Content="刷新"
-                                           Command="{Binding ReloadMapLabelTreeCommand}" />
-
-                                <ui:Button Grid.Column="2"
-                                           Margin="8,0,0,0"
-                                           Height="32"
-                                           Background="#FF2B2F37"
-                                           Foreground="White"
-                                           Content="关闭"
+                                           Icon="{ui:SymbolIcon Dismiss24}"
                                            Command="{Binding ToggleMapPointPickerCommand}" />
                             </Grid>
 
@@ -492,7 +486,9 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Border Grid.Column="0"
-                                        Background="#FF232831"
+                                        Background="#B2232831"
+                                        BorderBrush="#1FFFFFFF"
+                                        BorderThickness="1"
                                         CornerRadius="10"
                                         Padding="8">
                                     <ui:ListView x:Name="MapLabelCategoriesListView"
@@ -518,7 +514,9 @@
                                 </Border>
 
                                 <Border Grid.Column="2"
-                                        Background="#FF232831"
+                                        Background="#B2232831"
+                                        BorderBrush="#1FFFFFFF"
+                                        BorderThickness="1"
                                         CornerRadius="10"
                                         Padding="10">
                                     <Grid>
@@ -546,8 +544,8 @@
                                                         <Button Width="160"
                                                                 Height="54"
                                                                 Margin="0,0,8,8"
-                                                                Background="#FF2C323C"
-                                                                BorderBrush="#FF3A424F"
+                                                                Background="#B22C323C"
+                                                                BorderBrush="#403A424F"
                                                                 BorderThickness="1"
                                                                 Padding="8,0"
                                                                 HorizontalContentAlignment="Stretch"
@@ -561,7 +559,7 @@
                                                                         Width="36"
                                                                         Height="36"
                                                                         CornerRadius="8"
-                                                                        Background="#FF232831"
+                                                                        Background="#80232831"
                                                                         Margin="0,0,4,0">
                                                                     <Image Width="28"
                                                                            Height="28"

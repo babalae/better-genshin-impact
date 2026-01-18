@@ -118,13 +118,6 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private async Task ReloadMapLabelTreeAsync()
-        {
-            _isMapLabelTreeLoaded = false;
-            await EnsureLabelTreeLoadedAsync();
-        }
-
-        [RelayCommand]
         private void SelectMapLabelCategory(MapLabelCategoryVm? category)
         {
             SelectedMapLabelCategory = category;
