@@ -533,7 +533,8 @@ namespace BetterGenshinImpact.ViewModel
     file static class MapIconImageCache
     {
         private static readonly HttpClient _http = new();
-        private static readonly ConcurrentDictionary<string, Task<ImageSource?>> _tasks = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly TimeSpan _ttl = TimeSpan.FromMinutes(10);
+        private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
 
         public static Task<ImageSource?> GetAsync(string url, CancellationToken ct)
         {
@@ -542,7 +543,39 @@ namespace BetterGenshinImpact.ViewModel
                 return Task.FromResult<ImageSource?>(null);
             }
 
-            return _tasks.GetOrAdd(url, LoadCoreAsync);
+            var now = DateTimeOffset.UtcNow;
+            while (true)
+            {
+                if (_cache.TryGetValue(url, out var existing))
+                {
+                    if (existing.ExpiresAt > now)
+                    {
+                        return existing.Task;
+                    }
+
+                    _cache.TryRemove(new KeyValuePair<string, CacheEntry>(url, existing));
+                    continue;
+                }
+
+                var entry = new CacheEntry(now.Add(_ttl), () => LoadCoreAsync(url));
+                if (_cache.TryAdd(url, entry))
+                {
+                    return entry.Task;
+                }
+            }
+        }
+
+        private sealed class CacheEntry
+        {
+            public DateTimeOffset ExpiresAt { get; }
+            private readonly Lazy<Task<ImageSource?>> _lazyTask;
+            public Task<ImageSource?> Task => _lazyTask.Value;
+
+            public CacheEntry(DateTimeOffset expiresAt, Func<Task<ImageSource?>> factory)
+            {
+                ExpiresAt = expiresAt;
+                _lazyTask = new Lazy<Task<ImageSource?>>(factory);
+            }
         }
 
         private static async Task<ImageSource?> LoadCoreAsync(string url)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -14,12 +15,16 @@ public class PointImageCacheManager
     private static readonly Lazy<PointImageCacheManager> _instance = new(() => new PointImageCacheManager());
     public static PointImageCacheManager Instance => _instance.Value;
 
-    private readonly ConcurrentDictionary<string, ImageSource> _imageCache = new();
+    private static readonly TimeSpan _ttl = TimeSpan.FromMinutes(10);
+    private readonly ConcurrentDictionary<string, CacheEntry> _imageCache = new();
     private readonly object _loadLock = new();
+    private readonly ConcurrentDictionary<string, Task> _inflightLoads = new(StringComparer.OrdinalIgnoreCase);
 
     private PointImageCacheManager()
     {
     }
+
+    public event EventHandler<string>? ImageUpdated;
 
     /// <summary>
     /// 获取图片（如果未缓存则加载）
@@ -29,7 +34,67 @@ public class PointImageCacheManager
         if (string.IsNullOrEmpty(iconUrl))
             return null;
 
-        return _imageCache.GetOrAdd(labelId, _ => LoadImage(iconUrl));
+        var now = DateTimeOffset.UtcNow;
+        if (_imageCache.TryGetValue(labelId, out var existing) &&
+            existing.ExpiresAt > now &&
+            string.Equals(existing.IconUrl, iconUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return existing.Image;
+        }
+
+        lock (_loadLock)
+        {
+            now = DateTimeOffset.UtcNow;
+            if (_imageCache.TryGetValue(labelId, out existing) &&
+                existing.ExpiresAt > now &&
+                string.Equals(existing.IconUrl, iconUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                return existing.Image;
+            }
+
+            var image = LoadImage(iconUrl);
+            if (image == null)
+            {
+                return null;
+            }
+
+            _imageCache[labelId] = new CacheEntry(image, iconUrl, now.Add(_ttl));
+            return image;
+        }
+    }
+
+    public ImageSource? TryGetImage(string labelId, string iconUrl)
+    {
+        if (string.IsNullOrEmpty(iconUrl))
+        {
+            return null;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        if (_imageCache.TryGetValue(labelId, out var existing) &&
+            existing.ExpiresAt > now &&
+            string.Equals(existing.IconUrl, iconUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return existing.Image;
+        }
+
+        if (existing != null && existing.ExpiresAt <= now)
+        {
+            _imageCache.TryRemove(labelId, out _);
+        }
+
+        return null;
+    }
+
+    public Task EnsureImageAsync(string labelId, string iconUrl, CancellationToken ct = default)
+    {
+        if (TryGetImage(labelId, iconUrl) != null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var key = $"{labelId}|{iconUrl}";
+        return _inflightLoads.GetOrAdd(key, _ => LoadAndStoreAsync(labelId, iconUrl, key, ct));
     }
 
     /// <summary>
@@ -37,13 +102,20 @@ public class PointImageCacheManager
     /// </summary>
     public void PreloadImage(string labelId, string iconUrl)
     {
-        if (string.IsNullOrEmpty(iconUrl) || _imageCache.ContainsKey(labelId))
+        if (string.IsNullOrEmpty(iconUrl))
             return;
 
         try
         {
-            var image = LoadImage(iconUrl);
-            _imageCache.TryAdd(labelId, image);
+            var now = DateTimeOffset.UtcNow;
+            if (_imageCache.TryGetValue(labelId, out var existing) &&
+                existing.ExpiresAt > now &&
+                string.Equals(existing.IconUrl, iconUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _ = EnsureImageAsync(labelId, iconUrl);
         }
         catch (Exception ex)
         {
@@ -81,6 +153,30 @@ public class PointImageCacheManager
     public void RemoveImage(string labelId)
     {
         _imageCache.TryRemove(labelId, out _);
+    }
+
+    private async Task LoadAndStoreAsync(string labelId, string iconUrl, string inflightKey, CancellationToken ct)
+    {
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            var image = await StaRunner.Instance.InvokeAsync(() => LoadImage(iconUrl)).ConfigureAwait(false);
+            if (image == null)
+            {
+                return;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            _imageCache[labelId] = new CacheEntry(image, iconUrl, now.Add(_ttl));
+            ImageUpdated?.Invoke(this, labelId);
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _inflightLoads.TryRemove(inflightKey, out _);
+        }
     }
 
     /// <summary>
@@ -152,14 +248,68 @@ public class PointImageCacheManager
     public (int Count, long EstimatedMemoryBytes) GetCacheStats()
     {
         long estimatedMemory = 0;
-        foreach (var image in _imageCache.Values)
+        foreach (var entry in _imageCache.Values)
         {
-            if (image is BitmapSource bitmapSource)
+            if (entry.Image is BitmapSource bitmapSource)
             {
                 estimatedMemory += bitmapSource.PixelWidth * bitmapSource.PixelHeight * 4; // 假设 ARGB
             }
         }
 
         return (_imageCache.Count, estimatedMemory);
+    }
+
+    private sealed class CacheEntry
+    {
+        public ImageSource Image { get; }
+        public string IconUrl { get; }
+        public DateTimeOffset ExpiresAt { get; }
+
+        public CacheEntry(ImageSource image, string iconUrl, DateTimeOffset expiresAt)
+        {
+            Image = image;
+            IconUrl = iconUrl;
+            ExpiresAt = expiresAt;
+        }
+    }
+
+    private sealed class StaRunner
+    {
+        public static StaRunner Instance { get; } = new();
+
+        private readonly BlockingCollection<Action> _queue = new();
+        private readonly Thread _thread;
+
+        private StaRunner()
+        {
+            _thread = new Thread(Run) { IsBackground = true };
+            _thread.SetApartmentState(ApartmentState.STA);
+            _thread.Start();
+        }
+
+        private void Run()
+        {
+            foreach (var action in _queue.GetConsumingEnumerable())
+            {
+                action();
+            }
+        }
+
+        public Task<T> InvokeAsync<T>(Func<T> func)
+        {
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _queue.Add(() =>
+            {
+                try
+                {
+                    tcs.SetResult(func());
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            return tcs.Task;
+        }
     }
 }

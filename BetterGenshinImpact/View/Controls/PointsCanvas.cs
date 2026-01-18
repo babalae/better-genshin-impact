@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -22,6 +23,7 @@ public class PointsCanvas : FrameworkElement
     private readonly DrawingVisual _drawingVisual;
     private readonly Dictionary<string, Brush> _colorBrushCache;
     private readonly Random _random;
+    private int _refreshQueued;
 
     // 私有字段
     private ObservableCollection<MaskMapPoint> _points;
@@ -96,6 +98,31 @@ public class PointsCanvas : FrameworkElement
         
         // 启用命中测试
         IsHitTestVisible = true;
+
+        PointImageCacheManager.Instance.ImageUpdated += PointImageCacheManagerOnImageUpdated;
+    }
+
+    protected override void OnVisualParentChanged(DependencyObject oldParent)
+    {
+        base.OnVisualParentChanged(oldParent);
+        if (VisualParent == null)
+        {
+            PointImageCacheManager.Instance.ImageUpdated -= PointImageCacheManagerOnImageUpdated;
+        }
+    }
+
+    private void PointImageCacheManagerOnImageUpdated(object? sender, string e)
+    {
+        if (Interlocked.Exchange(ref _refreshQueued, 1) != 0)
+        {
+            return;
+        }
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            Interlocked.Exchange(ref _refreshQueued, 0);
+            Refresh();
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     #region 集合和属性变更处理
@@ -212,8 +239,7 @@ public class PointsCanvas : FrameworkElement
         // 获取点位标签
         if (_labelMap.TryGetValue(point.LabelId, out var label))
         {
-            // 尝试从缓存获取图片
-            var image = PointImageCacheManager.Instance.GetImage(label.LabelId, label.IconUrl);
+            var image = PointImageCacheManager.Instance.TryGetImage(label.LabelId, label.IconUrl);
 
             if (image != null)
             {
@@ -222,6 +248,8 @@ public class PointsCanvas : FrameworkElement
             }
             else
             {
+                _ = PointImageCacheManager.Instance.EnsureImageAsync(label.LabelId, label.IconUrl);
+
                 // 绘制颜色圆点
                 var brush = GetColorBrush(label);
                 dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
