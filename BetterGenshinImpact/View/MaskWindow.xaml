@@ -441,7 +441,7 @@
                                Command="{Binding ToggleMapPointPickerCommand}" />
 
                     <Border Margin="0,8,0,0"
-                            Width="520"
+                            Width="540"
                             Height="640"
                             Background="#FF1F232A"
                             CornerRadius="12"
@@ -543,45 +543,47 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Button Width="150"
-                                                                Height="64"
-                                                                Margin="0,0,10,10"
+                                                        <Button Width="160"
+                                                                Height="54"
+                                                                Margin="0,0,8,8"
                                                                 Background="#FF2C323C"
                                                                 BorderBrush="#FF3A424F"
                                                                 BorderThickness="1"
+                                                                Padding="8,0"
+                                                                HorizontalContentAlignment="Stretch"
+                                                                VerticalContentAlignment="Center"
                                                                 Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 CommandParameter="{Binding}">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <Border Grid.Column="0"
+                                                            <DockPanel HorizontalAlignment="Stretch"
+                                                                       VerticalAlignment="Center"
+                                                                       LastChildFill="True">
+                                                                <Border DockPanel.Dock="Left"
                                                                         Width="36"
                                                                         Height="36"
                                                                         CornerRadius="8"
                                                                         Background="#FF232831"
-                                                                        Margin="8,0,8,0">
+                                                                        Margin="0,0,4,0">
                                                                     <Image Width="28"
                                                                            Height="28"
                                                                            Stretch="Uniform"
-                                                                           Source="{Binding Icon}" />
+                                                                               Source="{Binding IconImage}" />
                                                                 </Border>
 
-                                                                <TextBlock Grid.Column="1"
+                                                                <TextBlock DockPanel.Dock="Right"
+                                                                           Width="42"
                                                                            VerticalAlignment="Center"
-                                                                           Foreground="White"
-                                                                           Text="{Binding Name}"
-                                                                           TextTrimming="CharacterEllipsis" />
-
-                                                                <TextBlock Grid.Column="2"
-                                                                           Margin="8,0,8,0"
-                                                                           VerticalAlignment="Center"
+                                                                           HorizontalAlignment="Right"
+                                                                           TextAlignment="Right"
                                                                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                                                            Text="{Binding PointCount}" />
-                                                            </Grid>
+
+                                                                <TextBlock VerticalAlignment="Center"
+                                                                           Foreground="White"
+                                                                           HorizontalAlignment="Stretch"
+                                                                           TextAlignment="Left"
+                                                                           Text="{Binding Name}"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </DockPanel>
                                                         </Button>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

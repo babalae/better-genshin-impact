@@ -329,6 +329,11 @@ public partial class MaskWindow : Window
             return;
         }
     
+        if (ReferenceEquals(MapLabelCategoriesListView.SelectedItem, item))
+        {
+            return;
+        }
+
         MapLabelCategoriesListView.SelectedItem = item;
     
         if (DataContext is MaskWindowViewModel vm)

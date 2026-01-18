@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
@@ -14,11 +14,18 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using PresentMonFps;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using BetterGenshinImpact.Model.MaskMap;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
@@ -49,6 +56,8 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private bool _isMapLabelTreeLoading;
 
+        [ObservableProperty] private bool _isMapLabelItemsLoading;
+
         [ObservableProperty] private string _mapLabelSearchText = string.Empty;
 
         [ObservableProperty] private ObservableCollection<MapLabelCategoryVm> _mapLabelCategories = [];
@@ -58,6 +67,8 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private MapLabelCategoryVm? _selectedMapLabelCategory;
 
         private bool _isMapLabelTreeLoaded;
+        private CancellationTokenSource? _mapLabelItemsCts;
+        private readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
 
         public MaskWindowViewModel()
         {
@@ -117,7 +128,7 @@ namespace BetterGenshinImpact.ViewModel
         private void SelectMapLabelCategory(MapLabelCategoryVm? category)
         {
             SelectedMapLabelCategory = category;
-            RebuildRightList(category, MapLabelSearchText);
+            StartPopulateRightList(category, MapLabelSearchText);
         }
 
         [RelayCommand]
@@ -256,7 +267,7 @@ namespace BetterGenshinImpact.ViewModel
 
         partial void OnMapLabelSearchTextChanged(string value)
         {
-            RebuildRightList(SelectedMapLabelCategory, value);
+            StartPopulateRightList(SelectedMapLabelCategory, value);
         }
 
         private async Task EnsureLabelTreeLoadedAsync()
@@ -311,17 +322,113 @@ namespace BetterGenshinImpact.ViewModel
             }
         }
 
-        private void RebuildRightList(MapLabelCategoryVm? category, string? searchText)
+        private void StartPopulateRightList(MapLabelCategoryVm? category, string? searchText)
         {
-            var query = category?.Items?.AsEnumerable() ?? Enumerable.Empty<MapLabelItemVm>();
+            _mapLabelItemsCts?.Cancel();
+            _mapLabelItemsCts?.Dispose();
+            _mapLabelItemsCts = new CancellationTokenSource();
+            var ct = _mapLabelItemsCts.Token;
+            _ = PopulateRightListAsync(category, searchText, ct);
+        }
 
-            if (!string.IsNullOrWhiteSpace(searchText))
+        private async Task PopulateRightListAsync(MapLabelCategoryVm? category, string? searchText, CancellationToken ct)
+        {
+            try
             {
-                var q = searchText.Trim();
-                query = query.Where(x => x.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+                IsMapLabelItemsLoading = true;
+                await Application.Current.Dispatcher.InvokeAsync(() => { MapLabelItems = []; }, DispatcherPriority.Background);
+
+                if (category?.Items == null)
+                {
+                    return;
+                }
+
+                var src = category.Items.AsEnumerable();
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    var q = searchText.Trim();
+                    src = src.Where(x => x.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+                }
+
+                const int batchSize = 24;
+                var batch = new List<MapLabelItemVm>(batchSize);
+
+                foreach (var item in src)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    batch.Add(item);
+                    if (batch.Count < batchSize)
+                    {
+                        continue;
+                    }
+
+                    var snapshot = batch.ToArray();
+                    batch.Clear();
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        foreach (var it in snapshot)
+                        {
+                            MapLabelItems.Add(it);
+                        }
+                    }, DispatcherPriority.Background);
+
+                    foreach (var it in snapshot)
+                    {
+                        _ = EnsureIconLoadedAsync(it, ct);
+                    }
+
+                    await Task.Delay(1, ct);
+                }
+
+                if (batch.Count > 0)
+                {
+                    var snapshot = batch.ToArray();
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        foreach (var it in snapshot)
+                        {
+                            MapLabelItems.Add(it);
+                        }
+                    }, DispatcherPriority.Background);
+
+                    foreach (var it in snapshot)
+                    {
+                        _ = EnsureIconLoadedAsync(it, ct);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                IsMapLabelItemsLoading = false;
+            }
+        }
+
+        private async Task EnsureIconLoadedAsync(MapLabelItemVm item, CancellationToken ct)
+        {
+            if (item.IconImage != null || string.IsNullOrEmpty(item.IconUrl))
+            {
+                return;
             }
 
-            MapLabelItems = new ObservableCollection<MapLabelItemVm>(query);
+            await _iconLoadSemaphore.WaitAsync(ct);
+            try
+            {
+                await item.LoadIconAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "加载地图点位图标失败");
+            }
+            finally
+            {
+                _iconLoadSemaphore.Release();
+            }
         }
 
         private static ApiResponse<LabelTreeData>? TryLoadLabelTreeFromLocalExample()
@@ -400,15 +507,145 @@ namespace BetterGenshinImpact.ViewModel
     {
         public int Id { get; }
         public string Name { get; }
-        public string Icon { get; }
+        public string IconUrl { get; }
         public int PointCount { get; }
+
+        [ObservableProperty] private ImageSource? _iconImage;
 
         public MapLabelItemVm(LabelNode node)
         {
             Id = node.Id;
             Name = node.Name;
-            Icon = node.Icon;
+            IconUrl = node.Icon;
             PointCount = node.PointCount;
+        }
+
+        public async Task LoadIconAsync(CancellationToken ct)
+        {
+            if (IconImage != null || string.IsNullOrEmpty(IconUrl))
+            {
+                return;
+            }
+
+            var img = await MapIconImageCache.GetAsync(IconUrl, ct);
+            if (img == null)
+            {
+                return;
+            }
+
+            await Application.Current.Dispatcher.InvokeAsync(() => { IconImage = img; }, DispatcherPriority.Background);
+        }
+    }
+
+    file static class MapIconImageCache
+    {
+        private static readonly HttpClient _http = new();
+        private static readonly ConcurrentDictionary<string, Task<ImageSource?>> _tasks = new(StringComparer.OrdinalIgnoreCase);
+
+        public static Task<ImageSource?> GetAsync(string url, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return Task.FromResult<ImageSource?>(null);
+            }
+
+            return _tasks.GetOrAdd(url, LoadCoreAsync);
+        }
+
+        private static async Task<ImageSource?> LoadCoreAsync(string url)
+        {
+            try
+            {
+                if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var bytes = await _http.GetByteArrayAsync(url);
+                    return await StaRunner.Instance.InvokeAsync(() =>
+                    {
+                        using var ms = new MemoryStream(bytes);
+                        var bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.StreamSource = ms;
+                        bmp.EndInit();
+                        bmp.Freeze();
+                        return (ImageSource)bmp;
+                    });
+                }
+
+                var absoluteOrRelative = ToAbsoluteOrRelativeUri(url);
+                return await StaRunner.Instance.InvokeAsync(() =>
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.UriSource = absoluteOrRelative;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return (ImageSource)bmp;
+                });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Uri ToAbsoluteOrRelativeUri(string iconUrl)
+        {
+            if (iconUrl.StartsWith("pack://", StringComparison.OrdinalIgnoreCase))
+            {
+                return new Uri(iconUrl, UriKind.Absolute);
+            }
+
+            if (Uri.TryCreate(iconUrl, UriKind.Absolute, out var abs))
+            {
+                return abs;
+            }
+
+            var basePath = AppContext.BaseDirectory;
+            var fullPath = Path.Combine(basePath, iconUrl);
+            return new Uri(fullPath, UriKind.Absolute);
+        }
+    }
+
+    file sealed class StaRunner
+    {
+        public static StaRunner Instance { get; } = new();
+
+        private readonly BlockingCollection<Action> _queue = new();
+        private readonly Thread _thread;
+
+        private StaRunner()
+        {
+            _thread = new Thread(Run) { IsBackground = true };
+            _thread.SetApartmentState(ApartmentState.STA);
+            _thread.Start();
+        }
+
+        private void Run()
+        {
+            foreach (var action in _queue.GetConsumingEnumerable())
+            {
+                action();
+            }
+        }
+
+        public Task<T> InvokeAsync<T>(Func<T> func)
+        {
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _queue.Add(() =>
+            {
+                try
+                {
+                    tcs.SetResult(func());
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            return tcs.Task;
         }
     }
 }
