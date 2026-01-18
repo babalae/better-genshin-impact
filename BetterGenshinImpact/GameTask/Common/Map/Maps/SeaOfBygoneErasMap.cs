@@ -57,8 +57,8 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         var mapTeleports = new List<Point>();
         var tpJson = System.IO.File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
 
-        JArray j = JArray.Parse(tpJson);
-        foreach (JObject i in j)
+        JObject j = JObject.Parse(tpJson);
+        foreach (JObject i in j["data"]!)
         {
             var sceneId = i["sceneId"];
             if (sceneId != null && (int)sceneId == 11)
