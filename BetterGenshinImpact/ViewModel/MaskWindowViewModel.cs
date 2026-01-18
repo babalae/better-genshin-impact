@@ -29,6 +29,8 @@ using System.Windows.Threading;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model.MaskMap;
+using LazyCache;
+using Microsoft.Extensions.Caching.Memory;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
@@ -396,7 +398,7 @@ namespace BetterGenshinImpact.ViewModel
                     {
                         LabelId = x.Id.ToString(),
                         Name = x.Name,
-                        // IconUrl = x.IconUrl
+                        IconUrl = x.IconUrl
                     })
                     .ToList();
 
@@ -672,7 +674,7 @@ namespace BetterGenshinImpact.ViewModel
     {
         private static readonly HttpClient _http = new();
         private static readonly TimeSpan _ttl = TimeSpan.FromMinutes(10);
-        private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly IAppCache _cache = App.GetService<IAppCache>() ?? new CachingService();
 
         public static Task<ImageSource?> GetAsync(string url, CancellationToken ct)
         {
@@ -681,39 +683,14 @@ namespace BetterGenshinImpact.ViewModel
                 return Task.FromResult<ImageSource?>(null);
             }
 
-            var now = DateTimeOffset.UtcNow;
-            while (true)
-            {
-                if (_cache.TryGetValue(url, out var existing))
-                {
-                    if (existing.ExpiresAt > now)
+            return _cache.GetOrAddAsync(
+                    url,
+                    async (ICacheEntry entry) =>
                     {
-                        return existing.Task;
-                    }
-
-                    _cache.TryRemove(new KeyValuePair<string, CacheEntry>(url, existing));
-                    continue;
-                }
-
-                var entry = new CacheEntry(now.Add(_ttl), () => LoadCoreAsync(url));
-                if (_cache.TryAdd(url, entry))
-                {
-                    return entry.Task;
-                }
-            }
-        }
-
-        private sealed class CacheEntry
-        {
-            public DateTimeOffset ExpiresAt { get; }
-            private readonly Lazy<Task<ImageSource?>> _lazyTask;
-            public Task<ImageSource?> Task => _lazyTask.Value;
-
-            public CacheEntry(DateTimeOffset expiresAt, Func<Task<ImageSource?>> factory)
-            {
-                ExpiresAt = expiresAt;
-                _lazyTask = new Lazy<Task<ImageSource?>>(factory);
-            }
+                        entry.AbsoluteExpirationRelativeToNow = _ttl;
+                        return await LoadCoreAsync(url);
+                    })
+                .WaitAsync(ct);
         }
 
         private static async Task<ImageSource?> LoadCoreAsync(string url)
