@@ -218,7 +218,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.CancelTaskHotkey),
             Config.HotKeyConfig.CancelTaskHotkey,
             Config.HotKeyConfig.CancelTaskHotkeyType,
-            (_, _) => { CancellationContext.Instance.ManualCancel(); }
+            (_, _) =>
+            {
+                _logger.LogInformation("检测到您配置的停止快捷键{Key}按下，停止当前执行任务", Config.HotKeyConfig.CancelTaskHotkey);
+                CancellationContext.Instance.ManualCancel();
+            }
         ));
         systemDirectory.Children.Add(new HotKeySettingModel(
             "暂停当前脚本/独立任务",

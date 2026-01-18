@@ -8,6 +8,7 @@ using System.Threading;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.GameTask.AutoWood.Utils;
 
@@ -107,9 +108,10 @@ internal sealed class Login3rdParty
                 var (loginWindow, windowType) = GetBiliLoginWindow(process);
                 if (loginWindow != IntPtr.Zero)
                 {
+                    var dpiScale = TaskContext.Instance().DpiScale;
                     if (windowType.Contains("协议"))
                     {
-                        GameCaptureRegion.GameRegion1080PPosClick(1030, 615);
+                        GameCaptureRegion.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
 
                         // 检查窗口是否还存在
                         var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
@@ -124,7 +126,7 @@ internal sealed class Login3rdParty
                     if (windowType.Contains("登录"))
                     {
                         Thread.Sleep(2000);
-                        GameCaptureRegion.GameRegion1080PPosClick(960, 630);
+                        GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
                         Thread.Sleep(2000);
 
                         // 检查窗口是否还存在

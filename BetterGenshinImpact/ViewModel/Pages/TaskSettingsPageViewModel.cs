@@ -633,7 +633,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToGetGridIconsUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/getGridIcons.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/dev/getGridIcons.html"));
     }
 
     [RelayCommand]

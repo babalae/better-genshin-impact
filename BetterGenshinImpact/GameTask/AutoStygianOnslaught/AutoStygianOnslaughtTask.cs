@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -30,6 +31,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.GameTask.AutoFight;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
@@ -94,6 +96,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
         // 前置进入秘境
         await TpToDomain(page);
+        await SelectDifficulty(page);
         await EnterDomain(page);
         await ChooseBoss(page);
 
@@ -141,7 +144,12 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
             Bv.ClickWhiteCancelButton(ra); // 点击返回后是主角
             await Bv.WaitUntilFound(ElementAssets.Instance.LeylineDisorderIconRo, _ct);
-            await Delay(6000, _ct); // 等待载入完成
+            await Delay(2500, _ct); // 等待载入完成
+            // 走一步防止在地脉花上
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            await Delay(200, _ct);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            await Delay(3400, _ct); // 等待载入完成
 
             // 4. 寻找地脉花
             _logger.LogInformation($"{Name}：{{Text}}", "3. 寻找地脉花");
@@ -193,7 +201,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         }
     }
 
-    private async Task TpToDomain(BvPage page)
+    private async Task TpToDomain(BvPage page, bool isRetry = false)
     {
         await new ReturnMainUiTask().Start(_ct);
         await Delay(100, _ct);
@@ -203,6 +211,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         {
             if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
             {
+                await Delay(500, _ct);
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                 _logger.LogInformation($"{Name}：交互秘境");
                 return;
@@ -216,6 +225,7 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await page.GetByText("活动一览").WithRoi(r => r.CutLeftTop(0.3, 0.2)).WaitFor();
         await Delay(500, _ct);
 
+        // 查找并点击幽境危战 - 前往挑战
         if (page.GetByText("幽境危战").WithRoi(r => r.CutRight(0.5)).IsExist())
         {
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
@@ -226,11 +236,35 @@ public class AutoStygianOnslaughtTask : ISoloTask
             await Delay(1500, _ct);
             await page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).Click();
         }
+        else
+        {
+            throw new Exception("未找到幽境危战选项");
+        }
 
         _logger.LogInformation($"{Name}：点击前往挑战");
 
         // 传送
         await Delay(1000, _ct);
+
+        try
+        {
+            await page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo)
+                .WaitFor();
+        }
+        catch
+        {
+            if (!isRetry)
+            {
+                // 未找到传送按钮，先返回主界面再重新进入
+                _logger.LogWarning($"{Name}：未找到传送按钮，返回七天神像重新开始");
+                await new TpTask(_ct).TpToStatueOfTheSeven();
+                // 重新执行从打开活动界面开始的流程
+                await TpToDomain(page, isRetry: true);
+            }
+
+            return;
+        }
+
         await page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo).Click();
         _logger.LogInformation($"{Name}：点击传送");
         await Delay(800, _ct);
@@ -246,7 +280,6 @@ public class AutoStygianOnslaughtTask : ISoloTask
 
     private async Task EnterDomain(BvPage page)
     {
-        await Delay(4000, _ct); // 等待动画完成
         await page.Locator(ElementAssets.Instance.BtnWhiteConfirm)
             .WithRoi(r => r.CutRight(0.5))
             .ClickUntilDisappears();
@@ -284,6 +317,9 @@ public class AutoStygianOnslaughtTask : ISoloTask
             {
                 page.Click(203, 728);
             }
+
+            // 切换战斗队伍
+            await SwitchTeam(page);
 
             await Delay(120, _ct);
 
@@ -362,10 +398,45 @@ public class AutoStygianOnslaughtTask : ISoloTask
     /// </summary>
     private Task DomainEndDetectionTask(CancellationTokenSource cts)
     {
-        return new Task(async () =>
+        return new Task(async void () =>
         {
-            await Bv.WaitUntilFound(ElementAssets.Instance.BtnWhiteCancel, cts.Token, 150, 1000);
-            await cts.CancelAsync();
+            try
+            {
+                var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+                var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+                RecognitionObject whiteCancelRo = new RecognitionObject
+                {
+                    Name = "BtnWhiteCancel",
+                    RecognitionType = RecognitionTypes.TemplateMatch,
+                    TemplateImageMat = ElementAssets.Instance.BtnWhiteCancel.TemplateImageMat,
+                    RegionOfInterest = new Rect(captureRect.Width / 3, captureRect.Height - (int)(captureRect.Height * 0.22), captureRect.Width / 3, (int)(captureRect.Height * 0.22)),
+                    Use3Channels = true
+                }.InitTemplate();
+
+                await NewRetry.WaitForAction(() =>
+                {
+                    using var ra = CaptureToRectArea();
+                    using var ret = ra.Find(whiteCancelRo);
+                    if (ret.IsExist())
+                    {
+                        // OCR 保证识别不出错
+                        var list = ra.FindMulti(RecognitionObject.Ocr(ret.X + 40 * assetScale, ret.Y - 20 * assetScale, 270 * assetScale, ret.Height * 2));
+                        if (list.Any(o => o.Text.Contains("返回")))
+                        {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }, cts.Token, 300, 1000);
+                _logger.LogInformation("检测到战斗结束，结束战斗操作线程");
+                await cts.CancelAsync();
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation("对局结束检测线程异常结束：{Msg}", e.Message);
+                _logger.LogDebug(e, "对局结束检测线程异常结束");
+            }
         }, cts.Token);
     }
 
@@ -568,13 +639,119 @@ public class AutoStygianOnslaughtTask : ISoloTask
         await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
     }
 
+    private async Task SelectDifficulty(BvPage page)
+    {
+        await Delay(4000, _ct); // 等待动画完成
+
+        // 检查是否需要从至危挑战切换到困难
+        if (page.GetByText("至危挑战").WithRoi(r => r.CutLeftTop(0.5, 0.2)).IsExist())
+        {
+            _logger.LogInformation($"{Name}：找到至危挑战，尝试切换到困难模式");
+            await Delay(500, _ct);
+            await page.GetByText("至危挑战").WithRoi(r => r.CutLeftTop(0.5, 0.2)).Click();
+            await Delay(500, _ct);
+        }
+
+        // 检查困难模式是否已选中
+        var hardMode = page.GetByText("困难").WithRoi(r => r.CutRightTop(0.5, 0.2)).IsExist();
+
+        if (hardMode)
+        {
+            _logger.LogInformation($"{Name}：确认困难模式");
+        }
+        else
+        {
+            _logger.LogWarning("未找到困难模式，尝试切换");
+            await Delay(500, _ct);
+            page.Click(1096, 186);
+            await Delay(500, _ct);
+            page.Click(1093, 399);
+        }
+    }
+
+    private async Task SwitchTeam(BvPage page)
+    {
+        var fightTeamName = _taskParam.FightTeamName;
+        if (string.IsNullOrEmpty(fightTeamName))
+        {
+            _logger.LogInformation($"{Name}：不更换战斗队伍");
+            return;
+        }
+
+        _logger.LogInformation($"{Name}：配置战斗队伍为：{fightTeamName}");
+
+        // 查找预设队伍按钮并点击它打开面板
+        var teamButton = page.GetByText("预设队伍").WithRoi(r => r.CutRightBottom(0.3, 0.1)).FindAll().FirstOrDefault();
+
+        if (teamButton == null)
+        {
+            // 如果按钮未找到，检查列表面板是否已打开
+            var panelTitle = page.GetByText("预设队伍").WithRoi(r => r.CutLeftTop(0.15, 0.075)).FindAll().FirstOrDefault();
+            if (panelTitle == null)
+            {
+                _logger.LogWarning("未找到预设队伍按钮，不执行切换操作");
+                return;
+            }
+            // 列表面板已打开，跳过点击按钮步骤
+        }
+        else
+        {
+            // 点击预设队伍按钮打开队伍选择面板
+            teamButton.Click();
+            await Delay(100, _ct);
+        }
+
+        // 此时面板已打开，点击滚动条准备拖动
+        page.Click(936, 150);
+        await Delay(100, _ct);
+
+        // 滚轮预操作 - 按住左键准备拖动列表
+        Simulation.SendInput.Mouse.LeftButtonDown();
+        await Delay(100, _ct);
+        // 向上移动一点开始滚动
+        GameCaptureRegion.GameRegion1080PPosMove(936, 140);
+        await Delay(100, _ct);
+
+        int yOffset = 0;
+        const int maxRetries = 30;
+
+        for (int retries = 0; retries < maxRetries; retries++)
+        {
+            // 查找队伍名称，OCR区域: 左侧竖列队伍列表
+            var teamRegionList = page.GetByText(fightTeamName).WithRoi(r => r.CutLeft(0.18)).FindAll();
+            var foundTeam = teamRegionList.FirstOrDefault();
+            if (foundTeam != null)
+            {
+                Simulation.SendInput.Mouse.LeftButtonUp();
+                await Delay(300, _ct);
+                foundTeam.Click();
+                await Delay(500, _ct);
+                return;
+            }
+
+            // 滚轮操作 - 在滚动条(936, y)位置拖动
+            yOffset += 100;
+            if (130 + yOffset > 1080)
+            {
+                Simulation.SendInput.Mouse.LeftButtonUp();
+                await Delay(100, _ct);
+                _logger.LogWarning("未找到预设战斗队伍名称，保持原有队伍");
+                Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+                await Delay(500, _ct);
+                return;
+            }
+
+            // 移动滚动条
+            GameCaptureRegion.GameRegion1080PPosMove(936, 130 + yOffset);
+            await Delay(200, _ct);
+        }
+    }
 
     private async Task ExitDomain(BvPage page)
     {
-        
         var exitDoor = await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.BtnExitDoor.Value,
-            () => Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE),// 点击队伍选择按钮
+            () => Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE), // 点击队伍选择按钮
             _ct,
             4,
             1000

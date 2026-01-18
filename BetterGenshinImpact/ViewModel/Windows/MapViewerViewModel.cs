@@ -98,6 +98,14 @@ public partial class MapViewerViewModel : ObservableObject
         {
             _mapImage = new Mat(Global.Absolute(@"Assets/Map/Enkanomiya/Enkanomiya_0_1024.png"));
         }
+        else if (mapName == MapTypes.SeaOfBygoneEras.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_0_1024.png"));
+        }
+        else if (mapName == MapTypes.AncientSacredMountain.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/AncientSacredMountain/AncientSacredMountain_0_1024.png"));
+        }
         else
         {
             throw new Exception("暂时不支持展示路径的地图类型:" + mapName);

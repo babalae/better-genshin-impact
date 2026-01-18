@@ -370,7 +370,7 @@ public partial class ScriptService : IScriptService
                                 _logger.LogInformation("------------------------------");
                             }
 
-                            await Task.Delay(2000);
+                            await Task.Delay(1000);
                         }
 
                         if (!RunnerContext.Instance.IsPreExecution && taskProgress != null)
@@ -583,7 +583,7 @@ public partial class ScriptService : IScriptService
                             continue;
                         }
 
-                        var content = TaskControl.CaptureToRectArea();
+                        using var content = TaskControl.CaptureToRectArea();
                         if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
                         {
                             return;

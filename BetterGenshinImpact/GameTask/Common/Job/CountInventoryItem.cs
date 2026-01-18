@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Helpers;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -100,7 +101,8 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                     string predName = result.Item1;
                     if (predName == this.itemName!)
                     {
-                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
                         if (int.TryParse(numStr, out int num))
                         {
                             count = num;
@@ -149,7 +151,8 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                     if (this.itemNames!.Contains(predName) && !itemsCountDic!.ContainsKey(predName))
                     {
                         int count;
-                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
                         if (int.TryParse(numStr, out int num))
                         {
                             count = num;

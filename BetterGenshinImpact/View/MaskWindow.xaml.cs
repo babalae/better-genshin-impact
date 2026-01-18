@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Settings;
@@ -13,6 +13,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -41,6 +42,8 @@ public partial class MaskWindow : Window
     private IRichTextBox? _richTextBox;
 
     private readonly ILogger<MaskWindow> _logger = App.GetLogger<MaskWindow>();
+
+    private MaskWindowConfig? _maskWindowConfig;
 
     static MaskWindow()
     {
@@ -108,8 +111,7 @@ public partial class MaskWindow : Window
     {
         nint targetHWnd = TaskContext.Instance().GameHandle;
         _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        float x = DpiHelper.GetScale(targetHWnd).X;
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, (int)(targetRect.Width * x), (int)(targetRect.Height * x), User32.SetWindowPosFlags.SWP_SHOWWINDOW);
+        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, targetRect.Width, targetRect.Height, User32.SetWindowPosFlags.SWP_SHOWWINDOW);
     }
 
     public MaskWindow()
@@ -132,6 +134,10 @@ public partial class MaskWindow : Window
         {
             _richTextBox.RichTextBox = LogTextBox;
         }
+
+        _maskWindowConfig = TaskContext.Instance().Config.MaskWindowConfig;
+        _maskWindowConfig.PropertyChanged += MaskWindowConfigOnPropertyChanged;
+        UpdateClickThroughState();
 
         if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
         {
@@ -170,6 +176,37 @@ public partial class MaskWindow : Window
         // PointsCanvasControl.UpdateViewport(0, 0, 1600, 900);
         // PointsCanvasControl.UpdateViewport(0, 0, 200, 400);
 
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (_maskWindowConfig != null)
+        {
+            _maskWindowConfig.PropertyChanged -= MaskWindowConfigOnPropertyChanged;
+        }
+
+        base.OnClosed(e);
+    }
+
+    private void MaskWindowConfigOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MaskWindowConfig.OverlayLayoutEditEnabled))
+        {
+            Dispatcher.Invoke(UpdateClickThroughState);
+        }
+    }
+
+    private void UpdateClickThroughState()
+    {
+        try
+        {
+            var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
+            this.SetClickThrough(!editEnabled);
+        }
+        catch
+        {
+            this.SetClickThrough(true);
+        }
     }
 
     private void PrintSystemInfo()
@@ -228,10 +265,15 @@ public partial class MaskWindow : Window
         this.SetLayeredWindow();
         this.SetChildWindow();
         this.HideFromAltTab();
+        UpdateClickThroughState();
     }
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
+        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 100)
+        {
+            (p.Inlines as System.Collections.IList).RemoveAt(0);
+        }
         var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
         if (textRange.Text.Length > 10000)
         {
@@ -249,6 +291,15 @@ public partial class MaskWindow : Window
     public void Invoke(Action action)
     {
         Dispatcher.Invoke(action);
+    }
+
+    public void HideSelf()
+    {
+        if (TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled)
+        {
+            return;
+        }
+        this.Hide();
     }
 
     protected override void OnRender(DrawingContext drawingContext)
@@ -347,6 +398,27 @@ file static class MaskWindowExtension
         {
             style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
             style &= ~(int)User32.WindowStylesEx.WS_EX_LAYERED;
+        }
+
+        _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
+    }
+
+    public static void SetClickThrough(this Window window, bool isClickThrough)
+    {
+        SetClickThrough(new WindowInteropHelper(window).Handle, isClickThrough);
+    }
+
+    private static void SetClickThrough(nint hWnd, bool isClickThrough)
+    {
+        int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+
+        if (isClickThrough)
+        {
+            style |= (int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
+        }
+        else
+        {
+            style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
         }
 
         _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);

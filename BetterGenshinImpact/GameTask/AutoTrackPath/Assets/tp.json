@@ -1075,28 +1075,6 @@
                 "area": "风啸山坡"
             },
             {
-                "id": "42",
-                "gadgetId": 70120001,
-                "gadgetType": "TransPointSecond",
-                "type": "Dungeon",
-                "areaId": 3,
-                "position": [
-                    1698.907958984375,
-                    255.85549926757812,
-                    -662.4711303710938
-                ],
-                "tranPosition": [
-                    1710.2528076171875,
-                    256.0782470703125,
-                    -663.4055786132812
-                ],
-                "titleTextID": "UI_DUNGEON_ENTRY_27",
-                "description": "圣遗物本",
-                "country": "蒙德",
-                "name": "铭记之谷",
-                "area": "苍风高地"
-            },
-            {
                 "id": "44",
                 "gadgetId": 70120001,
                 "gadgetType": "TransPointSecond",
@@ -1113,9 +1091,53 @@
                     -887.1939697265625
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_29",
-                "description": "材料本",
+                "description": "天赋",
                 "country": "蒙德",
                 "name": "忘却之峡",
+                "area": "苍风高地"
+            },
+            {
+                "id": "42",
+                "gadgetId": 70120001,
+                "gadgetType": "TransPointSecond",
+                "type": "Dungeon",
+                "areaId": 3,
+                "position": [
+                    1698.907958984375,
+                    255.85549926757812,
+                    -662.4711303710938
+                ],
+                "tranPosition": [
+                    1710.2528076171875,
+                    256.0782470703125,
+                    -663.4055786132812
+                ],
+                "titleTextID": "UI_DUNGEON_ENTRY_27",
+                "description": "圣遗物（翠绿、少女）",
+                "country": "蒙德",
+                "name": "铭记之谷",
+                "area": "苍风高地"
+            },
+            {
+                "id": "50",
+                "gadgetId": 70120002,
+                "gadgetType": "TransPointSecond",
+                "type": "Dungeon",
+                "areaId": 3,
+                "position": [
+                    2257.0458984375,
+                    271.3699035644531,
+                    -237.54100036621094
+                ],
+                "tranPosition": [
+                    2257.228271484375,
+                    272.0661315917969,
+                    -251.3035125732422
+                ],
+                "titleTextID": "UI_DUNGEON_ENTRY_37",
+                "description": "武器",
+                "country": "蒙德",
+                "name": "塞西莉亚苗圃",
                 "area": "苍风高地"
             },
             {
@@ -1157,54 +1179,10 @@
                     -1558.2525634765625
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_35",
-                "description": "圣遗物本",
+                "description": "圣遗物（如雷、平雷）",
                 "country": "蒙德",
                 "name": "仲夏庭园",
                 "area": "坠星山谷"
-            },
-            {
-                "id": "50",
-                "gadgetId": 70120002,
-                "gadgetType": "TransPointSecond",
-                "type": "Dungeon",
-                "areaId": 3,
-                "position": [
-                    2257.0458984375,
-                    271.3699035644531,
-                    -237.54100036621094
-                ],
-                "tranPosition": [
-                    2257.228271484375,
-                    272.0661315917969,
-                    -251.3035125732422
-                ],
-                "titleTextID": "UI_DUNGEON_ENTRY_37",
-                "description": "材料本",
-                "country": "蒙德",
-                "name": "塞西莉亚苗圃",
-                "area": "苍风高地"
-            },
-            {
-                "id": "107",
-                "gadgetId": 70120002,
-                "gadgetType": "TransPointSecond",
-                "type": "Dungeon",
-                "areaId": 5,
-                "position": [
-                    1692.7919921875,
-                    283.9447937011719,
-                    394.147705078125
-                ],
-                "tranPosition": [
-                    1689.248779296875,
-                    284.45025634765625,
-                    386.14398193359375
-                ],
-                "titleTextID": "UI_DUNGEON_ENTRY_54",
-                "description": "圣遗物本",
-                "country": "璃月",
-                "name": "无妄引咎密宫",
-                "area": "碧水原"
             },
             {
                 "id": "117",
@@ -1245,7 +1223,7 @@
                     1167.97607421875
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_46",
-                "description": "材料本",
+                "description": "天赋",
                 "country": "璃月",
                 "name": "太山府",
                 "area": "珉林"
@@ -1289,10 +1267,32 @@
                     -415.8290710449219
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_52",
-                "description": "材料本",
+                "description": "武器",
                 "country": "璃月",
                 "name": "震雷连山密宫",
                 "area": "琼玑野"
+            },
+            {
+                "id": "107",
+                "gadgetId": 70120002,
+                "gadgetType": "TransPointSecond",
+                "type": "Dungeon",
+                "areaId": 5,
+                "position": [
+                    1692.7919921875,
+                    283.9447937011719,
+                    394.147705078125
+                ],
+                "tranPosition": [
+                    1689.248779296875,
+                    284.45025634765625,
+                    386.14398193359375
+                ],
+                "titleTextID": "UI_DUNGEON_ENTRY_54",
+                "description": "圣遗物（魔女、渡火）",
+                "country": "璃月",
+                "name": "无妄引咎密宫",
+                "area": "碧水原"
             },
             {
                 "id": "137",
@@ -1311,7 +1311,7 @@
                     -963.106201171875
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_48",
-                "description": "圣遗物本",
+                "description": "圣遗物（磐岩、逆飞）",
                 "country": "璃月",
                 "name": "孤云凌霄之处",
                 "area": "云来海"
@@ -1333,7 +1333,7 @@
                     1436.615478515625
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_50",
-                "description": "圣遗物本",
+                "description": "圣遗物（染血、宗室）",
                 "country": "璃月",
                 "name": "华池岩岫",
                 "area": "珉林"
@@ -1399,7 +1399,7 @@
                     -824.258544921875
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_221",
-                "description": "圣遗物本",
+                "description": "圣遗物（冰风、沉沦）",
                 "country": "蒙德",
                 "name": "芬德尼尔之顶",
                 "area": "龙脊雪山"
@@ -1443,7 +1443,7 @@
                     -321.2357177734375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_282",
-                "description": "圣遗物本",
+                "description": "圣遗物（千岩、苍白）",
                 "country": "璃月",
                 "name": "山脊守望",
                 "area": "碧水原"
@@ -1487,10 +1487,32 @@
                     -3930.887451171875
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_310",
-                "description": "材料本",
+                "description": "天赋",
                 "country": "稻妻",
                 "name": "菫色之庭",
                 "area": "神无冢"
+            },
+            {
+                "id": "368",
+                "gadgetId": 70120001,
+                "gadgetType": "TransPointSecond",
+                "type": "Dungeon",
+                "areaId": 11,
+                "position": [
+                    -2401.882080078125,
+                    255.39320373535156,
+                    -4405.69482421875
+                ],
+                "tranPosition": [
+                    -2394.694580078125,
+                    254.45736694335938,
+                    -4408.5947265625
+                ],
+                "titleTextID": "UI_DUNGEON_ENTRY_368",
+                "description": "武器",
+                "country": "稻妻",
+                "name": "砂流之庭",
+                "area": "鸣神岛"
             },
             {
                 "id": "350",
@@ -1575,32 +1597,10 @@
                     -2365.654052734375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_361",
-                "description": "圣遗物本",
+                "description": "圣遗物（绝缘、追忆）",
                 "country": "稻妻",
                 "name": "椛染之庭",
                 "area": "八酝岛"
-            },
-            {
-                "id": "368",
-                "gadgetId": 70120001,
-                "gadgetType": "TransPointSecond",
-                "type": "Dungeon",
-                "areaId": 11,
-                "position": [
-                    -2401.882080078125,
-                    255.39320373535156,
-                    -4405.69482421875
-                ],
-                "tranPosition": [
-                    -2394.694580078125,
-                    254.45736694335938,
-                    -4408.5947265625
-                ],
-                "titleTextID": "UI_DUNGEON_ENTRY_368",
-                "description": "材料本",
-                "country": "稻妻",
-                "name": "砂流之庭",
-                "area": "鸣神岛"
             },
             {
                 "id": "396",
@@ -1663,7 +1663,7 @@
                     -4208.97412109375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_433",
-                "description": "圣遗物本",
+                "description": "圣遗物（海染、华馆）",
                 "country": "稻妻",
                 "name": "沉眠之庭",
                 "area": "清籁岛"
@@ -1707,32 +1707,10 @@
                     3021.365966796875
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_505",
-                "description": "材料本",
+                "description": "天赋",
                 "country": "须弥",
                 "name": "昏识塔",
                 "area": "护世森"
-            },
-            {
-                "id": "507",
-                "gadgetId": 70120001,
-                "gadgetType": "TransPointSecond",
-                "type": "Dungeon",
-                "areaId": 24,
-                "position": [
-                    -564.530029296875,
-                    282.4547119140625,
-                    2209.929931640625
-                ],
-                "tranPosition": [
-                    -563.691650390625,
-                    282.4547119140625,
-                    2217.395751953125
-                ],
-                "titleTextID": "UI_DUNGEON_ENTRY_507",
-                "description": "圣遗物本",
-                "country": "须弥",
-                "name": "缘觉塔",
-                "area": "道成林"
             },
             {
                 "id": "509",
@@ -1751,10 +1729,32 @@
                     3467.1533203125
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_509",
-                "description": "材料本",
+                "description": "武器",
                 "country": "须弥",
                 "name": "有顶塔",
                 "area": "善见地"
+            },
+            {
+                "id": "507",
+                "gadgetId": 70120001,
+                "gadgetType": "TransPointSecond",
+                "type": "Dungeon",
+                "areaId": 24,
+                "position": [
+                    -564.530029296875,
+                    282.4547119140625,
+                    2209.929931640625
+                ],
+                "tranPosition": [
+                    -563.691650390625,
+                    282.4547119140625,
+                    2217.395751953125
+                ],
+                "titleTextID": "UI_DUNGEON_ENTRY_507",
+                "description": "圣遗物（深林、饰金）",
+                "country": "须弥",
+                "name": "缘觉塔",
+                "area": "道成林"
             },
             {
                 "id": "516",
@@ -1773,7 +1773,7 @@
                     1902.536376953125
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_516",
-                "description": "圣遗物本",
+                "description": "圣遗物（辰砂、来歆）",
                 "country": "璃月",
                 "name": "岩中幽谷",
                 "area": "层岩巨渊"
@@ -2015,7 +2015,7 @@
                     4296.51904296875
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_758",
-                "description": "圣遗物本",
+                "description": "圣遗物（沙上、乐园）",
                 "country": "须弥",
                 "name": "赤金的城墟",
                 "area": "下风蚀地"
@@ -2037,7 +2037,7 @@
                     6058.34521484375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_803",
-                "description": "圣遗物本",
+                "description": "圣遗物（水仙、花海）",
                 "country": "须弥",
                 "name": "熔铁的孤塞",
                 "area": "荒石苍漠"
@@ -2109,28 +2109,6 @@
                 "area": "千壑沙地"
             },
             {
-                "id": "859",
-                "gadgetId": 70120001,
-                "gadgetType": "TransPointSecond",
-                "type": "Dungeon",
-                "areaId": 35,
-                "position": [
-                    3953.658935546875,
-                    489.7099914550781,
-                    4703.46923828125
-                ],
-                "tranPosition": [
-                    3959.377685546875,
-                    489.3465270996094,
-                    4701.67724609375
-                ],
-                "titleTextID": "UI_DUNGEON_ENTRY_859",
-                "description": "材料本",
-                "country": "枫丹",
-                "name": "深潮的余响",
-                "area": "枫丹廷区"
-            },
-            {
                 "id": "865",
                 "gadgetId": 70120012,
                 "gadgetType": "TransPointSecond",
@@ -2147,9 +2125,31 @@
                     4187.91943359375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_865",
-                "description": "材料本",
+                "description": "天赋",
                 "country": "枫丹",
                 "name": "苍白的遗荣",
+                "area": "枫丹廷区"
+            },
+            {
+                "id": "859",
+                "gadgetId": 70120001,
+                "gadgetType": "TransPointSecond",
+                "type": "Dungeon",
+                "areaId": 35,
+                "position": [
+                    3953.658935546875,
+                    489.7099914550781,
+                    4703.46923828125
+                ],
+                "tranPosition": [
+                    3959.377685546875,
+                    489.3465270996094,
+                    4701.67724609375
+                ],
+                "titleTextID": "UI_DUNGEON_ENTRY_859",
+                "description": "武器",
+                "country": "枫丹",
+                "name": "深潮的余响",
                 "area": "枫丹廷区"
             },
             {
@@ -2169,7 +2169,7 @@
                     4722.4345703125
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_982",
-                "description": "圣遗物本",
+                "description": "圣遗物（猎人、剧团）",
                 "country": "枫丹",
                 "name": "罪祸的终末",
                 "area": "白露区"
@@ -2213,7 +2213,7 @@
                     3940.7099609375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_1142",
-                "description": "圣遗物本",
+                "description": "圣遗物（回声、昔时）",
                 "country": "枫丹",
                 "name": "临瀑之城",
                 "area": "莫尔泰区"
@@ -2235,7 +2235,7 @@
                     4200.6572265625
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_1151",
-                "description": "圣遗物本",
+                "description": "圣遗物（谐律、遐思）",
                 "country": "枫丹",
                 "name": "褪色的剧场",
                 "area": "诺思托伊区"
@@ -2257,7 +2257,7 @@
                     7796.26611328125
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_1186",
-                "description": "材料本",
+                "description": "天赋",
                 "country": "纳塔",
                 "name": "蕴火的幽墟",
                 "area": "踞石山"
@@ -2279,7 +2279,7 @@
                     8179.7099609375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_1188",
-                "description": "材料本",
+                "description": "武器",
                 "country": "纳塔",
                 "name": "深古瞭望所",
                 "area": "踞石山"
@@ -2301,7 +2301,7 @@
                     9039.115234375
                 ],
                 "titleTextID": "UI_DUNGEON_ENTRY_1190",
-                "description": "圣遗物本",
+                "description": "圣遗物（烬城、黑曜）",
                 "country": "纳塔",
                 "name": "虹灵的净土",
                 "area": "涌流地"
@@ -11637,7 +11637,7 @@
                 ],
                 "country": "纳塔",
                 "name": "荒废砌造坞",
-                "description": "圣遗物本",
+                "description": "圣遗物（长夜、终曲）",
                 "area": "安饶之野"
             },
             {
@@ -11906,6 +11906,66 @@
                 "country": "纳塔",
                 "name": "传送锚点",
                 "area": "刺梨岩"
+            },
+            {
+                "id": "1622",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1416.627,
+                    66.34088,
+                    14227.44
+                ],
+                "tranPosition": [
+                    1419.7568,
+                    65.44593,
+                    14227.67
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
+                "id": "1623",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1444.299,
+                    128.6889,
+                    13984.66
+                ],
+                "tranPosition": [
+                    1441.9055,
+                    128.4382,
+                    13982.096
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
+            },
+            {
+                "id": "1624",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    1531.633,
+                    94.35979,
+                    13921.42
+                ],
+                "tranPosition": [
+                    1525.5068,
+                    94.35979,
+                    13922.6045
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "刺梨岩",
+                "areaId": 5207
             },
             {
                 "id": "1604",
@@ -12285,7 +12345,7 @@
                 ],
                 "country": "挪德卡莱",
                 "name": "无光的深都",
-                "description": "材料本",
+                "description": "天赋",
                 "area": "伦波岛"
             },
             {
@@ -12685,7 +12745,7 @@
                 ],
                 "country": "挪德卡莱",
                 "name": "失落的月庭",
-                "description": "材料本",
+                "description": "武器",
                 "area": "希汐岛"
             },
             {
@@ -12876,7 +12936,7 @@
                 ],
                 "country": "挪德卡莱",
                 "name": "霜凝的机枢",
-                "description": "圣遗物本",
+                "description": "圣遗物（穹境、纺月）",
                 "area": "帕哈岛"
             },
             {
@@ -13334,6 +13394,687 @@
                 "country": "挪德卡莱",
                 "name": "传送锚点",
                 "area": "月矩力试验设计局"
+            },
+            {
+                "id": "1625",
+                "gadgetId": 70130009,
+                "gadgetType": "TransPointFirst",
+                "type": "Goddess",
+                "position": [
+                    4974.03,
+                    219.34,
+                    9633.44
+                ],
+                "tranPosition": [
+                    4976.812,
+                    218.37158,
+                    9638.071
+                ],
+                "country": "挪德卡莱",
+                "name": "新月神像",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1626",
+                "gadgetId": 70130011,
+                "gadgetType": "TransPointFirst",
+                "type": "Goddess",
+                "position": [
+                    5565.878,
+                    246.31,
+                    9664.909
+                ],
+                "tranPosition": [
+                    5564.5205,
+                    247.2711,
+                    9681.538
+                ],
+                "country": "挪德卡莱",
+                "name": "新月神像",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1627",
+                "gadgetId": 70130011,
+                "gadgetType": "TransPointFirst",
+                "type": "Goddess",
+                "position": [
+                    6080.89,
+                    223.07,
+                    9870.67
+                ],
+                "tranPosition": [
+                    6076.124,
+                    223.44057,
+                    9870.319
+                ],
+                "country": "挪德卡莱",
+                "name": "新月神像",
+                "area": "TBD",
+                "areaId": 75
+            },
+            {
+                "id": "1665",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    4944.084,
+                    203.43,
+                    9759.771
+                ],
+                "tranPosition": [
+                    4946.8013,
+                    203.67488,
+                    9758.903
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1666",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5232.729,
+                    341.984,
+                    9452.989
+                ],
+                "tranPosition": [
+                    5235.2485,
+                    342.08243,
+                    9452.3
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7302
+            },
+            {
+                "id": "1667",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5321,
+                    243.214,
+                    9564.529
+                ],
+                "tranPosition": [
+                    5322.2793,
+                    243.42404,
+                    9562.006
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1668",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5421.173,
+                    233.674,
+                    9550.923
+                ],
+                "tranPosition": [
+                    5417.4995,
+                    235.23416,
+                    9547.103
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7303
+            },
+            {
+                "id": "1669",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5522.131,
+                    212.5043,
+                    9496.041
+                ],
+                "tranPosition": [
+                    5526.7075,
+                    208.37251,
+                    9492.233
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7303
+            },
+            {
+                "id": "1670",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5445.849,
+                    252.4566,
+                    9724.226
+                ],
+                "tranPosition": [
+                    5442.0386,
+                    252.4,
+                    9727.726
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1671",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5630.542,
+                    211.397,
+                    10056.84
+                ],
+                "tranPosition": [
+                    5629.222,
+                    212.235,
+                    10069.1
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7406
+            },
+            {
+                "id": "1672",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5759.933,
+                    200.352,
+                    10275.25
+                ],
+                "tranPosition": [
+                    5753.903,
+                    200.51938,
+                    10265.69
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7405
+            },
+            {
+                "id": "1673",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5863.657,
+                    260.4117,
+                    9541.175
+                ],
+                "tranPosition": [
+                    5868.8184,
+                    260.82626,
+                    9541.722
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1674",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6262.288,
+                    200.3076,
+                    9548.759
+                ],
+                "tranPosition": [
+                    6260.5522,
+                    200.52245,
+                    9545.525
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7505
+            },
+            {
+                "id": "1675",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5811.407,
+                    269.8461,
+                    9777.187
+                ],
+                "tranPosition": [
+                    5817.818,
+                    268.361,
+                    9775.385
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1676",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6352.47,
+                    224.434,
+                    10289.7
+                ],
+                "tranPosition": [
+                    6356.9746,
+                    224.50026,
+                    10286.954
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 75
+            },
+            {
+                "id": "1677",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6217.454,
+                    228.875,
+                    9964.374
+                ],
+                "tranPosition": [
+                    6220.651,
+                    229.65024,
+                    9961.27
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7507
+            },
+            {
+                "id": "1678",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6341.936,
+                    241.0631,
+                    10101.98
+                ],
+                "tranPosition": [
+                    6344.371,
+                    241.132,
+                    10101.95
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7507
+            },
+            {
+                "id": "1679",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5734.079,
+                    220.2581,
+                    9513.032
+                ],
+                "tranPosition": [
+                    5729.3506,
+                    220.36047,
+                    9515.775
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1680",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5911.66,
+                    241.4545,
+                    9905.04
+                ],
+                "tranPosition": [
+                    5918.857,
+                    241.389,
+                    9898.238
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 75
+            },
+            {
+                "id": "1698",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5341.135,
+                    8.744677,
+                    9777.647
+                ],
+                "tranPosition": [
+                    5337.3174,
+                    7.9476347,
+                    9777.236
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7401
+            },
+            {
+                "id": "1760",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5696.751,
+                    198.6516,
+                    9666.249
+                ],
+                "tranPosition": [
+                    5693.0723,
+                    198.42331,
+                    9671.311
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1761",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6380.936,
+                    -254.6875,
+                    9903.156
+                ],
+                "tranPosition": [
+                    6381.8853,
+                    -254.70729,
+                    9900.887
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7504
+            },
+            {
+                "id": "1803",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5440.255,
+                    201.442,
+                    9352.813
+                ],
+                "tranPosition": [
+                    5442.8677,
+                    201.57214,
+                    9351.525
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1829",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5271.795,
+                    200.2807,
+                    9848.254
+                ],
+                "tranPosition": [
+                    5271.1567,
+                    200.50378,
+                    9852.172
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1830",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5480.807,
+                    200.277,
+                    10030.25
+                ],
+                "tranPosition": [
+                    5482.05,
+                    200.3948,
+                    10027.925
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1831",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5156.021,
+                    237.2479,
+                    9552.812
+                ],
+                "tranPosition": [
+                    5153.0776,
+                    237.16643,
+                    9554.542
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 73
+            },
+            {
+                "id": "1873",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5677.237,
+                    278.3242,
+                    9702.766
+                ],
+                "tranPosition": [
+                    5674.04,
+                    277.91226,
+                    9707.631
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 74
+            },
+            {
+                "id": "1953",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6215.33,
+                    294.522,
+                    9782.777
+                ],
+                "tranPosition": [
+                    6213.2227,
+                    294.6113,
+                    9780.7
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7507
+            },
+            {
+                "id": "1954",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5529.75,
+                    90.282,
+                    9447.972
+                ],
+                "tranPosition": [
+                    5531.3184,
+                    90.18029,
+                    9451.202
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7305
+            },
+            {
+                "id": "1956",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5548.43,
+                    232.418,
+                    9771.714
+                ],
+                "tranPosition": [
+                    5539.8613,
+                    237.36768,
+                    9774.191
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7406
+            },
+            {
+                "id": "1957",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5719.461,
+                    222.838,
+                    9926.973
+                ],
+                "tranPosition": [
+                    5728.6426,
+                    221.1158,
+                    9920.595
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7406
+            },
+            {
+                "id": "1960",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    6049.194,
+                    282.8203,
+                    9673.524
+                ],
+                "tranPosition": [
+                    6046.3574,
+                    282.2899,
+                    9669.12
+                ],
+                "country": "挪德卡莱",
+                "name": "传送锚点",
+                "area": "TBD",
+                "areaId": 7403
+            },
+            {
+                "id": "1811",
+                "gadgetId": 70120016,
+                "gadgetType": "",
+                "type": "Dungeon",
+                "position": [
+                    5945.359,
+                    200.3035,
+                    10043.97
+                ],
+                "tranPosition": [
+                    5938.7,
+                    200.6,
+                    10043.404
+                ],
+                "country": "挪德卡莱",
+                "name": "月童的库藏",
+                "description": "圣遗物（晓歌、风起）",
+                "area": "",
+                "areaId": 75
+            },
+            {
+                "id": "1827",
+                "gadgetId": 70950010,
+                "gadgetType": "",
+                "type": "Teleport",
+                "position": [
+                    6394.153,
+                    216.631,
+                    9532.071
+                ],
+                "tranPosition": [
+                    6393.7954,
+                    216.6302,
+                    9531.251
+                ],
+                "country": "挪德卡莱",
+                "name": "",
+                "area": "",
+                "areaId": 7505
             }
         ]
     },
@@ -14475,6 +15216,393 @@
                 "name": "传送锚点",
                 "area": "旧日之海",
                 "areaId": 600
+            }
+        ]
+    },
+    {
+        "mapName": "AncientSacredMountain",
+        "sceneId": 101,
+        "description": "远古圣山",
+        "points": [
+            {
+                "id": "11",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    5.254,
+                    770.154,
+                    -544.8
+                ],
+                "tranPosition": [
+                    8.071999,
+                    770.3726,
+                    -546.2424
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "12",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    301.3517,
+                    201.98,
+                    -158.3329
+                ],
+                "tranPosition": [
+                    308.8704,
+                    201.54634,
+                    -151.29555
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "13",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    100.683,
+                    210.202,
+                    -143.976
+                ],
+                "tranPosition": [
+                    105.01541,
+                    210.202,
+                    -152.21004
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80005
+            },
+            {
+                "id": "14",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    305.55,
+                    138.782,
+                    108.762
+                ],
+                "tranPosition": [
+                    312.97974,
+                    141.13326,
+                    102.69159
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80006
+            },
+            {
+                "id": "15",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    345.413,
+                    259.0234,
+                    264.3909
+                ],
+                "tranPosition": [
+                    346.47064,
+                    259.45032,
+                    270.15018
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80006
+            },
+            {
+                "id": "16",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    512.608,
+                    106.953,
+                    7.501
+                ],
+                "tranPosition": [
+                    508.58472,
+                    107.43931,
+                    19.718029
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "17",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    640.53,
+                    89.07455,
+                    -89.7999
+                ],
+                "tranPosition": [
+                    645.846,
+                    88.50239,
+                    -85.27797
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "18",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    261.4832,
+                    57.82032,
+                    -138.0443
+                ],
+                "tranPosition": [
+                    264.99072,
+                    57.53672,
+                    -152.49945
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80004
+            },
+            {
+                "id": "19",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    541.595,
+                    77.494,
+                    -287.768
+                ],
+                "tranPosition": [
+                    534.5397,
+                    74.56176,
+                    -293.87283
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "2",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    747.23,
+                    857.58,
+                    44.91
+                ],
+                "tranPosition": [
+                    752.04047,
+                    857.8871,
+                    40.86717
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80001
+            },
+            {
+                "id": "20",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    474.239,
+                    115.454,
+                    -497.752
+                ],
+                "tranPosition": [
+                    469.06088,
+                    115.62647,
+                    -501.97424
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "21",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    251.6618,
+                    146.964,
+                    -424.2064
+                ],
+                "tranPosition": [
+                    253.07848,
+                    147.8764,
+                    -432.8027
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "22",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    427.1338,
+                    -635.1426,
+                    -434.3028
+                ],
+                "tranPosition": [
+                    450.01736,
+                    -635.4016,
+                    -424.52426
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80009
+            },
+            {
+                "id": "3",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    365.439,
+                    751.873,
+                    -185.486
+                ],
+                "tranPosition": [
+                    363.01917,
+                    751.1264,
+                    -182.49893
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "4",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    207.5441,
+                    693.96,
+                    196.1411
+                ],
+                "tranPosition": [
+                    209.92026,
+                    694.134,
+                    202.46678
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80002
+            },
+            {
+                "id": "5",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -42.25665,
+                    822.063,
+                    193.6675
+                ],
+                "tranPosition": [
+                    -42.84648,
+                    821.274,
+                    185.37282
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "6",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    37.49844,
+                    737.135,
+                    383.0565
+                ],
+                "tranPosition": [
+                    35.7756,
+                    736.75525,
+                    387.55582
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 80002
+            },
+            {
+                "id": "7",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -246.441,
+                    831.017,
+                    -90.849
+                ],
+                "tranPosition": [
+                    -248.21928,
+                    828.3109,
+                    -80.89331
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
+            },
+            {
+                "id": "8",
+                "gadgetId": 70110002,
+                "gadgetType": "TransPointSecond",
+                "type": "Teleport",
+                "position": [
+                    -292.383,
+                    885.409,
+                    -249.987
+                ],
+                "tranPosition": [
+                    -290.66766,
+                    885.0531,
+                    -245.20038
+                ],
+                "country": "纳塔",
+                "name": "传送锚点",
+                "area": "远古圣山",
+                "areaId": 800
             }
         ]
     }

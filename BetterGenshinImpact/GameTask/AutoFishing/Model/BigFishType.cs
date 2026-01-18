@@ -30,7 +30,7 @@ public class BigFishType
     public static readonly BigFishType Rapidfish = new("rapidfish", BaitType.SpinelgrainBait, "斗士急流鱼", 9);
     public static readonly BigFishType PhonyUnihornfish = new("phony unihornfish", BaitType.EmberglowBait, "燃素独角鱼", 10);
     public static readonly BigFishType MagmaRapidfish = new("magma rapidfish", BaitType.EmberglowBait, "炽岩斗士急流鱼", 9);
-    public static readonly BigFishType SecretSourceScoutSweeper = new ("secret", BaitType.EmberglowBait, "秘源机关・巡戒使", 9);
+    public static readonly BigFishType SecretSourceScoutSweeper = new ("secret source", BaitType.EmberglowBait, "秘源机关・巡戒使", 9);
 
     public static readonly BigFishType MaulerShark = new ("mauler shark", BaitType.RefreshingLakkaBait, "凶凶鲨", 9);
     public static readonly BigFishType CrystalEye = new("crystal eye", BaitType.RefreshingLakkaBait, "明眼鱼", 9);
@@ -59,6 +59,7 @@ public class BigFishType
             yield return Rapidfish;
             yield return PhonyUnihornfish;
             yield return MagmaRapidfish;
+            yield return SecretSourceScoutSweeper;
             yield return MaulerShark;
             yield return CrystalEye;
             yield return AxeheadFish;

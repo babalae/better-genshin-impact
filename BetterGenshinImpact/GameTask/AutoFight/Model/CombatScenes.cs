@@ -466,7 +466,7 @@ public class CombatScenes : IDisposable
                 if (PartyAvatarSideIndexHelper.CountIndexRect(imageRegion) == Avatars.Length)
                 {
                     bool res = RefreshTeamAvatarIndexRectList(imageRegion);
-                    _logger.LogWarning("多次识别出战角色失败，尝试刷新角色编号位置（处理草露问题），刷新结果:{Result}", res ? "成功" : "失败");
+                    _logger.LogWarning("多次识别出战角色失败，尝试刷新角色编号位置，刷新结果:{Result}", res ? "成功" : "失败");
                     imageRegion.SrcMat.SaveImage(Global.Absolute("log\\refresh_avatar_index_rect.png"));
                     if (res)
                     {

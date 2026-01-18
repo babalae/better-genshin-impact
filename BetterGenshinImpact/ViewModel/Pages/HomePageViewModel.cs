@@ -510,8 +510,11 @@ public partial class HomePageViewModel : ViewModel
         {
             Title = "硬件加速设置",
             Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
-            SizeToContent = SizeToContent.WidthAndHeight,
-            ResizeMode = ResizeMode.NoResize,
+            Width = 800,
+            Height = 600,
+            MinWidth = 800,
+            MaxWidth = 800,
+            MinHeight = 600,
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ExtendsContentIntoTitleBar = true,
@@ -585,6 +588,7 @@ public partial class HomePageViewModel : ViewModel
                 bitmap.BeginInit();
                 bitmap.UriSource = new Uri(Path.GetFullPath(_customBannerImagePath));
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; 
                 bitmap.EndInit();
                 BannerImageSource = bitmap;
                 Toast.Success("背景图片更换成功！");
@@ -611,6 +615,7 @@ public partial class HomePageViewModel : ViewModel
             defaultBitmap.BeginInit();
             defaultBitmap.UriSource = new Uri(DefaultBannerImagePath, UriKind.Absolute);
             defaultBitmap.CacheOption = BitmapCacheOption.OnLoad;
+            defaultBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; 
             defaultBitmap.EndInit();
             BannerImageSource = defaultBitmap;
             

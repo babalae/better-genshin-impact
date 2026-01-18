@@ -25,7 +25,7 @@ public class BlessingOfTheWelkinMoonTask
             if (t.Hour == 4 && t.Minute < 10)
             {
                 using var ra = CaptureToRectArea();
-                if (Bv.IsInBlessingOfTheWelkinMoon(ra))
+                if (Bv.IsInBlessingOfTheWelkinMoon(ra) || ra.Find(ElementAssets.Instance.PrimogemRo).IsExist())
                 {
                     Logger.LogInformation("检测到空月祝福界面，自动点击");
                     GameCaptureRegion.GameRegion1080PPosMove(100, 100);

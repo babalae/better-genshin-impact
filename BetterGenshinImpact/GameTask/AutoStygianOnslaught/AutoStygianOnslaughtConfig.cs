@@ -45,4 +45,8 @@ public partial class AutoStygianOnslaughtConfig : ObservableObject
     // 使用脆弱树脂刷取副本次数
     [ObservableProperty]
     private int _fragileResinUseCount = 0;
+    
+    // 指定战斗队伍
+    [ObservableProperty]
+    private string _fightTeamName = "";
 }
