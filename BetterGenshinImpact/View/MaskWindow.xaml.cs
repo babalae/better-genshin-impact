@@ -18,10 +18,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Model.MaskMap;
+using BetterGenshinImpact.ViewModel;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -38,6 +40,7 @@ public partial class MaskWindow : Window
     private static readonly Typeface _typeface;
 
     private nint _hWnd;
+    private MaskWindowViewModel? _viewModel;
 
     private IRichTextBox? _richTextBox;
 
@@ -137,6 +140,13 @@ public partial class MaskWindow : Window
 
         _maskWindowConfig = TaskContext.Instance().Config.MaskWindowConfig;
         _maskWindowConfig.PropertyChanged += MaskWindowConfigOnPropertyChanged;
+
+        _viewModel = DataContext as MaskWindowViewModel;
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
+        }
+
         UpdateClickThroughState();
 
         if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
@@ -185,12 +195,26 @@ public partial class MaskWindow : Window
             _maskWindowConfig.PropertyChanged -= MaskWindowConfigOnPropertyChanged;
         }
 
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        }
+
         base.OnClosed(e);
     }
 
     private void MaskWindowConfigOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MaskWindowConfig.OverlayLayoutEditEnabled))
+        {
+            Dispatcher.Invoke(UpdateClickThroughState);
+        }   
+    }
+
+    private void ViewModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MaskWindowViewModel.IsInBigMapUi) ||
+            e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
         {
             Dispatcher.Invoke(UpdateClickThroughState);
         }
@@ -201,7 +225,15 @@ public partial class MaskWindow : Window
         try
         {
             var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
-            this.SetClickThrough(!editEnabled);
+            var inBigMapUi = _viewModel?.IsInBigMapUi == true;
+
+            if (editEnabled)
+            {
+                this.SetClickThrough(false);
+                return;
+            }
+
+            this.SetClickThrough(!inBigMapUi);
         }
         catch
         {
@@ -281,6 +313,28 @@ public partial class MaskWindow : Window
         }
 
         LogTextBox.ScrollToEnd();
+    }
+
+    private void MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var container = ItemsControl.ContainerFromElement(MapLabelCategoriesListView, e.OriginalSource as DependencyObject) as ListViewItem;
+        if (container == null)
+        {
+            return;
+        }
+    
+        var item = MapLabelCategoriesListView.ItemContainerGenerator.ItemFromContainer(container) as MapLabelCategoryVm;
+        if (item == null)
+        {
+            return;
+        }
+    
+        MapLabelCategoriesListView.SelectedItem = item;
+    
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.SelectMapLabelCategoryCommand.Execute(item);
+        }
     }
 
     public void Refresh()

@@ -3,13 +3,19 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
+using BetterGenshinImpact.Service.Model.MihoyoMap.Responses;
 using BetterGenshinImpact.View.Controls.Overlay;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using PresentMonFps;
+using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,6 +27,8 @@ namespace BetterGenshinImpact.ViewModel
 {
     public partial class MaskWindowViewModel : ObservableRecipient
     {
+        private readonly ILogger<MaskWindowViewModel> _logger = App.GetLogger<MaskWindowViewModel>();
+
         [ObservableProperty] private Rect _windowRect;
 
         [ObservableProperty] private ObservableCollection<StatusItem> _statusList = [];
@@ -34,6 +42,22 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private double _maskWindowWidth;
 
         [ObservableProperty] private double _maskWindowHeight;
+
+        [ObservableProperty] private bool _isInBigMapUi;
+
+        [ObservableProperty] private bool _isMapPointPickerOpen;
+
+        [ObservableProperty] private bool _isMapLabelTreeLoading;
+
+        [ObservableProperty] private string _mapLabelSearchText = string.Empty;
+
+        [ObservableProperty] private ObservableCollection<MapLabelCategoryVm> _mapLabelCategories = [];
+
+        [ObservableProperty] private ObservableCollection<MapLabelItemVm> _mapLabelItems = [];
+
+        [ObservableProperty] private MapLabelCategoryVm? _selectedMapLabelCategory;
+
+        private bool _isMapLabelTreeLoaded;
 
         public MaskWindowViewModel()
         {
@@ -64,6 +88,47 @@ namespace BetterGenshinImpact.ViewModel
             RefreshSettings();
             InitializeStatusList();
             InitFps();
+        }
+
+        [RelayCommand]
+        private async Task ToggleMapPointPickerAsync()
+        {
+            if (!IsInBigMapUi)
+            {
+                IsMapPointPickerOpen = false;
+                return;
+            }
+
+            IsMapPointPickerOpen = !IsMapPointPickerOpen;
+            if (IsMapPointPickerOpen)
+            {
+                await EnsureLabelTreeLoadedAsync();
+            }
+        }
+
+        [RelayCommand]
+        private async Task ReloadMapLabelTreeAsync()
+        {
+            _isMapLabelTreeLoaded = false;
+            await EnsureLabelTreeLoadedAsync();
+        }
+
+        [RelayCommand]
+        private void SelectMapLabelCategory(MapLabelCategoryVm? category)
+        {
+            SelectedMapLabelCategory = category;
+            RebuildRightList(category, MapLabelSearchText);
+        }
+
+        [RelayCommand]
+        private void SelectMapLabelItem(MapLabelItemVm? item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            _logger.LogInformation("选择地图点位分类: {Name}({Id}) Count={Count}", item.Name, item.Id, item.PointCount);
         }
 
         private void RefreshSettings()
@@ -181,6 +246,104 @@ namespace BetterGenshinImpact.ViewModel
             };
         }
         
+        partial void OnIsInBigMapUiChanged(bool value)
+        {
+            if (!value)
+            {
+                IsMapPointPickerOpen = false;
+            }
+        }
+
+        partial void OnMapLabelSearchTextChanged(string value)
+        {
+            RebuildRightList(SelectedMapLabelCategory, value);
+        }
+
+        private async Task EnsureLabelTreeLoadedAsync()
+        {
+            if (_isMapLabelTreeLoaded || IsMapLabelTreeLoading)
+            {
+                return;
+            }
+
+            IsMapLabelTreeLoading = true;
+            try
+            {
+                var apiService = App.GetService<IMihoyoMapApiService>();
+                ApiResponse<LabelTreeData>? resp = null;
+
+                if (apiService != null)
+                {
+                    resp = await apiService.GetLabelTreeAsync(new LabelTreeRequest());
+                }
+
+                if (resp == null || resp.Retcode != 0 || resp.Data == null)
+                {
+                    resp = TryLoadLabelTreeFromLocalExample();
+                }
+
+                if (resp == null || resp.Retcode != 0 || resp.Data == null)
+                {
+                    _logger.LogWarning("加载地图点位树失败: {Retcode} {Message}", resp?.Retcode, resp?.Message);
+                    MapLabelCategories = [];
+                    MapLabelItems = [];
+                    SelectedMapLabelCategory = null;
+                    return;
+                }
+
+                var categories = resp.Data.Tree
+                    .OrderBy(x => x.Sort)
+                    .ThenBy(x => x.DisplayPriority)
+                    .Select(x => new MapLabelCategoryVm(x))
+                    .ToList();
+
+                MapLabelCategories = new ObservableCollection<MapLabelCategoryVm>(categories);
+                SelectMapLabelCategory(MapLabelCategories.FirstOrDefault());
+                _isMapLabelTreeLoaded = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "加载地图点位树时发生异常");
+            }
+            finally
+            {
+                IsMapLabelTreeLoading = false;
+            }
+        }
+
+        private void RebuildRightList(MapLabelCategoryVm? category, string? searchText)
+        {
+            var query = category?.Items?.AsEnumerable() ?? Enumerable.Empty<MapLabelItemVm>();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var q = searchText.Trim();
+                query = query.Where(x => x.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+            }
+
+            MapLabelItems = new ObservableCollection<MapLabelItemVm>(query);
+        }
+
+        private static ApiResponse<LabelTreeData>? TryLoadLabelTreeFromLocalExample()
+        {
+            try
+            {
+                var root = AppContext.BaseDirectory;
+                var path = Path.Combine(root, ".trae", "documents", "tree.json");
+                if (!File.Exists(path))
+                {
+                    return null;
+                }
+
+                var json = File.ReadAllText(path);
+                return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         [RelayCommand]
         private void OnPointClick(MaskMapPoint? point)
         {
@@ -207,6 +370,45 @@ namespace BetterGenshinImpact.ViewModel
             {
                 // 悬停逻辑
             }
+        }
+    }
+
+    public partial class MapLabelCategoryVm : ObservableObject
+    {
+        public int Id { get; }
+        public string Name { get; }
+        public string Icon { get; }
+        public ObservableCollection<MapLabelItemVm> Items { get; }
+
+        public MapLabelCategoryVm(LabelNode node)
+        {
+            Id = node.Id;
+            Name = node.Name;
+            Icon = node.Icon;
+
+            var list = (node.Children != null && node.Children.Count > 0 ? node.Children : [node])
+                .OrderBy(x => x.Sort)
+                .ThenBy(x => x.DisplayPriority)
+                .Select(x => new MapLabelItemVm(x))
+                .ToList();
+
+            Items = new ObservableCollection<MapLabelItemVm>(list);
+        }
+    }
+
+    public partial class MapLabelItemVm : ObservableObject
+    {
+        public int Id { get; }
+        public string Name { get; }
+        public string Icon { get; }
+        public int PointCount { get; }
+
+        public MapLabelItemVm(LabelNode node)
+        {
+            Id = node.Id;
+            Name = node.Name;
+            Icon = node.Icon;
+            PointCount = node.PointCount;
         }
     }
 }

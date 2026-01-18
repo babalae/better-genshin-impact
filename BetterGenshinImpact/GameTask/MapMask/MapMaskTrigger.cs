@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.MapMask;
@@ -50,7 +51,17 @@ public class MapMaskTrigger : ITaskTrigger
         try
         {
             var region = content.CaptureRectArea;
-            if (Bv.IsInBigMapUi(region))
+            var inBigMapUi = Bv.IsInBigMapUi(region);
+            UIDispatcherHelper.Invoke(() =>
+            {
+                var vm = MaskWindow.Instance().DataContext as MaskWindowViewModel;
+                if (vm != null)
+                {
+                    vm.IsInBigMapUi = inBigMapUi;
+                }
+            });
+
+            if (inBigMapUi)
             {
                 if (_detector.IsStable(region.CacheGreyMat))
                 {
