@@ -312,10 +312,10 @@ namespace BetterGenshinImpact.GameTask
 
                     _prevGameActive = active;
                     // // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获
-                    // if (SyncMaskWindowPosition())
-                    // {
-                    //     return;
-                    // }
+                    if (SyncMaskWindowPosition())
+                    {
+                        return;
+                    }
                 }
 
                 if (_triggers == null || !_triggers.Exists(t => t.IsEnabled))
