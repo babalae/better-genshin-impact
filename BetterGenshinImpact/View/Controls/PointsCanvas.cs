@@ -10,7 +10,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using BetterGenshinImpact.Model.MaskMap;
-using BetterGenshinImpact.Service;
+using BetterGenshinImpact.ViewModel;
 
 namespace BetterGenshinImpact.View.Controls;
 
@@ -99,7 +99,7 @@ public class PointsCanvas : FrameworkElement
         // 启用命中测试
         IsHitTestVisible = true;
 
-        PointImageCacheManager.Instance.ImageUpdated += PointImageCacheManagerOnImageUpdated;
+        MapIconImageCache.ImageUpdated += PointImageCacheManagerOnImageUpdated;
     }
 
     protected override void OnVisualParentChanged(DependencyObject oldParent)
@@ -107,7 +107,7 @@ public class PointsCanvas : FrameworkElement
         base.OnVisualParentChanged(oldParent);
         if (VisualParent == null)
         {
-            PointImageCacheManager.Instance.ImageUpdated -= PointImageCacheManagerOnImageUpdated;
+            MapIconImageCache.ImageUpdated -= PointImageCacheManagerOnImageUpdated;
         }
     }
 
@@ -239,18 +239,16 @@ public class PointsCanvas : FrameworkElement
         // 获取点位标签
         if (_labelMap.TryGetValue(point.LabelId, out var label))
         {
-            var image = PointImageCacheManager.Instance.TryGetImage(label.LabelId, label.IconUrl);
+            var image = MapIconImageCache.TryGet(label.IconUrl);
 
             if (image != null)
             {
-                // 绘制图片
                 dc.DrawImage(image, rect);
             }
             else
             {
-                _ = PointImageCacheManager.Instance.EnsureImageAsync(label.LabelId, label.IconUrl);
+                _ = MapIconImageCache.GetAsync(label.IconUrl, CancellationToken.None);
 
-                // 绘制颜色圆点
                 var brush = GetColorBrush(label);
                 dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
             }

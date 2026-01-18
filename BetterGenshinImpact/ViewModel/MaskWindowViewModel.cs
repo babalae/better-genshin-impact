@@ -669,12 +669,24 @@ namespace BetterGenshinImpact.ViewModel
             await Application.Current.Dispatcher.InvokeAsync(() => { IconImage = img; }, DispatcherPriority.Background);
         }
     }
-
-    file static class MapIconImageCache
+    
+    static class MapIconImageCache
     {
         private static readonly HttpClient _http = new();
         private static readonly TimeSpan _ttl = TimeSpan.FromMinutes(10);
         private static readonly IAppCache _cache = App.GetService<IAppCache>() ?? new CachingService();
+
+        public static event EventHandler<string>? ImageUpdated;
+
+        public static ImageSource? TryGet(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return null;
+            }
+
+            return _cache.Get<ImageSource?>(url);
+        }
 
         public static Task<ImageSource?> GetAsync(string url, CancellationToken ct)
         {
@@ -688,7 +700,13 @@ namespace BetterGenshinImpact.ViewModel
                     async (ICacheEntry entry) =>
                     {
                         entry.AbsoluteExpirationRelativeToNow = _ttl;
-                        return await LoadCoreAsync(url);
+                        var image = await LoadCoreAsync(url);
+                        if (image != null)
+                        {
+                            ImageUpdated?.Invoke(null, url);
+                        }
+
+                        return image;
                     })
                 .WaitAsync(ct);
         }
