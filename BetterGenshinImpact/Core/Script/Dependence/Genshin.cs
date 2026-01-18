@@ -182,7 +182,7 @@ public class Genshin
     /// 获取当前在大地图上的位置坐标
     /// </summary>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromBigMap()
+    public Point2f? GetPositionFromBigMap()
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
@@ -193,7 +193,7 @@ public class Genshin
     /// </summary>
     /// <param name="mapName">大地图名称</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromBigMap(string mapName)
+    public Point2f? GetPositionFromBigMap(string mapName)
     {
         TpTask tpTask = new TpTask(CancellationContext.Instance.Cts.Token);
         return tpTask.GetPositionFromBigMap(mapName);
@@ -203,7 +203,7 @@ public class Genshin
     /// 获取当前在小地图上的位置坐标
     /// </summary>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap()
+    public Point2f? GetPositionFromMap()
     {
         return GetPositionFromMap(MapTypes.Teyvat.ToString());
     }
@@ -220,7 +220,7 @@ public class Genshin
     /// <param name="mapName">大地图名称</param>
     /// <param name="cacheTimeMs">缓存时间，单位毫秒，默认900ms</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap(string mapName, int cacheTimeMs = 900)
+    public Point2f? GetPositionFromMap(string mapName, int cacheTimeMs = 900)
     {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
@@ -241,7 +241,7 @@ public class Genshin
     /// <param name="x">世界坐标x</param>
     /// <param name="y">世界坐标y</param>
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
-    public Point2f GetPositionFromMap(string mapName, float x, float y)
+    public Point2f? GetPositionFromMap(string mapName, float x, float y)
     {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))

@@ -389,7 +389,7 @@ public class TpTask
     /// <returns></returns>
     private (double clickX, double clickY) ConvertToGameRegionPosition(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
-        var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates((float)x, (float)y);
+        var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)x, (float)y));
         var picRect = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
         Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
         var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
@@ -769,7 +769,7 @@ public class TpTask
             rect = new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s);
         }
 
-        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect);
+        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect)!.Value;
     }
 
     public Point2f GetBigMapCenterPoint(string mapName)
@@ -793,7 +793,7 @@ public class TpTask
                 (x, y) = (p.X * TeyvatMap.BigMap256ScaleTo2048, p.Y * TeyvatMap.BigMap256ScaleTo2048);
             }
 
-            return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y));
+            return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y))!.Value;
         }
         else
         {
