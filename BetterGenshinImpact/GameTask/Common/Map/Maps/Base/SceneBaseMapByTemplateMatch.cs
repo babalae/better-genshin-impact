@@ -106,7 +106,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         using (miniMap)
         using (mask)
         {
-            LocalMatch(miniMap, mask, ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(prevX, prevY)), ref curResult);
+            LocalMatch(miniMap, mask, ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(prevX, prevY))!.Value, ref curResult);
             return UpdateResult(curResult, rank);
         }
     }
