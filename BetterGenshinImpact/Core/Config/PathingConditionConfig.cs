@@ -6,6 +6,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Config;
 
@@ -29,6 +33,10 @@ public partial class PathingConditionConfig : ObservableObject
     // 使用小道具的间隔时间(ms)
     [ObservableProperty]
     private int _useGadgetIntervalMs = 0;
+    
+    // 启用自动吃药功能
+    [ObservableProperty]
+    private bool _autoEatEnabled = false;
 
     public static PathingConditionConfig Default => new()
     {

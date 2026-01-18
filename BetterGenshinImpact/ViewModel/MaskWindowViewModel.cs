@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls.Overlay;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -25,6 +26,10 @@ namespace BetterGenshinImpact.ViewModel
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private string _fps = "0";
+
+        [ObservableProperty] private double _maskWindowWidth;
+
+        [ObservableProperty] private double _maskWindowHeight;
 
         public MaskWindowViewModel()
         {
@@ -95,6 +100,81 @@ namespace BetterGenshinImpact.ViewModel
                     });
                 });
             }
+        }
+
+        [RelayCommand]
+        private void OnOverlayLayoutCommitted(OverlayLayoutCommittedEventArgs args)
+        {
+            if (Config == null)
+            {
+                return;
+            }
+
+            if (args.Width <= 0 || args.Height <= 0)
+            {
+                return;
+            }
+
+            if (MaskWindowWidth <= 0 || MaskWindowHeight <= 0)
+            {
+                return;
+            }
+
+            var leftRatio = ToRatio(args.Left, MaskWindowWidth);
+            var topRatio = ToRatio(args.Top, MaskWindowHeight);
+            var widthRatio = ToRatio(args.Width, MaskWindowWidth);
+            var heightRatio = ToRatio(args.Height, MaskWindowHeight);
+
+            switch (args.LayoutKey)
+            {
+                case "LogTextBox":
+                    Config.MaskWindowConfig.LogTextBoxLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.LogTextBoxTopRatio = topRatio;
+                    Config.MaskWindowConfig.LogTextBoxWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.LogTextBoxHeightRatio = heightRatio;
+                    break;
+                case "StatusList":
+                    Config.MaskWindowConfig.StatusListLeftRatio = leftRatio;
+                    Config.MaskWindowConfig.StatusListTopRatio = topRatio;
+                    Config.MaskWindowConfig.StatusListWidthRatio = widthRatio;
+                    Config.MaskWindowConfig.StatusListHeightRatio = heightRatio;
+                    break;
+            }
+        }
+
+        [RelayCommand]
+        private void OnWindowSizeChanged(SizeChangedEventArgs args)
+        {
+            MaskWindowWidth = args.NewSize.Width;
+            MaskWindowHeight = args.NewSize.Height;
+        }
+
+        [RelayCommand]
+        private void OnExitOverlayLayoutEditMode()
+        {
+            if (Config == null)
+            {
+                return;
+            }
+
+            Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
+            SystemControl.ActivateWindow();
+        }
+
+        private static double ToRatio(double value, double baseSize)
+        {
+            if (double.IsNaN(value) || double.IsNaN(baseSize) || baseSize <= 0)
+            {
+                return 0;
+            }
+
+            var ratio = value / baseSize;
+            return ratio switch
+            {
+                < 0 => 0,
+                > 1 => 1,
+                _ => ratio
+            };
         }
     }
 }

@@ -2,6 +2,7 @@
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -95,7 +96,7 @@ public class ScriptParser
         catch (System.Exception ex)
         {
             MyLogger.LogError($"解析脚本错误，行号：{i + 1}，错误信息：{ex}");
-            MessageBox.Error($"解析脚本错误，行号：{i + 1}，错误信息：{ex}", "策略解析失败");
+            ThemedMessageBox.Error($"解析脚本错误，行号：{i + 1}，错误信息：{ex}", "策略解析失败");
             return default!;
         }
 

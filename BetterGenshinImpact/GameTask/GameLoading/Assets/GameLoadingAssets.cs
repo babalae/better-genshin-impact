@@ -9,6 +9,7 @@ public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
     public RecognitionObject ChooseEnterGameRo;
     public RecognitionObject EnterGameRo;
     public RecognitionObject WelkinMoonRo;
+    public RecognitionObject GirlMoonRo;
 
     private GameLoadingAssets()
     {
@@ -25,8 +26,8 @@ public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
         {
             Name = "EnterGame",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoWood", "exit_welcome.png"),
-            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height - CaptureRect.Height / 2),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "enter_game.png"),
+            RegionOfInterest = new Rect(CaptureRect.Width / 3, CaptureRect.Height / 2, CaptureRect.Width / 3, CaptureRect.Height - CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -35,6 +36,15 @@ public class GameLoadingAssets : BaseAssets<GameLoadingAssets>
             Name = "WelkinMoon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "welkin_moon_logo.png"),
+            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height / 2),
+            DrawOnWindow = false
+        }.InitTemplate();
+        
+        GirlMoonRo = new RecognitionObject
+        {
+            Name = "GirlMoon",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("GameLoading", "girl_moon.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height / 2),
             DrawOnWindow = false
         }.InitTemplate();

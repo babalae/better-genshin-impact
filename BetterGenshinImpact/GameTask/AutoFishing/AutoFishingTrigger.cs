@@ -1,4 +1,4 @@
-﻿using BehaviourTree;
+using BehaviourTree;
 using BehaviourTree.FluentBuilder;
 using BehaviourTree.Composites;
 using BetterGenshinImpact.Core.Simulator;
@@ -52,9 +52,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             AutoFishingTaskParam autoFishingTaskParam =
                 AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
             IOcrService ocrService = OcrFactory.Paddle;
-            IStringLocalizer<AutoFishingImageRecognition> stringLocalizer =
-                App.GetService<IStringLocalizer<AutoFishingImageRecognition>>() ??
-                throw new NullReferenceException(nameof(stringLocalizer));
+
             this.blackboard = new Blackboard(_predictor, this.Sleep, AutoFishingAssets.Instance);
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
@@ -63,7 +61,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 .UntilSuccess("拉条循环")
                 .Sequence("拉条")
                 .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, false, input, ocrService,
-                    cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: stringLocalizer))
+                    cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: autoFishingTaskParam.StringLocalizer))
                 .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
                 .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
                 .End()

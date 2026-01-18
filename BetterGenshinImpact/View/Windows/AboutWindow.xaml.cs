@@ -1,10 +1,11 @@
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Navigation;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -18,7 +19,8 @@ public partial class AboutWindow
     public AboutWindow()
     {
         InitializeComponent();
-        
+        SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
+
         Line1.Text = Base64Helper.DecodeToString("54mI5p2D5L+h5oGv");
         Line2.Text = Base64Helper.DecodeToString("6K+B5Lmm5Y+377yaIOi9r+iRl+eZu+Wtl+esrDE1MTU2OTUw5Y+3");
         Line3.Text = Base64Helper.DecodeToString("55m76K6w5Y+377yaIDIwMjVTUjA1MDA3NTI=");

@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Helpers.Ui;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -49,6 +51,13 @@ public partial class PromptDialog
         ConfigureLeftButton();
 
         this.Loaded += PromptDialogLoaded;
+        this.SourceInitialized += PromptDialog_SourceInitialized;
+    }
+
+    private void PromptDialog_SourceInitialized(object? sender, EventArgs e)
+    {
+        // 应用与主窗口相同的背景主题
+        WindowHelper.TryApplySystemBackdrop(this);
     }
 
     private void ConfigureLeftButton()
@@ -95,7 +104,7 @@ public partial class PromptDialog
         var inst = new PromptDialog(question, title, uiElement, "", config)
         {
             Width = size.Width,
-            Height = size.Height 
+            Height = size.Height
         };
         inst.ShowDialog();
         return inst.DialogResult == true ? inst.ResponseText : "";
@@ -119,7 +128,7 @@ public partial class PromptDialog
             }
         }
     }
-    
+
     private void BtnOkClick(object sender, RoutedEventArgs e)
     {
         DialogResult = true;

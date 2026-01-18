@@ -529,7 +529,7 @@ public partial class AutoWoodTask : ISoloTask
             if (!ra.IsEmpty())
             {
                 clickCnt++;
-                GameCaptureRegion.GameRegion1080PPosClick(955, 666);
+                GameCaptureRegion.GameRegion1080PPosClick(960, 630);
                 Debug.WriteLine("[AutoWood] Click entry");
             }
             else

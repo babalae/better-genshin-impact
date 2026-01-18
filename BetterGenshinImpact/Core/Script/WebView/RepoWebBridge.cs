@@ -4,9 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
+using System.Net;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -24,7 +27,12 @@ public sealed class RepoWebBridge
         ".vue", ".css", ".html", ".csv", ".xml",
         ".yaml", ".yml", ".ini", ".config"
     };
-
+    
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"
+    };
+    
     public async Task<string> GetRepoJson()
     {
         try
@@ -39,7 +47,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception ex)
         {
-            await MessageBox.ShowAsync(ex.Message, "获取仓库信息失败");
+            await ThemedMessageBox.ErrorAsync(ex.Message, "获取仓库信息失败");
             return string.Empty;
         }
     }
@@ -53,7 +61,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception e)
         {
-            await MessageBox.ShowAsync(e.Message, "订阅脚本链接失败！");
+            await ThemedMessageBox.ErrorAsync(e.Message, "订阅脚本链接失败！");
         }
     }
 
@@ -63,34 +71,73 @@ public sealed class RepoWebBridge
         
         if (!File.Exists(userConfigPath))
         {
-            await MessageBox.ShowAsync($"用户配置文件不存在: {userConfigPath}", "获取用户配置失败");
+            await ThemedMessageBox.ErrorAsync($"用户配置文件不存在: {userConfigPath}", "获取用户配置失败");
             return string.Empty;
         }
 
         return await File.ReadAllTextAsync(userConfigPath);
     }
 
-    public async Task<string> GetFile(string relPath)
+    public Task<string> GetFile(string relPath)
     {
         try
         {
+            // URL 解码路径（处理中文文件名）
+            relPath = WebUtility.UrlDecode(relPath);
+        
             string filePath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", relPath)
                 .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-
-            if (!File.Exists(filePath))
+            
+            // 验证解析后的路径在允许的目录范围内
+            string normalizedBasePath = Path.GetFullPath(Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo"));
+            string normalizedFilePath = Path.GetFullPath(filePath);
+            if (!normalizedFilePath.StartsWith(normalizedBasePath, StringComparison.OrdinalIgnoreCase))
             {
-                return "404";
+                return Task.FromResult("404");
             }
 
-            string extension = Path.GetExtension(filePath);
-            return AllowedTextExtensions.Contains(extension) 
-                ? await File.ReadAllTextAsync(filePath) 
-                : "404";
+            string extension = Path.GetExtension(filePath).ToLower();
+    
+            if (AllowedTextExtensions.Contains(extension)) 
+            {
+                // 读取文本文件
+                string? content = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(relPath);
+                return Task.FromResult(string.IsNullOrEmpty(content) ? "404" : content);
+            }
+            else if (AllowedImageExtensions.Contains(extension))
+            {
+                // 读取图片文件，返回 Base64 编码
+                byte[]? bytes = ScriptRepoUpdater.Instance.ReadBinaryFileFromCenterRepo(relPath);
+                if (bytes == null || bytes.Length == 0)
+                {
+                    return Task.FromResult("404");
+                }
+
+                string base64 = Convert.ToBase64String(bytes);
+                return Task.FromResult(base64);
+            }
+
+            return Task.FromResult("404");
         }
         catch
         {
-            return "404";
+            return Task.FromResult("404");
         }
+    }
+
+    private static string GetMimeType(string extension)
+    {
+        return extension.ToLower() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            ".ico" => "image/x-icon",
+            _ => "application/octet-stream"
+        };
     }
 
     public async Task<bool> UpdateSubscribed(string path)
@@ -118,7 +165,7 @@ public sealed class RepoWebBridge
         }
         catch (Exception ex)
         {
-            await MessageBox.ShowAsync(ex.Message, "信息更新失败");
+            await ThemedMessageBox.ErrorAsync(ex.Message, "信息更新失败");
             return false;
         }
     }
@@ -144,7 +191,37 @@ public sealed class RepoWebBridge
         }
         catch (Exception ex)
         {
-            await MessageBox.ShowAsync($"清空更新标记失败: {ex.Message}", "操作失败");
+            await ThemedMessageBox.ErrorAsync($"清空更新标记失败: {ex.Message}", "操作失败");
+            return false;
+        }
+    }
+
+    // 设置新手引导标志位
+    public bool SetGuideStatus(bool status)
+    {
+        try
+        {
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            scriptConfig.GuideStatus = status;
+            return true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return false;
+        }
+    }
+    
+    // 获取新手引导标志位
+    public bool GetGuideStatus()
+    {
+        try
+        {
+            return TaskContext.Instance().Config.ScriptConfig.GuideStatus;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
             return false;
         }
     }

@@ -1,4 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2),q
-纳西妲 e(hold),q
-芙宁娜 e,wait(0.3),q
-克洛琳德 e,charge(0.9),e,charge(0.9),e,charge(0.9),e,charge(0.9),e,charge(0.9),e,charge(0.9),e,q

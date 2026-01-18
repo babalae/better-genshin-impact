@@ -89,6 +89,10 @@ public class OcrFactory : IDisposable
     {
         return _config.PaddleOcrModelConfig switch
         {
+            PaddleOcrModelConfig.V4Auto =>
+                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
+                    PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(GetCultureInfo()) ??
+                    PaddleOcrService.PaddleOcrModelType.V4),
             PaddleOcrModelConfig.V5Auto =>
                 new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
                     PaddleOcrService.PaddleOcrModelType.FromCultureInfo(GetCultureInfo()) ??

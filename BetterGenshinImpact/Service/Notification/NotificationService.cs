@@ -107,6 +107,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeTelegramNotifier();
         InitializeXxtuiNotifier();
         InitializeDiscordWebhookNotifier();
+        InitializeServerChanNotifier();
 
         // 添加新通知渠道时，在此处添加对应的初始化方法调用
     }
@@ -208,7 +209,8 @@ public class NotificationService : IHostedService, IDisposable
                 _notificationConfig.BarkDeviceKeys,
                 _notificationConfig.BarkApiEndpoint,
                 _notificationConfig.BarkGroup,
-                _notificationConfig.BarkSound
+                _notificationConfig.BarkSound,
+                _notificationConfig.BarkIcon
             ));
         }
     }
@@ -296,6 +298,19 @@ public class NotificationService : IHostedService, IDisposable
             _notificationConfig.DiscordWebhookUsername,
             _notificationConfig.DiscordWebhookAvatarUrl,
             _notificationConfig.DiscordWebhookImageEncoder
+        ));
+    }
+
+    /// <summary>
+    /// 初始化 ServerChan 通知器
+    /// </summary>
+    private void InitializeServerChanNotifier()
+    {
+        if (_notificationConfig?.ServerChanNotificationEnabled != true) return;
+
+        _notifierManager.RegisterNotifier(new ServerChanNotifier(
+            _notifyHttpClient,
+            _notificationConfig.ServerChanSendKey
         ));
     }
 

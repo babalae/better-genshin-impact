@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
@@ -24,9 +25,6 @@
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
-    
-    
-    
     
     <Grid Margin="22,16,8,12">
         <Grid.ColumnDefinitions>
@@ -229,7 +227,8 @@
                                FontSize="16"
                                FontWeight="Bold"
                                VerticalAlignment="Center"
-                               Text="配置" />
+                               Text="配置" 
+                               x:Name="ConfigListGrid"/>
                     <ComboBox Grid.Column="1"
                               MinWidth="200"
                               Height="34"
@@ -438,16 +437,13 @@
                                               Text="秘境名称"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
-                                          Width="Auto"
+                                          Width="100"
                                           HorizontalAlignment="Left"
-                                          HorizontalContentAlignment="Center"
                                           Margin="10,0,10,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.DomainName, Mode=TwoWay}">
-                                </ComboBox>
+                                          SelectedDomain="{Binding SelectedConfig.DomainName, Mode=TwoWay}" />
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="2"
                                               Margin="10,0,10,0"
@@ -547,12 +543,11 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -576,12 +571,11 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -604,12 +598,11 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}" />
 
                             </Grid>
                             <Grid Margin="16">
@@ -633,12 +626,11 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}" />
 
                             </Grid>
                             <Grid Margin="16">
@@ -662,12 +654,11 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}" />
 
 
                             </Grid>
@@ -692,12 +683,11 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}" />
 
                             </Grid>
                             <Grid Margin="16">
@@ -726,18 +716,19 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <ComboBox Grid.Row="0"
+                                <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="140"
+                                          Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{Binding DomainNameList}"
-                                          SelectedItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}" />
+                                          SelectedDomain="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}" />
                                 <Border Grid.Row="1"
                                         Grid.Column="0"
                                         Grid.ColumnSpan="3"
                                         Grid.RowSpan="2"
                                         Margin="0,21,100,10"
-                                        Background="#80595959"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                        BorderThickness="1"
                                         CornerRadius="5"
                                         Width="Auto"
                                         HorizontalAlignment="Right"
@@ -752,7 +743,6 @@
                                           Grid.Column="2"
                                           Grid.RowSpan="2"
                                           Margin="20,11,37,0"
-                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           HorizontalAlignment="Right"
                                           VerticalAlignment="Center"
                                           ItemsSource="{Binding SundaySelectedValueList , Mode=TwoWay}"
@@ -1044,11 +1034,269 @@
                                       Margin="0,0,10,0"
                                       SelectedItem="{Binding SelectedConfig.SereniteaPotTpType, Mode=TwoWay}"
                                       ItemsSource="{Binding SereniteaPotTpTypes}" />
-                            <Button MinWidth="90"
-                                    Height="36"
-                                    Margin="0,0,28,0"
-                                    Content="购买选择"
-                                    Command="{Binding AddPotBuyItemCommand}" />
+                            <ToggleButton                                         
+                                Margin="0,0,28,0"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                HorizontalContentAlignment="Center"
+                                MinWidth="90"
+                                Height="36"
+                                Padding="0"
+                                ClickMode="Press"
+                                Content="购买选择"
+                                Click="SereniteaPotTpType_Clicked"
+                                x:Name="PotButton">
+                            </ToggleButton>
+                            
+                            <!-- 弹窗 -->
+                                <Popup Grid.Row="0" Grid.Column="0" x:Name="Popup"
+                                       Placement="Bottom"
+                                       PlacementTarget="{Binding ElementName=ConfigListGrid}"
+                                       IsOpen="{Binding IsChecked,ElementName=PotButton}"
+                                       AllowsTransparency="True"
+                                       PopupAnimation="Fade"
+                                       HorizontalAlignment="Center"
+                                       Focusable="False" 
+                                       StaysOpen="False"
+                                       Margin="12">
+                                    <Border CornerRadius="12"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Background="{DynamicResource  ApplicationBackgroundBrush}"
+                                            BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                            BorderThickness="1"
+                                            MaxWidth="300"
+                                            Margin="12">
+                                    
+                                        <StackPanel Margin="12">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <ui:TextBlock Grid.Row="0" 
+                                                              Grid.Column="0"
+                                                              Grid.ColumnSpan="2"
+                                                              Margin="5,5,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="日期不影响领取好感和钱币"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                <ComboBox Grid.Row="1" 
+                                                          Grid.Column="0"
+                                                          Grid.ColumnSpan="2" 
+                                                          MinWidth="150"
+                                                          Margin="5,5,5,5"
+                                                          ItemsSource="{x:Static local:OneDragonFlowPage.SereniteaPotSchedule}"
+                                                          x:Name="SereniteaPotComboBox" />
+                                                
+                                                <Separator Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"  Margin="5,3,5,3" BorderThickness="0,1,0,0" />
+                                                
+                                                <CheckBox
+                                                          Grid.Row="3" 
+                                                          Grid.Column="0"
+                                                          Margin="5,0,5,5"
+                                                          Background="Transparent"
+                                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                          HorizontalAlignment="Left"
+                                                          VerticalAlignment="Center"
+                                                          IsEnabled="{Binding SelectedConfig.SecretTreasureObjects[1], Mode=TwoWay}"
+                                                          x:Name="ClothCheckBox"/>
+                                                <ui:TextBlock Grid.Row="3" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="布匹"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="4" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="MomentResinCheckBox"/>
+                                                <ui:TextBlock Grid.Row="4" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="须臾树脂"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="5" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="SereniteapotExpBookCheckBox"/>
+                                                <ui:TextBlock Grid.Row="5" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="大英雄的经验"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="6" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="SereniteapotExpBookSmallCheckBox"/>
+                                                <ui:TextBlock Grid.Row="6" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="流浪者的经验"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="7" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="MagicmineralprecisionCheckBox"/>
+                                                <ui:TextBlock Grid.Row="7" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="精锻用魔矿"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="8" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="MOlaCheckBox"/>
+                                                <ui:TextBlock Grid.Row="8" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="摩拉"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="9" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="ExpBottleBigCheckBox"/>
+                                                <ui:TextBlock Grid.Row="9" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="祝圣精华"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                                
+                                                <CheckBox
+                                                    Grid.Row="10" 
+                                                    Grid.Column="0"
+                                                    Margin="5,0,5,5"
+                                                    Background="Transparent"
+                                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    x:Name="ExpBottleSmallCheckBox"/>
+                                                <ui:TextBlock Grid.Row="10" 
+                                                              Grid.Column="1"
+                                                              Margin="5,0,5,5"
+                                                              FontSize="14"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"
+                                                              Text="祝圣油膏"
+                                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                              TextWrapping="Wrap"/>
+                                            </Grid>  
+                                            
+                                            <Separator  Margin="5,0,5,5" BorderThickness="0,1,0,0" />
+                                            
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Button
+                                                    Grid.Row="0"
+                                                    Grid.Column="0"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    Width="70"
+                                                    Margin="15,0,5,5"
+                                                    Content="确定" 
+                                                    x:Name="PopupConfirmButton"
+                                                    Click="SereniteaPotTpType_Clicked"/>
+                                                <Button
+                                                    Grid.Row="0"
+                                                    Grid.Column="1"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    Width="70"
+                                                    Margin="5,0,5,5"
+                                                    Content="取消" 
+                                                    x:Name="PopupCloseButton"
+                                                    Click="SereniteaPotTpType_Clicked"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            
+                            
                         </StackPanel>
                     </ui:CardControl>
                     

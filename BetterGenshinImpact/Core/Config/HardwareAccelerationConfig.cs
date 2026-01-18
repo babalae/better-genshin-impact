@@ -14,10 +14,10 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private InferenceDeviceType _inferenceDevice = InferenceDeviceType.Cpu;
 
     /// <summary>
-    /// 是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认开。
+    /// 是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认关闭。
     /// </summary>
     [ObservableProperty]
-    private bool _cpuOcr = true;
+    private bool _cpuOcr = false;
 
     #region 一般GPU加速设置
 
@@ -84,7 +84,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// 启用 OpenVINO 缓存。默认关闭。
     /// </summary>
     [ObservableProperty]
-    private bool _enableOpenVinoCache = true;
+    private bool _enableOpenVinoCache = false;
 
     #endregion
 }

@@ -32,7 +32,7 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Error("读取黑白名单出错：" + e.ToString());
+            ThemedMessageBox.Error("读取黑白名单出错：" + e.ToString());
         }
     }
 
@@ -45,7 +45,7 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Error("保存失败：" + e.ToString());
+            ThemedMessageBox.Error("保存失败：" + e.ToString());
             return;
         }
 
@@ -56,7 +56,7 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            MessageBox.Error("保存失败：" + e.ToString());
+            ThemedMessageBox.Error("保存失败：" + e.ToString());
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using System;
@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
+using Microsoft.ClearScript.JavaScript;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -89,7 +90,19 @@ public class ScriptProject
         }
         try
         {
-            await (Task)engine.Evaluate(code);
+            if (Manifest.Library.Length != 0)
+            {
+                // 清除Document缓存
+                DocumentLoader.Default.DiscardCachedDocuments();
+
+                var evaluation = engine.Evaluate(new DocumentInfo { Category = ModuleCategory.Standard }, code);
+                if (evaluation is Task task) await task;
+            }
+            else
+            {
+                var evaluation = engine.Evaluate(code);
+                if (evaluation is Task task) await task;
+            }
         }
         catch (Exception e)
         {

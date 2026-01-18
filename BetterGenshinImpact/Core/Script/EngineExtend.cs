@@ -1,14 +1,18 @@
-﻿using BetterGenshinImpact.Core.Script.Dependence;
+﻿using System;
+using System.Collections.Generic;
+using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Utils;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -30,12 +34,14 @@ public class EngineExtend
         engine.AddHostObject("genshin", new Dependence.Genshin());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
+        engine.AddHostObject("http", new Http()); // 限制文件访问
         engine.AddHostObject("notification", new Notification());
-
+        
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
+        engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
         
         // 添加取消令牌相关类型
         engine.AddHostType("CancellationTokenSource", typeof(CancellationTokenSource));
@@ -57,19 +63,44 @@ public class EngineExtend
         engine.AddHostType("Region", typeof(Region));
         
         engine.AddHostType("CombatScenes", typeof(CombatScenes));
-        engine.AddHostType("CombatScenes", typeof(Avatar));
+        engine.AddHostType("Avatar", typeof(Avatar));
+        
+        
+        engine.AddHostObject("OpenCvSharp", new HostTypeCollection("OpenCvSharp"));
 
-
+        engine.AddHostType("ServerTime", typeof(ServerTime));
+        
+        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
+        engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
+        //鼠标回调
+        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
 
-        // 导入 CommonJS 模块
+        // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
         // https://github.com/microsoft/ClearScript/blob/master/ClearScriptTest/V8ModuleTest.cs
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading | DocumentAccessFlags.AllowCategoryMismatch;
         if (searchPaths != null)
         {
-            engine.DocumentSettings.SearchPath = string.Join(';', searchPaths);
+            var normalizedPaths = new List<string>();
+            foreach (var path in searchPaths)
+            {
+                try
+                {
+                    var normalizedPath = ScriptUtils.NormalizePath(workDir, path);
+                    normalizedPaths.Add(normalizedPath);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"从 library 字段读取路径 '{path}' 失败: {ex.Message}", ex);
+                }
+            }
+
+            if (normalizedPaths.Count > 0)
+            {
+                engine.DocumentSettings.SearchPath = string.Join(';', normalizedPaths);
+            }
         }
     }
 
@@ -91,6 +122,7 @@ public class EngineExtend
         engine.AddHostObject("keyUp", GlobalMethod.KeyUp);
         engine.AddHostObject("keyPress", GlobalMethod.KeyPress);
         engine.AddHostObject("setGameMetrics", GlobalMethod.SetGameMetrics);
+        engine.AddHostObject("getGameMetrics", GlobalMethod.GetGameMetrics);
         engine.AddHostObject("moveMouseBy", GlobalMethod.MoveMouseBy);
         engine.AddHostObject("moveMouseTo", GlobalMethod.MoveMouseTo);
         engine.AddHostObject("click", GlobalMethod.Click);

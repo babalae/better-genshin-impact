@@ -1,5 +1,3 @@
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Helpers.Extensions;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -8,9 +6,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using BetterGenshinImpact.GameTask.Model.Area;
-using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.GameTask;
 
 namespace BetterGenshinImpact.GameTask.AutoWood.Utils;
 
@@ -24,6 +22,7 @@ internal sealed class Login3rdParty
 
     public bool IsAvailabled => Type != The3rdPartyType.None;
     public The3rdPartyType Type { get; private set; } = default;
+    private (double x1080, double y1080)? lastAgreementClickPos = null;
 
     public void RefreshAvailabled()
     {
@@ -105,50 +104,40 @@ internal sealed class Login3rdParty
         {
             if (Process.GetProcessesByName("YuanShen").FirstOrDefault() is Process process)
             {
-                // 使用新的B服登录逻辑
+                // B服登录
                 var (loginWindow, windowType) = GetBiliLoginWindow(process);
                 if (loginWindow != IntPtr.Zero)
                 {
-                    // if (windowType.Contains("协议"))
-                    // {
-                    //     // 点击协议窗口
-                    //     var p = TaskContext.Instance()
-                    //         .SystemInfo.CaptureAreaRect.GetCenterPoint()
-                    //         .Add(new(40, 60));
-                    //     p.Click();
-                    //     Debug.WriteLine("[AutoWood] Click protocol window for Bilibili");
-                    //     // Sleep(2000, ct);
-                    //     Thread.Sleep(3000);
-                    //
-                    //     // 检查窗口是否还存在
-                    //     var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
-                    //     if (remainingWindow == IntPtr.Zero || !remainingType.Contains("协议"))
-                    //     {
-                    //         // 协议窗口已消失，继续等待登录窗口
-                    //         return false; // 继续循环等待登录窗口
-                    //     }
-                    //
-                    //     return false; // 协议窗口仍然存在，继续尝试
-                    // }
-                    if (windowType.Contains("登录"))
+                    var dpiScale = TaskContext.Instance().DpiScale;
+                    if (windowType.Contains("协议"))
                     {
-                        // 点击登录窗口
-                        var p = TaskContext.Instance()
-                            .SystemInfo.CaptureAreaRect.GetCenterPoint()
-                            .Add(new(0, 90));
-                        p.Click();
-                        Debug.WriteLine("[AutoWood] Click login window for Bilibili");
-                        // Sleep(2000, ct);
-                        Thread.Sleep(3000);
+                        GameCaptureRegion.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
 
                         // 检查窗口是否还存在
                         var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
-                        if (remainingWindow != IntPtr.Zero)
+                        if (remainingWindow == IntPtr.Zero || !remainingType.Contains("协议"))
                         {
-                            p.Click();
-                            Debug.WriteLine("[AutoWood] Bilibili login successful");
+                            // 协议窗口已消失，继续等待登录窗口
+                            return false;
                         }
-                        return true; // 登录成功
+                        // 协议窗口仍然存在，继续尝试
+                        return false;
+                    }
+                    if (windowType.Contains("登录"))
+                    {
+                        Thread.Sleep(2000);
+                        GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
+                        Thread.Sleep(2000);
+
+                        // 检查窗口是否还存在
+                        var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
+                        if (remainingWindow == IntPtr.Zero)
+                        {
+                            Debug.WriteLine("[AutoWood] Bilibili login successful");
+                            return true; // 登录成功
+                        }
+
+                        return false; // 登录窗口仍然存在，继续尝试
                     }
                 }
 

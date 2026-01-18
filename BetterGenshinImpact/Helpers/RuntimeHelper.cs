@@ -1,5 +1,7 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.ComponentModel;
@@ -87,7 +89,19 @@ internal static class RuntimeHelper
             catch (Exception ex)
             {
                 Debug.WriteLine(ex);
-                MessageBox.Error("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI");
+                // 延迟显示错误对话框，等待 Config 初始化完成
+                Application.Current?.Dispatcher.InvokeAsync(async () =>
+                {
+                    // 轮询等待 Config 初始化完成（最多等待 3 秒）
+                    var timeout = TimeSpan.FromSeconds(3);
+                    var startTime = DateTime.Now;
+                    while (ConfigService.Config == null && DateTime.Now - startTime < timeout)
+                    {
+                        await Task.Delay(50);
+                    }
+
+                    ThemedMessageBox.Error("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI");
+                }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                 return;
             }
         }
@@ -142,7 +156,7 @@ internal static class RuntimeHelper
                 ? "请不要把主程序exe文件剪切到桌面。正确的做法：请右键点击主程序，在弹出的菜单中选择“发送到”选项，然后选择“桌面创建快捷方式”。"
                 : "请重新安装软件");
 
-            MessageBox.Warning(stringBuilder.ToString());
+            ThemedMessageBox.Warning(stringBuilder.ToString());
             Environment.Exit(0xFFFF);
         }
     }

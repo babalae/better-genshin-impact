@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -201,6 +200,43 @@ public class PaddleOcrService : IOcrService, IDisposable
 
             return null;
         }
+
+        /// <summary>
+        /// 中英文优先使用V4模型，其他语言使用V5模型
+        /// </summary>
+        /// <param name="cultureInfo"></param>
+        /// <returns></returns>
+        public static PaddleOcrModelType? FromCultureInfoV4(CultureInfo cultureInfo)
+        {
+            var v5 = FromCultureInfo(cultureInfo);
+            // 如果用的是v5, 那么优先用V4的细分模型
+            if (v5 == V5)
+            {
+                List<string> names =
+                [
+                    cultureInfo.EnglishName.ToLowerInvariant(), cultureInfo.Name.ToLowerInvariant(),
+                    cultureInfo.ThreeLetterISOLanguageName.ToLowerInvariant(),
+                    cultureInfo.TwoLetterISOLanguageName.ToLowerInvariant()
+                ];
+                foreach (var name in names)
+                {
+                    if (name.Equals("en"))
+                    {
+                        return V4En;
+                    }
+                    else if (name.Equals("zh-hant") || name.Equals("zh-tw") || name.Equals("zh-hk"))
+                    {
+                        return V5;
+                    }
+                }
+
+                return V4;
+            }
+            else
+            {
+                return v5;
+            }
+        }
     }
 
     public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType)
@@ -245,8 +281,10 @@ public class PaddleOcrService : IOcrService, IDisposable
     /// </summary>
     public string OcrWithoutDetector(Mat mat)
     {
+        var startTime = Stopwatch.GetTimestamp();
         var str = _localRecModel.Run(mat).Text;
-        Debug.WriteLine($"PaddleOcrWithoutDetector 结果: {str}");
+        var time = Stopwatch.GetElapsedTime(startTime);
+        Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
         return str;
     }
 
@@ -304,5 +342,16 @@ public class PaddleOcrService : IOcrService, IDisposable
     {
         _localDetModel.Dispose();
         _localRecModel.Dispose();
+    }
+
+    /// <summary>
+    /// 返回(DetConfigName, RecConfigName)
+    /// </summary>
+    public (string, string) GetConfigName
+    {
+        get
+        {
+            return (this._localDetModel.GetConfigName, this._localRecModel.GetConfigName);
+        }
     }
 }

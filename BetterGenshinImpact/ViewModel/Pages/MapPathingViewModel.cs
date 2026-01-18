@@ -1,35 +1,37 @@
-﻿using System;
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Controls.Drawer;
+using BetterGenshinImpact.View.Controls.Webview;
+using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Message;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Web.WebView2.Wpf;
+using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.ViewModel.Message;
-using CommunityToolkit.Mvvm.Messaging;
-using Wpf.Ui.Violeta.Controls;
-using BetterGenshinImpact.View.Pages.View;
-using BetterGenshinImpact.ViewModel.Pages.View;
-using Wpf.Ui.Violeta.Win32;
-using BetterGenshinImpact.View.Controls.Drawer;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
-using System.ComponentModel;
-using BetterGenshinImpact.View.Controls.Webview;
-using Microsoft.Web.WebView2.Wpf;
-using BetterGenshinImpact.Helpers;
+using Wpf.Ui.Violeta.Controls;
+using Wpf.Ui.Violeta.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -42,6 +44,9 @@ public partial class MapPathingViewModel : ViewModel
 
     [ObservableProperty] private FileTreeNode<PathingTask>? _selectNode;
 
+    [ObservableProperty]
+    private bool _isRightClickSelection;
+
     private MapPathingDevWindow? _mapPathingDevWindow;
     private readonly IScriptService _scriptService;
 
@@ -49,12 +54,6 @@ public partial class MapPathingViewModel : ViewModel
 
     // 添加抽屉ViewModel
     public DrawerViewModel DrawerVm { get; } = new DrawerViewModel();
-
-    // 添加WebView2相关成员变量
-    private WebView2? _webView2;
-    private WebpagePanel? _mdWebpagePanel;
-    private TaskCompletionSource<bool>? _navigationCompletionSource;
-    private const int NavigationTimeoutMs = 10000; // 10秒超时
 
     /// <inheritdoc/>
     public MapPathingViewModel(IScriptService scriptService, IConfigService configService)
@@ -123,9 +122,14 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
-    public async Task OnStart()
+    public async Task OnStart(FileTreeNode<PathingTask>? item)
     {
-        var item = SelectNode;
+        // 如果没有传入参数，使用选中的节点
+        if (item == null)
+        {
+            item = SelectNode;
+        }
+
         if (item == null)
         {
             return;
@@ -192,6 +196,86 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
+    public async Task OnDelete(FileTreeNode<PathingTask>? item)
+    {
+        // 如果没有传入参数，使用选中的节点
+        if (item == null)
+        {
+            item = SelectNode;
+        }
+
+        if (item == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(item.FilePath))
+        {
+            Toast.Warning("无法删除：路径无效");
+            return;
+        }
+
+        // 确定删除的内容类型
+        string itemType = item.IsDirectory ? "文件夹" : "文件";
+        string itemName = item.FileName ?? "未知项目";
+
+        // 显示确认对话框
+        var messageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "删除确认",
+            Content = $"确定要删除{itemType} \"{itemName}\" 吗？\n\n此操作将永久删除该{itemType}及其所有内容，无法恢复！",
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var result = await messageBox.ShowDialogAsync();
+        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
+        {
+            try
+            {
+                if (item.IsDirectory)
+                {
+                    // 删除目录
+                    if (Directory.Exists(item.FilePath))
+                    {
+                        Directory.Delete(item.FilePath, true);
+                        Toast.Success($"已删除文件夹: {itemName}");
+                        _logger.LogInformation("已删除地图追踪文件夹: {Name} ({Path})", itemName, item.FilePath);
+                    }
+                    else
+                    {
+                        Toast.Warning("文件夹不存在");
+                    }
+                }
+                else
+                {
+                    // 删除文件
+                    if (File.Exists(item.FilePath))
+                    {
+                        File.Delete(item.FilePath);
+                        Toast.Success($"已删除文件: {itemName}");
+                        _logger.LogInformation("已删除地图追踪文件: {Name} ({Path})", itemName, item.FilePath);
+                    }
+                    else
+                    {
+                        Toast.Warning("文件不存在");
+                    }
+                }
+
+                // 刷新列表
+                InitScriptListViewData();
+            }
+            catch (Exception ex)
+            {
+                Toast.Error($"删除失败: {ex.Message}");
+                _logger.LogError(ex, "删除地图追踪项失败");
+            }
+        }
+    }
+
+    [RelayCommand]
     public void OnOpenLocalScriptRepo()
     {
         Config.ScriptConfig.ScriptRepoHintDotVisible = false;
@@ -199,10 +283,18 @@ public partial class MapPathingViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void SetRightClickSelection(string isRightClick)
+    {
+        IsRightClickSelection = "True".Equals(isRightClick, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [RelayCommand]
     public void OnOpenPathingDetail()
     {
         var item = SelectNode;
-        if (item == null)
+        
+        // 如果是右键点击，不打开抽屉
+        if (item == null || IsRightClickSelection)
         {
             return;
         }
@@ -220,40 +312,15 @@ public partial class MapPathingViewModel : ViewModel
         if (!string.IsNullOrEmpty(mdFilePath))
         {
             DrawerVm.DrawerWidth = 450;
-            // 注册抽屉关闭前事件
-            DrawerVm.SetDrawerClosingAction(args =>
-            {
-                if (_mdWebpagePanel != null)
-                {
-                    _mdWebpagePanel.Visibility = Visibility.Hidden;
-                }
-            });
-            DrawerVm.setDrawerOpenedAction(async () =>
-            {
-                SelectNode = null;
-                if (_mdWebpagePanel != null)
-                {
-                    // 等待导航完成或超时
-                    try
-                    {
-                        await WaitForNavigationCompletedWithTimeout();
-                        _mdWebpagePanel.Visibility = Visibility.Visible;
-                        _mdWebpagePanel.WebView.Focus();
-                        Debug.WriteLine("Navigation completed successfully");
-                    }
-                    catch (TimeoutException)
-                    {
-                        Toast.Error("Markdown内容加载超时");
-                    }
-                }
-            });
         }
         else
         {
             DrawerVm.DrawerWidth = 350;
-            DrawerVm.SetDrawerClosingAction(_ => { });
-            DrawerVm.setDrawerOpenedAction(() => { SelectNode = null; });
         }
+
+        // 统一的抽屉事件处理
+        DrawerVm.SetDrawerClosingAction(_ => { });
+        DrawerVm.setDrawerOpenedAction(() => { SelectNode = null; });
 
         // 创建要在抽屉中显示的内容
         var content = CreatePathingDetailContent(item, mdFilePath);
@@ -262,19 +329,6 @@ public partial class MapPathingViewModel : ViewModel
         if (content != null)
         {
             DrawerVm.OpenDrawer(content);
-        }
-    }
-
-    private async Task WaitForNavigationCompletedWithTimeout()
-    {
-        var completedTask = await Task.WhenAny(
-            _navigationCompletionSource!.Task,
-            Task.Delay(NavigationTimeoutMs)
-        );
-
-        if (completedTask != _navigationCompletionSource.Task)
-        {
-            throw new TimeoutException("Navigation did not complete within the timeout period");
         }
     }
 
@@ -299,70 +353,51 @@ public partial class MapPathingViewModel : ViewModel
         // 创建显示路径任务详情的控件
         var border = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
-            Padding = new Thickness(20)
+            //Background = new SolidColorBrush(Color.FromRgb(0x2B, 0x2B, 0x2B)),
+            Padding = new Thickness(20),
+            CornerRadius = new CornerRadius(8),
         };
+        border.SetResourceReference(Border.BackgroundProperty, "ApplicationBackgroundBrush");
 
-        var panel = new StackPanel();
-        border.Child = panel;
+
+        var mainGrid = new Grid();
+        mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 标题行
+        mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 内容行，占满剩余空间
+
+        border.Child = mainGrid;
 
         // 添加标题
-        panel.Children.Add(new TextBlock
+        var titleTextBlock = new TextBlock
         {
             Text = node.FileName,
             FontSize = 20,
             FontWeight = FontWeights.Bold,
-            Margin = new Thickness(0, 0, 0, 10)
-        });
+            Margin = new Thickness(0, 0, 0, 10),
+        };
+        Grid.SetRow(titleTextBlock, 0);
+        mainGrid.Children.Add(titleTextBlock);
 
-        // 如果找到md文件，使用WebpagePanel显示
+        // 如果找到md文件，使用RichTextBox显示
         if (!string.IsNullOrEmpty(mdFilePath))
         {
-            // 使用Grid作为容器来实现填充效果
-            var grid = new Grid
+            string markdown = File.ReadAllText(mdFilePath);
+            var flowDoc = MarkdownToFlowDocumentConverter.ConvertToFlowDocument(markdown);
+            var richTextBox = new RichTextBox
             {
-                Margin = new Thickness(0, 0, 0, 15)
-            };
-
-            _mdWebpagePanel = new WebpagePanel
-            {
-                Margin = new Thickness(0),
-                Visibility = Visibility.Hidden,
+                IsReadOnly = true,
+                IsDocumentEnabled = true,
+                BorderThickness = new Thickness(0),
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Document = flowDoc,
+                Background = Brushes.Transparent,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                HorizontalAlignment = HorizontalAlignment.Stretch
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Margin = new Thickness(0, 10, 0, 0)
             };
 
-            _navigationCompletionSource = new TaskCompletionSource<bool>();
-            _mdWebpagePanel.OnNavigationCompletedAction = (_) =>
-            {
-                // 导航完成时设置任务结果
-                _navigationCompletionSource.TrySetResult(true);
-            };
-            _mdWebpagePanel.NavigateToMd(File.ReadAllText(mdFilePath));
-
-            grid.Children.Add(_mdWebpagePanel);
-            panel.Children.Add(grid);
-
-            // 设置Grid高度以占满剩余空间
-            panel.SizeChanged += (sender, args) =>
-            {
-                // 计算其他元素使用的高度
-                double otherElementsHeight = 0;
-                foreach (var child in panel.Children)
-                {
-                    if (child != grid)
-                    {
-                        var frameworkElement = child as FrameworkElement;
-                        if (frameworkElement != null)
-                        {
-                            otherElementsHeight += frameworkElement.ActualHeight + frameworkElement.Margin.Top + frameworkElement.Margin.Bottom;
-                        }
-                    }
-                }
-
-                // 设置Grid高度为剩余空间
-                grid.Height = Math.Max(400, panel.ActualHeight - otherElementsHeight - 15); // 设置最小高度为400
-            };
+            Grid.SetRow(richTextBox, 1);
+            mainGrid.Children.Add(richTextBox);
         }
         else if (!node.IsDirectory && !string.IsNullOrEmpty(node.FilePath))
         {
@@ -374,42 +409,58 @@ public partial class MapPathingViewModel : ViewModel
                     return null;
                 }
 
-                panel.Children.Add(new TextBlock
+                var descriptionTextBlock = new TextBlock
                 {
                     Text = $"{node.Value?.Info.Description}",
                     TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 5, 0, 5)
-                });
+                    Margin = new Thickness(0, 10, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Stretch
+                };
+                Grid.SetRow(descriptionTextBlock, 1);
+                mainGrid.Children.Add(descriptionTextBlock);
             }
             catch (Exception ex)
             {
-                panel.Children.Add(new TextBlock
+                var errorTextBlock = new TextBlock
                 {
                     Text = $"读取文件信息时出错: {ex.Message}",
                     TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 5, 0, 5)
-                });
+                    Margin = new Thickness(0, 10, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    Foreground = Brushes.Orange
+                };
+                Grid.SetRow(errorTextBlock, 1);
+                mainGrid.Children.Add(errorTextBlock);
             }
         }
         else
         {
-            // 显示目录信息
-            panel.Children.Add(new TextBlock
+            // 显示目录信息 - 使用StackPanel包装多个TextBlock
+            var contentPanel = new StackPanel
+            {
+                Margin = new Thickness(0, 10, 0, 0),
+                VerticalAlignment = VerticalAlignment.Top
+            };
+
+            contentPanel.Children.Add(new TextBlock
             {
                 Text = "这是一个目录，包含多个地图追踪任务。",
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 5, 0, 15)
+                Margin = new Thickness(0, 0, 0, 15)
             });
 
             // 添加子项信息
             if (node.Children.Count > 0)
             {
-                panel.Children.Add(new TextBlock
+                contentPanel.Children.Add(new TextBlock
                 {
                     Text = $"包含 {node.Children.Count} 个子项",
-                    Margin = new Thickness(0, 5, 0, 5)
+                    Margin = new Thickness(0, 0, 0, 5)
                 });
             }
+
+            Grid.SetRow(contentPanel, 1);
+            mainGrid.Children.Add(contentPanel);
         }
 
         return border;

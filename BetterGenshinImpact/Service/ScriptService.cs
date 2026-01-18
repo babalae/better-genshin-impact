@@ -63,7 +63,7 @@ public partial class ScriptService : IScriptService
             var tcc = project.GroupInfo.Config.PathingConfig.TaskCycleConfig;
             if (tcc.Enable)
             {
-                int index = tcc.GetExecutionOrder(DateTime.Now);
+                int index = tcc.GetExecutionOrder();
                 if (index == -1)
                 {
                     _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
@@ -370,7 +370,7 @@ public partial class ScriptService : IScriptService
                                 _logger.LogInformation("------------------------------");
                             }
 
-                            await Task.Delay(2000);
+                            await Task.Delay(1000);
                         }
 
                         if (!RunnerContext.Instance.IsPreExecution && taskProgress != null)
@@ -429,7 +429,10 @@ public partial class ScriptService : IScriptService
 
         if (!fisrt&&!RunnerContext.Instance.IsPreExecution)
         {
-            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            if (CancellationContext.Instance.IsManualStop is false)
+            {
+                Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+            }
         }
 
         if (taskProgress != null)
@@ -483,6 +486,7 @@ public partial class ScriptService : IScriptService
         target.JsScriptSettingsObject = source.JsScriptSettingsObject;
         target.GroupInfo = source.GroupInfo;
         target.AllowJsNotification = source.AllowJsNotification;
+        target.AllowJsHTTPHash = source.AllowJsHTTPHash;
         target.SkipFlag = source.SkipFlag;
     }
 
@@ -575,11 +579,12 @@ public partial class ScriptService : IScriptService
                     {
                         if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
                         {
+                            await Task.Delay(500);
                             continue;
                         }
 
-                        var content = TaskControl.CaptureToRectArea();
-                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content))
+                        using var content = TaskControl.CaptureToRectArea();
+                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
                         {
                             return;
                         }
@@ -610,7 +615,6 @@ public partial class ScriptService : IScriptService
                             {
                                 GlobalMethod.MoveMouseTo(300, 300);
                             }
-
 
                         }
                     }

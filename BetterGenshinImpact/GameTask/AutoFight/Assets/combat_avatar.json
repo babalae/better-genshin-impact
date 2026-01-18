@@ -49,6 +49,26 @@
   },
   {
     "alias": [
+      "奇偶(男)",
+      "MannequinBoy"
+    ],
+    "id": "10000117",
+    "name": "奇偶(男)",
+    "nameEn": "MannequinBoy",
+    "weapon": "1"
+  },
+  {
+    "alias": [
+      "奇偶(女)",
+      "MannequinGirl"
+    ],
+    "id": "10000118",
+    "name": "奇偶(女)",
+    "nameEn": "MannequinGirl",
+    "weapon": "1"
+  },
+  {
+    "alias": [
       "神里绫华",
       "Kamisato Ayaka",
       "Ayaka",
@@ -1902,7 +1922,9 @@
   {
     "alias": [
       "伊涅芙",
-      "Ineffa"
+      "Ineffa",
+      "机器人",
+      "机娘"
     ],
     "burstCD": 15,
     "id": "10000116",
@@ -1910,5 +1932,122 @@
     "nameEn": "Ineffa",
     "skillCD": 16,
     "weapon": "13"
+  },
+  {
+    "alias": [
+      "菈乌玛",
+      "Lauma"
+    ],
+    "burstCD": 15,
+    "id": "10000119",
+    "name": "菈乌玛",
+    "nameEn": "Lauma",
+    "skillCD": 12,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "菲林斯",
+      "Flins"
+    ],
+    "burstCD": 20,
+    "id": "10000120",
+    "name": "菲林斯",
+    "nameEn": "Flins",
+    "skillCD": 6,
+    "skillHoldCD": 16,
+    "weapon": "13"
+  },
+  {
+    "alias": [
+      "爱诺",
+      "Aino"
+    ],
+    "burstCD": 13.5,
+    "id": "10000121",
+    "name": "爱诺",
+    "nameEn": "Aino",
+    "skillCD": 10,
+    "weapon": "11"
+  },
+  {
+    "alias": [
+      "奈芙尔",
+      "Nefer"
+    ],
+    "burstCD": 15,
+    "id": "10000122",
+    "name": "奈芙尔",
+    "nameEn": "Nefer",
+    "skillCD": 9,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "杜林",
+      "Durin"
+    ],
+    "burstCD": 18,
+    "id": "10000123",
+    "name": "杜林",
+    "nameEn": "Durin",
+    "skillCD": 12,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "雅珂达",
+      "Jahoda"
+    ],
+    "burstCD": 18,
+    "id": "10000124",
+    "name": "雅珂达",
+    "nameEn": "Jahoda",
+    "skillCD": 15,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "哥伦比娅",
+      "Columbina",
+      "少女",
+      "库塔尔",
+      "月神",
+      "月之少女"
+    ],
+    "burstCD": 15,
+    "id": "10000125",
+    "name": "哥伦比娅",
+    "nameEn": "Columbina",
+    "skillCD": 17,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "兹白",
+      "Zibai",
+      "白马仙人",
+      "白马"
+    ],
+    "burstCD": 15,
+    "id": "10000126",
+    "name": "兹白",
+    "nameEn": "Zibai",
+    "skillCD": 18,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "叶洛亚",
+      "Illuga",
+      "少爷",
+      "小少爷"
+    ],
+    "burstCD": 15,
+    "id": "10000127",
+    "name": "叶洛亚",
+    "nameEn": "Illuga",
+    "skillCD": 15,
+    "weapon": "10"
   }
 ]

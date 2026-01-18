@@ -14,6 +14,8 @@ public class CombatCommand
 
     public List<string>? Args { get; set; }
 
+    public List<int> ActivatingRound { get; set; }
+
     public CombatCommand(string name, string command)
     {
         Name = name.Trim();
@@ -63,8 +65,13 @@ public class CombatCommand
             }
         }
     }
+    
+    public override string ToString()
+    {
+        return $"<CombatCommand {Name}, {Method}({Args}) (rounds {ActivatingRound})>";
+    }
 
-    public void Execute(CombatScenes combatScenes)
+    public void Execute(CombatScenes combatScenes, CombatCommand? lastCommand = null)
     {
         Avatar? avatar;
         if (Name == CombatScriptParser.CurrentAvatarName)
@@ -79,17 +86,26 @@ public class CombatCommand
             {
                 return;
             }
-            // 非宏类脚本，等待切换角色成功
-            if (Method != Method.Wait
-                && Method != Method.MouseDown
-                && Method != Method.MouseUp
-                && Method != Method.Click
-                && Method != Method.MoveBy
-                && Method != Method.KeyDown
-                && Method != Method.KeyUp
-                && Method != Method.KeyPress)
+
+            if (lastCommand != null && lastCommand.Name != Name)
             {
+                // 上一个命令和当前命令不是同一个角色，直接切换角色
                 avatar.Switch();
+            }
+            else
+            {
+                // 非宏类脚本，等待切换角色成功
+                if (Method != Method.Wait
+                    && Method != Method.MouseDown
+                    && Method != Method.MouseUp
+                    && Method != Method.Click
+                    && Method != Method.MoveBy
+                    && Method != Method.KeyDown
+                    && Method != Method.KeyUp
+                    && Method != Method.KeyPress)
+                {
+                    avatar.Switch();
+                }
             }
         }
         Execute(avatar);
@@ -176,6 +192,10 @@ public class CombatCommand
             var s = double.Parse(Args![0]);
             avatar.Wait((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
+        else if (Method == Method.Ready)
+        {
+            avatar.Ready();
+        }
         else if (Method == Method.Aim)
         {
             throw new NotImplementedException();
@@ -254,6 +274,10 @@ public class CombatCommand
         else if (Method == Method.KeyPress)
         {
             avatar.KeyPress(Args![0]);
+        }
+        else if (Method == Method.Round)
+        {
+            // 作为回合标记使用，不做任何操作
         }
         else
         {

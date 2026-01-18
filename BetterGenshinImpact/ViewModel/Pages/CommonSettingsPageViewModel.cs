@@ -50,6 +50,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private string _selectedCountry = string.Empty;
     [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    
+    [ObservableProperty] private List<Tuple<TimeSpan, string>> _serverTimeZones =
+    [
+        Tuple.Create(TimeSpan.FromHours(8), "其他 UTC+08"),
+        Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
+        Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
+    ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService)
@@ -66,7 +73,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public AllConfig Config { get; set; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
-    
+
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
@@ -106,11 +113,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             }
         }
     }
-    
-    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } = new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
 
-    [ObservableProperty]
-    private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
+    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } =
+        new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
+
+    [ObservableProperty] private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
 
     [RelayCommand]
     public void OnQuestionButtonOnClick()
@@ -127,10 +134,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         cookieWin.NavigateToHtml(TravelsDiaryDetailManager.generHtmlMessage());
         cookieWin.Show();
     }
+
     private void InitializeMiyousheCookie()
     {
         OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
-        if (mcfg.Cookie == string.Empty&&
+        if (mcfg.Cookie == string.Empty &&
             mcfg.LogSyncCookie)
         {
             var config = LogParse.LoadConfig();
@@ -199,6 +207,23 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         WeakReferenceMessenger.Default.Send(
             new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+    }
+
+    [RelayCommand]
+    private void OnResetMaskOverlayLayout()
+    {
+        var c = Config.MaskWindowConfig;
+        c.StatusListLeftRatio = 20.0 / 1920;
+        c.StatusListTopRatio = 807.0 / 1080;
+        c.StatusListWidthRatio = 477.0 / 1920;
+        c.StatusListHeightRatio = 24.0 / 1080;
+
+        c.LogTextBoxLeftRatio = 20.0 / 1920;
+        c.LogTextBoxTopRatio = 832.0 / 1080;
+        c.LogTextBoxWidthRatio = 477.0 / 1920;
+        c.LogTextBoxHeightRatio = 188.0 / 1080;
+
+        OnRefreshMaskSettings();
     }
 
     [RelayCommand]
@@ -274,11 +299,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
                 DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
-                MessageBox.Information("脚本仓库离线包导入成功！");
+                ThemedMessageBox.Information("脚本仓库离线包导入成功！");
             }
             else
             {
-                MessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                ThemedMessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }
@@ -314,6 +339,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
+        var result = await ThemedMessageBox.ShowAsync("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？", "警告", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+        
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption
         {
             Trigger = UpdateTrigger.Manual,
@@ -333,6 +364,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
     }
+
     [RelayCommand]
     private async Task OnPaddleOcrModelConfigChanged(PaddleOcrModelConfig value)
     {

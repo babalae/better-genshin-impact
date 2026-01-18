@@ -148,6 +148,47 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用拖拽调整位置大小"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="开启后可以拖拽调整日志与状态栏位置，并调整大小"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,12,0"
+                                     IsChecked="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled, Mode=TwoWay}">
+                        <b:Interaction.Triggers>
+                            <b:EventTrigger EventName="Unchecked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                            <b:EventTrigger EventName="Checked">
+                                <b:InvokeCommandAction Command="{Binding RefreshMaskSettingsCommand}" />
+                            </b:EventTrigger>
+                        </b:Interaction.Triggers>
+                    </ui:ToggleSwitch>
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,36,0"
+                               Command="{Binding ResetMaskOverlayLayoutCommand}"
+                               Content="重置位置" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -319,6 +360,46 @@
                             </b:EventTrigger>
                         </b:Interaction.Triggers>
                     </ui:ToggleSwitch>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="遮罩文本透明度"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="调整遮罩窗口中文本的透明度（0.0-1.0）"
+                                  TextWrapping="Wrap" />
+                    <Slider Grid.Row="0"
+                            Grid.Column="1"
+                            Width="200"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            Minimum="0"
+                            Maximum="1"
+                            TickFrequency="0.1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding Config.MaskWindowConfig.TextOpacity, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="2"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,36,0"
+                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                               FontSize="14"
+                               MinWidth="40"
+                               Text="{Binding Config.MaskWindowConfig.TextOpacity, StringFormat=F2}" />
                 </Grid>
 
 
@@ -877,7 +958,7 @@
         </ui:CardExpander>
         
         <!--  新增手动导入本地脚本仓库功能  -->
-        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
+        <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -907,7 +988,7 @@
                 </Grid>
         
             </ui:CardControl.Header>
-        </ui:CardControl>
+        </ui:CardControl>-->
 
 
         <!--  其他设置  -->
@@ -1025,6 +1106,35 @@
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.OtherConfig.RestoreFocusOnLostEnabled, Mode=TwoWay}" />-->
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="服务器时区设置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="设置游戏服务器的时区，用于计算基于服务器时间的每日重置时间等任务调度。JS脚本可手动使用此设置来处理不同区域服务器的时区。"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              MinWidth="100"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding ServerTimeZones}"
+                              SelectedValue="{Binding Config.OtherConfig.ServerTimeZoneOffset}"
+                              SelectedValuePath="Item1"
+                              DisplayMemberPath="Item2" />
                 </Grid>
                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
@@ -1541,7 +1651,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="默认使用PaddleV5并自动根据游戏语言选择(V5Auto)，如果需要使用其他模型，请在此处选择。"
+                                          Text="如果需要使用其他模型，请在此处选择。"
                                           TextWrapping="Wrap" />
                             <ComboBox Grid.Row="0"
                                       Grid.RowSpan="2"
@@ -1740,4 +1850,3 @@
         </ui:CardControl>
     </StackPanel>
 </Page>
-

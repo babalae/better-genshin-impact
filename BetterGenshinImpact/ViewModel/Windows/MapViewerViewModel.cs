@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.Helpers;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -43,12 +44,13 @@ public partial class MapViewerViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(mapName))
         {
-            mapName = MapTypes.Teyvat.ToString();
+            mapName = nameof(MapTypes.Teyvat);
         }
 
         _mapName = mapName;
         Init(mapName);
-        var center = MapManager.GetMap(_mapName).ConvertGenshinMapCoordinatesToImageCoordinates(512, 512);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var center = MapManager.GetMap(_mapName, matchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(512, 512);
         _mapBitmap = ClipMat(new Point2f(center.x, center.y)).ToWriteableBitmap();
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
         {
@@ -95,6 +97,14 @@ public partial class MapViewerViewModel : ObservableObject
         else if (mapName == MapTypes.Enkanomiya.ToString())
         {
             _mapImage = new Mat(Global.Absolute(@"Assets/Map/Enkanomiya/Enkanomiya_0_1024.png"));
+        }
+        else if (mapName == MapTypes.SeaOfBygoneEras.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_0_1024.png"));
+        }
+        else if (mapName == MapTypes.AncientSacredMountain.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/AncientSacredMountain/AncientSacredMountain_0_1024.png"));
         }
         else
         {
@@ -208,7 +218,8 @@ public partial class MapViewerViewModel : ObservableObject
 
     private Point ConvertToMapPoint(Waypoint point)
     {
-        var (x, y) = MapManager.GetMap(_mapName).ConvertGenshinMapCoordinatesToImageCoordinates((float)point.X, (float)point.Y);
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var (x, y) = MapManager.GetMap(_mapName, matchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates((float)point.X, (float)point.Y);
         return new Point(x, y);
     }
 

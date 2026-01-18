@@ -1,8 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2),q
-那维莱特 e
-芙宁娜 e,q
-琴 e
-那维莱特 charge(3)
-钟离 e(hold),wait(0.3)
-琴 q
-那维莱特 e,charge(3),q,charge(3),charge(3)

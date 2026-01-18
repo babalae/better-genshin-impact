@@ -1,13 +1,19 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DeviceId;
 using Fischless.GameCapture.BitBlt;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -23,12 +29,12 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using BetterGenshinImpact.GameTask.UseRedeemCode;
-using BetterGenshinImpact.View.Windows;
-using BetterGenshinImpact.ViewModel.Pages;
-using DeviceId;
+using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.ViewModel.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
+
+using BetterGenshinImpact.Platform.Wine;
 
 namespace BetterGenshinImpact.ViewModel;
 
@@ -36,6 +42,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
+    private readonly INavigationService _navigationService;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty] private bool _isVisible = true;
@@ -46,12 +53,17 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
     [ObservableProperty] private bool _isWin11Later = OsVersionHelper.IsWindows11_OrGreater;
     
+    [ObservableProperty] private Brush _redeemCodeButtonForeground = Brushes.White;
+    
+    private string? _redeemCodeUpdateNewVersion;
+
     private bool _firstActivated = true;
 
     public AllConfig Config { get; set; }
 
     public MainWindowViewModel(INavigationService navigationService, IConfigService configService)
     {
+        _navigationService = navigationService;
         _configService = configService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
@@ -66,7 +78,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             _firstActivated = false;
             return;
         }
-        
+
         // 激活时候获取剪切板内容 用于脚本导入、兑换码自动兑换等
         try
         {
@@ -79,8 +91,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 {
                     return;
                 }
-                
-                
+
+
                 // 1. 导入脚本
                 await ScriptRepoUpdater.Instance.ImportScriptFromClipboard(clipboardText);
                 // 2. 自动兑换码
@@ -102,24 +114,103 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private void OnSwitchBackdrop()
     {
+        // Windows11_22523以下版本支持基本深浅主题切换，以上版本额外还支持Mica/Acrylic主题切换
         if (!OsVersionHelper.IsWindows11_22523_OrGreater)
         {
-            return; // win10 不支持切换主题
+            Config.CommonConfig.CurrentThemeType = Config.CommonConfig.CurrentThemeType switch
+            {
+                ThemeType.DarkNone => ThemeType.LightNone,
+                ThemeType.LightNone => ThemeType.DarkNone,
+                _ => ThemeType.DarkNone
+            };
+        }
+        else
+        {
+            Config.CommonConfig.CurrentThemeType = Config.CommonConfig.CurrentThemeType switch
+            {
+                ThemeType.DarkMica => ThemeType.DarkAcrylic,
+                ThemeType.DarkAcrylic => ThemeType.LightMica,
+                ThemeType.LightMica => ThemeType.LightAcrylic,
+                ThemeType.LightAcrylic => ThemeType.DarkMica,
+                _ => ThemeType.DarkMica
+            };
         }
 
-        CurrentBackdropType = CurrentBackdropType switch
-        {
-            WindowBackdropType.Mica => WindowBackdropType.Acrylic,
-            WindowBackdropType.Acrylic => WindowBackdropType.Mica,
-            _ => WindowBackdropType.Acrylic
-        };
+        ApplyTheme(Config.CommonConfig.CurrentThemeType);
+        _configService.Save();
+    }
 
-        Config.CommonConfig.CurrentBackdropType = CurrentBackdropType;
+    private void ApplyTheme(ThemeType themeType)
+    {
+        var originalThemeType = themeType;
 
-        if (Application.Current.MainWindow is MainWindow mainWindow)
+        // 根据主题类型设置应用程序主题（深色/浅色）和背景效果类型（Mica/Acrylic/None）
+        if (!OsVersionHelper.IsWindows11_22523_OrGreater)
         {
-            mainWindow.Background = new SolidColorBrush(Color.FromArgb(100, 0, 0, 0));
-            WindowBackdrop.ApplyBackdrop(mainWindow, CurrentBackdropType);
+            // 22523以下版本只支持深浅色切换,修正背景材质为纯色
+            if (themeType == ThemeType.DarkMica || themeType == ThemeType.DarkAcrylic)
+            {
+                themeType = ThemeType.DarkNone;
+            }
+            else if (themeType == ThemeType.LightMica || themeType == ThemeType.LightAcrylic)
+            {
+                themeType = ThemeType.LightNone;
+            }
+        }
+
+        // 如果主题类型被修正，更新配置并保存
+        if (themeType != originalThemeType)
+        {
+            Config.CommonConfig.CurrentThemeType = themeType;
+            _configService.Save();
+            _logger.LogInformation($"主题类型已从 {originalThemeType} 修正为 {themeType}，因为当前系统不支持该主题效果");
+        }
+
+        if (WinePlatformAddon.IsRunningOnWine)
+        {
+            // Wine 平台下不应用主题
+            _logger.LogInformation("检测到运行在 Wine 平台，跳过主题应用");
+            return;
+        }
+
+        switch (themeType)
+        {
+            case ThemeType.DarkNone:
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+                CurrentBackdropType = WindowBackdropType.None;
+                break;
+            case ThemeType.DarkMica:
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+                CurrentBackdropType = WindowBackdropType.Mica;
+                break;
+            case ThemeType.DarkAcrylic:
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+                CurrentBackdropType = WindowBackdropType.Acrylic;
+                break;
+            case ThemeType.LightNone:
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
+                CurrentBackdropType = WindowBackdropType.None;
+                break;
+            case ThemeType.LightMica:
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
+                CurrentBackdropType = WindowBackdropType.Mica;
+                break;
+            case ThemeType.LightAcrylic:
+                Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
+                CurrentBackdropType = WindowBackdropType.Acrylic;
+                break;
+        }
+
+        // 立即应用主题到当前窗口
+        if (Application.Current.MainWindow != null)
+        {
+            WindowHelper.ApplyThemeToWindow(Application.Current.MainWindow, themeType);
+        }
+
+        // 根据当前主题更新兑换码按钮的默认前景色（若无更新高亮）
+        if (_redeemCodeUpdateNewVersion == null)
+        {
+            UpdateRedeemCodeButtonDefaultForeground();
         }
     }
 
@@ -134,8 +225,28 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     }
 
     [RelayCommand]
+    private void OnOpenFeed()
+    {
+        if (_redeemCodeUpdateNewVersion != null)
+        {
+            Config.CommonConfig.RedeemCodeFeedsUpdateVersion = _redeemCodeUpdateNewVersion;
+            // 重置为主题默认前景色，避免浅色主题下显示为白色
+            UpdateRedeemCodeButtonDefaultForeground();
+            _redeemCodeUpdateNewVersion = null;
+        }
+
+        var feedWindow = new FeedWindow(new FeedWindowViewModel());
+        feedWindow.Show();
+    }
+
+    [RelayCommand]
     private async Task OnLoaded()
     {
+
+        // 应用上次保存的主题
+        ApplyTheme(Config.CommonConfig.CurrentThemeType);
+
+
         // 预热OCR
         await OcrPreheating();
 
@@ -149,6 +260,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 删除多余特征点
         Patch2();
+
+        // 启动时关闭布局编辑模式
+        if (Config.MaskWindowConfig.OverlayLayoutEditEnabled)
+        {
+            Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
+        }
 
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
@@ -170,6 +287,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
 
         // 检查更新
         await App.GetService<IUpdateService>()!.CheckUpdateAsync(new UpdateOption());
+        
+        // 检查兑换码更新
+        await CheckRedeemCodeFeedsUpdateAsync();
 
         //  Win11下 BitBlt截图方式不可用，需要关闭窗口优化功能
         if (OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt)
@@ -210,7 +330,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
 
-            MessageBox.Error("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
+            await ThemedMessageBox.ErrorAsync("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
         }
     }
     */
@@ -233,15 +353,15 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await MessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
-                    System.Windows.MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var res = await ThemedMessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
+                    System.Windows.MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
                     // 迁移配置，拷贝整个目录并覆盖
                     DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
-                    await MessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
+                    await ThemedMessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
                     Application.Current.Shutdown();
                 }
             }
@@ -307,12 +427,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            MessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
+            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(
                 new ProcessStartInfo(
                         "https://bettergi.com/faq.html#%E2%9D%93%E6%8F%90%E7%A4%BA-paddleocr%E9%A2%84%E7%83%AD%E5%A4%B1%E8%B4%A5-%E5%BA%94%E8%AF%A5%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3")
-                    { UseShellExecute = true });
+                { UseShellExecute = true });
         }
     }
 
@@ -324,8 +444,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             deviceId = "default"; // 如果获取设备ID失败，使用默认值
         }
 
-        // 每个设备只运行一次
-        if (!Config.CommonConfig.OnceHadRunDeviceIdList.Contains(deviceId))
+        // 每个设备只运行一次 | 在Wine上会崩溃
+        if (!Config.CommonConfig.OnceHadRunDeviceIdList.Contains(deviceId) && !WinePlatformAddon.IsRunningOnWine)
         {
             WelcomeDialog prompt = new WelcomeDialog
             {
@@ -337,5 +457,59 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Config.CommonConfig.OnceHadRunDeviceIdList.Add(deviceId);
             _configService.Save();
         }
+    }
+    
+    private async Task CheckRedeemCodeFeedsUpdateAsync()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://cnb.cool/bettergi/genshin-redeem-code/-/git/raw/main/update_time.txt");
+            var response = await HttpClientFactory.GetCommonSendClient().SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var txt = await response.Content.ReadAsStringAsync();
+
+
+            if (!string.IsNullOrEmpty(txt))
+            {
+                if (long.TryParse(txt, out long v2) 
+                    && long.TryParse(Config.CommonConfig.RedeemCodeFeedsUpdateVersion, out long v1))
+                {
+                    if (v2 > v1)
+                    {
+                        RedeemCodeButtonForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E9BFA"));
+                        _redeemCodeUpdateNewVersion = txt;
+                    }
+                }
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, $"获取兑换码是否存在更新失败");
+        }
+    }
+
+    // 更新兑换码按钮在当前主题下的默认前景色
+    private void UpdateRedeemCodeButtonDefaultForeground()
+    {
+        try
+        {
+            var brush = Application.Current.TryFindResource("TextFillColorPrimaryBrush") as Brush;
+            if (brush != null)
+            {
+                RedeemCodeButtonForeground = brush;
+                return;
+            }
+        }
+        catch
+        {
+            // 忽略资源查找异常，走回退逻辑
+        }
+
+        // 回退：根据当前主题类型使用黑/白色
+        var isLightTheme = Config.CommonConfig.CurrentThemeType == ThemeType.LightNone
+                           || Config.CommonConfig.CurrentThemeType == ThemeType.LightMica
+                           || Config.CommonConfig.CurrentThemeType == ThemeType.LightAcrylic;
+        RedeemCodeButtonForeground = isLightTheme ? Brushes.Black : Brushes.White;
     }
 }

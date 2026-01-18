@@ -1,42 +1,44 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Macro;
-using BetterGenshinImpact.GameTask.QucikBuy;
+using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.QuickBuy;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
+using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
-using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
-using BetterGenshinImpact.GameTask.UseRedeemCode;
-using BetterGenshinImpact.View;
-using OpenCvSharp;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
@@ -216,7 +218,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.CancelTaskHotkey),
             Config.HotKeyConfig.CancelTaskHotkey,
             Config.HotKeyConfig.CancelTaskHotkeyType,
-            (_, _) => { CancellationContext.Instance.Cancel(); }
+            (_, _) =>
+            {
+                _logger.LogInformation("检测到您配置的停止快捷键{Key}按下，停止当前执行任务", Config.HotKeyConfig.CancelTaskHotkey);
+                CancellationContext.Instance.ManualCancel();
+            }
         ));
         systemDirectory.Children.Add(new HotKeySettingModel(
             "暂停当前脚本/独立任务",
@@ -532,7 +538,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 if (pathRecording)
                 {
                     Task.Run(() => { pathRecorder.AddWaypoint(); });
-                    
+
                 }
             }
         ));
@@ -582,6 +588,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
+                    Task.Run(async () => { await new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(star: 4, null, null, null, null)).Start(new CancellationToken()); });
+
                 }
             ));
             debugDirectory.Children.Add(new HotKeySettingModel(

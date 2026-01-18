@@ -1,7 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
-using BetterGenshinImpact.Service;
-using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,12 +25,14 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
         { "须弥", [2877, -374] },
         { "枫丹", [4515, 3631] },
         { "纳塔", [8973.5, -1879.1] },
+        { "挪德卡莱", [9542.25, 1661.84] },
     };
 
     public readonly Dictionary<string, GiTpPosition> DomainPositionMap = new();
     public readonly Dictionary<string, GiTpPosition> GoddessPositions = new();
 
     public readonly List<String> DomainNameList = [];
+    public readonly Dictionary<string, List<GiTpPosition>> CountryToDomains = new();
 
     public MapLazyAssets()
     {
@@ -42,16 +42,37 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
 
 
         // 取出秘境 description=Domain
-        var teyvatTpPositions = ScenesDic[MapTypes.Teyvat.ToString()].Points;
-        foreach (var tp in teyvatTpPositions.Where(tp => (tp.Description == "材料本" || tp.Description == "圣遗物本")))
+        var teyvatTpPositions = ScenesDic[nameof(MapTypes.Teyvat)].Points;
+        foreach (var tp in teyvatTpPositions.Where(tp => tp.Description != null && (tp.Description == "天赋" || tp.Description == "武器" || tp.Description.StartsWith("圣遗物"))))
         {
             DomainPositionMap[tp.Name!] = tp;
             DomainNameList.Add(tp.Name!);
+
+            if (!string.IsNullOrEmpty(tp.Country))
+            {
+                if (!CountryToDomains.ContainsKey(tp.Country))
+                {
+                    CountryToDomains[tp.Country] = [];
+                }
+
+                CountryToDomains[tp.Country].Add(tp);
+            }
         }
 
         foreach (var tp in teyvatTpPositions.Where(tp => (tp.Type == "Goddess")))
         {
             GoddessPositions[tp.Id] = tp;
         }
+    }
+
+    public string? GetCountryByDomain(string domain)
+    {
+        if (string.IsNullOrEmpty(domain)) return null;
+        if (DomainPositionMap.TryGetValue(domain, out var tp))
+        {
+            return tp.Country;
+        }
+
+        return null;
     }
 }

@@ -115,7 +115,15 @@ public class GlobalMethod
                 Simulation.SendInput.Mouse.XButtonClick(0x0001);
                 break;
             default:
-                Simulation.SendInput.Keyboard.KeyPress(vk);
+                if (InputBuilder.IsExtendedKey(vk))
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(false, vk);
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(vk);
+                }
+                
                 break;
         }
     }
@@ -151,6 +159,11 @@ public class GlobalMethod
         _gameWidth = width;
         _gameHeight = height;
         _dpi = dpi;
+    }
+
+    public static double[] GetGameMetrics()
+    {
+        return [_gameWidth, _gameHeight, _dpi];
     }
 
     public static void MoveMouseBy(int x, int y)

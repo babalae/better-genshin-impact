@@ -6,6 +6,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
+        xmlns:platform="clr-namespace:BetterGenshinImpact.Platform.Wine"
+        xmlns:overlay="clr-namespace:BetterGenshinImpact.View.Controls.Overlay"
+        xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -13,6 +16,8 @@
         d:DesignHeight="1080"
         AllowsTransparency="True"
         FontFamily="{DynamicResource TextThemeFontFamily}"
+        ShowActivated="False"
+        Focusable="False"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None"
@@ -24,10 +29,13 @@
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
+        <b:EventTrigger EventName="SizeChanged">
+            <b:InvokeCommandAction Command="{Binding WindowSizeChangedCommand}" PassEventArgsToCommand="True" />
+        </b:EventTrigger>
     </b:Interaction.Triggers>
 
     <Window.Background>
-        <SolidColorBrush Opacity="0" Color="#FFB0B0B0" />
+        <SolidColorBrush Opacity="0.00001" Color="Transparent" />
     </Window.Background>
     <Window.Style>
         <Style TargetType="Window">
@@ -45,8 +53,9 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/View/Controls/Draggable/DraggableResizableItem.xaml" />
+                <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
         </ResourceDictionary>
     </Window.Resources>
 
@@ -68,57 +77,60 @@
                 <RowDefinition Height="5*" />
             </Grid.RowDefinitions>
 
-            <!--  日志和状态  -->
-            <Grid Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="5"
-                  HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                  Height="213" Width="477">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="25" />
-                    <RowDefinition Height="188" />
-                </Grid.RowDefinitions>
-                <ContentControl x:Name="LogTextBoxWrapper"
-                                Grid.Row="1"
-                                Width="477" Height="188"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Style="{StaticResource OuterDraggableResizableItemStyle}">
-                    <ContentControl.Effect>
-                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
-                    </ContentControl.Effect>
-                    <RichTextBox x:Name="LogTextBox"
-                                 Padding="0,5,0,0"
+            <Canvas Grid.Row="0"
+                    Grid.RowSpan="4"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="6"
+                    ClipToBounds="True">
+                <overlay:AdjustableOverlayItem x:Name="StatusWrapper"
+                                               Padding="4,2"
+                                               Background="#00000000"
+                                               BorderBrush="#33000000"
+                                               BorderThickness="0"
+                                               MinWidth="160"
+                                               MinHeight="24"
+                                               IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
+                                               LayoutKey="StatusList"
+                                               Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <overlay:AdjustableOverlayItem.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListWidthRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Width>
+                    <overlay:AdjustableOverlayItem.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.StatusListHeightRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Height>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="LayoutCommitted">
+                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
+                        </b:EventTrigger>
+                        <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                            <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                    <overlay:AdjustableOverlayItem.Effect>
+                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" Color="LightGray" />
+                    </overlay:AdjustableOverlayItem.Effect>
+                    <ui:ListView ItemsSource="{Binding StatusList}"
                                  Background="Transparent"
                                  BorderThickness="0"
-                                 FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
-                                 FontSize="12"
-                                 Foreground="LightGray"
-                                 IsHitTestVisible="False"
-                                 VerticalScrollBarVisibility="Hidden"
-                                 Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}" FontSize="{Binding FontSize, ElementName=LogTextBox}">
-                            <Paragraph>
-                                <Run>[00:00:00 INF] 更好的原神</Run>
-                                <LineBreak/>
-                                <Run>[00:00:00 INF] 遮罩窗口已启动，游戏大小1920x1080，素材缩放1.00，DPI缩放1</Run>
-                                <LineBreak/>
-                                <Run>[00:00:01 INF] Never gonna give you up</Run>
-                                <LineBreak/>
-                                <Run>[00:00:01 INF] Never gonna let you down</Run>
-                            </Paragraph>
-                        </d:FlowDocument>
-                    </RichTextBox>
-                </ContentControl>
-
-                <ContentControl x:Name="StatusWrapper"
-                                Grid.Row="0"
-                                Width="477" Height="24"
-                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                                Style="{StaticResource OuterDraggableResizableItemStyle}">
-                    <ContentControl.Effect>
-                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" Color="LightGray" />
-                    </ContentControl.Effect>
-                    <ui:ListView ItemsSource="{Binding StatusList}"
-                                     Visibility="{Binding Config.MaskWindowConfig.ShowStatus, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                     d:ItemsSource="{d:SampleData}">
+                                 d:ItemsSource="{d:SampleData}">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="Focusable" Value="False" />
@@ -139,14 +151,24 @@
                                         </Style>
                                     </StackPanel.Resources>
                                     <TextBlock FontFamily="{StaticResource FgiIconFontFamily}"
-                                                   FontSize="12"
-                                                   Text="{Binding Name}">
+                                               FontSize="12"
+                                               Text="{Binding Name}">
                                         <TextBlock.Style>
                                             <Style TargetType="{x:Type TextBlock}">
-                                                <Setter Property="Foreground" Value="LightGray" />
+                                                <Setter Property="Foreground">
+                                                    <Setter.Value>
+                                                        <SolidColorBrush Color="LightGray"
+                                                                         Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    </Setter.Value>
+                                                </Setter>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsEnabled}" Value="True">
-                                                        <Setter Property="Foreground" Value="LightGreen" />
+                                                        <Setter Property="Foreground">
+                                                            <Setter.Value>
+                                                                <SolidColorBrush Color="LightGreen"
+                                                                                 Opacity="{Binding DataContext.Config.MaskWindowConfig.TextOpacity, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -156,7 +178,118 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ui:ListView>
-                </ContentControl>
+                </overlay:AdjustableOverlayItem>
+
+                <overlay:AdjustableOverlayItem x:Name="LogTextBoxWrapper"
+                                               Padding="0"
+                                               Background="#00000000"
+                                               BorderBrush="#33000000"
+                                               BorderThickness="0"
+                                               MinWidth="240"
+                                               MinHeight="80"
+                                               IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
+                                               LayoutKey="LogTextBox"
+                                               Visibility="{Binding Config.MaskWindowConfig.ShowLogBox, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <overlay:AdjustableOverlayItem.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxWidthRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Width>
+                    <overlay:AdjustableOverlayItem.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.LogTextBoxHeightRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Height>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="LayoutCommitted">
+                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}" PassEventArgsToCommand="True" />
+                        </b:EventTrigger>
+                        <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                            <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                    <overlay:AdjustableOverlayItem.Effect>
+                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
+                    </overlay:AdjustableOverlayItem.Effect>
+                    <RichTextBox x:Name="LogTextBox"
+                                 Padding="0,5,0,0"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
+                                 FontSize="12"
+                                 IsHitTestVisible="False"
+                                 VerticalScrollBarVisibility="Hidden"
+                                 Opacity="{Binding Config.MaskWindowConfig.TextOpacity}">
+                        <RichTextBox.Foreground>
+                            <SolidColorBrush Color="LightGray" />
+                        </RichTextBox.Foreground>
+                        <d:FlowDocument FontFamily="{Binding FontFamily, ElementName=LogTextBox}" FontSize="{Binding FontSize, ElementName=LogTextBox}">
+                            <Paragraph>
+                                <Run>[00:00:00 INF] 更好的原神</Run>
+                                <LineBreak />
+                                <Run>[00:00:00 INF] 遮罩窗口已启动，游戏大小1920x1080，素材缩放1.00，DPI缩放1</Run>
+                                <LineBreak />
+                                <Run>[00:00:01 INF] Never gonna give you up</Run>
+                                <LineBreak />
+                                <Run>[00:00:01 INF] Never gonna let you down</Run>
+                            </Paragraph>
+                        </d:FlowDocument>
+                    </RichTextBox>
+                </overlay:AdjustableOverlayItem>
+            </Canvas>
+
+            <Grid Grid.Row="0"
+                  Grid.RowSpan="4"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="6"
+                  IsHitTestVisible="False"
+                  Panel.ZIndex="999"
+                  Visibility="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="当前处于编辑模式"
+                               FontSize="72"
+                               FontWeight="DemiBold"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="可以调整日志框、状态栏控件的位置和大小"
+                               Margin="0,8,0,0"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="右键相关控件可退出编辑状态"
+                               Margin="0,8,0,0"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="#CCFFFFFF"
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Opacity="0.8" BlurRadius="10" ShadowDepth="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </StackPanel>
             </Grid>
 
             <!--  uid遮盖  -->
@@ -168,6 +301,7 @@
 
             <!--  方位  -->
             <Viewbox Grid.Column="2" Grid.Row="0"
+                     IsHitTestVisible="False"
                      HorizontalAlignment="Left" VerticalAlignment="Top">
                 <Grid Width="250" Height="250"
                       Visibility="{Binding Config.MaskWindowConfig.DirectionsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -196,8 +330,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="西" />
+                               Text="西">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="4"
                                HorizontalAlignment="Center"
@@ -206,8 +343,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="南" />
+                               Text="南">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Grid.Column="4"
                                Grid.Row="2"
                                HorizontalAlignment="Center"
@@ -216,8 +356,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="东" />
+                               Text="东">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Grid.Column="2"
                                Grid.Row="0"
                                HorizontalAlignment="Center"
@@ -226,8 +369,11 @@
                                FontSize="34"
                                FontStretch="Medium"
                                FontWeight="DemiBold"
-                               Foreground="White"
-                               Text="北" />
+                               Text="北">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                 </Grid>
             </Viewbox>
 
@@ -238,13 +384,35 @@
                     Background="#00000000"
                     CornerRadius="4"
                     Opacity="0.5"
+                    IsHitTestVisible="False"
                     Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource DigitalThemeFontFamily}"
                            FontSize="16"
-                           Foreground="White"
-                           Text="{Binding Fps}" />
+                           Text="{Binding Fps}">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="White" Opacity="{Binding Config.MaskWindowConfig.TextOpacity}" />
+                    </TextBlock.Foreground>
+                </TextBlock>
+            </Border>
+            <!--  用于支持wine  -->
+            <Border Grid.Row="0" Grid.Column="0"
+                    Grid.RowSpan="4" Grid.ColumnSpan="6"
+                    IsHitTestVisible="False">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="Background" Value="Transparent"/>
+
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Source={x:Static platform:WinePlatformAddon.IsRunningOnWine}}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Setter Property="Background" Value="#11000000"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
             </Border>
         </Grid>
     </AdornerDecorator>

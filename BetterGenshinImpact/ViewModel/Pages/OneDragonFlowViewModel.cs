@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -50,7 +51,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         new("合成树脂"),
         // new ("每日委托"),
         new("自动秘境"),
-        // new ("自动锻造"),
+        new ("自动幽境危战"),
         // new ("自动刷地脉花"),
         new("领取每日奖励"),
         new ("领取尘歌壶奖励"),
@@ -83,6 +84,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             new() { Name = "领取邮件" },
             new() { Name = "合成树脂" },
             new() { Name = "自动秘境" },
+            new() { Name = "自动幽境危战" },
             new() { Name = "领取每日奖励" },
             new() {Name = "领取尘歌壶奖励" },
         };
@@ -246,6 +248,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
         MaxHeight = 600,
         };
+        uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
@@ -270,105 +273,6 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         return null;
     }
-
-    public async Task<string?> OnPotBuyItemAsync()
-    {
-        var stackPanel = new StackPanel
-        {
-            Orientation = Orientation.Vertical,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        var checkBoxes = new Dictionary<string, CheckBox>(); 
-        CheckBox selectedCheckBox = null;
-        
-        if (SelectedConfig.SecretTreasureObjects == null || SelectedConfig.SecretTreasureObjects.Count == 0)
-        {
-            Toast.Warning("未配置洞天百宝购买配置，请先设置");
-            SelectedConfig.SecretTreasureObjects.Add("每天重复");
-        }
-        var infoTextBlock = new TextBlock
-        {
-            Text = "日期不影响领取好感和钱币",
-            HorizontalAlignment = HorizontalAlignment.Center,
-            FontSize = 12,
-            Margin = new Thickness(0, 0, 0, 10)
-        };
-
-        stackPanel.Children.Add(infoTextBlock);
-        // 添加下拉选择框
-        var dayComboBox = new ComboBox
-        {
-            ItemsSource = new List<string> { "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日", "每天重复" },
-            SelectedItem = SelectedConfig.SecretTreasureObjects.First(),
-            FontSize = 12,
-            Margin = new Thickness(0, 0, 0, 10)
-        };
-        stackPanel.Children.Add(dayComboBox);
-        
-        foreach (var potBuyItem in SecretTreasureObjectList)
-        {
-            var checkBox = new CheckBox
-            {
-                Content = potBuyItem,
-                Tag = potBuyItem,
-                MinWidth = 180,
-                IsChecked = SelectedConfig.SecretTreasureObjects.Contains(potBuyItem) 
-            };
-            checkBoxes[potBuyItem] = checkBox; 
-            stackPanel.Children.Add(checkBox);
-        }
-        
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = "洞天百宝购买选择",
-            Content = new ScrollViewer
-            {
-                Content = stackPanel,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            },
-            CloseButtonText = "关闭",
-            PrimaryButtonText = "确认",
-            Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            SizeToContent = SizeToContent.Width, // 确保弹窗根据内容自动调整大小
-            MinWidth = 200,
-            MaxHeight = 500,
-        };
-
-        var result = await uiMessageBox.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-        {
-            SelectedConfig.SecretTreasureObjects.Clear();
-            SelectedConfig.SecretTreasureObjects.Add(dayComboBox.SelectedItem.ToString());
-            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
-            foreach (var checkBox in checkBoxes.Values)
-            {
-                if (checkBox.IsChecked == true)
-                {
-                    var potBuyItem = checkBox.Tag as string;
-                    if (potBuyItem != null)
-                    {
-                        selectedItems.Add(potBuyItem);
-                        SelectedConfig.SecretTreasureObjects.Add(potBuyItem);
-                    }
-                    else
-                    {
-                        Toast.Error("加载失败");
-                    }
-                }
-            }
-            if (selectedItems.Count > 0)
-            {
-                return string.Join(",", selectedItems); // 返回所有选中的项
-            }
-            else
-            {
-                Toast.Warning("选择为空，请选择购买的宝物");
-            }
-        }
-        return null;
-    }
     
     [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
     /// <summary>
@@ -378,7 +282,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _craftingBenchCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
 
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = ["挪德卡莱", "枫丹", "稻妻", "璃月", "蒙德"];
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
@@ -561,14 +465,6 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         WriteConfig(SelectedConfig);
-    }
-
-    [RelayCommand]
-    private async void AddPotBuyItem()
-    {
-        await OnPotBuyItemAsync();
-        SaveConfig();
-        SelectedTask = null;
     }
     
     [RelayCommand]
@@ -771,7 +667,10 @@ public partial class OneDragonFlowViewModel : ViewModel
                 if (CancellationContext.Instance.Cts.IsCancellationRequested)
                 {
                     _logger.LogInformation("任务被取消，退出执行");
-                    Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                    if (CancellationContext.Instance.IsManualStop is false)
+                    {
+                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                    }
                     return; // 后续的检查任务也不执行
                 }
             }
@@ -782,7 +681,10 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             await new CheckRewardsTask().Start(CancellationContext.Instance.Cts.Token);
             await Task.Delay(500);
-            Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+            if (CancellationContext.Instance.IsManualStop is false)
+            {
+                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+            }
             _logger.LogInformation("一条龙和配置组任务结束");
 
             // 执行完成后操作

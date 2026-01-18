@@ -1,4 +1,4 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.TriggerSettingsPage"
+<Page x:Class="BetterGenshinImpact.View.Pages.TriggerSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -189,7 +189,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认为 F，自带了 E 按键，需要改成其他键的请阅读文档"
+                                  Text="默认为 F，自带了 E 和 G 按键，需要改成其他键的请阅读文档"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -260,6 +260,40 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.RunBackgroundEnabled, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="画中画窗口（建议和后台模式同时开启）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="游戏失焦时展示小窗，滚轮缩放，左键返回游戏，右键关闭"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Margin="0,0,12,0"
+                              DisplayMemberPath="Value"
+                              ItemsSource="{Binding PictureInPictureSourceTypeDict}"
+                              SelectedValue="{Binding Config.AutoSkipConfig.PictureInPictureSourceType, Mode=TwoWay}"
+                              SelectedValuePath="Key" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="2"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoSkipConfig.PictureInPictureEnabled, Mode=TwoWay}" />
+                </Grid>
                 <!--<Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -328,7 +362,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先选择第一个选项、选择最后一个选项、不选择选项"
+                                  Text="进入对话后，对话选项的选择方式"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -336,6 +370,47 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding ClickChatOptionNames}"
                               SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16" x:Name="CustomPriorityOptionsGrid">
+                    <Grid.Style>  
+                        <Style TargetType="Grid">  
+                            <Setter Property="Visibility" Value="Collapsed"/>  
+                            <Style.Triggers>  
+                                <DataTrigger Binding="{Binding Config.AutoSkipConfig.ClickChatOption}" Value="自定义优先选项">  
+                                    <Setter Property="Visibility" Value="Visible"/>  
+                                </DataTrigger>  
+                            </Style.Triggers>  
+                        </Style>  
+                    </Grid.Style>    
+                    <Grid.RowDefinitions>  
+                        <RowDefinition Height="Auto" />  
+                        <RowDefinition Height="Auto" />  
+                    </Grid.RowDefinitions>  
+                    <Grid.ColumnDefinitions>  
+                        <ColumnDefinition Width="*" />  
+                        <ColumnDefinition Width="Auto" />  
+                    </Grid.ColumnDefinitions>  
+                    <ui:TextBlock Grid.Row="0"  
+                                  Grid.Column="0"  
+                                  FontTypography="Body"  
+                                  Text="自定义优先选项（后台模式无效）"  
+                                  TextWrapping="Wrap" />  
+                    <ui:TextBlock Grid.Row="1"  
+                                  Grid.Column="0"  
+                                  Margin="0,-10,0,0"  
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"  
+                                  Text="多个选项用分号(中英文)分隔，或者换行"  
+                                  TextWrapping="Wrap" />  
+                    <ui:TextBox Grid.Row="0"  
+                                Grid.RowSpan="2"  
+                                Grid.Column="1"  
+                                MinWidth="250"  
+                                MinHeight="60"  
+                                Margin="0,0,24,0"  
+                                AcceptsReturn="True"  
+                                TextWrapping="Wrap"  
+                                VerticalScrollBarVisibility="Auto"  
+                                Text="{Binding Config.AutoSkipConfig.CustomPriorityOptions, Mode=TwoWay}" />  
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -362,6 +437,32 @@
                                 MinWidth="90"
                                 Margin="0,0,24,0"
                                 Text="{Binding Config.AutoSkipConfig.AfterChooseOptionSleepDelay, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="点击对话框确认按钮之前的延迟（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="方便在自动剧情的情况下，依旧能够看完全部对话框文字"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="90"
+                                Margin="0,0,24,0"
+                                Text="{Binding Config.AutoSkipConfig.BeforeClickConfirmDelay, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -639,6 +740,93 @@
                                   TextWrapping="Wrap">
                         全自动钓鱼已迁移至独立任务下，请到独立任务页配合快捷键使用
                     </ui:TextBlock>
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
+        <!--  自动吃药  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf0f1;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动吃药"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        检测角色红血状态，自动使用便携营养袋回复生命值
+                    </ui:TextBlock>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.AutoEatConfig.Enabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="触发时间间隔（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="多少时间检查一次是否红血或需要复活"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoEatConfig.CheckInterval, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="吃药时间间隔（毫秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="防止频繁吃药"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     Text="{Binding Config.AutoEatConfig.EatInterval, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

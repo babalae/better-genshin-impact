@@ -25,13 +25,13 @@ public class ClaimBattlePassRewardsTask
 {
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    private readonly string claimAllLocalizedString;
+    private readonly string[] claimAllLocalizedStrings;
 
     public ClaimBattlePassRewardsTask()
     {
         IStringLocalizer<ClaimBattlePassRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimBattlePassRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.claimAllLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "一键");
+        this.claimAllLocalizedStrings = ((string[])["一键", "领取"]).Select(i => stringLocalizer.WithCultureGet(cultureInfo, i)).ToArray();
     }
 
     public async Task Start(CancellationToken ct)
@@ -55,7 +55,7 @@ public class ClaimBattlePassRewardsTask
         TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenBattlePassScreen); // F4 开纪行
 
         // 领取战令1
-        await Delay(500, ct);
+        await Delay(1000, ct);
         await ClaimAll(ct);
 
 
@@ -66,14 +66,14 @@ public class ClaimBattlePassRewardsTask
         await ClaimAll(ct);
 
         // 领取战令2
-        await Delay(2000, ct); // 等待升级动画
+        await Delay(2500, ct); // 等待升级动画
         // 还可能存在领取到原石的情况
         if (CaptureToRectArea().Find(ElementAssets.Instance.PrimogemRo).IsExist())
         {
             TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
         }
         GameCaptureRegion.GameRegion1080PPosClick(858, 45);
-        await Delay(500, ct);
+        await Delay(1500, ct);
         await ClaimAll(ct);
 
         // 关闭
@@ -88,13 +88,13 @@ public class ClaimBattlePassRewardsTask
     {
         using var ra = CaptureToRectArea();
         var ocrList = ra.FindMulti(RecognitionObject.Ocr(ra.ToRect().CutRightBottom(0.3, 0.2)));
-        var wt = ocrList.FirstOrDefault(txt => Regex.IsMatch(txt.Text, this.claimAllLocalizedString));
-        Debug.WriteLine(this.claimAllLocalizedString);
+        var wt = ocrList.FirstOrDefault(txt => this.claimAllLocalizedStrings.Any(i => Regex.IsMatch(txt.Text, i)));
+        Debug.WriteLine(this.claimAllLocalizedStrings);
         if (wt != null)
         {
             wt.Click();
             Logger.LogInformation("纪行：{Text}", "一键领取");
-            await Delay(500, ct);
+            await Delay(1000, ct);
             using var ra2 = CaptureToRectArea();
             if (ra2.Find(ElementAssets.Instance.PrimogemRo).IsExist())
             {

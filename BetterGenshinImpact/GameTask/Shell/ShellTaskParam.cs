@@ -3,9 +3,9 @@ using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.Shell;
 
-public class ShellTaskParam : BaseTaskParam
+public class ShellTaskParam : BaseTaskParam<ShellTask>
 {
-    private ShellTaskParam(string command, int configTimeoutSeconds, bool configNoWindow, bool configOutput, bool configDisable)
+    private ShellTaskParam(string command, int configTimeoutSeconds, bool configNoWindow, bool configOutput, bool configDisable) : base(null, null)
     {
         Command = command;
         TimeoutSeconds = configTimeoutSeconds;

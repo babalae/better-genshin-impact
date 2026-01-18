@@ -1,4 +1,5 @@
-﻿using System;
+using BetterGenshinImpact.View.Windows;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -19,16 +20,34 @@ public class SystemControl
     {
         if (!File.Exists(path))
         {
-           throw new Exception($"原神启动路径 {path} 不存在，请前往 启动——同时启动原神——原神安装路径 重新进行配置！");
+            await ThemedMessageBox.ErrorAsync($"原神启动路径 {path} 不存在，请前往 启动——同时启动原神——原神安装路径 重新进行配置！");
+            return IntPtr.Zero;
         }
-        
-        // 直接exe启动
-        Process.Start(new ProcessStartInfo(path)
+
+        var cfg = TaskContext.Instance().Config.GenshinStartConfig;
+        var workdir = Path.GetDirectoryName(path) ?? "";
+        var arg = cfg.GenshinStartArgs;
+
+        if (cfg.StartGameWithCmd)
         {
-            UseShellExecute = true,
-            Arguments = TaskContext.Instance().Config.GenshinStartConfig.GenshinStartArgs,
-            WorkingDirectory = Path.GetDirectoryName(path)
-        });
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c start \"\" /d \"{workdir}\" \"{path}\" {arg}",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            Process.Start(psi);
+        }
+        else
+        {
+            Process.Start(new ProcessStartInfo(path)
+            {
+                UseShellExecute = true,
+                Arguments = arg,
+                WorkingDirectory = workdir
+            });
+        }
 
         for (var i = 0; i < 5; i++)
         {
@@ -50,7 +69,12 @@ public class SystemControl
     public static bool IsGenshinImpactActiveByProcess()
     {
         var name = GetActiveProcessName();
-        return name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game";
+        return name is "YuanShen" or "yuanshen" or "GenshinImpact" or "Genshin Impact Cloud Game";
+    }
+    
+    public static string GetActiveByProcess()
+    {
+        return GetActiveProcessName() ?? "Unknown";
     }
 
     public static bool IsGenshinImpactActive()

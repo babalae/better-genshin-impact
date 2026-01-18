@@ -37,6 +37,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.GameTask.AutoFight;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -160,7 +161,7 @@ public class PathExecutor
         var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
 
         await Delay(100, ct);
-        Navigation.WarmUp(); // 提前加载地图特征点
+        Navigation.WarmUp(task.Info.MapMatchMethod); // 提前加载地图特征点
 
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
@@ -185,6 +186,10 @@ public class PathExecutor
 
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
+                            if (CurWaypoints.Item1 > 0)
+                            {
+                                await Delay(1000, ct);
+                            }
                             await HandleTeleportWaypoint(waypoint);
                         }
                         else
@@ -213,6 +218,9 @@ public class PathExecutor
                             if ((!string.IsNullOrEmpty(waypoint.Action) && !_skipOtherOperations) ||
                                 waypoint.Action == ActionEnum.CombatScript.Code)
                             {
+                                //战斗前的节点记录，用于游泳检测回到战斗节点
+                                AutoFightTask.FightWaypoint = waypoint.Action == ActionEnum.Fight.Code ? waypoint : null;
+
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
                             }
@@ -505,7 +513,7 @@ public class PathExecutor
         // 把 X Y 转换为 MatX MatY
         var allList = positions.Select(waypoint =>
         {
-            WaypointForTrack wft=new WaypointForTrack(waypoint, task.Info.MapName);
+            WaypointForTrack wft = new WaypointForTrack(waypoint, task.Info.MapName, task.Info.MapMatchMethod);
             wft.Misidentification=waypoint.PointExtParams.Misidentification;
             wft.MonsterTag = waypoint.PointExtParams.MonsterTag;
             wft.EnableMonsterLootSplit = waypoint.PointExtParams.EnableMonsterLootSplit;
@@ -633,9 +641,9 @@ public class PathExecutor
         {
             tpTask = new TpTask(ct);
         }
-
+        
         // 最小5分钟间隔
-        if ((DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
+        if ( _combatScenes?.CurrentMultiGameStatus?.IsInMultiGame == true || (DateTime.UtcNow - _lastGetExpeditionRewardsTime).TotalMinutes < 5)
         {
             return false;
         }
@@ -648,7 +656,6 @@ public class PathExecutor
         if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry != "无")
         {
             var ra1 = CaptureToRectArea();
-
             var textRect = new Rect(60, 20, 160, 260);
             var textMat = new Mat(ra1.SrcMat, textRect);
             string text = OcrFactory.Paddle.Ocr(textMat);
@@ -685,7 +692,7 @@ public class PathExecutor
         TpTask tpTask = new TpTask(ct);
         await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
-        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName)
+        var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
             .ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
@@ -697,7 +704,7 @@ public class PathExecutor
         var position = await GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+        await WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
 
@@ -712,12 +719,13 @@ public class PathExecutor
         var (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
+        await WaitUntilRotatedTo(targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
         var prevPositions = new List<Point2f>();
         var fastModeColdTime = DateTime.MinValue;
+        var prevNotTooFarPosition = position;
         int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
 
         // 按下w，一直走
@@ -768,25 +776,41 @@ public class PathExecutor
                 else
                 {
                     distanceTooFarRetryCount++;
-                    if (distanceTooFarRetryCount > 5)
+                    if (distanceTooFarRetryCount > 50)
                     {
                         if (position == new Point2f())
                         {
-                            throw new NormalEndException("重试多次后，当前点位无法被识别，放弃此路径！");
+                            throw new HandledException("重试多次后，当前点位无法被识别，放弃此路径！");
                         }
                         else
                         {
                             Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试多次后仍然失败，放弃此路径点！");
-                            throw new NormalEndException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
+                            throw new HandledException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
                         }
                     }
                     else
                     {
-                        Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        // 取余减少日志输出频率
+                        if (distanceTooFarRetryCount % 5 == 0)
+                        {
+                            Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
+                        }
+                        // 取余减少判断频率
+                        if (distanceTooFarRetryCount % 10 == 0)
+                        {
+                            await ResolveAnomalies(screen);
+                            Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
+                            Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
+                            // 淡入淡出特效
+                            await Delay(500, ct);
+                        }
                         await Delay(50, ct);
                         continue;
                     }
                 }
+            } else
+            {
+                prevNotTooFarPosition = position;
             }
 
             // 非攀爬状态下，检测是否卡死（脱困触发器）
@@ -838,7 +862,7 @@ public class PathExecutor
                 if (consecutiveRotationCountBeyondAngle > 10)
                 {
                     // 直接站定好转向
-                    await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+                    await WaitUntilRotatedTo(targetOrientation, 2);
                 }
             }
             
@@ -1012,7 +1036,7 @@ public class PathExecutor
             }
 
             targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 2);
+            await WaitUntilRotatedTo(targetOrientation, 2);
             // 小碎步接近
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Thread.Sleep(60);
@@ -1044,7 +1068,7 @@ public class PathExecutor
             var screen = CaptureToRectArea();
             var position = await GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 10);
+            await WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
             await handler.RunAsync(ct, waypoint);
         }
@@ -1067,7 +1091,9 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code
             || waypoint.Action == ActionEnum.ExitAndRelogin.Code
-            || waypoint.Action == ActionEnum.SetTime.Code)
+            || waypoint.Action == ActionEnum.SetTime.Code
+            || waypoint.Action == ActionEnum.UseGadget.Code
+            || waypoint.Action == ActionEnum.PickUpCollect.Code)
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
@@ -1096,7 +1122,7 @@ public class PathExecutor
             return null;
         }
 
-        var success = avatar.TrySwitch();
+        var success = avatar.TrySwitch(5);//多切换一次，否则如果切人纠正要等下一个循环
         if (success)
         {
             await Delay(100, ct);
@@ -1173,7 +1199,7 @@ public class PathExecutor
     private async Task<(Point2f point,int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
     {
         
-        var position = Navigation.GetPosition(imageRegion, waypoint.MapName);
+        var position = Navigation.GetPosition(imageRegion, waypoint.MapName, waypoint.MapMatchMethod);
         int time = 0;
         if (position == new Point2f())
         {
@@ -1208,7 +1234,7 @@ public class PathExecutor
                 await tpTask.OpenBigMapUi();
                 try
                 {
-                    position =MapManager.GetMap(waypoint.MapName).ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
+                    position =MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates(tpTask.GetPositionFromBigMap(waypoint.MapName));
                 }
                 catch (Exception e)
                 {
@@ -1244,6 +1270,16 @@ public class PathExecutor
         return (position,time);
     }
 
+    private async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
+    {
+        if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
+        {
+            return;
+        }
+        await ResolveAnomalies();
+        await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff);
+    }
+
     /**
      * 处理各种异常场景
      * 需要保证耗时不能太高
@@ -1259,7 +1295,8 @@ public class PathExecutor
         var cookRa = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
         var closeRa = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
         var closeRa2 = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
-        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist())
+        var closeRa3 = imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo);
+        if (cookRa.IsExist() || closeRa.IsExist() || closeRa2.IsExist() || closeRa3.IsExist())
         {
             // 排除大地图
             if (Bv.IsInBigMapUi(imageRegion))

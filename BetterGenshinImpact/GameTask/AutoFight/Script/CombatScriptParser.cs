@@ -60,7 +60,7 @@ public class CombatScriptParser
 
     public static CombatScript ParseContext(string context, bool validate = true)
     {
-        var lines = context.Split(["\r\n", "\r", "\n", ";"], StringSplitOptions.RemoveEmptyEntries);
+        var lines = context.Split(["\r\n", "\r", "\n"], StringSplitOptions.RemoveEmptyEntries);
         var result = new List<string>();
         foreach (var line in lines)
         {
@@ -73,7 +73,14 @@ public class CombatScriptParser
                 continue;
             }
 
-            result.Add(l);
+            if (l.Contains(";"))
+            {
+                result.AddRange(l.Split(";", StringSplitOptions.RemoveEmptyEntries));
+            }
+            else
+            {
+                result.Add(l);
+            }
         }
 
         return ParseLines(result, validate);
@@ -97,6 +104,7 @@ public class CombatScriptParser
 
     private static List<CombatCommand> ParseLine(string line, HashSet<string> combatAvatarNames, bool validate = true)
     {
+        line = line.Trim();
         var oneLineCombatCommands = new List<CombatCommand>();
         // 以空格分隔角色和指令 截取第一个空格前的内容为角色名称，后面的为指令
         // 20241116更新 不输入角色名称时，直接以当前角色为准
@@ -123,7 +131,70 @@ public class CombatScriptParser
         return oneLineCombatCommands;
     }
 
-    public static List<CombatCommand> ParseLineCommands(string lineWithoutAvatar, string avatarName)
+    public static List<int> ParseRoundCommand(CombatCommand roundCommand) {
+        // 解析round命令的入参，返回一个整数列表，代表在哪些回合执行后续指令
+        // 支持Round(1)、Round(1,3,5)、Round(2-4)、Round(1,3-5)等格式
+        var activatingRounds = new List<int>();
+        if (roundCommand.Args == null || roundCommand.Args.Count == 0) {
+            Logger.LogError("round方法必须有入参，代表在哪些回合执行后续指令，例：round(1)、round(1,3-5)");
+            throw new ArgumentException("round方法必须有入参，代表在哪些回合执行后续指令，例：round(1)、round(1,3-5)");
+        }
+        foreach (var arg in roundCommand.Args) {
+            if (arg.Contains('-')) {
+                // 范围
+                var parts = arg.Split('-', StringSplitOptions.TrimEntries);
+                if (parts.Length != 2) {
+                    Logger.LogError("round方法的入参格式错误，例：round(1-3)");
+                    throw new ArgumentException("round方法的入参格式错误，例：round(1-3)");
+                }
+                var start = int.Parse(parts[0]);
+                var end = int.Parse(parts[1]);
+                if (start > end || start <= 0) {
+                    Logger.LogError("round方法的入参格式错误，起始回合必须小于等于结束回合且大于0，例：round(1-3)");
+                    throw new ArgumentException("round方法的入参格式错误，起始回合必须小于等于结束回合且大于0，例：round(1-3)");
+                }
+                for (int i = start; i <= end; i++) {
+                    activatingRounds.Add(i);
+                }
+            } else {
+                // 单个回合
+                var round = int.Parse(arg);
+                if (round <= 0) {
+                    Logger.LogError("round方法的入参格式错误，回合数必须大于0，例：round(1)");
+                    throw new ArgumentException("round方法的入参格式错误，回合数必须大于0，例：round(1)");
+                }
+                activatingRounds.Add(round);
+            }
+        }
+        return activatingRounds;
+    }
+
+    public static List<CombatCommand> ParseLineCommands(string lineWithoutAvatar, string avatarName) {
+        var parts = lineWithoutAvatar.Split("|", StringSplitOptions.RemoveEmptyEntries);
+        var fullCombatCommands = new List<CombatCommand>();
+        foreach (var part in parts)
+        {
+            var combatCommands = ParseLinePart(part, avatarName);
+            if (combatCommands.Count > 0 && combatCommands[0].Method == Method.Round) {
+                // 遇到round指令，作为回合分隔符使用，不加入最终指令列表
+                var roundCommand = combatCommands[0];
+                var activatingRounds = ParseRoundCommand(roundCommand);
+                combatCommands.RemoveAt(0);
+                foreach (var combatCommand in combatCommands) {
+                    
+                    combatCommand.ActivatingRound = activatingRounds;
+                }
+            }
+            fullCombatCommands.AddRange(combatCommands);
+        }
+        // foreach (var combatCommand in fullCombatCommands)
+        // {
+        //     Logger.LogDebug("解析战斗脚本命令：{cmd}", combatCommand.ToString());
+        // }
+        return fullCombatCommands;
+    }
+
+    public static List<CombatCommand> ParseLinePart(string lineWithoutAvatar, string avatarName)
     {
         var oneLineCombatCommands = new List<CombatCommand>();
         var commandArray = lineWithoutAvatar.Split(",", StringSplitOptions.RemoveEmptyEntries);

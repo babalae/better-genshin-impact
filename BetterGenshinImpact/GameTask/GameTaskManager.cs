@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoWood.Assets;
+using BetterGenshinImpact.GameTask.AutoEat.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GameLoading;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
@@ -22,6 +23,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -45,6 +47,7 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoSkip", new AutoSkip.AutoSkipTrigger());
         TriggerDictionary.TryAdd("AutoFish", new AutoFishing.AutoFishingTrigger());
         TriggerDictionary.TryAdd("AutoCook", new AutoCook.AutoCookTrigger());
+        TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
 
         return ConvertToTriggerList();
     }
@@ -92,7 +95,11 @@ internal class GameTaskManager
                 break;
             case "AutoSkip":
                 triggerName = "AutoSkip";
-                trigger = new AutoSkip.AutoSkipTrigger();
+                trigger = externalConfig is null ? new AutoSkip.AutoSkipTrigger() : new AutoSkip.AutoSkipTrigger(externalConfig as AutoSkipConfig);
+                break;
+            case "AutoEat":
+                triggerName = "AutoEat";
+                trigger = new AutoEat.AutoEatTrigger();
                 break;
         }
 
@@ -114,6 +121,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("QuickTeleport")?.Init();
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
+            TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }
@@ -134,6 +142,7 @@ internal class GameTaskManager
         QuickSereniteaPotAssets.DestroyInstance();
         GameLoadingAssets.DestroyInstance();
         MapLazyAssets.DestroyInstance();
+        AutoEatAssets.DestroyInstance();
     }
 
     /// <summary>
