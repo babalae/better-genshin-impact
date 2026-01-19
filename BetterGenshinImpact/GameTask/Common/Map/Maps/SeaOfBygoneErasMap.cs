@@ -133,7 +133,8 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         {
             return default;
         }
-        teleportPoints = teleportPoints.OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
+        teleportPoints = teleportPoints.Select(i => new Point(i.X + 12, i.Y + 12)).
+            OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
         /*
         foreach (var p in teleportPoints) {
             Logger.LogInformation("Teleport point: {a}", p);
