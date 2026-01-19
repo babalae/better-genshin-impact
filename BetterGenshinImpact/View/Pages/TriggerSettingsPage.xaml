@@ -357,30 +357,29 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择选项优先级"
+                                  Text="自定义优先对话选项"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="进入对话后，对话选项的选择方式"
+                                  Text="优先级高于下边的 选择选项优先级"
                                   TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Margin="0,0,36,0"
-                              ItemsSource="{Binding ClickChatOptionNames}"
-                              SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoSkipConfig.CustomPriorityOptionsEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16" x:Name="CustomPriorityOptionsGrid">
-                    <Grid.Style>  
-                        <Style TargetType="Grid">  
-                            <Setter Property="Visibility" Value="Collapsed"/>  
-                            <Style.Triggers>  
-                                <DataTrigger Binding="{Binding Config.AutoSkipConfig.ClickChatOption}" Value="自定义优先选项">  
-                                    <Setter Property="Visibility" Value="Visible"/>  
-                                </DataTrigger>  
-                            </Style.Triggers>  
-                        </Style>  
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Config.AutoSkipConfig.CustomPriorityOptionsEnabled}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
                     </Grid.Style>    
                     <Grid.RowDefinitions>  
                         <RowDefinition Height="Auto" />  
@@ -393,7 +392,7 @@
                     <ui:TextBlock Grid.Row="0"  
                                   Grid.Column="0"  
                                   FontTypography="Body"  
-                                  Text="自定义优先选项（后台模式无效）"  
+                                  Text="自定义优先选项文本"  
                                   TextWrapping="Wrap" />  
                     <ui:TextBlock Grid.Row="1"  
                                   Grid.Column="0"  
@@ -411,6 +410,32 @@
                                 TextWrapping="Wrap"  
                                 VerticalScrollBarVisibility="Auto"  
                                 Text="{Binding Config.AutoSkipConfig.CustomPriorityOptions, Mode=TwoWay}" />  
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="选择选项优先级"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="进入对话后，对话选项的选择方式"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding ClickChatOptionNames}"
+                              SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

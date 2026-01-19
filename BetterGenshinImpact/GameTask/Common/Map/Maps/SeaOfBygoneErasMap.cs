@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using Newtonsoft.Json.Linq;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps;
@@ -54,30 +55,10 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/SeaOfBygoneEras/SeaOfBygoneEras_-2_1024.webp"));
         Layers = BaseMapLayer.LoadLayers(this);
 
-        var mapTeleports = new List<Point>();
-        var tpJson = System.IO.File.ReadAllText(Global.Absolute(@"GameTask\AutoTrackPath\Assets\tp.json"));
-
-        JObject j = JObject.Parse(tpJson);
-        foreach (JObject i in j["data"]!)
-        {
-            var sceneId = i["sceneId"];
-            if (sceneId != null && (int)sceneId == 11)
-            {
-                foreach (var p in i["points"]!)
-                {
-                    if ((string)p["type"]! != "Teleport")
-                    {
-                        continue;
-                    }
-                    var x = (float)p["position"]![2]!;
-                    var y = (float)p["position"]![0]!;
-                    var (x1, y1) = ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f (x, y));
-                    mapTeleports.Add(new Point(x1, y1));
-                }
-            }
-        }
-        mapTeleports = mapTeleports.OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
-        MapTeleports = mapTeleports;
+        MapTeleports = MapLazyAssets.Instance.ScenesDic["SeaOfBygoneEras"].Points.
+            Where(i => i.Type == "TeleportWaypoint").
+            Select(i => ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)i.TranX, (float)i.TranY))).
+            Select(i => new Point(i.X, i.Y)).OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
     }
 
     public override Point2f GetBigMapPosition(Mat greyBigMapMat)
@@ -152,7 +133,8 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         {
             return default;
         }
-        teleportPoints = teleportPoints.OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
+        teleportPoints = teleportPoints.Select(i => new Point(i.X + 12, i.Y + 12)).
+            OrderBy(i => i.X).ThenBy(i => i.Y).ToList();
         /*
         foreach (var p in teleportPoints) {
             Logger.LogInformation("Teleport point: {a}", p);

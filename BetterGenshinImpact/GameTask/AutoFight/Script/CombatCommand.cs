@@ -64,6 +64,11 @@ public class CombatCommand
                 throw new ArgumentException($"{Method.Alias[0]}方法的入参必须是VirtualKeyCodes枚举中的值，当前入参 {Args[0]} 不合法");
             }
         }
+        else if (Method == Method.Scroll)
+        {
+            AssertUtils.IsTrue(Args.Count == 1, "scroll方法必须有一个入参，代表滚动格数。例：scroll(1) 或 scroll(-1)");
+            AssertUtils.IsTrue(int.TryParse(Args[0], out _), "滚动格数必须是整数");
+        }
     }
     
     public override string ToString()
@@ -102,7 +107,8 @@ public class CombatCommand
                     && Method != Method.MoveBy
                     && Method != Method.KeyDown
                     && Method != Method.KeyUp
-                    && Method != Method.KeyPress)
+                    && Method != Method.KeyPress
+                    && Method != Method.Scroll)
                 {
                     avatar.Switch();
                 }
@@ -274,6 +280,10 @@ public class CombatCommand
         else if (Method == Method.KeyPress)
         {
             avatar.KeyPress(Args![0]);
+        }
+        else if (Method == Method.Scroll)
+        {
+            avatar.Scroll(int.Parse(Args![0]));
         }
         else if (Method == Method.Round)
         {

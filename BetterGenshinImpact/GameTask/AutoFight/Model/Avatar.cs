@@ -892,6 +892,11 @@ public class Avatar
         GlobalMethod.MoveMouseBy(x, y);
     }
 
+    public void Scroll(int scrollAmountInClicks)
+    {
+        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
+    }
+
     public void KeyDown(string key)
     {
         var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));

@@ -13,6 +13,7 @@
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="NoResize"
+                 WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
                  WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">
