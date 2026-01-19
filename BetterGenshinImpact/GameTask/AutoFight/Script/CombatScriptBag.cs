@@ -28,7 +28,8 @@ public class CombatScriptBag(List<CombatScript> combatScripts)
                 }
 
                 if (matchCount != avatars.Count) continue;
-                Logger.LogInformation("匹配到战斗脚本：{Name}", combatScript.Name);
+                Logger.LogInformation("匹配到战斗脚本：{Name}，共{Cnt}条指令，涉及角色：{Str}", 
+                combatScript.Name, combatScript.CombatCommands.Count, string.Join(",", combatScript.AvatarNames));  
                 return combatScript.CombatCommands;
             }
 
