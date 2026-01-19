@@ -783,6 +783,15 @@ public partial class OneDragonFlowViewModel : ViewModel
                 SelectedConfig = ConfigList[0];
             }
 
+            // 更新全局配置名称
+            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+            
+            // 刷新任务列表
+            LoadDisplayTaskListFromConfig();
+            
+            // 保存配置
+            SaveConfig();
+
             Toast.Success("配置删除成功");
         }
         catch (Exception e)
@@ -820,18 +829,24 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         try
         {
-            // 删除旧文件
-            var oldConfigFile = Path.Combine(OneDragonFlowConfigFolder, $"{SelectedConfig.Name}.json");
+            // 保存旧名称
+            var oldName = SelectedConfig.Name;
+            
+            // 更新配置名称
+            SelectedConfig.Name = newName;
+
+            // 先写入新文件
+            WriteConfig(SelectedConfig);
+
+            // 写入成功后再删除旧文件
+            var oldConfigFile = Path.Combine(OneDragonFlowConfigFolder, $"{oldName}.json");
             if (File.Exists(oldConfigFile))
             {
                 File.Delete(oldConfigFile);
             }
 
-            // 更新配置名称
-            SelectedConfig.Name = newName;
-
-            // 保存新配置
-            WriteConfig(SelectedConfig);
+            // 更新全局配置名称
+            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = newName;
 
             Toast.Success("配置重命名成功");
         }
