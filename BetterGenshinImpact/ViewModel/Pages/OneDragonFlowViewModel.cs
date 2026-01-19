@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -737,5 +737,101 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         SaveConfig();
+    }
+
+    [RelayCommand]
+    private void DeleteConfig()
+    {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择要删除的配置");
+            return;
+        }
+
+        var result = System.Windows.MessageBox.Show($"确定要删除配置「{SelectedConfig.Name}」吗？", "删除配置", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            // 删除对应的JSON文件
+            var configFile = Path.Combine(OneDragonFlowConfigFolder, $"{SelectedConfig.Name}.json");
+            if (File.Exists(configFile))
+            {
+                File.Delete(configFile);
+            }
+
+            // 从列表中移除
+            ConfigList.Remove(SelectedConfig);
+
+            // 如果还有其他配置，选中第一个
+            if (ConfigList.Count > 0)
+            {
+                SelectedConfig = ConfigList[0];
+            }
+            else
+            {
+                SelectedConfig = null;
+            }
+
+            Toast.Success("配置删除成功");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "删除配置时失败");
+            Toast.Error("删除配置时失败");
+        }
+    }
+
+    [RelayCommand]
+    private void RenameConfig()
+    {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择要重命名的配置");
+            return;
+        }
+
+        var newName = PromptDialog.Prompt("请输入新的配置名称", "重命名配置", SelectedConfig.Name);
+        if (string.IsNullOrEmpty(newName))
+        {
+            return;
+        }
+
+        if (newName == SelectedConfig.Name)
+        {
+            return;
+        }
+
+        if (ConfigList.Any(x => x.Name == newName))
+        {
+            Toast.Warning($"配置名称「{newName}」已存在，请使用其他名称");
+            return;
+        }
+
+        try
+        {
+            // 删除旧文件
+            var oldConfigFile = Path.Combine(OneDragonFlowConfigFolder, $"{SelectedConfig.Name}.json");
+            if (File.Exists(oldConfigFile))
+            {
+                File.Delete(oldConfigFile);
+            }
+
+            // 更新配置名称
+            SelectedConfig.Name = newName;
+
+            // 保存新配置
+            WriteConfig(SelectedConfig);
+
+            Toast.Success("配置重命名成功");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "重命名配置时失败");
+            Toast.Error("重命名配置时失败");
+        }
     }
 }
