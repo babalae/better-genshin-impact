@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+﻿using System.Text.Json.Serialization;
+
+namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 
 /// <summary>
 /// 原神世界坐标
@@ -31,10 +33,12 @@ public class GiTpPosition: GiWorldPosition
     public string? Name { get; set; } // tp 名称
     public string? Type { get; set; } // tp 类型
     public string? Country { get; set; }  // 所在国家
+    
+    [JsonIgnore]
     public string[] Areas { get; set; } = []; // 所在区域
-
+    [JsonIgnore]
     public string[] Rewards { get; set; } = [];
-
+    [JsonIgnore]
     public string Level1Area => Areas[0]; // 一级区域
     // 实际传送的坐标
     public decimal[] TranPosition { get; set; } = new decimal[3];
