@@ -766,14 +766,21 @@ public partial class OneDragonFlowViewModel : ViewModel
             // 从列表中移除
             ConfigList.Remove(SelectedConfig);
 
-            // 如果还有其他配置，选中第一个
-            if (ConfigList.Count > 0)
+            // 如果列表为空，创建默认配置
+            if (ConfigList.Count == 0)
             {
-                SelectedConfig = ConfigList[0];
+                var defaultConfig = new OneDragonFlowConfig
+                {
+                    Name = "默认配置"
+                };
+                ConfigList.Add(defaultConfig);
+                SelectedConfig = defaultConfig;
+                WriteConfig(defaultConfig);
             }
             else
             {
-                SelectedConfig = null;
+                // 如果还有其他配置，选中第一个
+                SelectedConfig = ConfigList[0];
             }
 
             Toast.Success("配置删除成功");
