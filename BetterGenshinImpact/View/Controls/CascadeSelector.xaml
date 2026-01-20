@@ -38,12 +38,14 @@
             </ToggleButton.Template>
         </ToggleButton>
 
-        <Popup IsOpen="{Binding IsChecked, ElementName=MainToggle, Mode=TwoWay}"
+        <Popup x:Name="MainPopup"
+               IsOpen="{Binding IsChecked, ElementName=MainToggle, Mode=TwoWay}"
                PlacementTarget="{Binding ElementName=MainToggle}"
                StaysOpen="False"
                AllowsTransparency="True"
                PopupAnimation="Slide">
-            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+            <Border x:Name="PopupBorder"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
@@ -51,15 +53,16 @@
                     Padding="4"
                     MinHeight="100"
                     MaxHeight="300"
-                    Width="300">
+                    MinWidth="120"
+                    MaxWidth="600">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="Black" Opacity="0.2"/>
                 </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="90"/>
+                        <ColumnDefinition Width="Auto" MinWidth="100"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" MinWidth="100"/>
                     </Grid.ColumnDefinitions>
 
                     <ListView x:Name="FirstLevelListView"

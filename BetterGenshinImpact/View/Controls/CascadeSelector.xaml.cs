@@ -1,15 +1,33 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace BetterGenshinImpact.View.Controls;
 
 public partial class CascadeSelector : UserControl
 {
+    private const double HorizontalMargin = 16;
+    private const double VerticalMargin = 8;
+    private const double MinFirstLevelWidth = 100;
+    private const double MaxFirstLevelWidth = 300;
+    private const double MinSecondLevelWidth = 100;
+    private const double MaxSecondLevelWidth = 300;
+    private const double MinPopupWidth = 120;
+    private const double MaxPopupWidth = 600;
+
     public CascadeSelector()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        UpdateFirstLevelOptions();
+        UpdatePopupWidth();
     }
 
     public Dictionary<string, List<string>>? CascadeOptions
@@ -44,7 +62,17 @@ public partial class CascadeSelector : UserControl
     }
 
     public static readonly DependencyProperty SecondLevelOptionsProperty =
-        DependencyProperty.Register("SecondLevelOptions", typeof(List<string>), typeof(CascadeSelector), new PropertyMetadata(null));
+        DependencyProperty.Register("SecondLevelOptions", typeof(List<string>), typeof(CascadeSelector), 
+            new PropertyMetadata(null, OnSecondLevelOptionsChanged));
+
+    private static void OnSecondLevelOptionsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = (CascadeSelector)d;
+        control.Dispatcher.BeginInvoke(() =>
+        {
+            control.AdjustSecondLevelListWidth();
+        }, System.Windows.Threading.DispatcherPriority.Render);
+    }
 
     public string? SelectedValue
     {
@@ -71,11 +99,136 @@ public partial class CascadeSelector : UserControl
     public static readonly DependencyProperty DefaultValueProperty =
         DependencyProperty.Register("DefaultValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
 
+    private double MeasureTextWidth(string text, double fontSize = 12)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        var formattedText = new FormattedText(
+            text,
+            CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(FontFamily, FontStyle, FontWeight, FontStretch),
+            fontSize,
+            Brushes.Black,
+            new NumberSubstitution(),
+            TextFormattingMode.Display,
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        return formattedText.WidthIncludingTrailingWhitespace;
+    }
+
+    private void AdjustFirstLevelListWidth()
+    {
+        if (FirstLevelOptions == null || FirstLevelOptions.Count == 0)
+        {
+            return;
+        }
+
+        double maxWidth = MinFirstLevelWidth;
+        foreach (var option in FirstLevelOptions)
+        {
+            double textWidth = MeasureTextWidth(option) + HorizontalMargin;
+            if (textWidth > maxWidth)
+            {
+                maxWidth = textWidth;
+            }
+        }
+
+        if (maxWidth > MaxFirstLevelWidth)
+        {
+            maxWidth = MaxFirstLevelWidth;
+        }
+
+        var grid = PopupBorder?.Child as Grid;
+        var firstColumn = grid?.ColumnDefinitions[0];
+        if (firstColumn != null)
+        {
+            firstColumn.Width = new GridLength(maxWidth);
+        }
+    }
+
+    private void AdjustSecondLevelListWidth()
+    {
+        if (SecondLevelOptions == null || SecondLevelOptions.Count == 0)
+        {
+            UpdatePopupWidth();
+            return;
+        }
+
+        double maxWidth = MinSecondLevelWidth;
+        foreach (var option in SecondLevelOptions)
+        {
+            double textWidth = MeasureTextWidth(option) + HorizontalMargin;
+            if (textWidth > maxWidth)
+            {
+                maxWidth = textWidth;
+            }
+        }
+
+        if (maxWidth > MaxSecondLevelWidth)
+        {
+            maxWidth = MaxSecondLevelWidth;
+        }
+
+        var grid = PopupBorder?.Child as Grid;
+        var thirdColumn = grid?.ColumnDefinitions[2];
+        if (thirdColumn != null)
+        {
+            thirdColumn.Width = new GridLength(maxWidth);
+        }
+
+        Dispatcher.BeginInvoke(() => UpdatePopupWidth(), System.Windows.Threading.DispatcherPriority.Render);
+    }
+
+    private void UpdatePopupWidth()
+    {
+        var grid = PopupBorder?.Child as Grid;
+        if (grid == null || grid.ColumnDefinitions.Count < 3)
+        {
+            return;
+        }
+
+        double totalWidth = 0;
+
+        var firstColumn = grid.ColumnDefinitions[0];
+        var secondColumn = grid.ColumnDefinitions[1];
+        var thirdColumn = grid.ColumnDefinitions[2];
+
+        if (firstColumn.Width.IsAuto)
+        {
+            firstColumn.Width = new GridLength(MinFirstLevelWidth);
+        }
+        totalWidth += firstColumn.Width.Value;
+
+        totalWidth += secondColumn.Width.Value;
+        totalWidth += thirdColumn.Width.Value;
+
+        totalWidth += 8;
+
+        if (totalWidth < MinPopupWidth)
+        {
+            totalWidth = MinPopupWidth;
+        }
+        if (totalWidth > MaxPopupWidth)
+        {
+            totalWidth = MaxPopupWidth;
+        }
+
+        PopupBorder.Width = totalWidth;
+    }
+
     private void UpdateFirstLevelOptions()
     {
         if (CascadeOptions != null)
         {
             FirstLevelOptions = CascadeOptions.Keys.ToList();
+            Dispatcher.BeginInvoke(() =>
+            {
+                AdjustFirstLevelListWidth();
+                UpdatePopupWidth();
+            }, System.Windows.Threading.DispatcherPriority.Render);
         }
         else
         {
