@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d" 
              d:DesignHeight="40" d:DesignWidth="300"
              Name="Root">
@@ -65,33 +66,33 @@
                         <ColumnDefinition Width="Auto" MinWidth="100"/>
                     </Grid.ColumnDefinitions>
 
-                    <ListView x:Name="FirstLevelListView"
+                    <ui:ListView x:Name="FirstLevelListView"
                               ItemsSource="{Binding FirstLevelOptions, ElementName=Root}"
                               BorderThickness="0"
                               SelectionChanged="FirstLevelListView_SelectionChanged"
                               ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <ListView.ItemTemplate>
+                        <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                        </ui:ListView.ItemTemplate>
+                    </ui:ListView>
 
                     <Rectangle Grid.Column="1" Width="1" 
                                Fill="{DynamicResource SurfaceStrokeColorDefaultBrush}" 
                                Margin="2,0"/>
 
-                    <ListView Grid.Column="2" x:Name="SecondLevelListView"
+                    <ui:ListView Grid.Column="2" x:Name="SecondLevelListView"
                               ItemsSource="{Binding SecondLevelOptions, ElementName=Root}"
                               BorderThickness="0"
                               SelectionChanged="SecondLevelListView_SelectionChanged"
                               ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <ListView.ItemTemplate>
+                        <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                        </ui:ListView.ItemTemplate>
+                    </ui:ListView>
                 </Grid>
             </Border>
         </Popup>
