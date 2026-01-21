@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -187,6 +187,14 @@ public class SettingItem
                         DefaultValue = Default?.ToString(),
                         Margin = new Thickness(0, 0, 0, 10)
                     };
+
+                    if (Default != null)
+                    {
+                        if (context is IDictionary<string, object?> ctx)
+                        {
+                            ctx.TryAdd(Name, Default.ToString());
+                        }
+                    }
 
                     BindingOperations.SetBinding(cascadeSelector, CascadeSelector.SelectedValueProperty, 
                         new Binding(Name) { Source = context, Mode = BindingMode.TwoWay });
