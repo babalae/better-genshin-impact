@@ -9,8 +9,7 @@ namespace BetterGenshinImpact.View.Controls;
 
 public partial class CascadeSelector : UserControl
 {
-    private const double HorizontalMargin = 16;
-    private const double VerticalMargin = 8;
+    private const double HorizontalMargin = 40;
     private const double MinFirstLevelWidth = 100;
     private const double MaxFirstLevelWidth = 300;
     private const double MinSecondLevelWidth = 100;
@@ -99,7 +98,7 @@ public partial class CascadeSelector : UserControl
     public static readonly DependencyProperty DefaultValueProperty =
         DependencyProperty.Register("DefaultValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
 
-    private double MeasureTextWidth(string text, double fontSize = 12)
+    private double MeasureTextWidth(string text, double fontSize)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -129,7 +128,7 @@ public partial class CascadeSelector : UserControl
         double maxWidth = MinFirstLevelWidth;
         foreach (var option in FirstLevelOptions)
         {
-            double textWidth = MeasureTextWidth(option) + HorizontalMargin;
+            double textWidth = MeasureTextWidth(option, FontSize) + HorizontalMargin;
             if (textWidth > maxWidth)
             {
                 maxWidth = textWidth;
@@ -160,7 +159,7 @@ public partial class CascadeSelector : UserControl
         double maxWidth = MinSecondLevelWidth;
         foreach (var option in SecondLevelOptions)
         {
-            double textWidth = MeasureTextWidth(option) + HorizontalMargin;
+            double textWidth = MeasureTextWidth(option, FontSize) + HorizontalMargin;
             if (textWidth > maxWidth)
             {
                 maxWidth = textWidth;
