@@ -358,7 +358,6 @@ namespace BetterGenshinImpact.ViewModel
         private void StartRefreshSelectedMapPoints()
         {
             _mapPointListCts?.Cancel();
-            _mapPointListCts?.Dispose();
             _mapPointListCts = new CancellationTokenSource();
             var ct = _mapPointListCts.Token;
             _ = RefreshSelectedMapPointsAsync(ct);

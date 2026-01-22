@@ -90,7 +90,7 @@ public abstract class SceneBaseMap : ISceneMap
 
     protected BaseMapLayer MainLayer => Layers[0];
 
-    protected readonly Feature2D SiftMatcher = Feature2DFactory.Get(Feature2DType.SIFT);
+    public readonly Feature2D SiftMatcher = Feature2DFactory.Get(Feature2DType.SIFT);
 
     protected void ExtractAndSaveFeature(string basePath)
     {

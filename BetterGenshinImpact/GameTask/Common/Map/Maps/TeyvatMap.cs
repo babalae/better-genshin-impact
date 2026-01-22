@@ -1,8 +1,9 @@
-﻿using System.IO;
+using System.IO;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Layer;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
@@ -25,8 +26,6 @@ public class TeyvatMap : SceneBaseMap
 
     public static readonly int TeyvatMapImageBlockWidth = 2048;
 
-    private readonly BaseMapLayer _teyvat256MapLayer;
-
     public TeyvatMap() : base(type: MapTypes.Teyvat,
         mapSize: new Size(GameMapCols * TeyvatMapImageBlockWidth, GameMapRows * TeyvatMapImageBlockWidth),
         mapOriginInImageCoordinate: new Point2f((GameMapLeftCols + 1) * TeyvatMapImageBlockWidth, (GameMapUpRows + 1) * TeyvatMapImageBlockWidth),
@@ -34,13 +33,6 @@ public class TeyvatMap : SceneBaseMap
         splitRow: GameMapRows * 2,
         splitCol: GameMapCols * 2)
     {
-        // 256用于大地图匹配
-        var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), Type.ToString());
-        _teyvat256MapLayer = BaseMapLayer.LoadLayer(this, Path.Combine(layerDir, "Teyvat_0_256_SIFT.kp.bin"), Path.Combine(layerDir, "Teyvat_0_256_SIFT.mat.png"));
-        
-        // 手动拆分特征点
-        var mapSize256 = new Size(MapSize.Width / BigMap256ScaleTo2048, MapSize.Height / BigMap256ScaleTo2048);
-        _teyvat256MapLayer.SplitBlocks = KeyPointFeatureBlockHelper.SplitFeatures(mapSize256, SplitRow, SplitCol, _teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors);
     }
     
 
@@ -50,19 +42,17 @@ public class TeyvatMap : SceneBaseMap
     public override Point2f GetBigMapPosition(Mat greyBigMapMat)
     {
         greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
-        return SiftMatcher.Match(_teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors, greyBigMapMat);
+        var layer = BigMapTeyvat256Layer.GetInstance(this);
+        return SiftMatcher.Match(layer.TrainKeyPoints, layer.TrainDescriptors, greyBigMapMat);
     }
 
     public override Rect GetBigMapRect(Mat greyBigMapMat)
     {
-        greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
-        return SiftMatcher.KnnMatchRect(_teyvat256MapLayer.TrainKeyPoints, _teyvat256MapLayer.TrainDescriptors, greyBigMapMat);
+        return BigMapTeyvat256Layer.GetInstance(this).GetBigMapRect(greyBigMapMat);
     }
 
-    public Rect GetBigMapRect(Mat greyBigMapMat, float prevX, float prevY)
+    public Rect GetBigMapRect(Mat greyBigMapMat, Rect prevRect)
     {
-        greyBigMapMat = ResizeHelper.Resize(greyBigMapMat, 1d / 4);
-        var (keyPoints, descriptors) = _teyvat256MapLayer.ChooseBlocks(prevX, prevY);
-        return SiftMatcher.KnnMatchRect(keyPoints, descriptors, greyBigMapMat);
+        return BigMapTeyvat256Layer.GetInstance(this).GetBigMapRect(greyBigMapMat, prevRect);
     }
 }

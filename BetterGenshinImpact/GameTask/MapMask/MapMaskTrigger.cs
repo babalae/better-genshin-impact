@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Layer;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.ViewModel;
@@ -12,8 +13,7 @@ using Microsoft.Extensions.Logging;
 namespace BetterGenshinImpact.GameTask.MapMask;
 
 /// <summary>
-/// 自动吃药触发器
-/// 检测红血状态时自动使用Recovery.png，检测到Resurrection.png时按z复活
+/// 地图遮罩触发器
 /// </summary>
 public class MapMaskTrigger : ITaskTrigger
 {
@@ -33,6 +33,9 @@ public class MapMaskTrigger : ITaskTrigger
 
     // 图像连续稳定次数
     private int _stableCount = 0;
+    
+    private ISceneMap _teyvatMap =>  MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod);
+    private OpenCvSharp.Rect _prevRect = default;
 
     public void Init()
     {
@@ -78,11 +81,19 @@ public class MapMaskTrigger : ITaskTrigger
 
                 if (_stableCount == 0)
                 {
-                    var rect256 = MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod).GetBigMapRect(region.CacheGreyMat);
+                    var rect256 = BigMapTeyvat256Layer.GetInstance((SceneBaseMap)_teyvatMap).GetBigMapRect(region.CacheGreyMat, _prevRect);
+                    if (rect256 != default)
+                    {
+                        _prevRect = rect256;
+                    }
                     const int s = TeyvatMap.BigMap256ScaleTo2048; // 相对2048做8倍缩放
                     var rect2048 = new Rect(rect256.X * s, rect256.Y * s, rect256.Width * s, rect256.Height * s);
                     UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().PointsCanvasControl.UpdateViewport(rect2048.X, rect2048.Y, rect2048.Width, rect2048.Height); });
                 }
+            }
+            else
+            {
+                _prevRect = default;
             }
         }
         catch (Exception e)
