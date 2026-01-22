@@ -33,9 +33,11 @@ public class MapMaskTrigger : ITaskTrigger
 
     // 图像连续稳定次数
     private int _stableCount = 0;
-    
-    private ISceneMap _teyvatMap =>  MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod);
+
+    private ISceneMap _teyvatMap => MapManager.GetMap(MapTypes.Teyvat, _mapMatchingMethod);
     private OpenCvSharp.Rect _prevRect = default;
+
+    private const int RectDebounceThreshold = 3;
 
     public void Init()
     {
@@ -84,8 +86,19 @@ public class MapMaskTrigger : ITaskTrigger
                     var rect256 = BigMapTeyvat256Layer.GetInstance((SceneBaseMap)_teyvatMap).GetBigMapRect(region.CacheGreyMat, _prevRect);
                     if (rect256 != default)
                     {
+                        // if (_prevRect != default)
+                        // {
+                        //     var dx = Math.Abs(rect256.X - _prevRect.X);
+                        //     var dy = Math.Abs(rect256.Y - _prevRect.Y);
+                        //     if (dx <= RectDebounceThreshold && dy <= RectDebounceThreshold)
+                        //     {
+                        //         return;
+                        //     }
+                        // }
+
                         _prevRect = rect256;
                     }
+
                     const int s = TeyvatMap.BigMap256ScaleTo2048; // 相对2048做8倍缩放
                     var rect2048 = new Rect(rect256.X * s, rect256.Y * s, rect256.Width * s, rect256.Height * s);
                     UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().PointsCanvasControl.UpdateViewport(rect2048.X, rect2048.Y, rect2048.Width, rect2048.Height); });
