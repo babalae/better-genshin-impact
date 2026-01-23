@@ -9,6 +9,8 @@ using Fischless.GameCapture;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
+using System.Net.NetworkInformation;
+using BetterGenshinImpact.GameTask.Common.Job;
 
 namespace BetterGenshinImpact.GameTask.Common;
 
@@ -17,13 +19,55 @@ public class TaskControl
     public static ILogger Logger { get; } = App.GetLogger<TaskControl>();
 
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
+    
+    private static DateTime _lastCheckTime = DateTime.MinValue;
+    private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(TaskContext.Instance().Config.OtherConfig.NetworkDetectionInterval);
+    private static readonly Ping PingSender = new Ping();
+    
+    public static bool IsSuspendedByNetwork { get; set; } = false;
 
+    private static Task CheckNetworkStatusAsync()
+    {
+        if (DateTime.Now - _lastCheckTime < _checkInterval)
+        {
+            return Task.CompletedTask;
+        }
+
+        _lastCheckTime = DateTime.Now;
+
+        var isSuspend = false; 
+        try
+        {
+            var reply = PingSender.Send(TaskContext.Instance().Config.OtherConfig.NetworkDetectionUrl);
+            isSuspend = reply.Status != IPStatus.Success;
+            if (IsSuspendedByNetwork)
+            {
+                Logger.LogWarning("网络恢复中...");
+                if (NetworkRecovery.Start(CancellationToken.None).Wait(5000))
+                {
+                    isSuspend = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "网络状态检查：错误");
+            isSuspend = true;
+        }
+        finally
+        {
+            if (!RunnerContext.Instance.IsSuspend)
+            {
+                IsSuspendedByNetwork = isSuspend;
+            }
+        }
+        return Task.CompletedTask;
+    }
 
     public static void CheckAndSleep(int millisecondsTimeout)
     {
         TrySuspend();
         CheckAndActivateGameWindow();
-
         Thread.Sleep(millisecondsTimeout);
     }
 
@@ -48,12 +92,13 @@ public class TaskControl
 
     public static void TrySuspend()
     {
-        
+        Task.Run(CheckNetworkStatusAsync);
         var first = true;
         //此处为了记录最开始的暂停状态
-        var isSuspend = RunnerContext.Instance.IsSuspend;
-        while (RunnerContext.Instance.IsSuspend)
+        var isSuspend = RunnerContext.Instance.IsSuspend || IsSuspendedByNetwork;
+        while (RunnerContext.Instance.IsSuspend || IsSuspendedByNetwork)
         {
+            if (RunnerContext.Instance.IsSuspend) IsSuspendedByNetwork = false; NetworkRecovery.RecoveryNetworkDone = true;
             if (first)
             {
                 RunnerContext.Instance.StopAutoPick();
@@ -69,13 +114,18 @@ public class TaskControl
                     }
                 }
 
-                Logger.LogWarning("快捷键触发暂停，等待解除");
+                Logger.LogWarning(IsSuspendedByNetwork ? "网络检测失败触发暂停，等待解除" : "快捷键触发暂停，等待解除");
                 foreach (var item in RunnerContext.Instance.SuspendableDictionary)
                 {
                     item.Value.Suspend();
                 }
 
                 first = false;
+            }
+
+            if (IsSuspendedByNetwork)
+            {
+                CheckNetworkStatusAsync().Wait(1000, CancellationToken.None);
             }
 
             Thread.Sleep(1000);
@@ -143,7 +193,6 @@ public class TaskControl
             {
                 throw new NormalEndException("取消自动任务");
             }
-
             TrySuspend();
             CheckAndActivateGameWindow();
         }, TimeSpan.FromSeconds(1), 100);
@@ -172,7 +221,6 @@ public class TaskControl
             {
                 throw new NormalEndException("取消自动任务");
             }
-
             TrySuspend();
             CheckAndActivateGameWindow();
         }, TimeSpan.FromSeconds(1), 100);
