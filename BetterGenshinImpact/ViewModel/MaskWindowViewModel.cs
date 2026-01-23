@@ -50,9 +50,9 @@ namespace BetterGenshinImpact.ViewModel
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private string _fps = "0";
-        
+
         public ObservableCollection<MaskMapPoint> Points { get; } = new ObservableCollection<MaskMapPoint>();
-        
+
         [ObservableProperty] private double _maskWindowWidth;
 
         [ObservableProperty] private double _maskWindowHeight;
@@ -205,13 +205,7 @@ namespace BetterGenshinImpact.ViewModel
             {
                 nint targetHWnd = TaskContext.Instance().GameHandle;
                 _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
-                Task.Run(async () =>
-                {
-                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), (result) =>
-                    {
-                        Fps = $"{result.Fps:0}";
-                    });
-                });
+                Task.Run(async () => { await FpsInspector.StartForeverAsync(new FpsRequest(pid), (result) => { Fps = $"{result.Fps:0}"; }); });
             }
         }
 
@@ -289,7 +283,7 @@ namespace BetterGenshinImpact.ViewModel
                 _ => ratio
             };
         }
-        
+
         partial void OnIsInBigMapUiChanged(bool value)
         {
             if (!value)
@@ -430,7 +424,7 @@ namespace BetterGenshinImpact.ViewModel
                             LabelId = x.LabelId.ToString()
                         };
                         (m.GameX, m.GameY) = GameWebMapCoordinateConverter.MysWebToGame(m.X, m.Y);
-                        var imageCoordinates  = MapManager.GetMap(MapTypes.Teyvat, 
+                        var imageCoordinates = MapManager.GetMap(MapTypes.Teyvat,
                             TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
                         (m.ImageX, m.ImageY) = (imageCoordinates.X, imageCoordinates.Y);
                         return m;
@@ -543,10 +537,18 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
-            await _iconLoadSemaphore.WaitAsync(ct);
+
             try
             {
-                await item.LoadIconAsync(ct);
+                await _iconLoadSemaphore.WaitAsync(ct);
+                try
+                {
+                    await item.LoadIconAsync(ct);
+                }
+                finally
+                {
+                    _iconLoadSemaphore.Release();
+                }
             }
             catch (OperationCanceledException)
             {
@@ -554,10 +556,6 @@ namespace BetterGenshinImpact.ViewModel
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "加载地图点位图标失败");
-            }
-            finally
-            {
-                _iconLoadSemaphore.Release();
             }
         }
 
@@ -668,7 +666,7 @@ namespace BetterGenshinImpact.ViewModel
             await Application.Current.Dispatcher.InvokeAsync(() => { IconImage = img; }, DispatcherPriority.Background);
         }
     }
-    
+
     static class MapIconImageCache
     {
         private static readonly HttpClient _http = new();

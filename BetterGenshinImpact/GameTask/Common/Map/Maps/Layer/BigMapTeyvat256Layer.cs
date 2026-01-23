@@ -74,13 +74,8 @@ public class BigMapTeyvat256Layer : BaseMapLayer
     /// <returns></returns>
     public Rect GetBigMapRect(Mat greyBigMapMat, Rect prevRect)
     {
-        if (prevRect == default)
-        {
-            return GetBigMapRect(greyBigMapMat);
-        }
-
         var rows = SplitBlocks.Length;
-        if (rows == 0)
+        if (prevRect == default || rows == 0)
         {
             return GetBigMapRect(greyBigMapMat);
         }
@@ -111,7 +106,7 @@ public class BigMapTeyvat256Layer : BaseMapLayer
         if (res == default)
         {
             Debug.WriteLine("[提瓦特大地图]自适应扩展搜索失败，退回全图搜索");
-            return GetBigMapRect(greyBigMapMat);
+            return _siftMatcher.KnnMatchRect(TrainKeyPoints, TrainDescriptors, greyBigMapMat);
         }
         return res;
     }

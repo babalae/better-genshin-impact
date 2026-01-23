@@ -356,6 +356,7 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     private MaskMapPoint HitTest(Point position)
     {
+        // TODO 有问题，需要继续优化实现
         if (_allPoints == null || _allPoints.Count == 0)
             return null;
 
@@ -370,7 +371,7 @@ public class PointsCanvas : FrameworkElement
                 continue;
             }
 
-            if (!_viewportRect.Contains(point.X, point.Y))
+            if (!_viewportRect.Contains(point.ImageX, point.ImageY))
                 continue;
 
             var aw = ActualWidth;
@@ -384,8 +385,8 @@ public class PointsCanvas : FrameworkElement
 
             var scaleX = aw / _viewportRect.Width;
             var scaleY = ah / _viewportRect.Height;
-            var localX = (point.X - _viewportRect.X) * scaleX;
-            var localY = (point.Y - _viewportRect.Y) * scaleY;
+            var localX = (point.ImageX - _viewportRect.X) * scaleX;
+            var localY = (point.ImageY - _viewportRect.Y) * scaleY;
             var localW = MaskMapPointStatic.Width * scaleX;
             var localH = MaskMapPointStatic.Height * scaleY;
             var rect = new Rect(localX - localW / 2.0, localY - localH / 2.0, localW, localH);

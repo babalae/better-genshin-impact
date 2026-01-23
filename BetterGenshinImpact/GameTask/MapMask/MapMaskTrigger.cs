@@ -41,7 +41,7 @@ public class MapMaskTrigger : ITaskTrigger
 
     public void Init()
     {
-        IsEnabled = true;
+        IsEnabled = _config.Enabled;
     }
 
     public void OnCapture(CaptureContent content)

@@ -25,15 +25,22 @@ namespace BetterGenshinImpact.Service
         {
             _cache = cache;
             _httpClient = HttpClientFactory.GetCommonSendClient();
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-            _httpClient.DefaultRequestHeaders.Referrer = new Uri("https://act.mihoyo.com/");
+        }
+
+        private static HttpRequestMessage CreateRequest(HttpMethod method, string url)
+        {
+            var request = new HttpRequestMessage(method, url);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+            request.Headers.Referrer = new Uri("https://act.mihoyo.com/");
+            return request;
         }
 
         public async Task<ApiResponse<LabelTreeData>> GetLabelTreeAsync(LabelTreeRequest request, CancellationToken ct = default)
         {
             var url = $"{TreeEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}";
-            var resp = await _httpClient.GetAsync(url, ct);
+            using var httpRequest = CreateRequest(HttpMethod.Get, url);
+            var resp = await _httpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json)!;
@@ -45,7 +52,8 @@ namespace BetterGenshinImpact.Service
                 ? string.Join(",", request.LabelIds.Select(x => x.ToString()))
                 : string.Empty;
             var url = $"{ListEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}&label_ids={Uri.EscapeDataString(labelIds)}";
-            var resp = await _httpClient.GetAsync(url, ct);
+            using var httpRequest = CreateRequest(HttpMethod.Get, url);
+            var resp = await _httpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<PointListData>>(json)!;

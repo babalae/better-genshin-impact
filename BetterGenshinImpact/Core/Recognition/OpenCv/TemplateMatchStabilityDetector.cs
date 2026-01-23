@@ -1,9 +1,10 @@
+using System;
 using System.Diagnostics;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 
-public class TemplateMatchStabilityDetector
+public class TemplateMatchStabilityDetector : IDisposable
 {
     private Mat previousFrame;
     private readonly double similarityThreshold = 0.98; // 相似度阈值（0-1）
@@ -34,6 +35,10 @@ public class TemplateMatchStabilityDetector
                 previousFrame?.Dispose();
                 previousFrame = processed;
                 return true;
+            }
+            else
+            {
+                processed.Dispose();
             }
         }
         else
@@ -88,5 +93,12 @@ public class TemplateMatchStabilityDetector
         currentStableCount = 0;
         previousFrame?.Dispose();
         previousFrame = null;
+    }
+
+    public void Dispose()
+    {
+        previousFrame?.Dispose();
+        previousFrame = null;
+        GC.SuppressFinalize(this);
     }
 }

@@ -10,7 +10,7 @@ namespace BetterGenshinImpact.GameTask.MapMask;
 public partial class MapMaskConfig : ObservableObject
 {
     /// <summary>
-    /// 是否启用自动吃药
+    /// 是否启用
     /// </summary>
     [ObservableProperty]
     private bool _enabled = true;
