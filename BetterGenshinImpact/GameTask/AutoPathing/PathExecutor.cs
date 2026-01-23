@@ -1091,6 +1091,7 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code
             || waypoint.Action == ActionEnum.ExitAndRelogin.Code
+            || waypoint.Action == ActionEnum.EnterAndExitWonderland.Code
             || waypoint.Action == ActionEnum.SetTime.Code
             || waypoint.Action == ActionEnum.UseGadget.Code
             || waypoint.Action == ActionEnum.PickUpCollect.Code)
