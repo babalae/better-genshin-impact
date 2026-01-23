@@ -393,10 +393,12 @@ public partial class AutoPickTrigger : ITaskTrigger
                 {
                     return;
                 }
-                if (_fuzzyBlackList.Count > 0 &&
-                    _fuzzyBlackList.Any(item => text.Contains(item)))
+                if (_fuzzyBlackList.Count > 0)
                 {
-                    return;
+                    if (_fuzzyBlackList.Any(item => text.Contains(item)))
+                    {
+                        return;
+                    }
                 }
             }
             speedTimer.Record("黑名单判断");
