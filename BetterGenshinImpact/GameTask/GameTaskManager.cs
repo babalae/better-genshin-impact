@@ -122,6 +122,7 @@ internal class GameTaskManager
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
+            TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }
