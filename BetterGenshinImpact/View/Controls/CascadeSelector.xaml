@@ -1,0 +1,100 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.CascadeSelector"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             mc:Ignorable="d" 
+             d:DesignHeight="40" d:DesignWidth="300"
+             Name="Root">
+    <Grid>
+        <ToggleButton x:Name="MainToggle"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch"
+                      Padding="12,6"
+                      Height="34"
+                      Background="{DynamicResource ControlFillColorDefaultBrush}"
+                      BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                      BorderThickness="1">
+            <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding SelectedValue, ElementName=Root, TargetNullValue='请选择', FallbackValue='请选择'}"
+                                       VerticalAlignment="Center"
+                                       Margin="5,0,0,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="1" Text="▼" FontSize="10" 
+                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </ToggleButton.Template>
+        </ToggleButton>
+
+        <Popup x:Name="MainPopup"
+               IsOpen="{Binding IsChecked, ElementName=MainToggle, Mode=TwoWay}"
+               PlacementTarget="{Binding ElementName=MainToggle}"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               PopupAnimation="Slide">
+            <Border x:Name="PopupBorder"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Margin="0,4,0,0"
+                    Padding="4"
+                    MinHeight="100"
+                    MaxHeight="300"
+                    MinWidth="120"
+                    MaxWidth="600">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="Black" Opacity="0.2"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" MinWidth="100"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto" MinWidth="100"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ui:ListView x:Name="FirstLevelListView"
+                              ItemsSource="{Binding FirstLevelOptions, ElementName=Root}"
+                              BorderThickness="0"
+                              SelectionChanged="FirstLevelListView_SelectionChanged"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ui:ListView.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Margin="8,4"/>
+                            </DataTemplate>
+                        </ui:ListView.ItemTemplate>
+                    </ui:ListView>
+
+                    <Rectangle Grid.Column="1" Width="1" 
+                               Fill="{DynamicResource SurfaceStrokeColorDefaultBrush}" 
+                               Margin="2,0"/>
+
+                    <ui:ListView Grid.Column="2" x:Name="SecondLevelListView"
+                              ItemsSource="{Binding SecondLevelOptions, ElementName=Root}"
+                              BorderThickness="0"
+                              SelectionChanged="SecondLevelListView_SelectionChanged"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ui:ListView.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Margin="8,4"/>
+                            </DataTemplate>
+                        </ui:ListView.ItemTemplate>
+                    </ui:ListView>
+                </Grid>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>
