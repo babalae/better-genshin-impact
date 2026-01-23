@@ -46,6 +46,8 @@ public partial class AutoWoodTask : ISoloTask
 
     private CancellationToken _ct;
 
+    private EnterAndExitWonderlandJob _enterAndExitWonderlandJob;
+
     public AutoWoodTask(WoodTaskParam taskParam)
     {
         this._taskParam = taskParam;
@@ -57,6 +59,7 @@ public partial class AutoWoodTask : ISoloTask
     {
         _assets = AutoWoodAssets.Instance;
         _printer = new WoodStatisticsPrinter(_assets);
+        _enterAndExitWonderlandJob = new EnterAndExitWonderlandJob();
         var runTimeWatch = new Stopwatch();
         _ct = ct;
         _printer.Ct = _ct;
@@ -403,8 +406,7 @@ public partial class AutoWoodTask : ISoloTask
         if (TaskContext.Instance().Config.AutoWoodConfig.UseWonderlandRefresh)
         {
             // 使用进出千星奇域刷新CD
-            var job = new EnterAndExitWonderlandJob();
-            await job.Start(_ct);
+            await _enterAndExitWonderlandJob.Start(_ct);
         }
         else
         {
