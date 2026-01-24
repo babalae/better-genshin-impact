@@ -41,7 +41,7 @@ namespace BetterGenshinImpact.Service
         {
             var url = $"{TreeEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}";
             using var httpRequest = CreateRequest(HttpMethod.Get, url);
-            var resp = await _httpClient.SendAsync(httpRequest, ct);
+            using var resp = await _httpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json)!;
@@ -52,7 +52,7 @@ namespace BetterGenshinImpact.Service
             var url = $"{InfoEndpoint}?map_id={request.MapId}&point_id={request.PointId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}";
             using var httpRequest = CreateRequest(HttpMethod.Get, url);
             httpRequest.Headers.Add("x-rpc-map_version", "4.5");
-            var resp = await _httpClient.SendAsync(httpRequest, ct);
+            using var resp = await _httpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<PointInfoData>>(json)!;
@@ -65,7 +65,7 @@ namespace BetterGenshinImpact.Service
                 : string.Empty;
             var url = $"{ListEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}&label_ids={Uri.EscapeDataString(labelIds)}";
             using var httpRequest = CreateRequest(HttpMethod.Get, url);
-            var resp = await _httpClient.SendAsync(httpRequest, ct);
+            using var resp = await _httpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<PointListData>>(json)!;
