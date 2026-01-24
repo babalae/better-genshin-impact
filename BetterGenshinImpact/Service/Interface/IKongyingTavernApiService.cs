@@ -13,5 +13,7 @@ namespace BetterGenshinImpact.Service.Interface
         Task<IReadOnlyList<ItemTypeVo>> GetItemTypeListAsync(CancellationToken ct = default);
 
         Task<IReadOnlyList<MarkerVo>> GetMarkerListAsync(CancellationToken ct = default);
+
+        Task<IReadOnlyList<IconVo>> GetIconListAsync(CancellationToken ct = default);
     }
 }

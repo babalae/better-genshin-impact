@@ -1,4 +1,4 @@
-using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Service.Tavern.Model;
 
@@ -22,7 +22,10 @@ public sealed class MarkerVo
 
     public string? Position { get; set; }
 
-    public JToken? ItemList { get; set; }
+    /// <summary>
+    /// 关键关联字段在这里
+    /// </summary>
+    public List<MarkerItemLinkVo>? ItemList { get; set; }
 
     public string? Content { get; set; }
 
@@ -38,7 +41,7 @@ public sealed class MarkerVo
 
     public int? HiddenFlag { get; set; }
 
-    public JToken? Extra { get; set; }
+    public MarkerExtraVo? Extra { get; set; }
 
     public string? LinkageId { get; set; }
 }

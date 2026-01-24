@@ -26,6 +26,8 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private const string ItemDocListPageBinPathPrefix = "api/item_doc/list_page_bin/";
     private const string MarkerDocListPageBinMd5Path = "api/marker_doc/list_page_bin_md5";
     private const string MarkerDocListPageBinPathPrefix = "api/marker_doc/list_page_bin/";
+    private const string IconDocAllBinMd5Path = "api/icon_doc/all_bin_md5";
+    private const string IconDocAllBinPathPrefix = "api/icon_doc/all_bin/";
 
     private readonly HttpClient _httpClient;
     private readonly SemaphoreSlim _tokenGate = new(1, 1);
@@ -43,7 +45,13 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private static Uri BuildApiUri(string baseUrl, string apiPath, string? query = null)
     {
         var normalizedBaseUrl = baseUrl.EndsWith("/", StringComparison.Ordinal) ? baseUrl : $"{baseUrl}/";
-        var endpoint = new Uri(new Uri(normalizedBaseUrl, UriKind.Absolute), apiPath);
+        var normalizedApiPath = apiPath.TrimStart('/');
+        while (normalizedApiPath.Contains("//", StringComparison.Ordinal))
+        {
+            normalizedApiPath = normalizedApiPath.Replace("//", "/", StringComparison.Ordinal);
+        }
+
+        var endpoint = new Uri(new Uri(normalizedBaseUrl, UriKind.Absolute), normalizedApiPath);
         if (string.IsNullOrWhiteSpace(query))
         {
             return endpoint;
@@ -52,26 +60,15 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         return new UriBuilder(endpoint) { Query = query }.Uri;
     }
 
-    private static Uri BuildItemDocPageBinMd5Uri(string baseUrl)
+    private static Uri BuildUri(string apiPath, string? query = null)
     {
-        return BuildApiUri(baseUrl, ItemDocListPageBinMd5Path);
+        return BuildApiUri(DefaultBaseUrl, apiPath, query);
     }
 
-    private static Uri BuildItemDocPageBinUri(string baseUrl, string md5)
+    private static Uri BuildUriWithId(string apiPathPrefix, string id)
     {
-        var apiPath = ItemDocListPageBinPathPrefix + Uri.EscapeDataString(md5);
-        return BuildApiUri(baseUrl, apiPath);
-    }
-
-    private static Uri BuildMarkerDocPageBinMd5Uri(string baseUrl)
-    {
-        return BuildApiUri(baseUrl, MarkerDocListPageBinMd5Path);
-    }
-
-    private static Uri BuildMarkerDocPageBinUri(string baseUrl, string md5)
-    {
-        var apiPath = MarkerDocListPageBinPathPrefix + Uri.EscapeDataString(md5);
-        return BuildApiUri(baseUrl, apiPath);
+        var apiPath = apiPathPrefix + Uri.EscapeDataString(id);
+        return BuildUri(apiPath);
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri)
@@ -85,10 +82,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
     public async Task<OauthTokenResponse> GetTokenAsync(CancellationToken ct = default)
     {
-        var uri = BuildApiUri(
-            DefaultBaseUrl,
-            OauthTokenPath,
-            query: "refresh_token=all&grant_type=client_credentials");
+        var uri = BuildUri(OauthTokenPath, query: "refresh_token=all&grant_type=client_credentials");
         using var request = CreateRequest(HttpMethod.Post, uri);
 
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", DefaultBasicAuthorization);
@@ -157,10 +151,32 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         return pageList;
     }
 
+    public async Task<IReadOnlyList<IconVo>> GetIconListAsync(CancellationToken ct = default)
+    {
+        await EnsureAccessTokenAsync(ct);
+        var md5 = await GetIconDocAllBinMd5Async(ct);
+        if (string.IsNullOrWhiteSpace(md5))
+        {
+            return [];
+        }
+
+        ct.ThrowIfCancellationRequested();
+        var pageBytes = await GetIconDocAllBinAsync(md5, ct);
+        var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
+        var json = Encoding.UTF8.GetString(jsonBytes);
+        var list = JsonConvert.DeserializeObject<List<IconVo>>(json);
+        if (list is null)
+        {
+            throw new InvalidOperationException($"icon_doc/all_bin/{md5} 返回内容无法反序列化为 List<IconVo>");
+        }
+
+        return list;
+    }
+
     private async Task<List<ListPageBinMd5Item>> GetItemDocPageMd5ListAsync(CancellationToken ct)
     {
         await EnsureAccessTokenAsync(ct);
-        var uri = BuildItemDocPageBinMd5Uri(DefaultBaseUrl);
+        var uri = BuildUri(ItemDocListPageBinMd5Path);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
         resp.EnsureSuccessStatusCode();
@@ -183,7 +199,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private async Task<byte[]> GetItemDocPageBinAsync(string md5, CancellationToken ct)
     {
         await EnsureAccessTokenAsync(ct);
-        var uri = BuildItemDocPageBinUri(DefaultBaseUrl, md5);
+        var uri = BuildUriWithId(ItemDocListPageBinPathPrefix, md5);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
         resp.EnsureSuccessStatusCode();
@@ -193,7 +209,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private async Task<List<ListPageBinMd5Item>> GetMarkerDocPageMd5ListAsync(CancellationToken ct)
     {
         await EnsureAccessTokenAsync(ct);
-        var uri = BuildMarkerDocPageBinMd5Uri(DefaultBaseUrl);
+        var uri = BuildUri(MarkerDocListPageBinMd5Path);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
         resp.EnsureSuccessStatusCode();
@@ -216,11 +232,132 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private async Task<byte[]> GetMarkerDocPageBinAsync(string md5, CancellationToken ct)
     {
         await EnsureAccessTokenAsync(ct);
-        var uri = BuildMarkerDocPageBinUri(DefaultBaseUrl, md5);
+        var uri = BuildUriWithId(MarkerDocListPageBinPathPrefix, md5);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
         resp.EnsureSuccessStatusCode();
         return await resp.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    private async Task<string> GetIconDocAllBinMd5Async(CancellationToken ct)
+    {
+        await EnsureAccessTokenAsync(ct);
+        var uri = BuildUri(IconDocAllBinMd5Path);
+        using var request = CreateRequest(HttpMethod.Get, uri);
+        using var resp = await _httpClient.SendAsync(request, ct);
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadAsStringAsync(ct);
+
+        if (TryExtractMd5FromApiJson(json, out var md5))
+        {
+            return md5;
+        }
+
+        throw new InvalidOperationException($"{uri.AbsolutePath} 返回内容无法解析为 md5");
+    }
+
+    private async Task<byte[]> GetIconDocAllBinAsync(string md5, CancellationToken ct)
+    {
+        await EnsureAccessTokenAsync(ct);
+        var uri = BuildUriWithId(IconDocAllBinPathPrefix, md5);
+        using var request = CreateRequest(HttpMethod.Get, uri);
+        using var resp = await _httpClient.SendAsync(request, ct);
+        resp.EnsureSuccessStatusCode();
+        return await resp.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    private static bool TryExtractMd5FromApiJson(string json, out string md5)
+    {
+        md5 = string.Empty;
+        KongyingTavernResponse<Newtonsoft.Json.Linq.JToken>? envelope;
+        try
+        {
+            envelope = JsonConvert.DeserializeObject<KongyingTavernResponse<Newtonsoft.Json.Linq.JToken>>(json);
+        }
+        catch
+        {
+            envelope = null;
+        }
+
+        if (envelope is not null)
+        {
+            if (envelope.Error)
+            {
+                throw new InvalidOperationException(envelope.Message ?? "未知错误");
+            }
+
+            return TryExtractMd5FromData(envelope.Data, out md5);
+        }
+
+        try
+        {
+            var token = Newtonsoft.Json.Linq.JToken.Parse(json);
+            if (token.Type == Newtonsoft.Json.Linq.JTokenType.String)
+            {
+                md5 = token.ToObject<string>() ?? string.Empty;
+                return !string.IsNullOrWhiteSpace(md5);
+            }
+
+            if (token.Type == Newtonsoft.Json.Linq.JTokenType.Object
+                && token["md5"]?.Type == Newtonsoft.Json.Linq.JTokenType.String)
+            {
+                md5 = token["md5"]!.ToObject<string>() ?? string.Empty;
+                return !string.IsNullOrWhiteSpace(md5);
+            }
+
+            if (token.Type == Newtonsoft.Json.Linq.JTokenType.Array)
+            {
+                return TryExtractMd5FromData(token, out md5);
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
+    private static bool TryExtractMd5FromData(Newtonsoft.Json.Linq.JToken? data, out string md5)
+    {
+        md5 = string.Empty;
+        if (data is null)
+        {
+            return false;
+        }
+
+        if (data.Type == Newtonsoft.Json.Linq.JTokenType.String)
+        {
+            md5 = data.ToObject<string>() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(md5);
+        }
+
+        if (data.Type == Newtonsoft.Json.Linq.JTokenType.Object)
+        {
+            md5 = data["md5"]?.ToObject<string>() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(md5);
+        }
+
+        if (data.Type == Newtonsoft.Json.Linq.JTokenType.Array)
+        {
+            var items = data
+                .OfType<Newtonsoft.Json.Linq.JObject>()
+                .Select(x => new
+                {
+                    Md5 = x["md5"]?.ToObject<string>() ?? string.Empty,
+                    Time = x["time"]?.ToObject<long?>(),
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Md5))
+                .ToList();
+
+            var latest = items.Count > 0
+                ? items.OrderByDescending(x => x.Time ?? 0).FirstOrDefault()
+                : null;
+
+            md5 = latest?.Md5 ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(md5);
+        }
+
+        return false;
     }
 
     private void SetCachedToken(OauthTokenResponse token)
