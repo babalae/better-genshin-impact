@@ -92,6 +92,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject EscDown;
     public RecognitionObject EscWonderlandHome;
     public RecognitionObject WonderlandEnter;
+    public RecognitionObject WonderlandClose;
 
     public RecognitionObject Index1;
     public RecognitionObject Index2;
@@ -707,6 +708,12 @@ public class ElementAssets : BaseAssets<ElementAssets>
             Name = "WonderlandEnter",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "wonderland_enter.png", systemInfo),
+        }.InitTemplate();
+        WonderlandClose = new RecognitionObject
+        {
+            Name = "WonderlandClose",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "wonderland_close.png", systemInfo),
         }.InitTemplate();
 
         Rect partyRect = new Rect(CaptureRect.Width - (int)(65 * AssetScale), (int)(155 * AssetScale), (int)(35 * AssetScale), (int)(600 * AssetScale));
