@@ -18,7 +18,6 @@
         AllowsTransparency="True"
         FontFamily="{DynamicResource TextThemeFontFamily}"
         ShowActivated="False"
-        Focusable="False"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None"
@@ -479,7 +478,7 @@
                                         Height="16"
                                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
-                                <TextBlock Foreground="#B3FFFFFF" Text="正在加载点位信息..." />
+                                <TextBlock Foreground="#B3FFFFFF" Text="正在加载..." />
                             </StackPanel>
 
                             <Border Margin="0,10,0,0"
@@ -572,10 +571,12 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <ui:TextBox Grid.Column="0"
+                                    <ui:TextBox x:Name="MapLabelSearchTextBox"
+                                                Grid.Column="0"
                                                 Height="32"
                                                 PlaceholderText="搜索当前区域下的标点分类"
-                                                Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
 
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
                                         <ui:Button Height="32"

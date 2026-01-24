@@ -24,6 +24,7 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.View.Windows;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -47,6 +48,7 @@ public partial class MaskWindow : Window
     private readonly ILogger<MaskWindow> _logger = App.GetLogger<MaskWindow>();
 
     private MaskWindowConfig? _maskWindowConfig;
+    private MapLabelSearchWindow? _mapLabelSearchWindow;
 
     static MaskWindow()
     {
@@ -140,6 +142,11 @@ public partial class MaskWindow : Window
         }
 
         (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+
+        if (_mapLabelSearchWindow != null)
+        {
+            _mapLabelSearchWindow.Hide();
+        }
     }
 
     private void MaskWindowOnStateChanged(object? sender, EventArgs e)
@@ -212,6 +219,12 @@ public partial class MaskWindow : Window
         if (_viewModel != null)
         {
             _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        }
+
+        if (_mapLabelSearchWindow != null)
+        {
+            _mapLabelSearchWindow.Close();
+            _mapLabelSearchWindow = null;
         }
 
         base.OnClosed(e);
@@ -349,6 +362,37 @@ public partial class MaskWindow : Window
         }
 
         LogTextBox.ScrollToEnd();
+    }
+
+    private void MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MaskWindowViewModel vm)
+        {
+            return;
+        }
+
+        if (_mapLabelSearchWindow == null)
+        {
+            _mapLabelSearchWindow = new MapLabelSearchWindow();
+            _mapLabelSearchWindow.AttachViewModel(vm);
+        }
+
+        var textbox = (FrameworkElement)sender;
+        var point = textbox.PointToScreen(new Point(0, 0));
+        var popupHeight = _mapLabelSearchWindow.ActualHeight > 0 ? _mapLabelSearchWindow.ActualHeight : _mapLabelSearchWindow.Height;
+
+        _mapLabelSearchWindow.Left = point.X;
+        _mapLabelSearchWindow.Top = point.Y - popupHeight - 4;
+
+        if (!_mapLabelSearchWindow.IsVisible)
+        {
+            _mapLabelSearchWindow.Show();
+        }
+
+        _mapLabelSearchWindow.Topmost = true;
+        _mapLabelSearchWindow.FocusSearch();
+
+        e.Handled = true;
     }
 
     private void MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
