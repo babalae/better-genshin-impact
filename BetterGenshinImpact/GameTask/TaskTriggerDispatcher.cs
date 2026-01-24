@@ -11,10 +11,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
+using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -355,11 +358,11 @@ namespace BetterGenshinImpact.GameTask
 
                 lock (_triggerListLocker)
                 {
+                    var needRunTriggers = new List<ITaskTrigger>(); // 最终要执行的触发器列表
                     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                     if (exclusiveTrigger != null)
                     {
-                        exclusiveTrigger.OnCapture(content);
-                        speedTimer.Record(exclusiveTrigger.Name);
+                        needRunTriggers.Add(exclusiveTrigger);
                     }
                     else
                     {
@@ -369,10 +372,20 @@ namespace BetterGenshinImpact.GameTask
                             runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
                         }
 
-                        foreach (var trigger in runningTriggers)
+                        needRunTriggers.AddRange(runningTriggers);
+                    }
+
+                    if (needRunTriggers.Count > 0)
+                    {
+                        // 判断当前UI
+                        content.CurrentGameUiCategory = Bv.WhichGameUiForTriggers(content.CaptureRectArea);
+                        foreach (var trigger in needRunTriggers)
                         {
-                            trigger.OnCapture(content);
-                            speedTimer.Record(trigger.Name);
+                            if (trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
+                            {
+                                trigger.OnCapture(content);
+                                speedTimer.Record(trigger.Name);
+                            }
                         }
                     }
                 }

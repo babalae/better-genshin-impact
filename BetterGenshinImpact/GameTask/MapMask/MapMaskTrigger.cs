@@ -21,8 +21,10 @@ public class MapMaskTrigger : ITaskTrigger
 
     public string Name => "地图遮罩";
     public bool IsEnabled { get; set; }
-    public int Priority => 25; // 中等优先级
+    public int Priority => 1; // 低优先级
     public bool IsExclusive => false;
+    
+    public GameUiCategory SupportedGameUiCategory => GameUiCategory.BigMap;
 
     private readonly MapMaskConfig _config = TaskContext.Instance().Config.MapMaskConfig;
     private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
@@ -56,7 +58,7 @@ public class MapMaskTrigger : ITaskTrigger
         try
         {
             var region = content.CaptureRectArea;
-            var inBigMapUi = Bv.IsInBigMapUi(region);
+            var inBigMapUi = content.CurrentGameUiCategory == GameUiCategory.BigMap || Bv.IsInBigMapUi(region);
             UIDispatcherHelper.Invoke(() =>
             {
                 var vm = MaskWindow.Instance().DataContext as MaskWindowViewModel;

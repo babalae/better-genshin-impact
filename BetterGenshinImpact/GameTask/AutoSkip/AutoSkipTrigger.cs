@@ -170,9 +170,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
-        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.DisabledUiButtonRo);
+        var foundTalkUi = content.CurrentGameUiCategory == GameUiCategory.Talk
+                                  || Bv.IsInTalkUi(content.CaptureRectArea);
 
-        var isPlaying = !foundRectArea.IsEmpty(); // 播放中
+        var isPlaying = !foundTalkUi; // 播放中
 
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
