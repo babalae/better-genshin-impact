@@ -76,7 +76,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInMainUi(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist() && !IsInRevivePrompt(captureRa);
+        using var ra = captureRa.Find(ElementAssets.Instance.PaimonMenuRo);
+        return ra.IsExist() && !IsInRevivePrompt(captureRa);
     }
 
     /// <summary>
@@ -146,7 +147,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInAnyClosableUi(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapCloseButtonRo).IsExist();
+        using var ra = captureRa.Find(QuickTeleportAssets.Instance.MapCloseButtonRo);
+        return ra.IsExist();
     }
 
     /// <summary>
@@ -156,7 +158,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInPartyViewUi(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PartyBtnChooseView).IsExist();
+        using var ra = captureRa.Find(ElementAssets.Instance.PartyBtnChooseView);
+        return ra.IsExist();
     }
 
     /// <summary>
@@ -167,7 +170,11 @@ public static partial class Bv
     /// <returns></returns>
     public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 5)
     {
-        return await NewRetry.WaitForAction(() => IsInPartyViewUi(TaskControl.CaptureToRectArea()), ct, retryTimes);
+        return await NewRetry.WaitForAction(() =>
+        {
+            using var ra = TaskControl.CaptureToRectArea();
+            return IsInPartyViewUi(ra);
+        }, ct, retryTimes);
     }
 
     /// <summary>
@@ -177,7 +184,14 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInBigMapUi(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo).IsExist() || captureRa.Find(QuickTeleportAssets.Instance.MapSettingsButtonRo).IsExist();
+        using var scaleRa = captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        if (scaleRa.IsExist())
+        {
+            return true;
+        }
+
+        using var settingsRa = captureRa.Find(QuickTeleportAssets.Instance.MapSettingsButtonRo);
+        return settingsRa.IsExist();
     }
 
     /// <summary>
@@ -188,7 +202,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool BigMapIsUnderground(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo).IsExist();
+        using var ra = captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo);
+        return ra.IsExist();
     }
 
     public static double GetBigMapScale(ImageRegion region)
@@ -298,12 +313,14 @@ public static partial class Bv
     {
         using var ra = captureRa;
 
-        if (ra.Find(GameLoadingAssets.Instance.GirlMoonRo).IsExist())
+        using var girlRa = ra.Find(GameLoadingAssets.Instance.GirlMoonRo);
+        if (girlRa.IsExist())
         {
             return true;
         }
 
-        return ra.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
+        using var moonRa = ra.Find(GameLoadingAssets.Instance.WelkinMoonRo);
+        return moonRa.IsExist();
     }
 
     /// <summary>
@@ -325,7 +342,11 @@ public static partial class Bv
     /// <returns></returns>
     public static async Task<bool> WaitAndSkipForTalkUi(CancellationToken ct, int retryTimes = 5)
     {
-        return await NewRetry.WaitForAction(() => IsInTalkUi(TaskControl.CaptureToRectArea()), ct, retryTimes, 500);
+        return await NewRetry.WaitForAction(() =>
+        {
+            using var ra = TaskControl.CaptureToRectArea();
+            return IsInTalkUi(ra);
+        }, ct, retryTimes, 500);
     }
 
     /// <summary>
