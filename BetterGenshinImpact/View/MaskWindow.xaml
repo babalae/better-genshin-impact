@@ -423,6 +423,7 @@
 
             <controls:PointsCanvas Grid.Row="0" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="6"
                                    x:Name="PointsCanvasControl"
+                                   Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"

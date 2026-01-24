@@ -55,6 +55,8 @@ namespace BetterGenshinImpact.GameTask
 
         public event EventHandler? UiTaskStartTickEvent;
 
+        public GameUiCategory PrevGameUiCategory = GameUiCategory.Unknown;
+
         public TaskTriggerDispatcher()
         {
             _instance = this;
@@ -379,14 +381,18 @@ namespace BetterGenshinImpact.GameTask
                     {
                         // 判断当前UI
                         content.CurrentGameUiCategory = Bv.WhichGameUiForTriggers(content.CaptureRectArea);
+
                         foreach (var trigger in needRunTriggers)
                         {
-                            if (trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
+                            if (PrevGameUiCategory != content.CurrentGameUiCategory // UI变化了则所有触发器执行一遍
+                                || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
                             {
                                 trigger.OnCapture(content);
                                 speedTimer.Record(trigger.Name);
                             }
                         }
+
+                        PrevGameUiCategory = content.CurrentGameUiCategory;
                     }
                 }
 
