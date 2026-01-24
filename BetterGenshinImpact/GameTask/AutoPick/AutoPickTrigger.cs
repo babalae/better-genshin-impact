@@ -54,6 +54,47 @@ public partial class AutoPickTrigger : ITaskTrigger
     // 外部配置
     private AutoPickExternalConfig? _externalConfig;
 
+    /// <summary>
+    /// 上一帧 OCR 结果
+    /// </summary>
+    private string? _lastOcrText;
+
+    /// <summary>
+    /// 连续相同 OCR 结果的帧数
+    /// </summary>
+    private int _sameOcrFrameCount;
+
+    /// <summary>
+    /// 判定为稳定所需的最小连续帧数
+    /// </summary>
+    private const int OcrStableFrameThreshold = 2;
+
+    /// <summary>
+    /// OCR 帧稳定确认
+    /// </summary>
+    private bool IsOcrTextStable(string text)
+    {
+        if (text == _lastOcrText)
+        {
+            _sameOcrFrameCount++;
+        }
+        else
+        {
+            _lastOcrText = text;
+            _sameOcrFrameCount = 1;
+        }
+
+        if (_sameOcrFrameCount >= OcrStableFrameThreshold)
+        {
+            // 重置
+            _lastOcrText = null;
+            _sameOcrFrameCount = 0;
+            return true;
+        }
+
+        return false;
+    }
+
     public AutoPickTrigger()
     {
         _autoPickAssets = AutoPickAssets.Instance;
@@ -315,44 +356,43 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.Record("文字识别");
+
         if (!string.IsNullOrEmpty(text))
         {
             // 处理OCR识别结果，清理无效字符并确保引号配对
             text = ProcessOcrText(text);
-
             if (DoNotPick(text))
             {
                 return;
             }
-
             // 单个字符不拾取
             if (text.Length <= 1)
             {
                 return;
             }
-
+            // 连续多帧识别结果一致，进行下一步
+            if (!IsOcrTextStable(text))
+            {
+                return;
+            }
             if (config.WhiteListEnabled && _whiteList.Contains(text))
             {
                 LogPick(content, text);
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                 return;
             }
-
             speedTimer.Record("白名单判断");
-
             if (isExcludeIcon)
             {
                 //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
                 return;
             }
-
             if (config.BlackListEnabled)
             {
                 if (_blackList.Contains(text))
                 {
                     return;
                 }
-
                 if (_fuzzyBlackList.Count > 0)
                 {
                     if (_fuzzyBlackList.Any(item => text.Contains(item)))
@@ -361,9 +401,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                     }
                 }
             }
-
             speedTimer.Record("黑名单判断");
-
             LogPick(content, text);
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
         }

@@ -245,6 +245,7 @@ public class TpTask
             // 直接切换地区
             await SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
         }
+        await Delay(50, ct);
 
 
         // 3. 调整初始缩放等级，避免识别中心点失败
@@ -927,6 +928,7 @@ public class TpTask
 
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
+        await Delay(50, ct);
         if (hasTeleportButton) return;   // 可以传送了，结束
         // 3. 没点出传送按钮，且不存在外部地图关闭按钮
         // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表
