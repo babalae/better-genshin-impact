@@ -429,6 +429,72 @@
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
                                    PointHoverCommand="{Binding PointHoverCommand}" />
 
+            <Popup AllowsTransparency="True"
+                   IsOpen="{Binding PointInfoPopup.IsOpen}"
+                   PlacementTarget="{Binding ElementName=PointsCanvasControl}"
+                   Placement="Top"
+                   PlacementRectangle="{Binding PointInfoPopup.PlacementRect}"
+                   HorizontalOffset="-164"
+                   VerticalOffset="-8"
+                   StaysOpen="True">
+                <Border Width="360"
+                        Background="#C81F232A"
+                        BorderBrush="#26FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        DataContext="{Binding PointInfoPopup}">
+                    <Border.Effect>
+                        <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
+                    </Border.Effect>
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       Text="{Binding Title}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <ui:Button Grid.Column="1"
+                                       Width="28"
+                                       Height="28"
+                                       Padding="0"
+                                       Margin="8,-2,-2,0"
+                                       Background="Transparent"
+                                       BorderBrush="{x:Null}"
+                                       Command="{Binding CloseCommand}"
+                                       Content="✕" />
+                        </Grid>
+
+                        <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                            <StackPanel Orientation="Horizontal"
+                                        Height="16"
+                                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
+                                <TextBlock Foreground="#B3FFFFFF" Text="正在加载点位信息..." />
+                            </StackPanel>
+
+                            <ScrollViewer Margin="0,8,0,0"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          MaxHeight="220">
+                                <TextBlock Foreground="#E6FFFFFF"
+                                           Text="{Binding Text}"
+                                           TextWrapping="Wrap" />
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Popup>
+
             <Grid x:Name="MapPointPickerRoot"
                   Grid.Row="0"
                   Grid.RowSpan="4"

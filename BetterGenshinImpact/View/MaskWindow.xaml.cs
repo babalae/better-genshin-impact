@@ -167,10 +167,19 @@ public partial class MaskWindow : Window
             PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
             PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
         }
+
+        PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
+    }
+
+    private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
+    {
+        _viewModel?.PointInfoPopup.CloseCommand.Execute(null);
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
+
         if (_maskWindowConfig != null)
         {
             _maskWindowConfig.PropertyChanged -= MaskWindowConfigOnPropertyChanged;

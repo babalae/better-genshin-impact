@@ -31,6 +31,8 @@ public class PointsCanvas : FrameworkElement
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
     private Rect _viewportRect = Rect.Empty;
 
+    public event EventHandler? ViewportChanged;
+
     #region 依赖属性
 
     public static readonly DependencyProperty PointClickCommandProperty =
@@ -307,15 +309,44 @@ public class PointsCanvas : FrameworkElement
 
     #region 鼠标交互
 
+    private bool TryGetPointCenterPosition(MaskMapPoint point, out Point center)
+    {
+        center = default;
+
+        if (_viewportRect.IsEmpty)
+        {
+            return false;
+        }
+
+        var aw = ActualWidth;
+        var ah = ActualHeight;
+        if (aw <= 0 || ah <= 0)
+        {
+            return false;
+        }
+
+        var scaleX = aw / _viewportRect.Width;
+        var scaleY = ah / _viewportRect.Height;
+        center = new Point(
+            (point.ImageX - _viewportRect.X) * scaleX,
+            (point.ImageY - _viewportRect.Y) * scaleY);
+        return true;
+    }
+
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         var position = e.GetPosition(this);
         var point = HitTest(position);
 
-        if (point != null && PointClickCommand?.CanExecute(point) == true)
+        if (point != null)
         {
-            PointClickCommand.Execute(point);
-            e.Handled = true;
+            var anchor = TryGetPointCenterPosition(point, out var center) ? center : position;
+            var args = new MaskMapPointClickArgs(point, anchor);
+            if (PointClickCommand?.CanExecute(args) == true)
+            {
+                PointClickCommand.Execute(args);
+                e.Handled = true;
+            }
         }
     }
 
@@ -466,6 +497,7 @@ public class PointsCanvas : FrameworkElement
         _viewportRect = newRect;
         Debug.WriteLine($"Viewport updated: {_viewportRect}");
         Refresh();
+        ViewportChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

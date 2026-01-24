@@ -79,6 +79,8 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
+        public MaskMapPointInfoPopupViewModel PointInfoPopup { get; } = new();
+
         private bool _isMapLabelTreeLoaded;
         private CancellationTokenSource? _mapLabelItemsCts;
         private CancellationTokenSource? _mapPointListCts;
@@ -289,6 +291,7 @@ namespace BetterGenshinImpact.ViewModel
             if (!value)
             {
                 IsMapPointPickerOpen = false;
+                PointInfoPopup.Close();
             }
         }
 
@@ -580,13 +583,25 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private void OnPointClick(MaskMapPoint? point)
+        private async Task OnPointClick(MaskMapPointClickArgs? args)
         {
-            if (point != null)
+            var point = args?.Point;
+            if (point == null || !IsInBigMapUi)
             {
-                // 在这里触发 UI 或逻辑（示例：弹窗）
-                MessageBox.Show($"点击了点: {point.Id}");
+                return;
             }
+            await PointInfoPopup.ShowAsync(point, args!.AnchorPosition, ResolvePointTitle(point));
+        }
+
+        private string ResolvePointTitle(MaskMapPoint point)
+        {
+            var labelName = MapPointLabels.FirstOrDefault(x => x.LabelId == point.LabelId)?.Name;
+            if (!string.IsNullOrWhiteSpace(labelName))
+            {
+                return labelName;
+            }
+
+            return $"点位 {point.Id}";
         }
 
         [RelayCommand]
