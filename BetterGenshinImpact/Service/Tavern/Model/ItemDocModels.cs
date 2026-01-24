@@ -27,7 +27,7 @@ internal sealed class KongyingTavernResponse<T>
     public string? Time { get; set; }
 }
 
-internal sealed class ItemDocPageMd5Item
+internal sealed class ListPageBinMd5Item
 {
     [JsonProperty("md5")]
     public string Md5 { get; set; } = string.Empty;

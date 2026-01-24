@@ -23,7 +23,9 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
     private const string OauthTokenPath = "oauth/token";
     private const string ItemDocListPageBinMd5Path = "api/item_doc/list_page_bin_md5";
-    private const string ItemDocListPageBinPathPrefix = "api/item_doc/list_page_bin";
+    private const string ItemDocListPageBinPathPrefix = "api/item_doc/list_page_bin/";
+    private const string MarkerDocListPageBinMd5Path = "api/marker_doc/list_page_bin_md5";
+    private const string MarkerDocListPageBinPathPrefix = "api/marker_doc/list_page_bin/";
 
     private readonly HttpClient _httpClient;
     private readonly SemaphoreSlim _tokenGate = new(1, 1);
@@ -57,7 +59,18 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
     private static Uri BuildItemDocPageBinUri(string baseUrl, string md5)
     {
-        var apiPath = ItemDocListPageBinPathPrefix +"/" + Uri.EscapeDataString(md5);
+        var apiPath = ItemDocListPageBinPathPrefix + Uri.EscapeDataString(md5);
+        return BuildApiUri(baseUrl, apiPath);
+    }
+
+    private static Uri BuildMarkerDocPageBinMd5Uri(string baseUrl)
+    {
+        return BuildApiUri(baseUrl, MarkerDocListPageBinMd5Path);
+    }
+
+    private static Uri BuildMarkerDocPageBinUri(string baseUrl, string md5)
+    {
+        var apiPath = MarkerDocListPageBinPathPrefix + Uri.EscapeDataString(md5);
         return BuildApiUri(baseUrl, apiPath);
     }
 
@@ -118,7 +131,33 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         return pageList;
     }
 
-    private async Task<List<ItemDocPageMd5Item>> GetItemDocPageMd5ListAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<MarkerVo>> GetMarkerListAsync(CancellationToken ct = default)
+    {
+        await EnsureAccessTokenAsync(ct);
+        var pages = await GetMarkerDocPageMd5ListAsync(ct);
+        var latestPage = pages.Count > 0
+            ? pages.OrderByDescending(x => x.Time).First()
+            : null;
+
+        if (latestPage is null)
+        {
+            return [];
+        }
+
+        ct.ThrowIfCancellationRequested();
+        var pageBytes = await GetMarkerDocPageBinAsync(latestPage.Md5, ct);
+        var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
+        var json = Encoding.UTF8.GetString(jsonBytes);
+        var pageList = JsonConvert.DeserializeObject<List<MarkerVo>>(json);
+        if (pageList is null)
+        {
+            throw new InvalidOperationException($"marker_doc/list_page_bin/{latestPage.Md5} 返回内容无法反序列化为 List<MarkerVo>");
+        }
+
+        return pageList;
+    }
+
+    private async Task<List<ListPageBinMd5Item>> GetItemDocPageMd5ListAsync(CancellationToken ct)
     {
         await EnsureAccessTokenAsync(ct);
         var uri = BuildItemDocPageBinMd5Uri(DefaultBaseUrl);
@@ -127,7 +166,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
 
-        var result = JsonConvert.DeserializeObject<KongyingTavernResponse<List<ItemDocPageMd5Item>>>(json);
+        var result = JsonConvert.DeserializeObject<KongyingTavernResponse<List<ListPageBinMd5Item>>>(json);
         if (result is null)
         {
             throw new InvalidOperationException("item_doc/list_page_bin_md5 返回内容无法反序列化");
@@ -145,6 +184,39 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     {
         await EnsureAccessTokenAsync(ct);
         var uri = BuildItemDocPageBinUri(DefaultBaseUrl, md5);
+        using var request = CreateRequest(HttpMethod.Get, uri);
+        using var resp = await _httpClient.SendAsync(request, ct);
+        resp.EnsureSuccessStatusCode();
+        return await resp.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    private async Task<List<ListPageBinMd5Item>> GetMarkerDocPageMd5ListAsync(CancellationToken ct)
+    {
+        await EnsureAccessTokenAsync(ct);
+        var uri = BuildMarkerDocPageBinMd5Uri(DefaultBaseUrl);
+        using var request = CreateRequest(HttpMethod.Get, uri);
+        using var resp = await _httpClient.SendAsync(request, ct);
+        resp.EnsureSuccessStatusCode();
+        var json = await resp.Content.ReadAsStringAsync(ct);
+
+        var result = JsonConvert.DeserializeObject<KongyingTavernResponse<List<ListPageBinMd5Item>>>(json);
+        if (result is null)
+        {
+            throw new InvalidOperationException("marker_doc/list_page_bin_md5 返回内容无法反序列化");
+        }
+
+        if (result.Error)
+        {
+            throw new InvalidOperationException($"marker_doc/list_page_bin_md5 返回错误: {result.Message ?? "未知错误"}");
+        }
+
+        return result.Data ?? [];
+    }
+
+    private async Task<byte[]> GetMarkerDocPageBinAsync(string md5, CancellationToken ct)
+    {
+        await EnsureAccessTokenAsync(ct);
+        var uri = BuildMarkerDocPageBinUri(DefaultBaseUrl, md5);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
         resp.EnsureSuccessStatusCode();
