@@ -20,6 +20,7 @@ namespace BetterGenshinImpact.Service
         private readonly IAppCache _cache;
         private const string TreeEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v2/map/label/tree";
         private const string ListEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v3/map/point/list";
+        private const string InfoEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v1/map/point/info";
 
         public MihoyoMapApiService(IAppCache cache)
         {
@@ -44,6 +45,17 @@ namespace BetterGenshinImpact.Service
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json)!;
+        }
+
+        public async Task<ApiResponse<PointInfoData>> GetPointInfoAsync(PointInfoRequest request, CancellationToken ct = default)
+        {
+            var url = $"{InfoEndpoint}?map_id={request.MapId}&point_id={request.PointId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}";
+            using var httpRequest = CreateRequest(HttpMethod.Get, url);
+            httpRequest.Headers.Add("x-rpc-map_version", "4.5");
+            var resp = await _httpClient.SendAsync(httpRequest, ct);
+            resp.EnsureSuccessStatusCode();
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            return JsonConvert.DeserializeObject<ApiResponse<PointInfoData>>(json)!;
         }
 
         public async Task<ApiResponse<PointListData>> GetPointListAsync(PointListRequest request, CancellationToken ct = default)
