@@ -8,11 +8,11 @@ public sealed class MarkerVo
 
     public long? CreatorId { get; set; }
 
-    public long? CreateTime { get; set; }
+    public string? CreateTime { get; set; }
 
     public long? UpdaterId { get; set; }
 
-    public long? UpdateTime { get; set; }
+    public string? UpdateTime { get; set; }
 
     public string? MarkerStamp { get; set; }
 

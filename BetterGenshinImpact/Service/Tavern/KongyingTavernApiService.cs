@@ -26,6 +26,10 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private const string ItemDocListPageBinPathPrefix = "api/item_doc/list_page_bin";
 
     private readonly HttpClient _httpClient;
+    private readonly SemaphoreSlim _tokenGate = new(1, 1);
+    private OauthTokenResponse? _cachedToken;
+    private DateTimeOffset _cachedTokenExpiresAt = DateTimeOffset.MinValue;
+    private static readonly TimeSpan RefreshBeforeExpiry = TimeSpan.FromMinutes(1);
 
     public KongyingTavernApiService()
     {
@@ -53,7 +57,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
     private static Uri BuildItemDocPageBinUri(string baseUrl, string md5)
     {
-        var apiPath = ItemDocListPageBinPathPrefix + Uri.EscapeDataString(md5);
+        var apiPath = ItemDocListPageBinPathPrefix +"/" + Uri.EscapeDataString(md5);
         return BuildApiUri(baseUrl, apiPath);
     }
 
@@ -82,8 +86,15 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         return result ?? throw new InvalidOperationException("oauth/token 返回内容无法反序列化");
     }
 
+    public async Task RefreshToken(CancellationToken ct)
+    {
+        var token = await GetTokenAsync(ct);
+        SetCachedToken(token);
+    }
+
     public async Task<IReadOnlyList<ItemTypeVo>> GetItemTypeListAsync(CancellationToken ct = default)
     {
+        await EnsureAccessTokenAsync(ct);
         var pages = await GetItemDocPageMd5ListAsync(ct);
         var latestPage = pages.Count > 0
             ? pages.OrderByDescending(x => x.Time).First()
@@ -109,6 +120,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
     private async Task<List<ItemDocPageMd5Item>> GetItemDocPageMd5ListAsync(CancellationToken ct)
     {
+        await EnsureAccessTokenAsync(ct);
         var uri = BuildItemDocPageBinMd5Uri(DefaultBaseUrl);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
@@ -131,11 +143,48 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
     private async Task<byte[]> GetItemDocPageBinAsync(string md5, CancellationToken ct)
     {
+        await EnsureAccessTokenAsync(ct);
         var uri = BuildItemDocPageBinUri(DefaultBaseUrl, md5);
         using var request = CreateRequest(HttpMethod.Get, uri);
         using var resp = await _httpClient.SendAsync(request, ct);
         resp.EnsureSuccessStatusCode();
         return await resp.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    private void SetCachedToken(OauthTokenResponse token)
+    {
+        _cachedToken = token;
+        _cachedTokenExpiresAt = DateTimeOffset.UtcNow.AddSeconds(Math.Max(0, token.ExpiresIn));
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+    }
+
+    private bool IsTokenStillValid()
+    {
+        return _cachedToken is not null
+               && DateTimeOffset.UtcNow < _cachedTokenExpiresAt.Subtract(RefreshBeforeExpiry);
+    }
+
+    private async Task EnsureAccessTokenAsync(CancellationToken ct)
+    {
+        if (IsTokenStillValid())
+        {
+            return;
+        }
+
+        await _tokenGate.WaitAsync(ct);
+        try
+        {
+            if (IsTokenStillValid())
+            {
+                return;
+            }
+
+            await RefreshToken(ct);
+        }
+        finally
+        {
+            _tokenGate.Release();
+        }
     }
 
     private static bool TryDecompressGzip(byte[] input, out byte[] output)
