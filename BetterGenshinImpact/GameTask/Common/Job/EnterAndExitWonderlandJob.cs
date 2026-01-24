@@ -1,8 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -21,55 +19,51 @@ public class EnterAndExitWonderlandJob
         Logger.LogInformation("进入千星奇域");
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
 
-        // 等待菜单界面出现
+        // 等待千星奇域界面出现
         await NewRetry.WaitForElementAppear(
-            _assets.EscDown,
-            () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
+            _assets.WonderlandClose,
+            () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F6),
             ct,
             10,
-            1200
-        );
-
-        // 点击下拉按钮并等待大厅按钮出现
-        await NewRetry.WaitForElementAppear(
-            _assets.EscWonderlandHome,
-            () =>
-            {
-                using var ra = CaptureToRectArea();
-                Bv.FindAndClick(ra, _assets.EscDown);
-            },
-            ct,
-            5,
-            800
-        );
-        
-        // 点击大厅按钮并等待公共大厅按钮出现
-        await NewRetry.WaitForElementAppear(
-            _assets.WonderlandEnter,
-            () =>
-            {
-                using var ra = CaptureToRectArea();
-                Bv.FindAndClick(ra, _assets.EscWonderlandHome);
-            },
-            ct,
-            5,
             1000
         );
 
-        // 点击公共大厅按钮并等待确认弹窗出现
+        // 点击一个奇域并等待大厅按钮出现
         await NewRetry.WaitForElementAppear(
             _assets.BtnBlackConfirm,
-            () => 
-            {
-                using var ra = CaptureToRectArea();
-                Bv.FindAndClick(ra, _assets.WonderlandEnter);
-            },
+            () => GameCaptureRegion.GameRegion1080PPosClick(680, 310),
             ct,
             5,
             800
         );
         
-        // 点击确认并等待确认弹窗消失
+        // // 点击大厅按钮并等待公共大厅按钮出现
+        // await NewRetry.WaitForElementAppear(
+        //     _assets.WonderlandEnter,
+        //     () =>
+        //     {
+        //         using var ra = CaptureToRectArea();
+        //         Bv.FindAndClick(ra, _assets.EscWonderlandHome);
+        //     },
+        //     ct,
+        //     5,
+        //     1000
+        // );
+        //
+        // // 点击公共大厅按钮并等待确认弹窗出现
+        // await NewRetry.WaitForElementAppear(
+        //     _assets.BtnBlackConfirm,
+        //     () => 
+        //     {
+        //         using var ra = CaptureToRectArea();
+        //         Bv.FindAndClick(ra, _assets.WonderlandEnter);
+        //     },
+        //     ct,
+        //     5,
+        //     800
+        // );
+        
+        // 点击前往大厅并等待弹窗消失
         await NewRetry.WaitForElementDisappear(
             _assets.BtnBlackConfirm,
             screen =>
@@ -109,11 +103,11 @@ public class EnterAndExitWonderlandJob
         
         // 等待菜单界面出现
         await NewRetry.WaitForElementAppear(
-            _assets.EscDown,
+            _assets.BtnBackTeyvat,
             () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
             ct,
-            10,
-            1200
+            20,
+            800
         );
         
         // 点击返回提瓦特按钮并等待确认弹窗出现
