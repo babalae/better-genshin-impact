@@ -1,7 +1,11 @@
 using System;
+using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
@@ -15,12 +19,14 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 {
     private readonly ILogger<MaskMapPointInfoPopupViewModel> _logger = App.GetLogger<MaskMapPointInfoPopupViewModel>();
     private CancellationTokenSource? _cts;
+    private static readonly HttpClient _http = new();
 
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private Rect _placementRect = Rect.Empty;
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private string _text = string.Empty;
+    [ObservableProperty] private ImageSource? _image;
 
     public async Task ShowAsync(MaskMapPoint point, Point anchorPosition, string title, CancellationToken externalCt = default)
     {
@@ -37,6 +43,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
         Title = title ?? string.Empty;
         Text = "正在加载...";
+        Image = null;
         IsLoading = true;
         IsOpen = true;
 
@@ -70,6 +77,21 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
             var content = (resp.Data.Info.Content ?? string.Empty).Trim();
             Text = string.IsNullOrEmpty(content) ? "暂无描述" : content;
+
+            var imageUrl = string.Empty;
+            if (resp.Data.Info.UrlList is { Count: > 0 })
+            {
+                imageUrl = resp.Data.Info.UrlList[0] ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                imageUrl = resp.Data.Info.Img ?? string.Empty;
+            }
+
+            var img = await LoadImageNoCacheAsync(imageUrl, ct);
+            ct.ThrowIfCancellationRequested();
+            Image = img;
         }
         catch (OperationCanceledException)
         {
@@ -85,6 +107,49 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         }
     }
 
+    private static async Task<ImageSource?> LoadImageNoCacheAsync(string url, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        try
+        {
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                var bytes = await _http.GetByteArrayAsync(url, ct);
+                return await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    using var ms = new MemoryStream(bytes);
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.StreamSource = ms;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return (ImageSource)bmp;
+                });
+            }
+
+            return await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.UriSource = new Uri(url, UriKind.RelativeOrAbsolute);
+                bmp.EndInit();
+                bmp.Freeze();
+                return (ImageSource)bmp;
+            });
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     [RelayCommand]
     public void Close()
     {
@@ -93,5 +158,6 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         _cts = null;
         IsOpen = false;
         IsLoading = false;
+        Image = null;
     }
 }

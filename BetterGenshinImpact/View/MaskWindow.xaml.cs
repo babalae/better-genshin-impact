@@ -128,6 +128,28 @@ public partial class MaskWindow : Window
         LogTextBox.TextChanged += LogTextBoxTextChanged;
         //AddAreaSettingsControl("测试识别窗口");
         Loaded += OnLoaded;
+        IsVisibleChanged += MaskWindowOnIsVisibleChanged;
+        StateChanged += MaskWindowOnStateChanged;
+    }
+
+    private void MaskWindowOnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible)
+        {
+            return;
+        }
+
+        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+    }
+
+    private void MaskWindowOnStateChanged(object? sender, EventArgs e)
+    {
+        if (WindowState != WindowState.Minimized)
+        {
+            return;
+        }
+
+        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -179,6 +201,8 @@ public partial class MaskWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
+        IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
+        StateChanged -= MaskWindowOnStateChanged;
 
         if (_maskWindowConfig != null)
         {

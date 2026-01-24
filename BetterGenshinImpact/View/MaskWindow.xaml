@@ -482,6 +482,24 @@
                                 <TextBlock Foreground="#B3FFFFFF" Text="正在加载点位信息..." />
                             </StackPanel>
 
+                            <Border Margin="0,10,0,0"
+                                    CornerRadius="8"
+                                    ClipToBounds="True">
+                                <Border.Style>
+                                    <Style TargetType="{x:Type Border}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Image}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Image Height="180"
+                                       Stretch="UniformToFill"
+                                       Source="{Binding Image}" />
+                            </Border>
+
                             <ScrollViewer Margin="0,8,0,0"
                                           VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
