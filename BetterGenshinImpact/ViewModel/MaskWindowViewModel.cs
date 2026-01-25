@@ -76,6 +76,10 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
+        [ObservableProperty] private bool _isMapPointsLoading;
+
+        [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
+
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
 
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
@@ -92,6 +96,7 @@ namespace BetterGenshinImpact.ViewModel
         private int _mapLabelTreeLoadVersion;
         private CancellationTokenSource? _mapLabelItemsCts;
         private CancellationTokenSource? _mapPointListCts;
+        private int _mapPointsLoadVersion;
         private readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
 
         public MaskWindowViewModel()
@@ -428,16 +433,22 @@ namespace BetterGenshinImpact.ViewModel
 
         private void StartRefreshSelectedMapPoints()
         {
+            var loadVersion = Interlocked.Increment(ref _mapPointsLoadVersion);
             _mapPointListCts?.Cancel();
             _mapPointListCts = new CancellationTokenSource();
             var ct = _mapPointListCts.Token;
-            _ = RefreshSelectedMapPointsAsync(ct);
+            _ = RefreshSelectedMapPointsAsync(loadVersion, ct);
         }
 
-        private async Task RefreshSelectedMapPointsAsync(CancellationToken ct)
+        private async Task RefreshSelectedMapPointsAsync(int loadVersion, CancellationToken ct)
         {
             try
             {
+                if (loadVersion == _mapPointsLoadVersion)
+                {
+                    IsMapPointsLoading = true;
+                }
+
                 var selectedItems = await Application.Current.Dispatcher.InvokeAsync(
                     () => SelectedMapLabelItems.ToList(),
                     DispatcherPriority.Background);
@@ -474,6 +485,13 @@ namespace BetterGenshinImpact.ViewModel
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "刷新地图点位列表时发生异常");
+            }
+            finally
+            {
+                if (loadVersion == _mapPointsLoadVersion)
+                {
+                    IsMapPointsLoading = false;
+                }
             }
         }
 

@@ -429,6 +429,29 @@
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
                                    PointHoverCommand="{Binding PointHoverCommand}" />
 
+            <Grid Grid.Row="0"
+                  Grid.Column="0"
+                  Grid.RowSpan="4"
+                  Grid.ColumnSpan="6"
+                  IsHitTestVisible="False"
+                  Visibility="{Binding IsMapPointsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border HorizontalAlignment="Center"
+                        VerticalAlignment="Top"
+                        Margin="0,16,0,0"
+                        Padding="12,10"
+                        Background="#CC1F232A"
+                        BorderBrush="#26FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="12">
+                    <StackPanel Orientation="Horizontal">
+                        <ui:ProgressRing Width="18" Height="18" IsIndeterminate="True" Margin="0,0,10,0" />
+                        <TextBlock Foreground="White"
+                                   FontSize="13"
+                                   Text="{Binding MapPointsLoadingText}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
             <Popup AllowsTransparency="True"
                    IsOpen="{Binding PointInfoPopup.IsOpen}"
                    PlacementTarget="{Binding ElementName=PointsCanvasControl}"

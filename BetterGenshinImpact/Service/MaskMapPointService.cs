@@ -647,12 +647,12 @@ public sealed class MaskMapPointService : IMaskMapPointService
                         x => (IReadOnlyList<MarkerVo>)x.Value);
                     var responseElapsed = Stopwatch.GetElapsedTime(responseStart);
 
-                    _logger.LogInformation(
-                        "空荧酒馆 markers-by-item-id: API {ApiMs}ms, 响应处理 {ResponseMs}ms, markers {MarkerCount}, itemIds {ItemIdCount}",
-                        apiElapsed.TotalMilliseconds,
-                        responseElapsed.TotalMilliseconds,
-                        markers.Count,
-                        result.Count);
+                    // _logger.LogInformation(
+                    //     "空荧酒馆 markers-by-item-id: API {ApiMs}ms, 响应处理 {ResponseMs}ms, markers {MarkerCount}, itemIds {ItemIdCount}",
+                    //     apiElapsed.TotalMilliseconds,
+                    //     responseElapsed.TotalMilliseconds,
+                    //     markers.Count,
+                    //     result.Count);
 
                     return result;
                 })
