@@ -47,9 +47,7 @@ namespace BetterGenshinImpact.ViewModel
         public AllConfig? Config { get; set; }
 
         [ObservableProperty] private string _fps = "0";
-
-        public ObservableCollection<MaskMapPoint> Points { get; } = new ObservableCollection<MaskMapPoint>();
-
+        
         [ObservableProperty] private double _maskWindowWidth;
 
         [ObservableProperty] private double _maskWindowHeight;
@@ -425,10 +423,10 @@ namespace BetterGenshinImpact.ViewModel
             finally
             {
                 IsMapLabelTreeLoading = false;
-                if (!_isMapLabelTreeLoaded && IsMapPointPickerOpen && loadVersion != _mapLabelTreeLoadVersion)
-                {
-                    _ = EnsureLabelTreeLoadedAsync();
-                }
+                // if (!_isMapLabelTreeLoaded && IsMapPointPickerOpen && loadVersion != _mapLabelTreeLoadVersion)
+                // {
+                //     _ = EnsureLabelTreeLoadedAsync();
+                // }
             }
         }
 

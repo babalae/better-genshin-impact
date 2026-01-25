@@ -43,7 +43,6 @@ namespace BetterGenshinImpact.Service.Model.MihoyoMap.Responses
     {
         [JsonProperty("text")] public string Text { get; set; } = string.Empty;
         [JsonProperty("url")] public string Url { get; set; } = string.Empty;
-        [JsonExtensionData] public IDictionary<string, JToken>? Extra { get; set; }
     }
 
     public class PointInfoVideo
