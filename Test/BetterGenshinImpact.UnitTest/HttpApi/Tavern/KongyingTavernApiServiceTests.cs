@@ -1,7 +1,3 @@
-using System;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Tavern;
 using Newtonsoft.Json;
 using Xunit.Abstractions;
