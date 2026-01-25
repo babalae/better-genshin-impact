@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -12,6 +13,10 @@ using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.Oauth;
 using BetterGenshinImpact.Service.Tavern.Model;
+using LazyCache;
+using LazyCache.Providers;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service.Tavern;
@@ -26,29 +31,47 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private const string ItemDocListPageBinPathPrefix = "api/item_doc/list_page_bin/";
     private const string MarkerDocListPageBinMd5Path = "api/marker_doc/list_page_bin_md5";
     private const string MarkerDocListPageBinPathPrefix = "api/marker_doc/list_page_bin/";
-    private const string IconDocAllBinMd5Path = "api/icon_doc/all_bin_md5";
     private const string IconDocAllBinPath = "api/icon_doc/all_bin";
 
+    private const string MarkerDocJsonCacheType = "kongying-tavern-marker-doc-json";
+    private static readonly TimeSpan MarkerDocJsonCacheTtl = TimeSpan.FromDays(30);
+    private const int MarkerDocMaxConcurrency = 5;
+
     private readonly HttpClient _httpClient;
+    private readonly MemoryFileCache _memoryFileCache;
     private readonly SemaphoreSlim _tokenGate = new(1, 1);
     private OauthTokenResponse? _cachedToken;
     private DateTimeOffset _cachedTokenExpiresAt = DateTimeOffset.MinValue;
     private static readonly TimeSpan RefreshBeforeExpiry = TimeSpan.FromMinutes(1);
 
     internal static readonly IReadOnlySet<long> MaskMapItemTypeExcludedAreaIds = new HashSet<long> { 7, 25, 42, 16, 4, 8, 10, 26, 32, 43 };
-
+    
     public KongyingTavernApiService()
+        : this(CreateDefaultMemoryFileCache())
     {
+    }
+
+
+    public KongyingTavernApiService(MemoryFileCache memoryFileCache)
+    {
+        _memoryFileCache = memoryFileCache;
         _httpClient = HttpClientFactory.GetClient(
             "KongyingTavern",
             () => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
     }
+    private static MemoryFileCache CreateDefaultMemoryFileCache()
+    {
+        var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var provider = new MemoryCacheProvider(memoryCache);
+        var appCache = new CachingService(new Lazy<ICacheProvider>(() => provider));
+        return new MemoryFileCache(appCache, TimeProvider.System, NullLogger<MemoryFileCache>.Instance);
+    }
+
 
     private static Uri BuildApiUri(string baseUrl, string apiPath, string? query = null)
     {
         var normalizedBaseUrl = baseUrl.EndsWith("/", StringComparison.Ordinal) ? baseUrl : $"{baseUrl}/";
         var normalizedApiPath = apiPath.TrimStart('/');
-        while (normalizedApiPath.Contains("//", StringComparison.Ordinal))
         {
             normalizedApiPath = normalizedApiPath.Replace("//", "/", StringComparison.Ordinal);
         }
@@ -141,36 +164,71 @@ public class KongyingTavernApiService : IKongyingTavernApiService
             return [];
         }
 
-        var dict = new Dictionary<long, MarkerVo>();
-        var noId = new List<MarkerVo>();
+        var distinctPages = pages
+            .Where(x => !string.IsNullOrWhiteSpace(x.Md5))
+            .DistinctBy(x => x.Md5)
+            .ToArray();
 
-        foreach (var page in pages.Where(x => !string.IsNullOrWhiteSpace(x.Md5)).DistinctBy(x => x.Md5))
-        {
-            ct.ThrowIfCancellationRequested();
-            var pageBytes = await GetMarkerDocPageBinAsync(page.Md5, ct);
-            var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
-            var json = Encoding.UTF8.GetString(jsonBytes);
-            var pageList = JsonConvert.DeserializeObject<List<MarkerVo>>(json);
-            if (pageList is null)
-            {
-                throw new InvalidOperationException($"marker_doc/list_page_bin/{page.Md5} 返回内容无法反序列化为 List<MarkerVo>");
-            }
+        var keepCacheKeys = distinctPages
+            .Select(x => GetMarkerPageJsonCacheKey(x.Md5))
+            .ToArray();
+        _memoryFileCache.PurgeCacheTypeByCacheKeys(MarkerDocJsonCacheType, keepCacheKeys);
 
-            foreach (var item in pageList)
+        var result = new ConcurrentBag<MarkerVo>();
+        await Parallel.ForEachAsync(
+            distinctPages,
+            new ParallelOptions
             {
-                if (item.Id is null)
+                CancellationToken = ct,
+                MaxDegreeOfParallelism = MarkerDocMaxConcurrency
+            },
+            async (page, token) =>
+            {
+                var pageList = await LoadMarkerPageAsync(page.Md5, token);
+                foreach (var item in pageList)
                 {
-                    noId.Add(item);
-                    continue;
+                    result.Add(item);
                 }
+            });
 
-                dict[item.Id.Value] = item;
-            }
+        return result.ToList();
+    }
+
+    private static string GetMarkerPageJsonCacheKey(string pageMd5)
+    {
+        return $"marker_doc/list_page_json/{pageMd5}";
+    }
+
+    private async Task<List<MarkerVo>> LoadMarkerPageAsync(string pageMd5, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var cacheKey = GetMarkerPageJsonCacheKey(pageMd5);
+        var jsonBytes = await _memoryFileCache.GetOrAddAsync<byte[]>(
+            MarkerDocJsonCacheType,
+            cacheKey,
+            MarkerDocJsonCacheTtl,
+            async _ =>
+            {
+                var pageBytes = await GetMarkerDocPageBinAsync(pageMd5, ct);
+                return TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
+            },
+            static x => x,
+            static x => x,
+            ct);
+
+        if (jsonBytes is not { Length: > 0 })
+        {
+            throw new InvalidOperationException($"marker_doc/list_page_bin/{pageMd5} 返回内容为空");
         }
 
-        var result = dict.Values.ToList();
-        result.AddRange(noId);
-        return result;
+        var json = Encoding.UTF8.GetString(jsonBytes);
+        var pageList = JsonConvert.DeserializeObject<List<MarkerVo>>(json);
+        if (pageList is null)
+        {
+            throw new InvalidOperationException($"marker_doc/list_page_bin/{pageMd5} 返回内容无法反序列化为 List<MarkerVo>");
+        }
+
+        return pageList;
     }
 
     public async Task<IReadOnlyList<IconVo>> GetIconListAsync(CancellationToken ct = default)
