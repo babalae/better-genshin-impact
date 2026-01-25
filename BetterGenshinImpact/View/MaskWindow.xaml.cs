@@ -238,7 +238,7 @@ public partial class MaskWindow : Window
         if (e.PropertyName == nameof(MaskWindowConfig.OverlayLayoutEditEnabled))
         {
             Dispatcher.Invoke(UpdateClickThroughState);
-        }   
+        }
     }
 
     private void ViewModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -307,13 +307,13 @@ public partial class MaskWindow : Window
         {
             _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
         }
-        
+
         AfterburnerWarning();
 
         // 读取游戏注册表配置
         GameSettingsChecker.LoadGameSettingsAndCheck();
     }
-    
+
     /**
      * MSIAfterburner.exe 在左上角会导致识别失败
      */
@@ -358,6 +358,7 @@ public partial class MaskWindow : Window
         {
             (p.Inlines as System.Collections.IList).RemoveAt(0);
         }
+
         var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
         if (textRange.Text.Length > 10000)
         {
@@ -405,20 +406,20 @@ public partial class MaskWindow : Window
         {
             return;
         }
-    
+
         var item = MapLabelCategoriesListView.ItemContainerGenerator.ItemFromContainer(container) as MapLabelCategoryVm;
         if (item == null)
         {
             return;
         }
-    
+
         if (ReferenceEquals(MapLabelCategoriesListView.SelectedItem, item))
         {
             return;
         }
 
         MapLabelCategoriesListView.SelectedItem = item;
-    
+
         if (DataContext is MaskWindowViewModel vm)
         {
             _mapLabelCategorySelectCts?.Cancel();
@@ -447,7 +448,16 @@ public partial class MaskWindow : Window
 
     public void Invoke(Action action)
     {
-        Dispatcher.Invoke(action);
+        try
+        {
+            Dispatcher.Invoke(action);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     public void HideSelf()
@@ -456,6 +466,7 @@ public partial class MaskWindow : Window
         {
             return;
         }
+
         this.Hide();
     }
 
