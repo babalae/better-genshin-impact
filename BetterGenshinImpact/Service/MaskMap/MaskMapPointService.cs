@@ -454,14 +454,12 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 Id = markerId.ToString(CultureInfo.InvariantCulture),
                 X = x,
                 Y = y,
-                GameX = x,
-                GameY = y,
                 LabelId = labelItemId.ToString(CultureInfo.InvariantCulture)
             };
-
+            
+            (m.GameX, m.GameY) = GameWebMapCoordinateConverter.KongyingTavernToGame(m.X, m.Y);
             var imageCoordinates = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
             (m.ImageX, m.ImageY) = (imageCoordinates.X, imageCoordinates.Y);
-
             points.Add(m);
         }
 

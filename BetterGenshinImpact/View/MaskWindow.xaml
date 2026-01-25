@@ -567,18 +567,27 @@
 
                                 <Grid Grid.Row="0" Margin="12,12,12,8">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
+                                    <ComboBox Grid.Column="0"
+                                              Height="32"
+                                              MinWidth="120"
+                                              Margin="0,0,8,0"
+                                              ItemsSource="{Binding MapPointApiProviderOptions}"
+                                              SelectedItem="{Binding SelectedMapPointApiProviderOption, Mode=TwoWay}"
+                                              DisplayMemberPath="DisplayName" />
+
                                     <ui:TextBox x:Name="MapLabelSearchTextBox"
-                                                Grid.Column="0"
+                                                Grid.Column="1"
                                                 Height="32"
                                                 PlaceholderText="搜索当前区域下的标点分类"
                                                 Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
 
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0">
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
                                         <ui:Button Height="32"
                                                    Padding="12,0"
                                                    Background="#FF2B2F37"

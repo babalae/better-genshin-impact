@@ -4,6 +4,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Overlay;
+using BetterGenshinImpact.GameTask.MapMask;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -73,9 +74,20 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
+        public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
+
+        public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
+        [
+            new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
+            new(MapPointApiProvider.KongyingTavern, "空荧酒馆")
+        ];
+
+        [ObservableProperty] private MapPointApiProviderOption? _selectedMapPointApiProviderOption;
+
         public MaskMapPointInfoPopupViewModel PointInfoPopup { get; } = new();
 
         private bool _isMapLabelTreeLoaded;
+        private int _mapLabelTreeLoadVersion;
         private CancellationTokenSource? _mapLabelItemsCts;
         private CancellationTokenSource? _mapPointListCts;
         private readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
@@ -178,6 +190,8 @@ namespace BetterGenshinImpact.ViewModel
             {
                 OnPropertyChanged(nameof(Config));
             }
+
+            SyncSelectedMapPointApiProviderFromConfig();
         }
 
         /// <summary>
@@ -192,6 +206,73 @@ namespace BetterGenshinImpact.ViewModel
                 {
                     Config = configService.Get();
                 }
+            }
+        }
+
+        private void SyncSelectedMapPointApiProviderFromConfig()
+        {
+            var provider = TaskContext.Instance().Config.MapMaskConfig.MapPointApiProvider;
+            SelectedMapPointApiProviderOption = MapPointApiProviderOptions.FirstOrDefault(x => x.Provider == provider)
+                                                ?? MapPointApiProviderOptions.FirstOrDefault();
+        }
+
+        partial void OnSelectedMapPointApiProviderOptionChanged(MapPointApiProviderOption? value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            _ = SwitchMapPointApiProviderAsync(value.Provider);
+        }
+
+        private async Task SwitchMapPointApiProviderAsync(MapPointApiProvider provider)
+        {
+            try
+            {
+                var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+                if (mapMaskConfig.MapPointApiProvider == provider)
+                {
+                    return;
+                }
+
+                mapMaskConfig.MapPointApiProvider = provider;
+                if (Config != null)
+                {
+                    Config.MapMaskConfig.MapPointApiProvider = provider;
+                }
+
+                await ResetAndReloadMapPointPickerAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "切换地图点位来源时发生异常");
+            }
+        }
+
+        private async Task ResetAndReloadMapPointPickerAsync()
+        {
+            _mapLabelItemsCts?.Cancel();
+            _mapPointListCts?.Cancel();
+            PointInfoPopup.Close();
+
+            Interlocked.Increment(ref _mapLabelTreeLoadVersion);
+            _isMapLabelTreeLoaded = false;
+            MapLabelSearchText = string.Empty;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                SelectedMapLabelItems.Clear();
+                SelectedMapLabelCategory = null;
+                MapLabelCategories = [];
+                MapLabelItems = [];
+                MapPointLabels = [];
+                MapPoints = [];
+            }, DispatcherPriority.Background);
+
+            if (IsMapPointPickerOpen)
+            {
+                await EnsureLabelTreeLoadedAsync();
             }
         }
 
@@ -301,6 +382,7 @@ namespace BetterGenshinImpact.ViewModel
                 return;
             }
 
+            var loadVersion = _mapLabelTreeLoadVersion;
             IsMapLabelTreeLoading = true;
             try
             {
@@ -314,6 +396,10 @@ namespace BetterGenshinImpact.ViewModel
                 }
 
                 var categories = await service.GetLabelCategoriesAsync();
+                if (loadVersion != _mapLabelTreeLoadVersion)
+                {
+                    return;
+                }
                 if (categories.Count == 0)
                 {
                     MapLabelCategories = [];
@@ -334,6 +420,10 @@ namespace BetterGenshinImpact.ViewModel
             finally
             {
                 IsMapLabelTreeLoading = false;
+                if (!_isMapLabelTreeLoaded && IsMapPointPickerOpen && loadVersion != _mapLabelTreeLoadVersion)
+                {
+                    _ = EnsureLabelTreeLoadedAsync();
+                }
             }
         }
 
