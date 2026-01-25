@@ -6,11 +6,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.ViewModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace BetterGenshinImpact.View.Controls;
 
@@ -309,6 +311,18 @@ public class PointsCanvas : FrameworkElement
 
     #region 鼠标交互
 
+    private static async Task ExecuteAsyncRelayCommandSafe(IAsyncRelayCommand command, object? parameter)
+    {
+        try
+        {
+            await command.ExecuteAsync(parameter);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
     private bool TryGetPointCenterPosition(MaskMapPoint point, out Point center)
     {
         center = default;
@@ -333,7 +347,7 @@ public class PointsCanvas : FrameworkElement
         return true;
     }
 
-    private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private async void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         var position = e.GetPosition(this);
         var point = HitTest(position);
@@ -342,7 +356,15 @@ public class PointsCanvas : FrameworkElement
         {
             var anchor = TryGetPointCenterPosition(point, out var center) ? center : position;
             var args = new MaskMapPointClickArgs(point, anchor);
-            if (PointClickCommand?.CanExecute(args) == true)
+            if (PointClickCommand is IAsyncRelayCommand asyncCommand)
+            {
+                if (asyncCommand.CanExecute(args))
+                {
+                    e.Handled = true;
+                    await ExecuteAsyncRelayCommandSafe(asyncCommand, args);
+                }
+            }
+            else if (PointClickCommand?.CanExecute(args) == true)
             {
                 PointClickCommand.Execute(args);
                 e.Handled = true;
@@ -350,12 +372,25 @@ public class PointsCanvas : FrameworkElement
         }
     }
 
-    private void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    private async void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
         var position = e.GetPosition(this);
         var point = HitTest(position);
 
-        if (point != null && PointRightClickCommand?.CanExecute(point) == true)
+        if (point == null)
+        {
+            return;
+        }
+
+        if (PointRightClickCommand is IAsyncRelayCommand asyncCommand)
+        {
+            if (asyncCommand.CanExecute(point))
+            {
+                e.Handled = true;
+                await ExecuteAsyncRelayCommandSafe(asyncCommand, point);
+            }
+        }
+        else if (PointRightClickCommand?.CanExecute(point) == true)
         {
             PointRightClickCommand.Execute(point);
             e.Handled = true;
@@ -371,7 +406,14 @@ public class PointsCanvas : FrameworkElement
         {
             Cursor = Cursors.Hand;
             
-            if (PointHoverCommand?.CanExecute(point) == true)
+            if (PointHoverCommand is IAsyncRelayCommand asyncCommand)
+            {
+                if (asyncCommand.CanExecute(point))
+                {
+                    _ = ExecuteAsyncRelayCommandSafe(asyncCommand, point);
+                }
+            }
+            else if (PointHoverCommand?.CanExecute(point) == true)
             {
                 PointHoverCommand.Execute(point);
             }

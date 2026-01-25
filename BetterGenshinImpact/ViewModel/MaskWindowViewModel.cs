@@ -655,21 +655,25 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private void OnPointRightClick(MaskMapPoint? point)
+        private Task OnPointRightClick(MaskMapPoint? point)
         {
             if (point != null)
             {
                 // 自定义右键逻辑
             }
+
+            return Task.CompletedTask;
         }
 
         [RelayCommand]
-        private void OnPointHover(MaskMapPoint? point)
+        private Task OnPointHover(MaskMapPoint? point)
         {
             if (point != null)
             {
                 // 悬停逻辑
             }
+
+            return Task.CompletedTask;
         }
     }
 
