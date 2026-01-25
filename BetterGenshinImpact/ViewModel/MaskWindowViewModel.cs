@@ -651,6 +651,7 @@ namespace BetterGenshinImpact.ViewModel
     public partial class MapLabelItemVm : ObservableObject
     {
         public string Id { get; }
+        public IReadOnlyList<string> LabelIds { get; }
         public string Name { get; }
         public string IconUrl { get; }
         public int PointCount { get; }
@@ -661,6 +662,7 @@ namespace BetterGenshinImpact.ViewModel
         public MapLabelItemVm(MaskMapPointLabel item)
         {
             Id = item.LabelId;
+            LabelIds = item.LabelIds is { Count: > 0 } ? item.LabelIds : new[] { item.LabelId };
             Name = item.Name;
             IconUrl = item.IconUrl;
             PointCount = item.PointCount;
@@ -672,6 +674,7 @@ namespace BetterGenshinImpact.ViewModel
             return new MaskMapPointLabel
             {
                 LabelId = Id,
+                LabelIds = LabelIds,
                 ParentId = ParentId,
                 Name = Name,
                 IconUrl = IconUrl,

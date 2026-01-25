@@ -103,52 +103,82 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     {
         await EnsureAccessTokenAsync(ct);
         var pages = await GetItemDocPageMd5ListAsync(ct);
-        var latestPage = pages.Count > 0
-            ? pages.OrderByDescending(x => x.Time).First()
-            : null;
-
-        if (latestPage is null)
+        if (pages.Count == 0)
         {
             return [];
         }
 
-        ct.ThrowIfCancellationRequested();
-        var pageBytes = await GetItemDocPageBinAsync(latestPage.Md5, ct);
-        var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
-        var json = Encoding.UTF8.GetString(jsonBytes);
-        var pageList = JsonConvert.DeserializeObject<List<ItemTypeVo>>(json);
-        if (pageList is null)
+        var dict = new Dictionary<long, ItemTypeVo>();
+        var noId = new List<ItemTypeVo>();
+
+        foreach (var page in pages.Where(x => !string.IsNullOrWhiteSpace(x.Md5)).DistinctBy(x => x.Md5))
         {
-            throw new InvalidOperationException($"item_doc/list_page_bin/{latestPage.Md5} 返回内容无法反序列化为 List<ItemTypeVo>");
+            ct.ThrowIfCancellationRequested();
+            var pageBytes = await GetItemDocPageBinAsync(page.Md5, ct);
+            var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
+            var json = Encoding.UTF8.GetString(jsonBytes);
+            var pageList = JsonConvert.DeserializeObject<List<ItemTypeVo>>(json);
+            if (pageList is null)
+            {
+                throw new InvalidOperationException($"item_doc/list_page_bin/{page.Md5} 返回内容无法反序列化为 List<ItemTypeVo>");
+            }
+
+            foreach (var item in pageList)
+            {
+                if (item.Id is null)
+                {
+                    noId.Add(item);
+                    continue;
+                }
+
+                dict[item.Id.Value] = item;
+            }
         }
 
-        return pageList;
+        var result = dict.Values.ToList();
+        result.AddRange(noId);
+        return result;
     }
 
     public async Task<IReadOnlyList<MarkerVo>> GetMarkerListAsync(CancellationToken ct = default)
     {
         await EnsureAccessTokenAsync(ct);
         var pages = await GetMarkerDocPageMd5ListAsync(ct);
-        var latestPage = pages.Count > 0
-            ? pages.OrderByDescending(x => x.Time).First()
-            : null;
-
-        if (latestPage is null)
+        if (pages.Count == 0)
         {
             return [];
         }
 
-        ct.ThrowIfCancellationRequested();
-        var pageBytes = await GetMarkerDocPageBinAsync(latestPage.Md5, ct);
-        var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
-        var json = Encoding.UTF8.GetString(jsonBytes);
-        var pageList = JsonConvert.DeserializeObject<List<MarkerVo>>(json);
-        if (pageList is null)
+        var dict = new Dictionary<long, MarkerVo>();
+        var noId = new List<MarkerVo>();
+
+        foreach (var page in pages.Where(x => !string.IsNullOrWhiteSpace(x.Md5)).DistinctBy(x => x.Md5))
         {
-            throw new InvalidOperationException($"marker_doc/list_page_bin/{latestPage.Md5} 返回内容无法反序列化为 List<MarkerVo>");
+            ct.ThrowIfCancellationRequested();
+            var pageBytes = await GetMarkerDocPageBinAsync(page.Md5, ct);
+            var jsonBytes = TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
+            var json = Encoding.UTF8.GetString(jsonBytes);
+            var pageList = JsonConvert.DeserializeObject<List<MarkerVo>>(json);
+            if (pageList is null)
+            {
+                throw new InvalidOperationException($"marker_doc/list_page_bin/{page.Md5} 返回内容无法反序列化为 List<MarkerVo>");
+            }
+
+            foreach (var item in pageList)
+            {
+                if (item.Id is null)
+                {
+                    noId.Add(item);
+                    continue;
+                }
+
+                dict[item.Id.Value] = item;
+            }
         }
 
-        return pageList;
+        var result = dict.Values.ToList();
+        result.AddRange(noId);
+        return result;
     }
 
     public async Task<IReadOnlyList<IconVo>> GetIconListAsync(CancellationToken ct = default)

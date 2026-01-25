@@ -11,6 +11,8 @@ public class MaskMapPointLabel
 {
     public string LabelId { get; set; } = string.Empty;
 
+    public IReadOnlyList<string> LabelIds { get; set; } = Array.Empty<string>();
+
     public string ParentId { get; set; } = string.Empty;
 
     public string Name { get; set; } = string.Empty;

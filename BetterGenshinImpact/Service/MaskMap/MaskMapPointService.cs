@@ -328,7 +328,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
                     var items = await GetKongyingItemTypeListCachedAsync(CancellationToken.None);
                     var iconUrlById = await GetKongyingIconUrlByIdCachedAsync(CancellationToken.None);
 
-                    var dict = categoryIds.ToDictionary(x => x, _ => new List<MaskMapPointLabel>());
+                    var dict = categoryIds.ToDictionary(x => x, _ => new Dictionary<string, (long MinId, List<long> LabelIds, string IconUrl, int PointCount)>(StringComparer.Ordinal));
 
                     foreach (var item in items)
                     {
@@ -337,28 +337,63 @@ public sealed class MaskMapPointService : IMaskMapPointService
                             continue;
                         }
 
+                        var itemId = item.Id.Value;
+                        var itemCount = item.Count ?? 0;
                         var itemIconUrl = (item.IconId != null && iconUrlById.TryGetValue(item.IconId.Value, out var url)) ? url : string.Empty;
+                        var nameKey = (item.Name ?? string.Empty).Trim();
                         foreach (var typeId in item.TypeIdList)
                         {
-                            if (!dict.TryGetValue(typeId, out var list))
+                            if (!dict.TryGetValue(typeId, out var byName))
                             {
                                 continue;
                             }
 
-                            list.Add(new MaskMapPointLabel
+                            if (!byName.TryGetValue(nameKey, out var acc))
                             {
-                                LabelId = item.Id.Value.ToString(CultureInfo.InvariantCulture),
-                                ParentId = typeId.ToString(CultureInfo.InvariantCulture),
-                                Name = item.Name ?? string.Empty,
-                                IconUrl = itemIconUrl,
-                                PointCount = item.Count ?? 0
-                            });
+                                acc = (itemId, new List<long>(), itemIconUrl, 0);
+                            }
+
+                            acc.LabelIds.Add(itemId);
+                            acc.PointCount += itemCount;
+                            if (itemId < acc.MinId)
+                            {
+                                acc.MinId = itemId;
+                            }
+
+                            byName[nameKey] = acc;
                         }
                     }
 
                     var result = dict.ToDictionary(
                         x => x.Key,
-                        x => (IReadOnlyList<MaskMapPointLabel>)x.Value.OrderBy(i => i.Name, StringComparer.Ordinal).ToList());
+                        x =>
+                        {
+                            var parentId = x.Key.ToString(CultureInfo.InvariantCulture);
+                            var list = x.Value
+                                .Select(kv =>
+                                {
+                                    var acc = kv.Value;
+                                    var ids = acc.LabelIds
+                                        .Distinct()
+                                        .OrderBy(id => id)
+                                        .Select(id => id.ToString(CultureInfo.InvariantCulture))
+                                        .ToArray();
+
+                                    return new MaskMapPointLabel
+                                    {
+                                        LabelId = acc.MinId.ToString(CultureInfo.InvariantCulture),
+                                        LabelIds = ids,
+                                        ParentId = parentId,
+                                        Name = kv.Key,
+                                        IconUrl = acc.IconUrl,
+                                        PointCount = acc.PointCount
+                                    };
+                                })
+                                .OrderBy(i => i.Name, StringComparer.Ordinal)
+                                .ToList();
+
+                            return (IReadOnlyList<MaskMapPointLabel>)list;
+                        });
                     return result;
                 })
             .WaitAsync(ct);
@@ -371,31 +406,50 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return new MaskMapPointsResult();
         }
 
+        IEnumerable<string> GetEffectiveIds(MaskMapPointLabel item) =>
+            item.LabelIds is { Count: > 0 } ? item.LabelIds : new[] { item.LabelId };
+
         var selectedItemIdsInOrder = new List<long>(capacity: selectedItems.Count);
         var selectedItemIds = new HashSet<long>();
         foreach (var item in selectedItems)
         {
-            if (!long.TryParse(item.LabelId, out var id))
+            foreach (var idStr in GetEffectiveIds(item))
             {
-                continue;
-            }
+                if (!long.TryParse(idStr, out var id))
+                {
+                    continue;
+                }
 
-            if (selectedItemIds.Add(id))
-            {
-                selectedItemIdsInOrder.Add(id);
+                if (selectedItemIds.Add(id))
+                {
+                    selectedItemIdsInOrder.Add(id);
+                }
             }
         }
 
-        var labels = selectedItems
-            .GroupBy(x => x.LabelId, StringComparer.Ordinal)
-            .Select(g => g.First())
-            .Select(x => new MaskMapPointLabel
+        var labelsById = new Dictionary<string, MaskMapPointLabel>(StringComparer.Ordinal);
+        foreach (var item in selectedItems)
+        {
+            foreach (var idStr in GetEffectiveIds(item))
             {
-                LabelId = x.LabelId,
-                Name = x.Name,
-                IconUrl = x.IconUrl
-            })
-            .ToList();
+                if (string.IsNullOrWhiteSpace(idStr))
+                {
+                    continue;
+                }
+
+                if (!labelsById.ContainsKey(idStr))
+                {
+                    labelsById.Add(idStr, new MaskMapPointLabel
+                    {
+                        LabelId = idStr,
+                        Name = item.Name,
+                        IconUrl = item.IconUrl
+                    });
+                }
+            }
+        }
+
+        var labels = labelsById.Values.ToList();
 
         if (selectedItemIds.Count == 0)
         {

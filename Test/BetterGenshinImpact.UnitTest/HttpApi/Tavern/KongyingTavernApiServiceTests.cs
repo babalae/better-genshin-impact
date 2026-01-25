@@ -14,7 +14,7 @@ public class KongyingTavernApiServiceTests
     }
 
     [Fact]
-    public async Task GetItemTypeListAsync_ShouldFetchLatestMd5Page_AndPrint()
+    public async Task GetItemTypeListAsync_ShouldFetchAllLatestMd5Pages_AndPrint()
     {
         var service = new KongyingTavernApiService();
         try
@@ -44,7 +44,7 @@ public class KongyingTavernApiServiceTests
     }
 
     [Fact]
-    public async Task GetMarkerListAsync_ShouldFetchLatestMd5Page_AndPrint()
+    public async Task GetMarkerListAsync_ShouldFetchAllLatestMd5Pages_AndPrint()
     {
         var service = new KongyingTavernApiService();
         try

@@ -574,8 +574,10 @@
 
                                     <ComboBox Grid.Column="0"
                                               Height="32"
-                                              MinWidth="120"
-                                              Margin="0,0,8,0"
+                                              MinWidth="140"
+                                              Margin="0,0,12,0"
+                                              Padding="6,0"
+                                              VerticalContentAlignment="Center"
                                               ItemsSource="{Binding MapPointApiProviderOptions}"
                                               SelectedItem="{Binding SelectedMapPointApiProviderOption, Mode=TwoWay}"
                                               DisplayMemberPath="DisplayName" />

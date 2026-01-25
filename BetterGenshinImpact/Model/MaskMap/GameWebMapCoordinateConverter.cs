@@ -23,11 +23,11 @@ public static class GameWebMapCoordinateConverter
         var y = MysWebOffsetOriginY - webY;
         return (x, y);
     }
-    
+
     public static (double x, double y) KongyingTavernToGame(double webX, double webY)
     {
-        var x = KongyingTavernOffsetOriginX - webX;
-        var y = KongyingTavernOffsetOriginY - webY;
+        var x = KongyingTavernOffsetOriginX / 3.0 * 4 - webX;
+        var y = KongyingTavernOffsetOriginY / 3.0 * 4 - webY;
         return (x, y);
     }
 }
