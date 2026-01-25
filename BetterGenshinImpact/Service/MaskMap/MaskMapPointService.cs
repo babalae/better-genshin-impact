@@ -17,13 +17,14 @@ using BetterGenshinImpact.Service.Tavern.Model;
 using LazyCache;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Service.MaskMap;
 
 public sealed class MaskMapPointService : IMaskMapPointService
 {
+    public static readonly TimeSpan CacheDuration = TimeSpan.FromHours(5);
+
     // 酒馆（空荧酒馆）点位标签树的第一层 Label 类别定义（固定、手工维护），用于构建第一层节点以及限定第二层归类范围。
     private static readonly IReadOnlyList<(long Id, long IconId, string Name)> KongyingFirstLayerLabelDefinitions = new (long Id, long IconId, string Name)[]
     {
@@ -237,7 +238,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 key,
                 async entry =>
                 {
-                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(2);
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     return await _mihoyoMapApi.GetPointListAsync(request, CancellationToken.None);
                 })
             .WaitAsync(ct);
@@ -323,7 +324,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 key,
                 async entry =>
                 {
-                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6);
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     var items = await GetKongyingItemTypeListCachedAsync(CancellationToken.None);
                     var iconUrlById = await GetKongyingIconUrlByIdCachedAsync(CancellationToken.None);
 
@@ -370,11 +371,20 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return new MaskMapPointsResult();
         }
 
-        var selectedItemIds = selectedItems
-            .Select(x => long.TryParse(x.LabelId, out var v) ? v : (long?)null)
-            .Where(x => x != null)
-            .Select(x => x!.Value)
-            .ToHashSet();
+        var selectedItemIdsInOrder = new List<long>(capacity: selectedItems.Count);
+        var selectedItemIds = new HashSet<long>();
+        foreach (var item in selectedItems)
+        {
+            if (!long.TryParse(item.LabelId, out var id))
+            {
+                continue;
+            }
+
+            if (selectedItemIds.Add(id))
+            {
+                selectedItemIdsInOrder.Add(id);
+            }
+        }
 
         var labels = selectedItems
             .GroupBy(x => x.LabelId, StringComparer.Ordinal)
@@ -392,21 +402,44 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return new MaskMapPointsResult { Labels = labels, Points = Array.Empty<MaskMapPoint>() };
         }
 
-        var markers = await GetKongyingMarkerListCachedAsync(ct);
+        var markersByItemId = await GetKongyingMarkersByItemIdCachedAsync(ct);
         var map = MapManager.GetMap(MapTypes.Teyvat, TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
 
-        var points = new List<MaskMapPoint>(capacity: Math.Min(markers.Count, 4096));
-        foreach (var marker in markers)
+        var markerById = new Dictionary<long, (MarkerVo Marker, long LabelItemId)>();
+        foreach (var selectedItemId in selectedItemIdsInOrder)
         {
-            ct.ThrowIfCancellationRequested();
-
-            if (marker.Id == null || string.IsNullOrWhiteSpace(marker.Position) || marker.ItemList == null || marker.ItemList.Count == 0)
+            if (!markersByItemId.TryGetValue(selectedItemId, out var markers))
             {
                 continue;
             }
 
-            var match = marker.ItemList.FirstOrDefault(x => x.ItemId != null && selectedItemIds.Contains(x.ItemId.Value));
-            if (match?.ItemId == null)
+            foreach (var marker in markers)
+            {
+                if (marker.Id == null)
+                {
+                    continue;
+                }
+
+                var markerId = marker.Id.Value;
+                if (markerById.ContainsKey(markerId))
+                {
+                    continue;
+                }
+
+                markerById.Add(markerId, (marker, selectedItemId));
+            }
+        }
+
+        var points = new List<MaskMapPoint>(capacity: Math.Min(markerById.Count, 4096));
+        foreach (var kv in markerById)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var markerId = kv.Key;
+            var marker = kv.Value.Marker;
+            var labelItemId = kv.Value.LabelItemId;
+
+            if (string.IsNullOrWhiteSpace(marker.Position))
             {
                 continue;
             }
@@ -418,12 +451,12 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
             var m = new MaskMapPoint
             {
-                Id = marker.Id.Value.ToString(CultureInfo.InvariantCulture),
+                Id = markerId.ToString(CultureInfo.InvariantCulture),
                 X = x,
                 Y = y,
                 GameX = x,
                 GameY = y,
-                LabelId = match.ItemId.Value.ToString(CultureInfo.InvariantCulture)
+                LabelId = labelItemId.ToString(CultureInfo.InvariantCulture)
             };
 
             var imageCoordinates = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
@@ -446,9 +479,8 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return new MaskMapPointInfo { Text = $"点位 ID 非法: {point.Id}" };
         }
 
-        var markers = await GetKongyingMarkerListCachedAsync(ct);
-        var marker = markers.FirstOrDefault(x => x.Id == markerId);
-        if (marker == null)
+        var markerById = await GetKongyingMarkerByIdCachedAsync(ct);
+        if (!markerById.TryGetValue(markerId, out var marker))
         {
             return new MaskMapPointInfo { Text = "暂无描述" };
         }
@@ -472,7 +504,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 "kongying-tavern:item-types",
                 async entry =>
                 {
-                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6);
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     var list = await _kongyingTavernApi.GetItemTypeListAsync(CancellationToken.None);
                     return list;
                 })
@@ -485,9 +517,74 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 "kongying-tavern:markers",
                 async entry =>
                 {
-                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     var list = await _kongyingTavernApi.GetMarkerListAsync(CancellationToken.None);
                     return list;
+                })
+            .WaitAsync(ct);
+    }
+
+    private Task<IReadOnlyDictionary<long, MarkerVo>> GetKongyingMarkerByIdCachedAsync(CancellationToken ct)
+    {
+        return _cache.GetOrAddAsync<IReadOnlyDictionary<long, MarkerVo>>(
+                "kongying-tavern:markers-by-id",
+                async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
+                    var markers = await GetKongyingMarkerListCachedAsync(CancellationToken.None);
+
+                    return markers
+                        .Where(x => x.Id != null)
+                        .GroupBy(x => x.Id!.Value)
+                        .ToDictionary(g => g.Key, g => g.First());
+                })
+            .WaitAsync(ct);
+    }
+
+    private Task<IReadOnlyDictionary<long, IReadOnlyList<MarkerVo>>> GetKongyingMarkersByItemIdCachedAsync(CancellationToken ct)
+    {
+        return _cache.GetOrAddAsync<IReadOnlyDictionary<long, IReadOnlyList<MarkerVo>>>(
+                "kongying-tavern:markers-by-item-id",
+                async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
+                    var markers = await GetKongyingMarkerListCachedAsync(CancellationToken.None);
+
+                    var markerListByItemId = new Dictionary<long, List<MarkerVo>>(capacity: 4096);
+
+                    foreach (var marker in markers)
+                    {
+                        if (marker.Id == null || string.IsNullOrWhiteSpace(marker.Position) || marker.ItemList == null || marker.ItemList.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var seen = new HashSet<long>();
+                        foreach (var markerItem in marker.ItemList)
+                        {
+                            if (markerItem.ItemId == null)
+                            {
+                                continue;
+                            }
+
+                            if (!seen.Add(markerItem.ItemId.Value))
+                            {
+                                continue;
+                            }
+
+                            if (!markerListByItemId.TryGetValue(markerItem.ItemId.Value, out var list))
+                            {
+                                list = new List<MarkerVo>();
+                                markerListByItemId[markerItem.ItemId.Value] = list;
+                            }
+
+                            list.Add(marker);
+                        }
+                    }
+
+                    return markerListByItemId.ToDictionary(
+                        x => x.Key,
+                        x => (IReadOnlyList<MarkerVo>)x.Value);
                 })
             .WaitAsync(ct);
     }
@@ -498,7 +595,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 "kongying-tavern:icons-by-id",
                 async entry =>
                 {
-                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6);
+                    entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     var icons = await _kongyingTavernApi.GetIconListAsync(CancellationToken.None);
                     return icons
                         .Where(x => x.Id != null && !string.IsNullOrWhiteSpace(x.Url))
@@ -518,61 +615,15 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return false;
         }
 
-        var s = position.Trim();
-
-        if (s.StartsWith("[", StringComparison.Ordinal) || s.StartsWith("{", StringComparison.Ordinal))
-        {
-            try
-            {
-                var token = JToken.Parse(s);
-                if (token is JArray arr && arr.Count >= 2)
-                {
-                    x = arr[0]!.ToObject<double>();
-                    y = arr[1]!.ToObject<double>();
-                    return true;
-                }
-
-                if (token is JObject obj)
-                {
-                    var xt = obj["x"] ?? obj["X"] ?? obj["lng"] ?? obj["lon"];
-                    var yt = obj["y"] ?? obj["Y"] ?? obj["lat"];
-                    if (xt != null && yt != null)
-                    {
-                        x = xt.ToObject<double>();
-                        y = yt.ToObject<double>();
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        var parts = s
-            .Split(new[] { ',', ' ', ';', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length < 2)
+        var parts = position
+            .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 2)
         {
             return false;
         }
 
-        if (!double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out x))
-        {
-            if (!double.TryParse(parts[0], NumberStyles.Float, CultureInfo.CurrentCulture, out x))
-            {
-                return false;
-            }
-        }
-
-        if (!double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out y))
-        {
-            if (!double.TryParse(parts[1], NumberStyles.Float, CultureInfo.CurrentCulture, out y))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out x)
+            && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out y);
     }
 
     private static ApiResponse<LabelTreeData>? TryLoadLabelTreeFromLocalExample()
