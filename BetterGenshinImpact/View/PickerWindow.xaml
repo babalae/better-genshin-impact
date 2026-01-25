@@ -1,4 +1,4 @@
-﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.PickerWindow"
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.PickerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:view="clr-namespace:BetterGenshinImpact.View"
@@ -9,6 +9,7 @@
         Width="800"
         Height="450"
         ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Auto"
         WindowStartupLocation="CenterScreen"
         Loaded="Window_Loaded"
         PreviewKeyDown="FluentWindow_PreviewKeyDown">

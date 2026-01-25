@@ -22,6 +22,9 @@ using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -44,6 +47,10 @@ public class AutoFightTask : ISoloTask
     public static bool FightStatusFlag { get; set; } = false;
     
     private static readonly object PickLock = new object(); 
+    
+    private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+    
+    private readonly ReturnMainUiTask _returnMainUiTask = new();
 
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
@@ -486,7 +493,58 @@ public class AutoFightTask : ISoloTask
             // 队伍中存在万叶的时候使用一次长E
             var picker = combatScenes.SelectAvatar("枫原万叶") ?? combatScenes.SelectAvatar("琴");
             
-            var oldPartyName = RunnerContext.Instance.PartyName;
+            string? oldPartyName = null;
+            if (RunnerContext.Instance.PartyName is not null)
+            {
+                oldPartyName = RunnerContext.Instance.PartyName;
+            }
+            else if (picker is null)
+            {
+                Logger.LogWarning("换队拾取：当前队伍名称为空，尝试读取！");
+                await Delay(1000, ct);
+                await _returnMainUiTask.Start(ct);
+
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                    var enterGameAppear = await NewRetry.WaitForElementAppear(
+                        ElementAssets.Instance.PartyBtnChooseView,
+                        () => { },
+                        ct,
+                        15,
+                        500
+                    );
+                    if (attempt == 2)
+                    {
+                        Logger.LogWarning("换队拾取：读取队伍名称失败！");
+                    }
+                }
+            }
+            
+            //等待寻找2秒队伍按钮出现
+            var timeWaitStart = 0;
+            while(timeWaitStart < 6000)
+            {
+                using var ra = CaptureToRectArea();
+                var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+                if (partyViewBtn.IsExist())
+                {
+                    // OCR 当前队伍名称（无法单字，中间禁止空格）
+                    oldPartyName = ra.Find(new RecognitionObject
+                    {
+                        RecognitionType = RecognitionTypes.Ocr,
+                        RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale),
+                            partyViewBtn.Height)
+                    }).Text;
+                    Logger.LogInformation("换队拾取：当前队伍名称读取为：{oldPartyName}",oldPartyName);
+                    RunnerContext.Instance.PartyName = oldPartyName;
+                    // await _returnMainUiTask.Start(ct);
+                    break;
+                }
+                await Delay(200, ct);
+                timeWaitStart += 200;
+            }
+
             var switchPartyFlag = false;
             if (picker == null && !timeOutFlag &&!string.IsNullOrEmpty(_taskParam.KazuhaPartyName) && oldPartyName != _taskParam.KazuhaPartyName)
             {

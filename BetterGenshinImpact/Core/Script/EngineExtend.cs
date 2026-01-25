@@ -118,6 +118,7 @@ public class EngineExtend
 
 #pragma warning disable CS8974 // Converting method group to non-delegate type
         engine.AddHostObject("sleep", GlobalMethod.Sleep);
+        engine.AddHostObject("getVersion", GlobalMethod.GetVersion);
         engine.AddHostObject("keyDown", GlobalMethod.KeyDown);
         engine.AddHostObject("keyUp", GlobalMethod.KeyUp);
         engine.AddHostObject("keyPress", GlobalMethod.KeyPress);

@@ -377,6 +377,15 @@ public class Genshin
     {
         await new ExitAndReloginJob().Start(CancellationContext.Instance.Cts.Token);
     }
+    
+    /// <summary>
+    /// 进出千星奇域
+    /// </summary>
+    /// <returns></returns>
+    public async Task WonderlandCycle()
+    {
+        await new EnterAndExitWonderlandJob().Start(CancellationContext.Instance.Cts.Token);
+    }
 
     /// <summary>
     /// 调整时间
