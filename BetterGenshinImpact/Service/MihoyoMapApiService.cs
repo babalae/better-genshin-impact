@@ -8,8 +8,6 @@ using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Responses;
-using LazyCache;
-using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service
@@ -17,14 +15,12 @@ namespace BetterGenshinImpact.Service
     public class MihoyoMapApiService : IMihoyoMapApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly IAppCache _cache;
         private const string TreeEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v2/map/label/tree";
         private const string ListEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v3/map/point/list";
         private const string InfoEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v1/map/point/info";
 
-        public MihoyoMapApiService(IAppCache cache)
+        public MihoyoMapApiService()
         {
-            _cache = cache;
             _httpClient = HttpClientFactory.GetCommonSendClient();
         }
 
@@ -69,28 +65,6 @@ namespace BetterGenshinImpact.Service
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<PointListData>>(json)!;
-        }
-
-        public Task<ApiResponse<PointListData>> GetPointListCacheAsync(PointListRequest request, CancellationToken ct = default)
-        {
-            var labelIds = request.LabelIds?.Distinct().OrderBy(x => x).ToArray() ?? Array.Empty<int>();
-            var key = $"mihoyo-map:point-list:{request.MapId}:{request.AppSn}:{request.Lang}:{string.Join(",", labelIds)}";
-            var cachedRequest = new PointListRequest
-            {
-                MapId = request.MapId,
-                AppSn = request.AppSn,
-                Lang = request.Lang,
-                LabelIds = labelIds.ToList()
-            };
-
-            return _cache.GetOrAddAsync(
-                    key,
-                    async (ICacheEntry entry) =>
-                    {
-                        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(2);
-                        return await GetPointListAsync(cachedRequest, CancellationToken.None);
-                    })
-                .WaitAsync(ct);
         }
     }
 }

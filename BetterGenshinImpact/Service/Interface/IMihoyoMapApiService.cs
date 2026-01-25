@@ -19,9 +19,5 @@ namespace BetterGenshinImpact.Service.Interface
          * 通过父类型获取所有点位
          */
         Task<ApiResponse<PointListData>> GetPointListAsync(PointListRequest request, CancellationToken ct = default);
-        /**
-         * 通过父类型获取所有点位 - 带缓存
-         */
-        Task<ApiResponse<PointListData>> GetPointListCacheAsync(PointListRequest request, CancellationToken ct = default);
     }
 }

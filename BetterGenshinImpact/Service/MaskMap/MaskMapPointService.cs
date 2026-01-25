@@ -24,6 +24,21 @@ namespace BetterGenshinImpact.Service.MaskMap;
 
 public sealed class MaskMapPointService : IMaskMapPointService
 {
+    // 酒馆（空荧酒馆）点位标签树的第一层 Label 类别定义（固定、手工维护），用于构建第一层节点以及限定第二层归类范围。
+    private static readonly IReadOnlyList<(long Id, long IconId, string Name)> KongyingFirstLayerLabelDefinitions = new (long Id, long IconId, string Name)[]
+    {
+        (10, 290, "宝箱-品质"),
+        (11, 290, "宝箱-获取"),
+        (2, 291, "见闻"),
+        (3, 292, "特产"),
+        (4, 293, "矿物"),
+        (5, 294, "怪物"),
+        (6, 295, "食材"),
+        (7, 296, "素材"),
+        (8, 297, "家园"),
+        (1, 298, "活动")
+    };
+
     private readonly ILogger<MaskMapPointService> _logger;
     private readonly IAppCache _cache;
     private readonly IMihoyoMapApiService _mihoyoMapApi;
@@ -168,10 +183,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         ApiResponse<PointListData> resp;
         try
         {
-            resp = await _mihoyoMapApi.GetPointListCacheAsync(new PointListRequest
-            {
-                LabelIds = parentLabelIds
-            }, ct);
+            resp = await GetMihoyoPointListCacheAsync(parentLabelIds, ct);
         }
         catch (Exception ex)
         {
@@ -210,6 +222,25 @@ public sealed class MaskMapPointService : IMaskMapPointService
             Labels = labels,
             Points = points
         };
+    }
+
+    private Task<ApiResponse<PointListData>> GetMihoyoPointListCacheAsync(IReadOnlyList<int> parentLabelIds, CancellationToken ct)
+    {
+        var labelIds = parentLabelIds?.Distinct().OrderBy(x => x).ToArray() ?? Array.Empty<int>();
+        var key = $"mihoyo-map:point-list:2:ys_obc:zh-cn:{string.Join(",", labelIds)}";
+        var request = new PointListRequest
+        {
+            LabelIds = labelIds.ToList()
+        };
+
+        return _cache.GetOrAddAsync(
+                key,
+                async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(2);
+                    return await _mihoyoMapApi.GetPointListAsync(request, CancellationToken.None);
+                })
+            .WaitAsync(ct);
     }
 
     private async Task<MaskMapPointInfo> GetMihoyoPointInfoAsync(MaskMapPoint point, CancellationToken ct)
@@ -254,32 +285,82 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
     private async Task<IReadOnlyList<MaskMapPointLabel>> GetKongyingLabelCategoriesAsync(CancellationToken ct)
     {
-        var items = await GetKongyingItemTypeListCachedAsync(ct);
         var iconUrlById = await GetKongyingIconUrlByIdCachedAsync(ct);
+        var childrenByCategoryId = await GetKongyingChildrenByCategoryIdCachedAsync(KongyingFirstLayerLabelDefinitions, ct);
 
-        var children = items
-            .Where(x => x.Id != null)
-            .Select(x => new MaskMapPointLabel
-            {
-                LabelId = x.Id!.Value.ToString(CultureInfo.InvariantCulture),
-                ParentId = "KongyingTavern",
-                Name = x.Name ?? string.Empty,
-                IconUrl = (x.IconId != null && iconUrlById.TryGetValue(x.IconId.Value, out var url)) ? url : string.Empty,
-                PointCount = x.Count ?? 0
-            })
-            .OrderBy(x => x.Name)
-            .ToList();
-
-        return new List<MaskMapPointLabel>
+        var categories = new List<MaskMapPointLabel>(KongyingFirstLayerLabelDefinitions.Count);
+        foreach (var def in KongyingFirstLayerLabelDefinitions)
         {
-            new()
+            var catIconUrl = iconUrlById.TryGetValue(def.IconId, out var iconUrl) ? iconUrl : string.Empty;
+            var children = childrenByCategoryId.TryGetValue(def.Id, out var list) ? list : Array.Empty<MaskMapPointLabel>();
+
+            categories.Add(new MaskMapPointLabel
             {
-                LabelId = "KongyingTavern",
-                Name = "空荧酒馆",
-                IconUrl = string.Empty,
+                LabelId = def.Id.ToString(CultureInfo.InvariantCulture),
+                ParentId = "KongyingTavern",
+                Name = def.Name,
+                IconUrl = catIconUrl,
+                PointCount = children.Sum(x => x.PointCount),
                 Children = children
-            }
-        };
+            });
+        }
+
+        return categories;
+    }
+
+    private Task<IReadOnlyDictionary<long, IReadOnlyList<MaskMapPointLabel>>> GetKongyingChildrenByCategoryIdCachedAsync(
+        IReadOnlyList<(long Id, long IconId, string Name)> firstLayerLabelDefinitions,
+        CancellationToken ct)
+    {
+        var categoryIds = firstLayerLabelDefinitions
+            .Select(x => x.Id)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToArray();
+        var key = $"kongying-tavern:children-by-category-id:{string.Join(",", categoryIds)}";
+
+        return _cache.GetOrAddAsync<IReadOnlyDictionary<long, IReadOnlyList<MaskMapPointLabel>>>(
+                key,
+                async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6);
+                    var items = await GetKongyingItemTypeListCachedAsync(CancellationToken.None);
+                    var iconUrlById = await GetKongyingIconUrlByIdCachedAsync(CancellationToken.None);
+
+                    var dict = categoryIds.ToDictionary(x => x, _ => new List<MaskMapPointLabel>());
+
+                    foreach (var item in items)
+                    {
+                        if (item.Id == null || item.TypeIdList == null || item.TypeIdList.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var itemIconUrl = (item.IconId != null && iconUrlById.TryGetValue(item.IconId.Value, out var url)) ? url : string.Empty;
+                        foreach (var typeId in item.TypeIdList)
+                        {
+                            if (!dict.TryGetValue(typeId, out var list))
+                            {
+                                continue;
+                            }
+
+                            list.Add(new MaskMapPointLabel
+                            {
+                                LabelId = item.Id.Value.ToString(CultureInfo.InvariantCulture),
+                                ParentId = typeId.ToString(CultureInfo.InvariantCulture),
+                                Name = item.Name ?? string.Empty,
+                                IconUrl = itemIconUrl,
+                                PointCount = item.Count ?? 0
+                            });
+                        }
+                    }
+
+                    var result = dict.ToDictionary(
+                        x => x.Key,
+                        x => (IReadOnlyList<MaskMapPointLabel>)x.Value.OrderBy(i => i.Name, StringComparer.Ordinal).ToList());
+                    return result;
+                })
+            .WaitAsync(ct);
     }
 
     private async Task<MaskMapPointsResult> GetKongyingPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, CancellationToken ct)

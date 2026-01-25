@@ -349,8 +349,6 @@ namespace BetterGenshinImpact.ViewModel
         {
             try
             {
-                await Task.Delay(120, ct);
-
                 var selectedItems = await Application.Current.Dispatcher.InvokeAsync(
                     () => SelectedMapLabelItems.ToList(),
                     DispatcherPriority.Background);
