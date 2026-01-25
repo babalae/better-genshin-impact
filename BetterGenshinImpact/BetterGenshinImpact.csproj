@@ -90,7 +90,7 @@
 		<PackageReference Include="Vanara.PInvoke.NtDll" Version="4.1.3" />
 		<PackageReference Include="Vanara.PInvoke.SHCore" Version="4.1.3" />
 		<PackageReference Include="Vanara.PInvoke.User32" Version="4.1.3" />
-		<PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
+		<PackageReference Include="XamlAnimatedGif" Version="2.3.1" />
 		<PackageReference Include="WPF-UI" Version="4.2.0" />
 		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.2.0" />
 		<PackageReference Include="WPF-UI.Tray" Version="4.2.0" />

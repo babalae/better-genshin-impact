@@ -36,6 +36,9 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     [ObservableProperty] private bool _hasImage;
     [ObservableProperty] private bool _isImageLoading;
     [ObservableProperty] private string _imageError = string.Empty;
+    [ObservableProperty] private bool _isGifImage;
+    [ObservableProperty] private Uri? _gifSourceUri;
+    [ObservableProperty] private Stream? _gifSourceStream;
 
     partial void OnUrlListChanged(IReadOnlyList<MaskMapLink> value)
     {
@@ -64,6 +67,9 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         HasImage = false;
         ImageError = string.Empty;
         IsImageLoading = false;
+        IsGifImage = false;
+        GifSourceUri = null;
+        GifSourceStream = null;
         DisposeImageStream();
         IsLoading = true;
         IsOpen = true;
@@ -93,15 +99,27 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
                 IsImageLoading = true;
                 try
                 {
-                    var img = await LoadImageNoCacheAsync(info.ImageUrl, ct);
+                    var (isGif, staticImage, gifUri, gifStream) = await LoadPopupImageNoCacheAsync(info.ImageUrl, ct);
                     ct.ThrowIfCancellationRequested();
-                    if (img == null)
+
+                    IsGifImage = isGif;
+                    GifSourceUri = gifUri;
+                    GifSourceStream = gifStream;
+                    Image = staticImage;
+
+                    if (IsGifImage)
                     {
-                        ImageError = "图片加载失败";
+                        if (GifSourceUri == null && GifSourceStream == null)
+                        {
+                            ImageError = "图片加载失败";
+                        }
                     }
                     else
                     {
-                        Image = img;
+                        if (Image == null)
+                        {
+                            ImageError = "图片加载失败";
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -137,15 +155,18 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
     private void DisposeImageStream()
     {
+        GifSourceStream = null;
         _imageStream?.Dispose();
         _imageStream = null;
     }
 
-    private async Task<ImageSource?> LoadImageNoCacheAsync(string url, CancellationToken ct)
+    private async Task<(bool IsGif, ImageSource? StaticImage, Uri? GifSourceUri, Stream? GifSourceStream)> LoadPopupImageNoCacheAsync(
+        string url,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            return null;
+            return default;
         }
 
         try
@@ -154,22 +175,41 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
                 url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
                 var bytes = await _http.GetByteArrayAsync(url, ct);
-                return await Application.Current.Dispatcher.InvokeAsync(() =>
+
+                if (IsGifBytes(bytes))
                 {
                     DisposeImageStream();
                     _imageStream = new MemoryStream(bytes, writable: false);
                     _imageStream.Position = 0;
+                    return (IsGif: true, StaticImage: null, GifSourceUri: null, GifSourceStream: _imageStream);
+                }
+
+                var img = await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    using var ms = new MemoryStream(bytes, writable: false);
+                    ms.Position = 0;
                     var bmp = new BitmapImage();
                     bmp.BeginInit();
                     bmp.CacheOption = BitmapCacheOption.OnLoad;
-                    bmp.StreamSource = _imageStream;
+                    bmp.StreamSource = ms;
                     bmp.EndInit();
                     bmp.Freeze();
                     return (ImageSource)bmp;
                 });
+
+                return (IsGif: false, StaticImage: img, GifSourceUri: null, GifSourceStream: null);
             }
 
-            return await Application.Current.Dispatcher.InvokeAsync(() =>
+            if (LooksLikeGifUri(url))
+            {
+                if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var gifUri))
+                {
+                    DisposeImageStream();
+                    return (IsGif: true, StaticImage: null, GifSourceUri: gifUri, GifSourceStream: null);
+                }
+            }
+
+            var staticImg = await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 DisposeImageStream();
                 var bmp = new BitmapImage();
@@ -180,11 +220,45 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
                 bmp.Freeze();
                 return (ImageSource)bmp;
             });
+            return (IsGif: false, StaticImage: staticImg, GifSourceUri: null, GifSourceStream: null);
         }
         catch
         {
-            return null;
+            return default;
         }
+    }
+
+    private static bool LooksLikeGifUri(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        if (Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var uri))
+        {
+            var path = uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
+            var q = path.IndexOfAny(['?', '#']);
+            if (q >= 0)
+            {
+                path = path[..q];
+            }
+
+            return path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return url.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGifBytes(byte[] bytes)
+    {
+        return bytes is
+        [
+            (byte)'G', (byte)'I', (byte)'F', (byte)'8',
+            (byte)'7' or (byte)'9',
+            (byte)'a',
+            ..
+        ];
     }
 
     [RelayCommand]
@@ -203,6 +277,9 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         IsImageLoading = false;
         ImageError = string.Empty;
         Image = null;
+        IsGifImage = false;
+        GifSourceUri = null;
+        GifSourceStream = null;
         DisposeImageStream();
     }
 

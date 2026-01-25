@@ -10,7 +10,7 @@
         xmlns:overlay="clr-namespace:BetterGenshinImpact.View.Controls.Overlay"
         xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
         xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
-        xmlns:gif="http://wpfanimatedgif.codeplex.com"
+        xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -552,7 +552,24 @@
                                     ClipToBounds="True"
                                     Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid>
-                                    <Image gif:ImageBehavior.AnimatedSource="{Binding Image}"
+                                    <Image gif:AnimationBehavior.SourceStream="{Binding GifSourceStream}"
+                                           gif:AnimationBehavior.SourceUri="{Binding GifSourceUri}"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Top"
+                                           Stretch="Uniform">
+                                        <Image.Style>
+                                            <Style TargetType="{x:Type Image}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsGifImage}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+
+                                    <Image Source="{Binding Image}"
                                            HorizontalAlignment="Stretch"
                                            VerticalAlignment="Top"
                                            Stretch="Uniform">
@@ -560,6 +577,9 @@
                                             <Style TargetType="{x:Type Image}">
                                                 <Setter Property="Visibility" Value="Visible" />
                                                 <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsGifImage}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
                                                     <DataTrigger Binding="{Binding Image}" Value="{x:Null}">
                                                         <Setter Property="Visibility" Value="Collapsed" />
                                                     </DataTrigger>
