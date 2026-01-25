@@ -23,10 +23,15 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isTextLoading;
+    [ObservableProperty] private string _textError = string.Empty;
     [ObservableProperty] private Rect _placementRect = Rect.Empty;
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private ImageSource? _image;
+    [ObservableProperty] private bool _hasImage;
+    [ObservableProperty] private bool _isImageLoading;
+    [ObservableProperty] private string _imageError = string.Empty;
 
     public async Task ShowAsync(MaskMapPoint point, Point anchorPosition, string title, CancellationToken externalCt = default)
     {
@@ -42,8 +47,13 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             MaskMapPointStatic.Height);
 
         Title = title ?? string.Empty;
-        Text = "正在加载...";
+        Text = string.Empty;
+        TextError = string.Empty;
+        IsTextLoading = true;
         Image = null;
+        HasImage = false;
+        ImageError = string.Empty;
+        IsImageLoading = false;
         DisposeImageStream();
         IsLoading = true;
         IsOpen = true;
@@ -53,7 +63,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             var service = App.GetService<IMaskMapPointService>();
             if (service == null)
             {
-                Text = "地图服务未就绪";
+                TextError = "地图服务未就绪";
                 return;
             }
 
@@ -61,9 +71,39 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             ct.ThrowIfCancellationRequested();
 
             Text = string.IsNullOrEmpty(info.Text) ? "暂无描述" : info.Text;
-            var img = await LoadImageNoCacheAsync(info.ImageUrl, ct);
-            ct.ThrowIfCancellationRequested();
-            Image = img;
+            IsTextLoading = false;
+
+            HasImage = !string.IsNullOrWhiteSpace(info.ImageUrl);
+            if (HasImage)
+            {
+                IsImageLoading = true;
+                try
+                {
+                    var img = await LoadImageNoCacheAsync(info.ImageUrl, ct);
+                    ct.ThrowIfCancellationRequested();
+                    if (img == null)
+                    {
+                        ImageError = "图片加载失败";
+                    }
+                    else
+                    {
+                        Image = img;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "加载点位图片失败");
+                    ImageError = "图片加载失败";
+                }
+                finally
+                {
+                    IsImageLoading = false;
+                }
+            }
         }
         catch (OperationCanceledException)
         {
@@ -71,10 +111,12 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "查询地图点位详情失败");
-            Text = "查询失败";
+            TextError = "查询失败";
         }
         finally
         {
+            IsTextLoading = false;
+            IsImageLoading = false;
             IsLoading = false;
         }
     }
@@ -139,6 +181,12 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         _cts = null;
         IsOpen = false;
         IsLoading = false;
+        IsTextLoading = false;
+        TextError = string.Empty;
+        Text = string.Empty;
+        HasImage = false;
+        IsImageLoading = false;
+        ImageError = string.Empty;
         Image = null;
         DisposeImageStream();
     }

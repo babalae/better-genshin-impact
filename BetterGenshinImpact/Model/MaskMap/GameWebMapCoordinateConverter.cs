@@ -26,8 +26,8 @@ public static class GameWebMapCoordinateConverter
 
     public static (double x, double y) KongyingTavernToGame(double webX, double webY)
     {
-        var x = KongyingTavernOffsetOriginX - webX / 2.0;
-        var y = KongyingTavernOffsetOriginY - webY / 2.0;
+        var x = KongyingTavernOffsetOriginX - webX / 4.0 * 3;
+        var y = KongyingTavernOffsetOriginY - webY / 4.0 * 3;
         return (x, y);
     }
 }

@@ -74,7 +74,7 @@ public class KongyingTavernApiServiceTests
     }
 
     [Fact]
-    public async Task GetIconListAsync_ShouldFetchLatestMd5_AndPrint()
+    public async Task GetIconListAsync_AndPrint()
     {
         var service = new KongyingTavernApiService();
         try

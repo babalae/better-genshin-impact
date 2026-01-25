@@ -477,34 +477,73 @@
                         <StackPanel Grid.Row="1" Margin="0,10,0,0">
                             <StackPanel Orientation="Horizontal"
                                         Height="16"
-                                        Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        Visibility="{Binding IsTextLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
-                                <TextBlock Foreground="#B3FFFFFF" Text="正在加载..." />
+                                <TextBlock Foreground="#B3FFFFFF" Text="正在加载文本..." />
                             </StackPanel>
+
+                            <TextBlock Margin="0,6,0,0"
+                                       Foreground="#B3FFFFFF"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding TextError, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
+                                       Text="{Binding TextError}" />
 
                             <Border Margin="0,10,0,0"
                                     CornerRadius="8"
-                                    ClipToBounds="True">
-                                <Border.Style>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Image}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <Image gif:ImageBehavior.AnimatedSource="{Binding Image}"
-                                       HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Top"
-                                       Stretch="Uniform" />
+                                    ClipToBounds="True"
+                                    Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid>
+                                    <Image gif:ImageBehavior.AnimatedSource="{Binding Image}"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Top"
+                                           Stretch="Uniform">
+                                        <Image.Style>
+                                            <Style TargetType="{x:Type Image}">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Image}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Visibility="{Binding IsImageLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
+                                        <TextBlock Foreground="#B3FFFFFF" Text="图片加载中..." />
+                                    </StackPanel>
+
+                                    <TextBlock HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#B3FFFFFF"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding ImageError, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
+                                               Text="{Binding ImageError}" />
+                                </Grid>
                             </Border>
 
                             <ScrollViewer Margin="0,8,0,0"
                                           VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
                                           MaxHeight="220">
+                                <ScrollViewer.Style>
+                                    <Style TargetType="{x:Type ScrollViewer}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsTextLoading}" Value="False" />
+                                                    <Condition Binding="{Binding TextError}" Value="" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ScrollViewer.Style>
                                 <TextBlock Foreground="#E6FFFFFF"
                                            Text="{Binding Text}"
                                            TextWrapping="Wrap" />
