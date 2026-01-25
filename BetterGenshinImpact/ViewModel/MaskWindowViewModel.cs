@@ -96,7 +96,7 @@ namespace BetterGenshinImpact.ViewModel
         private CancellationTokenSource? _mapPointListCts;
         private int _mapLabelItemsLoadVersion;
         private int _mapPointsLoadVersion;
-        private readonly SemaphoreSlim _iconLoadSemaphore = new(4, 4);
+        private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
 
         public MaskWindowViewModel()
         {
