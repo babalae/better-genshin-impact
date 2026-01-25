@@ -14,6 +14,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -49,6 +51,7 @@ public partial class MaskWindow : Window
 
     private MaskWindowConfig? _maskWindowConfig;
     private MapLabelSearchWindow? _mapLabelSearchWindow;
+    private CancellationTokenSource? _mapLabelCategorySelectCts;
 
     static MaskWindow()
     {
@@ -418,7 +421,22 @@ public partial class MaskWindow : Window
     
         if (DataContext is MaskWindowViewModel vm)
         {
-            vm.SelectMapLabelCategoryCommand.Execute(item);
+            _mapLabelCategorySelectCts?.Cancel();
+            _mapLabelCategorySelectCts?.Dispose();
+            _mapLabelCategorySelectCts = new CancellationTokenSource();
+            _ = SelectMapLabelCategoryAsync(vm, item, _mapLabelCategorySelectCts.Token);
+        }
+    }
+
+    private async Task SelectMapLabelCategoryAsync(MaskWindowViewModel vm, MapLabelCategoryVm item, CancellationToken ct)
+    {
+        try
+        {
+            await vm.SelectMapLabelCategoryCommand.ExecuteAsync(item);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "切换地图标点分类时发生异常");
         }
     }
 
