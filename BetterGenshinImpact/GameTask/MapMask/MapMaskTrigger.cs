@@ -88,6 +88,14 @@ public class MapMaskTrigger : ITaskTrigger
                     var rect256 = BigMapTeyvat256Layer.GetInstance((SceneBaseMap)_teyvatMap).GetBigMapRect(region.CacheGreyMat, _prevRect);
                     if (rect256 != default)
                     {
+                        // 过大或过小的区域不处理
+                        if (rect256 is { Width: < 50, Height: < 40 } || rect256 is { Width: > 3000, Height: > 1800 })
+                        {
+                            _prevRect = default;
+                            return;
+                        }
+                        
+                        
                         // if (_prevRect != default)
                         // {
                         //     var dx = Math.Abs(rect256.X - _prevRect.X);
