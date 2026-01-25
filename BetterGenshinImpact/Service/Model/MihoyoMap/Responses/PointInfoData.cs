@@ -29,13 +29,20 @@ namespace BetterGenshinImpact.Service.Model.MihoyoMap.Responses
         [JsonProperty("ctime")] public string Ctime { get; set; } = string.Empty;
         [JsonProperty("content")] public string Content { get; set; } = string.Empty;
         [JsonProperty("img")] public string Img { get; set; } = string.Empty;
-        [JsonProperty("url_list")] public List<string> UrlList { get; set; } = new List<string>();
+        [JsonProperty("url_list")] public List<PointInfoUrlItem> UrlList { get; set; } = new List<PointInfoUrlItem>();
         [JsonProperty("record_id")] public string RecordId { get; set; } = string.Empty;
         [JsonProperty("area_id")] public int AreaId { get; set; }
         [JsonProperty("ext_attrs")] public string ExtAttrs { get; set; } = string.Empty;
         [JsonProperty("z_level")] public int ZLevel { get; set; }
         [JsonProperty("icon_sign")] public int IconSign { get; set; }
         [JsonProperty("video")] public PointInfoVideo Video { get; set; } = new PointInfoVideo();
+        [JsonExtensionData] public IDictionary<string, JToken>? Extra { get; set; }
+    }
+
+    public class PointInfoUrlItem
+    {
+        [JsonProperty("text")] public string Text { get; set; } = string.Empty;
+        [JsonProperty("url")] public string Url { get; set; } = string.Empty;
         [JsonExtensionData] public IDictionary<string, JToken>? Extra { get; set; }
     }
 

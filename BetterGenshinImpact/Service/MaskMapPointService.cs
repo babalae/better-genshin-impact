@@ -262,21 +262,21 @@ public sealed class MaskMapPointService : IMaskMapPointService
             }
 
             var content = (resp.Data.Info.Content ?? string.Empty).Trim();
-            var imageUrl = string.Empty;
-            if (resp.Data.Info.UrlList is { Count: > 0 })
-            {
-                imageUrl = resp.Data.Info.UrlList[0] ?? string.Empty;
-            }
-
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                imageUrl = resp.Data.Info.Img ?? string.Empty;
-            }
+            var imageUrl = resp.Data.Info.Img ?? string.Empty;
+            var urlList = resp.Data.Info.UrlList
+                .Where(x => !string.IsNullOrWhiteSpace(x?.Url))
+                .Select(x => new MaskMapLink
+                {
+                    Text = x.Text ?? string.Empty,
+                    Url = x.Url ?? string.Empty
+                })
+                .ToList();
 
             return new MaskMapPointInfo
             {
                 Text = string.IsNullOrEmpty(content) ? "暂无描述" : content,
-                ImageUrl = imageUrl
+                ImageUrl = imageUrl,
+                UrlList = urlList
             };
         }
         catch (Exception ex)
@@ -510,7 +510,17 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 Id = markerId.ToString(CultureInfo.InvariantCulture),
                 X = x,
                 Y = y,
-                LabelId = labelItemId.ToString(CultureInfo.InvariantCulture)
+                LabelId = labelItemId.ToString(CultureInfo.InvariantCulture),
+                VideoUrls = string.IsNullOrWhiteSpace(marker.VideoPath)
+                    ? new List<MaskMapLink>()
+                    : new List<MaskMapLink>
+                    {
+                        new()
+                        {
+                            Text = string.Empty,
+                            Url = marker.VideoPath!.Trim()
+                        }
+                    }
             };
             
             (m.GameX, m.GameY) = GameWebMapCoordinateConverter.KongyingTavernToGame(m.X, m.Y);
@@ -548,7 +558,17 @@ public sealed class MaskMapPointService : IMaskMapPointService
         return new MaskMapPointInfo
         {
             Text = string.IsNullOrWhiteSpace(text) ? "暂无描述" : text,
-            ImageUrl = marker.Picture ?? string.Empty
+            ImageUrl = marker.Picture ?? string.Empty,
+            UrlList = string.IsNullOrWhiteSpace(marker.VideoPath)
+                ? Array.Empty<MaskMapLink>()
+                : new[]
+                {
+                    new MaskMapLink
+                    {
+                        Text = string.Empty,
+                        Url = marker.VideoPath!.Trim()
+                    }
+                }
         };
     }
 

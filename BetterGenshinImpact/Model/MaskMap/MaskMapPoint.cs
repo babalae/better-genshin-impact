@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Model.MaskMap;
 
@@ -29,6 +29,8 @@ public class MaskMapPoint
     public double ImageY { get; set; }
     
     public string LabelId { get; set; } = string.Empty;
+
+    public List<MaskMapLink> VideoUrls { get; set; } = new();
 
     public bool Contains(double px, double py)
     {

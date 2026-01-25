@@ -511,6 +511,42 @@
                                        Visibility="{Binding TextError, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                        Text="{Binding TextError}" />
 
+                            <ItemsControl Margin="0,8,0,0"
+                                          ItemsSource="{Binding UrlList}"
+                                          Visibility="{Binding HasUrlList, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Margin="0,0,8,8"
+                                                Padding="10,4"
+                                                Background="#2FFFFFFF"
+                                                BorderBrush="#26FFFFFF"
+                                                BorderThickness="1"
+                                                Cursor="Hand"
+                                                ToolTip="{Binding Url}"
+                                                Command="{Binding DataContext.OpenUrlCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding Url}">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="{x:Type Button}">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="10"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <TextBlock Foreground="White" FontSize="12" Text="{Binding DisplayText}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
                             <Border Margin="0,10,0,0"
                                     CornerRadius="8"
                                     ClipToBounds="True"

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -28,10 +30,17 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     [ObservableProperty] private Rect _placementRect = Rect.Empty;
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private string _text = string.Empty;
+    [ObservableProperty] private IReadOnlyList<MaskMapLink> _urlList = Array.Empty<MaskMapLink>();
+    [ObservableProperty] private bool _hasUrlList;
     [ObservableProperty] private ImageSource? _image;
     [ObservableProperty] private bool _hasImage;
     [ObservableProperty] private bool _isImageLoading;
     [ObservableProperty] private string _imageError = string.Empty;
+
+    partial void OnUrlListChanged(IReadOnlyList<MaskMapLink> value)
+    {
+        HasUrlList = value is { Count: > 0 };
+    }
 
     public async Task ShowAsync(MaskMapPoint point, Point anchorPosition, string title, CancellationToken externalCt = default)
     {
@@ -48,6 +57,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
         Title = title ?? string.Empty;
         Text = string.Empty;
+        UrlList = point.VideoUrls;
         TextError = string.Empty;
         IsTextLoading = true;
         Image = null;
@@ -72,6 +82,10 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
             Text = string.IsNullOrEmpty(info.Text) ? "暂无描述" : info.Text;
             IsTextLoading = false;
+            if (info.UrlList is { Count: > 0 })
+            {
+                UrlList = info.UrlList;
+            }
 
             HasImage = !string.IsNullOrWhiteSpace(info.ImageUrl);
             if (HasImage)
@@ -184,10 +198,61 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         IsTextLoading = false;
         TextError = string.Empty;
         Text = string.Empty;
+        UrlList = Array.Empty<MaskMapLink>();
         HasImage = false;
         IsImageLoading = false;
         ImageError = string.Empty;
         Image = null;
         DisposeImageStream();
+    }
+
+    [RelayCommand]
+    private void OpenUrl(string? url)
+    {
+        url = NormalizeUrl(url);
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "打开链接失败: {Url}", url);
+        }
+    }
+
+    private static string NormalizeUrl(string? url)
+    {
+        url = (url ?? string.Empty).Trim();
+        url = url.Trim('`').Trim('"').Trim('\'').Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return string.Empty;
+        }
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var abs))
+        {
+            return abs.AbsoluteUri;
+        }
+
+        if (url.StartsWith("//", StringComparison.Ordinal))
+        {
+            return "https:" + url;
+        }
+
+        if (url.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+        {
+            return "https://" + url;
+        }
+
+        return url;
     }
 }
