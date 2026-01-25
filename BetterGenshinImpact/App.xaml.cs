@@ -37,6 +37,7 @@ using Wpf.Ui.Violeta.Controls;
 // Wine 平台适配
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service.Tavern;
+using BetterGenshinImpact.Service.MaskMap;
 
 namespace BetterGenshinImpact;
 
@@ -146,6 +147,7 @@ public partial class App : Application
                 services.AddSingleton<IAppCache, CachingService>();
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
+                services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
                 
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();

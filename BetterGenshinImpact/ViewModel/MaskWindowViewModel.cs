@@ -3,15 +3,14 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
-using BetterGenshinImpact.Service.Model.MihoyoMap.Responses;
 using BetterGenshinImpact.View.Controls.Overlay;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using LazyCache;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using PresentMonFps;
 using System;
 using System.Collections.Concurrent;
@@ -26,12 +25,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using BetterGenshinImpact.GameTask.Common.Map.Maps;
-using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model.MaskMap;
-using LazyCache;
-using Microsoft.Extensions.Caching.Memory;
-using OpenCvSharp;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
@@ -310,35 +304,26 @@ namespace BetterGenshinImpact.ViewModel
             IsMapLabelTreeLoading = true;
             try
             {
-                var apiService = App.GetService<IMihoyoMapApiService>();
-                ApiResponse<LabelTreeData>? resp = null;
-
-                if (apiService != null)
+                var service = App.GetService<IMaskMapPointService>();
+                if (service == null)
                 {
-                    resp = await apiService.GetLabelTreeAsync(new LabelTreeRequest());
-                }
-
-                if (resp == null || resp.Retcode != 0 || resp.Data == null)
-                {
-                    resp = TryLoadLabelTreeFromLocalExample();
-                }
-
-                if (resp == null || resp.Retcode != 0 || resp.Data == null)
-                {
-                    _logger.LogWarning("加载地图点位树失败: {Retcode} {Message}", resp?.Retcode, resp?.Message);
                     MapLabelCategories = [];
                     MapLabelItems = [];
                     SelectedMapLabelCategory = null;
                     return;
                 }
 
-                var categories = resp.Data.Tree
-                    .OrderBy(x => x.Sort)
-                    .ThenBy(x => x.DisplayPriority)
-                    .Select(x => new MapLabelCategoryVm(x))
-                    .ToList();
+                var categories = await service.GetLabelCategoriesAsync();
+                if (categories.Count == 0)
+                {
+                    MapLabelCategories = [];
+                    MapLabelItems = [];
+                    SelectedMapLabelCategory = null;
+                    return;
+                }
 
-                MapLabelCategories = new ObservableCollection<MapLabelCategoryVm>(categories);
+                var vms = categories.Select(x => new MapLabelCategoryVm(x)).ToList();
+                MapLabelCategories = new ObservableCollection<MapLabelCategoryVm>(vms);
                 SelectMapLabelCategory(MapLabelCategories.FirstOrDefault());
                 _isMapLabelTreeLoaded = true;
             }
@@ -380,64 +365,20 @@ namespace BetterGenshinImpact.ViewModel
                     return;
                 }
 
-                var selectedSecondLevelIds = selectedItems.Select(x => x.Id).ToHashSet();
-                var parentLabelIds = selectedItems
-                    .Select(x => x.ParentId)
-                    .Distinct()
-                    .OrderBy(x => x)
-                    .ToList();
-
-                var labels = selectedItems
-                    .GroupBy(x => x.Id)
-                    .Select(g => g.First())
-                    .Select(x => new MaskMapPointLabel
-                    {
-                        LabelId = x.Id.ToString(),
-                        Name = x.Name,
-                        IconUrl = x.IconUrl
-                    })
-                    .ToList();
-
-                var apiService = App.GetService<IMihoyoMapApiService>();
-                if (apiService == null)
+                var service = App.GetService<IMaskMapPointService>();
+                if (service == null)
                 {
                     return;
                 }
 
-                var resp = await apiService.GetPointListCacheAsync(new PointListRequest
-                {
-                    LabelIds = parentLabelIds
-                }, ct);
-
-                if (resp.Retcode != 0 || resp.Data == null)
-                {
-                    _logger.LogWarning("获取地图点位列表失败: {Retcode} {Message}", resp.Retcode, resp.Message);
-                    return;
-                }
-
-                var points = resp.Data.PointList
-                    .Where(x => selectedSecondLevelIds.Contains(x.LabelId))
-                    .Select(x =>
-                    {
-                        MaskMapPoint m = new MaskMapPoint
-                        {
-                            Id = x.Id.ToString(),
-                            X = x.XPos,
-                            Y = x.YPos,
-                            LabelId = x.LabelId.ToString()
-                        };
-                        (m.GameX, m.GameY) = GameWebMapCoordinateConverter.MysWebToGame(m.X, m.Y);
-                        var imageCoordinates = MapManager.GetMap(MapTypes.Teyvat,
-                            TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
-                        (m.ImageX, m.ImageY) = (imageCoordinates.X, imageCoordinates.Y);
-                        return m;
-                    })
-                    .ToList();
+                var selectedModels = selectedItems.Select(x => x.ToModel()).ToList();
+                var result = await service.GetPointsAsync(selectedModels, ct);
+                ct.ThrowIfCancellationRequested();
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    MapPointLabels = new ObservableCollection<MaskMapPointLabel>(labels);
-                    MapPoints = new ObservableCollection<MaskMapPoint>(points);
+                    MapPointLabels = new ObservableCollection<MaskMapPointLabel>(result.Labels);
+                    MapPoints = new ObservableCollection<MaskMapPoint>(result.Points);
                 }, DispatcherPriority.Background);
             }
             catch (OperationCanceledException)
@@ -562,26 +503,6 @@ namespace BetterGenshinImpact.ViewModel
             }
         }
 
-        private static ApiResponse<LabelTreeData>? TryLoadLabelTreeFromLocalExample()
-        {
-            try
-            {
-                var root = AppContext.BaseDirectory;
-                var path = Path.Combine(root, ".trae", "documents", "tree.json");
-                if (!File.Exists(path))
-                {
-                    return null;
-                }
-
-                var json = File.ReadAllText(path);
-                return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
         [RelayCommand]
         private async Task OnPointClick(MaskMapPointClickArgs? args)
         {
@@ -625,44 +546,49 @@ namespace BetterGenshinImpact.ViewModel
 
     public partial class MapLabelCategoryVm : ObservableObject
     {
-        public int Id { get; }
+        public string Id { get; }
         public string Name { get; }
-        public string Icon { get; }
+        public string IconUrl { get; }
         public ObservableCollection<MapLabelItemVm> Items { get; }
 
-        public MapLabelCategoryVm(LabelNode node)
+        public MapLabelCategoryVm(MaskMapPointLabel category)
         {
-            Id = node.Id;
-            Name = node.Name;
-            Icon = node.Icon;
-
-            var list = (node.Children != null && node.Children.Count > 0 ? node.Children : [node])
-                .OrderBy(x => x.Sort)
-                .ThenBy(x => x.DisplayPriority)
-                .Select(x => new MapLabelItemVm(x, node.Id))
-                .ToList();
-
-            Items = new ObservableCollection<MapLabelItemVm>(list);
+            Id = category.LabelId;
+            Name = category.Name;
+            IconUrl = category.IconUrl;
+            Items = new ObservableCollection<MapLabelItemVm>((category.Children ?? Array.Empty<MaskMapPointLabel>()).Select(x => new MapLabelItemVm(x)));
         }
     }
 
     public partial class MapLabelItemVm : ObservableObject
     {
-        public int Id { get; }
+        public string Id { get; }
         public string Name { get; }
         public string IconUrl { get; }
         public int PointCount { get; }
-        public int ParentId { get; }
+        public string ParentId { get; }
 
         [ObservableProperty] private ImageSource? _iconImage;
 
-        public MapLabelItemVm(LabelNode node, int parentId)
+        public MapLabelItemVm(MaskMapPointLabel item)
         {
-            Id = node.Id;
-            Name = node.Name;
-            IconUrl = node.Icon;
-            PointCount = node.PointCount;
-            ParentId = parentId;
+            Id = item.LabelId;
+            Name = item.Name;
+            IconUrl = item.IconUrl;
+            PointCount = item.PointCount;
+            ParentId = item.ParentId;
+        }
+
+        public MaskMapPointLabel ToModel()
+        {
+            return new MaskMapPointLabel
+            {
+                LabelId = Id,
+                ParentId = ParentId,
+                Name = Name,
+                IconUrl = IconUrl,
+                PointCount = PointCount
+            };
         }
 
         public async Task LoadIconAsync(CancellationToken ct)

@@ -8,7 +8,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.Service.Interface;
-using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -49,47 +48,18 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
         try
         {
-            var apiService = App.GetService<IMihoyoMapApiService>();
-            if (apiService == null)
+            var service = App.GetService<IMaskMapPointService>();
+            if (service == null)
             {
                 Text = "地图服务未就绪";
                 return;
             }
 
-            if (!int.TryParse(point.Id, out var pointId))
-            {
-                Text = $"点位 ID 非法: {point.Id}";
-                return;
-            }
-
-            var resp = await apiService.GetPointInfoAsync(new PointInfoRequest
-            {
-                PointId = pointId
-            }, ct);
-
+            var info = await service.GetPointInfoAsync(point, ct);
             ct.ThrowIfCancellationRequested();
 
-            if (resp.Retcode != 0 || resp.Data == null)
-            {
-                Text = $"查询失败: {resp.Retcode} {resp.Message}";
-                return;
-            }
-
-            var content = (resp.Data.Info.Content ?? string.Empty).Trim();
-            Text = string.IsNullOrEmpty(content) ? "暂无描述" : content;
-
-            var imageUrl = string.Empty;
-            if (resp.Data.Info.UrlList is { Count: > 0 })
-            {
-                imageUrl = resp.Data.Info.UrlList[0] ?? string.Empty;
-            }
-
-            if (string.IsNullOrWhiteSpace(imageUrl))
-            {
-                imageUrl = resp.Data.Info.Img ?? string.Empty;
-            }
-
-            var img = await LoadImageNoCacheAsync(imageUrl, ct);
+            Text = string.IsNullOrEmpty(info.Text) ? "暂无描述" : info.Text;
+            var img = await LoadImageNoCacheAsync(info.ImageUrl, ct);
             ct.ThrowIfCancellationRequested();
             Image = img;
         }

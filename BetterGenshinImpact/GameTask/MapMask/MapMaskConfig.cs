@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.GameTask.MapMask;
 
@@ -14,4 +15,13 @@ public partial class MapMaskConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _enabled = true;
+
+    private MapPointApiProvider _mapPointApiProvider = MapPointApiProvider.MihoyoMap;
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public MapPointApiProvider MapPointApiProvider
+    {
+        get => _mapPointApiProvider;
+        set => SetProperty(ref _mapPointApiProvider, value);
+    }
 }
