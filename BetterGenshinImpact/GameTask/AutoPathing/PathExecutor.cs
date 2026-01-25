@@ -1350,6 +1350,7 @@ public class PathExecutor
                 if (disabledUiButtonRa.IsExist())
                 {
                     _autoSkipTrigger.OnCapture(new CaptureContent(ra));
+                    noDisabledUiButtonTimes = 0;
                 }
                 else
                 {
