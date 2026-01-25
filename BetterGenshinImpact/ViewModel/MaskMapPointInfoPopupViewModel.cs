@@ -19,6 +19,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     private readonly ILogger<MaskMapPointInfoPopupViewModel> _logger = App.GetLogger<MaskMapPointInfoPopupViewModel>();
     private CancellationTokenSource? _cts;
     private static readonly HttpClient _http = new();
+    private MemoryStream? _imageStream;
 
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private bool _isLoading;
@@ -43,6 +44,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         Title = title ?? string.Empty;
         Text = "正在加载...";
         Image = null;
+        DisposeImageStream();
         IsLoading = true;
         IsOpen = true;
 
@@ -77,7 +79,13 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         }
     }
 
-    private static async Task<ImageSource?> LoadImageNoCacheAsync(string url, CancellationToken ct)
+    private void DisposeImageStream()
+    {
+        _imageStream?.Dispose();
+        _imageStream = null;
+    }
+
+    private async Task<ImageSource?> LoadImageNoCacheAsync(string url, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -92,11 +100,13 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
                 var bytes = await _http.GetByteArrayAsync(url, ct);
                 return await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    using var ms = new MemoryStream(bytes);
+                    DisposeImageStream();
+                    _imageStream = new MemoryStream(bytes, writable: false);
+                    _imageStream.Position = 0;
                     var bmp = new BitmapImage();
                     bmp.BeginInit();
                     bmp.CacheOption = BitmapCacheOption.OnLoad;
-                    bmp.StreamSource = ms;
+                    bmp.StreamSource = _imageStream;
                     bmp.EndInit();
                     bmp.Freeze();
                     return (ImageSource)bmp;
@@ -105,6 +115,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 
             return await Application.Current.Dispatcher.InvokeAsync(() =>
             {
+                DisposeImageStream();
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad;
@@ -129,5 +140,6 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         IsOpen = false;
         IsLoading = false;
         Image = null;
+        DisposeImageStream();
     }
 }

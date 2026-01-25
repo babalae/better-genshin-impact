@@ -35,6 +35,8 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private DateTimeOffset _cachedTokenExpiresAt = DateTimeOffset.MinValue;
     private static readonly TimeSpan RefreshBeforeExpiry = TimeSpan.FromMinutes(1);
 
+    internal static readonly IReadOnlySet<long> MaskMapItemTypeExcludedAreaIds = new HashSet<long> { 7, 25, 42, 16, 4, 8, 10, 26, 32, 43 };
+
     public KongyingTavernApiService()
     {
         _httpClient = HttpClientFactory.GetClient(
@@ -108,8 +110,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
             return [];
         }
 
-        var dict = new Dictionary<long, ItemTypeVo>();
-        var noId = new List<ItemTypeVo>();
+        var resList = new List<ItemTypeVo>();
 
         foreach (var page in pages.Where(x => !string.IsNullOrWhiteSpace(x.Md5)).DistinctBy(x => x.Md5))
         {
@@ -125,19 +126,10 @@ public class KongyingTavernApiService : IKongyingTavernApiService
 
             foreach (var item in pageList)
             {
-                if (item.Id is null)
-                {
-                    noId.Add(item);
-                    continue;
-                }
-
-                dict[item.Id.Value] = item;
+                resList.Add(item);
             }
         }
-
-        var result = dict.Values.ToList();
-        result.AddRange(noId);
-        return result;
+        return resList;
     }
 
     public async Task<IReadOnlyList<MarkerVo>> GetMarkerListAsync(CancellationToken ct = default)

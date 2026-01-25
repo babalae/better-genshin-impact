@@ -13,6 +13,7 @@ using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Responses;
+using BetterGenshinImpact.Service.Tavern;
 using BetterGenshinImpact.Service.Tavern.Model;
 using LazyCache;
 using Microsoft.Extensions.Logging;
@@ -552,13 +553,16 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
     private Task<IReadOnlyList<ItemTypeVo>> GetKongyingItemTypeListCachedAsync(CancellationToken ct)
     {
-        return _cache.GetOrAddAsync(
-                "kongying-tavern:item-types",
+        const string cacheKey = "kongying-tavern:item-types:area-filter-v1";
+        return _cache.GetOrAddAsync<IReadOnlyList<ItemTypeVo>>(
+                cacheKey,
                 async entry =>
                 {
                     entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     var list = await _kongyingTavernApi.GetItemTypeListAsync(CancellationToken.None);
-                    return list;
+                    return list
+                        .Where(x => x.AreaId == null || !KongyingTavernApiService.MaskMapItemTypeExcludedAreaIds.Contains(x.AreaId.Value))
+                        .ToList();
                 })
             .WaitAsync(ct);
     }

@@ -10,6 +10,7 @@
         xmlns:overlay="clr-namespace:BetterGenshinImpact.View.Controls.Overlay"
         xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
         xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+        xmlns:gif="http://wpfanimatedgif.codeplex.com"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -494,9 +495,10 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <Image Height="180"
-                                       Stretch="UniformToFill"
-                                       Source="{Binding Image}" />
+                                <Image gif:ImageBehavior.AnimatedSource="{Binding Image}"
+                                       HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Top"
+                                       Stretch="Uniform" />
                             </Border>
 
                             <ScrollViewer Margin="0,8,0,0"
@@ -576,7 +578,7 @@
                                               Height="32"
                                               MinWidth="140"
                                               Margin="0,0,12,0"
-                                              Padding="6,0"
+                                              Padding="12,0,6,0"
                                               VerticalContentAlignment="Center"
                                               ItemsSource="{Binding MapPointApiProviderOptions}"
                                               SelectedItem="{Binding SelectedMapPointApiProviderOption, Mode=TwoWay}"

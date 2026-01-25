@@ -165,9 +165,6 @@ namespace BetterGenshinImpact.ViewModel
                 await EnsureIconLoadedAsync(item, CancellationToken.None);
             }
 
-            _logger.LogInformation("切换二级Label选择: {Name}({Id}) Parent={ParentId} Count={Count} Selected={SelectedCount}",
-                item.Name, item.Id, item.ParentId, item.PointCount, SelectedMapLabelItems.Count);
-
             StartRefreshSelectedMapPoints();
         }
 
