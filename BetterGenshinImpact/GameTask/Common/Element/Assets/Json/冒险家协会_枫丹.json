@@ -1,28 +1,48 @@
-{
+﻿{
   "info": {
+    "authors": [
+      {
+        "links": "",
+        "name": "起个名字好难的喵"
+      }
+    ],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "last_modified_time": 1769335370377,
+    "map_match_method": "",
+    "map_name": "Teyvat",
     "name": "冒险家协会_枫丹",
+    "tags": [],
     "type": "collect",
-    "author": "yemaxul",
-    "version": "2.0",
-    "description": "传送到枫丹冒险家协会",
-    "bgiVersion": "0.35.0"
+    "version": "1.0"
   },
   "positions": [
     {
+      "action": "",
+      "action_params": "",
       "id": 1,
-      "x": 4508.97509765625,
-      "y": 3630.557373046875,
-      "type": "teleport",
       "move_mode": "walk",
-      "action": ""
+      "type": "teleport",
+      "x": 4509.001953125,
+      "y": 3630.5986328125
     },
     {
+      "action": "",
+      "action_params": "",
       "id": 2,
-      "x": 4495.0,
-      "y": 3638.0,
-      "type": "target",
       "move_mode": "walk",
-      "action": ""
+      "type": "path",
+      "x": 4500.5625,
+      "y": 3630.69677734375
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 3,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 4495.94140625,
+      "y": 3638.5205078125
     }
   ]
 }
