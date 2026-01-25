@@ -50,8 +50,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
         BurstEnabled = autoFightConfig.BurstEnabled;
-        
-        CheckBeforeBurst = autoFightConfig.FinishDetectConfig.CheckBeforeBurst;
+        ExpKazuhaPickup = autoFightConfig.ExpKazuhaPickup;
         IsFirstCheck = autoFightConfig.FinishDetectConfig.IsFirstCheck;
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
@@ -80,6 +79,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public bool IsFirstCheck { get; set; } = true;    
     public int RotaryFactor { get; set; } = 10;
     public bool BurstEnabled { get; set; } = false;
+    public bool ExpKazuhaPickup  { get; set; } = false;
     
     public bool QinDoublePickUp { get; set; } = false;
     public static bool SwimmingEnabled  { get; set; } = false;
@@ -140,5 +140,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
+        ExpKazuhaPickup = autoFightConfig.ExpKazuhaPickup;
     }
 }
