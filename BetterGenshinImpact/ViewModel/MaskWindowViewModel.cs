@@ -27,6 +27,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BetterGenshinImpact.Model.MaskMap;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
@@ -747,20 +749,29 @@ namespace BetterGenshinImpact.ViewModel
                     var bytes = await _http.GetByteArrayAsync(url);
                     return await StaRunner.Instance.InvokeAsync(() =>
                     {
-                        using var ms = new MemoryStream(bytes);
-                        var bmp = new BitmapImage();
-                        bmp.BeginInit();
-                        bmp.CacheOption = BitmapCacheOption.OnLoad;
-                        bmp.StreamSource = ms;
-                        bmp.EndInit();
-                        bmp.Freeze();
-                        return (ImageSource)bmp;
+                        if (LooksLikeWebp(bytes))
+                        {
+                            return LoadWebpFromBytes(bytes);
+                        }
+
+                        return LoadBitmapImageFromBytes(bytes);
                     });
                 }
 
                 var absoluteOrRelative = ToAbsoluteOrRelativeUri(url);
                 return await StaRunner.Instance.InvokeAsync(() =>
                 {
+                    var bytes = TryReadBytesFromUri(absoluteOrRelative);
+                    if (bytes != null)
+                    {
+                        if (LooksLikeWebp(bytes))
+                        {
+                            return LoadWebpFromBytes(bytes);
+                        }
+
+                        return LoadBitmapImageFromBytes(bytes);
+                    }
+
                     var bmp = new BitmapImage();
                     bmp.BeginInit();
                     bmp.CacheOption = BitmapCacheOption.OnLoad;
@@ -773,6 +784,111 @@ namespace BetterGenshinImpact.ViewModel
             catch
             {
                 return null;
+            }
+        }
+
+        private static ImageSource LoadBitmapImageFromBytes(byte[] bytes)
+        {
+            using var ms = new MemoryStream(bytes, writable: false);
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.StreamSource = ms;
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+
+        private static ImageSource LoadWebpFromBytes(byte[] bytes)
+        {
+            using var img = Image.Load<Rgba32>(bytes);
+            var width = img.Width;
+            var height = img.Height;
+            var stride = width * 4;
+            var buffer = new byte[stride * height];
+
+            img.ProcessPixelRows(accessor =>
+            {
+                for (var y = 0; y < height; y++)
+                {
+                    var row = accessor.GetRowSpan(y);
+                    var rowOffset = y * stride;
+                    for (var x = 0; x < width; x++)
+                    {
+                        var p = row[x];
+                        var a = p.A;
+                        var i = rowOffset + x * 4;
+                        buffer[i + 0] = Premultiply(p.B, a);
+                        buffer[i + 1] = Premultiply(p.G, a);
+                        buffer[i + 2] = Premultiply(p.R, a);
+                        buffer[i + 3] = a;
+                    }
+                }
+            });
+
+            var bmp = BitmapSource.Create(width, height, 96, 96, PixelFormats.Pbgra32, null, buffer, stride);
+            bmp.Freeze();
+            return bmp;
+        }
+
+        private static byte Premultiply(byte c, byte a)
+        {
+            return (byte)((c * a + 127) / 255);
+        }
+
+        private static byte[]? TryReadBytesFromUri(Uri uri)
+        {
+            try
+            {
+                if (uri.IsFile && File.Exists(uri.LocalPath))
+                {
+                    return File.ReadAllBytes(uri.LocalPath);
+                }
+
+                if (Application.GetResourceStream(uri) is { } res)
+                {
+                    using var s = res.Stream;
+                    using var ms = new MemoryStream();
+                    s.CopyTo(ms);
+                    return ms.ToArray();
+                }
+
+                if (Application.GetContentStream(uri) is { } content)
+                {
+                    using var s = content.Stream;
+                    using var ms = new MemoryStream();
+                    s.CopyTo(ms);
+                    return ms.ToArray();
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
+        private static bool LooksLikeWebp(byte[] bytes)
+        {
+            if (bytes.Length < 12)
+            {
+                return false;
+            }
+
+            try
+            {
+                return bytes[0] == (byte)'R'
+                       && bytes[1] == (byte)'I'
+                       && bytes[2] == (byte)'F'
+                       && bytes[3] == (byte)'F'
+                       && bytes[8] == (byte)'W'
+                       && bytes[9] == (byte)'E'
+                       && bytes[10] == (byte)'B'
+                       && bytes[11] == (byte)'P';
+            }
+            catch
+            {
+                return false;
             }
         }
 

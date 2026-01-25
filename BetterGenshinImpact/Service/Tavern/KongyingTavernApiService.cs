@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.Service.Tavern;
 public class KongyingTavernApiService : IKongyingTavernApiService
 {
     private const string DefaultBaseUrl = "https://cloud.yuanshen.site";
-    private const string DefaultBasicAuthorization = "Y2xpZW50OnNlY3JldA==";
+    private const string DefaultBasicAuthorization = "YmV0dGVyX2dpOjRmNjc4M2I1LTY1M2MtNGVmMC1iYzc3LTViODMyMzA3YTA2NA==";
 
     private const string OauthTokenPath = "oauth/token";
     private const string ItemDocListPageBinMd5Path = "api/item_doc/list_page_bin_md5";

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -20,7 +21,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Service.MaskMap;
+namespace BetterGenshinImpact.Service;
 
 public sealed class MaskMapPointService : IMaskMapPointService
 {
@@ -604,8 +605,11 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 async entry =>
                 {
                     entry.AbsoluteExpirationRelativeToNow = CacheDuration;
+                    var apiStart = Stopwatch.GetTimestamp();
                     var markers = await GetKongyingMarkerListCachedAsync(CancellationToken.None);
+                    var apiElapsed = Stopwatch.GetElapsedTime(apiStart);
 
+                    var responseStart = Stopwatch.GetTimestamp();
                     var markerListByItemId = new Dictionary<long, List<MarkerVo>>(capacity: 4096);
 
                     foreach (var marker in markers)
@@ -638,9 +642,19 @@ public sealed class MaskMapPointService : IMaskMapPointService
                         }
                     }
 
-                    return markerListByItemId.ToDictionary(
+                    var result = markerListByItemId.ToDictionary(
                         x => x.Key,
                         x => (IReadOnlyList<MarkerVo>)x.Value);
+                    var responseElapsed = Stopwatch.GetElapsedTime(responseStart);
+
+                    _logger.LogInformation(
+                        "空荧酒馆 markers-by-item-id: API {ApiMs}ms, 响应处理 {ResponseMs}ms, markers {MarkerCount}, itemIds {ItemIdCount}",
+                        apiElapsed.TotalMilliseconds,
+                        responseElapsed.TotalMilliseconds,
+                        markers.Count,
+                        result.Count);
+
+                    return result;
                 })
             .WaitAsync(ct);
     }
