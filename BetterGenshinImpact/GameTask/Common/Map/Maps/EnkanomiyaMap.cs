@@ -28,7 +28,6 @@ public class EnkanomiyaMap : SceneBaseMap
         splitCol: 0)
     {
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/Enkanomiya/Enkanomiya_0_1024.png"));
-        Layers = BaseMapLayer.LoadLayers(this);
     }
 
 }

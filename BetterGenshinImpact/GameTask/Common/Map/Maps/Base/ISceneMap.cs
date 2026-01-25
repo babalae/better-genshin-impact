@@ -9,6 +9,8 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 /// </summary>
 public interface ISceneMap
 {
+    void WarmUp();
+    
     /// <summary>
     /// 获取大地图在整张地图上的位置
     /// </summary>

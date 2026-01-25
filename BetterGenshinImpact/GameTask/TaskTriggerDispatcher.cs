@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
-
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using Fischless.GameCapture;
@@ -12,10 +11,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.GameLoading;
 using Fischless.GameCapture.Graphics;
 using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
+using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -52,6 +54,8 @@ namespace BetterGenshinImpact.GameTask
         public event EventHandler? UiTaskStopTickEvent;
 
         public event EventHandler? UiTaskStartTickEvent;
+
+        public GameUiCategory PrevGameUiCategory = GameUiCategory.Unknown;
 
         public TaskTriggerDispatcher()
         {
@@ -111,6 +115,7 @@ namespace BetterGenshinImpact.GameTask
                     SetTriggers(GameTaskManager.ConvertToTriggerList(true));
                     return true;
                 }
+
                 return false;
             }
         }
@@ -128,7 +133,7 @@ namespace BetterGenshinImpact.GameTask
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
             GameLoadingTrigger.GlobalEnabled = TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled;
-            
+
             // if (GraphicsCapture.IsHdrEnabled(hWnd))
             // {
             //     _logger.LogError("游戏窗口在HDR模式下无法获取正常颜色的截图，请关闭HDR模式！");
@@ -141,13 +146,13 @@ namespace BetterGenshinImpact.GameTask
                     { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
                 }
             );
-            
+
             // 使用 SetWinEventHook 监听窗口移动和大小变化事件
             _winEventProc = WinEventCallback;
             var flags = (User32.WINEVENT)(WINEVENT_SKIPOWNPROCESS | WINEVENT_SKIPOWNTHREAD);
             _winEventHookMoveSize = User32.SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, default, _winEventProc, 0, 0, flags);
             _winEventHookLocation = User32.SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, default, _winEventProc, 0, 0, flags);
-            
+
             // 启动定时器
             _frameIndex = 0;
             _timer.Interval = interval;
@@ -169,6 +174,7 @@ namespace BetterGenshinImpact.GameTask
                 User32.UnhookWinEvent(_winEventHookMoveSize);
                 _winEventHookMoveSize = default;
             }
+
             if (_winEventHookLocation != default)
             {
                 User32.UnhookWinEvent(_winEventHookLocation);
@@ -231,8 +237,8 @@ namespace BetterGenshinImpact.GameTask
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
                 var autoSkipConfig = TaskContext.Instance().Config.AutoSkipConfig;
-                var shouldShowPictureInPicture = autoSkipConfig.Enabled 
-                                                 && autoSkipConfig.PictureInPictureEnabled 
+                var shouldShowPictureInPicture = autoSkipConfig.Enabled
+                                                 && autoSkipConfig.PictureInPictureEnabled
                                                  && !PictureInPictureService.IsManuallyClosed
                                                  && TaskControl.TaskSemaphore.CurrentCount == 1; // 没有任务持有锁（也就是没有任务正在运行）
                 var active = SystemControl.IsGenshinImpactActive();
@@ -254,8 +260,9 @@ namespace BetterGenshinImpact.GameTask
                     if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
                     {
                         var pName = SystemControl.GetActiveProcessName();
-                        if (pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                        if (pName != "Idle" && pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
                         {
+                            // Debug.WriteLine(pName + "：hide mask window");
                             maskWindow.Invoke(() => { maskWindow.HideSelf(); });
                         }
                     }
@@ -277,6 +284,7 @@ namespace BetterGenshinImpact.GameTask
                             }
                         }
                     }
+
                     if (!hasBackgroundTriggerToRun && shouldShowPictureInPicture)
                     {
                         hasBackgroundTriggerToRun = true;
@@ -323,7 +331,7 @@ namespace BetterGenshinImpact.GameTask
                     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
                 }
-                
+
                 // 帧序号自增 1分钟后归零(MaxFrameIndexSecond)
                 _frameIndex = (_frameIndex + 1) % (int)(CaptureContent.MaxFrameIndexSecond * 1000d / _timer.Interval);
 
@@ -352,11 +360,11 @@ namespace BetterGenshinImpact.GameTask
 
                 lock (_triggerListLocker)
                 {
+                    var needRunTriggers = new List<ITaskTrigger>(); // 最终要执行的触发器列表
                     var exclusiveTrigger = _triggers!.FirstOrDefault(t => t is { IsEnabled: true, IsExclusive: true });
                     if (exclusiveTrigger != null)
                     {
-                        exclusiveTrigger.OnCapture(content);
-                        speedTimer.Record(exclusiveTrigger.Name);
+                        needRunTriggers.Add(exclusiveTrigger);
                     }
                     else
                     {
@@ -366,11 +374,25 @@ namespace BetterGenshinImpact.GameTask
                             runningTriggers = runningTriggers.Where(t => t.IsBackgroundRunning);
                         }
 
-                        foreach (var trigger in runningTriggers)
+                        needRunTriggers.AddRange(runningTriggers);
+                    }
+
+                    if (needRunTriggers.Count > 0)
+                    {
+                        // 判断当前UI
+                        content.CurrentGameUiCategory = Bv.WhichGameUiForTriggers(content.CaptureRectArea);
+
+                        foreach (var trigger in needRunTriggers)
                         {
-                            trigger.OnCapture(content);
-                            speedTimer.Record(trigger.Name);
+                            if (PrevGameUiCategory != content.CurrentGameUiCategory // UI变化了则所有触发器执行一遍
+                                || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
+                            {
+                                trigger.OnCapture(content);
+                                speedTimer.Record(trigger.Name);
+                            }
                         }
+
+                        PrevGameUiCategory = content.CurrentGameUiCategory;
                     }
                 }
 
@@ -437,10 +459,12 @@ namespace BetterGenshinImpact.GameTask
             {
                 return;
             }
+
             if (idObject != 0)
             {
                 return;
             }
+
             var hwndPtr = hwnd.DangerousGetHandle();
             if (hwndPtr == target)
             {
@@ -468,6 +492,7 @@ namespace BetterGenshinImpact.GameTask
                     _logger.LogInformation("截图失败，未获取到图像");
                     return;
                 }
+
                 var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
                 var savePath = Global.Absolute($@"log\screenshot\{name}");
                 if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)

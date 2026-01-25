@@ -10,6 +10,7 @@ using OpenCvSharp;
 using System;
 using System.Linq;
 using System.Windows.Forms;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
@@ -19,6 +20,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
     public bool IsEnabled { get; set; }
     public int Priority => 21;
     public bool IsExclusive { get; set; }
+
+    public GameUiCategory SupportedGameUiCategory => GameUiCategory.BigMap;
 
     private readonly QuickTeleportAssets _assets;
 
@@ -64,10 +67,9 @@ internal class QuickTeleportTrigger : ITaskTrigger
         _prevExecute = DateTime.Now;
 
         // 1.判断是否在地图界面
-        content.CaptureRectArea.Find(_assets.MapScaleButtonRo, _ =>
+        if (content.CurrentGameUiCategory == GameUiCategory.BigMap
+            || Bv.IsInBigMapUi(content.CaptureRectArea))
         {
-            IsExclusive = true;
-
             // 2. 判断是否有传送按钮
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
 
@@ -95,7 +97,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                     CheckTeleportButton(TaskControl.CaptureToRectArea(forceNew: true));
                 }
             }
-        });
+        }
     }
 
     private bool CheckTeleportButton(ImageRegion imageRegion)
@@ -139,7 +141,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 {
                     // RecognitionType = RecognitionTypes.Ocr,
                     RecognitionType = RecognitionTypes.ColorRangeAndOcr,
-                    LowerColor = new Scalar(249, 249, 249),  // 只取白色文字
+                    LowerColor = new Scalar(249, 249, 249), // 只取白色文字
                     UpperColor = new Scalar(255, 255, 255),
                 });
                 if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)

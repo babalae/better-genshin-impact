@@ -29,7 +29,6 @@ public class TheChasmMap : SceneBaseMap
         splitCol: 0)
     {
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/TheChasm/TheChasm_0_1024.png"));
-        Layers = BaseMapLayer.LoadLayers(this);
     }
 
 }

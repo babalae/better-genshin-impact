@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.GameTask;
+﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
+
+namespace BetterGenshinImpact.GameTask;
 
 /// <summary>
 /// 触发器接口
@@ -34,6 +36,8 @@ public interface ITaskTrigger
     /// 处于可以后台运行的状态（原神窗口不处于激活状态）
     /// </summary>
     bool IsBackgroundRunning => false;
+    
+    GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 
     /// <summary>
     /// 初始化

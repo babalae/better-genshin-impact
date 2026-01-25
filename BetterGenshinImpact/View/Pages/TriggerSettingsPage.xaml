@@ -975,6 +975,31 @@
             </StackPanel>
         </ui:CardExpander>
 
+        <ui:CardControl Margin="0,0,0,12">
+            <ui:CardControl.Icon>
+                <ui:FontIcon Glyph="&#xf279;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardControl.Icon>
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="地图遮罩"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        在遮罩窗口中显示大地图位置与标点信息
+                    </ui:TextBlock>
+                </Grid>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch Margin="0,0,40,0" IsChecked="{Binding Config.MapMaskConfig.Enabled, Mode=TwoWay}" />
+        </ui:CardControl>
 
         <!--  自动烹饪  -->
         <ui:CardControl Margin="0,0,0,12">

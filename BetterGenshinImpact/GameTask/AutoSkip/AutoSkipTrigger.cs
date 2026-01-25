@@ -40,6 +40,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool IsEnabled { get; set; }
     public int Priority => 20;
     public bool IsExclusive => false;
+    
+    public GameUiCategory SupportedGameUiCategory => GameUiCategory.Talk;
+
 
     public bool IsBackgroundRunning { get; private set; }
     
@@ -170,9 +173,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
-        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.DisabledUiButtonRo);
 
-        var isPlaying = !foundRectArea.IsEmpty(); // 播放中
+        var isPlaying = content.CurrentGameUiCategory == GameUiCategory.Talk
+                        || Bv.IsInTalkUi(content.CaptureRectArea); // 播放中
 
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {

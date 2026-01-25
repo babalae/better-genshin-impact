@@ -8,17 +8,25 @@ using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.Genshin.Settings2;
+using BetterGenshinImpact.Model.MaskMap;
+using BetterGenshinImpact.ViewModel;
+using BetterGenshinImpact.View.Windows;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -35,12 +43,15 @@ public partial class MaskWindow : Window
     private static readonly Typeface _typeface;
 
     private nint _hWnd;
+    private MaskWindowViewModel? _viewModel;
 
     private IRichTextBox? _richTextBox;
 
     private readonly ILogger<MaskWindow> _logger = App.GetLogger<MaskWindow>();
 
     private MaskWindowConfig? _maskWindowConfig;
+    private MapLabelSearchWindow? _mapLabelSearchWindow;
+    private CancellationTokenSource? _mapLabelCategorySelectCts;
 
     static MaskWindow()
     {
@@ -122,6 +133,33 @@ public partial class MaskWindow : Window
         LogTextBox.TextChanged += LogTextBoxTextChanged;
         //AddAreaSettingsControl("测试识别窗口");
         Loaded += OnLoaded;
+        IsVisibleChanged += MaskWindowOnIsVisibleChanged;
+        StateChanged += MaskWindowOnStateChanged;
+    }
+
+    private void MaskWindowOnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible)
+        {
+            return;
+        }
+
+        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+
+        if (_mapLabelSearchWindow != null)
+        {
+            _mapLabelSearchWindow.Hide();
+        }
+    }
+
+    private void MaskWindowOnStateChanged(object? sender, EventArgs e)
+    {
+        if (WindowState != WindowState.Minimized)
+        {
+            return;
+        }
+
+        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -134,6 +172,13 @@ public partial class MaskWindow : Window
 
         _maskWindowConfig = TaskContext.Instance().Config.MaskWindowConfig;
         _maskWindowConfig.PropertyChanged += MaskWindowConfigOnPropertyChanged;
+
+        _viewModel = DataContext as MaskWindowViewModel;
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
+        }
+
         UpdateClickThroughState();
 
         if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
@@ -149,13 +194,40 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
+        if (_viewModel != null)
+        {
+            PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
+            PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
+        }
+
+        PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
+    }
+
+    private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
+    {
+        _viewModel?.PointInfoPopup.CloseCommand.Execute(null);
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
+        IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
+        StateChanged -= MaskWindowOnStateChanged;
+
         if (_maskWindowConfig != null)
         {
             _maskWindowConfig.PropertyChanged -= MaskWindowConfigOnPropertyChanged;
+        }
+
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        }
+
+        if (_mapLabelSearchWindow != null)
+        {
+            _mapLabelSearchWindow.Close();
+            _mapLabelSearchWindow = null;
         }
 
         base.OnClosed(e);
@@ -169,12 +241,51 @@ public partial class MaskWindow : Window
         }
     }
 
+    private void ViewModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MaskWindowViewModel.IsInBigMapUi) ||
+            e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
+        {
+            Dispatcher.Invoke(UpdateClickThroughState);
+        }
+
+        if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel != null)
+                {
+                    PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
+                }
+            });
+        }
+
+        if (e.PropertyName == nameof(MaskWindowViewModel.MapPoints))
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel != null)
+                {
+                    PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
+                }
+            });
+        }
+    }
+
     private void UpdateClickThroughState()
     {
         try
         {
             var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
-            this.SetClickThrough(!editEnabled);
+            var inBigMapUi = _viewModel?.IsInBigMapUi == true;
+
+            if (editEnabled)
+            {
+                this.SetClickThrough(false);
+                return;
+            }
+
+            this.SetClickThrough(!inBigMapUi);
         }
         catch
         {
@@ -196,13 +307,13 @@ public partial class MaskWindow : Window
         {
             _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
         }
-        
+
         AfterburnerWarning();
 
         // 读取游戏注册表配置
         GameSettingsChecker.LoadGameSettingsAndCheck();
     }
-    
+
     /**
      * MSIAfterburner.exe 在左上角会导致识别失败
      */
@@ -247,6 +358,7 @@ public partial class MaskWindow : Window
         {
             (p.Inlines as System.Collections.IList).RemoveAt(0);
         }
+
         var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
         if (textRange.Text.Length > 10000)
         {
@@ -256,6 +368,79 @@ public partial class MaskWindow : Window
         LogTextBox.ScrollToEnd();
     }
 
+    private void MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MaskWindowViewModel vm)
+        {
+            return;
+        }
+
+        if (_mapLabelSearchWindow == null)
+        {
+            _mapLabelSearchWindow = new MapLabelSearchWindow();
+            _mapLabelSearchWindow.AttachViewModel(vm);
+        }
+
+        var textbox = (FrameworkElement)sender;
+        var point = textbox.PointToScreen(new Point(0, 0));
+        var popupHeight = _mapLabelSearchWindow.ActualHeight > 0 ? _mapLabelSearchWindow.ActualHeight : _mapLabelSearchWindow.Height;
+
+        _mapLabelSearchWindow.Left = point.X;
+        _mapLabelSearchWindow.Top = point.Y - popupHeight - 4;
+
+        if (!_mapLabelSearchWindow.IsVisible)
+        {
+            _mapLabelSearchWindow.Show();
+        }
+
+        _mapLabelSearchWindow.Topmost = true;
+        _mapLabelSearchWindow.FocusSearch();
+
+        e.Handled = true;
+    }
+
+    private void MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var container = ItemsControl.ContainerFromElement(MapLabelCategoriesListView, e.OriginalSource as DependencyObject) as ListViewItem;
+        if (container == null)
+        {
+            return;
+        }
+
+        var item = MapLabelCategoriesListView.ItemContainerGenerator.ItemFromContainer(container) as MapLabelCategoryVm;
+        if (item == null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(MapLabelCategoriesListView.SelectedItem, item))
+        {
+            return;
+        }
+
+        MapLabelCategoriesListView.SelectedItem = item;
+
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            _mapLabelCategorySelectCts?.Cancel();
+            _mapLabelCategorySelectCts?.Dispose();
+            _mapLabelCategorySelectCts = new CancellationTokenSource();
+            _ = SelectMapLabelCategoryAsync(vm, item, _mapLabelCategorySelectCts.Token);
+        }
+    }
+
+    private async Task SelectMapLabelCategoryAsync(MaskWindowViewModel vm, MapLabelCategoryVm item, CancellationToken ct)
+    {
+        try
+        {
+            await vm.SelectMapLabelCategoryCommand.ExecuteAsync(item);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "切换地图标点分类时发生异常");
+        }
+    }
+
     public void Refresh()
     {
         Dispatcher.Invoke(InvalidateVisual);
@@ -263,7 +448,16 @@ public partial class MaskWindow : Window
 
     public void Invoke(Action action)
     {
-        Dispatcher.Invoke(action);
+        try
+        {
+            Dispatcher.Invoke(action);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     public void HideSelf()
@@ -272,6 +466,7 @@ public partial class MaskWindow : Window
         {
             return;
         }
+
         this.Hide();
     }
 

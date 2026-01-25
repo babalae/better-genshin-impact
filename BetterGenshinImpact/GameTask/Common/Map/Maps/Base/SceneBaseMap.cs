@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
@@ -63,11 +64,33 @@ public abstract class SceneBaseMap : ISceneMap
     /// 分层地图特征列表
     /// 0 是主地图
     /// </summary>
-    public List<BaseMapLayer> Layers { get; set; } = [];
+    private List<BaseMapLayer> _layers = [];
+    private readonly object _layersLock = new();
+
+    public List<BaseMapLayer> Layers
+    {
+        get
+        {
+            if (_layers.Count == 0)
+            {
+                lock (_layersLock)
+                {
+                    if (_layers.Count == 0)
+                    {
+                        TaskControl.Logger.LogInformation("[SIFT]地图特征点加载中，预计耗时2秒，请等待...");
+                        _layers = BaseMapLayer.LoadLayers(this);
+                        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+                    }
+                }
+            }
+            return _layers;
+        }
+        set => _layers = value ?? [];
+    }
 
     protected BaseMapLayer MainLayer => Layers[0];
 
-    protected readonly Feature2D SiftMatcher = Feature2DFactory.Get(Feature2DType.SIFT);
+    public readonly Feature2D SiftMatcher = Feature2DFactory.Get(Feature2DType.SIFT);
 
     protected void ExtractAndSaveFeature(string basePath)
     {
@@ -83,6 +106,11 @@ public abstract class SceneBaseMap : ISceneMap
         }
 
         SiftMatcher.SaveFeatures(basePath, trainKeyPointsPath, trainDescriptorsPath);
+    }
+
+    public virtual void WarmUp()
+    {
+        Console.WriteLine("提前加载地图，层数：" + Layers.Count);
     }
 
     public virtual Point2f GetBigMapPosition(Mat greyBigMapMat)

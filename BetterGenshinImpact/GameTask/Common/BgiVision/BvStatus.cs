@@ -17,19 +17,57 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
-/// <summary>
-/// 模仿OpenCv的静态类
-/// 用于原神的各类识别与控制操作
-///
-/// 此处主要是对游戏内的一些状态进行识别
-/// </summary>
+public enum GameUiCategory
+{
+    Unknown,
+    Main,
+    Talk,
+    BigMap
+}
+
 public static partial class Bv
 {
-
-    public static string WhichGameUi()
+    public static GameUiCategory WhichGameUi()
     {
-        throw new NotImplementedException();
+        using var region = TaskControl.CaptureToRectArea();
+        return WhichGameUi(region);
     }
+
+    public static GameUiCategory WhichGameUi(ImageRegion region)
+    {
+        if (IsInTalkUi(region))
+        {
+            return GameUiCategory.Talk;
+        }
+
+        if (IsInBigMapUi(region))
+        {
+            return GameUiCategory.BigMap;
+        }
+
+        if (IsInMainUi(region))
+        {
+            return GameUiCategory.Main;
+        }
+
+        return GameUiCategory.Unknown;
+    }
+
+    public static GameUiCategory WhichGameUiForTriggers(ImageRegion region)
+    {
+        if (IsInTalkUi(region))
+        {
+            return GameUiCategory.Talk;
+        }
+
+        if (IsInBigMapUi(region))
+        {
+            return GameUiCategory.BigMap;
+        }
+
+        return GameUiCategory.Unknown;
+    }
+
 
     /// <summary>
     /// 是否在主界面
@@ -38,7 +76,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInMainUi(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PaimonMenuRo).IsExist() && !IsInRevivePrompt(captureRa);
+        using var ra = captureRa.Find(ElementAssets.Instance.PaimonMenuRo);
+        return ra.IsExist() && !IsInRevivePrompt(captureRa);
     }
 
     /// <summary>
@@ -108,7 +147,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInAnyClosableUi(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapCloseButtonRo).IsExist();
+        using var ra = captureRa.Find(QuickTeleportAssets.Instance.MapCloseButtonRo);
+        return ra.IsExist();
     }
 
     /// <summary>
@@ -118,7 +158,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInPartyViewUi(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PartyBtnChooseView).IsExist();
+        using var ra = captureRa.Find(ElementAssets.Instance.PartyBtnChooseView);
+        return ra.IsExist();
     }
 
     /// <summary>
@@ -129,7 +170,11 @@ public static partial class Bv
     /// <returns></returns>
     public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 5)
     {
-        return await NewRetry.WaitForAction(() => IsInPartyViewUi(TaskControl.CaptureToRectArea()), ct, retryTimes);
+        return await NewRetry.WaitForAction(() =>
+        {
+            using var ra = TaskControl.CaptureToRectArea();
+            return IsInPartyViewUi(ra);
+        }, ct, retryTimes);
     }
 
     /// <summary>
@@ -139,7 +184,14 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInBigMapUi(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo).IsExist() || captureRa.Find(QuickTeleportAssets.Instance.MapSettingsButtonRo).IsExist();
+        using var scaleRa = captureRa.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        if (scaleRa.IsExist())
+        {
+            return true;
+        }
+
+        using var settingsRa = captureRa.Find(QuickTeleportAssets.Instance.MapSettingsButtonRo);
+        return settingsRa.IsExist();
     }
 
     /// <summary>
@@ -150,12 +202,13 @@ public static partial class Bv
     /// <returns></returns>
     public static bool BigMapIsUnderground(ImageRegion captureRa)
     {
-        return captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo).IsExist();
+        using var ra = captureRa.Find(QuickTeleportAssets.Instance.MapUndergroundSwitchButtonRo);
+        return ra.IsExist();
     }
 
     public static double GetBigMapScale(ImageRegion region)
     {
-        var scaleRa = region.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
+        using var scaleRa = region.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (scaleRa.IsEmpty())
         {
             throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
@@ -171,8 +224,10 @@ public static partial class Bv
 
     public static MotionStatus GetMotionStatus(ImageRegion captureRa)
     {
-        var spaceExist = captureRa.Find(ElementAssets.Instance.SpaceKey).IsExist();
-        var xExist = captureRa.Find(ElementAssets.Instance.XKey).IsExist();
+        using var spaceRa = captureRa.Find(ElementAssets.Instance.SpaceKey);
+        var spaceExist = spaceRa.IsExist();
+        using var xRa = captureRa.Find(ElementAssets.Instance.XKey);
+        var xExist = xRa.IsExist();
         if (spaceExist)
         {
             return xExist ? MotionStatus.Climb : MotionStatus.Fly;
@@ -223,7 +278,7 @@ public static partial class Bv
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(0, region.Height / 4 * 3, region.Width, region.Height / 4)
         });
-        var r = list.FirstOrDefault(r => r.Text.Contains("复苏"));
+        using var r = list.FirstOrDefault(r => r.Text.Contains("复苏"));
         if (r != null)
         {
             r.Click();
@@ -258,12 +313,14 @@ public static partial class Bv
     {
         var ra = captureRa;
 
-        if (ra.Find(GameLoadingAssets.Instance.GirlMoonRo).IsExist())
+        using var girlRa = ra.Find(GameLoadingAssets.Instance.GirlMoonRo);
+        if (girlRa.IsExist())
         {
             return true;
         }
-        
-        return ra.Find(GameLoadingAssets.Instance.WelkinMoonRo).IsExist();
+
+        using var moonRa = ra.Find(GameLoadingAssets.Instance.WelkinMoonRo);
+        return moonRa.IsExist();
     }
 
     /// <summary>
@@ -273,7 +330,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInTalkUi(ImageRegion captureRa)
     {
-        return captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo).IsExist();
+        using var ra = captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+        return ra.IsExist();
     }
 
     /// <summary>
@@ -284,7 +342,11 @@ public static partial class Bv
     /// <returns></returns>
     public static async Task<bool> WaitAndSkipForTalkUi(CancellationToken ct, int retryTimes = 5)
     {
-        return await NewRetry.WaitForAction(() => IsInTalkUi(TaskControl.CaptureToRectArea()), ct, retryTimes, 500);
+        return await NewRetry.WaitForAction(() =>
+        {
+            using var ra = TaskControl.CaptureToRectArea();
+            return IsInTalkUi(ra);
+        }, ct, retryTimes, 500);
     }
 
     /// <summary>
@@ -295,7 +357,8 @@ public static partial class Bv
     /// <returns></returns>
     public static bool IsInPromptDialog(ImageRegion captureRa)
     {
-        return captureRa.Find(ElementAssets.Instance.PromptDialogLeftBottomStar).IsExist();
+        using var ra = captureRa.Find(ElementAssets.Instance.PromptDialogLeftBottomStar);
+        return ra.IsExist();
     }
 }
 
