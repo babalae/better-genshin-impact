@@ -31,15 +31,6 @@
             <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type ui:TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
             </Style>
-            <Style TargetType="{x:Type Window}">
-                <Setter Property="behavior:AutoTranslateInterceptor.EnableAutoTranslate" Value="True" />
-            </Style>
-            <Style TargetType="{x:Type UserControl}">
-                <Setter Property="behavior:AutoTranslateInterceptor.EnableAutoTranslate" Value="True" />
-            </Style>
-            <Style TargetType="{x:Type Page}">
-                <Setter Property="behavior:AutoTranslateInterceptor.EnableAutoTranslate" Value="True" />
-            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
