@@ -31,6 +31,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
@@ -272,6 +273,256 @@ public partial class CommonSettingsPageViewModel : ViewModel
         }
 
         Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    public void OnOpenConfigFolder()
+    {
+        var path = Global.UserDataRoot;
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
+    }
+
+    [RelayCommand]
+    private async Task OnBackupConfig()
+    {
+        try
+        {
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "ZIP 压缩包 (*.zip)|*.zip",
+                FileName = $"BetterGI_Config_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.zip",
+                Title = "选择备份文件保存位置"
+            };
+
+            if (saveDialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var backupPath = saveDialog.FileName;
+            var includeScripts = Config.CommonConfig.BackupIncludeScripts;
+
+            await Task.Run(() =>
+            {
+                // 确保数据库已同步
+                UserCache.SyncToDb();
+
+                using var zipArchive = ZipFile.Open(backupPath, ZipArchiveMode.Create);
+
+                // 1. 备份数据库文件
+                var dbPath = UserStorage.DatabasePath;
+                if (File.Exists(dbPath))
+                {
+                    var tempDbPath = Path.Combine(Path.GetTempPath(), $"config_backup_{Guid.NewGuid()}.db");
+                    try
+                    {
+                        // 使用 SQLite 的在线备份 API
+                        BackupDatabase(dbPath, tempDbPath);
+
+                        // 读取临时文件到内存，然后写入 ZIP
+                        var dbBytes = File.ReadAllBytes(tempDbPath);
+                        var entry = zipArchive.CreateEntry("config.db", CompressionLevel.Optimal);
+                        using (var entryStream = entry.Open())
+                        {
+                            entryStream.Write(dbBytes, 0, dbBytes.Length);
+                        }
+                    }
+                    finally
+                    {
+                        // 清理临时文件
+                        if (File.Exists(tempDbPath))
+                        {
+                            try
+                            {
+                                // 等待一小段时间确保文件句柄被释放
+                                System.Threading.Thread.Sleep(100);
+                                File.Delete(tempDbPath);
+                            }
+                            catch
+                            {
+                                // 忽略清理失败
+                            }
+                        }
+                    }
+                }
+
+                // 2. 如果勾选了包含脚本，备份脚本目录
+                if (includeScripts)
+                {
+                    var scriptDirs = new[]
+                    {
+                        "JsScript",
+                        "KeyMouseScript",
+                        "AutoFight",
+                        "AutoGeniusInvokation",
+                        "AutoPathing",
+                        "ScriptGroup",
+                        "OneDragon",
+                        "Images"
+                    };
+
+                    foreach (var dir in scriptDirs)
+                    {
+                        var dirPath = Path.Combine(Global.UserDataRoot, dir);
+                        if (Directory.Exists(dirPath))
+                        {
+                            AddDirectoryToZip(zipArchive, dirPath, dir);
+                        }
+                    }
+                }
+            });
+
+            ThemedMessageBox.Information($"配置备份成功！\n\n备份文件：{backupPath}");
+        }
+        catch (Exception ex)
+        {
+            ThemedMessageBox.Error($"配置备份失败：{ex.Message}");
+        }
+    }
+
+    private void BackupDatabase(string sourcePath, string destPath)
+    {
+        using (var sourceConnection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={sourcePath};Mode=ReadOnly"))
+        using (var destConnection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={destPath}"))
+        {
+            sourceConnection.Open();
+            destConnection.Open();
+
+            // 使用 SQLite 的 backup API
+            sourceConnection.BackupDatabase(destConnection);
+        }
+
+        // 确保连接完全关闭
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+    }
+
+    [RelayCommand]
+    private async Task OnImportConfig()
+    {
+        try
+        {
+            var result = await ThemedMessageBox.ShowAsync(
+                "导入配置将覆盖当前配置！\n\n建议先备份当前配置。\n\n是否继续？",
+                "警告",
+                MessageBoxButton.YesNo,
+                ThemedMessageBox.MessageBoxIcon.Warning);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            var openDialog = new OpenFileDialog
+            {
+                Filter = "ZIP 压缩包 (*.zip)|*.zip",
+                Title = "选择要导入的配置备份文件"
+            };
+
+            if (openDialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var importPath = openDialog.FileName;
+
+            await Task.Run(() =>
+            {
+                using var zipArchive = ZipFile.OpenRead(importPath);
+
+                // 1. 导入数据库文件
+                var dbEntry = zipArchive.GetEntry("config.db");
+                if (dbEntry != null)
+                {
+                    var dbPath = UserStorage.DatabasePath;
+                    var dbBackupPath = dbPath + ".backup";
+
+                    // 备份当前数据库
+                    if (File.Exists(dbPath))
+                    {
+                        File.Copy(dbPath, dbBackupPath, true);
+                    }
+
+                    try
+                    {
+                        dbEntry.ExtractToFile(dbPath, true);
+                    }
+                    catch
+                    {
+                        // 如果导入失败，恢复备份
+                        if (File.Exists(dbBackupPath))
+                        {
+                            File.Copy(dbBackupPath, dbPath, true);
+                        }
+                        throw;
+                    }
+                    finally
+                    {
+                        // 清理备份文件
+                        if (File.Exists(dbBackupPath))
+                        {
+                            File.Delete(dbBackupPath);
+                        }
+                    }
+                }
+
+                // 2. 导入脚本目录
+                var scriptDirs = new[]
+                {
+                    "JsScript",
+                    "KeyMouseScript",
+                    "AutoFight",
+                    "AutoGeniusInvokation",
+                    "AutoPathing",
+                    "ScriptGroup",
+                    "OneDragon",
+                    "Images"
+                };
+
+                foreach (var dir in scriptDirs)
+                {
+                    var entries = zipArchive.Entries.Where(e => e.FullName.StartsWith(dir + "/", StringComparison.OrdinalIgnoreCase));
+                    foreach (var entry in entries)
+                    {
+                        if (string.IsNullOrEmpty(entry.Name)) // 跳过目录条目
+                        {
+                            continue;
+                        }
+
+                        var destPath = Path.Combine(Global.UserDataRoot, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+                        var destDir = Path.GetDirectoryName(destPath);
+                        if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                        {
+                            Directory.CreateDirectory(destDir);
+                        }
+
+                        entry.ExtractToFile(destPath, true);
+                    }
+                }
+            });
+
+            await ThemedMessageBox.InformationAsync("配置导入成功！\n\n软件将自动重启以应用新配置。");
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            ThemedMessageBox.Error($"配置导入失败：{ex.Message}");
+        }
+    }
+
+    private void AddDirectoryToZip(ZipArchive zipArchive, string sourcePath, string entryName)
+    {
+        var files = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
+        foreach (var file in files)
+        {
+            var relativePath = Path.GetRelativePath(sourcePath, file);
+            var zipEntryName = Path.Combine(entryName, relativePath).Replace(Path.DirectorySeparatorChar, '/');
+            zipArchive.CreateEntryFromFile(file, zipEntryName, CompressionLevel.Optimal);
+        }
     }
 
     [RelayCommand]

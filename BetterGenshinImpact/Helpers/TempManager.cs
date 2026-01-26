@@ -1,16 +1,15 @@
 ﻿using System;
 using System.IO;
-using BetterGenshinImpact.Core.Config;
-
 namespace BetterGenshinImpact.Helpers;
 
 public class TempManager
 {
+    private static readonly string TempRoot = Path.Combine(Path.GetTempPath(), "BetterGenshinImpact", "Temp");
+
     public static string GetTempDirectory()
     {
-        var tmp = Global.Absolute("User/Temp");
-        Directory.CreateDirectory(tmp);
-        return tmp;
+        Directory.CreateDirectory(TempRoot);
+        return TempRoot;
     }
 
     public static void CleanUp()

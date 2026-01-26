@@ -9,8 +9,6 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -182,8 +180,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             var exactTextRange = new TextRange(exactRichTextBox.Document.ContentStart, exactRichTextBox.Document.ContentEnd);
             var fuzzyTextRange = new TextRange(fuzzyRichTextBox.Document.ContentStart, fuzzyRichTextBox.Document.ContentEnd);
             
-            File.WriteAllText(Global.Absolute(exactPath), exactTextRange.Text);
-            File.WriteAllText(Global.Absolute(fuzzyPath), fuzzyTextRange.Text);
+            Global.WriteAllText(exactPath, exactTextRange.Text);
+            Global.WriteAllText(fuzzyPath, fuzzyTextRange.Text);
             GameTaskManager.RefreshTriggerConfigs();
         }
     }
@@ -224,7 +222,7 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         p.ShowDialog();
         if (p.DialogResult == true)
         {
-            File.WriteAllText(Global.Absolute(path), multilineTextBox.Text);
+            Global.WriteAllText(path, multilineTextBox.Text);
             GameTaskManager.RefreshTriggerConfigs();
         }
     }

@@ -2,11 +2,14 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -55,6 +58,12 @@ public partial class App : Application
         .ConfigureServices(
             (context, services) =>
             {
+                EnsureConfigMigrationChoice();
+                UserCache.Initialize();
+
+                // 诊断：检查数据库状态
+                LogDatabaseStatus();
+
                 // 提前初始化配置
                 var configService = new ConfigService();
                 services.AddSingleton<IConfigService>(sp => configService);
@@ -226,7 +235,8 @@ public partial class App : Application
         base.OnExit(e);
 
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
-        
+
+        UserCache.Shutdown();
         TempManager.CleanUp();
 
         await _host.StopAsync();
@@ -332,5 +342,168 @@ public partial class App : Application
 
         // log
         GetLogger<App>().LogDebug(e, "UnHandle Exception");
+    }
+
+    private static int _configMigrationChecked;
+
+    private static void LogDatabaseStatus()
+    {
+        try
+        {
+            var dbPath = UserStorage.DatabasePath;
+            var dbExists = File.Exists(dbPath);
+
+            ConsoleHelper.WriteLine($"=== 数据库状态诊断 ===");
+            ConsoleHelper.WriteLine($"数据库路径: {dbPath}");
+            ConsoleHelper.WriteLine($"数据库存在: {dbExists}");
+
+            if (dbExists)
+            {
+                var fileInfo = new FileInfo(dbPath);
+                ConsoleHelper.WriteLine($"数据库大小: {fileInfo.Length / 1024.0:F2} KB");
+
+                // 检查是否有config.json在数据库中
+                var hasConfig = UserStorage.Exists("config.json");
+                ConsoleHelper.WriteLine($"config.json在数据库中: {hasConfig}");
+
+                // 列出数据库中的文件数量
+                var entries = UserStorage.ListEntries();
+                ConsoleHelper.WriteLine($"数据库中的文件总数: {entries.Count}");
+
+                if (entries.Count > 0)
+                {
+                    ConsoleHelper.WriteLine("数据库中的部分文件:");
+                    foreach (var entry in entries.Take(10))
+                    {
+                        ConsoleHelper.WriteLine($"  - {entry.Path} ({entry.Size} bytes)");
+                    }
+                }
+            }
+
+            // 检查临时缓存目录
+            var cacheDir = UserCache.RootDirectory;
+            ConsoleHelper.WriteLine($"\n临时缓存目录: {cacheDir}");
+            ConsoleHelper.WriteLine($"缓存目录存在: {Directory.Exists(cacheDir)}");
+
+            if (Directory.Exists(cacheDir))
+            {
+                var cacheFiles = Directory.GetFiles(cacheDir, "*", SearchOption.AllDirectories);
+                ConsoleHelper.WriteLine($"缓存文件数量: {cacheFiles.Length}");
+            }
+
+            ConsoleHelper.WriteLine("======================\n");
+        }
+        catch (Exception ex)
+        {
+            ConsoleHelper.WriteError($"数据库诊断失败: {ex.Message}");
+        }
+    }
+
+    internal static void EnsureConfigMigrationChoice()
+    {
+        if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
+        {
+            Application.Current.Dispatcher.Invoke(EnsureConfigMigrationChoice);
+            return;
+        }
+
+        EnsureConfigMigrationChoiceInternal();
+    }
+
+    private static void EnsureConfigMigrationChoiceInternal()
+    {
+        if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _configMigrationChecked, 1) == 1)
+        {
+            return;
+        }
+
+        var dbExists = File.Exists(UserStorage.DatabasePath);
+        var legacyConfigExists = UserStorage.LegacyConfigFileExists();
+
+        // 如果数据库不存在但有旧配置文件，询问是否迁移
+        if (!dbExists && legacyConfigExists)
+        {
+            var result = MessageBox.Show(
+                "检测到旧版本配置文件。\n是否迁移到数据库？\n\n是：迁移并继续使用旧配置\n否：新建主配置（保留旧配置文件）",
+                "BetterGI - 配置迁移",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                UserStorage.MarkLegacyConfigIgnored();
+            }
+        }
+        // 如果数据库已存在，显示信息提示
+        else if (dbExists)
+        {
+            // 检查是否是首次使用数据库（通过检查是否有迁移标记）
+            try
+            {
+                using var connection = OpenDatabaseConnection();
+                var migratedDisk = GetMetaValue(connection, "migrated_disk");
+                var migratedConfig = GetMetaValue(connection, "migrated_config_entries");
+                var firstDbUse = GetMetaValue(connection, "first_db_use_notified");
+
+                // 如果已经迁移但还没有通知过用户
+                if ((migratedDisk == "1" || migratedConfig == "1") && firstDbUse != "1")
+                {
+                    MessageBox.Show(
+                        "配置文件已成功迁移到数据库！\n\n" +
+                        "• 所有配置现在存储在 User/config.db 中\n" +
+                        "• 脚本文件仍保存在原有路径，方便管理\n" +
+                        "• 数据库提供更好的性能和可靠性",
+                        "BetterGI - 配置迁移完成",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    SetMetaValue(connection, "first_db_use_notified", "1");
+                }
+            }
+            catch
+            {
+                // 忽略错误，不影响启动
+            }
+        }
+    }
+
+    private static Microsoft.Data.Sqlite.SqliteConnection OpenDatabaseConnection()
+    {
+        var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+        {
+            DataSource = UserStorage.DatabasePath,
+            Mode = Microsoft.Data.Sqlite.SqliteOpenMode.ReadWriteCreate,
+            Cache = Microsoft.Data.Sqlite.SqliteCacheMode.Shared
+        };
+
+        var connection = new Microsoft.Data.Sqlite.SqliteConnection(builder.ToString());
+        connection.Open();
+        return connection;
+    }
+
+    private static string? GetMetaValue(Microsoft.Data.Sqlite.SqliteConnection connection, string key)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT meta_value FROM user_meta WHERE meta_key = $key;";
+        command.Parameters.AddWithValue("$key", key);
+        return command.ExecuteScalar()?.ToString();
+    }
+
+    private static void SetMetaValue(Microsoft.Data.Sqlite.SqliteConnection connection, string key, string value)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+                               INSERT INTO user_meta (meta_key, meta_value)
+                               VALUES ($key, $value)
+                               ON CONFLICT(meta_key) DO UPDATE SET meta_value = excluded.meta_value;
+                               """;
+        command.Parameters.AddWithValue("$key", key);
+        command.Parameters.AddWithValue("$value", value);
+        command.ExecuteNonQuery();
     }
 }

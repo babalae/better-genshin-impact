@@ -60,10 +60,10 @@ namespace BetterGenshinImpact.GameTask
             {
                 if (ConfigService.Config == null)
                 {
-                    throw new Exception("Config未初始化");
+                    new ConfigService().Get();
                 }
 
-                return ConfigService.Config;
+                return ConfigService.Config ?? new AllConfig();
             }
         }
 

@@ -32,7 +32,7 @@ public class FileAccessBridge
 
         if (!Directory.Exists(allowedDirectory))
         {
-            throw new ArgumentException("目录不存在", nameof(allowedDirectory));
+            Directory.CreateDirectory(allowedDirectory);
         }
 
         _allowedDirectory = Path.GetFullPath(allowedDirectory);

@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
 {
     public class LogParse
     {
-        private static readonly string _configPath = Global.Absolute(@"log\logparse\config.json");
+        private static readonly string _configPath = Global.Absolute(@"User\LogParse\config.json");
         private static readonly string _assets_dir = Global.Absolute($@"GameTask\LogParse\Assets");
         // 添加一个静态事件用于通知日志的生成状态
         public static event Action<string> HtmlGenerationStatusChanged = delegate { };

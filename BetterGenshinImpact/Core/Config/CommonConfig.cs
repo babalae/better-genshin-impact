@@ -80,4 +80,10 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _redeemCodeFeedsUpdateVersion = "20251013";
+
+    /// <summary>
+    /// 备份时是否包含脚本文件
+    /// </summary>
+    [ObservableProperty]
+    private bool _backupIncludeScripts = true;
 }

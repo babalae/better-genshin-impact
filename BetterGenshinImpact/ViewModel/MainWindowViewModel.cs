@@ -358,7 +358,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
                     // 迁移配置，拷贝整个目录并覆盖
-                    DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
+                    DirectoryHelper.CopyDirectory(embeddedUserPath, UserCache.RootDirectory);
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
                     await ThemedMessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");

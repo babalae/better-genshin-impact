@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
@@ -67,15 +68,14 @@ public sealed class RepoWebBridge
 
     public async Task<string> GetUserConfigJson()
     {
-        string userConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "User", "config.json");
-        
-        if (!File.Exists(userConfigPath))
+        var configJson = Global.ReadAllTextIfExist(@"User\config.json");
+        if (string.IsNullOrEmpty(configJson))
         {
-            await ThemedMessageBox.ErrorAsync($"用户配置文件不存在: {userConfigPath}", "获取用户配置失败");
+            await ThemedMessageBox.ErrorAsync("用户配置文件不存在或读取失败。", "获取用户配置失败");
             return string.Empty;
         }
 
-        return await File.ReadAllTextAsync(userConfigPath);
+        return configJson;
     }
 
     public Task<string> GetFile(string relPath)

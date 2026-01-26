@@ -2,7 +2,6 @@
 using BetterGenshinImpact.Service.Interface;
 using OpenCvSharp;
 using System;
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -63,13 +62,12 @@ public class ConfigService : IConfigService
         _rwLock.EnterReadLock();
         try
         {
-            var filePath = Global.Absolute(@"User/config.json");
-            if (!File.Exists(filePath))
+            var json = Global.ReadAllTextIfExist(@"User\config.json");
+            if (string.IsNullOrWhiteSpace(json))
             {
                 return new AllConfig();
             }
 
-            var json = File.ReadAllText(filePath);
             var config = JsonSerializer.Deserialize<AllConfig>(json, JsonOptions);
             if (config == null)
             {
@@ -96,14 +94,8 @@ public class ConfigService : IConfigService
         _rwLock.EnterWriteLock();
         try
         {
-            var path = Global.Absolute("User");
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
-
-            var file = Path.Combine(path, "config.json");
-            File.WriteAllText(file, JsonSerializer.Serialize(config, JsonOptions));
+            var json = JsonSerializer.Serialize(config, JsonOptions);
+            Global.WriteAllText(@"User\config.json", json);
         }
         catch (Exception e)
         {
