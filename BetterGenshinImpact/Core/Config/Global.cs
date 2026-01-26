@@ -46,6 +46,34 @@ public class Global
 
     private static bool IsScriptPath(string path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        // 标准化路径分隔符
+        var normalizedPath = path.Replace('/', '\\');
+
+        // 特定的配置文件也直接从磁盘读取
+        var directAccessFiles = new[]
+        {
+            "pick_black_lists.json",
+            "pick_white_lists.json",
+            "avatar_macro_default.json"
+        };
+
+        // 检查是否是特定的配置文件（直接匹配文件名）
+        foreach (var file in directAccessFiles)
+        {
+            if (normalizedPath.EndsWith("\\" + file, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.Equals("User\\" + file, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.Equals(file, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        // 脚本目录
         var scriptDirs = new[]
         {
             "JsScript",
@@ -58,18 +86,14 @@ public class Global
             "Images"
         };
 
-        var trimmed = path.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (trimmed.StartsWith("User" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("User/", StringComparison.OrdinalIgnoreCase))
-        {
-            trimmed = trimmed.Substring(5);
-        }
-
+        // 检查是否在脚本目录中
         foreach (var dir in scriptDirs)
         {
-            if (trimmed.Equals(dir, StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith(dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith(dir + "/", StringComparison.OrdinalIgnoreCase))
+            if (normalizedPath.Contains("\\" + dir + "\\") ||
+                normalizedPath.StartsWith(dir + "\\", StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith("User\\" + dir + "\\", StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.Equals("User\\" + dir, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.Equals(dir, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

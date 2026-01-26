@@ -408,6 +408,22 @@ internal static class UserStorage
             return true;
         }
 
+        // 忽略特定的配置文件 - 这些文件应该直接存储在磁盘上
+        var ignoredFiles = new[]
+        {
+            "pick_black_lists.json",
+            "pick_white_lists.json",
+            "avatar_macro_default.json"
+        };
+
+        foreach (var file in ignoredFiles)
+        {
+            if (normalizedPath.Equals(file, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
         // 忽略脚本文件目录 - 这些文件应该直接存储在磁盘上，不需要数据库管理
         var scriptDirs = new[]
         {
