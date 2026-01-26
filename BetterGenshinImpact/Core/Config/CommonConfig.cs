@@ -86,4 +86,76 @@ public partial class CommonConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _backupIncludeScripts = true;
+
+    /// <summary>
+    /// 是否启用远程备份
+    /// </summary>
+    [ObservableProperty]
+    private bool _remoteBackupEnabled = false;
+
+    /// <summary>
+    /// 远程备份类型：RemoteFolder, OSS, WebDAV
+    /// </summary>
+    [ObservableProperty]
+    private string _remoteBackupType = "RemoteFolder";
+
+    /// <summary>
+    /// 远程文件夹路径（UNC路径或映射的网络驱动器）
+    /// </summary>
+    [ObservableProperty]
+    private string _remoteBackupFolderPath = string.Empty;
+
+    /// <summary>
+    /// OSS Endpoint
+    /// </summary>
+    [ObservableProperty]
+    private string _ossEndpoint = string.Empty;
+
+    /// <summary>
+    /// OSS Access Key ID
+    /// </summary>
+    [ObservableProperty]
+    private string _ossAccessKeyId = string.Empty;
+
+    /// <summary>
+    /// OSS Access Key Secret
+    /// </summary>
+    [ObservableProperty]
+    private string _ossAccessKeySecret = string.Empty;
+
+    /// <summary>
+    /// OSS Bucket Name
+    /// </summary>
+    [ObservableProperty]
+    private string _ossBucketName = string.Empty;
+
+    /// <summary>
+    /// OSS 存储路径前缀
+    /// </summary>
+    [ObservableProperty]
+    private string _ossPathPrefix = "BetterGI/Backups/";
+
+    /// <summary>
+    /// WebDAV 服务器地址
+    /// </summary>
+    [ObservableProperty]
+    private string _webDavUrl = string.Empty;
+
+    /// <summary>
+    /// WebDAV 用户名
+    /// </summary>
+    [ObservableProperty]
+    private string _webDavUsername = string.Empty;
+
+    /// <summary>
+    /// WebDAV 密码
+    /// </summary>
+    [ObservableProperty]
+    private string _webDavPassword = string.Empty;
+
+    /// <summary>
+    /// WebDAV 远程路径
+    /// </summary>
+    [ObservableProperty]
+    private string _webDavRemotePath = "/BetterGI/Backups/";
 }

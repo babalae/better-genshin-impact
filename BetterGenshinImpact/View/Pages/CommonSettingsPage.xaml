@@ -6,6 +6,7 @@
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
@@ -16,6 +17,10 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
+    </Page.Resources>
 
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
@@ -1843,6 +1848,204 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.CommonConfig.BackupIncludeScripts, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用远程备份"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="备份时自动上传到远程存储（远程文件夹/OSS/WebDAV）"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.CommonConfig.RemoteBackupEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="远程备份类型"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="选择远程存储方式"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="200"
+                              Margin="0,0,36,0"
+                              SelectedValuePath="Tag"
+                              SelectedValue="{Binding Config.CommonConfig.RemoteBackupType, Mode=TwoWay}">
+                        <ComboBoxItem Content="远程文件夹" Tag="RemoteFolder" />
+                        <ComboBoxItem Content="阿里云 OSS" Tag="OSS" />
+                        <ComboBoxItem Content="WebDAV" Tag="WebDAV" />
+                    </ComboBox>
+                </Grid>
+                <Grid Margin="16"
+                      Visibility="{Binding Config.CommonConfig.RemoteBackupType, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=RemoteFolder}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="远程文件夹路径"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="UNC路径（如 \\server\share）或映射的网络驱动器"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Width="300"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.CommonConfig.RemoteBackupFolderPath, Mode=TwoWay}"
+                                PlaceholderText="\\server\share\backups" />
+                </Grid>
+                <StackPanel Margin="16"
+                            Visibility="{Binding Config.CommonConfig.RemoteBackupType, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=OSS}">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="Endpoint："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.OssEndpoint, Mode=TwoWay}"
+                                    PlaceholderText="oss-cn-hangzhou.aliyuncs.com" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="Access Key ID："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.OssAccessKeyId, Mode=TwoWay}"
+                                    PlaceholderText="LTAI..." />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="Access Key Secret："
+                                      VerticalAlignment="Center" />
+                        <ui:PasswordBox Grid.Column="1"
+                                        Password="{Binding Config.CommonConfig.OssAccessKeySecret, Mode=TwoWay}"
+                                        PlaceholderText="密钥" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="Bucket Name："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.OssBucketName, Mode=TwoWay}"
+                                    PlaceholderText="my-bucket" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="存储路径前缀："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.OssPathPrefix, Mode=TwoWay}"
+                                    PlaceholderText="BetterGI/Backups/" />
+                    </Grid>
+                </StackPanel>
+                <StackPanel Margin="16"
+                            Visibility="{Binding Config.CommonConfig.RemoteBackupType, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=WebDAV}">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="服务器地址："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.WebDavUrl, Mode=TwoWay}"
+                                    PlaceholderText="https://dav.example.com" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="用户名："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.WebDavUsername, Mode=TwoWay}"
+                                    PlaceholderText="username" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="密码："
+                                      VerticalAlignment="Center" />
+                        <ui:PasswordBox Grid.Column="1"
+                                        Password="{Binding Config.CommonConfig.WebDavPassword, Mode=TwoWay}"
+                                        PlaceholderText="密码" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0"
+                                      Text="远程路径："
+                                      VerticalAlignment="Center" />
+                        <ui:TextBox Grid.Column="1"
+                                    Text="{Binding Config.CommonConfig.WebDavRemotePath, Mode=TwoWay}"
+                                    PlaceholderText="/BetterGI/Backups/" />
+                    </Grid>
+                </StackPanel>
             </StackPanel>
         </ui:CardExpander>
 

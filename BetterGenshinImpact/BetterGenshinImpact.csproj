@@ -41,7 +41,9 @@
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 		<PackageReference Include="BehaviourTree" Version="1.0.73" />
 
-		
+		<PackageReference Include="Aliyun.OSS.SDK.NetCore" Version="2.14.1" />
+		<PackageReference Include="WebDav.Client" Version="2.6.6" />
+
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.17" />
         <PackageReference Include="BetterGI.Assets.Model" Version="1.0.18" />

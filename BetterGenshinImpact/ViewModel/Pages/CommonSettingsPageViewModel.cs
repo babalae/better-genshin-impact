@@ -378,11 +378,121 @@ public partial class CommonSettingsPageViewModel : ViewModel
             });
 
             ThemedMessageBox.Information($"配置备份成功！\n\n备份文件：{backupPath}");
+
+            // 如果启用了远程备份，上传到远程存储
+            if (Config.CommonConfig.RemoteBackupEnabled)
+            {
+                try
+                {
+                    await UploadToRemoteStorage(backupPath);
+                    ThemedMessageBox.Information("远程备份成功！");
+                }
+                catch (Exception remoteEx)
+                {
+                    ThemedMessageBox.Warning($"本地备份成功，但远程备份失败：{remoteEx.Message}");
+                }
+            }
         }
         catch (Exception ex)
         {
             ThemedMessageBox.Error($"配置备份失败：{ex.Message}");
         }
+    }
+
+    private async Task UploadToRemoteStorage(string localFilePath)
+    {
+        var fileName = Path.GetFileName(localFilePath);
+
+        switch (Config.CommonConfig.RemoteBackupType)
+        {
+            case "RemoteFolder":
+                await UploadToRemoteFolder(localFilePath, fileName);
+                break;
+            case "OSS":
+                await UploadToOSS(localFilePath, fileName);
+                break;
+            case "WebDAV":
+                await UploadToWebDAV(localFilePath, fileName);
+                break;
+            default:
+                throw new NotSupportedException($"不支持的远程备份类型：{Config.CommonConfig.RemoteBackupType}");
+        }
+    }
+
+    private async Task UploadToRemoteFolder(string localFilePath, string fileName)
+    {
+        await Task.Run(() =>
+        {
+            var remotePath = Config.CommonConfig.RemoteBackupFolderPath;
+            if (string.IsNullOrWhiteSpace(remotePath))
+            {
+                throw new InvalidOperationException("远程文件夹路径未配置");
+            }
+
+            if (!Directory.Exists(remotePath))
+            {
+                Directory.CreateDirectory(remotePath);
+            }
+
+            var destPath = Path.Combine(remotePath, fileName);
+            File.Copy(localFilePath, destPath, true);
+        });
+    }
+
+    private async Task UploadToOSS(string localFilePath, string fileName)
+    {
+        await Task.Run(() =>
+        {
+            var endpoint = Config.CommonConfig.OssEndpoint;
+            var accessKeyId = Config.CommonConfig.OssAccessKeyId;
+            var accessKeySecret = Config.CommonConfig.OssAccessKeySecret;
+            var bucketName = Config.CommonConfig.OssBucketName;
+            var pathPrefix = Config.CommonConfig.OssPathPrefix;
+
+            if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(accessKeyId) ||
+                string.IsNullOrWhiteSpace(accessKeySecret) || string.IsNullOrWhiteSpace(bucketName))
+            {
+                throw new InvalidOperationException("OSS 配置不完整");
+            }
+
+            var client = new Aliyun.OSS.OssClient(endpoint, accessKeyId, accessKeySecret);
+            var objectKey = pathPrefix + fileName;
+
+            client.PutObject(bucketName, objectKey, localFilePath);
+        });
+    }
+
+    private async Task UploadToWebDAV(string localFilePath, string fileName)
+    {
+        var url = Config.CommonConfig.WebDavUrl;
+        var username = Config.CommonConfig.WebDavUsername;
+        var password = Config.CommonConfig.WebDavPassword;
+        var remotePath = Config.CommonConfig.WebDavRemotePath;
+
+        if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(username) ||
+            string.IsNullOrWhiteSpace(password))
+        {
+            throw new InvalidOperationException("WebDAV 配置不完整");
+        }
+
+        var clientParams = new WebDav.WebDavClientParams
+        {
+            BaseAddress = new Uri(url),
+            Credentials = new System.Net.NetworkCredential(username, password)
+        };
+
+        var client = new WebDav.WebDavClient(clientParams);
+
+        // 确保远程目录存在
+        if (!string.IsNullOrWhiteSpace(remotePath))
+        {
+            await client.Mkcol(remotePath);
+        }
+
+        // 上传文件
+        var remoteFilePath = remotePath.TrimEnd('/') + "/" + fileName;
+        using var fileStream = File.OpenRead(localFilePath);
+        await client.PutFile(remoteFilePath, fileStream);
     }
 
     private void BackupDatabase(string sourcePath, string destPath)
@@ -432,6 +542,10 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
             await Task.Run(() =>
             {
+                // 先同步并关闭所有数据库连接
+                UserCache.SyncToDb();
+                SqliteConnection.ClearAllPools();
+
                 using var zipArchive = ZipFile.OpenRead(importPath);
 
                 // 1. 导入数据库文件
@@ -440,22 +554,56 @@ public partial class CommonSettingsPageViewModel : ViewModel
                 {
                     var dbPath = UserStorage.DatabasePath;
                     var dbBackupPath = dbPath + ".backup";
-
-                    // 备份当前数据库
-                    if (File.Exists(dbPath))
-                    {
-                        File.Copy(dbPath, dbBackupPath, true);
-                    }
+                    var tempDbPath = Path.Combine(Path.GetTempPath(), $"config_import_{Guid.NewGuid()}.db");
 
                     try
                     {
-                        dbEntry.ExtractToFile(dbPath, true);
+                        // 备份当前数据库
+                        if (File.Exists(dbPath))
+                        {
+                            File.Copy(dbPath, dbBackupPath, true);
+                        }
+
+                        // 先提取到临时文件
+                        dbEntry.ExtractToFile(tempDbPath, true);
+
+                        // 等待确保文件句柄释放
+                        System.Threading.Thread.Sleep(100);
+
+                        // 删除旧数据库
+                        if (File.Exists(dbPath))
+                        {
+                            File.Delete(dbPath);
+                        }
+
+                        // 等待确保文件被删除
+                        System.Threading.Thread.Sleep(100);
+
+                        // 复制新数据库
+                        File.Copy(tempDbPath, dbPath, true);
+
+                        // 清理临时文件
+                        if (File.Exists(tempDbPath))
+                        {
+                            try
+                            {
+                                File.Delete(tempDbPath);
+                            }
+                            catch
+                            {
+                                // 忽略清理失败
+                            }
+                        }
                     }
                     catch
                     {
                         // 如果导入失败，恢复备份
                         if (File.Exists(dbBackupPath))
                         {
+                            if (File.Exists(dbPath))
+                            {
+                                File.Delete(dbPath);
+                            }
                             File.Copy(dbBackupPath, dbPath, true);
                         }
                         throw;
@@ -465,7 +613,14 @@ public partial class CommonSettingsPageViewModel : ViewModel
                         // 清理备份文件
                         if (File.Exists(dbBackupPath))
                         {
-                            File.Delete(dbBackupPath);
+                            try
+                            {
+                                File.Delete(dbBackupPath);
+                            }
+                            catch
+                            {
+                                // 忽略清理失败
+                            }
                         }
                     }
                 }
@@ -506,6 +661,10 @@ public partial class CommonSettingsPageViewModel : ViewModel
             });
 
             await ThemedMessageBox.InformationAsync("配置导入成功！\n\n软件将自动重启以应用新配置。");
+
+            // 等待用户关闭对话框
+            await Task.Delay(500);
+
             Application.Current.Shutdown();
         }
         catch (Exception ex)
