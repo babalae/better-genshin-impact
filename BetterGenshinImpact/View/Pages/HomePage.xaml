@@ -7,7 +7,6 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       Title="HomePage"
       d:DataContext="{d:DesignInstance Type=pages:HomePageViewModel}"
       d:DesignHeight="850"
@@ -16,7 +15,6 @@
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-      behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
       mc:Ignorable="d">
 
     <b:Interaction.Triggers>

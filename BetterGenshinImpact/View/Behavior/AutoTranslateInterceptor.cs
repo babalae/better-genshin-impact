@@ -13,12 +13,29 @@ namespace BetterGenshinImpact.View.Behavior
 {
     public static class AutoTranslateInterceptor
     {
+        static AutoTranslateInterceptor()
+        {
+            EventManager.RegisterClassHandler(
+                typeof(FrameworkElement),
+                FrameworkElement.LoadedEvent,
+                new RoutedEventHandler(OnAnyElementLoaded),
+                true);
+            EventManager.RegisterClassHandler(
+                typeof(FrameworkContentElement),
+                FrameworkContentElement.LoadedEvent,
+                new RoutedEventHandler(OnAnyElementLoaded),
+                true);
+        }
+
         public static readonly DependencyProperty EnableAutoTranslateProperty =
             DependencyProperty.RegisterAttached(
                 "EnableAutoTranslate",
                 typeof(bool),
                 typeof(AutoTranslateInterceptor),
-                new PropertyMetadata(false, OnEnableAutoTranslateChanged));
+                new FrameworkPropertyMetadata(
+                    false,
+                    FrameworkPropertyMetadataOptions.Inherits,
+                    OnEnableAutoTranslateChanged));
 
         public static void SetEnableAutoTranslate(DependencyObject element, bool value)
             => element.SetValue(EnableAutoTranslateProperty, value);
@@ -32,6 +49,68 @@ namespace BetterGenshinImpact.View.Behavior
                 typeof(Scope),
                 typeof(AutoTranslateInterceptor),
                 new PropertyMetadata(null));
+
+        private static void OnAnyElementLoaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is not DependencyObject obj)
+            {
+                return;
+            }
+
+            FindNearestScope(obj)?.RequestApply(obj);
+        }
+
+        private static Scope? FindNearestScope(DependencyObject obj)
+        {
+            DependencyObject? current = obj;
+            while (current != null)
+            {
+                if (current is FrameworkElement fe && fe.GetValue(ScopeProperty) is Scope scope)
+                {
+                    return scope;
+                }
+
+                current = GetParentObject(current);
+            }
+
+            return null;
+        }
+
+        private static DependencyObject? GetParentObject(DependencyObject obj)
+        {
+            if (obj is FrameworkElement fe)
+            {
+                if (fe.Parent != null)
+                {
+                    return fe.Parent;
+                }
+
+                if (fe.TemplatedParent is DependencyObject templatedParent)
+                {
+                    return templatedParent;
+                }
+            }
+
+            if (obj is FrameworkContentElement fce)
+            {
+                if (fce.Parent != null)
+                {
+                    return fce.Parent;
+                }
+
+                if (fce.TemplatedParent is DependencyObject templatedParent)
+                {
+                    return templatedParent;
+                }
+            }
+
+            if (obj is Visual || obj is System.Windows.Media.Media3D.Visual3D)
+            {
+                return VisualTreeHelper.GetParent(obj);
+            }
+
+            return LogicalTreeHelper.GetParent(obj);
+        }
 
         private static void OnEnableAutoTranslateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -76,16 +155,14 @@ namespace BetterGenshinImpact.View.Behavior
             private readonly FrameworkElement _root;
             private readonly List<Action> _unsubscribe = new();
             private bool _applied;
-            private readonly RoutedEventHandler _anyLoadedHandler;
             private readonly HashSet<ContextMenu> _trackedContextMenus = new();
             private readonly HashSet<ToolTip> _trackedToolTips = new();
+            private readonly HashSet<DependencyObject> _pendingApply = new();
+            private bool _applyScheduled;
 
             public Scope(FrameworkElement root)
             {
                 _root = root;
-                _anyLoadedHandler = OnAnyLoaded;
-                _root.AddHandler(FrameworkElement.LoadedEvent, _anyLoadedHandler, true);
-                _unsubscribe.Add(() => _root.RemoveHandler(FrameworkElement.LoadedEvent, _anyLoadedHandler));
             }
 
             public void OnLoaded(object sender, RoutedEventArgs e)
@@ -131,20 +208,41 @@ namespace BetterGenshinImpact.View.Behavior
                 _unsubscribe.Clear();
             }
 
-            private void OnAnyLoaded(object sender, RoutedEventArgs e)
+            public void RequestApply(DependencyObject obj)
             {
                 if (!_applied)
                 {
                     return;
                 }
 
-                if (e.OriginalSource is not DependencyObject obj)
+                if (!_pendingApply.Add(obj))
                 {
                     return;
                 }
 
+                if (_applyScheduled)
+                {
+                    return;
+                }
+
+                _applyScheduled = true;
                 _root.Dispatcher.BeginInvoke(
-                    () => Apply(obj),
+                    () =>
+                    {
+                        _applyScheduled = false;
+                        if (!_applied)
+                        {
+                            _pendingApply.Clear();
+                            return;
+                        }
+
+                        var items = _pendingApply.ToArray();
+                        _pendingApply.Clear();
+                        foreach (var item in items)
+                        {
+                            Apply(item);
+                        }
+                    },
                     DispatcherPriority.Loaded);
             }
 
@@ -325,7 +423,7 @@ namespace BetterGenshinImpact.View.Behavior
                 {
                     var entry = enumerator.Current;
                     var property = entry.Property;
-                    if (property.PropertyType != typeof(string))
+                    if (property.PropertyType != typeof(string) && property.PropertyType != typeof(object))
                     {
                         continue;
                     }
