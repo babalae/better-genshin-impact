@@ -4,7 +4,6 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  d:DataContext="{d:DesignInstance Type=windows:MapPathingDevViewModel}"
@@ -14,7 +13,6 @@
                  Height="260"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Auto"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  mc:Ignorable="d">
     <StackPanel>
         <ui:TitleBar Title="地图追踪开发者工具">

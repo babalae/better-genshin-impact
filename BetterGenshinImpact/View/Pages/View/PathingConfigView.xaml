@@ -8,7 +8,6 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:sdl="http://schemas.sdl.com/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
                  Width="1000"
                  Height="500"
@@ -18,7 +17,6 @@
                  d:DesignHeight="1000"
                  d:DesignWidth="500"
                  ExtendsContentIntoTitleBar="True"
-                 behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  WindowBackdropType="Auto"
                  mc:Ignorable="d">
 
