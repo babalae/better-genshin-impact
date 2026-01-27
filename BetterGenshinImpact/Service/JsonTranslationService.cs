@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -9,6 +10,8 @@ using System.Text;
 using System.Threading;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service;
@@ -19,6 +22,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
     private readonly object _sync = new();
     private readonly ConcurrentDictionary<string, MissingTextSource> _missingKeys = new(StringComparer.Ordinal);
     private readonly Timer _flushTimer;
+    private readonly OtherConfig _otherConfig;
 
     private string _loadedCultureName = string.Empty;
     private IReadOnlyDictionary<string, string> _map = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -27,6 +31,8 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
     public JsonTranslationService(IConfigService configService)
     {
         _configService = configService;
+        _otherConfig = _configService.Get().OtherConfig;
+        _otherConfig.PropertyChanged += OnOtherConfigPropertyChanged;
         _flushTimer = new Timer(_ => FlushMissingIfDirty(), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
 
@@ -100,7 +106,8 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
                 return;
             }
 
-            FlushMissingIfDirty();
+            var previousCultureName = _loadedCultureName;
+            FlushMissingIfDirty(previousCultureName);
             _map = LoadMap(cultureName);
             _loadedCultureName = cultureName;
             _missingKeys.Clear();
@@ -131,6 +138,17 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
     private void FlushMissingIfDirty()
     {
+        FlushMissingIfDirty(_loadedCultureName);
+    }
+
+    private void FlushMissingIfDirty(string cultureName)
+    {
+        if (IsChineseCultureName(cultureName))
+        {
+            Interlocked.Exchange(ref _dirtyMissing, 0);
+            return;
+        }
+
         if (Interlocked.Exchange(ref _dirtyMissing, 0) == 0)
         {
             return;
@@ -138,7 +156,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
         try
         {
-            FlushMissing();
+            FlushMissing(cultureName);
         }
         catch
         {
@@ -146,21 +164,15 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         }
     }
 
-    private void FlushMissing()
+    private void FlushMissing(string cultureName)
     {
-        var culture = GetCurrentCulture();
-        if (IsChineseCulture(culture))
-        {
-            return;
-        }
-
         var missingSnapshot = _missingKeys.ToArray();
         if (missingSnapshot.Length == 0)
         {
             return;
         }
 
-        var filePath = GetMissingFilePath(culture.Name);
+        var filePath = GetMissingFilePath(cultureName);
         Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
 
         Dictionary<string, MissingItem> existing;
@@ -268,6 +280,11 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         return name.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsChineseCultureName(string cultureName)
+    {
+        return cultureName.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool ContainsCjk(string text)
     {
         foreach (var ch in text)
@@ -299,8 +316,48 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
     public void Dispose()
     {
         _flushTimer.Dispose();
+        _otherConfig.PropertyChanged -= OnOtherConfigPropertyChanged;
         FlushMissingIfDirty();
     }
 
     private sealed record MissingItem(string Key, string Value, string Source);
+
+    private void OnOtherConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(OtherConfig.UiCultureInfoName))
+        {
+            return;
+        }
+
+        var cultureName = _otherConfig.UiCultureInfoName ?? string.Empty;
+        string previousLoaded;
+        string currentLoaded;
+
+        lock (_sync)
+        {
+            previousLoaded = _loadedCultureName;
+            FlushMissingIfDirty(previousLoaded);
+
+            if (string.IsNullOrWhiteSpace(cultureName) || IsChineseCultureName(cultureName))
+            {
+                _loadedCultureName = string.Empty;
+                _map = new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+            else
+            {
+                _loadedCultureName = cultureName;
+                _map = LoadMap(cultureName);
+            }
+
+            _missingKeys.Clear();
+            Interlocked.Exchange(ref _dirtyMissing, 0);
+            currentLoaded = _loadedCultureName;
+        }
+
+        if (!string.Equals(previousLoaded, currentLoaded, StringComparison.OrdinalIgnoreCase))
+        {
+            WeakReferenceMessenger.Default.Send(
+                new PropertyChangedMessage<object>(this, nameof(OtherConfig.UiCultureInfoName), previousLoaded, currentLoaded));
+        }
+    }
 }

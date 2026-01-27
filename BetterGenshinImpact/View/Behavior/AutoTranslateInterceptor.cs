@@ -7,7 +7,10 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 
 namespace BetterGenshinImpact.View.Behavior
 {
@@ -159,10 +162,20 @@ namespace BetterGenshinImpact.View.Behavior
             private readonly HashSet<ToolTip> _trackedToolTips = new();
             private readonly HashSet<DependencyObject> _pendingApply = new();
             private bool _applyScheduled;
+            private readonly Dictionary<(DependencyObject Obj, DependencyProperty Property), string> _originalValues = new();
+            private bool _refreshScheduled;
 
             public Scope(FrameworkElement root)
             {
                 _root = root;
+                WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (_, msg) =>
+                {
+                    if (msg.PropertyName == nameof(OtherConfig.UiCultureInfoName))
+                    {
+                        ScheduleRefresh();
+                    }
+                });
+                _unsubscribe.Add(() => WeakReferenceMessenger.Default.UnregisterAll(this));
             }
 
             public void OnLoaded(object sender, RoutedEventArgs e)
@@ -208,6 +221,35 @@ namespace BetterGenshinImpact.View.Behavior
                 _unsubscribe.Clear();
             }
 
+            private void ScheduleRefresh()
+            {
+                if (!_applied)
+                {
+                    return;
+                }
+
+                if (_refreshScheduled)
+                {
+                    return;
+                }
+
+                _refreshScheduled = true;
+                _root.Dispatcher.BeginInvoke(
+                    () =>
+                    {
+                        _refreshScheduled = false;
+                        if (!_applied)
+                        {
+                            return;
+                        }
+
+                        RestoreOriginalValues();
+                        RefreshBoundValues(_root);
+                        Apply(_root);
+                    },
+                    DispatcherPriority.Loaded);
+            }
+
             public void RequestApply(DependencyObject obj)
             {
                 if (!_applied)
@@ -250,6 +292,12 @@ namespace BetterGenshinImpact.View.Behavior
             {
                 var translator = App.GetService<ITranslationService>();
                 if (translator == null)
+                {
+                    return;
+                }
+
+                var culture = translator.GetCurrentCulture();
+                if (culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
                 {
                     return;
                 }
@@ -438,12 +486,26 @@ namespace BetterGenshinImpact.View.Behavior
                         continue;
                     }
 
-                    if (!ShouldTranslatePropertyName(property.Name) || !ContainsHan(value))
+                    if (!ShouldTranslatePropertyName(property.Name))
                     {
                         continue;
                     }
 
-                    var translated = translator.Translate(value, MissingTextSource.UiStaticLiteral);
+                    var key = (obj, property);
+                    if (!_originalValues.TryGetValue(key, out var original))
+                    {
+                        if (ContainsHan(value))
+                        {
+                            _originalValues[key] = value;
+                            original = value;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+
+                    var translated = translator.Translate(original, MissingTextSource.UiStaticLiteral);
                     if (!ReferenceEquals(value, translated) && !string.Equals(value, translated, StringComparison.Ordinal))
                     {
                         obj.SetValue(property, translated);
@@ -503,10 +565,110 @@ namespace BetterGenshinImpact.View.Behavior
                     return;
                 }
 
-                var translated = translator.Translate(currentValue, MissingTextSource.UiStaticLiteral);
+                var key = (obj, property);
+                if (!_originalValues.TryGetValue(key, out var original))
+                {
+                    if (ContainsHan(currentValue))
+                    {
+                        _originalValues[key] = currentValue;
+                        original = currentValue;
+                    }
+                    else
+                    {
+                        original = currentValue;
+                    }
+                }
+
+                var translated = translator.Translate(original, MissingTextSource.UiStaticLiteral);
                 if (!ReferenceEquals(currentValue, translated) && !string.Equals(currentValue, translated, StringComparison.Ordinal))
                 {
                     setter(translated);
+                }
+            }
+
+            private void RestoreOriginalValues()
+            {
+                foreach (var pair in _originalValues)
+                {
+                    var (obj, property) = pair.Key;
+                    if (BindingOperations.IsDataBound(obj, property))
+                    {
+                        continue;
+                    }
+
+                    obj.SetValue(property, pair.Value);
+                }
+            }
+
+            private static void RefreshBoundValues(DependencyObject root)
+            {
+                var queue = new Queue<DependencyObject>();
+                var visited = new HashSet<DependencyObject>();
+                queue.Enqueue(root);
+
+                while (queue.Count > 0)
+                {
+                    var current = queue.Dequeue();
+                    if (!visited.Add(current))
+                    {
+                        continue;
+                    }
+
+                    RefreshBindings(current);
+
+                    if (current is FrameworkElement feCurrent)
+                    {
+                        if (feCurrent.ContextMenu != null)
+                        {
+                            queue.Enqueue(feCurrent.ContextMenu);
+                        }
+
+                        if (feCurrent.ToolTip is DependencyObject tt)
+                        {
+                            queue.Enqueue(tt);
+                        }
+                    }
+
+                    if (current is Visual || current is System.Windows.Media.Media3D.Visual3D)
+                    {
+                        var count = VisualTreeHelper.GetChildrenCount(current);
+                        for (var i = 0; i < count; i++)
+                        {
+                            queue.Enqueue(VisualTreeHelper.GetChild(current, i));
+                        }
+                    }
+
+                    if (current is FrameworkElement || current is FrameworkContentElement)
+                    {
+                        foreach (var child in LogicalTreeHelper.GetChildren(current).OfType<DependencyObject>())
+                        {
+                            queue.Enqueue(child);
+                        }
+                    }
+
+                    if (current is TextBlock tb)
+                    {
+                        foreach (var inline in EnumerateInlineObjects(tb.Inlines))
+                        {
+                            queue.Enqueue(inline);
+                        }
+                    }
+                }
+            }
+
+            private static void RefreshBindings(DependencyObject obj)
+            {
+                var enumerator = obj.GetLocalValueEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    var entry = enumerator.Current;
+                    var property = entry.Property;
+                    if (!BindingOperations.IsDataBound(obj, property))
+                    {
+                        continue;
+                    }
+
+                    BindingOperations.GetBindingExpressionBase(obj, property)?.UpdateTarget();
                 }
             }
         }
