@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using Newtonsoft.Json;
 
@@ -120,8 +122,9 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
             return new Dictionary<string, string>(dict, StringComparer.Ordinal);
         }
-        catch
+        catch (Exception e)
         {
+            Debug.WriteLine(e);
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
     }
@@ -280,7 +283,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
     private static string GetI18nDirectory()
     {
-        return Path.Combine(AppContext.BaseDirectory, "i18n");
+        return Global.Absolute(@"User\I18n");
     }
 
     private static string GetMapFilePath(string cultureName)

@@ -194,6 +194,9 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\in_domain.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="User\I18n\en.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
