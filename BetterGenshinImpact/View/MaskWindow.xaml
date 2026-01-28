@@ -657,8 +657,8 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="58*" />
                             <ColumnDefinition Width="12*" />
-                            <ColumnDefinition Width="540*" />
-                            <ColumnDefinition Width="1192*" />
+                            <ColumnDefinition Width="640*" />
+                            <ColumnDefinition Width="1092*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="328*" />
@@ -669,8 +669,10 @@
 
                         <Border Grid.Row="1"
                                 Grid.Column="2"
-                                Width="540"
-                                Height="640"
+                                MaxWidth="540"
+                                MaxHeight="640"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
                                 Background="#C81F232A"
                                 BorderBrush="#26FFFFFF"
                                 BorderThickness="1"
