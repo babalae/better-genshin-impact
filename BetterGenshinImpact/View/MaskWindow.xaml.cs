@@ -144,7 +144,11 @@ public partial class MaskWindow : Window
             return;
         }
 
-        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.PointInfoPopup.CloseCommand.Execute(null);
+            vm.IsMapPointPickerOpen = false;
+        }
 
         if (_mapLabelSearchWindow != null)
         {
@@ -159,7 +163,11 @@ public partial class MaskWindow : Window
             return;
         }
 
-        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.PointInfoPopup.CloseCommand.Execute(null);
+            vm.IsMapPointPickerOpen = false;
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -247,6 +255,14 @@ public partial class MaskWindow : Window
             e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
         {
             Dispatcher.Invoke(UpdateClickThroughState);
+        }
+
+        if (e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
+        {
+            if (_viewModel?.IsMapPointPickerOpen != true && _mapLabelSearchWindow != null)
+            {
+                Dispatcher.Invoke(() => _mapLabelSearchWindow.Hide());
+            }
         }
 
         if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
@@ -385,8 +401,8 @@ public partial class MaskWindow : Window
         var point = textbox.PointToScreen(new Point(0, 0));
         var popupHeight = _mapLabelSearchWindow.ActualHeight > 0 ? _mapLabelSearchWindow.ActualHeight : _mapLabelSearchWindow.Height;
 
-        _mapLabelSearchWindow.Left = point.X;
-        _mapLabelSearchWindow.Top = point.Y - popupHeight - 4;
+        _mapLabelSearchWindow.Left = point.X / DpiHelper.ScaleY;
+        _mapLabelSearchWindow.Top = (point.Y - 4) / DpiHelper.ScaleY - popupHeight;
 
         if (!_mapLabelSearchWindow.IsVisible)
         {
