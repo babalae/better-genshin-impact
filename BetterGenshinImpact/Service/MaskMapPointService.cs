@@ -190,7 +190,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "调用米游社地图接口获取点位列表失败");
+            _logger.LogDebug(ex, "调用米游社地图接口获取点位列表失败");
             return new MaskMapPointsResult { Labels = labels, Points = Array.Empty<MaskMapPoint>() };
         }
 
