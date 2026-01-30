@@ -54,7 +54,19 @@ namespace BetterGenshinImpact.Core.Script
             // 全局替换 ../../../packages 为 packages
             string result = code.Replace("../../../packages", "packages");
 
-            // 资源导入转常量
+            // 检查是否在 packages 目录下
+            string relPath = Path.GetRelativePath(_scriptRootPath, currentFilePath);
+            relPath = relPath.Replace("\\", "/");
+            
+            bool isInPackages = relPath.StartsWith("packages", StringComparison.OrdinalIgnoreCase) || 
+                                currentFilePath.IndexOf("packages", StringComparison.OrdinalIgnoreCase) != -1;
+
+            if (!isInPackages)
+            {
+                return result;
+            }
+
+            // 资源导入转常量 (仅对 packages 下的代码生效)
             var resourceRegex = new Regex(@"import\s+([\w\d_$]+)\s+from\s+(['""])([^'""\n]+)(['""])");
             result = resourceRegex.Replace(result, match =>
             {
@@ -62,12 +74,11 @@ namespace BetterGenshinImpact.Core.Script
                 string quote = match.Groups[2].Value;
                 string rawPath = match.Groups[3].Value;
 
-                // 三层路径替换
                 string path = rawPath.Replace("../../../packages", "packages");
 
                 bool isJs = path.EndsWith(".js", StringComparison.OrdinalIgnoreCase);
 
-                if (path.Contains(".") && !isJs)
+                if (!isJs)
                 {
                     // 计算该资源的绝对路径
                     string resourceFullPath;
@@ -82,14 +93,22 @@ namespace BetterGenshinImpact.Core.Script
                     }
                     else
                     {
+                        if (!path.Contains("/"))
+                        {
+                            return match.Value;
+                        }
                         resourceFullPath = Path.GetFullPath(Path.Combine(_scriptRootPath, path));
                     }
 
                     // 计算相对于根目录的路径
                     string normalizedPath = Path.GetRelativePath(_scriptRootPath, resourceFullPath).Replace("\\", "/");
                     
-                    // 重写为 const
-                    return $"const {varName} = {quote}{normalizedPath}{quote};";
+                    // 再次检查：如果是 packages 下的资源，才重写为 packages/xxx 的形式
+                    if (normalizedPath.StartsWith("packages/", StringComparison.OrdinalIgnoreCase))
+                    {
+                         // 重写为 const 变量定义
+                        return $"const {varName} = {quote}{normalizedPath}{quote};";
+                    }
                 }
 
                 return match.Value;
@@ -105,8 +124,7 @@ namespace BetterGenshinImpact.Core.Script
             {
                 string relPkg = specifier.Substring(pkgIndex);
                 string fullPath = Path.GetFullPath(Path.Combine(_scriptRootPath, relPkg));
-                if (!File.Exists(fullPath) && !fullPath.Contains(".") && File.Exists(fullPath + ".js")) return fullPath + ".js";
-                return fullPath;
+                return ProbeFile(fullPath);
             }
 
             if (specifier.StartsWith("."))
@@ -121,12 +139,18 @@ namespace BetterGenshinImpact.Core.Script
                     if (dir != null)
                     {
                         string fullPath = Path.GetFullPath(Path.Combine(dir, specifier));
-                        if (!File.Exists(fullPath) && !fullPath.Contains(".") && File.Exists(fullPath + ".js")) return fullPath + ".js";
-                        return fullPath;
+                        return ProbeFile(fullPath);
                     }
                 }
             }
 
+            return null;
+        }
+
+        private string? ProbeFile(string path)
+        {
+            if (File.Exists(path)) return path;
+            if (File.Exists(path + ".js")) return path + ".js";
             return null;
         }
     }
