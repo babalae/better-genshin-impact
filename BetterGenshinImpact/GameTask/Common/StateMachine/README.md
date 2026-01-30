@@ -1,17 +1,30 @@
-# StateMachine 状态机基类使用说明
+# StateMachineBase 状态机框架
 
 ## 概述
 
-`StateMachineBase<TState, TContext>` 是一个通用的状态机基类，采用 **注册式状态处理器** 模式，子类只需注册状态处理逻辑，基类负责状态循环和调度。
+`StateMachineBase<TState, TContext>` 是一个通用的有限状态机基类，专为游戏自动化场景设计。
 
-## 设计理念
+## 核心概念
 
-1. **闭环检测**：使用 `DetectCurrentState()` 检测当前状态，而非固定等待
-2. **状态驱动**：根据检测到的状态执行对应处理器
-3. **注册式处理**：子类通过 `RegisterStateHandler()` 注册处理器，无需 switch-case
-4. **可扩展性**：支持未知状态处理器、上下文传递
+| 概念 | 说明 |
+|------|------|
+| **State** | 游戏界面的抽象（如 MainWorld、EventMenu） |
+| **Transition** | 状态之间的有向边，定义从一个状态可能到达的下一个状态 |
+| **Handler** | 状态处理器，执行当前状态的操作（如点击按钮），返回 `StateHandlerResult` |
+| **Detector** | 状态检测器，根据截图判断当前是否处于某个状态 |
 
-## 快速开始
+## StateHandlerResult
+
+Handler 必须返回 `StateHandlerResult`，状态机根据返回值决定下一步行为：
+
+| 返回值 | 语义 | 状态机行为 | 使用场景 |
+|--------|------|-----------|----------|
+| `Success` | 操作成功 | 等待邻接状态转换 | 点击按钮后等待界面切换 |
+| `Wait` | 可预期的等待 | 继续循环，重新检测 | 动画播放中、已到达目标状态 |
+| `Retry` | 意外失败 | 重试计数+1，超限后异常 | 找不到按钮、OCR 识别失败 |
+| `Fail` | 无法恢复 | 立即抛出异常 | 严重错误需要停止 |
+
+## 使用步骤
 
 ### 1. 定义状态枚举
 
@@ -19,294 +32,233 @@
 public enum MyState
 {
     Unknown,
-    StateA,
-    StateB,
-    StateC,
-    Done
+    MainWorld,
+    EventMenu,
+    BattleArena
 }
 ```
 
-### 2. 创建状态机子类
+### 2. 继承 StateMachineBase
 
 ```csharp
-using BetterGenshinImpact.GameTask.Common.StateMachine;
-using Microsoft.Extensions.Logging;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
-
-public class MyTask : StateMachineBase<MyState, MyContext>
+public class MyTask : StateMachineBase<MyState, BvPage>
 {
-    public override string Name => "我的任务";
-    
-    protected override ILogger Logger => TaskControl.Logger;
-
-    public MyTask()
-    {
-        RegisterStateHandlers();
-    }
-
-    protected override void RegisterStateHandlers()
-    {
-        RegisterStateHandler(MyState.StateA, HandleStateA);
-        RegisterStateHandler(MyState.StateB, HandleStateB);
-        RegisterStateHandler(MyState.StateC, HandleStateC);
-        RegisterUnknownStateHandler(HandleUnknownState);
-    }
-
-    protected override MyState DetectCurrentState()
-    {
-        // 使用 OCR/模板匹配检测当前界面状态
-        using var ra = CaptureToRectArea();
-        // ... 检测逻辑
-        return MyState.StateA;
-    }
-
-    private async Task<MyState?> HandleStateA(MyContext ctx, CancellationToken ct)
-    {
-        Logger.LogInformation("处理状态A");
-        // 执行操作...
-        return MyState.StateB; // 返回期望的下一状态
-    }
-
-    private async Task<MyState?> HandleStateB(MyContext ctx, CancellationToken ct)
-    {
-        // ...
-        return null; // 返回 null 表示重新检测状态
-    }
-
-    private async Task<MyState?> HandleStateC(MyContext ctx, CancellationToken ct)
-    {
-        // ...
-        return MyState.Done;
-    }
-
-    private async Task HandleUnknownState(CancellationToken ct)
-    {
-        Logger.LogWarning("未知状态，等待重试");
-        await Delay(500, ct);
-    }
+    protected override ILogger Logger => _logger;
+    private readonly ILogger<MyTask> _logger;
 }
 ```
 
-### 3. 运行状态机
+### 3. 注册 Handlers
 
 ```csharp
-var myTask = new MyTask();
-var result = await myTask.RunStateMachineUntil(
-    new MyContext(),           // 上下文
-    state => state == MyState.Done,  // 终止条件
-    TimeSpan.FromMinutes(5),   // 超时时间
-    cancellationToken
+RegisterStateHandlers(
+    (MyState.MainWorld, HandleMainWorld),
+    (MyState.EventMenu, HandleEventMenu)
+);
+
+RegisterUnknownStateHandler(HandleUnknown);
+```
+
+### 4. 注册 Detectors
+
+```csharp
+RegisterStateDetectors(
+    (MyState.MainWorld, DetectMainWorld),
+    (MyState.EventMenu, DetectEventMenu),
+    (MyState.BattleArena, DetectBattleArena)
 );
 ```
 
-## 核心 API
-
-### 状态注册
+### 5. 注册状态转换
 
 ```csharp
-// 注册单个状态处理器
-RegisterStateHandler(TState state, StateHandlerDelegate<TContext> handler);
-
-// 批量注册状态处理器
-RegisterStateHandlers((state1, handler1), (state2, handler2), ...);
-
-// 注册未知状态处理器
-RegisterUnknownStateHandler(Func<CancellationToken, Task> handler);
-```
-
-### 状态处理器签名
-
-```csharp
-// 处理器返回值说明：
-// - 返回具体状态：作为期望状态进行等待验证
-// - 返回 null：重新检测当前状态
-delegate Task<TState?> StateHandlerDelegate<TContext>(TContext context, CancellationToken ct);
-```
-
-### 状态机执行
-
-```csharp
-// 运行状态机直到满足终止条件
-Task<TState> RunStateMachineUntil(
-    TContext context,
-    Func<TState, bool> exitCondition,
-    TimeSpan? timeout = null,
-    CancellationToken ct = default
+RegisterStateTransitions(
+    (MyState.MainWorld, [MyState.EventMenu]),
+    (MyState.EventMenu, [MyState.BattleArena])
 );
 ```
 
-### 辅助方法
+### 6. 实现 Handler
 
 ```csharp
-// 点击并确保状态转换（闭环点击）
-Task ClickAndEnsure(
-    int x, int y,
-    Func<bool> successCondition,
-    int maxRetries = 10,
-    int retryDelay = 500,
-    int clickInterval = 300
-);
-
-// 等待状态转换
-Task<bool> EnsureStateTransition(
-    TState expectedState,
-    int timeoutMs = 10000,
-    int checkInterval = 500
-);
-```
-
-## 最佳实践
-
-### 1. 使用 BvPage 进行 UI 检测
-
-```csharp
-protected override MyState DetectCurrentState()
+private async Task<StateHandlerResult> HandleMainWorld(BvPage page)
 {
-    using var ra = CaptureToRectArea();
-    var page = new BvPage(ra);
-    
-    if (page.GetByText("确认").IsExist())
-        return MyState.ConfirmDialog;
-    
-    if (page.GetByText("开始").IsExist())
-        return MyState.Ready;
-    
-    return MyState.Unknown;
+    Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
+    await Delay(500, _ct);
+    return StateHandlerResult.Success; // 等待转换到 EventMenu
 }
-```
 
-### 2. 闭环点击模式
-
-```csharp
-private async Task<MyState?> HandleReadyState(MyContext ctx, CancellationToken ct)
+private async Task<StateHandlerResult> HandleEventMenu(BvPage page)
 {
-    var page = new BvPage(CaptureToRectArea());
-    
-    // 使用 ClickAndEnsure 确保点击成功
-    await ClickAndEnsure(
-        x: 500, y: 300,
-        successCondition: () => {
-            using var ra = CaptureToRectArea();
-            return new BvPage(ra).GetByText("加载中").IsExist();
-        },
-        maxRetries: 5
-    );
-    
-    return MyState.Loading;
-}
-```
-
-### 3. 状态转换等待
-
-```csharp
-private async Task<MyState?> HandleLoadingState(MyContext ctx, CancellationToken ct)
-{
-    // 等待状态转换到 Ready，最多等待 30 秒
-    var success = await EnsureStateTransition(MyState.Ready, timeoutMs: 30000);
-    
-    if (!success)
+    var button = page.GetByText("开始").FindAll().FirstOrDefault();
+    if (button == null)
     {
-        Logger.LogWarning("等待超时");
-        return null; // 重新检测
+        return StateHandlerResult.Retry; // 找不到按钮，重试
     }
     
-    return MyState.Ready;
+    button.Click();
+    await Delay(300, _ct);
+    return StateHandlerResult.Success;
 }
-```
 
-### 4. 使用 NewRetry 进行重试
-
-```csharp
-private async Task<MyState?> HandleInputState(MyContext ctx, CancellationToken ct)
+private Task<StateHandlerResult> HandleBattleArena(BvPage page)
 {
-    var found = await NewRetry.WaitForAction(() =>
-    {
-        Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
-        Sleep(300, ct);
-        
-        using var ra = CaptureToRectArea();
-        return new BvPage(ra).GetByText("成功").IsExist();
-    }, ct, maxRetries: 10, retryDelay: 500);
-    
-    return found ? MyState.Success : null;
+    // 已到达目标状态
+    return Task.FromResult(StateHandlerResult.Wait);
+}
+
+private async Task<StateHandlerResult> HandleUnknown(BvPage page)
+{
+    await new ReturnMainUiTask().Start(_ct);
+    return StateHandlerResult.Wait; // 尝试恢复后重新检测
 }
 ```
 
-## 项目约定
-
-### Logger 使用
+### 7. 实现 Detector
 
 ```csharp
-// 正确：使用属性覆盖
-protected override ILogger Logger => TaskControl.Logger;
+private bool DetectMainWorld(ImageRegion ra)
+{
+    return ra.Find(MainWorldAssets.Minimap).IsExist();
+}
 
-// 错误：构造函数注入
-// private readonly ILogger _logger;
+private bool DetectEventMenu(ImageRegion ra)
+{
+    return ra.FindMulti(RecognitionObject.Ocr(100, 50, 200, 50))
+             .Any(t => t.Text.Contains("活动"));
+}
 ```
 
-### 按键模拟
+### 8. 运行状态机
 
 ```csharp
-// 正确：使用 GIActions
-Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
-Simulation.SendInput.SimulateAction(GIActions.OpenPaimonMenu);
-
-// 错误：直接使用 KeyPress
-// Simulation.SendInput.Keyboard.KeyPress(VK.VK_F);
+public async Task Start(CancellationToken ct)
+{
+    Initialize(ct, MyState.MainWorld);
+    
+    using var page = Bv.Page();
+    await RunStateMachineUntil(page, MyState.BattleArena);
+    
+    // 状态机退出后，已到达 BattleArena
+    await ExecuteBattle();
+}
 ```
 
-### 延时调用
+## API 参考
+
+### 核心方法
+
+| 方法 | 说明 |
+|------|------|
+| `Initialize(ct, initialState)` | 初始化状态机 |
+| `RunStateMachineUntil(context, targetStates)` | 运行直到达到目标状态 |
+| `RunStateMachineUntil(context, targetState)` | 运行直到达到单个目标状态 |
+| `EnsureNextStateTransition(timeout)` | 等待邻接状态转换（供特殊场景使用） |
+
+### 注册方法
+
+| 方法 | 说明 |
+|------|------|
+| `RegisterStateHandler(state, handler)` | 注册单个状态处理器 |
+| `RegisterStateHandlers(...)` | 批量注册状态处理器 |
+| `RegisterUnknownStateHandler(handler)` | 注册未知状态处理器 |
+| `RegisterStateDetector(state, detector)` | 注册单个状态检测器 |
+| `RegisterStateDetectors(...)` | 批量注册状态检测器 |
+| `RegisterStateTransitions(...)` | 注册状态转换关系 |
+
+### 可重写属性
+
+| 属性 | 默认值 | 说明 |
+|------|--------|------|
+| `DefaultDetectionInterval` | 300ms | 状态检测间隔 |
+| `DefaultTransitionTimeout` | 10000ms | 状态转换超时 |
+| `DefaultMaxRetries` | 3 | 最大重试次数 |
+| `StateMachineLoopInterval` | 200ms | 状态机循环间隔 |
+
+## 状态机循环流程
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  RunStateMachineUntil               │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │  RefreshCurrentState │  ◄─────────────┐
+              │  (检测当前状态)       │                │
+              └──────────────────────┘                │
+                         │                            │
+                         ▼                            │
+              ┌──────────────────────┐                │
+              │ 是否到达目标状态？    │                │
+              └──────────────────────┘                │
+                    │         │                       │
+                   Yes        No                      │
+                    │         │                       │
+                    ▼         ▼                       │
+              ┌────────┐  ┌──────────────────────┐    │
+              │  退出  │  │  执行 Handler         │    │
+              └────────┘  └──────────────────────┘    │
+                                   │                  │
+                                   ▼                  │
+                    ┌─────────────────────────────┐   │
+                    │      Handler 返回值          │   │
+                    └─────────────────────────────┘   │
+                         │    │    │    │            │
+          ┌──────────────┤    │    │    │            │
+          │              │    │    │    │            │
+          ▼              ▼    ▼    ▼    │            │
+    ┌─────────┐    ┌─────┐ ┌───┐ ┌────┐│            │
+    │ Success │    │Wait │ │Rty│ │Fail││            │
+    └─────────┘    └─────┘ └───┘ └────┘│            │
+          │              │    │    │   │            │
+          ▼              │    │    ▼   │            │
+    ┌───────────────┐    │    │  抛出  │            │
+    │EnsureNextState│    │    │  异常  │            │
+    │   Transition  │    │    │        │            │
+    └───────────────┘    │    │        │            │
+          │              │    ▼        │            │
+          │              │ ┌────────┐  │            │
+          │              │ │重试计数│  │            │
+          │              │ │  +1    │  │            │
+          │              │ └────────┘  │            │
+          │              │    │        │            │
+          └──────────────┴────┴────────┴────────────┘
+```
+
+## 性能优化
+
+### 检测器顺序
+
+注册检测器时按速度排序（先快后慢）：
+
+1. **模板匹配**（~10ms）- 最快
+2. **小范围 OCR**（~50ms）
+3. **大范围 OCR**（~100-200ms）- 最慢
+
+### 邻接状态顺序
+
+`RegisterStateTransitions` 中候选状态的顺序影响检测优先级，更具体的状态应放在前面：
 
 ```csharp
-// 使用 TaskControl 的静态方法
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
+// 正确：更具体的状态放前面
+(TeleportMap, [DomainEntrance, MainWorld])
 
-await Delay(500, ct);  // 异步延时
-Sleep(200, ct);        // 同步延时（在闭环中使用）
+// 错误：通用状态会被优先检测
+(TeleportMap, [MainWorld, DomainEntrance])
 ```
 
-## 示例：AutoStygianOnslaughtTask
+## 示例
 
-参考 [AutoStygianOnslaughtTask.cs](../../AutoStygianOnslaught/AutoStygianOnslaughtTask.cs) 了解完整的状态机实现示例。
+完整示例见 `GameTask/AutoStygianOnslaught/AutoStygianOnslaughtTask.cs`
 
-该任务实现了：
-- 18 种状态的检测和处理
-- 使用 BvPage 进行 OCR 检测
-- 闭环点击和状态等待
-- 战斗状态机嵌套
-- 奖励领取流程
-
-## 架构图
-
+状态图：
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    StateMachineBase                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ RunStateMachineUntil()                              │    │
-│  │   ↓                                                 │    │
-│  │   while (!exitCondition)                            │    │
-│  │     ↓                                               │    │
-│  │     DetectCurrentState() → 子类实现                  │    │
-│  │     ↓                                               │    │
-│  │     _stateHandlers[state]() → 子类注册的处理器        │    │
-│  │     ↓                                               │    │
-│  │     返回期望状态 → EnsureStateTransition()           │    │
-│  └─────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│  辅助方法：                                                  │
-│  - ClickAndEnsure()       闭环点击                          │
-│  - EnsureStateTransition() 状态转换等待                      │
-│  - CaptureToRectArea()    截图                              │
-└─────────────────────────────────────────────────────────────┘
-                              ↑
-                              │ 继承
-┌─────────────────────────────────────────────────────────────┐
-│                    子类 (如 AutoStygianOnslaughtTask)         │
-├─────────────────────────────────────────────────────────────┤
-│  - 定义状态枚举                                              │
-│  - 实现 DetectCurrentState()                                │
-│  - 注册状态处理器                                            │
-│  - 实现各状态的处理逻辑                                       │
-└─────────────────────────────────────────────────────────────┘
+MainWorld ─► EventMenu ─► StygianOnslaughtPage ─► TeleportMap
+                                                      │
+                                                      ▼
+DomainLobby ◄── DifficultySelect ◄── DomainEntrance ◄─┘
+    │
+    ▼
+BossSelect ─► BattleArena ─► BattleResult ─► DomainLobby
 ```
