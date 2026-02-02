@@ -455,7 +455,8 @@
                 </Border>
             </Grid>
 
-            <Popup AllowsTransparency="True"
+            <Popup x:Name="PointInfoPopupControl"
+                   AllowsTransparency="True"
                    IsOpen="{Binding PointInfoPopup.IsOpen}"
                    PlacementTarget="{Binding ElementName=PointsCanvasControl}"
                    Placement="Top"
@@ -705,7 +706,8 @@
                             </Grid>
                         </Viewbox>
 
-                        <Popup AllowsTransparency="True"
+                        <Popup x:Name="MapPointPickerPopupControl"
+                               AllowsTransparency="True"
                                IsOpen="{Binding IsMapPointPickerOpen}"
                                PlacementTarget="{Binding ElementName=MapPointPickerToggleViewbox}"
                                Placement="Top"

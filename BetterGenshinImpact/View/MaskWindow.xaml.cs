@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Input;
@@ -27,6 +28,7 @@ using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.Helpers.Ui;
 using Vanara.PInvoke;
 using FontFamily = System.Windows.Media.FontFamily;
 
@@ -52,6 +54,7 @@ public partial class MaskWindow : Window
     private MaskWindowConfig? _maskWindowConfig;
     private MapLabelSearchWindow? _mapLabelSearchWindow;
     private CancellationTokenSource? _mapLabelCategorySelectCts;
+    private PopupTopmostFixer? _popupTopmostFixer;
 
     static MaskWindow()
     {
@@ -209,6 +212,9 @@ public partial class MaskWindow : Window
         }
 
         PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
+        _popupTopmostFixer = new PopupTopmostFixer(Dispatcher);
+        _popupTopmostFixer.Attach(PointInfoPopupControl);
+        _popupTopmostFixer.Attach(MapPointPickerPopupControl);
     }
 
     private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
@@ -221,6 +227,8 @@ public partial class MaskWindow : Window
         PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
         IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
         StateChanged -= MaskWindowOnStateChanged;
+        _popupTopmostFixer?.Dispose();
+        _popupTopmostFixer = null;
 
         if (_maskWindowConfig != null)
         {
