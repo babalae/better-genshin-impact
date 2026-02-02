@@ -30,7 +30,7 @@ public partial class CheckUpdateWindow : FluentWindow
 
     [ObservableProperty] private bool showOtherUpdateTip = false;
 
-    [ObservableProperty] private string selectedGitSource = "Github";
+    [ObservableProperty] private string selectedGitSource = "CNB";
 
     public string GitSourceDescription => SelectedGitSource == "CNB" ? "【国内】直接从 CNB 下载并更新" : "【国外】直接从 Github 下载并更新";
 
@@ -68,26 +68,8 @@ public partial class CheckUpdateWindow : FluentWindow
 
             // 隐藏开源渠道和Steambird服务卡片
             GitSourceCard.Visibility = Visibility.Collapsed;
-            SteambirdCard.Visibility = Visibility.Collapsed;
-
-            // // 删除前几行
-            // MyGrid.RowDefinitions.RemoveAt(0);
-            // MyGrid.RowDefinitions.RemoveAt(0);
-            //
-            // // 注意：删除行定义后，需要调整剩余元素的 Grid.Row 属性
-            // foreach (FrameworkElement child in MyGrid.Children)
-            // {
-            //     int currentRow = System.Windows.Controls.Grid.GetRow(child);
-            //     if (currentRow > 1) // 如果元素在第三行或之后
-            //     {
-            //         Grid.SetRow(child, currentRow - 2); // 行号减2
-            //     }
-            // }
-            //
-            // if (ServerPanel.Children.Count > 0)
-            // {
-            //     ServerPanel.Children.RemoveAt(0);
-            // }
+            // SteambirdCard.Visibility = Visibility.Collapsed;
+            
             SizeToContent = SizeToContent.Height; // 设置高度为自动
             UpdateLayout();
         }
@@ -186,12 +168,31 @@ public partial class CheckUpdateWindow : FluentWindow
     [RelayCommand]
     private async Task UpdateFromSteambirdAsync()
     {
-        await RunUpdaterAsync("-I");
+        if (_option.Channel == UpdateChannel.Stable)
+        {
+            await RunUpdaterAsync("-I");
+        }
+        else
+        {
+            await RunUpdaterAsync("-I --source dfs-alpha");
+        }
     }
 
     [RelayCommand]
     private async Task UpdateFromMirrorChyanAsync()
     {
+        // 没输入 CDK 的情况下提示这是收费渠道
+        if (string.IsNullOrEmpty(MirrorChyanHelper.GetCdk()))
+        {
+            var result = await ThemedMessageBox.ShowAsync("Mirror酱是一个【付费】更新渠道！\n更新窗上有多个可用的【免费】国内更新渠道！\n（使用有问题可以直接反馈，或者过一段时间后重试，也可以点击左下角按钮进行手动更新）\n是否继续使用 Mirror酱 渠道更新？",
+                "您已选择「Mirror酱」作为更新源", System.Windows.MessageBoxButton.OKCancel, ThemedMessageBox.MessageBoxIcon.Warning);
+            if (result != MessageBoxResult.OK)
+            {
+                return;
+            }
+        }
+        
+        
         var cdk = MirrorChyanHelper.GetAndPromptCdk();
         if (string.IsNullOrEmpty(cdk))
         {

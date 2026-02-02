@@ -115,7 +115,7 @@
                             </Grid.RowDefinitions>
                             <emoji:TextBlock Grid.Row="0"
                                           Grid.Column="0"
-                                          Text="Mirror酱服务 ⚡"
+                                          Text="Mirror酱服务 💰"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
