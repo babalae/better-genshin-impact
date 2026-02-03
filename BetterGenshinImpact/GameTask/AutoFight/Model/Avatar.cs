@@ -254,10 +254,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                if (needLog && i > 0)
-                {
-                    Logger.LogInformation("成功切换角色:{Name}", Name);
-                }
+                // if (needLog && i > 0)
+                // {
+                //     Logger.LogInformation("成功切换角色:{Name}", Name);
+                // }
 
                 return true;
             }
@@ -267,6 +267,8 @@ public class Avatar
 
             Sleep(250, Ct);
         }
+        
+        Logger.LogWarning("切换角色失败:{Name}", Name);
 
         return false;
     }
@@ -472,8 +474,8 @@ public class Avatar
             var cd = AfterUseSkill(region);
             if (cd > 0)
             {
-                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
-                    Math.Round(cd, 2));
+                // Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                //     Math.Round(cd, 2));
                 return;
             }
         }
