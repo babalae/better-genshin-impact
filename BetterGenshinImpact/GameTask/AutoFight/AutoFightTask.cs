@@ -792,7 +792,7 @@ public class AutoFightTask : ISoloTask
 
         // Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-        Logger.LogInformation("未识别到战斗结束");
+        Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
 
         if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
