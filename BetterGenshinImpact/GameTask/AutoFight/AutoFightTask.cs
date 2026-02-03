@@ -444,7 +444,7 @@ public class AutoFightTask : ISoloTask
                                 if (_finishDetectConfig.DelayTimes.TryGetValue(command.Name, out var time))
                                 {
                                     delayTime = time;
-                                    Logger.LogInformation($"{command.Name}结束后，延时检查为{delayTime}毫秒");
+                                    // Logger.LogInformation($"{command.Name}结束后，延时检查为{delayTime}毫秒");
                                 }
                                 else
                                 {
@@ -766,7 +766,8 @@ public class AutoFightTask : ISoloTask
 
         if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
         
-        Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
+        // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
+        Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
@@ -789,8 +790,9 @@ public class AutoFightTask : ISoloTask
             return true;
         }
 
-        Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
-        Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
+        // Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
+        // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
+        Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
 
         if (_finishDetectConfig.RotateFindEnemyEnabled)
         {
