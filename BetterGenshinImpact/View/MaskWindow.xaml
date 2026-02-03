@@ -765,14 +765,7 @@
                                                         PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
 
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
-                                                <ui:Button Height="32"
-                                                           Padding="12,0"
-                                                           Background="#FF2B2F37"
-                                                           Foreground="White"
-                                                           Content="重置选择"
-                                                           Command="{Binding ResetSelectedMapLabelSelectionCommand}" />
-
-                                                <ui:Button Margin="8,0,0,0"
+                                                <ui:Button
                                                            Width="32"
                                                            Height="32"
                                                            Background="#FF2B2F37"
@@ -932,12 +925,38 @@
                                                 <Border.Effect>
                                                     <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
                                                 </Border.Effect>
-                                                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                                              HorizontalScrollBarVisibility="Disabled"
-                                                              Padding="0"
-                                                              Margin="0">
-                                                    <ItemsPresenter />
-                                                </ScrollViewer>
+                                                <DockPanel LastChildFill="True">
+                                                    <Button DockPanel.Dock="Top"
+                                                            Width="40"
+                                                            Height="40"
+                                                            Margin="0,0,0,8"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="0"
+                                                            HorizontalContentAlignment="Center"
+                                                            VerticalContentAlignment="Center"
+                                                            ToolTip="重置选择"
+                                                            Command="{Binding ResetSelectedMapLabelSelectionCommand}">
+                                                        <Border Width="40"
+                                                                Height="40"
+                                                                CornerRadius="20"
+                                                                Background="#C82C323C"
+                                                                BorderBrush="#403A424F"
+                                                                BorderThickness="1">
+                                                            <ui:SymbolIcon Width="22"
+                                                                           Height="22"
+                                                                           Foreground="White"
+                                                                           Symbol="Broom24" />
+                                                        </Border>
+                                                    </Button>
+
+                                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled"
+                                                                  Padding="0"
+                                                                  Margin="0">
+                                                        <ItemsPresenter />
+                                                    </ScrollViewer>
+                                                </DockPanel>
                                             </Border>
                                         </ControlTemplate>
                                     </ItemsControl.Template>
