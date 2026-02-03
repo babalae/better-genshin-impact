@@ -213,7 +213,11 @@ public partial class MaskWindow : Window
 
     private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
     {
-        _viewModel?.PointInfoPopup.CloseCommand.Execute(null);
+        if (_viewModel != null)
+        {
+            _viewModel.PointInfoPopup.CloseCommand.Execute(null);
+            _viewModel.IsMapPointPickerOpen = false;
+        }
     }
 
     protected override void OnClosed(EventArgs e)
