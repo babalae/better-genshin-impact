@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -79,9 +80,15 @@ public class ScriptProject
         engine.DocumentSettings.Loader = loader;
 
         // 添加 packages 到搜索路径
-        var libraries = new List<string>(Manifest.Library ?? Array.Empty<string>()) { ".", "./packages" };
-        
-        EngineExtend.InitHost(engine, ProjectPath, libraries.ToArray(), partyConfig);
+        var libraries = new HashSet<string>(Manifest.Library ?? Array.Empty<string>())
+        {
+            ".",
+            "./packages"
+        };
+
+        var libraryList = libraries.ToList();
+
+        EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig);
         return engine;
     }
 
