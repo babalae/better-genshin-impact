@@ -216,6 +216,9 @@ public partial class ScriptGroupProject : ObservableObject
             }
             JsScriptSettingsObject ??= new ExpandoObject();
 
+            // 清理配置中的无效值
+            CleanInvalidSettingsValues();
+
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
             await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
         }
@@ -335,6 +338,67 @@ public partial class ScriptGroupProject : ObservableObject
     partial void OnScheduleChanged(string value)
     {
         OnPropertyChanged(nameof(ScheduleDesc));
+    }
+
+    /// <summary>
+    /// 清理 JsScriptSettingsObject 中不在 settings.json 定义的 Options 列表中的无效值
+    /// </summary>
+    private void CleanInvalidSettingsValues()
+    {
+        if (Project == null || JsScriptSettingsObject == null)
+        {
+            return;
+        }
+
+        try
+        {
+            // 加载 settings.json 中定义的配置项
+            var settingItems = Project.Manifest.LoadSettingItems(Project.ProjectPath);
+            if (settingItems.Count == 0)
+            {
+                return;
+            }
+
+            var settingsDict = JsScriptSettingsObject as IDictionary<string, object?>;
+            if (settingsDict == null)
+            {
+                return;
+            }
+
+            // 遍历所有 multi-checkbox 类型的配置项
+            foreach (var item in settingItems.Where(i => i.Type == "multi-checkbox"))
+            {
+                if (!settingsDict.ContainsKey(item.Name))
+                {
+                    continue;
+                }
+
+                // 获取当前保存的值
+                var savedValue = settingsDict[item.Name];
+                List<string>? checkedValues = null;
+
+                if (savedValue is List<string> stringList)
+                {
+                    checkedValues = stringList;
+                }
+                else if (savedValue is List<object> objectList)
+                {
+                    checkedValues = objectList.Select(i => (string)i).ToList();
+                    settingsDict[item.Name] = checkedValues;
+                }
+
+                // 清理不在 Options 列表中的无效值
+                if (checkedValues != null && item.Options != null)
+                {
+                    checkedValues.RemoveAll(value => !item.Options.Contains(value));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // 清理失败不影响脚本执行，只记录日志
+            TaskControl.Logger.LogDebug(ex, "清理JS脚本配置中的无效值时发生异常");
+        }
     }
 }
 
