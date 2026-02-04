@@ -56,7 +56,10 @@ public class SetTimeTask
         await Delay(900, ct);
         await SetTime(h, m, r1, r2, r3, stepDuration, ct);
         await Delay(100, ct);
-        GameCaptureRegion.GameRegion1080PPosClick(1500, 1000); // 确认
+        GameCaptureRegion.GameRegion1080PPosMove(1500, 1000);
+        await Delay(300, ct);
+        Simulation.SendInput.Mouse.LeftButtonClick();
+        await Delay(7, ct);
         
         if (skipTimeAdjustmentAnimation)
         {
