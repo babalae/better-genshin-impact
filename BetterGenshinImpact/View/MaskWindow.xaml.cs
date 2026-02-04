@@ -8,8 +8,6 @@ using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -367,9 +365,28 @@ public partial class MaskWindow : Window
     {
         base.OnSourceInitialized(e);
         this.SetLayeredWindow();
-        this.SetChildWindow();
+        // 不使用 SetChildWindow，因为子窗口会导致父窗口激活，与 WS_EX_NOACTIVATE 冲突
+        // this.SetChildWindow();
         this.HideFromAltTab();
+        this.SetNoActivate();
         UpdateClickThroughState();
+
+        // 添加 WndProc 钩子以防止窗口在点击时获取焦点
+        var hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+        hwndSource?.AddHook(WndProc);
+    }
+
+    private const int WM_MOUSEACTIVATE = 0x0021;
+    private const int MA_NOACTIVATE = 3;
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_MOUSEACTIVATE)
+        {
+            handled = true;
+            return new IntPtr(MA_NOACTIVATE);
+        }
+        return IntPtr.Zero;
     }
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
@@ -565,6 +582,7 @@ file static class MaskWindowExtension
         int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
 
         style |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
+        style |= (int)User32.WindowStylesEx.WS_EX_NOACTIVATE;
         User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
     }
 
@@ -607,8 +625,22 @@ file static class MaskWindowExtension
         else
         {
             style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
+            // 确保窗口可点击时仍然不会被激活
+            style |= (int)User32.WindowStylesEx.WS_EX_NOACTIVATE;
         }
 
+        _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
+    }
+
+    public static void SetNoActivate(this Window window)
+    {
+        SetNoActivate(new WindowInteropHelper(window).Handle);
+    }
+
+    private static void SetNoActivate(nint hWnd)
+    {
+        int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
+        style |= (int)User32.WindowStylesEx.WS_EX_NOACTIVATE;
         _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
     }
 
