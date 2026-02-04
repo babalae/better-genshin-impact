@@ -1000,6 +1000,70 @@
             </ui:CardControl.Header>
             <ui:ToggleSwitch Margin="0,0,40,0" IsChecked="{Binding Config.MapMaskConfig.Enabled, Mode=TwoWay}" />
         </ui:CardControl>
+        
+        <!--  冷却提示  -->
+        <ui:CardExpander 
+            Margin="0,0,0,12"
+            Icon="{ui:SymbolIcon Timer24}"
+            ContentPadding="0">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="冷却提示"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        在头像旁显示角色元素战技剩余冷却时间
+                    </ui:TextBlock>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.SkillCdConfig.Enabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="角色CD配置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap"
+                                  Text="填写此项，为指定的角色未识别到 CD 数字时配置默认值。如玛微卡开 E 会显示摩托车，识别不到CD。" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="10,0,24,0"
+                               Content="前往配置"
+                               Icon="{ui:SymbolIcon Settings24}"
+                               Command="{Binding EditSkillCdConfigCommand}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
         <!--  自动烹饪  -->
         <ui:CardControl Margin="0,0,0,12">
