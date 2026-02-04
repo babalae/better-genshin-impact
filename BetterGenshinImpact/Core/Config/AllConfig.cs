@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -177,7 +178,12 @@ public partial class AllConfig : ObservableObject
     ///   地图遮罩
     /// </summary>
     public MapMaskConfig MapMaskConfig { get; set; } = new();
-    
+
+    /// <summary>
+    /// 技能 CD 提示
+    /// </summary>
+    public SkillCdConfig SkillCdConfig { get; set; } = new();
+
     /// <summary>
     /// 自动使用
     /// </summary>
@@ -274,6 +280,7 @@ public partial class AllConfig : ObservableObject
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
+        SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)
