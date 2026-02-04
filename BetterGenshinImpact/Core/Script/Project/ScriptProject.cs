@@ -2,8 +2,10 @@ using BetterGenshinImpact.Core.Config;
 using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -69,10 +71,24 @@ public class ScriptProject
         return scrollViewer;
     }
 
-    public IScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig = null)
+    private IScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig)
     {
-        IScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
-        EngineExtend.InitHost(engine, ProjectPath, Manifest.Library,partyConfig);
+        V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
+        
+        // packages 依赖和资源重载
+        var loader = new PackageDocumentLoader(ProjectPath);
+        engine.DocumentSettings.Loader = loader;
+
+        // 添加 packages 到搜索路径
+        var libraries = new HashSet<string>(Manifest.Library ?? Array.Empty<string>())
+        {
+            ".",
+            "./packages"
+        };
+
+        var libraryList = libraries.ToList();
+
+        EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig);
         return engine;
     }
 
@@ -83,6 +99,10 @@ public class ScriptProject
         // 加载代码
         var code = await LoadCode();
         var engine = BuildScriptEngine(partyConfig);
+        
+        // 使用自定义加载器解析脚本文件
+        var loader = (PackageDocumentLoader)engine.DocumentSettings.Loader;
+
         if (context != null)
         {
             // 写入配置的内容
@@ -90,12 +110,19 @@ public class ScriptProject
         }
         try
         {
-            if (Manifest.Library.Length != 0)
+            bool useModule = Manifest.Library.Length != 0 || 
+                             code.Contains("import ", StringComparison.Ordinal) || 
+                             code.Contains("export ", StringComparison.Ordinal);
+
+            if (useModule)
             {
                 // 清除Document缓存
                 DocumentLoader.Default.DiscardCachedDocuments();
 
-                var evaluation = engine.Evaluate(new DocumentInfo { Category = ModuleCategory.Standard }, code);
+                string mainScriptPath = Path.Combine(ProjectPath, Manifest.Main);
+                string runtimeCode = loader.RewriteScriptCode(code, mainScriptPath);
+                
+                var evaluation = engine.Evaluate(new DocumentInfo(mainScriptPath) { Category = ModuleCategory.Standard }, runtimeCode);
                 if (evaluation is Task task) await task;
             }
             else
