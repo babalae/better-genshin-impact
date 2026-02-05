@@ -74,13 +74,16 @@ public static partial class Bv
     /// <param name="image">游戏截图</param>
     /// <param name="index">角色索引 (1-4)</param>
     /// <returns>是否活跃</returns>
+    private static readonly AvatarActiveCheckContext _avatarActiveCheckContext = new();
+
     public static bool IsCharacterActive(ImageRegion image, int index)
     {
         var rectList = AutoFightAssets.Instance.AvatarIndexRectList;
         if (index < 1 || index > rectList.Count) return false;
 
         // 使用 PartyAvatarSideIndexHelper 的综合判断逻辑（包含颜色对比、箭头检测等）
-        int activeIdx = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(image, rectList.ToArray(), new AvatarActiveCheckContext());
+        int activeIdx = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(image, rectList.ToArray(), _avatarActiveCheckContext);
         return activeIdx == index;
+    }
     }
 }
