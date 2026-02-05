@@ -35,7 +35,7 @@ public class SkillCdTrigger : ITaskTrigger
     public int Priority => 10;
     public bool IsExclusive => false;
     /// <summary>
-    /// 在所有UI场景下都运行（包括大地图），这样计时器才能持续运行
+    /// 在所有UI场景下都运行（包括大地图），确保遮罩层能处理消失
     /// </summary>
     public GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 
@@ -81,6 +81,7 @@ public class SkillCdTrigger : ITaskTrigger
     /// </summary>
     public void Init()
     {
+        // 清空帧缓存
         _lastImage?.Dispose();
         _lastImage = null;
         _penultimateImage?.Dispose();
@@ -138,7 +139,6 @@ public class SkillCdTrigger : ITaskTrigger
         }
 
         // 场景检测（带0.5秒防抖，仅影响UI渲染）
-        // 排除大地图界面，打开地图时不显示CD
         bool rawInContext =
             (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea)) &&
             !Bv.IsInBigMapUi(content.CaptureRectArea) &&
@@ -148,7 +148,7 @@ public class SkillCdTrigger : ITaskTrigger
 
         bool isInContext;
 
-        // 如果进入了大地图，且当前配置不支持大地图（Unknown），则这是最后一帧运行机会，必须强制跳过防抖立即清理
+        // 如果进入了大地图，则这是最后一帧运行机会，必须强制跳过防抖立即清理
         bool forceExit = Bv.IsInBigMapUi(content.CaptureRectArea) &&
                          SupportedGameUiCategory != GameUiCategory.BigMap;
 
@@ -206,7 +206,7 @@ public class SkillCdTrigger : ITaskTrigger
             {
                 try 
                 {
-                    // 稍微等待一下，确保画面加载完成，提高识别成功率
+                    // 确保画面加载完成，提高识别成功率
                     await Task.Delay(500); 
                     
                     var scenes = RunnerContext.Instance.TrySyncCombatScenesSilent();
@@ -318,7 +318,7 @@ public class SkillCdTrigger : ITaskTrigger
             }
             else if (_lastImage != null)
             {
-                // 非切人操作（日常检测）：使用上一帧即可
+                // 非切人操作：使用上一帧
                 HandleNonActionTrigger(_lastImage); 
             }
         }
@@ -327,7 +327,7 @@ public class SkillCdTrigger : ITaskTrigger
         _penultimateImage?.Dispose();
         _penultimateImage = _lastImage; // 把上一帧移到倒数第二帧
         
-        // 记录当前帧为上一帧（深拷贝，因为current用完会被dispose）
+        // 记录当前帧为上一帧（深拷贝，避免current用完会被dispose）
         _lastImage = new ImageRegion(
             content.CaptureRectArea.SrcMat.Clone(),
             content.CaptureRectArea.X,
@@ -617,8 +617,6 @@ public class SkillCdTrigger : ITaskTrigger
 
         // 检查是否有足够的角色信息（必须恰好4人）
         int validAvatarCount = _teamAvatarNames.Count(n => !string.IsNullOrEmpty(n));
-        
-        // 调试日志：只有在数量变化时打印，防止刷屏
         // _logger.LogDebug("[SkillCD] UpdateOverlay: 有效角色数量={Count}, Names={Names}", validAvatarCount, string.Join(",", _teamAvatarNames));
         
         if (validAvatarCount != 4)
