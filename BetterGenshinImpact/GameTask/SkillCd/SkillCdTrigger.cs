@@ -73,6 +73,7 @@ public class SkillCdTrigger : ITaskTrigger
 
     private ImageRegion? _lastImage = null; // 上一帧
     private ImageRegion? _penultimateImage = null; // 上上帧（倒数第二帧）
+    private readonly object _stateLock = new();
     private readonly ILogger _logger = TaskControl.Logger;
     private readonly AvatarActiveCheckContext _activeCheckContext = new();
 
@@ -141,10 +142,19 @@ public class SkillCdTrigger : ITaskTrigger
         // 场景检测（带0.5秒防抖，仅影响UI渲染）
         bool rawInContext =
             (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea)) &&
-            !Bv.IsInBigMapUi(content.CaptureRectArea) &&
-            !PartyAvatarSideIndexHelper
-                .DetectedMultiGameStatus(content.CaptureRectArea)
-                .IsInMultiGame;
+            !Bv.IsInBigMapUi(content.CaptureRectArea);
+
+        if (rawInContext)
+        {
+            var multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(content.CaptureRectArea);
+            if (multiGameStatus.IsInMultiGame)
+            {
+                // 检测到联机状态，自动关闭SkillCd
+                IsEnabled = false;
+                _logger.LogWarning("检测到联机状态，自动关闭冷却提示");
+                return;
+            }
+        }
 
         bool isInContext;
 
@@ -230,31 +240,34 @@ public class SkillCdTrigger : ITaskTrigger
                                 }
                             }
                             
-                            if (teamChanged)
+                            lock (_stateLock)
                             {
-                                bool wasFullTeam = _lastTeamAvatarNames.All(n => !string.IsNullOrEmpty(n));
-                                bool isNowFullTeam = newTeamNames.Length == 4;
-                                bool isFullTeam = wasFullTeam && isNowFullTeam;
-                                if (isFullTeam)
+                                if (teamChanged)
                                 {
-                                     _logger.LogInformation("[SkillCD] 队伍配置变化: {OldTeam} -> {NewTeam}",
-                                        string.Join(",", _lastTeamAvatarNames),
-                                        string.Join(",", newTeamNames));
+                                    bool wasFullTeam = _lastTeamAvatarNames.All(n => !string.IsNullOrEmpty(n));
+                                    bool isNowFullTeam = newTeamNames.Length == 4;
+                                    bool isFullTeam = wasFullTeam && isNowFullTeam;
+                                    if (isFullTeam)
+                                    {
+                                        _logger.LogInformation("[SkillCD] 队伍配置变化: {OldTeam} -> {NewTeam}",
+                                            string.Join(",", _lastTeamAvatarNames),
+                                            string.Join(",", newTeamNames));
+                                    }
+                                    
+                                    for (int i = 0; i < 4; i++)
+                                    {
+                                        _cds[i] = 0;
+                                        _lastSetTime[i] = DateTime.MinValue;
+                                    }
+                                    _lastActiveIndex = -1;
                                 }
-
+                                
+                                SyncAvatarInfo(avatars.ToList());
+                                
                                 for (int i = 0; i < 4; i++)
                                 {
-                                    _cds[i] = 0;
-                                    _lastSetTime[i] = DateTime.MinValue;
+                                    _lastTeamAvatarNames[i] = i < newTeamNames.Length ? newTeamNames[i] : string.Empty;
                                 }
-                                _lastActiveIndex = -1;
-                            }
-                            
-                            SyncAvatarInfo(avatars.ToList());
-                            
-                            for (int i = 0; i < 4; i++)
-                            {
-                                _lastTeamAvatarNames[i] = i < newTeamNames.Length ? newTeamNames[i] : string.Empty;
                             }
                         }
                         else
@@ -278,7 +291,10 @@ public class SkillCdTrigger : ITaskTrigger
                 }
                 finally
                 {
-                    _isSyncingTeam = false; // 无论成功失败，同步结束，允许渲染
+                    lock (_stateLock)
+                    {
+                        _isSyncingTeam = false; // 无论成功失败，同步结束，允许渲染
+                    }
                 }
             });
         }
@@ -566,7 +582,8 @@ public class SkillCdTrigger : ITaskTrigger
         try
         {
             var eCdRect = AutoFightAssets.Instance.ECooldownRect;
-            using var roi = image.DeriveCrop(eCdRect).SrcMat;
+            using var crop = image.DeriveCrop(eCdRect);
+            using var roi = crop.SrcMat;
             using var whiteMask = new Mat();
             Cv2.InRange(roi, new Scalar(230, 230, 230), new Scalar(255, 255, 255), whiteMask);
             var text = OcrFactory.Paddle.OcrWithoutDetector(whiteMask);
