@@ -386,7 +386,7 @@ public class SkillCdTrigger : ITaskTrigger
             else
             {
                 // OCR识别失败，尝试兜底
-                bool justUsedE = (DateTime.Now - _lastEKeyPress).TotalSeconds < 2.5;
+                bool justUsedE = (DateTime.Now - _lastEKeyPress).TotalSeconds < 1.1;
                 bool isVisualReady = Bv.IsSkillReady(frame, activeIdx, false);
 
                 if (isVisualReady)
@@ -445,8 +445,8 @@ public class SkillCdTrigger : ITaskTrigger
                 {
                     double? customCd = null;
 
-                    // 场景：技能是亮的，且2.5秒内按过E，尝试应用自定义配置
-                    if ((DateTime.Now - _lastEKeyPress).TotalSeconds < 2.5)
+                    // 场景：技能是亮的，且1.1秒内按过E，尝试应用自定义配置
+                    if ((DateTime.Now - _lastEKeyPress).TotalSeconds < 1.1)
                     {
                         customCd = GetCustomCdRule(_teamAvatarNames[slot]);
                     }
