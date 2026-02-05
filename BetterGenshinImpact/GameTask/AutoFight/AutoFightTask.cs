@@ -520,60 +520,62 @@ public class AutoFightTask : ISoloTask
                     }
                 }
             }
-            
-            await Delay(1000, ct);
-                
-            //等待寻找2秒队伍按钮出现
-            var timeWaitStart = 0;
-            while(timeWaitStart < 6000)
-            {
-                using var ra = CaptureToRectArea();
-                var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
-                if (partyViewBtn.IsExist())
+
+            if (!string.IsNullOrEmpty(_taskParam.KazuhaPartyName)){
+                await Delay(1000, ct);
+                    
+                //等待寻找2秒队伍按钮出现
+                var timeWaitStart = 0;
+                while(timeWaitStart < 6000)
                 {
-                    // OCR 当前队伍名称（无法单字，中间禁止空格）
-                  // 读取OCR原始识别文本
-                  var rawPartyName = ra.Find(new RecognitionObject
-                  {
-                      RecognitionType = RecognitionTypes.Ocr,
-                      RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale),
-                          partyViewBtn.Height)
-                  }).Text;
-                  
-                  // 核心处理逻辑：1.空值兜底 2.去首尾空白 3.移除末尾的“口”字（仅最后一个是口才删）
-                  if (string.IsNullOrWhiteSpace(rawPartyName))
-                  {
-                      oldPartyName = string.Empty;
-                  }
-                  else
-                  {
-                      //有概率把编辑图标识别为字符，并且含有空格或换行符，需要过滤
-                      var tempName = rawPartyName
-                          .Replace("\"", "")        // 移除所有双引号（核心新增，解决日志里的""问题）
-                          .Replace("\r\n", "")      // 清理Windows换行符
-                          .Replace("\r", "");   // 先清理所有双引号，避免引号干扰后续处理
-                          
-                          // 核心逻辑：找到第一个换行符(\n)的位置，截断并删除换行+后面所有字符
-                          int firstNewLineIndex = tempName.IndexOf('\n');
-                          if (firstNewLineIndex != -1) // 存在换行符，截取到换行符前
-                          {
-                              tempName = tempName.Substring(0, firstNewLineIndex);
-                          }
-                      
-                          // 最后统一去首尾所有空白（空格、制表符、回车符\r等），得到纯净队伍名
-                          oldPartyName = tempName.Trim();
-                  }
-                  
-                  // 后续原有逻辑不变
-                  Logger.LogInformation("换队拾取：当前队伍名称读取为：{oldPartyName}", oldPartyName);
-                  // 加在rawPartyName赋值后，打印原始文本的“原始形态”（转义符会显示）
-                  Logger.LogDebug("OCR原始识别文本（含转义）：{rawPartyName}", rawPartyName);
-                  RunnerContext.Instance.PartyName = oldPartyName;
-                    // await _returnMainUiTask.Start(ct);
-                    break;
+                    using var ra = CaptureToRectArea();
+                    var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
+                    if (partyViewBtn.IsExist())
+                    {
+                        // OCR 当前队伍名称（无法单字，中间禁止空格）
+                    // 读取OCR原始识别文本
+                    var rawPartyName = ra.Find(new RecognitionObject
+                    {
+                        RecognitionType = RecognitionTypes.Ocr,
+                        RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale),
+                            partyViewBtn.Height)
+                    }).Text;
+                    
+                    // 核心处理逻辑：1.空值兜底 2.去首尾空白 3.移除末尾的“口”字（仅最后一个是口才删）
+                    if (string.IsNullOrWhiteSpace(rawPartyName))
+                    {
+                        oldPartyName = string.Empty;
+                    }
+                    else
+                    {
+                        //有概率把编辑图标识别为字符，并且含有空格或换行符，需要过滤
+                        var tempName = rawPartyName
+                            .Replace("\"", "")        // 移除所有双引号（核心新增，解决日志里的""问题）
+                            .Replace("\r\n", "")      // 清理Windows换行符
+                            .Replace("\r", "");   // 先清理所有双引号，避免引号干扰后续处理
+                            
+                            // 核心逻辑：找到第一个换行符(\n)的位置，截断并删除换行+后面所有字符
+                            int firstNewLineIndex = tempName.IndexOf('\n');
+                            if (firstNewLineIndex != -1) // 存在换行符，截取到换行符前
+                            {
+                                tempName = tempName.Substring(0, firstNewLineIndex);
+                            }
+                        
+                            // 最后统一去首尾所有空白（空格、制表符、回车符\r等），得到纯净队伍名
+                            oldPartyName = tempName.Trim();
+                    }
+                    
+                    // 后续原有逻辑不变
+                    Logger.LogInformation("换队拾取：当前队伍名称读取为：{oldPartyName}", oldPartyName);
+                    // 加在rawPartyName赋值后，打印原始文本的“原始形态”（转义符会显示）
+                    Logger.LogDebug("OCR原始识别文本（含转义）：{rawPartyName}", rawPartyName);
+                    RunnerContext.Instance.PartyName = oldPartyName;
+                        // await _returnMainUiTask.Start(ct);
+                        break;
+                    }
+                    await Delay(200, ct);
+                    timeWaitStart += 200;
                 }
-                await Delay(200, ct);
-                timeWaitStart += 200;
             }
 
             var switchPartyFlag = false;
