@@ -44,6 +44,21 @@ public class MapMaskTrigger : ITaskTrigger
     public void Init()
     {
         IsEnabled = _config.Enabled;
+        
+        // 关闭时隐藏UI
+        if (!IsEnabled)
+        {
+            UIDispatcherHelper.Invoke(() =>
+            {
+                if (MaskWindow.InstanceNullable() != null)
+                {
+                    if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
+                    {
+                        vm.IsInBigMapUi = false;
+                    }
+                }
+            });
+        }
     }
 
     public void OnCapture(CaptureContent content)
@@ -61,8 +76,7 @@ public class MapMaskTrigger : ITaskTrigger
             var inBigMapUi = content.CurrentGameUiCategory == GameUiCategory.BigMap || Bv.IsInBigMapUi(region);
             UIDispatcherHelper.Invoke(() =>
             {
-                var vm = MaskWindow.Instance().DataContext as MaskWindowViewModel;
-                if (vm != null)
+                if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
                 {
                     vm.IsInBigMapUi = inBigMapUi;
                 }

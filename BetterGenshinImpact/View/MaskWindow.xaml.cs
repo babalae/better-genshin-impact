@@ -76,6 +76,11 @@ public partial class MaskWindow : Window
 
         return _maskWindow;
     }
+    
+    public static MaskWindow? InstanceNullable()
+    {
+        return _maskWindow;
+    }
 
     public bool IsExist()
     {
@@ -298,13 +303,13 @@ public partial class MaskWindow : Window
         {
             var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
             var inBigMapUi = _viewModel?.IsInBigMapUi == true;
-
+        
             if (editEnabled)
             {
                 this.SetClickThrough(false);
                 return;
             }
-
+        
             this.SetClickThrough(!inBigMapUi);
         }
         catch
@@ -593,25 +598,9 @@ file static class MaskWindowExtension
 
     public static void SetClickThrough(this Window window, bool isClickThrough)
     {
-        SetClickThrough(new WindowInteropHelper(window).Handle, isClickThrough);
+        SetLayeredWindow(new WindowInteropHelper(window).Handle, isClickThrough);
     }
-
-    private static void SetClickThrough(nint hWnd, bool isClickThrough)
-    {
-        int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
-
-        if (isClickThrough)
-        {
-            style |= (int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
-        }
-        else
-        {
-            style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
-        }
-
-        _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
-    }
-
+    
     public static void SetChildWindow(this Window window)
     {
         SetChildWindow(new WindowInteropHelper(window).Handle);
