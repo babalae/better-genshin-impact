@@ -22,6 +22,8 @@ public static partial class Bv
     public static bool IsSkillReady(ImageRegion image, int index, bool isBurst)
     {
         if (image == null) return false;
+        var avatarRects = AutoFightAssets.Instance.AvatarIndexRectList;
+        if (index < 1 || index > avatarRects.Count) return false;
 
         // 1. 判断是否为当前活跃角色
         bool isActive = IsCharacterActive(image, index);
@@ -51,7 +53,9 @@ public static partial class Bv
             if (isBurst)
             {
                 // 通过侧边栏图标的 Hough 圆变换识别明亮的高能环
-                var qArea = AutoFightAssets.Instance.AvatarQRectListMap[index - 1];
+                var qRects = AutoFightAssets.Instance.AvatarQRectListMap;
+                if (index > qRects.Count) return false;
+                var qArea = qRects[index - 1];
                 using var grayImage = image.DeriveCrop(qArea).SrcMat.CvtColor(ColorConversionCodes.BGR2GRAY);
 
                 var meanBrightness = Cv2.Mean(grayImage).Val0;
@@ -63,7 +67,6 @@ public static partial class Bv
                 return circles.Length > 0;
             }
             
-            // 提示：目前无法通过视觉直接获取后台角色的 E 技能冷却状态
             return false;
         }
     }
@@ -85,5 +88,5 @@ public static partial class Bv
         int activeIdx = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(image, rectList.ToArray(), _avatarActiveCheckContext);
         return activeIdx == index;
     }
-    }
+    
 }

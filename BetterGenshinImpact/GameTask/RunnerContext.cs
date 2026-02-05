@@ -95,6 +95,7 @@ public class RunnerContext : Singleton<RunnerContext>
             {
                 return scenes;
             }
+            scenes.Dispose();
         }
         catch
         {

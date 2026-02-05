@@ -81,6 +81,10 @@ public class SkillCdTrigger : ITaskTrigger
     /// </summary>
     public void Init()
     {
+        _lastImage?.Dispose();
+        _lastImage = null;
+        _penultimateImage?.Dispose();
+        _penultimateImage = null;
         for (int i = 0; i < 4; i++)
         {
             _cds[i] = 0;
@@ -572,11 +576,14 @@ public class SkillCdTrigger : ITaskTrigger
                 int intervalMs = TaskContext.Instance().Config.TriggerInterval;
                 double compensation = (intervalMs * 2) / 1000.0;
                 val -= compensation;
-                
+
                 return (val > 0 && val < 60) ? val : 0;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[SkillCD] OCR识别CD失败");
+        }
         return 0;
     }
 
