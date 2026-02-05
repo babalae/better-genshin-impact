@@ -42,6 +42,9 @@ public class KeyMouseHook: IDisposable
     private EventHandler<MouseEventExtArgs>? _mouseMoveExtHandler;
     private EventHandler<MouseEventExtArgs>? _mouseWheelExtHandler;
     
+    private readonly object _mouseMoveLock = new();
+    private DateTime _lastProcessMouseMoveTime = DateTime.MinValue;
+    
     private readonly ILogger<KeyMouseHook> _logger = App.GetLogger<KeyMouseHook>();
     
     /// <summary>
@@ -112,7 +115,14 @@ public class KeyMouseHook: IDisposable
         }
     }
     
-    private readonly System.Threading.Channels.Channel<Action> _eventChannel = System.Threading.Channels.Channel.CreateUnbounded<Action>();
+    private readonly System.Threading.Channels.Channel<Action> _eventChannel =
+        System.Threading.Channels.Channel.CreateBounded<Action>(
+            new System.Threading.Channels.BoundedChannelOptions(2048)
+            {
+                FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait,
+                SingleReader = true,
+                SingleWriter = false
+            });
     private readonly CancellationTokenSource _cts = new();
 
     public KeyMouseHook()
@@ -148,188 +158,217 @@ public class KeyMouseHook: IDisposable
         // 初始化事件处理程序
         _keyDownHandler = (_, args) =>
         {
+            if (_keyDownDataCallbacks.Count == 0 && _keyDownCodeCallbacks.Count == 0) return;
+
             var keyDownDataCallbacksCopy = new List<ScriptObject>(_keyDownDataCallbacks);
             var keyDownCodeCallbacksCopy = new List<ScriptObject>(_keyDownCodeCallbacks);
             var keyDataStr = args.KeyData.ToString();
             var keyCodeStr = args.KeyCode.ToString();
 
-            _eventChannel.Writer.TryWrite(() =>
-            {
-                // 调用KeyData回调
-                foreach (var callback in keyDownDataCallbacksCopy)
+            if (!_eventChannel.Writer.TryWrite(() =>
                 {
-                    try
+                    // 调用KeyData回调
+                    foreach (var callback in keyDownDataCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(keyDataStr);
+                        try
+                        {
+                            callback.InvokeAsFunction(keyDataStr);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "键盘按下事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "键盘按下事件");
-                        return;
-                    }
-                }
 
-                // 调用KeyCode回调
-                foreach (var callback in keyDownCodeCallbacksCopy)
-                {
-                    try
+                    // 调用KeyCode回调
+                    foreach (var callback in keyDownCodeCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(keyCodeStr);
-                    }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "键盘按下事件");
-                        return;
-                    }
-                }
-            });
+                        try
+                        {
+                            callback.InvokeAsFunction(keyCodeStr);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "键盘按下事件");
+                            return;
+                        }
+                    } 
+                }))
+            { 
+                _logger.LogWarning("事件队列已满或已关闭，忽略键盘按下回调");
+            }
         };
         
         _keyUpHandler = (_, args) =>
         {
+            if (_keyUpDataCallbacks.Count == 0 && _keyUpCodeCallbacks.Count == 0) return;
+
             var keyUpDataCallbacksCopy = new List<ScriptObject>(_keyUpDataCallbacks);
             var keyUpCodeCallbacksCopy = new List<ScriptObject>(_keyUpCodeCallbacks);
             var keyDataStr = args.KeyData.ToString();
             var keyCodeStr = args.KeyCode.ToString();
-
-            _eventChannel.Writer.TryWrite(() =>
-            {
-                // 调用KeyData回调
-                foreach (var callback in keyUpDataCallbacksCopy)
+            if (!_eventChannel.Writer.TryWrite(() =>
                 {
-                    try
+                    // 调用KeyData回调
+                    foreach (var callback in keyUpDataCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(keyDataStr);
+                        try
+                        {
+                            callback.InvokeAsFunction(keyDataStr);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "键盘释放事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "键盘释放事件");
-                        return;
-                    }
-                }
 
-                // 调用KeyCode回调
-                foreach (var callback in keyUpCodeCallbacksCopy)
-                {
-                    try
+                    // 调用KeyCode回调
+                    foreach (var callback in keyUpCodeCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(keyCodeStr);
+                        try
+                        {
+                            callback.InvokeAsFunction(keyCodeStr);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "键盘释放事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "键盘释放事件");
-                        return;
-                    }
-                }
-            });
+                }))
+            { 
+                _logger.LogWarning("事件队列已满或已关闭，忽略键盘释放回调");
+            }
         };
         
         _mouseDownExtHandler = (_, args) =>
         {
+            if (_mouseDownCallbacks.Count == 0) return;
+
             var mouseDownCallbacksCopy = new List<ScriptObject>(_mouseDownCallbacks);
             var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
             var buttonStr = args.Button.ToString();
 
-            _eventChannel.Writer.TryWrite(() =>
-            {
-                foreach (var callback in mouseDownCallbacksCopy)
+            if (!_eventChannel.Writer.TryWrite(() =>
                 {
-                    try
+                    foreach (var callback in mouseDownCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(buttonStr, localX, localY);
+                        try
+                        {
+                            callback.InvokeAsFunction(buttonStr, localX, localY);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "鼠标按下事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "鼠标按下事件");
-                        return;
-                    }
-                }
-            });
+                }))
+            { 
+                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标按下回调");
+            }
         };
         
         _mouseUpExtHandler = (_, args) =>
         {
+            if (_mouseUpCallbacks.Count == 0) return;
+
             var mouseUpCallbacksCopy = new List<ScriptObject>(_mouseUpCallbacks);
             var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
             var buttonStr = args.Button.ToString();
 
-            _eventChannel.Writer.TryWrite(() =>
-            {
-                foreach (var callback in mouseUpCallbacksCopy)
+            if (!_eventChannel.Writer.TryWrite(() =>
                 {
-                    try
+                    foreach (var callback in mouseUpCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(buttonStr, localX, localY);
+                        try
+                        {
+                            callback.InvokeAsFunction(buttonStr, localX, localY);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "鼠标释放事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "鼠标释放事件");
-                        return;
-                    }
-                }
-            });
+                }))
+            {
+                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标释放回调");
+            }
         };
         
         _mouseMoveExtHandler = (_, args) =>
         {
+            if (_mouseMoveCallbacks.Count == 0) return;
+
             var now = DateTime.Now;
+            if ((now - _lastProcessMouseMoveTime).TotalMilliseconds < 10) return;
+            _lastProcessMouseMoveTime = now;
+
             var mouseMoveCallbacksCopy = new List<ScriptObject>(_mouseMoveCallbacks);
             var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
 
-            _eventChannel.Writer.TryWrite(() =>
-            {
-                foreach (var callback in mouseMoveCallbacksCopy)
+            if (!_eventChannel.Writer.TryWrite(() =>
                 {
-                    try
+                    foreach (var callback in mouseMoveCallbacksCopy)
                     {
-                        // 获取回调的间隔时间
-                        if (_mouseMoveCallbackIntervals.TryGetValue(callback, out var interval))
+                        
+                        try
                         {
-                            // 获取上次调用时间
-                            if (_lastMouseMoveCallbackTimes.TryGetValue(callback, out var lastTime))
+                            lock (_mouseMoveLock)
                             {
-                                // 计算时间差
-                                var timeSpan = now - lastTime;
-                                // 如果时间差大于等于间隔时间，则执行回调
-                                if (timeSpan.TotalMilliseconds >= interval)
+                                if (_mouseMoveCallbackIntervals.TryGetValue(callback, out var interval) &&
+                                    _lastMouseMoveCallbackTimes.TryGetValue(callback, out var lastTime))
                                 {
-                                    callback.InvokeAsFunction(localX, localY);
-                                    // 更新上次调用时间
-                                    _lastMouseMoveCallbackTimes[callback] = now;
+                                    var timeSpan = now - lastTime;
+                                    if (timeSpan.TotalMilliseconds >= interval)
+                                    {
+                                        callback.InvokeAsFunction(localX, localY);
+                                        _lastMouseMoveCallbackTimes[callback] = now;
+                                    }
                                 }
                             }
                         }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "鼠标移动事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "鼠标移动事件");
-                        return;
-                    }
-                }
-            });
+                }))
+            {
+                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标移动回调");
+            }
         };
         
         _mouseWheelExtHandler = (_, args) =>
         {
+            if (_mouseWheelCallbacks.Count == 0) return;
+
             var mouseWheelCallbacksCopy = new List<ScriptObject>(_mouseWheelCallbacks);
             var (localX, localY) = ConvertToLocalCoordinates(args.X, args.Y);
             var delta = args.Delta;
 
-            _eventChannel.Writer.TryWrite(() =>
-            {
-                foreach (var callback in mouseWheelCallbacksCopy)
+            if (!_eventChannel.Writer.TryWrite(() =>
                 {
-                    try
+                    foreach (var callback in mouseWheelCallbacksCopy)
                     {
-                        callback.InvokeAsFunction(delta, localX, localY);
+                        try
+                        {
+                            callback.InvokeAsFunction(delta, localX, localY);
+                        }
+                        catch (Exception ex)
+                        {
+                            HandleCallbackException(ex, "鼠标滚轮事件");
+                            return;
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        HandleCallbackException(ex, "鼠标滚轮事件");
-                        return;
-                    }
-                }
-            });
+                }))
+            {
+                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标滚轮回调");
+            }
         };
         
         // 添加事件监听器
