@@ -520,7 +520,7 @@ public class AutoFightTask : ISoloTask
                     }
                 }
             }
-            
+
             if (!string.IsNullOrEmpty(_taskParam.KazuhaPartyName)){
                 await Delay(1000, ct);
                     
