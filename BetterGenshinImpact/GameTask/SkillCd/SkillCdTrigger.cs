@@ -232,7 +232,9 @@ public class SkillCdTrigger : ITaskTrigger
                             
                             if (teamChanged)
                             {
-                                bool isFullTeam = newTeamNames.Length == 4 && _lastTeamAvatarNames.All(n => !string.IsNullOrEmpty(n));
+                                bool wasFullTeam = _lastTeamAvatarNames.All(n => !string.IsNullOrEmpty(n));
+                                bool isNowFullTeam = newTeamNames.Length == 4;
+                                bool isFullTeam = wasFullTeam && isNowFullTeam;
                                 if (isFullTeam)
                                 {
                                      _logger.LogInformation("[SkillCD] 队伍配置变化: {OldTeam} -> {NewTeam}",
