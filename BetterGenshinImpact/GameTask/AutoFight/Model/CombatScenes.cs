@@ -201,6 +201,7 @@ public class CombatScenes : IDisposable
 
             CurrentMultiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(imageRegion, _autoFightAssets, nullLogger);
             var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus, nullLogger, _elementAssets, _systemInfo);
+            ExpectedTeamAvatarNum = avatarIndexRectList.Count;
             
             var names = new string[avatarSideIconRectList.Count];
             for (var i = 0; i < avatarSideIconRectList.Count; i++)
