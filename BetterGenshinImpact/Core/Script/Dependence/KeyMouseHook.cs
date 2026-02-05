@@ -460,7 +460,6 @@ public class KeyMouseHook: IDisposable
         {
             _cts.Cancel();
             _eventChannel.Writer.TryComplete();
-            _cts.Dispose();
             // 移除所有事件监听器
             if (_keyDownHandler != null)
             {
