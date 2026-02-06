@@ -18,7 +18,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Title="角色CD配置" Grid.Row="0">
+        <ui:TitleBar Title="角色 CD 配置" Grid.Row="0">
             <ui:TitleBar.Icon>
                 <ui:SymbolIcon Symbol="Settings24" />
             </ui:TitleBar.Icon>
@@ -33,7 +33,7 @@
 
             <!-- 说明文本 -->
             <TextBlock Grid.Row="0" 
-                       Text="特定角色CD修正配置&#x0a;为指定的角色未识别到 CD 数字时配置默认值。如玛微卡开 E 会显示摩托车，识别不到CD。&#x0a;未填写CD的角色将使用默认配置。" 
+                       Text="特定角色 CD 修正配置&#x0a;为指定的角色未识别到 CD 数字时配置默认值。如玛薇卡开 E 会显示摩托车，识别不到 CD 。&#x0a;未填写CD的角色将使用默认配置。" 
                        Margin="0,0,0,15" 
                        TextWrapping="Wrap" />
 
