@@ -50,7 +50,7 @@ public class SkillCdTrigger : ITaskTrigger
     private DateTime _lastTickTime = DateTime.Now;
     private DateTime _contextEnterTime = DateTime.MinValue;
     /// <summary>
-    /// 离开场景时间，用于0.5秒防抖避免识别失误导致UI闪烁（仅影响UI渲染，不影响CD计时）
+    /// 离开场景时间，用于0.8秒防抖避免识别失误导致UI闪烁（仅影响UI渲染，不影响CD计时）
     /// </summary>
     private DateTime _contextLeaveTime = DateTime.MinValue;
     private bool _wasInContext = false;
@@ -163,9 +163,9 @@ public class SkillCdTrigger : ITaskTrigger
                 _contextLeaveTime = now;
             }
 
-            // 离开后0.5秒内仍视为在场景中，防止识别失误
+            // 离开后0.8秒内仍视为在场景中，防止识别失误
             isInContext = _contextLeaveTime != DateTime.MinValue &&
-                          (now - _contextLeaveTime).TotalSeconds < 0.5;
+                          (now - _contextLeaveTime).TotalSeconds < 0.8;
         }
 
         // 离开场景时隐藏UI，但保留角色信息和CD数据
