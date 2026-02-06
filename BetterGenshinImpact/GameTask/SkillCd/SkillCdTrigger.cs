@@ -437,28 +437,29 @@ public class SkillCdTrigger : ITaskTrigger
         int activeIdx = IdentifyActiveIndex(frame, _activeCheckContext);
         if (activeIdx > 0)
         {
-            int slot = activeIdx - 1;
-            
-            // 更新当前激活角色索引（切换角色不清零CD）
-            if (_lastActiveIndex != activeIdx)
-            {
-                _lastActiveIndex = activeIdx;
-            }
-            
-            // 检测技能是否就绪，就绪则归零
-            // 额外保护：处于切人冷却期时不检测
-            bool isInSwitchProtect = (slot == _lastSwitchFromSlot) && (DateTime.Now - _lastSwitchTime).TotalSeconds < 1.0;
-            
-            if (activeIdx == slot + 1 && !isInSwitchProtect)
-            {
-                bool isReady = Bv.IsSkillReady(frame, activeIdx, false);
-                if (isReady)
-                {
-                    // 默认逻辑：识别到技能就绪时，不清零当前计时
-                    // 防止因开大招全屏遮挡导致误判为Ready从而错误清零计数器
-                    // 让倒计时自然跑完
-                }
-            }
+            // int slot = activeIdx - 1;
+            //
+            // // 更新当前激活角色索引（切换角色不清零CD）
+            // if (_lastActiveIndex != activeIdx)
+            // {
+            //     _lastActiveIndex = activeIdx;
+            // }
+            //
+            // // 检测技能是否就绪，就绪则归零
+            // // 额外保护：处于切人冷却期时不检测
+            // bool isInSwitchProtect = (slot == _lastSwitchFromSlot) && (DateTime.Now - _lastSwitchTime).TotalSeconds < 1.0;
+            //
+            // if (activeIdx == slot + 1 && !isInSwitchProtect)
+            // {
+            //     bool isReady = Bv.IsSkillReady(frame, activeIdx, false);
+            //     if (isReady)
+            //     {
+            //         // 默认逻辑：识别到技能就绪时，不清零当前计时
+            //         // 防止因开大招全屏遮挡导致误判为Ready从而错误清零计数器
+            //         // 让倒计时自然跑完
+            //     }
+            // }
+            _lastActiveIndex = activeIdx;
         }
     }
 
