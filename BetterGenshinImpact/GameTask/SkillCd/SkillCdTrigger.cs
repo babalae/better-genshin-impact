@@ -272,20 +272,26 @@ public class SkillCdTrigger : ITaskTrigger
                         }
                         else
                         {
-                            // 同步失败/无人时清空UI，但保留数据
-                            for (int i = 0; i < 4; i++)
+                            lock (_stateLock)
                             {
-                                _teamAvatarNames[i] = string.Empty;
-                                _teamIndexRects[i] = default;
+                                // 同步失败/无人时清空UI，但保留数据
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    _teamAvatarNames[i] = string.Empty;
+                                    _teamIndexRects[i] = default;
+                                }
                             }
                         }
                     }
                     else
                     {
-                        for (int i = 0; i < 4; i++)
+                        lock (_stateLock)
                         {
-                            _teamAvatarNames[i] = string.Empty;
-                            _teamIndexRects[i] = default;
+                            for (int i = 0; i < 4; i++)
+                            {
+                                _teamAvatarNames[i] = string.Empty;
+                                _teamIndexRects[i] = default;
+                            }
                         }
                     }
                 }
