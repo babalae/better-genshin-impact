@@ -610,7 +610,7 @@ public class AutoFightTask : ISoloTask
 
                     // 如果配置了二次拾取，或者不满足跳过条件（上次是万叶且冷却时间>3秒），则执行拾取
                     bool shouldSkip = lastFightName == picker.Name && time.TotalSeconds > 3;
-                    bool forcePickup = _taskParam.QinDoublePickUp;
+                    bool forcePickup = _taskParam.DoublePickUp;
                     
                     if (forcePickup || !shouldSkip)
                     {
