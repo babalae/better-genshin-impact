@@ -56,6 +56,13 @@ public partial class SkillCdConfigWindow : FluentWindow
 
     public List<SkillCdRule> GetValidRules()
     {
-        return Rules.Where(r => !string.IsNullOrWhiteSpace(r.RoleName)).ToList();
+        return Rules
+            .Where(r => !string.IsNullOrWhiteSpace(r.RoleName))
+            .Select(r => new SkillCdRule
+            {
+                RoleName = r.RoleName.Trim(),
+                CdValueText = r.CdValueText?.Trim()
+            })
+            .ToList();
     }
 }
