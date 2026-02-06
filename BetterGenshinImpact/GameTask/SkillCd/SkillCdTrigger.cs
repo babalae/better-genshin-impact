@@ -140,10 +140,9 @@ public class SkillCdTrigger : ITaskTrigger
         }
 
         // 场景检测（带0.5秒防抖，仅影响UI渲染）
-        bool rawInContext =
-            (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea)) &&
-            !Bv.IsInBigMapUi(content.CaptureRectArea);
-
+        bool rawInContext = Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea);
+        bool isInContext;
+        
         if (rawInContext)
         {
             var multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(content.CaptureRectArea);
@@ -154,36 +153,19 @@ public class SkillCdTrigger : ITaskTrigger
                 _logger.LogWarning("检测到联机状态，自动关闭冷却提示");
                 return;
             }
-        }
-
-        bool isInContext;
-
-        // 如果进入了大地图，则这是最后一帧运行机会，必须强制跳过防抖立即清理
-        bool forceExit = Bv.IsInBigMapUi(content.CaptureRectArea) &&
-                         SupportedGameUiCategory != GameUiCategory.BigMap;
-
-        if (rawInContext && !forceExit)
-        {
             _contextLeaveTime = DateTime.MinValue;
             isInContext = true;
         }
         else
         {
-            if (forceExit)
+            if (_wasInContext && _contextLeaveTime == DateTime.MinValue)
             {
-                isInContext = false;
+                _contextLeaveTime = now;
             }
-            else
-            {
-                if (_wasInContext && _contextLeaveTime == DateTime.MinValue)
-                {
-                    _contextLeaveTime = now;
-                }
 
-                // 离开后0.5秒内仍视为在场景中，防止识别失误
-                isInContext = _contextLeaveTime != DateTime.MinValue &&
-                              (now - _contextLeaveTime).TotalSeconds < 0.5;
-            }
+            // 离开后0.5秒内仍视为在场景中，防止识别失误
+            isInContext = _contextLeaveTime != DateTime.MinValue &&
+                          (now - _contextLeaveTime).TotalSeconds < 0.5;
         }
 
         // 离开场景时隐藏UI，但保留角色信息和CD数据
@@ -471,30 +453,9 @@ public class SkillCdTrigger : ITaskTrigger
                 bool isReady = Bv.IsSkillReady(frame, activeIdx, false);
                 if (isReady)
                 {
-                    double? customCd = null;
-
-                    // 场景：技能是亮的，且1.1秒内按过E，尝试应用自定义配置
-                    if ((DateTime.Now - _lastEKeyPress).TotalSeconds < 1.1)
-                    {
-                        customCd = GetCustomCdRule(_teamAvatarNames[slot]);
-                    }
-
-                    if (customCd.HasValue)
-                    {
-                        double targetCd = customCd.Value;
-                        // 如果当前CD还没设置或者远小于目标值（防止每帧重置导致倒计时卡死）
-                        if (_cds[slot] < targetCd * 0.9)
-                        {
-                            _cds[slot] = targetCd;
-                            _lastSetTime[slot] = DateTime.Now;
-                        }
-                    }
-                    else
-                    {
-                        // 默认逻辑：识别到技能就绪时，不清零当前计时
-                        // 防止因开大招全屏遮挡导致误判为Ready从而错误清零计数器
-                        // 让倒计时自然跑完
-                    }
+                    // 默认逻辑：识别到技能就绪时，不清零当前计时
+                    // 防止因开大招全屏遮挡导致误判为Ready从而错误清零计数器
+                    // 让倒计时自然跑完
                 }
             }
         }
