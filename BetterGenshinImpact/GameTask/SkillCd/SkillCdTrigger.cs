@@ -67,7 +67,7 @@ public class SkillCdTrigger : ITaskTrigger
     private int _lastSwitchFromSlot = -1;
     private DateTime _lastSwitchTime = DateTime.MinValue;
 
-    private bool _isSyncingTeam = false;
+    private volatile bool _isSyncingTeam = false;
 
     private DateTime _lastSyncTime = DateTime.MinValue;
 
@@ -196,12 +196,12 @@ public class SkillCdTrigger : ITaskTrigger
             
             Task.Run(async () =>
             {
+                // 确保画面加载完成，提高识别成功率
+                await Task.Delay(500); 
+                    
+                var scenes = RunnerContext.Instance.TrySyncCombatScenesSilent();
                 try 
                 {
-                    // 确保画面加载完成，提高识别成功率
-                    await Task.Delay(500); 
-                    
-                    var scenes = RunnerContext.Instance.TrySyncCombatScenesSilent();
                     if (scenes != null && scenes.CheckTeamInitialized())
                     {
                         var avatars = scenes.GetAvatars();
@@ -279,6 +279,7 @@ public class SkillCdTrigger : ITaskTrigger
                 }
                 finally
                 {
+                    scenes?.Dispose();
                     lock (_stateLock)
                     {
                         _isSyncingTeam = false; // 无论成功失败，同步结束，允许渲染
