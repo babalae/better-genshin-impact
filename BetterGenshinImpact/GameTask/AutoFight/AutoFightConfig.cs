@@ -131,7 +131,7 @@ public partial class AutoFightConfig : ObservableObject
     private bool _kazuhaPickupEnabled = true;
     
     [ObservableProperty]
-    private bool _qinDoublePickUp = false;
+    private bool _doublePickUp = false;
     
     [ObservableProperty]
     private string _guardianAvatar = string.Empty;

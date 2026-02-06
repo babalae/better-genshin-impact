@@ -1450,7 +1450,7 @@
                                       FontSize="10"
                                       FontTypography="Body"
                                       VerticalAlignment="Bottom"
-                                      Text="(琴二次拾取：首次拾取空,再次拾取)"
+                                      Text="(二次拾取：琴首次拾取空,再次拾取。即使万叶刚使用过技能，也会强制再次拾取。)"
                                       TextWrapping="Wrap" />
                         
                         <ui:TextBlock Grid.Row="1"
@@ -1469,7 +1469,7 @@
                                          Grid.Column="2"
                                          Margin="0,0,38,0"
                                          IsEnabled="{Binding PathingConfig.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
-                                         IsChecked="{Binding PathingConfig.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
+                                         IsChecked="{Binding PathingConfig.AutoFightConfig.DoublePickUp, Mode=TwoWay}" />
                         <ui:TextBlock Grid.Row="0"
                                       Grid.RowSpan="2"
                                       Grid.Column="2"
@@ -1479,7 +1479,7 @@
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                       Margin="0,0,38,26"
                                       FontTypography="Body"
-                                      Text="琴二次拾取"
+                                      Text="二次拾取"
                                       TextWrapping="Wrap" />
                     </Grid>
                     <Grid Margin="16">
