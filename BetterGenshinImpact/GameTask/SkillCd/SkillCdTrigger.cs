@@ -199,9 +199,10 @@ public class SkillCdTrigger : ITaskTrigger
                 // 确保画面加载完成，提高识别成功率
                 await Task.Delay(500); 
                     
-                var scenes = RunnerContext.Instance.TrySyncCombatScenesSilent();
+                CombatScenes? scenes = null;
                 try 
                 {
+                    scenes = RunnerContext.Instance.TrySyncCombatScenesSilent();
                     if (scenes != null && scenes.CheckTeamInitialized())
                     {
                         var avatars = scenes.GetAvatars();
