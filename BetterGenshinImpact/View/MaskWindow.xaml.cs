@@ -564,7 +564,7 @@ public partial class MaskWindow : Window
                             var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
                             bool isZeroCd =
                                 double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
-                                && Math.Abs(cdValue) < 1.0;
+                                && Math.Abs(cdValue) < 0.8;
 
                             Brush textBrush = isZeroCd
                                 ? new SolidColorBrush(Color.FromRgb(93, 204, 23))
