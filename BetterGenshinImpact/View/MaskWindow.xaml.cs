@@ -564,11 +564,11 @@ public partial class MaskWindow : Window
                             var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
                             bool isZeroCd =
                                 double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
-                                && Math.Abs(cdValue) < 0.0001;
+                                && Math.Abs(cdValue) < 1.0;
 
                             Brush textBrush = isZeroCd
-                                ? new SolidColorBrush(Color.FromRgb(92, 181, 93))
-                                : new SolidColorBrush(Color.FromRgb(50, 50, 50));
+                                ? new SolidColorBrush(Color.FromRgb(93, 204, 23))
+                                : new SolidColorBrush(Color.FromRgb(218, 74, 35));
                             
                             var formattedText = new FormattedText(
                                 drawable.Text,
