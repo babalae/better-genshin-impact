@@ -54,7 +54,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         CheckBeforeBurst = autoFightConfig.FinishDetectConfig.CheckBeforeBurst;
         IsFirstCheck = autoFightConfig.FinishDetectConfig.IsFirstCheck;
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
-        DoublePickUp = autoFightConfig.DoublePickUp;
+        QinDoublePickUp = autoFightConfig.QinDoublePickUp;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
     }
 
@@ -81,7 +81,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     public int RotaryFactor { get; set; } = 10;
     public bool BurstEnabled { get; set; } = false;
     
-    public bool DoublePickUp { get; set; } = false;
+    public bool QinDoublePickUp { get; set; } = false;
     public static bool SwimmingEnabled  { get; set; } = false;
 
     public AutoFightParam(string? strategyName = null) : base(null, null)
@@ -139,6 +139,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianCombatSkip = autoFightConfig.GuardianCombatSkip;
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
-        DoublePickUp = autoFightConfig.DoublePickUp;
+        QinDoublePickUp = autoFightConfig.QinDoublePickUp;
     }
 }
