@@ -548,8 +548,6 @@ public partial class MaskWindow : Window
                 var systemInfo = TaskContext.Instance().SystemInfo;
                 // 使用不封顶的物理比例进行 UI 大小缩放
                 var scaleTo1080 = systemInfo.ScaleTo1080PRatio;
-                // 自定义缩放
-                var skillConfig = TaskContext.Instance().Config.SkillCdConfig.Scale;
                 
                 foreach (var drawable in kv.Value)
                 {
@@ -560,16 +558,25 @@ public partial class MaskWindow : Window
 
                         if (isSkillCd)
                         {
-                            // 使用 drawable.Scale 进行缩放
+                            // 自定义缩放
+                            var skillConfig = TaskContext.Instance().Config.SkillCdConfig.Scale;
                             double scaledFontSize = (26 * scaleTo1080 * skillConfig) / pixelsPerDip;
                             var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
+                            bool isZeroCd =
+                                double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
+                                && Math.Abs(cdValue) < 0.0001;
+
+                            Brush textBrush = isZeroCd
+                                ? new SolidColorBrush(Color.FromRgb(92, 181, 93))
+                                : new SolidColorBrush(Color.FromRgb(50, 50, 50));
                             
-                            var formattedText = new FormattedText(drawable.Text,
+                            var formattedText = new FormattedText(
+                                drawable.Text,
                                 CultureInfo.GetCultureInfo("zh-cn"),
                                 FlowDirection.LeftToRight,
                                 mediumTypeface,
                                 scaledFontSize,
-                                new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 50, 50)),
+                                textBrush,
                                 pixelsPerDip);
 
                             double px = (6 * scaleTo1080 * skillConfig) / pixelsPerDip;
