@@ -623,7 +623,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 Thread.Sleep(800); // 等待探索派遣界面打开
                                 new OneKeyExpeditionTask().Run(_autoSkipAssets);
                             }
-                            else
+                            else if (!item.Text.Contains("每日")
+                                && !item.Text.Contains("委托")
+                                && !item.Text.Contains("探索")
+                                && !item.Text.Contains("派遣"))
                             {
                                 ClickOcrRegion(item);
                             }
