@@ -548,6 +548,8 @@ public partial class MaskWindow : Window
                 var systemInfo = TaskContext.Instance().SystemInfo;
                 // 使用不封顶的物理比例进行 UI 大小缩放
                 var scaleTo1080 = systemInfo.ScaleTo1080PRatio;
+                // 自定义缩放
+                var skillConfig = TaskContext.Instance().Config.SkillCdConfig.Scale;
                 
                 foreach (var drawable in kv.Value)
                 {
@@ -558,7 +560,8 @@ public partial class MaskWindow : Window
 
                         if (isSkillCd)
                         {
-                            double scaledFontSize = (26 * scaleTo1080) / pixelsPerDip;
+                            // 使用 drawable.Scale 进行缩放
+                            double scaledFontSize = (26 * scaleTo1080 * skillConfig) / pixelsPerDip;
                             var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
                             
                             var formattedText = new FormattedText(drawable.Text,
@@ -569,9 +572,9 @@ public partial class MaskWindow : Window
                                 new SolidColorBrush(System.Windows.Media.Color.FromRgb(50, 50, 50)),
                                 pixelsPerDip);
 
-                            double px = (6 * scaleTo1080) / pixelsPerDip;
-                            double py = (2 * scaleTo1080) / pixelsPerDip;
-                            double radius = (5 * scaleTo1080) / pixelsPerDip;
+                            double px = (6 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            double py = (2 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            double radius = (5 * scaleTo1080 * skillConfig) / pixelsPerDip;
                             var bgRect = new Rect(renderPoint.X - px, renderPoint.Y - py, formattedText.Width + px * 2, formattedText.Height + py * 2);
                             drawingContext.DrawRoundedRectangle(Brushes.White, null, bgRect, radius, radius);
                             drawingContext.DrawText(formattedText, renderPoint);

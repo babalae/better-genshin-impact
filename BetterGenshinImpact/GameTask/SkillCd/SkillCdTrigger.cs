@@ -103,6 +103,10 @@ public class SkillCdTrigger : ITaskTrigger
         _contextEnterTime = DateTime.MinValue;
         _contextLeaveTime = DateTime.MinValue;
         _lastTickTime = DateTime.Now;
+        _lastActiveIndex = -1;
+        _lastSwitchFromSlot = -1;
+        _lastSwitchTime = DateTime.MinValue;
+        _lastSyncTime = DateTime.MinValue;
 
         if (!IsEnabled)
         {
@@ -553,7 +557,7 @@ public class SkillCdTrigger : ITaskTrigger
         {
             var eCdRect = AutoFightAssets.Instance.ECooldownRect;
             using var crop = image.DeriveCrop(eCdRect);
-            using var roi = crop.SrcMat;
+            var roi = crop.SrcMat;
             using var whiteMask = new Mat();
             Cv2.InRange(roi, new Scalar(230, 230, 230), new Scalar(255, 255, 255), whiteMask);
             var text = OcrFactory.Paddle.OcrWithoutDetector(whiteMask);
@@ -583,6 +587,7 @@ public class SkillCdTrigger : ITaskTrigger
     {
         var drawContent = VisionContext.Instance().DrawContent;
         var sideRects = AutoFightAssets.Instance.AvatarSideIconRectList;
+        var config = TaskContext.Instance().Config.SkillCdConfig;
         
         if (sideRects == null || sideRects.Count < 4)
         {
@@ -591,10 +596,16 @@ public class SkillCdTrigger : ITaskTrigger
         }
 
         var systemInfo = TaskContext.Instance().SystemInfo;
-        var assetScale = systemInfo.AssetScale;
         double factor = (double)systemInfo.GameScreenSize.Width / systemInfo.ScaleMax1080PCaptureRect.Width;
-        double refOffsetX = 240;
-        double refOffsetY = 20;
+        
+        // 使用配置中的坐标（保留一位小数）
+        double userPX = Math.Round(config.PX, 1);
+        double userPY = Math.Round(config.PY, 1);
+        double userGap = Math.Round(config.Gap, 1);
+
+        double basePx = userPX * factor;
+        double basePy = userPY * factor;
+        double intervalY = userGap * factor;
 
         var textList = new List<TextDrawable>();
         
@@ -622,9 +633,8 @@ public class SkillCdTrigger : ITaskTrigger
         {
             if (!string.IsNullOrEmpty(_teamAvatarNames[i]))
             {
-                var rect = sideRects[i];
-                var px = (rect.X - refOffsetX * assetScale) * factor;
-                var py = (rect.Y + refOffsetY * assetScale) * factor;
+                var px = basePx;
+                var py = basePy + intervalY * i;
                 
                 textList.Add(new TextDrawable(_cds[i].ToString("F1"), new Point(px, py)));
             }
