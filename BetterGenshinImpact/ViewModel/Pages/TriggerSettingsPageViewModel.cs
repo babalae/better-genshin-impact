@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Config;
+﻿using System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
@@ -11,10 +12,15 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.SkillCd;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
@@ -236,6 +242,37 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     //         "派遣角色优先级配置", Config.AutoSkipConfig.AutoReExploreCharacter);
     //     Config.AutoSkipConfig.AutoReExploreCharacter = str.Replace("，", ",").Replace(" ", "");
     // }
+
+    [RelayCommand]
+    private void OnRemoveSkillCdRule(SkillCdRule rule)
+    {
+        if (TemporarySkillCdCollection != null && rule != null)
+        {
+            TemporarySkillCdCollection.Remove(rule);
+        }
+    }
+
+    [ObservableProperty]
+    private System.Collections.ObjectModel.ObservableCollection<SkillCdRule> _temporarySkillCdCollection;
+
+    [RelayCommand]
+    private void OnEditSkillCdConfig()
+    {
+        var configList = Config.SkillCdConfig.CustomCdList;
+        
+        var window = new SkillCdConfigWindow(configList)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        
+        window.Closed += (s, e) => 
+        {
+            Config.SkillCdConfig.CustomCdList = window.GetValidRules();
+            GameTaskManager.RefreshTriggerConfigs();
+        };
+
+        window.ShowDialog();
+    }
 
     [RelayCommand]
     public void OnGoToHotKeyPage()

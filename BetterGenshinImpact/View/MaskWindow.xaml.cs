@@ -41,6 +41,7 @@ public partial class MaskWindow : Window
     private static MaskWindow? _maskWindow;
 
     private static readonly Typeface _typeface;
+    private static readonly Typeface _fgiTypeface;
 
     private nint _hWnd;
     private MaskWindowViewModel? _viewModel;
@@ -62,6 +63,15 @@ public partial class MaskWindow : Window
         else
         {
             _typeface = new FontFamily("Microsoft Yahei UI").GetTypefaces().First();
+        }
+
+        try
+        {
+            _fgiTypeface = new FontFamily(new Uri("pack://application:,,,/"), "./Resources/Fonts/Fgi-Regular.ttf#Fgi-Regular").GetTypefaces().First();
+        }
+        catch
+        {
+            _fgiTypeface = _typeface;
         }
 
         DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
@@ -534,15 +544,57 @@ public partial class MaskWindow : Window
 
             foreach (var kv in VisionContext.Instance().DrawContent.TextList)
             {
+                bool isSkillCd = kv.Key == "SkillCdText";
+                var systemInfo = TaskContext.Instance().SystemInfo;
+                // 使用不封顶的物理比例进行 UI 大小缩放
+                var scaleTo1080 = systemInfo.ScaleTo1080PRatio;
+                
                 foreach (var drawable in kv.Value)
                 {
                     if (!drawable.IsEmpty)
                     {
-                        drawingContext.DrawText(new FormattedText(drawable.Text,
-                            CultureInfo.GetCultureInfo("zh-cn"),
-                            FlowDirection.LeftToRight,
-                            _typeface,
-                            36, Brushes.Black, 1), drawable.Point);
+                        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+                        var renderPoint = new Point(drawable.Point.X / pixelsPerDip, drawable.Point.Y / pixelsPerDip);
+
+                        if (isSkillCd)
+                        {
+                            // 自定义缩放
+                            var skillConfig = TaskContext.Instance().Config.SkillCdConfig.Scale;
+                            double scaledFontSize = (26 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
+                            bool isZeroCd =
+                                double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
+                                && Math.Abs(cdValue) < 0.8;
+
+                            Brush textBrush = isZeroCd
+                                ? new SolidColorBrush(Color.FromRgb(93, 204, 23))
+                                : new SolidColorBrush(Color.FromRgb(218, 74, 35));
+                            
+                            var formattedText = new FormattedText(
+                                drawable.Text,
+                                CultureInfo.GetCultureInfo("zh-cn"),
+                                FlowDirection.LeftToRight,
+                                mediumTypeface,
+                                scaledFontSize,
+                                textBrush,
+                                pixelsPerDip);
+
+                            double px = (6 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            double py = (2 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            double radius = (5 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            var bgRect = new Rect(renderPoint.X - px, renderPoint.Y - py, formattedText.Width + px * 2, formattedText.Height + py * 2);
+                            drawingContext.DrawRoundedRectangle(Brushes.White, null, bgRect, radius, radius);
+                            drawingContext.DrawText(formattedText, renderPoint);
+                        }
+                        else
+                        {
+                            double defaultFontSize = (36 * scaleTo1080) / pixelsPerDip;
+                            drawingContext.DrawText(new FormattedText(drawable.Text,
+                                CultureInfo.GetCultureInfo("zh-cn"),
+                                FlowDirection.LeftToRight,
+                                _typeface,
+                                defaultFontSize, Brushes.Black, pixelsPerDip), renderPoint);
+                        }
                     }
                 }
             }

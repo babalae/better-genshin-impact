@@ -177,6 +177,48 @@ public class CombatScenes : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// 静默模式下的队伍识别（用于后台挂件）
+    /// </summary>
+    public CombatScenes InitializeTeamSilent(ImageRegion imageRegion, AutoFightConfig? autoFightConfig = null)
+    {
+        try
+        {
+            if (autoFightConfig == null)
+            {
+                autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+            }
+
+            // 优先取配置
+            if (!string.IsNullOrEmpty(autoFightConfig.TeamNames))
+            {
+                InitializeTeamFromConfig(autoFightConfig.TeamNames, autoFightConfig);
+                return this;
+            }
+
+            // 使用 NullLogger 彻底屏蔽底层工具类的日志输出
+            var nullLogger = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+
+            CurrentMultiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(imageRegion, _autoFightAssets, nullLogger);
+            var (avatarIndexRectList, avatarSideIconRectList) = PartyAvatarSideIndexHelper.GetAllIndexRects(imageRegion, CurrentMultiGameStatus, nullLogger, _elementAssets, _systemInfo);
+            ExpectedTeamAvatarNum = avatarIndexRectList.Count;
+            
+            var names = new string[avatarSideIconRectList.Count];
+            for (var i = 0; i < avatarSideIconRectList.Count; i++)
+            {
+                using var ra = imageRegion.DeriveCrop(avatarSideIconRectList[i]);
+                var pair = ClassifyAvatarCnName(ra.CacheImage, i + 1);
+                names[i] = pair.Item1;
+            }
+            Avatars = BuildAvatars([.. names], null, avatarIndexRectList, autoFightConfig);
+        }
+        catch
+        {
+            // 静默模式下完全不抛出、不记录异常
+        }
+        return this;
+    }
+
 
     /// <summary>
     /// 这个个方法主要用于在切人判断有误的情况下，且能够找到预期数量的角色编号框。此时只有两种情况

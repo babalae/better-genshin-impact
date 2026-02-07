@@ -105,7 +105,39 @@ public class DrawContent
         }
     }
 
+    /// <summary>
+    /// 更新文本列表
+    /// </summary>
+    public virtual void PutOrRemoveTextList(string key, List<TextDrawable>? list)
+    {
+        bool changed = false;
+        if (TextList.TryGetValue(key, out _))
+        {
+            if (list == null || list.Count == 0)
+            {
+                TextList.TryRemove(key, out _);
+                changed = true;
+            }
+            else
+            {
+                TextList[key] = list;
+                changed = true;
+            }
+        }
+        else
+        {
+            if (list is { Count: > 0 })
+            {
+                TextList[key] = list;
+                changed = true;
+            }
+        }
 
+        if (changed)
+        {
+            MaskWindow.Instance().Refresh();
+        }
+    }
 
     /// <summary>
     /// 清理所有绘制内容

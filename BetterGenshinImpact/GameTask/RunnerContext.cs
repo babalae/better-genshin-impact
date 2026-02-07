@@ -82,6 +82,28 @@ public class RunnerContext : Singleton<RunnerContext>
         return _combatScenes;
     }
 
+    /// <summary>
+    /// 尝试静默识别当前队伍信息（无副作用，不出错）
+    /// </summary>
+    public CombatScenes? TrySyncCombatScenesSilent()
+    {
+        try
+        {
+            using var region = CaptureToRectArea();
+            var scenes = new CombatScenes(logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance).InitializeTeamSilent(region);
+            if (scenes.CheckTeamInitialized())
+            {
+                return scenes;
+            }
+            scenes.Dispose();
+        }
+        catch
+        {
+            // 静默模式忽略一切异常
+        }
+        return null;
+    }
+
     public void ClearCombatScenes()
     {
         _combatScenes = null;
