@@ -329,7 +329,7 @@ public class SkillCdTrigger : ITaskTrigger
                 }
             }
 
-            if (_prevEKey)
+            if (_prevEKey && TaskContext.Instance().Config.SkillCdConfig.TriggerOnSkillUse)
             {
                 ImageRegion frameToUse = _penultimateImage ?? _lastImage;
                 if (frameToUse != null)
@@ -630,9 +630,15 @@ public class SkillCdTrigger : ITaskTrigger
         {
             if (!string.IsNullOrEmpty(_teamAvatarNames[i]))
             {
+                // 如果启用了"冷却为0时隐藏"，且CD为0，则跳过
+                if (config.HideWhenZero && _cds[i] <= 0)
+                {
+                    continue;
+                }
+
                 var px = basePx;
                 var py = basePy + intervalY * i;
-                
+
                 textList.Add(new TextDrawable(_cds[i].ToString("F1"), new Point(px, py)));
             }
         }

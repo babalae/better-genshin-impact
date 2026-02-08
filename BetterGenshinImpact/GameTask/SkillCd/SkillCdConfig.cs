@@ -20,6 +20,18 @@ public partial class SkillCdConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private System.Collections.Generic.List<SkillCdRule> _customCdList = new();
+
+    /// <summary>
+    /// 使用战技时触发（E键）
+    /// </summary>
+    [ObservableProperty]
+    private bool _triggerOnSkillUse = false;
+
+    /// <summary>
+    /// 冷却为0时隐藏
+    /// </summary>
+    [ObservableProperty]
+    private bool _hideWhenZero = false;
     
     /// <summary>
     /// 横坐标

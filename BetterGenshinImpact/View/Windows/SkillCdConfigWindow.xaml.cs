@@ -15,17 +15,17 @@ public partial class SkillCdConfigWindow : FluentWindow
     public SkillCdConfigWindow(List<SkillCdRule> initialRules)
     {
         InitializeComponent();
-        
+
         // 深度复制列表，避免直接修改原配置
         Rules = new ObservableCollection<SkillCdRule>();
         if (initialRules != null)
         {
             foreach (var rule in initialRules)
             {
-                Rules.Add(new SkillCdRule 
-                { 
-                    RoleName = rule.RoleName, 
-                    CdValueText = rule.CdValueText 
+                Rules.Add(new SkillCdRule
+                {
+                    RoleName = rule.RoleName,
+                    CdValueText = rule.CdValueText
                 });
             }
         }
@@ -37,7 +37,7 @@ public partial class SkillCdConfigWindow : FluentWindow
         }
 
         DataContext = this;
-        
+
         this.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
     }
 
