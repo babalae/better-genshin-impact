@@ -745,46 +745,60 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         repo = null;
 
                         var tempPath = repoPath + "_temp_" + Guid.NewGuid().ToString("N")[..8];
+                        // Step 1: 克隆到临时文件夹
+                        bool cloneSucceeded = false;
                         try
                         {
                             CloneRepository(repoUrl, tempPath, "release", onCheckoutProgress);
-
-                            // 读取新旧 repo.json 进行内容重合度比较
-                            var newTempRepoJson = Directory.GetFiles(tempPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                            var newContent = newTempRepoJson != null ? File.ReadAllText(newTempRepoJson) : null;
-
-                            double overlapRatio = 0;
-                            if (!string.IsNullOrEmpty(oldRepoJsonContent) && !string.IsNullOrEmpty(newContent))
-                            {
-                                overlapRatio = CalculateRepoOverlapRatio(oldRepoJsonContent, newContent);
-                            }
-
-                            if (overlapRatio >= 0.5)
-                            {
-                                // 内容重合度高 → 同一仓库的不同镜像，替换原文件夹
-                                _logger.LogInformation("内容重合度 {Ratio:P0}，判定为同一仓库镜像，替换原文件夹", overlapRatio);
-                                DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
-                                Directory.Move(tempPath, repoPath);
-                                SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
-                            }
-                            else
-                            {
-                                // 内容重合度低 → 不同仓库，创建新文件夹
-                                var baseName = DeriveBaseFolderName(repoUrl.TrimEnd('/'));
-                                var uniqueName = GenerateUniqueFolderName(baseName, repoUrl);
-                                var newRepoPath = Path.Combine(ReposPath, uniqueName);
-                                _logger.LogInformation("内容重合度 {Ratio:P0}，判定为不同仓库，创建新文件夹: {Folder}", overlapRatio, uniqueName);
-                                Directory.Move(tempPath, newRepoPath);
-                                repoPath = newRepoPath;
-                                SaveFolderMapping(repoUrl.TrimEnd('/'), uniqueName);
-                            }
+                            cloneSucceeded = true;
                         }
-                        catch
+                        catch (Exception cloneEx)
                         {
-                            // 临时文件夹流程失败，回退到直接克隆
+                            _logger.LogError(cloneEx, "克隆到临时文件夹失败，保留原仓库");
                             if (Directory.Exists(tempPath))
                                 DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
-                            CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        }
+
+                        // Step 2: 基于内容重合度决定存放位置
+                        if (cloneSucceeded)
+                        {
+                            try
+                            {
+                                var newTempRepoJson = Directory.GetFiles(tempPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                                var newContent = newTempRepoJson != null ? File.ReadAllText(newTempRepoJson) : null;
+
+                                double overlapRatio = 0;
+                                if (!string.IsNullOrEmpty(oldRepoJsonContent) && !string.IsNullOrEmpty(newContent))
+                                {
+                                    overlapRatio = CalculateRepoOverlapRatio(oldRepoJsonContent, newContent);
+                                }
+
+                                if (overlapRatio >= 0.5)
+                                {
+                                    // 内容重合度高 → 同一仓库的不同镜像，替换原文件夹
+                                    _logger.LogInformation("内容重合度 {Ratio:P0}，判定为同一仓库镜像，替换原文件夹", overlapRatio);
+                                    DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
+                                    Directory.Move(tempPath, repoPath);
+                                    SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
+                                }
+                                else
+                                {
+                                    // 内容重合度低 → 不同仓库，创建新文件夹
+                                    var baseName = DeriveBaseFolderName(repoUrl.TrimEnd('/'));
+                                    var uniqueName = GenerateUniqueFolderName(baseName, repoUrl);
+                                    var newRepoPath = Path.Combine(ReposPath, uniqueName);
+                                    _logger.LogInformation("内容重合度 {Ratio:P0}，判定为不同仓库，创建新文件夹: {Folder}", overlapRatio, uniqueName);
+                                    Directory.Move(tempPath, newRepoPath);
+                                    repoPath = newRepoPath;
+                                    SaveFolderMapping(repoUrl.TrimEnd('/'), uniqueName);
+                                }
+                            }
+                            catch (Exception moveEx)
+                            {
+                                _logger.LogError(moveEx, "处理临时文件夹失败，清理临时目录，保留原仓库");
+                                if (Directory.Exists(tempPath))
+                                    DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
+                            }
                         }
 
                         updated = true;
