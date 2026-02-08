@@ -475,7 +475,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 渠道名称到URL的映射
     /// </summary>
-    private static readonly Dictionary<string, string> RepoChannels = new()
+    public static readonly Dictionary<string, string> RepoChannels = new()
     {
         { "CNB", "https://cnb.cool/bettergi/bettergi-scripts-list" },
         { "GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list" },

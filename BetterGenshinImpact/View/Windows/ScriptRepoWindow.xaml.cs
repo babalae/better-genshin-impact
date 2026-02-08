@@ -170,13 +170,10 @@ public partial class ScriptRepoWindow
 
     private void InitializeRepoChannels()
     {
-        _repoChannels = new ObservableCollection<RepoChannel>
-        {
-            new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
-            new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
-            new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
-            new("自定义", "https://example.com/custom-repo")
-        };
+        _repoChannels = new ObservableCollection<RepoChannel>(
+            ScriptRepoUpdater.RepoChannels.Select(kv => new RepoChannel(kv.Key, kv.Value))
+        );
+        _repoChannels.Add(new RepoChannel("自定义", "https://example.com/custom-repo"));
 
         // 根据配置中保存的渠道名称恢复选择
         if (string.IsNullOrEmpty(Config.SelectedChannelName))
