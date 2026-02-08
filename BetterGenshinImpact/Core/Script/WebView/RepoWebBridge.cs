@@ -183,7 +183,7 @@ public sealed class RepoWebBridge
                 throw new FileNotFoundException("找不到原始 repo.json 文件");
             }
 
-            string targetPath = Path.Combine(ScriptRepoUpdater.ReposPath, "repo_updated.json");
+            string targetPath = ScriptRepoUpdater.RepoUpdatedJsonPath;
 
             File.Copy(repoJsonPath, targetPath, overwrite: true);
 
@@ -228,10 +228,7 @@ public sealed class RepoWebBridge
 
     private static string GetRepoJsonPath()
     {
-        string updatedRepoJsonPath = Path.Combine(
-            Path.GetDirectoryName(Path.Combine(ScriptRepoUpdater.ReposPath, "bettergi-scripts-list-git"))!,
-            "repo_updated.json"
-        );
+        string updatedRepoJsonPath = ScriptRepoUpdater.RepoUpdatedJsonPath;
 
         if (File.Exists(updatedRepoJsonPath))
         {
@@ -245,7 +242,7 @@ public sealed class RepoWebBridge
         return repoJson ?? throw new FileNotFoundException("repo.json 仓库索引文件不存在，请至少成功更新一次仓库！");
     }
 
-    private static void ProcessPathRecursively(JArray array, string[] pathParts, int currentIndex)
+    internal static void ProcessPathRecursively(JArray array, string[] pathParts, int currentIndex)
     {
         foreach (JObject item in array.OfType<JObject>())
         {
@@ -263,7 +260,7 @@ public sealed class RepoWebBridge
         }
     }
 
-    private static void ResetHasUpdateFlag(JObject node)
+    internal static void ResetHasUpdateFlag(JObject node)
     {
         if (node["hasUpdate"] is { Type: JTokenType.Boolean } hasUpdate && 
             (bool)hasUpdate)

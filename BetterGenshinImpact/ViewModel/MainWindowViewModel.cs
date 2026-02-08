@@ -300,6 +300,19 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
 
+        // 自动更新已订阅的脚本
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts();
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug(e, "自动更新订阅脚本失败");
+            }
+        });
+
         // 清理临时目录
         TempManager.CleanUp();
     }

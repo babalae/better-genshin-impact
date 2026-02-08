@@ -50,4 +50,7 @@ public partial class ScriptConfig : ObservableObject
     
     // 仓库新手教程是否已阅读
     [ObservableProperty] private bool _guideStatus = false;
+
+    // 是否在启动时自动更新已订阅的脚本
+    [ObservableProperty] private bool _autoUpdateSubscribedScripts = false;
 }

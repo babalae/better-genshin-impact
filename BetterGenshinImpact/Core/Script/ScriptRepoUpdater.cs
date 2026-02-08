@@ -49,10 +49,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     //     "https://r2-script.bettergi.com/github_mirror/repo.json",
     // ];
 
-    // 中央仓库解压后文件夹名
-    public static readonly string CenterRepoUnzipName = "bettergi-scripts-list-git";
+    // 中央仓库默认文件夹名
+    public static readonly string CenterRepoFolderName = "bettergi-scripts-list";
 
-    public static readonly string CenterRepoPath = Path.Combine(ReposPath, CenterRepoUnzipName);
+    /// <summary>
+    /// 当前活跃的中央仓库路径（根据用户配置的渠道动态解析）
+    /// </summary>
+    public static string CenterRepoPath
+    {
+        get
+        {
+            try
+            {
+                var config = TaskContext.Instance().Config.ScriptConfig;
+                var url = ResolveRepoUrl(config);
+                var folderName = GetRepoFolderName(url);
+                return Path.Combine(ReposPath, folderName);
+            }
+            catch
+            {
+                return Path.Combine(ReposPath, CenterRepoFolderName);
+            }
+        }
+    }
 
     public static readonly string CenterRepoPathOld = Path.Combine(ReposPath, "bettergi-scripts-list-main");
 
@@ -101,6 +120,521 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     //     }
     // }
 
+    /// <summary>
+    /// 自动更新已订阅的脚本
+    /// 在启动时先拉取最新仓库，然后检查已订阅的脚本是否有更新，
+    /// 如果有则自动从仓库中检出最新版本到用户目录。
+    /// 类似于 Web 端的"一键更新"功能
+    /// </summary>
+    public async Task AutoUpdateSubscribedScripts()
+    {
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+        // 检查是否启用自动更新
+        if (!scriptConfig.AutoUpdateSubscribedScripts)
+        {
+            _logger.LogDebug("已禁用自动更新订阅脚本");
+            return;
+        }
+
+        var subscribedPaths = scriptConfig.SubscribedScriptPaths;
+        if (subscribedPaths == null || subscribedPaths.Count == 0)
+        {
+            _logger.LogDebug("没有已订阅的脚本，跳过自动更新");
+            return;
+        }
+
+        // 第一步：拉取最新仓库
+        await UpdateCenterRepoSilently(scriptConfig);
+
+        // 检查仓库是否存在
+        if (!Directory.Exists(CenterRepoPath))
+        {
+            _logger.LogDebug("仓库文件夹不存在，跳过自动更新");
+            return;
+        }
+
+        // 重新加载订阅路径（仓库更新后可能有变化）
+        subscribedPaths = scriptConfig.SubscribedScriptPaths;
+        if (subscribedPaths == null || subscribedPaths.Count == 0)
+        {
+            return;
+        }
+
+        // 读取 repo_updated.json 检查是否有更新标记
+        string repoJsonPath;
+        try
+        {
+            var updatedRepoJsonPath = RepoUpdatedJsonPath;
+            if (File.Exists(updatedRepoJsonPath))
+            {
+                repoJsonPath = updatedRepoJsonPath;
+            }
+            else
+            {
+                // 没有 repo_updated.json 说明还没做过对比，无法确定哪些有更新
+                _logger.LogDebug("没有 repo_updated.json ({Path})，跳过自动更新", updatedRepoJsonPath);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "查找 repo_updated.json 失败");
+            return;
+        }
+
+        // 解析 repo_updated.json，收集有更新标记的订阅路径
+        List<string> pathsToUpdate;
+        JObject jsonObj;
+        try
+        {
+            var json = await File.ReadAllTextAsync(repoJsonPath);
+            jsonObj = JObject.Parse(json);
+            if (jsonObj["indexes"] is not JArray indexes)
+            {
+                _logger.LogDebug("repo_updated.json 中没有 indexes");
+                return;
+            }
+
+            pathsToUpdate = FindSubscribedPathsWithUpdates(indexes, subscribedPaths);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "解析 repo_updated.json 失败");
+            return;
+        }
+
+        if (pathsToUpdate.Count == 0)
+        {
+            _logger.LogDebug("所有已订阅的脚本均为最新版本");
+            return;
+        }
+
+        _logger.LogInformation("发现 {Count} 个已订阅脚本需要更新: {Paths}",
+            pathsToUpdate.Count, string.Join(", ", pathsToUpdate));
+
+        // 查找仓库路径
+        string repoPath;
+        try
+        {
+            repoPath = FindCenterRepoPath();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "查找中央仓库路径失败，跳过自动更新");
+            return;
+        }
+
+        // 展开顶层路径（如 "pathing" -> "pathing/xxx", "pathing/yyy"）
+        var expandedPaths = ExpandTopLevelPaths(pathsToUpdate, repoPath);
+
+        int successCount = 0;
+        int failCount = 0;
+
+        // 逐个更新脚本
+        foreach (var path in expandedPaths)
+        {
+            try
+            {
+                var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
+                if (!PathMapper.TryGetValue(first, out var userPath))
+                {
+                    _logger.LogDebug("未知的脚本路径类型: {Path}", path);
+                    continue;
+                }
+
+                var destPath = Path.Combine(userPath, remainingPath);
+
+                // 备份需要保存的文件（仅 JS 脚本）
+                List<string> backupFiles = new();
+                if (first == "js")
+                {
+                    backupFiles = BackupScriptFiles(path, repoPath);
+                }
+
+                // 删除旧文件/目录
+                if (Directory.Exists(destPath))
+                {
+                    DirectoryHelper.DeleteDirectoryWithReadOnlyCheck(destPath);
+                }
+                else if (File.Exists(destPath))
+                {
+                    File.Delete(destPath);
+                }
+
+                // 从仓库检出最新文件
+                CheckoutPath(repoPath, path, destPath);
+
+                // 图标处理（仅对目录）
+                if (Directory.Exists(destPath))
+                {
+                    DealWithIconFolder(destPath);
+                }
+
+                // 恢复备份的文件
+                if (first == "js" && backupFiles.Count > 0)
+                {
+                    RestoreScriptFiles(path, repoPath);
+                }
+
+                // 解析 JS 脚本依赖
+                if (first == "js")
+                {
+                    ResolveScriptDependencies(repoPath, destPath);
+                }
+
+                successCount++;
+                _logger.LogInformation("自动更新脚本成功: {Path}", path);
+            }
+            catch (Exception ex)
+            {
+                failCount++;
+                _logger.LogWarning(ex, "自动更新脚本失败: {Path}", path);
+            }
+        }
+
+        // 重置已更新脚本的 hasUpdate 标记
+        if (successCount > 0)
+        {
+            try
+            {
+                foreach (var path in pathsToUpdate)
+                {
+                    ResetHasUpdateForPath(jsonObj, path);
+                }
+
+                var modifiedJson = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
+                await File.WriteAllTextAsync(repoJsonPath, modifiedJson);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "重置 hasUpdate 标记失败");
+            }
+
+            // 更新订阅路径列表
+            UpdateSubscribedScriptPaths();
+
+            _logger.LogInformation("自动更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
+            UIDispatcherHelper.Invoke(() => Toast.Success($"已自动更新 {successCount} 个订阅脚本"));
+        }
+    }
+
+    /// <summary>
+    /// 在 repo_updated.json 的 indexes 中查找有 hasUpdate 标记的已订阅路径
+    /// </summary>
+    private List<string> FindSubscribedPathsWithUpdates(JArray indexes, List<string> subscribedPaths)
+    {
+        var result = new List<string>();
+        var subscribedSet = new HashSet<string>(subscribedPaths);
+
+        foreach (var path in subscribedPaths)
+        {
+            if (HasUpdateForPath(indexes, path))
+            {
+                result.Add(path);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 递归检查指定路径在 indexes 中是否有 hasUpdate 标记
+    /// </summary>
+    private bool HasUpdateForPath(JArray nodes, string targetPath)
+    {
+        var pathParts = targetPath.Split('/');
+        return HasUpdateForPathRecursive(nodes, pathParts, 0);
+    }
+
+    private bool HasUpdateForPathRecursive(JArray nodes, string[] pathParts, int currentIndex)
+    {
+        foreach (var node in nodes.OfType<JObject>())
+        {
+            var name = node["name"]?.ToString();
+            if (name != pathParts[currentIndex]) continue;
+
+            if (currentIndex == pathParts.Length - 1)
+            {
+                // 到达目标节点，检查是否有更新标记
+                return IsTruthy(node["hasUpdate"]) || IsTruthy(node["hasUpdated"]);
+            }
+
+            // 继续递归
+            if (node["children"] is JArray children)
+            {
+                return HasUpdateForPathRecursive(children, pathParts, currentIndex + 1);
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 重置指定路径的 hasUpdate 标记（递归重置子节点）
+    /// </summary>
+    private void ResetHasUpdateForPath(JObject jsonObj, string path)
+    {
+        if (jsonObj["indexes"] is not JArray indexes) return;
+
+        var pathParts = path.Split('/');
+        RepoWebBridge.ProcessPathRecursively(indexes, pathParts, 0);
+    }
+
+    /// <summary>
+    /// 展开顶层路径（如 "pathing" -> "pathing/xxx", "pathing/yyy"）
+    /// </summary>
+    private List<string> ExpandTopLevelPaths(List<string> paths, string repoPath)
+    {
+        var result = new List<string>();
+        foreach (var path in paths)
+        {
+            if (path == "pathing")
+            {
+                bool isGitRepo = IsGitRepository(repoPath);
+                if (isGitRepo)
+                {
+                    using var repo = new Repository(repoPath);
+                    var commit = repo.Head.Tip;
+                    if (commit != null)
+                    {
+                        var repoTree = GetRepoSubdirectoryTree(repo);
+                        var pathingEntry = repoTree["pathing"];
+                        if (pathingEntry?.TargetType == TreeEntryTargetType.Tree)
+                        {
+                            var pathingTree = (Tree)pathingEntry.Target;
+                            foreach (var entry in pathingTree)
+                            {
+                                if (entry.TargetType == TreeEntryTargetType.Tree)
+                                {
+                                    result.Add("pathing/" + entry.Name);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    var pathingDir = Path.Combine(repoPath, "pathing");
+                    if (Directory.Exists(pathingDir))
+                    {
+                        foreach (var dir in Directory.GetDirectories(pathingDir, "*", SearchOption.TopDirectoryOnly))
+                        {
+                            result.Add("pathing/" + Path.GetFileName(dir));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                result.Add(path);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 静默更新中央仓库（用于自动更新订阅脚本前同步最新仓库内容）
+    /// </summary>
+    private async Task UpdateCenterRepoSilently(ScriptConfig scriptConfig)
+    {
+        try
+        {
+            // 获取仓库URL
+            var repoUrl = ResolveRepoUrl(scriptConfig);
+            if (string.IsNullOrEmpty(repoUrl))
+            {
+                _logger.LogDebug("无法确定仓库URL，跳过仓库更新");
+                return;
+            }
+
+            _logger.LogInformation("自动更新订阅脚本：开始静默更新脚本仓库...");
+
+            var (_, updated) = await UpdateCenterRepoByGit(repoUrl, null);
+
+            if (updated)
+            {
+                _logger.LogInformation("自动更新订阅脚本：仓库有新内容");
+                scriptConfig.ScriptRepoHintDotVisible = true;
+            }
+            else
+            {
+                _logger.LogDebug("自动更新订阅脚本：仓库已是最新");
+            }
+
+            scriptConfig.LastUpdateScriptRepoTime = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "静默更新仓库失败，将基于本地仓库继续检查订阅更新");
+        }
+    }
+
+    /// <summary>
+    /// 渠道名称到URL的映射
+    /// </summary>
+    private static readonly Dictionary<string, string> RepoChannels = new()
+    {
+        { "CNB", "https://cnb.cool/bettergi/bettergi-scripts-list" },
+        { "GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list" },
+        { "GitHub", "https://github.com/babalae/bettergi-scripts-list" },
+    };
+
+    /// <summary>
+    /// 根据用户配置中的渠道名称解析仓库URL
+    /// </summary>
+    private static string? ResolveRepoUrl(ScriptConfig scriptConfig)
+    {
+        var channelName = scriptConfig.SelectedChannelName;
+
+        if (string.IsNullOrEmpty(channelName))
+        {
+            // 默认使用 CNB
+            return RepoChannels["CNB"];
+        }
+
+        if (channelName == "自定义")
+        {
+            var customUrl = scriptConfig.CustomRepoUrl;
+            if (!string.IsNullOrWhiteSpace(customUrl) && customUrl != "https://example.com/custom-repo")
+            {
+                return customUrl;
+            }
+
+            return null;
+        }
+
+        return RepoChannels.TryGetValue(channelName, out var url) ? url : RepoChannels["CNB"];
+    }
+
+    /// <summary>
+    /// 从仓库 URL 中提取文件夹名称（用于按仓库分开存储）
+    /// 优先查找持久化的 URL→文件夹名 映射，若无映射则根据 URL 结构推导
+    /// </summary>
+    internal static string GetRepoFolderName(string? repoUrl)
+    {
+        if (string.IsNullOrEmpty(repoUrl))
+            return CenterRepoFolderName;
+
+        var trimmedUrl = repoUrl.TrimEnd('/');
+
+        // 优先查找已保存的映射（基于内容重合度确定的文件夹名）
+        var mapping = LoadFolderMapping();
+        if (mapping.TryGetValue(trimmedUrl, out var savedName) && !string.IsNullOrEmpty(savedName))
+            return savedName;
+
+        // 无映射，根据 URL 推导默认名称
+        return DeriveBaseFolderName(trimmedUrl);
+    }
+
+    /// <summary>
+    /// 根据 URL 推导基础文件夹名称（仅使用仓库名，不包含拥有者）
+    /// </summary>
+    private static string DeriveBaseFolderName(string trimmedUrl)
+    {
+        try
+        {
+            var uri = new Uri(trimmedUrl);
+
+            var segments = uri.Segments
+                .Select(s => s.TrimEnd('/'))
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToArray();
+
+            if (segments.Length == 0)
+                return CenterRepoFolderName;
+
+            var repoName = segments.Last();
+
+            // 去掉 .git 后缀
+            if (repoName.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+                repoName = repoName[..^4];
+
+            return SanitizeFolderName(repoName);
+        }
+        catch
+        {
+            return CenterRepoFolderName;
+        }
+    }
+
+    /// <summary>
+    /// 净化文件夹名称，移除不合法字符
+    /// </summary>
+    private static string SanitizeFolderName(string name)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = new string(name.Select(c => invalidChars.Contains(c) ? '_' : c).ToArray());
+        return string.IsNullOrEmpty(sanitized) ? CenterRepoFolderName : sanitized;
+    }
+
+    /// <summary>
+    /// 获取当前活跃仓库对应的 repo_updated.json 路径（位于仓库文件夹内部）
+    /// </summary>
+    public static string RepoUpdatedJsonPath => Path.Combine(CenterRepoPath, "repo_updated.json");
+
+    /// <summary>
+    /// 根据仓库文件夹名获取对应的 repo_updated.json 路径（位于仓库文件夹内部）
+    /// </summary>
+    internal static string GetRepoUpdatedJsonPathForFolder(string repoFolderName)
+    {
+        return Path.Combine(ReposPath, repoFolderName, "repo_updated.json");
+    }
+
+    // URL → 文件夹名 映射文件路径
+    private static readonly string FolderMappingPath = Path.Combine(ReposPath, "repo_folder_mapping.json");
+
+    /// <summary>
+    /// 加载 URL→文件夹名 映射
+    /// </summary>
+    private static Dictionary<string, string> LoadFolderMapping()
+    {
+        try
+        {
+            if (File.Exists(FolderMappingPath))
+            {
+                var json = File.ReadAllText(FolderMappingPath);
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+            }
+        }
+        catch { }
+        return new();
+    }
+
+    /// <summary>
+    /// 保存 URL→文件夹名 映射
+    /// </summary>
+    private static void SaveFolderMapping(string url, string folderName)
+    {
+        try
+        {
+            if (!Directory.Exists(ReposPath)) Directory.CreateDirectory(ReposPath);
+            var mapping = LoadFolderMapping();
+            mapping[url.TrimEnd('/')] = folderName;
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(mapping, Newtonsoft.Json.Formatting.Indented);
+            File.WriteAllText(FolderMappingPath, json);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// 生成不重复的文件夹名（使用数字后缀 _1, _2, ...）
+    /// </summary>
+    private static string GenerateUniqueFolderName(string baseName, string repoUrl)
+    {
+        for (int i = 1; i < 100; i++)
+        {
+            var candidate = $"{baseName}_{i}";
+            var candidatePath = Path.Combine(ReposPath, candidate);
+            if (!Directory.Exists(candidatePath))
+                return candidate;
+        }
+        // 极端情况：100个同名文件夹都被占用，使用更大的数字
+        return $"{baseName}_{DateTime.Now.Ticks}";
+    }
+
     public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
@@ -108,7 +642,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             throw new ArgumentException("仓库URL不能为空", nameof(repoUrl));
         }
 
-        var repoPath = Path.Combine(ReposPath, "bettergi-scripts-list-git");
+        var repoPath = Path.Combine(ReposPath, GetRepoFolderName(repoUrl));
         var updated = false;
 
         // 备份相关变量
@@ -126,6 +660,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
                     CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                    SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
                     updated = true;
                 }
                 else
@@ -160,10 +695,54 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var origin = repo.Network.Remotes["origin"];
                     if (origin.Url != repoUrl)
                     {
-                        // 远程URL已更改，需要删除重新克隆
-                        _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}，将重新克隆");
+                        // 远程URL已更改，克隆到临时文件夹后基于内容重合度决定存放位置
+                        _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}");
                         repo?.Dispose();
-                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        repo = null;
+
+                        var tempPath = repoPath + "_temp_" + Guid.NewGuid().ToString("N")[..8];
+                        try
+                        {
+                            CloneRepository(repoUrl, tempPath, "release", onCheckoutProgress);
+
+                            // 读取新旧 repo.json 进行内容重合度比较
+                            var newTempRepoJson = Directory.GetFiles(tempPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                            var newContent = newTempRepoJson != null ? File.ReadAllText(newTempRepoJson) : null;
+
+                            double overlapRatio = 0;
+                            if (!string.IsNullOrEmpty(oldRepoJsonContent) && !string.IsNullOrEmpty(newContent))
+                            {
+                                overlapRatio = CalculateRepoOverlapRatio(oldRepoJsonContent, newContent);
+                            }
+
+                            if (overlapRatio >= 0.5)
+                            {
+                                // 内容重合度高 → 同一仓库的不同镜像，替换原文件夹
+                                _logger.LogInformation("内容重合度 {Ratio:P0}，判定为同一仓库镜像，替换原文件夹", overlapRatio);
+                                DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
+                                Directory.Move(tempPath, repoPath);
+                                SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
+                            }
+                            else
+                            {
+                                // 内容重合度低 → 不同仓库，创建新文件夹
+                                var baseName = DeriveBaseFolderName(repoUrl.TrimEnd('/'));
+                                var uniqueName = GenerateUniqueFolderName(baseName, repoUrl);
+                                var newRepoPath = Path.Combine(ReposPath, uniqueName);
+                                _logger.LogInformation("内容重合度 {Ratio:P0}，判定为不同仓库，创建新文件夹: {Folder}", overlapRatio, uniqueName);
+                                Directory.Move(tempPath, newRepoPath);
+                                repoPath = newRepoPath;
+                                SaveFolderMapping(repoUrl.TrimEnd('/'), uniqueName);
+                            }
+                        }
+                        catch
+                        {
+                            // 临时文件夹流程失败，回退到直接克隆
+                            if (Directory.Exists(tempPath))
+                                DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
+                            CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        }
+
                         updated = true;
                         return;
                     }
@@ -220,23 +799,49 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 var newRepoJsonContent = await File.ReadAllTextAsync(newRepoJsonPath);
 
-                // 检查是否存在repo_update.json，如果存在则直接与它比对
-                var repoUpdateJsonPath = Path.Combine(ReposPath, "repo_updated.json");
+                // 检查是否存在repo_updated.json，如果存在则直接与它比对
+                var repoFolderName = GetRepoFolderName(repoUrl);
+                var repoUpdateJsonPath = GetRepoUpdatedJsonPathForFolder(repoFolderName);
                 string updatedContent;
 
                 if (File.Exists(repoUpdateJsonPath))
                 {
                     var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
-                    updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
+
+                    // 检查内容重合度，低于阈值则判定为不同仓库，不继承旧的更新标记
+                    var overlapRatio = CalculateRepoOverlapRatio(repoUpdateContent, newRepoJsonContent);
+                    if (overlapRatio < 0.5)
+                    {
+                        _logger.LogInformation("仓库内容重合度低 ({Ratio:P0})，判定为不同仓库，不继承旧的更新标记", overlapRatio);
+                        updatedContent = newRepoJsonContent;
+                    }
+                    else
+                    {
+                        updatedContent = AddUpdateMarkersToNewRepo(repoUpdateContent, newRepoJsonContent);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(oldRepoJsonContent))
+                {
+                    // 如果没有repo_updated.json，则使用备份的旧内容进行比对
+                    var overlapRatio = CalculateRepoOverlapRatio(oldRepoJsonContent, newRepoJsonContent);
+                    if (overlapRatio < 0.5)
+                    {
+                        _logger.LogInformation("仓库内容重合度低 ({Ratio:P0})，判定为不同仓库，不继承旧的更新标记", overlapRatio);
+                        updatedContent = newRepoJsonContent;
+                    }
+                    else
+                    {
+                        updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent, newRepoJsonContent);
+                    }
                 }
                 else
                 {
-                    // 如果没有repo_update.json，则使用备份的旧内容进行比对
-                    updatedContent = AddUpdateMarkersToNewRepo(oldRepoJsonContent ?? "", newRepoJsonContent);
+                    // 全新仓库，无旧内容可比对
+                    updatedContent = newRepoJsonContent;
                 }
 
-                // 保存到同级目录
-                var updatedRepoJsonPath = Path.Combine(ReposPath, "repo_updated.json");
+                // 保存到按仓库区分的 repo_updated 文件
+                var updatedRepoJsonPath = GetRepoUpdatedJsonPathForFolder(repoFolderName);
                 await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
                 _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
             }
@@ -247,6 +852,69 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         return (repoPath, updated);
+    }
+
+    /// <summary>
+    /// 计算两个 repo.json 的内容重合度（基于脚本路径的 Jaccard 系数）
+    /// 用于判断是否为同一仓库的不同版本还是完全不同的仓库
+    /// </summary>
+    /// <param name="oldContent">旧版 repo.json 内容</param>
+    /// <param name="newContent">新版 repo.json 内容</param>
+    /// <returns>重合度 0.0 ~ 1.0</returns>
+    private double CalculateRepoOverlapRatio(string oldContent, string newContent)
+    {
+        try
+        {
+            var oldJson = JObject.Parse(oldContent);
+            var newJson = JObject.Parse(newContent);
+
+            var oldPaths = new HashSet<string>();
+            var newPaths = new HashSet<string>();
+
+            CollectLeafPaths(oldJson["indexes"] as JArray, "", oldPaths);
+            CollectLeafPaths(newJson["indexes"] as JArray, "", newPaths);
+
+            if (oldPaths.Count == 0 && newPaths.Count == 0) return 1.0;
+            if (oldPaths.Count == 0 || newPaths.Count == 0) return 0.0;
+
+            var intersection = oldPaths.Intersect(newPaths).Count();
+            var union = oldPaths.Union(newPaths).Count();
+
+            var ratio = union > 0 ? (double)intersection / union : 0.0;
+            _logger.LogDebug("仓库内容重合度: {Ratio:P0} (旧 {OldCount} 个路径, 新 {NewCount} 个路径, 交集 {Intersection} 个)",
+                ratio, oldPaths.Count, newPaths.Count, intersection);
+            return ratio;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "计算仓库重合度失败");
+            return 0.0;
+        }
+    }
+
+    /// <summary>
+    /// 递归收集 indexes 中的所有叶子节点路径
+    /// </summary>
+    private void CollectLeafPaths(JArray? nodes, string prefix, HashSet<string> paths)
+    {
+        if (nodes == null) return;
+
+        foreach (var node in nodes.OfType<JObject>())
+        {
+            var name = node["name"]?.ToString();
+            if (string.IsNullOrEmpty(name)) continue;
+
+            var fullPath = string.IsNullOrEmpty(prefix) ? name : $"{prefix}/{name}";
+
+            if (node["children"] is JArray children && children.Count > 0)
+            {
+                CollectLeafPaths(children, fullPath, paths);
+            }
+            else
+            {
+                paths.Add(fullPath);
+            }
+        }
     }
 
     /// <summary>
