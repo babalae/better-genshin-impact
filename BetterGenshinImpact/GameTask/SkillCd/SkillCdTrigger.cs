@@ -328,10 +328,14 @@ public class SkillCdTrigger : ITaskTrigger
                     HandleActionTrigger(frameToUse, pressedIndex);
                 }
             }
-            else if (_lastImage != null)
+
+            if (_prevEKey)
             {
-                // 非切人操作：使用上一帧
-                HandleNonActionTrigger(_lastImage); 
+                ImageRegion frameToUse = _penultimateImage ?? _lastImage;
+                if (frameToUse != null)
+                {
+                    HandleActionTrigger(frameToUse, pressedIndex);
+                }
             }
         }
 
@@ -348,13 +352,6 @@ public class SkillCdTrigger : ITaskTrigger
 
         UpdateOverlay();
     }
-    
-    private void HandleNonActionTrigger(ImageRegion frame)
-    {
-         CheckAndSyncActiveStatus(frame);
-    }
-
-
 
     /// <summary>
     /// 同步角色基础数据
