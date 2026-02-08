@@ -346,7 +346,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private List<string> FindSubscribedPathsWithUpdates(JArray indexes, List<string> subscribedPaths)
     {
         var result = new List<string>();
-        var subscribedSet = new HashSet<string>(subscribedPaths);
 
         foreach (var path in subscribedPaths)
         {
@@ -608,24 +607,34 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private static readonly string FolderMappingPath = Path.Combine(ReposPath, "repo_folder_mapping.json");
 
     /// <summary>
-    /// 加载 URL→文件夹名 映射
+    /// 缓存的 URL→文件夹名 映射，避免每次访问 CenterRepoPath 都读磁盘
+    /// </summary>
+    private static Dictionary<string, string>? _folderMappingCache;
+
+    /// <summary>
+    /// 加载 URL→文件夹名 映射（带内存缓存）
     /// </summary>
     private static Dictionary<string, string> LoadFolderMapping()
     {
+        if (_folderMappingCache != null)
+            return _folderMappingCache;
+
         try
         {
             if (File.Exists(FolderMappingPath))
             {
                 var json = File.ReadAllText(FolderMappingPath);
-                return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                _folderMappingCache = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                return _folderMappingCache;
             }
         }
         catch { }
-        return new();
+        _folderMappingCache = new();
+        return _folderMappingCache;
     }
 
     /// <summary>
-    /// 保存 URL→文件夹名 映射
+    /// 保存 URL→文件夹名 映射（同时刷新内存缓存）
     /// </summary>
     private static void SaveFolderMapping(string url, string folderName)
     {
@@ -634,6 +643,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (!Directory.Exists(ReposPath)) Directory.CreateDirectory(ReposPath);
             var mapping = LoadFolderMapping();
             mapping[url.TrimEnd('/')] = folderName;
+            _folderMappingCache = mapping;
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(mapping, Newtonsoft.Json.Formatting.Indented);
             File.WriteAllText(FolderMappingPath, json);
         }
@@ -894,7 +904,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     /// <param name="oldContent">旧版 repo.json 内容</param>
     /// <param name="newContent">新版 repo.json 内容</param>
-    /// <returns>重合度 0.0 ~ 1.0</returns>
+    /// <returns>重合度 0.0 ~ 1.0，解析失败返回 -1.0</returns>
     private double CalculateRepoOverlapRatio(string oldContent, string newContent)
     {
         try
@@ -921,8 +931,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "计算仓库重合度失败");
-            return 0.0;
+            _logger.LogDebug(ex, "计算仓库重合度失败（JSON 解析异常）");
+            return -1.0;
         }
     }
 
@@ -1792,24 +1802,31 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 foreach (var existingDir in Directory.GetDirectories(ReposPath))
                 {
-                    var dirName = Path.GetFileName(existingDir);
-                    if (dirName == "Temp") continue;
-
-                    // 尝试读取已有仓库的 repo.json 或 repo_updated.json
-                    var existingRepoUpdated = Path.Combine(existingDir, "repo_updated.json");
-                    var existingRepoJson = Directory.GetFiles(existingDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                    var existingContent = File.Exists(existingRepoUpdated)
-                        ? await File.ReadAllTextAsync(existingRepoUpdated)
-                        : (existingRepoJson != null ? await File.ReadAllTextAsync(existingRepoJson) : null);
-
-                    if (!string.IsNullOrEmpty(existingContent))
+                    try
                     {
-                        var overlap = CalculateRepoOverlapRatio(existingContent, newRepoJsonContent);
-                        if (overlap > bestOverlap)
+                        var dirName = Path.GetFileName(existingDir);
+                        if (dirName == "Temp") continue;
+
+                        // 尝试读取已有仓库的 repo.json 或 repo_updated.json
+                        var existingRepoUpdated = Path.Combine(existingDir, "repo_updated.json");
+                        var existingRepoJson = Directory.GetFiles(existingDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                        var existingContent = File.Exists(existingRepoUpdated)
+                            ? await File.ReadAllTextAsync(existingRepoUpdated)
+                            : (existingRepoJson != null ? await File.ReadAllTextAsync(existingRepoJson) : null);
+
+                        if (!string.IsNullOrEmpty(existingContent))
                         {
-                            bestOverlap = overlap;
-                            bestMatchFolder = dirName;
+                            var overlap = CalculateRepoOverlapRatio(existingContent, newRepoJsonContent);
+                            if (overlap > bestOverlap)
+                            {
+                                bestOverlap = overlap;
+                                bestMatchFolder = dirName;
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Zip导入：扫描仓库目录 {Dir} 时出错，跳过", existingDir);
                     }
                 }
             }
