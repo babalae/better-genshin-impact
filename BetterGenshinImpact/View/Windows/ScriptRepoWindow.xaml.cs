@@ -482,7 +482,15 @@ public partial class ScriptRepoWindow
                 UpdateProgressValue = 0;
                 UpdateProgressText = "正在导入脚本仓库，请耐心等待...";
 
-                await ImportZipFile(openFileDialog.FileName);
+                await ScriptRepoUpdater.Instance.ImportLocalRepoZip(openFileDialog.FileName, (progress, text) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdateProgressValue = progress;
+                        UpdateProgressText = text;
+                    });
+                });
+
                 Toast.Success("脚本仓库导入成功！");
             }
         }
@@ -494,95 +502,6 @@ public partial class ScriptRepoWindow
         {
             IsUpdating = false;
         }
-    }
-
-    private async Task ImportZipFile(string zipFilePath)
-    {
-        await Task.Run(() =>
-        {
-            var tempPath = ScriptRepoUpdater.ReposTempPath;
-            try
-            {
-                // 阶段1: 准备工作 (0-10%)
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 0;
-                    UpdateProgressText = "正在准备导入环境...";
-                });
-
-                var tempUnzipDir = Path.Combine(tempPath, "importZipFile");
-
-                // 先删除临时目录
-                DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
-
-                // 创建目标目录
-                Directory.CreateDirectory(tempUnzipDir);
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 10;
-                    UpdateProgressText = "准备完成，开始解压文件...";
-                });
-
-                // 阶段2: 解压zip文件 (10-50%)
-                ZipFile.ExtractToDirectory(zipFilePath, tempUnzipDir, true);
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 50;
-                    UpdateProgressText = "文件解压完成，正在验证仓库结构...";
-                });
-
-                // 阶段3: 查找并验证 repo.json (50-60%)
-                var repoJsonPath = Directory.GetFiles(tempUnzipDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                if (repoJsonPath == null)
-                {
-                    throw new FileNotFoundException("未找到 repo.json 文件，导入失败。");
-                }
-
-                var repoDir = Path.GetDirectoryName(repoJsonPath)!;
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 60;
-                    UpdateProgressText = "仓库结构验证通过，正在清理旧数据...";
-                });
-
-                // 阶段4: 删除旧的目标目录 (60-70%)
-                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-                {
-                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                }
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 70;
-                    UpdateProgressText = "旧数据清理完成，正在复制新仓库...";
-                });
-
-                // 阶段5: 复制新目录 (70-95%)
-                DirectoryHelper.CopyDirectory(repoDir, ScriptRepoUpdater.CenterRepoPath);
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 95;
-                    UpdateProgressText = "仓库复制完成，正在清理临时文件...";
-                });
-            }
-            finally
-            {
-                // 阶段6: 清理临时文件 (95-100%)
-                DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
-            }
-
-        });
-
-        // 最终完成
-        Dispatcher.Invoke(() =>
-        {
-            UpdateProgressValue = 100;
-            UpdateProgressText = "导入完成";
-        });
     }
 
     /// <summary>

@@ -1700,6 +1700,180 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         return (time, url, file);
     }
 
+    /// <summary>
+    /// 统一的本地 zip 导入方法
+    /// 解压后自动识别仓库内容，基于内容重合度决定覆盖已有仓库还是创建新文件夹，
+    /// 并生成 repo_updated.json 更新标记
+    /// </summary>
+    /// <param name="zipFilePath">本地 zip 文件路径</param>
+    /// <param name="onProgress">进度回调 (0-100, 描述文本)</param>
+    /// <returns>导入后的仓库文件夹路径</returns>
+    public async Task<string> ImportLocalRepoZip(string zipFilePath, Action<int, string>? onProgress = null)
+    {
+        var tempUnzipDir = Path.Combine(ReposTempPath, "importZipFile");
+        string targetFolderName = CenterRepoFolderName;
+
+        try
+        {
+            // 阶段1: 准备 (0-10%)
+            onProgress?.Invoke(0, "正在准备导入环境...");
+            DirectoryHelper.DeleteReadOnlyDirectory(ReposTempPath);
+            Directory.CreateDirectory(tempUnzipDir);
+            onProgress?.Invoke(10, "准备完成，开始解压文件...");
+
+            // 阶段2: 解压 (10-50%)
+            await Task.Run(() => ZipFile.ExtractToDirectory(zipFilePath, tempUnzipDir, true));
+            onProgress?.Invoke(50, "文件解压完成，正在验证仓库结构...");
+
+            // 阶段3: 查找 repo.json (50-55%)
+            var repoJsonPath = Directory.GetFiles(tempUnzipDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+            if (repoJsonPath == null)
+            {
+                throw new FileNotFoundException("未找到 repo.json 文件，不是有效的脚本仓库压缩包。");
+            }
+
+            var repoDir = Path.GetDirectoryName(repoJsonPath)!;
+            var newRepoJsonContent = await File.ReadAllTextAsync(repoJsonPath);
+            onProgress?.Invoke(55, "仓库结构验证通过，正在分析仓库内容...");
+
+            // 阶段4: 基于内容重合度决定目标文件夹 (55-70%)
+            string? bestMatchFolder = null;
+            double bestOverlap = 0;
+
+            // 扫描已有仓库，找内容重合度最高的
+            if (Directory.Exists(ReposPath))
+            {
+                foreach (var existingDir in Directory.GetDirectories(ReposPath))
+                {
+                    var dirName = Path.GetFileName(existingDir);
+                    if (dirName == "Temp") continue;
+
+                    // 尝试读取已有仓库的 repo.json 或 repo_updated.json
+                    var existingRepoUpdated = Path.Combine(existingDir, "repo_updated.json");
+                    var existingRepoJson = Directory.GetFiles(existingDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                    var existingContent = File.Exists(existingRepoUpdated)
+                        ? await File.ReadAllTextAsync(existingRepoUpdated)
+                        : (existingRepoJson != null ? await File.ReadAllTextAsync(existingRepoJson) : null);
+
+                    if (!string.IsNullOrEmpty(existingContent))
+                    {
+                        var overlap = CalculateRepoOverlapRatio(existingContent, newRepoJsonContent);
+                        if (overlap > bestOverlap)
+                        {
+                            bestOverlap = overlap;
+                            bestMatchFolder = dirName;
+                        }
+                    }
+                }
+            }
+
+            onProgress?.Invoke(65, "内容分析完成，正在确定目标位置...");
+
+            string targetPath;
+            string? oldRepoContent = null;
+
+            if (bestOverlap >= 0.5 && bestMatchFolder != null)
+            {
+                // 高重合度 → 覆盖已有仓库
+                targetFolderName = bestMatchFolder;
+                targetPath = Path.Combine(ReposPath, targetFolderName);
+                _logger.LogInformation("Zip导入：内容重合度 {Ratio:P0}，覆盖已有仓库 {Folder}", bestOverlap, targetFolderName);
+
+                // 读取旧的 repo_updated.json 用于生成更新标记
+                var oldUpdatedPath = Path.Combine(targetPath, "repo_updated.json");
+                if (File.Exists(oldUpdatedPath))
+                {
+                    oldRepoContent = await File.ReadAllTextAsync(oldUpdatedPath);
+                }
+                else
+                {
+                    var oldRepoJson = Directory.GetFiles(targetPath, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                    if (oldRepoJson != null)
+                        oldRepoContent = await File.ReadAllTextAsync(oldRepoJson);
+                }
+
+                DirectoryHelper.DeleteReadOnlyDirectory(targetPath);
+            }
+            else if (bestOverlap < 0.5 && bestMatchFolder != null)
+            {
+                // 低重合度 → 全新仓库，创建新文件夹
+                var baseName = CenterRepoFolderName;
+                // 如果默认文件夹不存在，就用默认名
+                if (!Directory.Exists(Path.Combine(ReposPath, baseName)))
+                {
+                    targetFolderName = baseName;
+                }
+                else
+                {
+                    targetFolderName = GenerateUniqueFolderName(baseName, zipFilePath);
+                }
+                targetPath = Path.Combine(ReposPath, targetFolderName);
+                _logger.LogInformation("Zip导入：内容重合度 {Ratio:P0}，创建新文件夹 {Folder}", bestOverlap, targetFolderName);
+            }
+            else
+            {
+                // 没有已有仓库，使用默认文件夹名
+                targetPath = Path.Combine(ReposPath, targetFolderName);
+                if (Directory.Exists(targetPath))
+                {
+                    // 读取旧内容用于生成更新标记
+                    var oldUpdatedPath = Path.Combine(targetPath, "repo_updated.json");
+                    if (File.Exists(oldUpdatedPath))
+                        oldRepoContent = await File.ReadAllTextAsync(oldUpdatedPath);
+
+                    DirectoryHelper.DeleteReadOnlyDirectory(targetPath);
+                }
+            }
+
+            onProgress?.Invoke(70, "正在复制仓库文件...");
+
+            // 阶段5: 拷贝仓库到目标位置 (70-90%)
+            DirectoryHelper.CopyDirectory(repoDir, targetPath);
+            onProgress?.Invoke(90, "仓库复制完成，正在生成更新标记...");
+
+            // 阶段6: 生成 repo_updated.json (90-95%)
+            try
+            {
+                var updatedJsonPath = Path.Combine(targetPath, "repo_updated.json");
+                if (!string.IsNullOrEmpty(oldRepoContent))
+                {
+                    var overlapWithOld = CalculateRepoOverlapRatio(oldRepoContent, newRepoJsonContent);
+                    if (overlapWithOld >= 0.5)
+                    {
+                        var updatedContent = AddUpdateMarkersToNewRepo(oldRepoContent, newRepoJsonContent);
+                        await File.WriteAllTextAsync(updatedJsonPath, updatedContent);
+                        _logger.LogInformation("Zip导入：已生成更新标记 repo_updated.json");
+                    }
+                    else
+                    {
+                        // 内容差异太大，直接使用新内容
+                        await File.WriteAllTextAsync(updatedJsonPath, newRepoJsonContent);
+                    }
+                }
+                else
+                {
+                    // 全新导入，直接使用新内容
+                    await File.WriteAllTextAsync(updatedJsonPath, newRepoJsonContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Zip导入：生成 repo_updated.json 失败");
+            }
+
+            onProgress?.Invoke(95, "正在清理临时文件...");
+        }
+        finally
+        {
+            // 阶段7: 清理 (95-100%)
+            DirectoryHelper.DeleteReadOnlyDirectory(ReposTempPath);
+        }
+
+        onProgress?.Invoke(100, "导入完成");
+        _logger.LogInformation("Zip导入完成，目标文件夹: {Folder}", targetFolderName);
+        return Path.Combine(ReposPath, targetFolderName);
+    }
+
     public async Task DownloadRepoAndUnzip(string url)
     {
         // 下载
