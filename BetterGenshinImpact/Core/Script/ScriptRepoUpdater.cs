@@ -357,7 +357,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (currentIndex == pathParts.Length - 1)
             {
                 // 到达目标节点，检查是否有更新标记
-                return IsTruthy(node["hasUpdate"]) || IsTruthy(node["hasUpdated"]);
+                return IsTruthy(node["hasUpdate"]);
             }
 
             // 继续递归
@@ -972,7 +972,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         if (oldNode != null)
         {
             // 若历史上已标记，则保留该标记
-            if (IsTruthy(oldNode["hasUpdate"]) || IsTruthy(oldNode["hasUpdated"]))
+            if (IsTruthy(oldNode["hasUpdate"]))
             {
                 newNode["hasUpdate"] = true;
                 hasDirectUpdate = true;
@@ -1012,7 +1012,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         // 如果是叶子节点更新，父节点也标记更新
                         var isLeafChild = newChildObj["children"] == null ||
                                           !((JArray?)newChildObj["children"])?.Any() == true;
-                        if (isLeafChild && (IsTruthy(newChildObj["hasUpdate"]) || IsTruthy(newChildObj["hasUpdated"])))
+                        if (isLeafChild && IsTruthy(newChildObj["hasUpdate"]))
                         {
                             var parentTime = ParseLastUpdated(newNode["lastUpdated"]?.ToString());
                             var childTime = ParseLastUpdated(newChildObj["lastUpdated"]?.ToString());
