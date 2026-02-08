@@ -610,42 +610,67 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// 缓存的 URL→文件夹名 映射，避免每次访问 CenterRepoPath 都读磁盘
     /// </summary>
     private static Dictionary<string, string>? _folderMappingCache;
+    private static readonly object _cacheLock = new();
 
     /// <summary>
-    /// 加载 URL→文件夹名 映射（带内存缓存）
+    /// 加载 URL→文件夹名 映射（带内存缓存，线程安全）
     /// </summary>
     private static Dictionary<string, string> LoadFolderMapping()
     {
-        if (_folderMappingCache != null)
-            return _folderMappingCache;
-
-        try
+        lock (_cacheLock)
         {
-            if (File.Exists(FolderMappingPath))
+            if (_folderMappingCache != null)
+                return new Dictionary<string, string>(_folderMappingCache);
+
+            try
             {
-                var json = File.ReadAllText(FolderMappingPath);
-                _folderMappingCache = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
-                return _folderMappingCache;
+                if (File.Exists(FolderMappingPath))
+                {
+                    var json = File.ReadAllText(FolderMappingPath);
+                    _folderMappingCache = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                    return new Dictionary<string, string>(_folderMappingCache);
+                }
             }
+            catch { }
+            _folderMappingCache = new();
+            return new Dictionary<string, string>(_folderMappingCache);
         }
-        catch { }
-        _folderMappingCache = new();
-        return _folderMappingCache;
     }
 
     /// <summary>
-    /// 保存 URL→文件夹名 映射（同时刷新内存缓存）
+    /// 保存 URL→文件夹名 映射（同时刷新内存缓存，线程安全）
     /// </summary>
     private static void SaveFolderMapping(string url, string folderName)
     {
         try
         {
             if (!Directory.Exists(ReposPath)) Directory.CreateDirectory(ReposPath);
-            var mapping = LoadFolderMapping();
-            mapping[url.TrimEnd('/')] = folderName;
-            _folderMappingCache = mapping;
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(mapping, Newtonsoft.Json.Formatting.Indented);
-            File.WriteAllText(FolderMappingPath, json);
+            lock (_cacheLock)
+            {
+                // 在锁内重新加载确保不丢失并发写入
+                Dictionary<string, string> mapping;
+                try
+                {
+                    if (File.Exists(FolderMappingPath))
+                    {
+                        var json = File.ReadAllText(FolderMappingPath);
+                        mapping = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
+                    }
+                    else
+                    {
+                        mapping = _folderMappingCache != null ? new Dictionary<string, string>(_folderMappingCache) : new();
+                    }
+                }
+                catch
+                {
+                    mapping = _folderMappingCache != null ? new Dictionary<string, string>(_folderMappingCache) : new();
+                }
+
+                mapping[url.TrimEnd('/')] = folderName;
+                _folderMappingCache = mapping;
+                var jsonOut = Newtonsoft.Json.JsonConvert.SerializeObject(mapping, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(FolderMappingPath, jsonOut);
+            }
         }
         catch { }
     }
