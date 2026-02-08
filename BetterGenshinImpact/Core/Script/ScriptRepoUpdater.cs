@@ -19,6 +19,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Windows.UI.Xaml.Automation;
@@ -35,6 +36,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
 
     private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    /// <summary>
+    /// 全局互斥锁，串行化所有对仓库目录和用户脚本目录的写操作，
+    /// 防止自动更新、手动更新、ZIP 导入等并发冲突。
+    /// </summary>
+    private readonly SemaphoreSlim _repoWriteLock = new(1, 1);
 
     // 仓储位置
     public static readonly string ReposPath = Global.Absolute("Repos");
@@ -143,6 +150,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogDebug("没有已订阅的脚本，跳过自动更新");
             return;
         }
+
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            await AutoUpdateSubscribedScriptsCore(scriptConfig, subscribedPaths);
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    private async Task AutoUpdateSubscribedScriptsCore(ScriptConfig scriptConfig, List<string> subscribedPaths)
+    {
 
         // 第一步：拉取最新仓库
         await UpdateCenterRepoSilently(scriptConfig);
@@ -452,7 +473,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             _logger.LogInformation("自动更新订阅脚本：开始静默更新脚本仓库...");
 
-            var (_, updated) = await UpdateCenterRepoByGit(repoUrl, null);
+            var (_, updated) = await UpdateCenterRepoByGitCore(repoUrl, null);
 
             if (updated)
             {
@@ -636,6 +657,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
+    {
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            return await UpdateCenterRepoByGitCore(repoUrl, onCheckoutProgress);
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    private async Task<(string, bool)> UpdateCenterRepoByGitCore(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
         {
@@ -1710,6 +1744,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <returns>导入后的仓库文件夹路径</returns>
     public async Task<string> ImportLocalRepoZip(string zipFilePath, Action<int, string>? onProgress = null)
     {
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            return await ImportLocalRepoZipCore(zipFilePath, onProgress);
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    private async Task<string> ImportLocalRepoZipCore(string zipFilePath, Action<int, string>? onProgress = null)
+    {
         var tempUnzipDir = Path.Combine(ReposTempPath, "importZipFile");
         string targetFolderName = CenterRepoFolderName;
 
@@ -1876,6 +1923,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     public async Task DownloadRepoAndUnzip(string url)
     {
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            await DownloadRepoAndUnzipCore(url);
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    private async Task DownloadRepoAndUnzipCore(string url)
+    {
         // 下载
         var res = await _httpClient.GetAsync(url);
         if (!res.IsSuccessStatusCode)
@@ -1999,6 +2059,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     public async Task ImportScriptFromPathJson(string pathJson)
+    {
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            await ImportScriptFromPathJsonCore(pathJson);
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    private async Task ImportScriptFromPathJsonCore(string pathJson)
     {
         var paths = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(pathJson);
         if (paths is null || paths.Count == 0)
