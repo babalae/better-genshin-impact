@@ -283,7 +283,19 @@ public class PointsCanvas : FrameworkElement
             else
             {
                 _ = MapIconImageCache.GetAsync(label.IconUrl, CancellationToken.None);
+                
+                var brush = GetColorBrush(label);
+                dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
             }
+        }
+        else
+        {
+            // 没有标签信息，绘制默认随机颜色圆点
+            var color = GenerateRandomColor(point.Id);
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+
+            dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
         }
     }
 
