@@ -1,12 +1,15 @@
-﻿using BetterGenshinImpact.View;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui;
@@ -90,6 +93,51 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                         var scheduler = App.GetService<ScriptControlViewModel>();
                         scheduler?.OnStartMultiScriptTaskProgressAsync(names);
                     }
+                }
+                // 直接执行JS脚本，目前只用于跑 JsTypeDef checker 运行时类型断言生成
+                else if (args[1].Trim().Equals("--debugRunScript", StringComparison.InvariantCultureIgnoreCase))
+                {
+#if DEBUG
+                    _ = _navigationWindow.Navigate(typeof(HomePage));
+                    if (args.Length > 2)
+                    {
+                        var scriptFolderName = args[2].Trim();
+                        // 解析脚本路径：优先脚本基址，回退到绝对路径/工作目录相对路径
+                        var scriptPathCheck = Path.Combine(Global.ScriptPath(), scriptFolderName);
+                        if (!Directory.Exists(scriptPathCheck))
+                        {
+                            var resolved = Path.GetFullPath(scriptFolderName);
+                            if (Directory.Exists(resolved))
+                            {
+                                scriptFolderName = resolved;
+                            }
+                        }
+                        var logger = App.GetLogger<ApplicationHostService>();
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                logger.LogInformation("debugRunScript: 脚本路径={Path}", scriptFolderName);
+                                var project = new ScriptProject(scriptFolderName);
+                                await project.ExecuteAsync();
+                                logger.LogInformation("debugRunScript: 脚本执行完毕");
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogError(ex, "debugRunScript: 脚本执行异常");
+                            }
+                            finally
+                            {
+                                // 等待日志刷写
+                                await Task.Delay(1000);
+                                Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
+                            }
+                        });
+                    }
+#else
+                    MessageBox.Show("--debugRunScript 仅在 DEBUG 编译配置下可用。请使用对应的构建配置后重试。",
+                        "不支持的操作", MessageBoxButton.OK, MessageBoxImage.Error);
+#endif
                 }
                 else if (args[1].Contains("start"))
                 {

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -21,7 +21,9 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
 {
-    private RECT captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    // ?? default 供 JS 类型兼容（TypeHelper 创建空实例时 SystemInfo 可能为 null）
+    private RECT captureAreaRect = TaskContext.Instance().SystemInfo?.CaptureAreaRect
+        ?? default;
 
     /// <summary>
     /// 游戏宽度
@@ -36,7 +38,9 @@ public class Genshin
     /// <summary>
     /// 游戏窗口大小相比1080P的缩放比例
     /// </summary>
-    public double ScaleTo1080PRatio { get; } = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+    // ?? 1 供 JS 类型兼容（TypeHelper 创建空实例时 SystemInfo 可能为 null）
+    public double ScaleTo1080PRatio { get; } = TaskContext.Instance().SystemInfo?.ScaleTo1080PRatio
+        ?? 1;
 
     /// <summary>
     /// 系统屏幕的DPI缩放比例

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
@@ -73,7 +73,16 @@ public class EngineExtend
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
         //鼠标回调
-        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
+        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook));
+
+#if DEBUG
+        // 供 JS 类型兼容：添加 ClearScript 辅助类，用于 JsTypeDef checker 反射导出类型信息
+        engine.AllowReflection = true; // 允许反射
+        engine.AddHostObject("HostFunctions", new HostFunctions());
+        // 用于辅助JsTypeDef创建空对象导出JS类型信息
+        engine.AddHostObject("TypeHelper", new TypeHelper(engine));
+#endif
+
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
 
