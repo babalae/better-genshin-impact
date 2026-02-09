@@ -27,7 +27,7 @@ public class GoToCraftingBenchTask
 {
     private static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
     
-    public string Name => Lang.S["GameTask_11570_4aac94"];
+    public string Name => "前往合成台";
 
     private readonly int _retryTimes = 2;
 
@@ -42,12 +42,12 @@ public class GoToCraftingBenchTask
     {
         IStringLocalizer<GoToCraftingBenchTask> stringLocalizer = App.GetService<IStringLocalizer<GoToCraftingBenchTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.craftLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_11569_c29e40"]);
+        this.craftLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "合成");
     }
     
     public async Task Start(string country, CancellationToken ct)
     {
-        Logger.LogInformation(Lang.S["GameTask_11555_88fe1c"], Name);
+        Logger.LogInformation("→ {Name} 开始", Name);
         for (int i = 0; i < _retryTimes; i++)
         {
             try
@@ -57,7 +57,7 @@ public class GoToCraftingBenchTask
             }
             catch (Exception e)
             {
-                Logger.LogError(Lang.S["GameTask_11568_a5a3e8"] + e.Message);
+                Logger.LogError("前往合成台领取奖励执行异常：" + e.Message);
                 if (i == _retryTimes - 1)
                 {
                     // 通知失败
@@ -66,12 +66,12 @@ public class GoToCraftingBenchTask
                 else
                 {
                     await Delay(1000, ct);
-                    Logger.LogInformation(Lang.S["GameTask_11567_588035"]);
+                    Logger.LogInformation("重试前往合成台领取奖励");
                 }
             }
         }
 
-        Logger.LogInformation(Lang.S["GameTask_11552_4ae836"], Name);
+        Logger.LogInformation("→ {Name} 结束", Name);
     }
 
     public async Task DoOnce(string country, CancellationToken ct)
@@ -110,7 +110,7 @@ public class GoToCraftingBenchTask
                     {
                         var numericPart = match.Groups[1].Value;
                         fragileResinCount = StringUtils.TryParseInt(numericPart);
-                        Logger.LogInformation(Lang.S["GameTask_11566_37872a"], fragileResinCount);
+                        Logger.LogInformation("提取到的原粹树脂数量：{fragileResinCount}", fragileResinCount);
                     }
                 }
                 
@@ -132,7 +132,7 @@ public class GoToCraftingBenchTask
                 {
                     Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                     await new ReturnMainUiTask().Start(ct);
-                    throw new Exception($"{Lang.S["GameTask_11565_e11dea"]});
+                    throw new Exception($"识别浓缩树脂数量失败: {condensedResinCount}");
                 }
                 
                 // 每次合成消耗的数量
@@ -151,9 +151,9 @@ public class GoToCraftingBenchTask
                 }
                 // 计算最大合成次数
                 craftsNeeded = Math.Min(maxCraftsPossible, craftsNeeded);
-                Logger.LogInformation(Lang.S["GameTask_11564_c59e1b"], fragileResinCount,
+                Logger.LogInformation("原粹树脂: {FragileResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", fragileResinCount,
                     condensedResinCount, maxCraftsPossible);
-                Logger.LogInformation(Lang.S["GameTask_11563_951cd3"],minResinToKeep,craftsNeeded);
+                Logger.LogInformation("保留 {MinResinToKeep} 原粹树脂需要合成次数： {craftsNeeded}",minResinToKeep,craftsNeeded);
                 if (craftsNeeded > 0)
                 {
                     for (int i = 0; i < 5; i++)
@@ -170,20 +170,20 @@ public class GoToCraftingBenchTask
                     await Delay(200, ct);
                     //await Delay(100000, ct);//调试延时=========
                     Bv.ClickWhiteConfirmButton(ra);
-                    Logger.LogInformation(Lang.S["GameTask_11562_397872"], "浓缩树脂");
+                    Logger.LogInformation("合成{Text}", "浓缩树脂");
                     await Delay(300, ct);
                     Bv.ClickBlackConfirmButton(CaptureToRectArea());
                 }
                 else
                 {
-                    Logger.LogInformation(Lang.S["GameTask_11561_cce727"]);
+                    Logger.LogInformation("无需合成浓缩树脂");
                 }
             }
             else
             {
                 //await Delay(100000, ct);//调试延时=========
                 Bv.ClickWhiteConfirmButton(ra);
-                Logger.LogInformation(Lang.S["GameTask_11562_397872"], "浓缩树脂");
+                Logger.LogInformation("合成{Text}", "浓缩树脂");
                 await Delay(300, ct);
                 Bv.ClickBlackConfirmButton(CaptureToRectArea());
             }
@@ -193,7 +193,7 @@ public class GoToCraftingBenchTask
         }
         else
         {
-            Logger.LogInformation(Lang.S["GameTask_11561_cce727"]);
+            Logger.LogInformation("无需合成浓缩树脂");
         }
 
         await new ReturnMainUiTask().Start(ct);
@@ -207,10 +207,10 @@ public class GoToCraftingBenchTask
     /// <returns></returns>
     public async Task GoToCraftingBench(string country, CancellationToken ct)
     {
-        var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"{Lang.S["GameTask_11560_80bbd1"]}));
+        var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"GameTask\Common\Element\Assets\Json\合成台_{country}.json"));
         if (task == null)
         {
-            throw new Exception(Lang.S["GameTask_11543_91950b"]);
+            throw new Exception("地图追踪文件加载失败");
         }
 
         var pathingTask = new PathExecutor(ct)
@@ -219,7 +219,7 @@ public class GoToCraftingBenchTask
             {
                 Enabled = true,
                 AutoSkipEnabled = true,
-                AutoRunEnabled = country != Lang.S["Gen_10019_6b7572"],
+                AutoRunEnabled = country != "枫丹",
             },
             EndAction = region => Bv.FindFAndPress(region, text: this.craftLocalizedString)
         };
@@ -245,7 +245,7 @@ public class GoToCraftingBenchTask
                 // 最后 check
                 if (!IsInCraftingTalkUi())
                 {
-                    throw new Exception(Lang.S["GameTask_11559_ef625f"]);
+                    throw new Exception("未进入和合成台交互对话界面");
                 }
             
             }
@@ -302,7 +302,7 @@ public class GoToCraftingBenchTask
             {
                 selected = new OneDragonFlowConfig
                 {
-                    Name = Lang.S["GameTask_11558_c51efb"]
+                    Name = "默认配置"
                 };
                 configs.Add(selected);
             }

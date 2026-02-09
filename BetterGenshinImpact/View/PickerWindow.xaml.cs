@@ -158,7 +158,7 @@ public partial class PickerWindow : FluentWindow
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"{Lang.S["View_12156_d84330"]});
+            Debug.WriteLine($"获取窗口图标失败: {ex.Message}");
         }
 
         // 如果获取失败，返回一个默认图标或null
@@ -168,8 +168,8 @@ public partial class PickerWindow : FluentWindow
     private static bool IsGenshinWindow(CapturableWindow window)
     {
         return window is
-        { Name: Lang.S["GameTask_10302_fc439d"], ProcessName: "YuanShen" } or
-        { Name: Lang.S["GameTask_10301_3e559b"], ProcessName: "Genshin Impact Cloud Game" } or
+        { Name: "原神", ProcessName: "YuanShen" } or
+        { Name: "云·原神", ProcessName: "Genshin Impact Cloud Game" } or
         { Name: "Genshin Impact", ProcessName: "GenshinImpact" } or
         { Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud" };
     }
@@ -182,7 +182,7 @@ public partial class PickerWindow : FluentWindow
 
             当前选择的窗口：{window.Name} ({window.ProcessName})
             """,
-            Lang.S["View_12155_0faff9"],
+            "确认选择",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxResult.No
         );

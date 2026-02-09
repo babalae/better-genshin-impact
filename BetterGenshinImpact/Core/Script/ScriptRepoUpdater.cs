@@ -105,7 +105,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         if (string.IsNullOrEmpty(repoUrl))
         {
-            throw new ArgumentException(Lang.S["Gen_10173_51181d"], nameof(repoUrl));
+            throw new ArgumentException("仓库URL不能为空", nameof(repoUrl));
         }
 
         var repoPath = Path.Combine(ReposPath, "bettergi-scripts-list-git");
@@ -123,7 +123,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 if (!Directory.Exists(repoPath))
                 {
                     // 如果仓库不存在，执行浅克隆操作
-                    _logger.LogInformation($"{Lang.S["Gen_10172_82f178"]});
+                    _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
                     CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                     updated = true;
@@ -141,14 +141,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, Lang.S["Gen_10171_bb1d7a"]);
+                        _logger.LogWarning(ex, "备份repo.json失败，继续更新仓库");
                     }
 
                     // 检查是否为有效的Git仓库
                     if (!Repository.IsValid(repoPath))
                     {
-                        Toast.Error(Lang.S["Gen_10170_1b1f85"]);
-                        UIDispatcherHelper.Invoke(() => Toast.Error(Lang.S["Gen_10170_1b1f85"]));
+                        Toast.Error($"不是有效的Git仓库，将重新克隆");
+                        UIDispatcherHelper.Invoke(() => Toast.Error("不是有效的Git仓库，将重新克隆"));
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
                         return;
@@ -161,7 +161,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     if (origin.Url != repoUrl)
                     {
                         // 远程URL已更改，需要删除重新克隆
-                        _logger.LogInformation($"{Lang.S["Gen_10169_48bc55"]});
+                        _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}，将重新克隆");
                         repo?.Dispose();
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
                         updated = true;
@@ -174,7 +174,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     if (remoteBranch == null)
                     {
-                        throw new Exception(Lang.S["Gen_10168_9d6db3"]);
+                        throw new Exception("未找到远程release分支");
                     }
 
                     var remoteCommitSha = remoteBranch.TargetIdentifier;
@@ -183,12 +183,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 比较本地和远程commit
                     if (currentCommitSha == remoteCommitSha)
                     {
-                        _logger.LogInformation(Lang.S["Gen_10167_c8d7fb"]);
+                        _logger.LogInformation("本地仓库已是最新版本，无需更新");
                         updated = false;
                     }
                     else
                     {
-                        _logger.LogInformation(Lang.S["Gen_10165_68e9e5"]无"} -> 远程 {remoteCommitSha[..7]}");
+                        _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha?[..7] ?? "无"} -> 远程 {remoteCommitSha[..7]}");
                         repo?.Dispose();
                         repo = null;
                         CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
@@ -198,8 +198,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, Lang.S["Gen_10164_b8ce3f"]);
-                UIDispatcherHelper.Invoke(() => Toast.Error(Lang.S["Gen_10163_cb2e5e"] + ex.Message));
+                _logger.LogError(ex, "Git仓库更新失败");
+                UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
                 repo?.Dispose();
                 repo = null;
                 CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
@@ -238,12 +238,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 // 保存到同级目录
                 var updatedRepoJsonPath = Path.Combine(ReposPath, "repo_updated.json");
                 await File.WriteAllTextAsync(updatedRepoJsonPath, updatedContent);
-                _logger.LogInformation($"{Lang.S["Gen_10162_238f00"]});
+                _logger.LogInformation($"已标记repo.json中的更新节点并保存到: {updatedRepoJsonPath}");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, Lang.S["Gen_10161_de5494"]);
+            _logger.LogWarning(ex, "标记repo.json更新节点失败");
         }
 
         return (repoPath, updated);
@@ -277,7 +277,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, Lang.S["Gen_10160_578253"]);
+            _logger.LogWarning(ex, "标记repo.json更新失败，返回原内容");
             return newContent;
         }
     }
@@ -413,7 +413,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
         options.FetchOptions.OnTransferProgress = progress =>
         {
-            onCheckoutProgress?.Invoke($"{Lang.S["Gen_10159_4728a6"]}, progress.ReceivedObjects, progress.TotalObjects);
+            onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
             return true;
         };
         // 克隆仓库
@@ -454,17 +454,17 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
                 OnTransferProgress = progress =>
                 {
-                    onCheckoutProgress?.Invoke($"{Lang.S["Gen_10159_4728a6"]}, progress.ReceivedObjects, progress.TotalObjects);
+                    onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
                     return true;
                 }
             };
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
-            Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, Lang.S["Gen_10158_04536a"]);
+            Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
 
             // 获取远程分支
             var remoteBranch = repo.Branches[$"origin/{branchName}"];
             if (remoteBranch == null)
-                throw new Exception($"{Lang.S["Gen_10157_421cd8"]});
+                throw new Exception($"远程仓库中未找到 {branchName} 分支");
 
             // 创建本地分支
             var localBranch = repo.CreateBranch(branchName, remoteBranch.Tip);
@@ -514,12 +514,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else
             {
-                _logger.LogWarning(Lang.S["Gen_10156_7b8b65"]);
+                _logger.LogWarning("未在仓库中找到 repo.json 文件");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, Lang.S["Gen_10155_45468b"]);
+            _logger.LogError(ex, "检出 repo.json 失败");
         }
     }
 
@@ -541,14 +541,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var commit = repo.Head?.Tip;
         if (commit == null)
         {
-            throw new Exception(Lang.S["Gen_10126_51e5ec"]);
+            throw new Exception("仓库HEAD未指向任何提交");
         }
 
         // 脚本内容都在 repo/ 子目录下
         var repoEntry = commit.Tree["repo"];
         if (repoEntry == null || repoEntry.TargetType != TreeEntryTargetType.Tree)
         {
-            throw new Exception(Lang.S["Gen_10154_4ee0bc"]);
+            throw new Exception("仓库结构错误：未找到 repo/ 子目录");
         }
 
         return (Tree)repoEntry.Target;
@@ -585,7 +585,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10153_7c71de"]});
+            _logger.LogError(ex, $"从中央仓库读取文件失败: {relPath}");
             return null;
         }
     }
@@ -621,7 +621,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10152_d3f662"]});
+            _logger.LogError(ex, $"从中央仓库读取二进制文件失败: {relPath}");
             return null;
         }
     }
@@ -677,7 +677,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10151_52ccba"]});
+            _logger.LogError(ex, $"从Git仓库读取文件失败: {filePath}");
             return null;
         }
     }
@@ -734,7 +734,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10150_cff30e"]});
+            _logger.LogError(ex, $"从Git仓库读取二进制文件失败: {filePath}");
             return null;
         }
     }
@@ -758,8 +758,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             if (commit == null)
             {
-                _logger.LogError(Lang.S["Gen_10149_c5215d"]null"}");
-                throw new Exception(Lang.S["Gen_10126_51e5ec"]);
+                _logger.LogError($"仓库HEAD未指向任何提交。HEAD: {repo.Head?.CanonicalName ?? "null"}");
+                throw new Exception("仓库HEAD未指向任何提交");
             }
 
             // 递归查找路径
@@ -784,7 +784,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 {
                     if (entry.TargetType != TreeEntryTargetType.Tree)
                     {
-                        throw new Exception(Lang.S["Gen_10148_ac2c29"]/", pathParts.Take(i + 1))}");
+                        throw new Exception($"路径中间部分不是目录: {string.Join("/", pathParts.Take(i + 1))}");
                     }
                     currentTree = (Tree)entry.Target;
                 }
@@ -844,7 +844,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else
             {
-                throw new Exception($"{Lang.S["Gen_10147_2b2e8a"]});
+                throw new Exception($"仓库中不存在路径: {sourcePath}");
             }
         }
     }
@@ -906,7 +906,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 返回凭据处理器
         return (url, usernameFromUrl, types) =>
         {
-            _logger.LogInformation(Lang.S["Gen_10146_b75255"]);
+            _logger.LogInformation($"使用配置的Git凭据进行身份验证");
             return new UsernamePasswordCredentials
             {
                 Username = credential?.UserName ?? "",
@@ -1000,7 +1000,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         if (string.IsNullOrEmpty(repoJsonDir))
         {
-            throw new Exception(Lang.S["Gen_10145_5cf434"]);
+            throw new Exception("本地仓库缺少 repo.json");
         }
 
         // 检查 repo.json 同级是否存在 repo/ 目录来判断仓库类型
@@ -1026,7 +1026,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 检查是否有空值
         if (time is null || url is null || file is null)
         {
-            throw new Exception(Lang.S["Gen_10144_95ca69"]);
+            throw new Exception("repo.json 解析失败");
         }
 
         return (time, url, file);
@@ -1038,7 +1038,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var res = await _httpClient.GetAsync(url);
         if (!res.IsSuccessStatusCode)
         {
-            throw new Exception(Lang.S["Gen_10143_65e200"]);
+            throw new Exception("下载失败");
         }
 
         var bytes = await res.Content.ReadAsByteArrayAsync();
@@ -1088,18 +1088,18 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 检查剪切板内容是否符合特定的URL格式
         if (!string.IsNullOrEmpty(uri) && uri.Trim().ToLower().StartsWith("bettergi://script?import="))
         {
-            Debug.WriteLine($"{Lang.S["Gen_10142_b2c89f"]});
+            Debug.WriteLine($"脚本订购内容：{uri}");
             // 执行相关操作
             var pathJson = ParseUri(uri);
             if (!string.IsNullOrEmpty(pathJson))
             {
                 var uiMessageBox = new Wpf.Ui.Controls.MessageBox
                 {
-                    Title = Lang.S["Gen_10141_7c3a93"],
+                    Title = "脚本订阅",
                     Content =
-                        Lang.S["Gen_10139_fdfb55"]剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
-                    CloseButtonText = Lang.S["Btn_Close"],
-                    PrimaryButtonText = Lang.S["Gen_10138_3e36a9"],
+                        $"检测到{(formClipboard ? "剪切板上存在" : "")}脚本订阅链接，解析后需要导入的脚本为：{pathJson}。\n是否导入并覆盖此文件或者文件夹下的脚本？",
+                    CloseButtonText = "关闭",
+                    PrimaryButtonText = "确认导入",
                     Owner = Application.Current.MainWindow,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 };
@@ -1147,7 +1147,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var import = queryParams["import"];
         if (string.IsNullOrEmpty(import))
         {
-            Debug.WriteLine(Lang.S["Gen_10137_ce897b"]);
+            Debug.WriteLine("未找到 import 参数");
             return null;
         }
 
@@ -1161,7 +1161,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var paths = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(pathJson);
         if (paths is null || paths.Count == 0)
         {
-            Toast.Warning(Lang.S["Gen_10136_e6db4e"]);
+            Toast.Warning("订阅脚本路径为空");
             return;
         }
 
@@ -1169,7 +1169,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
         scriptConfig.SubscribedScriptPaths.AddRange(paths);
 
-        Toast.Information(Lang.S["Gen_10135_69efb3"]);
+        Toast.Information("获取最新仓库信息中...");
 
         string repoPath;
         try
@@ -1178,7 +1178,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch
         {
-            await ThemedMessageBox.ErrorAsync(Lang.S["Gen_10134_d13b78"]);
+            await ThemedMessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
             return;
         }
 
@@ -1251,7 +1251,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var commit = repo.Head.Tip;
                     if (commit == null)
                     {
-                        throw new Exception(Lang.S["Gen_10126_51e5ec"]);
+                        throw new Exception("仓库HEAD未指向任何提交");
                     }
 
                     Tree repoTree = GetRepoSubdirectoryTree(repo);
@@ -1270,7 +1270,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     else
                     {
-                        Toast.Warning($"{Lang.S["Gen_10132_c2e51e"]});
+                        Toast.Warning($"未知的脚本路径：{path}");
                     }
                 }
                 else
@@ -1288,7 +1288,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     else
                     {
-                        Toast.Warning($"{Lang.S["Gen_10132_c2e51e"]});
+                        Toast.Warning($"未知的脚本路径：{path}");
                     }
                 }
             }
@@ -1345,11 +1345,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
 
                 UpdateSubscribedScriptPaths();
-                Toast.Success(Lang.S["Gen_10133_25fd8d"]);
+                Toast.Success("脚本订阅链接导入完成");
             }
             else
             {
-                Toast.Warning($"{Lang.S["Gen_10132_c2e51e"]});
+                Toast.Warning($"未知的脚本路径：{path}");
             }
         }
     }
@@ -1490,7 +1490,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, Lang.S["Gen_10131_d4886d"]);
+            _logger.LogError(ex, "添加父节点时发生错误");
         }
 
         scriptConfig.SubscribedScriptPaths = pathsToKeep
@@ -1564,7 +1564,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning($"{Lang.S["Gen_10130_f136c8"]});
+                    _logger.LogWarning($"清理依赖目录失败: {ex.Message}");
                 }
             }
 
@@ -1648,7 +1648,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                                 if (!downloaded)
                                 {
-                                     _logger.LogWarning($"{Lang.S["Gen_10129_92233a"]});
+                                     _logger.LogWarning($"依赖未找到: {packagePath} (in {Path.GetFileName(currentFile)})");
                                 }
                             }
                             else
@@ -1664,13 +1664,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning($"{Lang.S["Gen_10128_6b7aa8"]});
+                    _logger.LogWarning($"分析文件依赖出错: {currentFile}, {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, Lang.S["Gen_10127_933661"]);
+            _logger.LogError(ex, "解析脚本依赖主流程失败");
         }
     }
 
@@ -1697,7 +1697,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             using var repo = new Repository(repoPath);
             var commit = repo.Head.Tip;
 
-            if (commit == null) throw new Exception(Lang.S["Gen_10126_51e5ec"]);
+            if (commit == null) throw new Exception("仓库HEAD未指向任何提交");
 
             TreeEntry? entry = null;
             var pathParts = sourcePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1823,7 +1823,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             
             _webWindow = new WebpageWindow
             {
-                Title = Lang.S["Gen_10125_639a91"],
+                Title = "Genshin Copilot Scripts | BetterGI 脚本本地中央仓库",
                 Width = width,
                 Height = height,
                 Left = left,
@@ -1902,11 +1902,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 使用 Vanara 库中的 SetFileAttributes 函数设置文件夹属性
             if (Kernel32.SetFileAttributes(folderPath, FileFlagsAndAttributes.FILE_ATTRIBUTE_READONLY))
             {
-                Debug.WriteLine($"{Lang.S["Gen_10124_1649be"]});
+                Debug.WriteLine($"成功将文件夹设置为只读: {folderPath}");
             }
             else
             {
-                Debug.WriteLine($"{Lang.S["Gen_10123_c8e3f6"]});
+                Debug.WriteLine($"无法设置文件夹为只读: {folderPath}");
             }
         }
     }
@@ -1967,7 +1967,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10122_f0e900"]});
+            _logger.LogError(ex, $"获取匹配文件时发生错误: {pattern}");
         }
 
         return matchedFiles;
@@ -2004,7 +2004,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 manifestContent = ReadFileFromGitRepository(repoPath, $"{scriptPath}/manifest.json");
                 if (manifestContent == null)
                 {
-                    _logger.LogWarning($"{Lang.S["Gen_10116_fb10cb"]});
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptPath}/manifest.json");
                     return backupFiles;
                 }
             }
@@ -2014,7 +2014,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
                 if (!File.Exists(scriptManifestPath))
                 {
-                    _logger.LogWarning($"{Lang.S["Gen_10115_3690c8"]});
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
                     return backupFiles;
                 }
                 manifestContent = File.ReadAllText(scriptManifestPath);
@@ -2025,7 +2025,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
             {
-                _logger.LogInformation($"{Lang.S["Gen_10121_bf7248"]});
+                _logger.LogInformation($"脚本 {scriptPath} 没有需要保存的文件");
                 return backupFiles;
             }
 
@@ -2033,7 +2033,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var (first, remainingPath) = GetFirstFolderAndRemainingPath(scriptPath);
             if (!PathMapper.TryGetValue(first, out var userPath))
             {
-                _logger.LogWarning($"{Lang.S["Gen_10113_77f076"]});
+                _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
                 return backupFiles;
             }
 
@@ -2063,7 +2063,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     else
                     {
-                        _logger.LogWarning($"{Lang.S["Gen_10120_f672f6"]});
+                        _logger.LogWarning($"需要备份的文件夹不存在: {dirPath}");
                     }
                 }
                 else
@@ -2086,20 +2086,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, $"{Lang.S["Gen_10119_2eff5c"]});
+                            _logger.LogError(ex, $"备份文件失败: {matchedFile}");
                         }
                     }
 
                     if (matchedFiles.Count == 0)
                     {
-                        _logger.LogWarning($"{Lang.S["Gen_10118_39cc81"]});
+                        _logger.LogWarning($"没有找到匹配的文件: {savedFile}");
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10117_e70515"]});
+            _logger.LogError(ex, $"备份脚本文件时发生错误: {scriptPath}");
         }
 
         return backupFiles;
@@ -2129,7 +2129,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 manifestContent = ReadFileFromGitRepository(repoPath, $"{scriptPath}/manifest.json");
                 if (manifestContent == null)
                 {
-                    _logger.LogWarning($"{Lang.S["Gen_10116_fb10cb"]});
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptPath}/manifest.json");
                     return;
                 }
             }
@@ -2139,7 +2139,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var scriptManifestPath = Path.Combine(repoPath, scriptPath, "manifest.json");
                 if (!File.Exists(scriptManifestPath))
                 {
-                    _logger.LogWarning($"{Lang.S["Gen_10115_3690c8"]});
+                    _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
                     return;
                 }
                 manifestContent = File.ReadAllText(scriptManifestPath);
@@ -2150,7 +2150,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
             {
-                _logger.LogInformation($"{Lang.S["Gen_10114_26cbda"]});
+                _logger.LogInformation($"脚本 {scriptPath} 没有需要恢复的文件");
                 return;
             }
 
@@ -2158,7 +2158,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var (first, remainingPath) = GetFirstFolderAndRemainingPath(scriptPath);
             if (!PathMapper.TryGetValue(first, out var userPath))
             {
-                _logger.LogWarning($"{Lang.S["Gen_10113_77f076"]});
+                _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
                 return;
             }
 
@@ -2183,13 +2183,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"{Lang.S["Gen_10112_690733"]});
+                        _logger.LogError(ex, $"恢复文件失败: {file} -> {restorePath}");
                     }
                 }
             }
             else
             {
-                _logger.LogWarning($"{Lang.S["Gen_10111_fbf039"]});
+                _logger.LogWarning($"备份目录不存在: {backupScriptDir}");
             }
 
             // 清理Temp目录下该脚本的备份
@@ -2202,12 +2202,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, Lang.S["Gen_10110_df7367"]);
+                _logger.LogWarning(ex, "清理Temp脚本备份目录失败");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"{Lang.S["Gen_10109_f484c1"]});
+            _logger.LogError(ex, $"恢复脚本文件时发生错误: {scriptPath}");
         }
     }
 }

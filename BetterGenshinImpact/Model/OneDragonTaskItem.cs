@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
@@ -57,13 +56,13 @@ public partial class OneDragonTaskItem : ObservableObject
 
         switch (Name)
         {
-            case Lang.S["Gen_12025_21caea"]:
+            case "领取邮件":
                 Action = async () =>
                 {
                     await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case Lang.S["OneDragon_005_4762ca"]:
+            case "合成树脂":
                 Action = async () =>
                 {
                     try
@@ -73,34 +72,34 @@ public partial class OneDragonTaskItem : ObservableObject
                     }
                     catch (Exception e)
                     {
-                        TaskControl.Logger.LogError(Lang.S["Gen_12024_ea0b2f"] + e.Message);
+                        TaskControl.Logger.LogError("合成树脂执行异常：" + e.Message);
                     }
                 };
                 break;
-            case Lang.S["Task_059_1f7122"]:
+            case "自动秘境":
                 Action = async () =>
                 {
                     if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
                     {
-                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = Lang.S["GameTask_10386_0bfb2b"];
+                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
                     if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
                     {
-                        TaskControl.Logger.LogError(Lang.S["Gen_12023_ecd8f5"], "未配置");
+                        TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
                     var (partyName, domainName, sundaySelectedValue) = config.GetDomainConfig();
                     if (string.IsNullOrEmpty(domainName))
                     {
-                        TaskControl.Logger.LogError(Lang.S["Gen_12021_a28655"], "未选择");
+                        TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过", "未选择");
                         return;
                     }
                     else
                     {
-                        TaskControl.Logger.LogInformation(Lang.S["Gen_12020_f793b1"]);
+                        TaskControl.Logger.LogInformation("自动秘境任务：执行");
                     }
 
                     var autoDomainParam = new AutoDomainParam(0, path)
@@ -112,25 +111,25 @@ public partial class OneDragonTaskItem : ObservableObject
                     await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case Lang.S["Task_085_4fdef3"]:
+            case "自动幽境危战":
                 Action = async () =>
                 {
                     if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName))
                     {
-                        TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName = Lang.S["GameTask_10386_0bfb2b"];
+                        TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
                     if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
                     {
-                        TaskControl.Logger.LogError(Lang.S["Gen_12018_9f3c30"], "未配置");
+                        TaskControl.Logger.LogError("自动幽境危战战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
                     await new AutoStygianOnslaughtTask(TaskContext.Instance().Config.AutoStygianOnslaughtConfig, path).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case Lang.S["Gen_12017_8fdc0b"]:
+            case "领取每日奖励":
                 Action = async () =>
                 {
                     await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry,
@@ -138,7 +137,7 @@ public partial class OneDragonTaskItem : ObservableObject
                     await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
-            case Lang.S["GameTask_11624_df031f"]:
+            case "领取尘歌壶奖励":
                 Action = async () =>
                 {
                     await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token);

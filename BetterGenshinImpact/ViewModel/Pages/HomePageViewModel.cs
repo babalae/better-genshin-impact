@@ -153,7 +153,7 @@ public partial class HomePageViewModel : ViewModel
         // 启动的情况下重启
         if (TaskDispatcherEnabled)
         {
-            _logger.LogInformation(Lang.S["Gen_12239_391797"], Config.CaptureMode);
+            _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
             OnStopTrigger();
             await OnStartTriggerAsync();
         }
@@ -179,7 +179,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                ThemedMessageBox.Error(Lang.S["Gen_1002_9a2665"]);
+                ThemedMessageBox.Error("选择的窗体句柄为空");
             }
         }
     }
@@ -197,7 +197,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                ThemedMessageBox.Error(Lang.S["Gen_1003_1a77a5"]);
+                ThemedMessageBox.Error("选择的窗体句柄为空！");
             }
         }
     }
@@ -223,7 +223,7 @@ public partial class HomePageViewModel : ViewModel
             {
                 if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
                 {
-                    await ThemedMessageBox.ErrorAsync(Lang.S["Gen_12238_0f5493"]);
+                    await ThemedMessageBox.ErrorAsync("没有找到原神的安装路径");
                     return;
                 }
 
@@ -240,7 +240,7 @@ public partial class HomePageViewModel : ViewModel
 
             if (hWnd == IntPtr.Zero)
             {
-                await ThemedMessageBox.ErrorAsync(Lang.S["Gen_12237_f88c90"]);
+                await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
                 return;
             }
         }
@@ -250,12 +250,12 @@ public partial class HomePageViewModel : ViewModel
 
     private void Start(IntPtr hWnd)
     {
-        Debug.WriteLine($"{Lang.S["Gen_12236_6c711e"]});
+        Debug.WriteLine($"原神启动句柄{hWnd}");
         lock (this)
         {
             if (Config.TriggerInterval <= 0)
             {
-                ThemedMessageBox.Error(Lang.S["Gen_1004_4647a1"]);
+                ThemedMessageBox.Error("触发器触发频率必须大于0");
                 return;
             }
 
@@ -383,7 +383,7 @@ public partial class HomePageViewModel : ViewModel
             // 弹出选择文件夹对话框
             var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
             {
-                Filter = Lang.S["Gen_12235_b1b548"]
+                Filter = "原神|YuanShen.exe|原神国际服|GenshinImpact.exe|所有文件|*.*"
             };
             if (dialog.ShowDialog() == true)
             {
@@ -474,7 +474,7 @@ public partial class HomePageViewModel : ViewModel
         // 创建 TitleBar
         var titleBar = new TitleBar
         {
-            Title = Lang.S["Gen_1005_845503"],
+            Title = "启动参数说明",
             Icon = new ImageIcon
             {
                 Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute))
@@ -508,7 +508,7 @@ public partial class HomePageViewModel : ViewModel
     {
         var dialogWindow = new FluentWindow
         {
-            Title = Lang.S["Gen_1006_09c053"],
+            Title = "硬件加速设置",
             Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
             Width = 800,
             Height = 600,
@@ -539,18 +539,18 @@ public partial class HomePageViewModel : ViewModel
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
                 BannerImageSource = bitmap;
-                _logger.LogInformation(Lang.S["Gen_12234_f888d9"]);
+                _logger.LogInformation("已加载自定义背景图片");
             }
             else
             {
                 // 使用默认图片
                 BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
-                _logger.LogInformation(Lang.S["Gen_12233_8c6581"]);
+                _logger.LogInformation("已加载默认背景图片");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, Lang.S["Gen_12232_f8c281"]);
+            _logger.LogError(ex, "初始化背景图片失败，使用默认图片");
             BannerImageSource = new BitmapImage(new Uri(DefaultBannerImagePath, UriKind.Absolute));
         }
     }
@@ -562,8 +562,8 @@ public partial class HomePageViewModel : ViewModel
         {
             var openFileDialog = new OpenFileDialog
             {
-                Title = Lang.S["Gen_1007_2c7b91"],
-                Filter = Lang.S["Gen_12231_89d3b4"],
+                Title = "选择背景图片",
+                Filter = "图片文件|*.jpg;*.jpeg;*.png;*.bmp;*.gif|所有文件|*.*",
                 Multiselect = false
             };
 
@@ -591,13 +591,13 @@ public partial class HomePageViewModel : ViewModel
                 bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; 
                 bitmap.EndInit();
                 BannerImageSource = bitmap;
-                Toast.Success(Lang.S["Gen_1008_60e507"]);
+                Toast.Success("背景图片更换成功！");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, Lang.S["Gen_12230_bb4c5e"]);
-            Toast.Error($"{Lang.S["Gen_12229_4ee022"]});
+            _logger.LogError(ex, "更换背景图片失败");
+            Toast.Error($"更换背景图片失败: {ex.Message}");
         }
     }
 
@@ -608,7 +608,7 @@ public partial class HomePageViewModel : ViewModel
         {
             // 获取自定义图片的完整路径
             var customImageFullPath = Path.GetFullPath(_customBannerImagePath);
-            _logger.LogInformation(Lang.S["Gen_12228_a93570"], customImageFullPath);
+            _logger.LogInformation("尝试恢复默认背景图片，自定义图片路径: {CustomPath}", customImageFullPath);
 
             // 先切换到默认图片，释放自定义图片的文件锁
             var defaultBitmap = new BitmapImage();
@@ -622,13 +622,13 @@ public partial class HomePageViewModel : ViewModel
             if (File.Exists(customImageFullPath))
             {
                 File.Delete(customImageFullPath);
-                Toast.Success(Lang.S["Gen_1009_756538"]);
+                Toast.Success("已恢复为默认背景图片！");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, Lang.S["Gen_12227_6238a0"]);
-            Toast.Warning(Lang.S["Gen_1010_e7f5a5"]);
+            _logger.LogError(ex, "恢复默认背景图片失败");
+            Toast.Warning("已恢复为默认背景图片！但清除自定义图片失败，请手动删除文件。");
         }
     }
 

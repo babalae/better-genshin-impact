@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Model;
@@ -6,8 +5,8 @@ namespace BetterGenshinImpact.GameTask.AutoSkip.Model;
 public class SelectChatOptionTypes
 {
     // 使用交互键
-    public const string UseInteractionKey = Lang.S["GameTask_11296_58a080"];
+    public const string UseInteractionKey = "使用交互键";
     
     // 使用鼠标
-    public const string UseMouse = Lang.S["GameTask_11295_c23c30"];
+    public const string UseMouse = "使用鼠标";
 }

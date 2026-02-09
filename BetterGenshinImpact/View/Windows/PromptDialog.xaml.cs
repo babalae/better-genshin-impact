@@ -18,7 +18,7 @@ public class PromptDialogConfig
     /// <summary>
     /// 左下角按钮的文本
     /// </summary>
-    public string LeftButtonText { get; set; } = Lang.S["Dialog_LeftBottomButton"];
+    public string LeftButtonText { get; set; } = "左下角按钮";
 
     /// <summary>
     /// 左下角按钮的点击事件

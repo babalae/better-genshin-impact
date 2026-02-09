@@ -36,7 +36,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 {
     private readonly ILogger<AutoSkipTrigger> _logger = App.GetLogger<AutoSkipTrigger>();
 
-    public string Name => Lang.S["Trigger_012_8fe54f"];
+    public string Name => "自动剧情";
     public bool IsEnabled { get; set; }
     public int Priority => 20;
     public bool IsExclusive => false;
@@ -115,8 +115,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, Lang.S["GameTask_11257_2b9e81"]);
-            ThemedMessageBox.Error(Lang.S["GameTask_11256_7efe9b"]);
+            _logger.LogError(e, "读取自动剧情默认暂停点击关键词列表失败");
+            ThemedMessageBox.Error("读取自动剧情默认暂停点击关键词列表失败，请确认修改后的自动剧情默认暂停点击关键词内容格式是否正确！");
         }
 
         try
@@ -129,8 +129,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, Lang.S["GameTask_11255_245d31"]);
-            ThemedMessageBox.Error(Lang.S["GameTask_11254_190565"]);
+            _logger.LogError(e, "读取自动剧情暂停点击关键词列表失败");
+            ThemedMessageBox.Error("读取自动剧情暂停点击关键词列表失败，请确认修改后的自动剧情暂停点击关键词内容格式是否正确！");
         }
 
         try
@@ -143,8 +143,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, Lang.S["GameTask_11253_0ba0a9"]);
-            ThemedMessageBox.Error(Lang.S["GameTask_11252_a189ab"]);
+            _logger.LogError(e, "读取自动剧情优先点击选项列表失败");
+            ThemedMessageBox.Error("读取自动剧情优先点击选项列表失败，请确认修改后的自动剧情优先点击选项内容格式是否正确！");
         }
     }
 
@@ -277,7 +277,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     Simulation.SendInput.Mouse.LeftButtonClick();
                 }
 
-                _logger.LogInformation(Lang.S["GameTask_11250_575aa2"], "点击黑屏", rate.ToString("F"));
+                _logger.LogInformation("自动剧情：{Text} 比例 {Rate}", "点击黑屏", rate.ToString("F"));
 
                 _prevClickTime = DateTime.Now;
                 return true;
@@ -330,7 +330,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         if (hangoutOption.OptionTextSrc.Contains(str))
                         {
                             HangoutOptionClick(hangoutOption);
-                            _logger.LogInformation(Lang.S["GameTask_11249_095261"], _config.AutoHangoutEndChoose, str);
+                            _logger.LogInformation("邀约分支[{Text}]关键词[{Str}]命中", _config.AutoHangoutEndChoose, str);
                             AutoHangoutSkipLog(hangoutOption.OptionTextSrc);
                             VisionContext.Instance().DrawContent.RemoveRect("HangoutSelected");
                             VisionContext.Instance().DrawContent.RemoveRect("HangoutUnselected");
@@ -376,7 +376,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         skipRa.Click();
                     }
 
-                    AutoHangoutSkipLog(Lang.S["GameTask_11248_5b0320"]);
+                    AutoHangoutSkipLog("点击跳过按钮");
                 }
             }
         }
@@ -389,7 +389,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         using var bMat = OpenCvCommonHelper.Threshold(textMat, new Scalar(243, 195, 48), new Scalar(255, 205, 55));
         var whiteCount = OpenCvCommonHelper.CountGrayMatColor(bMat, 255);
         var rate = whiteCount * 1.0 / (bMat.Width * bMat.Height);
-        Debug.WriteLine($"{Lang.S["GameTask_11247_619674"]});
+        Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
         if (rate > 0.06)
         {
             return true;
@@ -475,7 +475,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 _postMessageSimulator?.KeyPressBackground(fKey);
             }
             
-            AutoSkipLog(Lang.S["GameTask_11246_5e8833"]);
+            AutoSkipLog("交互键点击(后台)");
 
             return true;
         }
@@ -499,7 +499,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 Thread.Sleep(_config.AfterChooseOptionSleepDelay);
                 exclamationIconRa.Click();
-                AutoSkipLog(Lang.S["GameTask_11245_75bc8f"]);
+                AutoSkipLog("点击感叹号选项");
                 return true;
             }
         }
@@ -540,7 +540,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 {
                     if (ocrResList[i + 1].Y - ocrResList[i].Y > 150)
                     {
-                        Debug.WriteLine($"{Lang.S["GameTask_11244_6e7753"]});
+                        Debug.WriteLine($"存在Y轴偏差过大的结果，忽略:{item.Text}");
                         continue;
                     }
                 }
@@ -602,31 +602,31 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         var textMat = item.ToImageRegion().SrcMat;
                         if (IsOrangeOption(textMat))
                         {
-                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains(Lang.S["Gen_10255_ce2210"]) || item.Text.Contains("委托")))
+                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
                             {
-                                ClickOcrRegion(item, Lang.S["GameTask_11233_985a25"]);
+                                ClickOcrRegion(item, "每日委托");
                                 TaskControl.Sleep(800);
                                 
                                 // 6.2 每日提示确认
                                 var ra1 = TaskControl.CaptureToRectArea();
                                 if (Bv.ClickBlackConfirmButton(ra1))
                                 {
-                                    _logger.LogInformation(Lang.S["GameTask_11243_4cd27d"]);
+                                    _logger.LogInformation("存在提示并确认");
                                 }
                                 ra1.Dispose();
                                 
                                 _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                             }
-                            else if (_config.AutoReExploreEnabled && (item.Text.Contains(Lang.S["GameTask_11241_fc6c4c"]) || item.Text.Contains("派遣")))
+                            else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
                             {
-                                ClickOcrRegion(item, Lang.S["GameTask_11234_109959"]);
+                                ClickOcrRegion(item, "探索派遣");
                                 Thread.Sleep(800); // 等待探索派遣界面打开
                                 new OneKeyExpeditionTask().Run(_autoSkipAssets);
                             }
-                            else if (!item.Text.Contains(Lang.S["Gen_10255_ce2210"])
-                                && !item.Text.Contains(Lang.S["GameTask_11242_f6b0bb"])
-                                && !item.Text.Contains(Lang.S["GameTask_11241_fc6c4c"])
-                                && !item.Text.Contains(Lang.S["GameTask_11240_91b6d1"]))
+                            else if (!item.Text.Contains("每日")
+                                && !item.Text.Contains("委托")
+                                && !item.Text.Contains("探索")
+                                && !item.Text.Contains("派遣"))
                             {
                                 ClickOcrRegion(item);
                             }
@@ -672,8 +672,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 // 没OCR到文字，直接选择气泡选项
                 Thread.Sleep(_config.AfterChooseOptionSleepDelay);
                 ClickOcrRegion(clickRect);
-                var msg = _config.IsClickFirstChatOption() ? Lang.S["GameTask_11238_0b4952"] : "最后一个";
-                AutoSkipLog($"{Lang.S["GameTask_11237_be0e04"]});
+                var msg = _config.IsClickFirstChatOption() ? "第一个" : "最后一个";
+                AutoSkipLog($"点击{msg}气泡选项");
             }
 
             return true;
@@ -685,7 +685,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             if (pickRa.IsExist())
             {
                 _postMessageSimulator?.KeyPressBackground(AutoPickAssets.Instance.PickVk);
-                AutoSkipLog(Lang.S["GameTask_11236_fdcde1"]);
+                AutoSkipLog("无气泡图标，但存在交互键，直接按下交互键");
             }
         }
 
@@ -732,7 +732,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     {
         if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
         {
-            _logger.LogInformation(Lang.S["GameTask_11235_7aff54"], text);
+            _logger.LogInformation("自动邀约：{Text}", text);
         }
 
         _prevClickTime = DateTime.Now;
@@ -740,13 +740,13 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private void AutoSkipLog(string text)
     {
-        if (text.Contains(Lang.S["GameTask_11233_985a25"]) || text.Contains("探索派遣"))
+        if (text.Contains("每日委托") || text.Contains("探索派遣"))
         {
-            _logger.LogInformation(Lang.S["GameTask_11232_217a3b"], text);
+            _logger.LogInformation("自动剧情：{Text}", text);
         }
         else if ((DateTime.Now - _prevClickTime).TotalMilliseconds > 1000)
         {
-            _logger.LogInformation(Lang.S["GameTask_11232_217a3b"], text);
+            _logger.LogInformation("自动剧情：{Text}", text);
         }
 
         _prevClickTime = DateTime.Now;
@@ -769,7 +769,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
 
-                AutoSkipLog(Lang.S["GameTask_11231_554dff"]);
+                AutoSkipLog("关闭弹出页");
                 pageCloseRoRa.Dispose();
             }
         });
@@ -823,7 +823,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 croppedRegion.Derive(Cv2.BoundingRect(approx)).Click();
             }
             _prevCloseItemTime = DateTime.Now;
-            _logger.LogInformation(Lang.S["GameTask_11229_a8ae71"], "点击底部三角形",area);
+            _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
             return;
         }
     }
@@ -871,16 +871,16 @@ public partial class AutoSkipTrigger : ITaskTrigger
             // 面积检查
             var areaRatio = (double)(bbox.Width * bbox.Height) / (imgWidth * imgHeight);
             if (areaRatio <= 0.24 || areaRatio >= 0.3) continue; // 弹窗高约300，面积比约等于0.27
-            _logger.LogDebug(Lang.S["GameTask_11228_6c0871"]);
+            _logger.LogDebug("自动剧情：关闭角色弹窗-面积检查通过");
 
             // 宽高比检查
             var aspectRatio = (double)bbox.Width / bbox.Height;
             if (aspectRatio < 5.6 || aspectRatio > 7.2) continue;
-            _logger.LogDebug(Lang.S["GameTask_11227_d7a700"]);
+            _logger.LogDebug("自动剧情：关闭角色弹窗-宽高比检查通过");
 
             // 位置检查
             if (bbox.Y <= imgHeight * 0.3 || bbox.Y + bbox.Height >= imgHeight * 0.7) continue;
-            _logger.LogDebug(Lang.S["GameTask_11226_ea6722"]);
+            _logger.LogDebug("自动剧情：关闭角色弹窗-位置检查通过");
 
 
             // 检查是否包含两种颜色  
@@ -897,7 +897,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 content.CaptureRectArea.ClickTo(100, 100); // 点击角色横幅外的区域才能跳过
             }
 
-            _logger.LogInformation(Lang.S["GameTask_11225_1e5a05"]);
+            _logger.LogInformation("自动剧情：关闭角色弹窗");
             return;
         }
     }
@@ -926,14 +926,14 @@ public partial class AutoSkipTrigger : ITaskTrigger
             for (var i = 0; i < rects.Count; i++)
             {
                 content.CaptureRectArea.Derive(rects[i]).Click();
-                _logger.LogInformation(Lang.S["GameTask_11221_d06ecc"], "1. 选择物品" + i);
+                _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
                 TaskControl.Sleep(800);
 
                 var btnBlackConfirmRa = TaskControl.CaptureToRectArea(forceNew: true).Find(ElementAssets.Instance.BtnBlackConfirm);
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
                     btnBlackConfirmRa.Click();
-                    _logger.LogInformation(Lang.S["GameTask_11221_d06ecc"], "2. 放入" + i);
+                    _logger.LogInformation("提交物品：{Text}", "2. 放入" + i);
                     TaskControl.Sleep(200);
                 }
             }
@@ -945,7 +945,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             if (!btnWhiteConfirmRa.IsEmpty())
             {
                 btnWhiteConfirmRa.Click();
-                _logger.LogInformation(Lang.S["GameTask_11221_d06ecc"], "3. 交付");
+                _logger.LogInformation("提交物品：{Text}", "3. 交付");
 
                 VisionContext.Instance().DrawContent.ClearAll();
             }

@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Net.Http;
 using System.Text.Json;
@@ -82,7 +81,7 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public static NotificationService Instance()
     {
-        if (_instance == null) throw new InvalidOperationException(Lang.S["Service_12085_a272c2"]);
+        if (_instance == null) throw new InvalidOperationException("NotificationService 未初始化");
 
         return _instance;
     }
@@ -356,7 +355,7 @@ public class NotificationService : IHostedService, IDisposable
             var notifier = _notifierManager.GetNotifier<T>();
             if (notifier == null)
             {
-                return NotificationTestResult.Error(Lang.S["Service_12084_605b74"]);
+                return NotificationTestResult.Error("通知类型未启用");
             }
 
             var testData = CreateTestNotificationData();
@@ -369,7 +368,7 @@ public class NotificationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            return NotificationTestResult.Error($"{Lang.S["Service_12083_c19a2f"]});
+            return NotificationTestResult.Error($"测试通知时发生未知错误: {ex.Message}");
         }
     }
 
@@ -382,7 +381,7 @@ public class NotificationService : IHostedService, IDisposable
         {
             Event = NotificationEvent.Test.Code,
             Result = NotificationEventResult.Success,
-            Message = Lang.S["Service_12082_fe3867"]
+            Message = "这是一条测试通知信息"
         };
 
         if (TaskContext.Instance().IsInitialized)
@@ -393,7 +392,7 @@ public class NotificationService : IHostedService, IDisposable
             }
             catch (Exception ex)
             {
-                TaskControl.Logger.LogWarning(ex, Lang.S["Service_12081_edd86a"]);
+                TaskControl.Logger.LogWarning(ex, "获取测试通知截图失败");
             }
         }
 
@@ -416,7 +415,7 @@ public class NotificationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogError(ex, Lang.S["Service_12080_a688e8"]);
+            TaskControl.Logger.LogError(ex, "发送通知时发生错误");
         }
     }
 
@@ -452,7 +451,7 @@ public class NotificationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogDebug(ex, Lang.S["Service_12079_b79630"]);
+            TaskControl.Logger.LogDebug(ex, "补充通知截图失败");
         }
 
         await Task.CompletedTask;
@@ -473,7 +472,7 @@ public class NotificationService : IHostedService, IDisposable
             }
             catch (Exception ex)
             {
-                TaskControl.Logger.LogError(ex, Lang.S["Service_12078_e5ec9d"]);
+                TaskControl.Logger.LogError(ex, "后台发送通知时发生错误");
             }
         });
     }

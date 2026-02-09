@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
@@ -23,16 +22,16 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             {
                 if (string.IsNullOrEmpty(Character.Skills[TargetIndex].Name))
                 {
-                    return $"{Lang.S["GameTask_10934_8ebc76"]};
+                    return $"【{Character.Name}】使用【技能{TargetIndex}】";
                 }
                 else
                 {
-                    return $"{Lang.S["GameTask_10933_397371"]};
+                    return $"【{Character.Name}】使用【{Character.Skills[TargetIndex].Name}】";
                 }
             }
             else if (Action == ActionEnum.SwitchLater)
             {
-                return $"{Lang.S["GameTask_10932_6cc49b"]};
+                return $"【{Character.Name}】切换至【角色{TargetIndex}】";
             }
             else
             {
@@ -49,7 +48,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             }
             else
             {
-                throw new ArgumentException(Lang.S["GameTask_10931_1b209c"]);
+                throw new ArgumentException("未知行动");
             }
         }
 
@@ -61,7 +60,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             }
             else
             {
-                throw new ArgumentException(Lang.S["GameTask_10931_1b209c"]);
+                throw new ArgumentException("未知行动");
             }
         }
 
@@ -73,7 +72,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             }
             else
             {
-                throw new ArgumentException(Lang.S["GameTask_10931_1b209c"]);
+                throw new ArgumentException("未知行动");
             }
         }
 

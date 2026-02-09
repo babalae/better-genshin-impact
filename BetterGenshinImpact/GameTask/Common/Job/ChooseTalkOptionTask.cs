@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,7 +24,7 @@ public partial class ChooseTalkOptionTask
 {
     private readonly ILogger<ChooseTalkOptionTask> _logger = App.GetLogger<ChooseTalkOptionTask>();
 
-    public string Name => Lang.S["GameTask_11508_43ddbc"];
+    public string Name => "持续对话并选择目标选项";
 
     // private readonly AutoSkipConfig _config = TaskContext.Instance().Config.AutoSkipConfig;
 
@@ -41,7 +40,7 @@ public partial class ChooseTalkOptionTask
     {
         if (!await Bv.WaitAndSkipForTalkUi(ct, 10))
         {
-            Logger.LogError(Lang.S["GameTask_11506_6d14a3"], "当前界面不在对话选项界面");
+            Logger.LogError("选项选择：{Text}", "当前界面不在对话选项界面");
             return TalkOptionRes.NotFound;
         }
 
@@ -178,7 +177,7 @@ public partial class ChooseTalkOptionTask
                 {
                     if (ocrResList[i + 1].Y - ocrResList[i].Y > 150)
                     {
-                        Debug.WriteLine($"{Lang.S["GameTask_11244_6e7753"]});
+                        Debug.WriteLine($"存在Y轴偏差过大的结果，忽略:{item.Text}");
                         continue;
                     }
                 }
@@ -202,7 +201,7 @@ public partial class ChooseTalkOptionTask
     {
         if (!string.IsNullOrEmpty(text))
         {
-            _logger.LogInformation(Lang.S["GameTask_11505_b22eff"], text);
+            _logger.LogInformation("对话选项：{Text}", text);
         }
     }
 
@@ -214,8 +213,8 @@ public partial class ChooseTalkOptionTask
         var mask = OpenCvCommonHelper.InRangeHsv(textMat, lowerOrange, upperOrange);
         int highConfidencePixels = Cv2.CountNonZero(mask);
         double rate = highConfidencePixels * 1.0 / (mask.Width * mask.Height);
-        Debug.WriteLine($"{Lang.S["GameTask_11247_619674"]});
-        _logger.LogInformation($"{Lang.S["GameTask_11247_619674"]});
+        Debug.WriteLine($"识别到橙色文字区域占比:{rate}");
+        _logger.LogInformation($"识别到橙色文字区域占比:{rate}");
         return rate > 0.1;
     }
 }

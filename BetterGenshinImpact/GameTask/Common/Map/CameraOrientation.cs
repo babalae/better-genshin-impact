@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
@@ -36,7 +35,7 @@ public class CameraOrientation
        var (angle, confidence)  = _coV2.PredictRotationWithConfidence(mat);
        if (confidence < 0.2)
        {
-           Debug.WriteLine($"{Lang.S["GameTask_11653_d68fa5"]});
+           Debug.WriteLine($"置信度过低, {confidence}<0.2, 不可靠视角 {angle}");
            Cv2.CvtColor(mat, mat, ColorConversionCodes.BGR2GRAY);
            return CameraOrientationFromGia.ComputeMiniMap(mat);
        }

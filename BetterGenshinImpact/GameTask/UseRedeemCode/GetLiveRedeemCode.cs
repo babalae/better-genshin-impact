@@ -56,7 +56,7 @@ public class GetLiveRedeemCode
         }
         catch (Exception e)
         {
-            return JObject.Parse($"{{\"error\":\Lang.S["GameTask_11866_8c96c3"],\"retcode\":1}}");
+            return JObject.Parse($"{{\"error\":\"[{e.GetType().Name}] {type} 接口请求错误\",\"retcode\":1}}");
         }
     }
 
@@ -70,7 +70,7 @@ public class GetLiveRedeemCode
             return "";
 
         string actId = "";
-        var keywords = new List<string> { Lang.S["GameTask_11865_eb9757"] };
+        var keywords = new List<string> { "前瞻特别节目" };
 
         var list = ret["data"]?["list"] as JArray;
         if (list == null) return "";
@@ -108,7 +108,7 @@ public class GetLiveRedeemCode
                         insert = insertToken.ToString();
                     }
                 }
-                if ((insert.Contains(Lang.S["GameTask_11863_325f88"]) || insert.Contains("米游社直播间")) && !string.IsNullOrEmpty(link))
+                if ((insert.Contains("观看") || insert.Contains("米游社直播间")) && !string.IsNullOrEmpty(link))
                 {
                     var match = Regex.Match(link, @"act_id=(.*?)\&");
                     if (match.Success)
@@ -168,12 +168,12 @@ public class GetLiveRedeemCode
         {
             actId = await GetActIdAsync("2");
             if (string.IsNullOrEmpty(actId))
-                throw new Exception(Lang.S["GameTask_11862_b2bac4"]);
+                throw new Exception("暂无前瞻直播资讯！");
         }
 
         var (codeVer, title) = await GetLiveDataAsync(actId);
         if (string.IsNullOrEmpty(codeVer))
-            throw new Exception(Lang.S["GameTask_11861_4dd7da"]);
+            throw new Exception("前瞻直播数据异常");
         var codeList = await GetCodeAsync(codeVer, actId);
         return codeList;
     }

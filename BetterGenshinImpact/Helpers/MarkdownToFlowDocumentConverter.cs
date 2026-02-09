@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -119,7 +118,7 @@ public static class MarkdownToFlowDocumentConverter
                         else
                         {
                             // 创建普通文本显示
-                            string fallbackText = !string.IsNullOrWhiteSpace(displayText) ? $"{Lang.S["Gen_11896_3085fc"]} : $"[图片: {url}]";
+                            string fallbackText = !string.IsNullOrWhiteSpace(displayText) ? $"[图片: {displayText}]" : $"[图片: {url}]";
                             imageParagraph.Inlines.Add(new Run(fallbackText)
                             {
                                 FontStyle = FontStyles.Normal,
@@ -374,7 +373,7 @@ public static class MarkdownToFlowDocumentConverter
                 StretchDirection = StretchDirection.DownOnly,
                 MaxWidth = 400, // 限制最大宽度，避免图片过大
                 MaxHeight = 300, // 限制最大高度
-                ToolTip = !string.IsNullOrWhiteSpace(altText) ? altText : Lang.S["Gen_11909_20def7"]
+                ToolTip = !string.IsNullOrWhiteSpace(altText) ? altText : "图片"
             };
 
             // 设置图片源
@@ -391,7 +390,7 @@ public static class MarkdownToFlowDocumentConverter
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"{Lang.S["Gen_11908_868d9e"]});
+            Debug.WriteLine($"加载图片失败: {url}, 错误: {ex.Message}");
             return false;
         }
     }
@@ -415,7 +414,7 @@ public static class MarkdownToFlowDocumentConverter
         try
         {
             Uri? imageUri = null;
-            string displayText = string.IsNullOrWhiteSpace(altText) ? $"{Lang.S["Gen_11907_51026d"]} : $"🖼️ {altText}";
+            string displayText = string.IsNullOrWhiteSpace(altText) ? $"🖼️ 查看图片: {Path.GetFileName(url)}" : $"🖼️ {altText}";
 
             // 处理不同类型的URL
             if (Uri.TryCreate(url, UriKind.Absolute, out imageUri))
@@ -455,7 +454,7 @@ public static class MarkdownToFlowDocumentConverter
                     NavigateUri = imageUri,
                     Foreground = Brushes.DodgerBlue,
                     TextDecorations = TextDecorations.Underline,
-                    ToolTip = $"{Lang.S["Gen_11906_f594ee"]}
+                    ToolTip = $"点击在浏览器中打开图片: {url}"
                 };
 
                 // 添加点击事件处理
@@ -467,7 +466,7 @@ public static class MarkdownToFlowDocumentConverter
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"{Lang.S["Gen_11905_1b58de"]});
+                        Debug.WriteLine($"无法打开图片: {e.Uri}, 错误: {ex.Message}");
                     }
                     e.Handled = true;
                 };
@@ -477,7 +476,7 @@ public static class MarkdownToFlowDocumentConverter
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"{Lang.S["Gen_11904_5aa1e3"]});
+            Debug.WriteLine($"创建图片链接失败 - URL: {url}, 错误: {ex.Message}");
         }
 
         return false;
@@ -1156,11 +1155,11 @@ public static class MarkdownToFlowDocumentConverter
                         Padding = new Thickness(4, 2, 4, 2),
                         Margin = new Thickness(2, 0, 2, 0),
                         Cursor = System.Windows.Input.Cursors.Hand,
-                        ToolTip = Lang.S["Gen_11903_1f2543"],
+                        ToolTip = "单击复制代码",
                         Child = new TextBlock
                         {
                             Text = RestoreEscapeCharacters(codeText),
-                            FontFamily = new FontFamily(Lang.S["Gen_11902_f40dae"]),
+                            FontFamily = new FontFamily("Consolas, 宋体, monospace"),
                             VerticalAlignment = VerticalAlignment.Center
                         }
                     };
@@ -1170,12 +1169,12 @@ public static class MarkdownToFlowDocumentConverter
                         try
                         {
                             Clipboard.SetText(RestoreEscapeCharacters(codeText));
-                            ThemedMessageBox.Information(Lang.S["Gen_11900_5562e0"], "复制成功");
+                            ThemedMessageBox.Information("代码已复制到剪贴板！", "复制成功");
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"{Lang.S["Gen_11899_060f8e"]});
-                            border.ToolTip = Lang.S["Gen_11898_5154ae"];
+                            Debug.WriteLine($"复制代码失败: {ex.Message}");
+                            border.ToolTip = "复制失败";
                         }
                     };
 
@@ -1233,7 +1232,7 @@ public static class MarkdownToFlowDocumentConverter
                 else
                 {
                     // 如果链接创建失败，显示替代文本
-                    string fallbackText = !string.IsNullOrWhiteSpace(displayText) ? $"{Lang.S["Gen_11896_3085fc"]} : $"[图片: {url}]";
+                    string fallbackText = !string.IsNullOrWhiteSpace(displayText) ? $"[图片: {displayText}]" : $"[图片: {url}]";
                     inlines.Add(new Run(fallbackText));
                 }
             }

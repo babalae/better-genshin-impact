@@ -42,7 +42,7 @@ public partial class FeedWindowViewModel : ViewModel
 
             if (codeList.Count == 0)
             {
-                Toast.Warning(Lang.S["Window_1069_e54374"]);
+                Toast.Warning("暂无前瞻兑换码信息");
                 return;
             }
 
@@ -53,7 +53,7 @@ public partial class FeedWindowViewModel : ViewModel
 
             var item = new FeedItem
             {
-                Title = Lang.S["Window_1070_3dbdb6"],
+                Title = "【实时获取】前瞻直播兑换码",
                 Content = displayItems.Count > 0 ? string.Join("\n", displayItems) : string.Empty,
                 Time = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
                 Codes = codeList.Select(c => c.Code).ToList()
@@ -73,11 +73,11 @@ public partial class FeedWindowViewModel : ViewModel
             }
 
 
-            Toast.Success(Lang.S["Window_1071_308912"]);
+            Toast.Success("已实时获取前瞻兑换码");
         }
         catch (Exception ex)
         {
-            Toast.Error($"{Lang.S["Gen_12472_0339c8"]});
+            Toast.Error($"获取前瞻兑换码失败: {ex.Message}");
         }
         finally
         {
@@ -101,12 +101,12 @@ public partial class FeedWindowViewModel : ViewModel
                 var codes = string.Join("\n", item.Codes);
                 UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(codes));
                 RedeemCodeManager.AddNotDetectClipboardText(codes);
-                Toast.Information(Lang.S["Window_1072_6b4ed6"]);
+                Toast.Information("兑换码已复制到剪贴板");
             }
         }
         catch (Exception ex)
         {
-            Toast.Error($"{Lang.S["Gen_12471_94dd33"]});
+            Toast.Error($"复制兑换码失败: {ex.Message}");
         }
     }
 
@@ -141,7 +141,7 @@ public partial class FeedWindowViewModel : ViewModel
         }
         catch (Exception ex)
         {
-            Toast.Error($"{Lang.S["Gen_12470_82ed44"]});
+            Toast.Error($"获取兑换码失败: {ex.Message}");
         }
         finally
         {

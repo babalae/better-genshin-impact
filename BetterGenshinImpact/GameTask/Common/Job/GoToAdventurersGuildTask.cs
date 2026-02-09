@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 public class GoToAdventurersGuildTask
 {
-    public string Name => Lang.S["GameTask_11557_63d2c1"];
+    public string Name => "前往冒险家协会领取奖励";
 
     private readonly int _retryTimes = 1;
 
@@ -35,14 +35,14 @@ public class GoToAdventurersGuildTask
     {
         IStringLocalizer<GoToAdventurersGuildTask> stringLocalizer = App.GetService<IStringLocalizer<GoToAdventurersGuildTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["Gen_10255_ce2210"]);
-        this.catherineLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_11556_84fdce"]);
-        this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_11241_fc6c4c"]);
+        this.dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日");
+        this.catherineLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "凯瑟琳");
+        this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
     }
 
     public async Task Start(string country, CancellationToken ct, string? dailyRewardPartyName = null ,bool onlyDoOnce = false)
     {
-        Logger.LogInformation(Lang.S["GameTask_11555_88fe1c"], Name);
+        Logger.LogInformation("→ {Name} 开始", Name);
         for (int i = 0; i < _retryTimes; i++)
         {
             try
@@ -64,7 +64,7 @@ public class GoToAdventurersGuildTask
             }
             catch (Exception e)
             {
-                Logger.LogError(Lang.S["GameTask_11554_f38b56"] + e.Message);
+                Logger.LogError("前往冒险家协会领取奖励执行异常：" + e.Message);
                 if (i == _retryTimes - 1)
                 {
                     // 通知失败
@@ -73,12 +73,12 @@ public class GoToAdventurersGuildTask
                 else
                 {
                     await Delay(1000, ct);
-                    Logger.LogInformation(Lang.S["GameTask_11553_48aaa9"]);
+                    Logger.LogInformation("重试前往冒险家协会领取奖励");
                 }
             }
         }
 
-        Logger.LogInformation(Lang.S["GameTask_11552_4ae836"], Name);
+        Logger.LogInformation("→ {Name} 结束", Name);
     }
 
     public async Task DoOnce(string country, CancellationToken ct)
@@ -90,14 +90,14 @@ public class GoToAdventurersGuildTask
         var res = await _chooseTalkOptionTask.SingleSelectText(this.dailyLocalizedString, ct, 10, true);
         if (res == TalkOptionRes.FoundAndClick)
         {
-            Logger.LogInformation("▶ {Text}", Lang.S["GameTask_11551_fdd590"]);
+            Logger.LogInformation("▶ {Text}", "领取『每日委托』奖励！");
             await Delay(800, ct);
             
             // 6.2 每日提示确认
             var ra1 = CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra1))
             {
-                Logger.LogInformation(Lang.S["GameTask_11243_4cd27d"]);
+                Logger.LogInformation("存在提示并确认");
             }
             ra1.Dispose();
             
@@ -112,16 +112,16 @@ public class GoToAdventurersGuildTask
             var ra = CaptureToRectArea();
             if (!Bv.FindFAndPress(ra, text: this.catherineLocalizedString))
             {
-                throw new Exception(Lang.S["GameTask_11550_023d04"]);
+                throw new Exception("未找与凯瑟琳对话交互按钮");
             }
         }
         else if (res == TalkOptionRes.FoundButNotOrange)
         {
-            Logger.LogInformation(Lang.S["GameTask_11549_156f53"], "领取『每日委托』奖励");
+            Logger.LogInformation("▶ {Text} 未完成或者已领取", "领取『每日委托』奖励");
         }
         else
         {
-            Logger.LogWarning(Lang.S["GameTask_11546_71ad05"], "领取『每日委托』奖励");
+            Logger.LogWarning("▶ 未找到 {Text} 选项", "领取『每日委托』奖励");
         }
 
         // 探索
@@ -133,18 +133,18 @@ public class GoToAdventurersGuildTask
         }
         else if (res == TalkOptionRes.FoundButNotOrange)
         {
-            Logger.LogInformation(Lang.S["GameTask_11547_7aab81"], "探索派遣");
+            Logger.LogInformation("▶ {Text} 未探索完成或已领取", "探索派遣");
         }
         else
         {
-            Logger.LogWarning(Lang.S["GameTask_11546_71ad05"], "探索派遣");
+            Logger.LogWarning("▶ 未找到 {Text} 选项", "探索派遣");
         }
 
         // 如果最后还在对话界面，选择最后一个选项退出
         if (Bv.IsInTalkUi(CaptureToRectArea()))
         {
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct);
-            Logger.LogInformation(Lang.S["GameTask_11545_1e4931"]);
+            Logger.LogInformation("退出当前对话");
         }
     }
 
@@ -156,10 +156,10 @@ public class GoToAdventurersGuildTask
     /// <returns></returns>
     public async Task GoToAdventurersGuild(string country, CancellationToken ct)
     {
-        var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"{Lang.S["GameTask_11544_c12235"]}));
+        var task = PathingTask.BuildFromFilePath(Global.Absolute(@$"GameTask\Common\Element\Assets\Json\冒险家协会_{country}.json"));
         if (task == null)
         {
-            throw new Exception(Lang.S["GameTask_11543_91950b"]);
+            throw new Exception("地图追踪文件加载失败");
         }
         var pathingTask = new PathExecutor(ct)
         {
@@ -185,7 +185,7 @@ public class GoToAdventurersGuildTask
 
                 if (i == retryTalkTimes - 1)
                 {
-                    throw new Exception(Lang.S["GameTask_11542_ba23bf"]);
+                    throw new Exception("与凯瑟琳对话失败");
                 }
             }
         }

@@ -173,11 +173,11 @@ public class TravelsDiaryDetailManager
                     writeFile(tddfile, _temp2);
                     if (!skipToast)
                     {
-                        Toast.Information($"{Lang.S["GameTask_11818_5c12c6"]});
+                        Toast.Information($"{month.year}_{month.month}数据获取成功！");
                     }
                     else
                     {
-                        TaskControl.Logger.LogError($"{Lang.S["GameTask_11817_9cbdc6"]});
+                        TaskControl.Logger.LogError($"米游社札记数据:{month.year}_{month.month}获取成功！");
 
                     }
 
@@ -193,11 +193,11 @@ public class TravelsDiaryDetailManager
         {
             if (!skipToast)
             {
-                Toast.Warning(Lang.S["GameTask_11816_d49209"]);
+                Toast.Warning("token未登录，请重新登录获取，此次将不新最新数据！");
             }
             else
             {
-                TaskControl.Logger.LogError(Lang.S["GameTask_11816_d49209"]);
+                TaskControl.Logger.LogError($"token未登录，请重新登录获取，此次将不新最新数据！");
             }
 
 
@@ -229,7 +229,7 @@ public class TravelsDiaryDetailManager
     {
         if (!File.Exists(filePath))
         {
-            throw new FileNotFoundException(Lang.S["GameTask_11815_538439"], filePath);
+            throw new FileNotFoundException("文件未找到", filePath);
         }
 
         // File.GetLastWriteTime 返回 DateTime 类型为 DateTimeKind.Local

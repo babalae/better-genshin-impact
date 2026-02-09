@@ -20,7 +20,6 @@ using LazyCache;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using OpenCvSharp;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service;
 
@@ -31,16 +30,16 @@ public sealed class MaskMapPointService : IMaskMapPointService
     // 酒馆（空荧酒馆）点位标签树的第一层 Label 类别定义（固定、手工维护），用于构建第一层节点以及限定第二层归类范围。
     private static readonly IReadOnlyList<(long Id, long IconId, string Name)> KongyingFirstLayerLabelDefinitions = new (long Id, long IconId, string Name)[]
     {
-        (10, 290, Lang.S["Service_12044_06d5fb"]),
-        (11, 290, Lang.S["Service_12043_a01d17"]),
-        (2, 291, Lang.S["Service_12042_6cfc2d"]),
-        (3, 292, Lang.S["Service_12041_2f4ccd"]),
-        (4, 293, Lang.S["Service_12040_e614f2"]),
-        (5, 294, Lang.S["Service_12039_2d99f8"]),
-        (6, 295, Lang.S["Service_12038_43589f"]),
-        (7, 296, Lang.S["Service_12037_54d363"]),
-        (8, 297, Lang.S["Service_12036_722188"]),
-        (1, 298, Lang.S["Service_12035_36c6f5"])
+        (10, 290, "宝箱-品质"),
+        (11, 290, "宝箱-获取"),
+        (2, 291, "见闻"),
+        (3, 292, "特产"),
+        (4, 293, "矿物"),
+        (5, 294, "怪物"),
+        (6, 295, "食材"),
+        (7, 296, "素材"),
+        (8, 297, "家园"),
+        (1, 298, "活动")
     };
 
     private readonly ILogger<MaskMapPointService> _logger;
@@ -101,7 +100,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, Lang.S["Service_12034_2611de"]);
+            _logger.LogDebug(ex, "调用米游社地图接口获取点位树失败");
         }
 
         if (resp == null || resp.Retcode != 0 || resp.Data == null)
@@ -191,13 +190,13 @@ public sealed class MaskMapPointService : IMaskMapPointService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, Lang.S["Service_12033_74d348"]);
+            _logger.LogDebug(ex, "调用米游社地图接口获取点位列表失败");
             return new MaskMapPointsResult { Labels = labels, Points = Array.Empty<MaskMapPoint>() };
         }
 
         if (resp.Retcode != 0 || resp.Data == null)
         {
-            _logger.LogWarning(Lang.S["Service_12032_8652e3"], resp.Retcode, resp.Message);
+            _logger.LogWarning("获取地图点位列表失败: {Retcode} {Message}", resp.Retcode, resp.Message);
             return new MaskMapPointsResult { Labels = labels, Points = Array.Empty<MaskMapPoint>() };
         }
 
@@ -251,7 +250,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
     {
         if (!int.TryParse(point.Id, out var pointId))
         {
-            return new MaskMapPointInfo { Text = $"{Lang.S["Service_12028_aa759c"]} };
+            return new MaskMapPointInfo { Text = $"点位 ID 非法: {point.Id}" };
         }
 
         try
@@ -259,7 +258,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
             var resp = await _mihoyoMapApi.GetPointInfoAsync(new PointInfoRequest { PointId = pointId }, ct);
             if (resp.Retcode != 0 || resp.Data == null)
             {
-                return new MaskMapPointInfo { Text = $"{Lang.S["Service_12031_de7656"]} };
+                return new MaskMapPointInfo { Text = $"查询失败: {resp.Retcode} {resp.Message}" };
             }
 
             var content = (resp.Data.Info.Content ?? string.Empty).Trim();
@@ -275,15 +274,15 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
             return new MaskMapPointInfo
             {
-                Text = string.IsNullOrEmpty(content) ? Lang.S["Service_12027_8c3ec9"] : content,
+                Text = string.IsNullOrEmpty(content) ? "暂无描述" : content,
                 ImageUrl = imageUrl,
                 UrlList = urlList
             };
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, Lang.S["Service_12030_999e1f"]);
-            return new MaskMapPointInfo { Text = Lang.S["Service_12029_0d66ed"] };
+            _logger.LogDebug(ex, "查询米游社地图点位详情失败");
+            return new MaskMapPointInfo { Text = "查询失败" };
         }
     }
 
@@ -541,13 +540,13 @@ public sealed class MaskMapPointService : IMaskMapPointService
     {
         if (!long.TryParse(point.Id, out var markerId))
         {
-            return new MaskMapPointInfo { Text = $"{Lang.S["Service_12028_aa759c"]} };
+            return new MaskMapPointInfo { Text = $"点位 ID 非法: {point.Id}" };
         }
 
         var markerById = await GetKongyingMarkerByIdCachedAsync(ct);
         if (!markerById.TryGetValue(markerId, out var marker))
         {
-            return new MaskMapPointInfo { Text = Lang.S["Service_12027_8c3ec9"] };
+            return new MaskMapPointInfo { Text = "暂无描述" };
         }
 
         var text = (marker.Content ?? string.Empty).Trim();
@@ -558,7 +557,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
         return new MaskMapPointInfo
         {
-            Text = string.IsNullOrWhiteSpace(text) ? Lang.S["Service_12027_8c3ec9"] : text,
+            Text = string.IsNullOrWhiteSpace(text) ? "暂无描述" : text,
             ImageUrl = marker.Picture ?? string.Empty,
             UrlList = string.IsNullOrWhiteSpace(marker.VideoPath)
                 ? Array.Empty<MaskMapLink>()

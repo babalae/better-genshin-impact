@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Net.Http;
 using System.Text;
@@ -31,7 +30,7 @@ public class ServerChanNotifier : INotifier
     {
         if (string.IsNullOrEmpty(_sendKey))
         {
-            throw new NotifierException(Lang.S["Service_12126_815c3c"]);
+            throw new NotifierException("ServerChan SendKey为空");
         }
 
         try
@@ -40,7 +39,7 @@ public class ServerChanNotifier : INotifier
             string apiUrl = GetServerChanApiUrl(_sendKey);
 
             // 生成通知标题和内容
-            string title = Lang.S["Service_12077_56fb4d"];
+            string title = $"BetterGI·更好的原神";
             string desp = GenerateDescription(content);
 
             // 准备表单数据
@@ -56,7 +55,7 @@ public class ServerChanNotifier : INotifier
             // 检查响应状态
             if (!response.IsSuccessStatusCode)
             {
-                throw new NotifierException($"{Lang.S["Service_12125_3a4893"]});
+                throw new NotifierException($"ServerChan调用失败，状态码: {response.StatusCode}");
             }
         }
         catch (NotifierException)
@@ -102,13 +101,13 @@ public class ServerChanNotifier : INotifier
         var sb = new StringBuilder();
 
         // 添加事件时间
-        sb.AppendLine(Lang.S["Service_12124_94dd20"]yyyy-MM-dd HH:mm:ss")}");
+        sb.AppendLine($"**时间**: {data.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")}");
 
         // 添加事件消息
         if (!string.IsNullOrEmpty(data.Message))
         {
             sb.AppendLine();
-            sb.AppendLine($"{Lang.S["Service_12123_047a03"]});
+            sb.AppendLine($"**消息**: {data.Message}");
         }
 
         return sb.ToString();

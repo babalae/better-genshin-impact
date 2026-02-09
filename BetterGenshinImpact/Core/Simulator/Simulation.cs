@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using Fischless.WindowsInput;
 using System;
 using BetterGenshinImpact.GameTask.Common;
@@ -25,7 +24,7 @@ public class Simulation
             // 检查键是否被按下
             if (IsKeyDown(key)) // 强制转换 VK 枚举为 int
             {
-                TaskControl.Logger.LogDebug($"{Lang.S["Gen_10289_b90d02"]});
+                TaskControl.Logger.LogDebug($"解除{key}的按下状态.");
                 SendInput.Keyboard.KeyUp(key);
             }
         }

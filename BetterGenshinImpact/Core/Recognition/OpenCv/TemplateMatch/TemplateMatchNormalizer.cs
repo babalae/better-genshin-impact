@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Linq;
 using OpenCvSharp;
@@ -36,7 +35,7 @@ public class TemplateMatchNormalizer
                 CCoeffMatchValue(template, mask),
             TemplateMatchModes.CCoeffNormed =>
                 (1, -1),
-            _ => throw new ArgumentException($"{Lang.S["Gen_10092_26045f"]}, nameof(mode))
+            _ => throw new ArgumentException($"未知的模板匹配模式: {mode}", nameof(mode))
         };
     }
     
@@ -57,7 +56,7 @@ public class TemplateMatchNormalizer
                 SumMatchValue(templates, mask, CCoeffMatchValue, channels),
             TemplateMatchModes.CCoeffNormed =>
                 (1, -1),
-            _ => throw new ArgumentException($"{Lang.S["Gen_10092_26045f"]}, nameof(mode))
+            _ => throw new ArgumentException($"未知的模板匹配模式: {mode}", nameof(mode))
         };
     }
 

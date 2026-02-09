@@ -21,7 +21,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     public MainWindow(MainWindowViewModel viewModel, INavigationService navigationService, ISnackbarService snackbarService)
     {
-        _logger.LogDebug(Lang.S["View_12148_b4957c"]);
+        _logger.LogDebug("主窗体实例化");
         DataContext = ViewModel = viewModel;
 
         InitializeComponent();
@@ -43,7 +43,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
 
     protected override void OnClosed(EventArgs e)
     {
-        _logger.LogDebug(Lang.S["View_12147_adf5f2"]);
+        _logger.LogDebug("主窗体退出");
         base.OnClosed(e);
         App.GetService<NotifyIconViewModel>()?.Exit();
     }

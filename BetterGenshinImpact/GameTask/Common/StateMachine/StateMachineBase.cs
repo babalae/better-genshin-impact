@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.StateMachine;
 
@@ -214,7 +213,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
     /// <param name="maxRetries">单个状态最大重试次数（Retry 返回值触发）</param>
     protected async Task RunStateMachineUntil(TContext context, TState[] targetStates, int maxIterations = 1000, int maxRetries = 5)
     {
-        Logger.LogInformation(Lang.S["GameTask_11703_f7d6f1"],
+        Logger.LogInformation("========== 状态机启动，目标状态：{Targets} ==========",
             string.Join(", ", targetStates));
 
         int retryCount = 0;
@@ -237,11 +236,11 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             // 检查是否到达目标状态
             if (targetStates.Contains(CurrentState))
             {
-                Logger.LogInformation(Lang.S["GameTask_11702_407321"], CurrentState);
+                Logger.LogInformation("========== 状态机完成，到达目标状态：{State} ==========", CurrentState);
                 return;
             }
 
-            Logger.LogDebug(Lang.S["GameTask_11701_662789"], iteration, CurrentState);
+            Logger.LogDebug("状态机迭代 {Iteration}，当前状态：{State}", iteration, CurrentState);
 
             // 执行状态处理器
             if (_stateHandlers.TryGetValue(CurrentState, out var handler))
@@ -256,13 +255,13 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
                         var nextState = await EnsureNextStateTransition();
                         if (EqualityComparer<TState>.Default.Equals(nextState, default))
                         {
-                            Logger.LogWarning(Lang.S["GameTask_11700_c2ae49"]);
+                            Logger.LogWarning("等待邻接状态转换超时");
                         }
                         break;
 
                     case StateHandlerResult.Wait:
                         // 可预期的等待：继续循环，重新检测状态
-                        Logger.LogDebug(Lang.S["GameTask_11699_4723e0"]);
+                        Logger.LogDebug("Handler 返回 Wait，状态机继续等待");
                         break;
 
                     case StateHandlerResult.Retry:
@@ -270,20 +269,20 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
                         retryCount++;
                         if (retryCount >= maxRetries)
                         {
-                            Logger.LogError(Lang.S["GameTask_11698_869bba"], CurrentState, maxRetries);
-                            throw new InvalidOperationException($"{Lang.S["GameTask_11697_2c2fb3"]});
+                            Logger.LogError("状态 {State} 重试次数达到上限 {Max}，转为失败", CurrentState, maxRetries);
+                            throw new InvalidOperationException($"状态 {CurrentState} 重试次数达到上限 {maxRetries}");
                         }
-                        Logger.LogWarning(Lang.S["GameTask_11696_e4ae64"], retryCount, maxRetries);
+                        Logger.LogWarning("Handler 返回 Retry，将重试当前状态（第 {Count}/{Max} 次）", retryCount, maxRetries);
                         break;
 
                     case StateHandlerResult.Fail:
                         // 失败：抛出异常
-                        throw new InvalidOperationException($"{Lang.S["GameTask_11695_fd6a3d"]});
+                        throw new InvalidOperationException($"状态 {CurrentState} 的 Handler 返回失败");
                 }
             }
             else if (!EqualityComparer<TState>.Default.Equals(CurrentState, default) && _unknownStateHandler != null)
             {
-                Logger.LogWarning(Lang.S["GameTask_11694_12f26c"], CurrentState);
+                Logger.LogWarning("状态 {State} 无注册处理器，使用未知状态处理器", CurrentState);
                 await _unknownStateHandler(context);
             }
             else if (_unknownStateHandler != null)
@@ -292,13 +291,13 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             }
             else
             {
-                Logger.LogWarning(Lang.S["GameTask_11693_2879bb"], CurrentState);
+                Logger.LogWarning("状态 {State} 无注册处理器，跳过", CurrentState);
             }
 
             await Delay(StateMachineLoopInterval, _ct);
         }
 
-        Logger.LogWarning(Lang.S["GameTask_11692_7117fd"], maxIterations);
+        Logger.LogWarning("状态机达到最大迭代次数 {Max}，强制退出", maxIterations);
     }
 
     /// <summary>
@@ -427,14 +426,14 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             if (EqualityComparer<TState>.Default.Equals(currentState, expectedState))
             {
                 CurrentState = currentState;
-                Logger.LogDebug(Lang.S["GameTask_11690_73f3fc"], expectedState);
+                Logger.LogDebug("状态转换成功：{State}", expectedState);
                 return true;
             }
 
             await Delay(DefaultDetectionInterval, _ct);
         }
 
-        Logger.LogWarning(Lang.S["GameTask_11691_d8b3ac"], expectedState, DetectCurrentState());
+        Logger.LogWarning("状态转换超时，期望：{Expected}，当前：{Current}", expectedState, DetectCurrentState());
         return false;
     }
 
@@ -458,14 +457,14 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
             if (expectedStates.Contains(currentState))
             {
                 CurrentState = currentState;
-                Logger.LogDebug(Lang.S["GameTask_11690_73f3fc"], currentState);
+                Logger.LogDebug("状态转换成功：{State}", currentState);
                 return currentState;
             }
 
             await Delay(DefaultDetectionInterval, _ct);
         }
 
-        Logger.LogWarning(Lang.S["GameTask_11689_d30df6"],
+        Logger.LogWarning("状态转换超时，期望任一：{Expected}，当前：{Current}",
             string.Join(",", expectedStates), DetectCurrentState());
         return default;
     }
@@ -481,7 +480,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
         var possibleStates = GetPossibleNextStates();
         if (possibleStates == null || possibleStates.Length == 0)
         {
-            Logger.LogWarning(Lang.S["GameTask_11688_96f82b"], CurrentState);
+            Logger.LogWarning("当前状态 {State} 没有注册邻接状态，无法确定期望状态", CurrentState);
             return default;
         }
 

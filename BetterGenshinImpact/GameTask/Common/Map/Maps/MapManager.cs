@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -59,7 +58,7 @@ public static class MapManager
                 MapTypes.Enkanomiya => new EnkanomiyaMap(),
                 MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
                 MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
-                _ => throw new System.ArgumentException($"{Lang.S["GameTask_11655_36fbed"]}, nameof(mapType))
+                _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))
             };
         }
         else
@@ -71,7 +70,7 @@ public static class MapManager
                 MapTypes.Enkanomiya => new EnkanomiyaMapTest(),
                 MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
                 MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
-                _ => throw new System.ArgumentException($"{Lang.S["GameTask_11655_36fbed"]}, nameof(mapType))
+                _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))
             };
         }
     }

@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using OpenCvSharp;
 using System;
 using System.Linq;
@@ -18,9 +17,9 @@ public class FastSqDiffMatcher : IDisposable
     public FastSqDiffMatcher(Mat source, Size templateSize)
     {
         if (source.Empty())
-            throw new Exception(Lang.S["Gen_10088_f1716d"]);
+            throw new Exception("源图像为空");
         if (templateSize.Width > source.Width || templateSize.Height > source.Height)
-            throw new Exception(Lang.S["Gen_10087_25e46f"]);
+            throw new Exception("模板图尺寸超过源图片尺寸");
 
         Source = source.Split();
 
@@ -53,7 +52,7 @@ public class FastSqDiffMatcher : IDisposable
     {
         var n = source.Length;
         if (maskedTemplates.Length != n)
-            throw new Exception($"{Lang.S["Gen_10086_2f924f"]});
+            throw new Exception($"模板图通道数 {maskedTemplates.Length} 与源图像通道数 {n} 不匹配");
 
         // 计算互相关图
         using var crossCorr = new Mat();
@@ -86,9 +85,9 @@ public class FastSqDiffMatcher : IDisposable
     public static (Mat[] maskedTemplates, Mat maskF) PreProcess(Mat template, Mat mask)
     {
         if (mask.Type() != MatType.CV_8UC1)
-            throw new Exception(Lang.S["Gen_10085_a59702"]);
+            throw new Exception("遮罩格式不对");
         if (template.Size() != mask.Size())
-            throw new Exception(Lang.S["Gen_10084_f4ee96"]);
+            throw new Exception("模板图与遮罩尺寸不匹配");
 
         var maskF = new Mat();
         mask.ConvertTo(maskF, MatType.CV_32F);

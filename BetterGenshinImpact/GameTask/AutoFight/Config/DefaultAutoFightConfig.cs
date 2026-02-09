@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using System;
 using System.Collections.Frozen;
@@ -34,7 +33,7 @@ public class DefaultAutoFightConfig
         {
             return name;
         }
-        throw new Exception($"{Lang.S["GameTask_10589_3e36cd"]});
+        throw new Exception($"角色名称校验失败：{alias}");
 
         // return CombatAvatars.Find(x => x.Alias.Contains(alias))?.Name ?? throw new Exception($"角色名称校验失败：{alias}");
     }

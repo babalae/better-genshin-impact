@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 {
     internal class CountInventoryItem : ISoloTask<object>
     {
-        public string Name => Lang.S["GameTask_11530_47b655"];
+        public string Name => "背包数物品";
 
         private readonly ILogger logger = App.GetLogger<CountInventoryItem>();
         private readonly InputSimulator input = Simulation.SendInput;
@@ -35,15 +35,15 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             this.gridScreenName = gridScreenName;
             if (itemName != null && itemNames != null)
             {
-                throw new ArgumentException($"{Lang.S["Gen_10182_48b564"]});
+                throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时使用");
             }
             if (itemName == null && itemNames == null)
             {
-                throw new ArgumentException($"{Lang.S["Gen_10181_fbe3fc"]});
+                throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时为空");
             }
             if (itemNames != null && !itemNames.Any())
             {
-                throw new ArgumentException($"{Lang.S["GameTask_11529_9ad546"]});
+                throw new ArgumentException($"参数{nameof(itemNames)}不能为空序列");
             }
             this.itemName = itemName;
             this.itemNames = itemNames;
@@ -55,11 +55,11 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 
             if (this.itemName != null)
             {
-                logger.LogInformation(Lang.S["GameTask_11528_dc69a2"], this.gridScreenName, this.itemName!);
+                logger.LogInformation("打开背包并在{grid}寻找{name}……", this.gridScreenName, this.itemName!);
             }
             else
             {
-                logger.LogInformation(Lang.S["GameTask_11527_9c5b3c"], this.gridScreenName, this.itemNames!.First(), this.itemNames!.Count());
+                logger.LogInformation("打开背包并在{grid}寻找{first}等{count}类物品……", this.gridScreenName, this.itemNames!.First(), this.itemNames!.Count());
             }
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, input, logger, this.ct);
@@ -109,7 +109,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                         }
                         else
                         {
-                            logger.LogWarning(Lang.S["GameTask_11526_f9d695"], numStr);
+                            logger.LogWarning("无法识别数量：{text}", numStr);
                             count = -2;
                         }
                         break;
@@ -123,7 +123,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             if (count == null)
             {
                 count = -1;
-                logger.LogInformation(Lang.S["GameTask_10489_37213d"], this.itemName!);
+                logger.LogInformation("没有找到{name}", this.itemName!);
             }
             return count.Value;
         }
@@ -159,13 +159,13 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                         }
                         else
                         {
-                            logger.LogWarning(Lang.S["GameTask_11526_f9d695"], numStr);
+                            logger.LogWarning("无法识别数量：{text}", numStr);
                             count = -2;
                         }
 
                         if (!itemsCountDic!.TryAdd(predName, count))
                         {
-                            logger.LogWarning(Lang.S["GameTask_11525_919d53"], predName);
+                            logger.LogWarning("重复的名称：{name}", predName);
                         }
 
                         notFoundItemNames.RemoveAll(n => n == predName);
@@ -184,7 +184,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 
             if (notFoundItemNames.Count > 0)
             {
-                logger.LogInformation(Lang.S["GameTask_10489_37213d"], String.Join(", ", notFoundItemNames));
+                logger.LogInformation("没有找到{name}", String.Join(", ", notFoundItemNames));
             }
             return itemsCountDic;
         }

@@ -6,7 +6,6 @@ using OpenCvSharp;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -45,7 +44,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回空数组
-            TaskControl.Logger.LogError(Lang.S["Gen_10239_5637de"], ex.Message);
+            TaskControl.Logger.LogError("ReadPathSync 异常: {Message}", ex.Message);
             return Array.Empty<string>();
         }
     }
@@ -68,7 +67,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回 false
-            TaskControl.Logger.LogError(Lang.S["Gen_10238_ae3c94"], ex.Message);
+            TaskControl.Logger.LogError("IsFolder 异常: {Message}", ex.Message);
             return false;
         }
     }
@@ -96,7 +95,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回空字符串
-            TaskControl.Logger.LogError(Lang.S["Gen_10237_a14533"], ex.Message);
+            TaskControl.Logger.LogError("ReadTextSync 异常: {Message}", ex.Message);
             return string.Empty;
         }
     }
@@ -117,7 +116,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回空字符串
-            TaskControl.Logger.LogError(Lang.S["Gen_10236_356a8e"], ex.Message);
+            TaskControl.Logger.LogError("ReadText 异常: {Message}", ex.Message);
             return string.Empty;
         }
     }
@@ -161,7 +160,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回空的Mat
-            TaskControl.Logger.LogError(Lang.S["Gen_10235_6e5ec1"], ex.Message);
+            TaskControl.Logger.LogError("ReadImageMatSync 异常: {Message}", ex.Message);
             return new Mat();
         }
     }
@@ -191,12 +190,12 @@ public class LimitedFile(string rootPath)
         {
             if (width <= 0 || height <= 0)
             {
-                throw new Exception(Lang.S["Gen_10234_bcc1f3"]);
+                throw new Exception("ReadImageMatWithResizeSync: 宽度和高度必须为正数");
             }
 
             if (interpolation is < 0 or > 5)
             {
-                throw new Exception($"{Lang.S["Gen_10233_629fe9"]});
+                throw new Exception($"ReadImageMatWithResizeSync: 不支持的插值算法 {interpolation}");
             }
 
             path = NormalizePath(path);
@@ -209,7 +208,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回空的Mat
-            TaskControl.Logger.LogError(Lang.S["Gen_10232_06a170"], ex.Message);
+            TaskControl.Logger.LogError("ReadImageMatWithResizeSync 异常: {Message}", ex.Message);
             return new Mat();
         }
     }
@@ -265,7 +264,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回 false
-            TaskControl.Logger.LogError(Lang.S["Gen_10231_e8e65c"], ex.Message);
+            TaskControl.Logger.LogError("IsValid 异常: {Message}", ex.Message);
             return false;
         }
     }
@@ -351,7 +350,7 @@ public class LimitedFile(string rootPath)
             path = NormalizePath(path);
             if (!IsValid(path, content))
             {
-                callbackFunc(Lang.S["Gen_10230_d0dd79"], null);
+                callbackFunc("路径不合法或文件内容不合法", null);
                 return false;
             }
             
@@ -405,7 +404,7 @@ public class LimitedFile(string rootPath)
         catch (Exception ex)
         {
             // 记录异常并返回 false
-            TaskControl.Logger.LogError(Lang.S["Gen_10229_87333c"], ex.Message);
+            TaskControl.Logger.LogError("WriteImageSync 异常: {Message}", ex.Message);
             return false;
         }
     }

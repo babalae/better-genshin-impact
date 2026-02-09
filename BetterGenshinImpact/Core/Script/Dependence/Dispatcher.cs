@@ -77,17 +77,17 @@ public class Dispatcher
         var realtimeTimer = timer;
         if (realtimeTimer == null)
         {
-            throw new ArgumentNullException(nameof(realtimeTimer), Lang.S["Gen_10196_11fbc0"]);
+            throw new ArgumentNullException(nameof(realtimeTimer), "实时任务对象不能为空");
         }
 
         if (string.IsNullOrEmpty(realtimeTimer.Name))
         {
-            throw new ArgumentNullException(nameof(realtimeTimer.Name), Lang.S["Gen_10195_c49ad2"]);
+            throw new ArgumentNullException(nameof(realtimeTimer.Name), "实时任务名称不能为空");
         }
 
         if (!TaskTriggerDispatcher.Instance().AddTrigger(realtimeTimer.Name, realtimeTimer.Config))
         {
-            throw new ArgumentException($"{Lang.S["Gen_10194_2ebd36"]}, nameof(realtimeTimer.Name));
+            throw new ArgumentException($"添加实时任务失败: {realtimeTimer.Name}", nameof(realtimeTimer.Name));
         }
     }
 
@@ -118,13 +118,13 @@ public class Dispatcher
     {
         if (soloTask == null)
         {
-            throw new ArgumentNullException(nameof(soloTask), Lang.S["Gen_10193_a83e8e"]);
+            throw new ArgumentNullException(nameof(soloTask), "独立任务对象不能为空");
         }
 
         var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
         if (taskSettingsPageViewModel == null)
         {
-            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), Lang.S["Gen_10192_de0f90"]);
+            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
 
 
@@ -200,7 +200,7 @@ public class Dispatcher
 
                     if (foodName != null && foodEffectType != null)
                     {
-                        throw new NotSupportedException(Lang.S["Gen_10191_212013"]);
+                        throw new NotSupportedException("不能同时指定foodName和foodEffectType");
                     }
 
                     if (foodName == null)
@@ -210,7 +210,7 @@ public class Dispatcher
                             PathingPartyConfig? pathingPartyConfig = _config as PathingPartyConfig;
                             if (pathingPartyConfig == null)
                             {
-                                throw new NotSupportedException(Lang.S["Gen_10190_95d8dd"]);
+                                throw new NotSupportedException("foodEffectType参数需要调度器配置，请在调度器下使用");
                             }
                             else
                             {
@@ -220,7 +220,7 @@ public class Dispatcher
                                         foodName = pathingPartyConfig.AutoEatConfig.DefaultAtkBoostingDishName;
                                         if (foodName == null)
                                         {
-                                            _logger.LogInformation(Lang.S["Gen_10186_dc3c0a"], "默认的攻击类料理");
+                                            _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的攻击类料理");
                                             return null;
                                         }
                                         break;
@@ -228,7 +228,7 @@ public class Dispatcher
                                         foodName = pathingPartyConfig.AutoEatConfig.DefaultAdventurersDishName;
                                         if (foodName == null)
                                         {
-                                            _logger.LogInformation(Lang.S["Gen_10186_dc3c0a"], "默认的冒险类料理");
+                                            _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的冒险类料理");
                                             return null;
                                         }
                                         break;
@@ -236,12 +236,12 @@ public class Dispatcher
                                         foodName = pathingPartyConfig.AutoEatConfig.DefaultDefBoostingDishName;
                                         if (foodName == null)
                                         {
-                                            _logger.LogInformation(Lang.S["Gen_10186_dc3c0a"], "默认的防御类料理");
+                                            _logger.LogInformation("缺少{Text}配置，跳过吃Buff", "默认的防御类料理");
                                             return null;
                                         }
                                         break;
                                     default:
-                                        throw new NotSupportedException(Lang.S["Gen_10185_75c3bc"]);
+                                        throw new NotSupportedException("JS脚本入参错误：错误的foodEffectType");
                                 }
                             }
                         }
@@ -260,18 +260,18 @@ public class Dispatcher
                 {
                     if (soloTask.Config == null)
                     {
-                        throw new NullReferenceException($"{Lang.S["Gen_10184_2c2858"]});
+                        throw new NullReferenceException($"{nameof(soloTask.Config)}为空");
                     }
-                    GridScreenName gridScreenName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "gridScreenName", (GridScreenName?)null) ?? throw new Exception(Lang.S["Gen_10183_c67967"]);
+                    GridScreenName gridScreenName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "gridScreenName", (GridScreenName?)null) ?? throw new Exception("gridScreenName为空或错误");
                     string? itemName = ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "itemName", (string?)null);
                     IEnumerable<string>? itemNames = ScriptObjectConverter.GetValue<string>((ScriptObject)soloTask.Config, "itemNames");
                     if (itemName != null && itemNames != null)
                     {
-                        throw new ArgumentException($"{Lang.S["Gen_10182_48b564"]});
+                        throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时使用");
                     }
                     if (itemName == null && itemNames == null)
                     {
-                        throw new ArgumentException($"{Lang.S["Gen_10181_fbe3fc"]});
+                        throw new ArgumentException($"参数{nameof(itemName)}和{nameof(itemNames)}不能同时为空");
                     }
                     var result = await new CountInventoryItem(gridScreenName, itemName, itemNames).Start(cancellationToken);
                     if (itemName != null)
@@ -290,7 +290,7 @@ public class Dispatcher
                     }
                 }
             default:
-                throw new ArgumentException($"{Lang.S["Gen_10180_1c3e3f"]}, nameof(soloTask.Name));
+                throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
         }
     }
 
@@ -316,7 +316,7 @@ public class Dispatcher
     {  
         if (param == null)  
         {  
-            throw new ArgumentNullException(nameof(param), Lang.S["Gen_10179_9269bb"]);  
+            throw new ArgumentNullException(nameof(param), "秘境任务参数不能为空");  
         }  
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
@@ -333,7 +333,7 @@ public class Dispatcher
     {  
         if (param == null)  
         {  
-            throw new ArgumentNullException(nameof(param), Lang.S["Gen_10178_a122e0"]);  
+            throw new ArgumentNullException(nameof(param), "战斗任务参数不能为空");  
         }  
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  

@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override void OnInitialize()
         {
-            logger.LogInformation(Lang.S["GameTask_10776_e5cfd8"]);
+            logger.LogInformation("开始寻找鱼塘");
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
@@ -60,7 +60,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 detectInterval = timeProvider.GetLocalNow().AddSeconds(0.5);
             }
             var result = blackboard.Predictor.Predictor.Detect(imageRegion.CacheImage);
-            Debug.WriteLine($"{Lang.S["GameTask_10775_21df35"]});
+            Debug.WriteLine($"YOLO识别: {result.Speed}");
             var fishpond = new Fishpond(result, ignoreObtained: true);
             if (fishpond.FishpondRect == default)
             {
@@ -73,8 +73,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 BaitType[] chooseBaitfailuresIgnoredBaits = blackboard.chooseBaitFailures.GroupBy(f => f).Where(g => g.Count() >= ChooseBait.MAX_FAILED_TIMES).Select(g => g.Key).ToArray();
                 BaitType[] throwRodNoTargetFishfailuresIgnoredBaits = blackboard.throwRodNoBaitFishFailures.GroupBy(f => f).Where(g => g.Count() >= ThrowRod.MAX_NO_BAIT_FISH_TIMES).Select(g => g.Key).ToArray();
 
-                logger.LogInformation(Lang.S["GameTask_10687_a53c94"] + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType)
-                    .Select(g => $"{Lang.S["GameTask_10686_ee8a97"]} + ((chooseBaitfailuresIgnoredBaits.Contains(g.Key.BaitType) || throwRodNoTargetFishfailuresIgnoredBaits.Contains(g.Key.BaitType)) ? "（忽略）" : ""))
+                logger.LogInformation("定位到鱼塘：" + string.Join('、', fishpond.Fishes.GroupBy(f => f.FishType)
+                    .Select(g => $"{g.Key.ChineseName}{g.Count()}条" + ((chooseBaitfailuresIgnoredBaits.Contains(g.Key.BaitType) || throwRodNoTargetFishfailuresIgnoredBaits.Contains(g.Key.BaitType)) ? "（忽略）" : ""))
                     ));
                 int i = 0;
                 foreach (var fish in fishpond.Fishes)
@@ -135,7 +135,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     return BehaviourStatus.Succeeded;
                 }
                 chooseBaitUIOpenWaitEndTime = timeProvider.GetLocalNow().AddSeconds(3);
-                logger.LogInformation(Lang.S["GameTask_10773_b8853c"]);
+                logger.LogInformation("打开换饵界面");
                 blackboard.chooseBaitUIOpening = true;
                 input.Mouse.RightButtonClick();
                 blackboard.Sleep(100);
@@ -147,7 +147,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             blackboard.selectedBait = blackboard.fishpond.Fishes.GroupBy(f => f.FishType.BaitType)
                 .Where(b => !blackboard.chooseBaitFailures.GroupBy(f => f).Where(g => g.Count() >= MAX_FAILED_TIMES).Any(g => g.Key == b.Key))  // 不能是已经失败两次的饵
                 .OrderByDescending(g => g.Count()).First().Key; // 选择最多鱼吃的饵料
-            logger.LogInformation(Lang.S["GameTask_10772_4bea81"], blackboard.selectedBait.GetDescription());
+            logger.LogInformation("选择鱼饵 {Text}", blackboard.selectedBait.GetDescription());
 
             // 寻找鱼饵
             var boxAndBaits = FindBait(imageRegion);
@@ -175,7 +175,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         ra.Click();
                     }
                     blackboard.chooseBaitUIOpening = false;
-                    logger.LogInformation(Lang.S["GameTask_10770_7f25db"]);
+                    logger.LogInformation("退出换饵界面");
                     blackboard.Sleep(500); // 等待界面切换
 
                     return BehaviourStatus.Succeeded;
@@ -184,15 +184,15 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             if (timeProvider.GetLocalNow() >= chooseBaitUIOpenWaitEndTime)
             {
-                logger.LogWarning(Lang.S["GameTask_10771_02917a"]);
+                logger.LogWarning("没有找到目标鱼饵");
                 input.Keyboard.KeyPress(VK.VK_ESCAPE);
                 blackboard.chooseBaitUIOpening = false;
-                logger.LogInformation(Lang.S["GameTask_10770_7f25db"]);
+                logger.LogInformation("退出换饵界面");
 
                 blackboard.chooseBaitFailures.Add(blackboard.selectedBait.Value);
                 if (blackboard.chooseBaitFailures.Count(f => f == blackboard.selectedBait) >= MAX_FAILED_TIMES)
                 {
-                    logger.LogWarning($"{Lang.S["GameTask_10769_862ba2"]});
+                    logger.LogWarning($"本次将忽略{blackboard.selectedBait.GetDescription()}");
                 }
 
                 blackboard.selectedBait = null;
@@ -263,7 +263,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             input.Mouse.LeftButtonDown();
             blackboard.pitchReset = true;
-            logger.LogInformation(Lang.S["GameTask_10767_fbbcd3"]);
+            logger.LogInformation("长按举起鱼竿");
         }
 
         protected override BehaviourStatus Update(ImageRegion context)
@@ -272,7 +272,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             // 但说到底，检查是否鼠标被干扰，不是一个必选的方法。做一个精确度高的图形检测方案，来检测当前位于哪个步骤，会更好。
             if (!Simulation.IsKeyDown(VK.VK_LBUTTON))
             {
-                logger.LogWarning(Lang.S["GameTask_10768_ae0679"]);
+                logger.LogWarning("检测到当前鼠标左键状态不符合要求，可能受到干扰，退出任务");
                 blackboard.abort = true;
                 return BehaviourStatus.Failed;
             }
@@ -320,7 +320,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             input.Mouse.LeftButtonDown();
             blackboard.pitchReset = true;
-            logger.LogInformation(Lang.S["GameTask_10767_fbbcd3"]);
+            logger.LogInformation("长按举起鱼竿");
         }
 
         protected override void OnTerminate(BehaviourStatus status)
@@ -341,7 +341,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             // 找 鱼饵落点
             var result = blackboard.Predictor.Predictor.Detect(imageRegion.CacheImage);
-            Debug.WriteLine($"{Lang.S["GameTask_10766_3aec58"]});
+            Debug.WriteLine($"YOLOv8识别: {result.Speed}");
             var fishpond = new Fishpond(result, includeTarget: timeProvider.GetLocalNow() <= ignoreObtainedEndTime);
             blackboard.fishpond = fishpond;
             Random _rd = new();
@@ -359,7 +359,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     }
                     else
                     {
-                        logger.LogInformation(Lang.S["GameTask_10765_ee7fd4"]);
+                        logger.LogInformation("举起鱼竿失败，始终没有找到落点");
                         input.Mouse.LeftButtonUp();
                         blackboard.Sleep(2000);
                         input.Mouse.LeftButtonClick();
@@ -369,7 +369,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         blackboard.throwRodNoTargetTimes++;
                         if (blackboard.throwRodNoTargetTimes > 2)
                         {
-                            logger.LogWarning(Lang.S["GameTask_10764_7830da"]);
+                            logger.LogWarning("没有找到落点次数过多，目前位置可能视野不佳，退出");
                             blackboard.abort = true;
                         }
 
@@ -379,7 +379,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 noPlacementTimes++;
                 blackboard.Sleep(50);
-                Debug.WriteLine($"{Lang.S["GameTask_10763_579c66"]});
+                Debug.WriteLine($"{noPlacementTimes}次未找到鱼饵落点");
 
                 var cX = imageRegion.CacheImage.Width / 2;
                 var cY = imageRegion.CacheImage.Height / 2;
@@ -393,7 +393,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 if (noPlacementTimes > 25)
                 {
-                    logger.LogInformation(Lang.S["GameTask_10762_03f76e"]);
+                    logger.LogInformation("中途丢失鱼饵落点，重试");
                     input.Mouse.LeftButtonUp();
                     blackboard.Sleep(2000);
                     input.Mouse.LeftButtonClick();
@@ -424,7 +424,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             if (currentFish == null)
             {
-                Debug.WriteLine(Lang.S["GameTask_10761_e1dbe3"]);
+                Debug.WriteLine("无鱼饵适用鱼");
                 noTargetFishTimes++;
 
                 if (noTargetFishTimes > 10)
@@ -438,11 +438,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     blackboard.throwRodNoBaitFishFailures.Add(blackboard.selectedBait.Value);
                     if (blackboard.throwRodNoBaitFishFailures.Count(f => f == blackboard.selectedBait) >= MAX_NO_BAIT_FISH_TIMES)
                     {
-                        logger.LogWarning(Lang.S["GameTask_10760_11e7da"], blackboard.selectedBait.GetDescription());
+                        logger.LogWarning("本次将忽略{bait}", blackboard.selectedBait.GetDescription());
                     }
 
                     blackboard.selectedBait = null;
-                    logger.LogInformation(Lang.S["GameTask_10759_81e2ef"]);
+                    logger.LogInformation("没有找到鱼饵适用鱼");
                     input.Mouse.LeftButtonUp();
                     blackboard.Sleep(2000);
                     input.Mouse.LeftButtonClick();
@@ -525,14 +525,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     var moveX = 100 * (cX - rdX) / imageRegion.CacheImage.Width;
                     var moveY = 100 * (cY - rdY) / imageRegion.CacheImage.Height;
 
-                    logger.LogInformation(Lang.S["GameTask_10758_741af8"], moveX, moveY);
+                    logger.LogInformation("失败 随机移动 {DX}, {DY}", moveX, moveY);
                     input.Mouse.MoveMouseBy(moveX, moveY);
                 }
                 else if (state == 0)
                 {
                     // 成功 抛竿
                     input.Mouse.LeftButtonUp();
-                    logger.LogInformation(Lang.S["GameTask_10757_132b3b"], currentFish.FishType.ChineseName);
+                    logger.LogInformation("尝试钓取 {Text}", currentFish.FishType.ChineseName);
                     return BehaviourStatus.Succeeded;
                 }
                 else if (state == 1)
@@ -612,7 +612,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                logger.LogInformation(Lang.S["GameTask_10756_230000"]);
+                logger.LogInformation("抛竿失败");
                 return BehaviourStatus.Failed;
             }
         }
@@ -648,13 +648,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 if (leftButtonClicked)
                 {
-                    logger.LogInformation(Lang.S["GameTask_10755_c95426"]);
+                    logger.LogInformation($"收杆成功");
 
                     return BehaviourStatus.Failed;
                 }
                 else
                 {
-                    logger.LogInformation($"{Lang.S["GameTask_10754_5ef13f"]});
+                    logger.LogInformation($"{seconds}秒没有咬杆，本次收杆");
                     leftButtonClicked = true;
                     input.Mouse.LeftButtonClick();
                     waitFishBiteTimeout = timeProvider.GetLocalNow().AddSeconds(2);
@@ -710,7 +710,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                logger.LogInformation(Lang.S["GameTask_10753_d670a2"]);
+                logger.LogInformation("提竿失败");
                 return BehaviourStatus.Failed;
             }
         }
@@ -732,12 +732,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             this.input = input;
             this.ocrService = ocrService;
             this.drawContent = drawContent ?? VisionContext.Instance().DrawContent;
-            this.getABiteLocalizedString = stringLocalizer == null ? Lang.S["GameTask_10752_889841"] : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
+            this.getABiteLocalizedString = stringLocalizer == null ? "上钩" : stringLocalizer.WithCultureGet(cultureInfo, "上钩");
         }
 
         protected override void OnInitialize()
         {
-            logger.LogInformation(Lang.S["GameTask_10751_ae75db"]);
+            logger.LogInformation("提竿识别开始");
         }
 
         protected override BehaviourStatus Update(ImageRegion imageRegion)
@@ -760,14 +760,14 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 using var tipsRa = imageRegion.Derive((Rect)currentBiteWordsTips + liftingWordsAreaRect.Location);
                 tipsRa.DrawSelf("FishBiteTips");
 
-                return RaiseRod(Lang.S["GameTask_10750_744a20"]);
+                return RaiseRod("文字块");
             }
 
             // 图像提竿判断
             using var liftRodButtonRa = imageRegion.Find(blackboard.AutoFishingAssets.LiftRodButtonRo);
             if (!liftRodButtonRa.IsEmpty())
             {
-                return RaiseRod(Lang.S["GameTask_10749_7ab147"]);
+                return RaiseRod("图像识别");
             }
 
             // OCR 提竿判断
@@ -785,7 +785,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             input.Mouse.LeftButtonClick();
             logger.LogInformation(@"┌------------------------┐");
-            logger.LogInformation(Lang.S["GameTask_10748_0e0b3b"], method);
+            logger.LogInformation("  自动提竿({m})", method);
             drawContent.RemoveRect("FishBiteTips");
             return BehaviourStatus.Succeeded;
         }
@@ -807,7 +807,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override void OnInitialize()
         {
-            logger.LogInformation(Lang.S["GameTask_10747_de9cfe"]);
+            logger.LogInformation("钓鱼框识别开始");
             waitFishBoxAppearEndTime = timeProvider.GetLocalNow().AddSeconds(5);
         }
 
@@ -815,7 +815,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             if (timeProvider.GetLocalNow() > waitFishBoxAppearEndTime)
             {
-                logger.LogInformation(Lang.S["GameTask_10746_222add"]);
+                logger.LogInformation("钓鱼框识别失败");
                 return BehaviourStatus.Failed;
             }
 
@@ -831,7 +831,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
                     }
-                    logger.LogError(Lang.S["GameTask_10745_123fae"]);
+                    logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
                     return BehaviourStatus.Running;
                 }
 
@@ -861,7 +861,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                      (topMat.Width / 2 - _cur.X) * 2 + hExtra * 2, _cur.Height + vExtra * 2);
                 using var boxRa = imageRegion.Derive(blackboard.fishBoxRect);
                 boxRa.DrawSelf("FishBox", System.Drawing.Pens.LightPink);
-                logger.LogInformation(Lang.S["GameTask_10744_2b802b"]);
+                logger.LogInformation("  识别到钓鱼框");
                 return BehaviourStatus.Succeeded;
             }
 
@@ -889,7 +889,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override void OnInitialize()
         {
-            logger.LogInformation(Lang.S["GameTask_10743_ec2a60"]);
+            logger.LogInformation("拉扯开始");
         }
 
         private MOUSEEVENTF _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
@@ -907,7 +907,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     {
                         SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
                     }
-                    logger.LogError(Lang.S["GameTask_10742_14c1da"]);
+                    logger.LogError("识别到超过3个矩形，取前三");
                     rects.Sort((a, b) => b.Height.CompareTo(a.Height));
                     rects.RemoveRange(3, rects.Count - 3);
                 }
@@ -1008,7 +1008,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 没有矩形视为已经完成钓鱼
                 drawContent.RemoveRect("FishBox");
                 _prevMouseEvent = MOUSEEVENTF.MOUSEEVENTF_LEFTUP;
-                logger.LogInformation(Lang.S["GameTask_10741_b4cefd"]);
+                logger.LogInformation("  拉扯结束");
                 logger.LogInformation(@"└------------------------┘");
 
                 // 保证鼠标松开
@@ -1059,7 +1059,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             if (blackboard.pitchReset)
             {
-                logger.LogInformation(Lang.S["GameTask_10715_834b53"]);
+                logger.LogInformation("调整视角至俯视");
                 blackboard.pitchReset = false;
                 // 下移视角方便看鱼
                 input.Mouse.MoveMouseBy(0, 500);
@@ -1096,7 +1096,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         protected override void OnInitialize()
         {
-            logger.LogInformation(Lang.S["GameTask_10740_9b64e7"]);
+            logger.LogInformation("开始寻找换饵图标");
             theta = 0d;
         }
 
@@ -1121,7 +1121,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                logger.LogInformation(Lang.S["GameTask_10739_42837f"]);
+                logger.LogInformation("找到换饵图标");
                 return BehaviourStatus.Succeeded;
             }
         }

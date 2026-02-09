@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -10,20 +9,20 @@ public class Method
 {
     public static readonly Method Skill = new(["skill", "e"]);
     public static readonly Method Burst = new(["burst", "q"]);
-    public static readonly Method Attack = new(["attack", Lang.S["GameTask_10675_0fdf02"], "普通攻击"]);
-    public static readonly Method Charge = new(["charge", Lang.S["GameTask_10674_7f3b6c"]]);
-    public static readonly Method Wait = new(["wait", "after", Lang.S["GameTask_10673_879792"]]);
-    public static readonly Method Ready = new(["ready", Lang.S["GameTask_10672_769d88"]]);
+    public static readonly Method Attack = new(["attack", "普攻", "普通攻击"]);
+    public static readonly Method Charge = new(["charge", "重击"]);
+    public static readonly Method Wait = new(["wait", "after", "等待"]);
+    public static readonly Method Ready = new(["ready", "完成"]);
 
-    public static readonly Method Walk = new(["walk", Lang.S["GameTask_10671_22a207"]]);
+    public static readonly Method Walk = new(["walk", "行走"]);
     public static readonly Method W = new(["w"]);
     public static readonly Method A = new(["a"]);
     public static readonly Method S = new(["s"]);
     public static readonly Method D = new(["d"]);
 
-    public static readonly Method Aim = new(["aim", "r", Lang.S["GameTask_10670_039c37"]]);
-    public static readonly Method Dash = new(["dash", Lang.S["GameTask_10669_fc16d9"]]);
-    public static readonly Method Jump = new(["jump", "j", Lang.S["GameTask_10668_fe8959"]]);
+    public static readonly Method Aim = new(["aim", "r", "瞄准"]);
+    public static readonly Method Dash = new(["dash", "冲刺"]);
+    public static readonly Method Jump = new(["jump", "j", "跳跃"]);
 
     // 宏
     public static readonly Method MouseDown = new(["mousedown"]);
@@ -90,7 +89,7 @@ public class Method
             }
         }
 
-        Logger.LogError($"{Lang.S["GameTask_10667_bcb659"]});
-        throw new ArgumentException($"{Lang.S["GameTask_10667_bcb659"]});
+        Logger.LogError($"战斗策略脚本中出现未知的方法：{method}");
+        throw new ArgumentException($"战斗策略脚本中出现未知的方法：{method}");
     }
 }

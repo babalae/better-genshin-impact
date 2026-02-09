@@ -43,7 +43,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
-    public string Title => $"{Lang.S["Gen_12202_6b4815"]} · Dev" : string.Empty)}";
+    public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     [ObservableProperty] private bool _isVisible = true;
 
@@ -163,13 +163,13 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         {
             Config.CommonConfig.CurrentThemeType = themeType;
             _configService.Save();
-            _logger.LogInformation($"{Lang.S["Gen_12201_e7c026"]});
+            _logger.LogInformation($"主题类型已从 {originalThemeType} 修正为 {themeType}，因为当前系统不支持该主题效果");
         }
 
         if (WinePlatformAddon.IsRunningOnWine)
         {
             // Wine 平台下不应用主题
-            _logger.LogInformation(Lang.S["Gen_12200_dceb7d"]);
+            _logger.LogInformation("检测到运行在 Wine 平台，跳过主题应用");
             return;
         }
 
@@ -328,9 +328,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            _logger.LogError(Lang.S["Gen_11915_d8e122"] + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
+            _logger.LogError("首次运行自动初始化按键绑定异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
 
-            await ThemedMessageBox.ErrorAsync(Lang.S["Gen_12198_7819c5"] + e.Message + "，后续可以手动设置");
+            await ThemedMessageBox.ErrorAsync("读取原神键位并设置键位绑定数据时发生异常：" + e.Message + "，后续可以手动设置");
         }
     }
     */
@@ -353,7 +353,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await ThemedMessageBox.ShowAsync(Lang.S["Gen_12197_25b4d5"], "BetterGI",
+                var res = await ThemedMessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
                     System.Windows.MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
@@ -361,7 +361,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
-                    await ThemedMessageBox.InformationAsync(Lang.S["Gen_12196_888fe4"]);
+                    await ThemedMessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
                     Application.Current.Shutdown();
                 }
             }
@@ -402,17 +402,17 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     // string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
                     // await OcrFactory.ChangeCulture(gameCultureInfoName);
                     var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png")));
-                    Debug.WriteLine(Lang.S["Gen_12195_30ecb3"] + s);
+                    Debug.WriteLine("PaddleOcr预热结果:" + s);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError(Lang.S["Gen_12194_dea420"] + e.Source + "\r\n--" +
+                    _logger.LogError("PaddleOcr预热异常，解决方案：【https://bettergi.com/faq.html】\r\n" + e.Source + "\r\n--" +
                                      Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError(Lang.S["Gen_12193_5943e4"] +
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：【https://bettergi.com/faq.html】\r\n" +
                                          innerException.Source + "\r\n--" + Environment.NewLine +
                                          innerException.StackTrace + "\r\n---" + Environment.NewLine +
                                          innerException.Message);
@@ -427,7 +427,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Warning(Lang.S["Window_1000_6f1fd0"] + e.Source + "\r\n--" +
+            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(
                 new ProcessStartInfo(
@@ -485,7 +485,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, Lang.S["Gen_12192_07be02"]);
+            _logger.LogDebug(ex, $"获取兑换码是否存在更新失败");
         }
     }
 

@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.ComponentModel;
 
@@ -6,19 +5,19 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 public enum MapTypes
 {
-    [Description(Lang.S["GameTask_11673_32269b"])]
+    [Description("提瓦特大陆")]
     Teyvat,
 
-    [Description(Lang.S["GameTask_11672_94e546"])]
+    [Description("层岩巨渊")]
     TheChasm,
 
-    [Description(Lang.S["GameTask_11397_9e13be"])]
+    [Description("渊下宫")]
     Enkanomiya,
 
-    [Description(Lang.S["GameTask_11671_9778f1"])]
+    [Description("旧日之海")]
     SeaOfBygoneEras,
 
-    [Description(Lang.S["GameTask_11670_c37935"])]
+    [Description("远古圣山")]
     AncientSacredMountain
 }
 public static class MapTypesExtensions
@@ -35,7 +34,7 @@ public static class MapTypesExtensions
                 }
             }
         }
-        throw new ArgumentException($"{Lang.S["GameTask_11675_626db4"]}, nameof(description));
+        throw new ArgumentException($"无法找到描述为 '{description}' 的枚举值", nameof(description));
     }
     
     public static MapTypes ParseFromName(string name)
@@ -44,6 +43,6 @@ public static class MapTypesExtensions
         {
             return result;
         }
-        throw new ArgumentException($"{Lang.S["GameTask_11674_8fef31"]}, nameof(name));
+        throw new ArgumentException($"无法找到名称为 '{name}' 的枚举值", nameof(name));
     }
 }

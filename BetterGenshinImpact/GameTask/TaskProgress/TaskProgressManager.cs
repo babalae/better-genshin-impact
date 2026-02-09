@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
@@ -64,7 +63,7 @@ public class TaskProgressManager
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogInformation($"{Lang.S["GameTask_11860_92927a"]});
+                    Logger.LogInformation($"删除文件失败：{file} - {ex.Message}");
                 }
                 continue;
             }
@@ -78,7 +77,7 @@ public class TaskProgressManager
             }
             catch (Exception ex)
             {
-                Logger.LogInformation($"{Lang.S["GameTask_11859_0f30f8"]});
+                Logger.LogInformation($"读取文件失败：{file} - {ex.Message}");
             }
         }
 

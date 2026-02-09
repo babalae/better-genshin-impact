@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Model;
@@ -39,14 +38,14 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "ConfirmButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10925_e3f054"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\确定.png"),
             DrawOnWindow = false
         }.InitTemplate();
         RoundEndButtonRo = new RecognitionObject
         {
             Name = "RoundEndButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10924_2842ea"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\回合结束.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height),
             DrawOnWindow = true
         }.InitTemplate();
@@ -54,7 +53,7 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "ElementalTuningConfirmButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10923_e2635c"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\元素调和.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width, CaptureRect.Height / 2),
             Threshold = 0.9,
             DrawOnWindow = false
@@ -63,7 +62,7 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "ExitDuelButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10922_ebe698"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\退出挑战.png"),
             RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 2, CaptureRect.Height - CaptureRect.Height / 2),
             DrawOnWindow = true
         }.InitTemplate();
@@ -71,7 +70,7 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "InOpponentAction",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10921_bf2feb"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\对方行动中.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height),
             DrawOnWindow = true
         }.InitTemplate();
@@ -79,7 +78,7 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "EndPhase",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10920_03d3d2"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\回合结算阶段.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height),
             DrawOnWindow = true
         }.InitTemplate();
@@ -87,7 +86,7 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "ElementalDiceLackWarning",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10919_b2d813"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\元素骰子不足.png"),
             RegionOfInterest = new Rect(CaptureRect.Width - CaptureRect.Width / 2, 0,
                 CaptureRect.Width / 2, CaptureRect.Height),
             DrawOnWindow = true
@@ -96,17 +95,17 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "CharacterTakenOut",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10918_743450"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色死亡.png"),
             DrawOnWindow = true
         }.InitTemplate();
 
-        CharacterDefeatedMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10917_159547"], ImreadModes.Grayscale);
+        CharacterDefeatedMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色被打败.png", ImreadModes.Grayscale);
 
         InCharacterPickRo = new RecognitionObject
         {
             Name = "InCharacterPick",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10916_266c44"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\出战角色.png"),
             RegionOfInterest = new Rect(CaptureRect.Width / 2, CaptureRect.Height / 2,
                 CaptureRect.Width - CaptureRect.Width / 2,
                 CaptureRect.Height - CaptureRect.Height / 2),
@@ -116,13 +115,13 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
         {
             Name = "CharacterHpUpper",
             RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10915_c204ac"]),
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色血量上方.png"),
             DrawOnWindow = true
         }.InitTemplate();
 
-        CharacterStatusFreezeMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10914_826415"], ImreadModes.Grayscale);
-        CharacterStatusDizzinessMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10913_1898ab"], ImreadModes.Grayscale);
-        CharacterEnergyOnMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", Lang.S["GameTask_10912_0a07a6"], ImreadModes.Grayscale);
+        CharacterStatusFreezeMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色状态_冻结.png", ImreadModes.Grayscale);
+        CharacterStatusDizzinessMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\角色状态_水泡.png", ImreadModes.Grayscale);
+        CharacterEnergyOnMat = GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"other\满能量.png", ImreadModes.Grayscale);
 
         // 投掷期间的骰子
         RollPhaseDiceMats = new Dictionary<string, Mat>()
@@ -150,6 +149,6 @@ public class AutoGeniusInvokationAssets : BaseAssets<AutoGeniusInvokationAssets>
             { "omni", GameTaskManager.LoadAssetImage("AutoGeniusInvokation", @"dice\action_omni.png", ImreadModes.Color) },
         };
         var msg = ActionPhaseDiceMats.Aggregate("", (current, kvp) => current + $"{kvp.Key.ToElementalType().ToChinese()}| ");
-        Debug.WriteLine($"{Lang.S["GameTask_10911_316cda"]});
+        Debug.WriteLine($"默认骰子排序：{msg}");
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using OpenCvSharp;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenCv;
 
@@ -19,7 +18,7 @@ public class ImageDifferenceDetector
         {
             if (images is not { Length: 4 })
             {
-                throw new ArgumentException(Lang.S["Gen_10079_ff92d5"]);
+                throw new ArgumentException("必须提供4张图片");
             }
 
             // 验证所有图片尺寸相同
@@ -28,7 +27,7 @@ public class ImageDifferenceDetector
             {
                 if (images[i].Size() != firstSize)
                 {
-                    throw new ArgumentException(Lang.S["Gen_10078_631d08"]);
+                    throw new ArgumentException("所有图片必须具有相同的尺寸");
                 }
             }
 
@@ -47,7 +46,7 @@ public class ImageDifferenceDetector
                     if (i != j)
                     {
                         double difference = CalculateDifference(images[i], images[j]);
-                        Debug.WriteLine($"{Lang.S["Gen_10077_a7bd11"]});
+                        Debug.WriteLine($"{i} vs {j} 差异像素数量: {difference}");
 
                         if (difference > maxDifference)
                         {
@@ -61,15 +60,15 @@ public class ImageDifferenceDetector
                 if (maxDiffImageIndex != -1)
                 {
                     votes[maxDiffImageIndex]++;
-                    Debug.WriteLine($"{Lang.S["Gen_10076_4f9463"]});
+                    Debug.WriteLine($"图片 {i} 投票给图片 {maxDiffImageIndex} (差异值: {maxDifference:F2})");
                 }
             }
 
             // 输出投票结果
-            Debug.WriteLine(Lang.S["Gen_10075_418c7e"]);
+            Debug.WriteLine("\n投票结果：");
             for (int i = 0; i < 4; i++)
             {
-                Debug.WriteLine($"{Lang.S["Gen_10074_4ea1af"]});
+                Debug.WriteLine($"图片 {i}: {votes[i]} 票");
             }
 
             // 检查是否有图片获得3票
@@ -85,7 +84,7 @@ public class ImageDifferenceDetector
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"{Lang.S["Gen_10073_b50a5f"]});
+            Debug.WriteLine($"FindMostDifferentImage 出错: {ex.Message}");
             return -1;
         }
     }

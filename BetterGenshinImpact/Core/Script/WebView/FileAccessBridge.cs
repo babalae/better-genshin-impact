@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -28,12 +27,12 @@ public class FileAccessBridge
     {
         if (string.IsNullOrEmpty(allowedDirectory))
         {
-            throw new ArgumentException(Lang.S["View_10278_a6946d"], nameof(allowedDirectory));
+            throw new ArgumentException("允许访问的目录不能为空", nameof(allowedDirectory));
         }
 
         if (!Directory.Exists(allowedDirectory))
         {
-            throw new ArgumentException(Lang.S["View_10277_2ccda7"], nameof(allowedDirectory));
+            throw new ArgumentException("目录不存在", nameof(allowedDirectory));
         }
 
         _allowedDirectory = Path.GetFullPath(allowedDirectory);
@@ -60,16 +59,16 @@ public class FileAccessBridge
         {
             var fullPath = Path.Combine(_allowedDirectory, relativePath);
             if (!IsPathAllowed(fullPath))
-                throw new UnauthorizedAccessException($"{Lang.S["View_10273_b05f4f"]});
+                throw new UnauthorizedAccessException($"访问路径 '{relativePath}' 被拒绝");
 
             if (!File.Exists(fullPath))
-                throw new FileNotFoundException($"{Lang.S["View_10276_21f15a"]});
+                throw new FileNotFoundException($"文件 '{relativePath}' 不存在");
 
             return File.ReadAllText(fullPath, Encoding.UTF8);
         }
         catch (Exception ex)
         {
-            throw new Exception($"{Lang.S["View_10275_5fe851"]});
+            throw new Exception($"读取文件失败: {ex.Message}");
         }
     }
 
@@ -79,7 +78,7 @@ public class FileAccessBridge
         {
             var fullPath = Path.Combine(_allowedDirectory, relativePath);
             if (!IsPathAllowed(fullPath))
-                throw new UnauthorizedAccessException($"{Lang.S["View_10273_b05f4f"]});
+                throw new UnauthorizedAccessException($"访问路径 '{relativePath}' 被拒绝");
 
             // var directory = Path.GetDirectoryName(fullPath);
             // if (!string.IsNullOrEmpty(directory))
@@ -89,7 +88,7 @@ public class FileAccessBridge
         }
         catch (Exception ex)
         {
-            throw new Exception($"{Lang.S["View_10274_c7dd15"]});
+            throw new Exception($"写入文件失败: {ex.Message}");
         }
     }
 
@@ -134,7 +133,7 @@ public class FileAccessBridge
                 : Path.Combine(_allowedDirectory, relativePath);
 
             if (!IsPathAllowed(fullPath))
-                throw new UnauthorizedAccessException($"{Lang.S["View_10273_b05f4f"]});
+                throw new UnauthorizedAccessException($"访问路径 '{relativePath}' 被拒绝");
 
             if (!Directory.Exists(fullPath))
                 return JsonConvert.SerializeObject(new List<FileSystemItem>());
@@ -177,7 +176,7 @@ public class FileAccessBridge
         }
         catch (Exception ex)
         {
-            throw new Exception($"{Lang.S["View_10272_212410"]});
+            throw new Exception($"列出项目失败: {ex.Message}");
         }
     }
 }

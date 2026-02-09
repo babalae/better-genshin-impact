@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,8 +21,8 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
 
     public List<KeyValuePair<bool, string>> JsNotificationOptions { get; } = new()
     {
-        new KeyValuePair<bool, string>(true, Lang.S["Settings_Enabled"]),
-        new KeyValuePair<bool, string>(false, Lang.S["Gen_10256_710ad0"])
+        new KeyValuePair<bool, string>(true, "启用"),
+        new KeyValuePair<bool, string>(false, "禁用")
     };
     
     public bool IsJsScript => _project.Type == "Javascript";
@@ -73,7 +72,7 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
             {
                 return new List<JsText>
                 {
-                    new JsText(Lang.S["Gen_12479_87e667"], Brushes.Red)
+                    new JsText("当前脚本项目未加载", Brushes.Red)
                 };
             }
             var urls = _project.Project.Manifest?.HttpAllowedUrls ?? [];
@@ -81,12 +80,12 @@ public class ScriptGroupProjectEditorViewModel : ObservableObject
             {
                 return new List<JsText>
                 {
-                    new JsText(Lang.S["Gen_12478_cccab6"], Brushes.Green)
+                    new JsText("当前脚本无需使用HTTP资源", Brushes.Green)
                 };
             }
             return new List<JsText>
             {
-                new JsText($"{Lang.S["Gen_12477_fa169e"]}, Brushes.OrangeRed)
+                new JsText($"当前脚本使用 {urls.Length} 个HTTP资源", Brushes.OrangeRed)
             };
         }
     }

@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using BetterGenshinImpact.GameTask;
 
@@ -92,7 +91,7 @@ public static class ServerTimeHelper
         if (_serverTimeProvider is null)
         {
             throw new InvalidOperationException(
-                $"{Lang.S["Gen_11916_4403c8"]});
+                $"{nameof(ServerTimeHelper)} 尚未初始化。请先调用 {nameof(Initialize)}。");
         }
 
         return _serverTimeProvider.GetServerTimeNow();
@@ -110,7 +109,7 @@ public static class ServerTimeHelper
         if (_serverTimeProvider is null)
         {
             throw new InvalidOperationException(
-                $"{Lang.S["Gen_11916_4403c8"]});
+                $"{nameof(ServerTimeHelper)} 尚未初始化。请先调用 {nameof(Initialize)}。");
         }
 
         return _serverTimeProvider.GetServerTimeOffset();

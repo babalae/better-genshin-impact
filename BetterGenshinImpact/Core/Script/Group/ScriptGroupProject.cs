@@ -63,7 +63,7 @@ public partial class ScriptGroupProject : ObservableObject
     private string _schedule = string.Empty;
 
     [JsonIgnore]
-    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, Lang.S["Gen_10264_0210ab"]);
+    public string ScheduleDesc => ScriptGroupProjectExtensions.ScheduleDescriptions.GetValueOrDefault(Schedule, "自定义周期");
 
     [ObservableProperty]
     private int _runNum = 1;
@@ -174,7 +174,7 @@ public partial class ScriptGroupProject : ObservableObject
     {
         if (string.IsNullOrEmpty(FolderName))
         {
-            throw new Exception(Lang.S["Gen_10263_587252"]);
+            throw new Exception("FolderName 为空");
         }
         Project = new ScriptProject(FolderName);
     }
@@ -212,7 +212,7 @@ public partial class ScriptGroupProject : ObservableObject
         {
             if (Project == null)
             {
-                throw new Exception(Lang.S["Gen_10262_c48739"]);
+                throw new Exception("JS脚本未初始化");
             }
             JsScriptSettingsObject ??= new ExpandoObject();
 
@@ -249,10 +249,10 @@ public partial class ScriptGroupProject : ObservableObject
             OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
             if (!pathingTask.SuccessEnd)
             {
-                TaskControl.Logger.LogWarning(Lang.S["Gen_10261_0929f0"]);
+                TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
                 if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
                 {
-                    throw new Exception(Lang.S["Gen_10260_a774bf"]);
+                    throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
                 }
             }
 
@@ -274,7 +274,7 @@ public partial class ScriptGroupProject : ObservableObject
                             &&autoRestart.IsFightFailureExceptional
                             &&!successFight)
                         {
-                            throw new Exception($"{Lang.S["Gen_10259_ad92f0"]});
+                            throw new Exception($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
                         }
                     }
                 }
@@ -291,7 +291,7 @@ public partial class ScriptGroupProject : ObservableObject
                 }
                 else
                 {
-                    TaskControl.Logger.LogWarning($"{Lang.S["Gen_10258_90f32c"]});
+                    TaskControl.Logger.LogWarning($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，此次不纳入成功锄地规划的统计上限！");
                 }
 
             }
@@ -397,7 +397,7 @@ public partial class ScriptGroupProject : ObservableObject
         catch (Exception ex)
         {
             // 清理失败不影响脚本执行，只记录日志
-            TaskControl.Logger.LogDebug(ex, Lang.S["Gen_10257_ca6be5"]);
+            TaskControl.Logger.LogDebug(ex, "清理JS脚本配置中的无效值时发生异常");
         }
     }
 }
@@ -406,16 +406,16 @@ public class ScriptGroupProjectExtensions
 {
     public static readonly Dictionary<string, string> TypeDescriptions = new()
     {
-        { "Javascript", Lang.S["Script_010_86c033"] },
-        { "KeyMouse", Lang.S["Script_012_ea035d"] },
-        { "Pathing", Lang.S["Nav_MapPathing"] },
+        { "Javascript", "JS脚本" },
+        { "KeyMouse", "键鼠脚本" },
+        { "Pathing", "地图追踪" },
         { "Shell", "Shell" }
     };
 
     public static readonly Dictionary<string, string> StatusDescriptions = new()
     {
-        { "Enabled", Lang.S["Settings_Enabled"] },
-        { "Disabled", Lang.S["Gen_10256_710ad0"] }
+        { "Enabled", "启用" },
+        { "Disabled", "禁用" }
     };
 
     public Dictionary<string, string> GetStatusDescriptions()
@@ -425,15 +425,15 @@ public class ScriptGroupProjectExtensions
 
     public static readonly Dictionary<string, string> ScheduleDescriptions = new()
     {
-        { "Daily", Lang.S["Gen_10255_ce2210"] },
-        { "EveryTwoDays", Lang.S["Gen_10254_5762a8"] },
-        { "Monday", Lang.S["Gen_10253_20f83c"] },
-        { "Tuesday", Lang.S["Gen_10252_364cd4"] },
-        { "Wednesday", Lang.S["Gen_10251_cbed94"] },
-        { "Thursday", Lang.S["Gen_10250_2de240"] },
-        { "Friday", Lang.S["Gen_10249_179940"] },
-        { "Saturday", Lang.S["Gen_10248_c4ea6c"] },
-        { "Sunday", Lang.S["Gen_10247_fe0b6a"] }
+        { "Daily", "每日" },
+        { "EveryTwoDays", "间隔两天" },
+        { "Monday", "每周一" },
+        { "Tuesday", "每周二" },
+        { "Wednesday", "每周三" },
+        { "Thursday", "每周四" },
+        { "Friday", "每周五" },
+        { "Saturday", "每周六" },
+        { "Sunday", "每周日" }
     };
 
     public Dictionary<string, string> GetScheduleDescriptions()

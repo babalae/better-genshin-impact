@@ -7,7 +7,6 @@ using BetterGenshinImpact.Service.Notifier.Interface;
 using MailKit.Security;
 using MimeKit;
 using SixLabors.ImageSharp;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Notifier
 {
@@ -49,7 +48,7 @@ namespace BetterGenshinImpact.Service.Notifier
         {
             if (string.IsNullOrEmpty(ToEmail))
             {
-                throw new NotifierException(Lang.S["Service_12121_adea5c"]);
+                throw new NotifierException("收件人邮箱地址为空");
             }
 
             // 创建邮件消息
@@ -98,7 +97,7 @@ namespace BetterGenshinImpact.Service.Notifier
             }
             catch (System.Exception ex)
             {
-                var errorMessage = $"{Lang.S["Service_12120_c0547e"]};
+                var errorMessage = $"发送邮件失败: {ex.Message}";
                 throw new NotifierException(errorMessage);
             }
         }
@@ -154,7 +153,7 @@ namespace BetterGenshinImpact.Service.Notifier
         private string FormatEmailSubject(BaseNotificationData content)
         {
             // 可以根据实际需求自定义邮件主题格式
-            return $"{Lang.S["Service_12106_5713a6"]};
+            return $"通知 - {content.GetType().Name}";
         }
 
         private string FormatEmailBody(BaseNotificationData content)
@@ -163,7 +162,7 @@ namespace BetterGenshinImpact.Service.Notifier
             builder.AppendLine("<html><body style='font-family: Arial, sans-serif;'>");
 
             // 添加通知标题
-            builder.AppendLine(Lang.S["Service_12119_fdf2a2"]);
+            builder.AppendLine("<h2 style='color: #333;'>通知详情</h2>");
 
             // 添加通知内容
             foreach (var prop in content.GetType().GetProperties())
@@ -182,7 +181,7 @@ namespace BetterGenshinImpact.Service.Notifier
             // 添加提示信息
             if (content.Screenshot != null)
             {
-                builder.AppendLine(Lang.S["Service_12118_821caf"]);
+                builder.AppendLine("<p><em>截图已作为附件添加到邮件中。</em></p>");
             }
             
             builder.AppendLine("</body></html>");

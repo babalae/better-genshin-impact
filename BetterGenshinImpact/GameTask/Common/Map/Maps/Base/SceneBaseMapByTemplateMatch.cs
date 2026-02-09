@@ -28,9 +28,9 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
                 {
                     if (_layers.Count == 0)
                     {
-                        TaskControl.Logger.LogInformation(Lang.S["GameTask_11686_8ee755"]);
+                        TaskControl.Logger.LogInformation("[TemplateMatch]提瓦特大陆地图模板加载中，可能耗时较久，请耐心等待...");
                         Layers = BaseMapLayerByTemplateMatch.LoadLayers(this);
-                        TaskControl.Logger.LogInformation(Lang.S["GameTask_11678_7d49a2"]);
+                        TaskControl.Logger.LogInformation("地图特征点加载完成！");
                     }
                 }
             }
@@ -68,7 +68,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     
     public override void WarmUp()
     {
-        Console.WriteLine(Lang.S["GameTask_11677_40e651"] + Layers.Count);
+        Console.WriteLine("提前加载地图，层数：" + Layers.Count);
     }
     
     public override Point2f GetMiniMapPosition(Mat colorMiniMapMat)
@@ -121,31 +121,31 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     [Conditional("DEBUG")]
     private static void LogMatchResult(string stage, in MatchResult result)
     {
-        Debug.WriteLine($"{Lang.S["GameTask_11685_40c9f9"]});
+        Debug.WriteLine($"{stage}: 坐标 ({result.MapPos.X:F4}, {result.MapPos.Y:F4}), 置信度 {result.Confidence:F4}");
     }
 
     #region 模板匹配
     
     public void GlobalMatch(Mat miniMap, Mat mask, ref MatchResult result)
     {
-        SpeedTimer speedTimer = new SpeedTimer(Lang.S["GameTask_11684_3dd3cd"]);
+        SpeedTimer speedTimer = new SpeedTimer("全局匹配");
         using var context = new MatchContext(miniMap, mask);
         RoughMatchGlobal(context, ref result);
-        speedTimer.Record(Lang.S["GameTask_11682_3bde6e"]); 
+        speedTimer.Record("全局粗匹配"); 
         ExactMatch(context, ref result);
-        speedTimer.Record(Lang.S["GameTask_11680_e38c3d"]);
+        speedTimer.Record("精确匹配");
         speedTimer.DebugPrint();
     }
 
     // 局部匹配：在上一次匹配位置附近进行搜索
     public void LocalMatch(Mat miniMap, Mat mask, Point2f pos, ref MatchResult result)
     {
-        SpeedTimer speedTimer = new SpeedTimer(Lang.S["GameTask_11683_41b85a"]);
+        SpeedTimer speedTimer = new SpeedTimer("局部匹配");
         using var context = new MatchContext(miniMap, mask);
         RoughMatchLocal(context, pos, ref result);
-        speedTimer.Record(Lang.S["GameTask_11681_f3de25"]);
+        speedTimer.Record("局部粗匹配");
         ExactMatch(context, ref result);
-        speedTimer.Record(Lang.S["GameTask_11680_e38c3d"]);
+        speedTimer.Record("精确匹配");
         speedTimer.DebugPrint();
     }
     
@@ -159,7 +159,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
             result.MapPos = tempPos;
         }
         result.Confidence = context.NormalizerRough.Confidence();
-        LogMatchResult(Lang.S["GameTask_11682_3bde6e"], result);
+        LogMatchResult("全局粗匹配", result);
     }
     
     public void RoughMatchLocal(MatchContext context, Point2f pos, ref MatchResult result)
@@ -181,7 +181,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
 
         if (result.IsSuccess(0))
         {
-            LogMatchResult(Lang.S["GameTask_11681_f3de25"], result);
+            LogMatchResult("局部粗匹配", result);
             return;
         }
         
@@ -195,7 +195,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
             flag = true;
         }
         if (flag) result.Confidence = context.NormalizerRough.Confidence();
-        LogMatchResult(Lang.S["GameTask_11681_f3de25"], result);
+        LogMatchResult("局部粗匹配", result);
         //if (CurResult.IsSuccess) return;
         //RoughMatchLocalChan(context, pos);
         //if (CurResult.IsSuccess) return;
@@ -236,7 +236,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         {
             result.Confidence = 0;
         }
-        LogMatchResult(Lang.S["GameTask_11680_e38c3d"], result);
+        LogMatchResult("精确匹配", result);
     }
     #endregion
     

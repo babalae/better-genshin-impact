@@ -2,33 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
     public enum GridScreenName
     {
-        [Description(Lang.S["GameTask_11842_44a3d9"])]
+        [Description("武器")]
         Weapons,
-        [Description(Lang.S["GameTask_11841_5baa97"])]
+        [Description("圣遗物")]
         Artifacts,
-        [Description(Lang.S["GameTask_11840_8622be"])]
+        [Description("养成道具")]
         CharacterDevelopmentItems,
-        [Description(Lang.S["GameTask_11839_d59546"])]
+        [Description("食物")]
         Food,
-        [Description(Lang.S["GameTask_11838_ebc9d9"])]
+        [Description("材料")]
         Materials,
-        [Description(Lang.S["GameTask_11837_804886"])]
+        [Description("小道具")]
         Gadget,
-        [Description(Lang.S["GameTask_11836_0e46d8"])]
+        [Description("任务")]
         Quest,
-        [Description(Lang.S["GameTask_11835_cbf34c"])]
+        [Description("贵重道具")]
         PreciousItems,
-        [Description(Lang.S["GameTask_11834_b1cb76"])]
+        [Description("摆设")]
         Furnishings,
-        [Description(Lang.S["Task_ArtifactSalvage"])]
+        [Description("圣遗物分解")]
         ArtifactSalvage,
-        [Description(Lang.S["GameTask_11833_68426d"])]
+        [Description("圣遗物套装筛选")]
         ArtifactSetFilter
     }
 }

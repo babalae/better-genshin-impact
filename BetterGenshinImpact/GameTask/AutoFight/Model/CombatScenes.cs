@@ -166,7 +166,7 @@ public class CombatScenes : IDisposable
                 }
             }
 
-            _logger.LogInformation(Lang.S["GameTask_10609_d1225e"], string.Join(",", displayNames));
+            _logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", displayNames));
             Avatars = BuildAvatars([.. names], null, avatarIndexRectList, autoFightConfig);
         }
         catch (Exception e) // todo 此处catch把错误吞了不便排查
@@ -194,7 +194,7 @@ public class CombatScenes : IDisposable
             var (avatarIndexRectList, _) = PartyAvatarSideIndexHelper.GetAllIndexRectsNew(imageRegion, CurrentMultiGameStatus!, _logger, _elementAssets, _systemInfo);
             if (avatarIndexRectList.Count != ExpectedTeamAvatarNum)
             {
-                _logger.LogWarning(Lang.S["GameTask_10627_9445f3"], ExpectedTeamAvatarNum, avatarIndexRectList.Count);
+                _logger.LogWarning("重新识别到的队伍角色数量与之前不一致，之前{Old}个，现在{New}个", ExpectedTeamAvatarNum, avatarIndexRectList.Count);
                 return false;
             }
 
@@ -207,8 +207,8 @@ public class CombatScenes : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, Lang.S["GameTask_10626_0d4f6e"]);
-            _logger.LogWarning(Lang.S["GameTask_10625_6aa54c"] + ex.Message);
+            _logger.LogDebug(ex, "使用新方法获取角色编号位置失败");
+            _logger.LogWarning("[重新识别角色编号位置]使用新方法获取角色编号位置失败，原因：" + ex.Message);
             return false;
         }
     }
@@ -245,10 +245,10 @@ public class CombatScenes : IDisposable
     public string ClassifyAvatarName(Image<Rgb24> img, int index)
     {
         SpeedTimer speedTimer = new();
-        speedTimer.Record(Lang.S["GameTask_10624_0e4437"]);
+        speedTimer.Record("角色侧面头像图像转换");
         var result = _predictor.Predictor.Classify(img);
-        speedTimer.Record(Lang.S["GameTask_10623_160728"]);
-        Debug.WriteLine($"{Lang.S["GameTask_10622_69abb4"]});
+        speedTimer.Record("角色侧面头像分类识别");
+        Debug.WriteLine($"角色侧面头像识别结果：{result}");
         speedTimer.DebugPrint();
         var topClass = result.GetTopClass();
         if (topClass.Name.Name.StartsWith("Qin") || topClass.Name.Name.Contains("Costume"))
@@ -258,7 +258,7 @@ public class CombatScenes : IDisposable
             {
                 img.SaveAsPng(Global.Absolute($@"log\avatar_side_classify_error.png"));
                 throw new Exception(
-                    $"{Lang.S["GameTask_10621_f53b5d"]});
+                    $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
         else
@@ -267,7 +267,7 @@ public class CombatScenes : IDisposable
             {
                 img.SaveAsPng(Global.Absolute($@"log\avatar_side_classify_error.png"));
                 throw new Exception(
-                    $"{Lang.S["GameTask_10621_f53b5d"]});
+                    $"无法识别第{index}位角色，置信度{topClass.Confidence:F1}，结果：{topClass.Name.Name}。请重新阅读 BetterGI 文档中的《快速上手》！");
             }
         }
 
@@ -279,7 +279,7 @@ public class CombatScenes : IDisposable
         var names = teamNames.Split(["，", ","], StringSplitOptions.TrimEntries);
         if (names.Length != 4)
         {
-            throw new Exception($"{Lang.S["GameTask_10620_094de2"]});
+            throw new Exception($"强制指定队伍角色数量不正确，必须是4个，当前{names.Length}个");
         }
 
         // 别名转换为标准名称
@@ -288,7 +288,7 @@ public class CombatScenes : IDisposable
             names[i] = DefaultAutoFightConfig.AvatarAliasToStandardName(names[i]);
         }
 
-        _logger.LogInformation(Lang.S["GameTask_10619_ec0d0c"], string.Join(",", names));
+        _logger.LogInformation("强制指定队伍角色:{Text}", string.Join(",", names));
         autoFightConfig.TeamNames = string.Join(",", names);
         Avatars = BuildAvatars([.. names], autoFightConfig: autoFightConfig);
     }
@@ -318,7 +318,7 @@ public class CombatScenes : IDisposable
 
         if (avatarIndexRectList == null)
         {
-            throw new Exception(Lang.S["GameTask_10618_ff9a7b"]);
+            throw new Exception("联机状态下，此方法必须传入队伍角色编号位置信息");
         }
 
         var namesCount = names.Count;
@@ -375,12 +375,12 @@ public class CombatScenes : IDisposable
         // 释放所有按键
         Simulation.ReleaseAllKey();
 
-        var mwk = SelectAvatar(Lang.S["GameTask_10617_20da40"]);
+        var mwk = SelectAvatar("玛薇卡");
         if (mwk != null)
         {
             foreach (var avatar in Avatars)
             {
-                if (avatar.Name != Lang.S["GameTask_10617_20da40"])
+                if (avatar.Name != "玛薇卡")
                 {
                     avatar.Switch();
                 }
@@ -402,8 +402,8 @@ public class CombatScenes : IDisposable
     {
         if (avatarIndex < 1 || avatarIndex > AvatarCount)
         {
-            _logger.LogError(Lang.S["GameTask_10616_97165e"], AvatarCount, avatarIndex);
-            throw new Exception(Lang.S["GameTask_10615_5795b1"]);
+            _logger.LogError("切换角色编号错误，当前角色数量{Count}，编号{Index}", AvatarCount, avatarIndex);
+            throw new Exception("不存在的角色编号");
         }
 
         return Avatars[avatarIndex - 1];
@@ -466,7 +466,7 @@ public class CombatScenes : IDisposable
                 if (PartyAvatarSideIndexHelper.CountIndexRect(imageRegion) == Avatars.Length)
                 {
                     bool res = RefreshTeamAvatarIndexRectList(imageRegion);
-                    _logger.LogWarning(Lang.S["GameTask_10614_0625e4"], res ? "成功" : "失败");
+                    _logger.LogWarning("多次识别出战角色失败，尝试刷新角色编号位置，刷新结果:{Result}", res ? "成功" : "失败");
                     imageRegion.SrcMat.SaveImage(Global.Absolute("log\\refresh_avatar_index_rect.png"));
                     if (res)
                     {
@@ -527,7 +527,7 @@ public class CombatScenes : IDisposable
 
         if (names.Count != 4)
         {
-            _logger.LogWarning(Lang.S["GameTask_10613_b36296"], string.Join(",", names));
+            _logger.LogWarning("识别到的队伍角色数量不正确，当前识别结果:{Text}", string.Join(",", names));
         }
 
         if (names.Count == 3)
@@ -543,7 +543,7 @@ public class CombatScenes : IDisposable
             if (wanderer.IsEmpty())
             {
                 // 补充识别流浪者
-                _logger.LogWarning(Lang.S["GameTask_10612_592360"], string.Join(",", names));
+                _logger.LogWarning("二次尝试识别失败，当前识别结果:{Text}", string.Join(",", names));
             }
             else
             {
@@ -560,21 +560,21 @@ public class CombatScenes : IDisposable
 
                     var rect = item.Rect.BoundingRect();
                     if (rect.Y > wanderer.Y && wanderer.Y + wanderer.Height > rect.Y + rect.Height &&
-                        !names.Contains(Lang.S["GameTask_10611_82263e"]))
+                        !names.Contains("流浪者"))
                     {
-                        names.Add(Lang.S["GameTask_10611_82263e"]);
+                        names.Add("流浪者");
                         nameRects.Add(item.Rect.BoundingRect());
                     }
                 }
 
                 if (names.Count != 4)
                 {
-                    _logger.LogWarning(Lang.S["GameTask_10610_d86324"]);
+                    _logger.LogWarning("图像识别到流浪者，但识别队内位置信息失败");
                 }
             }
         }
 
-        _logger.LogInformation(Lang.S["GameTask_10609_d1225e"], string.Join(",", names));
+        _logger.LogInformation("识别到的队伍角色:{Text}", string.Join(",", names));
         Avatars = BuildAvatars(names, nameRects);
     }
 
@@ -598,9 +598,9 @@ public class CombatScenes : IDisposable
     [Obsolete]
     public string ErrorOcrCorrection(string name)
     {
-        if (name.Contains(Lang.S["GameTask_10608_52fe13"]))
+        if (name.Contains("纳西"))
         {
-            return Lang.S["GameTask_10596_8279ac"];
+            return "纳西妲";
         }
 
         return name;

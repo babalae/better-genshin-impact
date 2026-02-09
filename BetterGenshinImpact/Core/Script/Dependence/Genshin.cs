@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
@@ -226,7 +225,7 @@ public class Genshin
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
-            throw new InvalidOperationException(Lang.S["Gen_10199_1af2e5"]);
+            throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
 
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
@@ -247,7 +246,7 @@ public class Genshin
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
-            throw new InvalidOperationException(Lang.S["Gen_10199_1af2e5"]);
+            throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         var sceneMap = MapManager.GetMap(mapName, matchingMethod);
@@ -362,7 +361,7 @@ public class Genshin
         var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
         if (taskSettingsPageViewModel == null)
         {
-            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), Lang.S["Gen_10192_de0f90"]);
+            throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
 
         var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
@@ -398,9 +397,9 @@ public class Genshin
     public async Task SetTime(int hour, int minute, bool skip = false)
     {
         if ( hour < 0 || hour > 24)
-            throw new ArgumentException($"{Lang.S["Gen_10198_e637dc"]}, nameof(hour));
+            throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (minute < 0 || minute > 59)
-            throw new ArgumentException($"{Lang.S["Gen_10197_63437a"]}, nameof(minute));
+            throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
         await new SetTimeTask().Start(hour, minute, CancellationContext.Instance.Cts.Token, skip);
     }
     
@@ -414,9 +413,9 @@ public class Genshin
     public async Task SetTime(string hour, string minute, bool skip = false)
     {
         if (!int.TryParse(hour, out var h) || h < 0 || h > 24)
-            throw new ArgumentException($"{Lang.S["Gen_10198_e637dc"]}, nameof(hour));
+            throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (!int.TryParse(minute, out var m) || m < 0 || m > 59)
-            throw new ArgumentException($"{Lang.S["Gen_10197_63437a"]}, nameof(minute));
+            throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
         await new SetTimeTask().Start(h, m, CancellationContext.Instance.Cts.Token, skip);
     }
 }

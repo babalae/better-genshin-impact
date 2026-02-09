@@ -38,7 +38,7 @@ public class PostMessage
         }
         catch
         {
-            throw new ArgumentException($"{Lang.S["Gen_10203_32ca6a"]});
+            throw new ArgumentException($"键盘编码必须是VirtualKeyCodes枚举中的值，当前传入的 {key} 不合法");
         }
     }
 }

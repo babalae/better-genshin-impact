@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Simulator;
@@ -149,7 +148,7 @@ public partial class  MouseKeyMonitor
             if (_firstSpaceKeyDownTime != DateTime.MaxValue)
             {
                 var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
-                Debug.WriteLine($"{Lang.S["Gen_10034_d8f80a"]});
+                Debug.WriteLine($"Space按下时间：{timeSpan.TotalMilliseconds}ms");
                 _firstSpaceKeyDownTime = DateTime.MaxValue;
                 _spaceTimer.Stop();
             }
@@ -159,7 +158,7 @@ public partial class  MouseKeyMonitor
             if (_firstFKeyDownTime != DateTime.MaxValue)
             {
                 var timeSpan = DateTime.Now - _firstFKeyDownTime;
-                Debug.WriteLine($"{Lang.S["Gen_10033_bfd608"]});
+                Debug.WriteLine($"F按下时间：{timeSpan.TotalMilliseconds}ms");
                 _firstFKeyDownTime = DateTime.MaxValue;
                 _fTimer.Stop();
             }

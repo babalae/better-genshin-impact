@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -21,7 +20,7 @@ public class SystemControl
     {
         if (!File.Exists(path))
         {
-            await ThemedMessageBox.ErrorAsync($"{Lang.S["GameTask_10303_89b448"]});
+            await ThemedMessageBox.ErrorAsync($"原神启动路径 {path} 不存在，请前往 启动——同时启动原神——原神安装路径 重新进行配置！");
             return IntPtr.Zero;
         }
 
@@ -105,7 +104,7 @@ public class SystemControl
 
     public static nint FindHandleByWindowName()
     {
-        var handle = (nint)User32.FindWindow("UnityWndClass", Lang.S["GameTask_10302_fc439d"]);
+        var handle = (nint)User32.FindWindow("UnityWndClass", "原神");
         if (handle != 0)
         {
             return handle;
@@ -117,7 +116,7 @@ public class SystemControl
             return handle;
         }
 
-        handle = (nint)User32.FindWindow("Qt5152QWindowIcon", Lang.S["GameTask_10301_3e559b"]);
+        handle = (nint)User32.FindWindow("Qt5152QWindowIcon", "云·原神");
         if (handle != 0)
         {
             return handle;
@@ -205,7 +204,7 @@ public class SystemControl
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            throw new Exception(Lang.S["GameTask_10300_137e34"]);
+            throw new Exception("请先启动BetterGI");
         }
 
         ActivateWindow(TaskContext.Instance().GameHandle);
@@ -216,8 +215,7 @@ public class SystemControl
         string exePath = Process.GetCurrentProcess().MainModule.FileName;
 
         // 构建参数字符串
-        // 使用 IEnumerable<string> 重载，避免在新 .NET 上与 ReadOnlySpan 重载产生歧义
-        string arguments = string.Join(" ", newArgs.Append("--no-single"));
+        string arguments = string.Join(" ", [..newArgs,"--no-single"]);
 
         // 启动新进程
         Process.Start(new ProcessStartInfo
@@ -338,7 +336,7 @@ public class SystemControl
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"{Lang.S["GameTask_10299_0d889e"]});
+                        Debug.WriteLine($"关闭游戏进程时出错: {ex.Message}");
                     }
                     finally
                     {
@@ -349,7 +347,7 @@ public class SystemControl
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"{Lang.S["GameTask_10298_e4c159"]});
+            Debug.WriteLine($"CloseGame方法执行出错: {ex.Message}");
         }
     }
 
@@ -359,11 +357,11 @@ public class SystemControl
         {
             // 使用Windows API安全关闭系统
             // 这里使用的是标准的Windows关机命令，需要适当的权限
-            Process.Start("shutdown", "/s /t 60 /c \Lang.S["GameTask_10297_67b154"]");
+            Process.Start("shutdown", "/s /t 60 /c \"系统将在60秒后关闭，请保存您的工作。\"");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"{Lang.S["GameTask_10296_df439f"]});
+            Debug.WriteLine($"Shutdown方法执行出错: {ex.Message}");
         }
     }
 }

@@ -107,7 +107,7 @@ public class TpTask
             revivePoint = giTpPoint;
         }
 
-        Logger.LogInformation(Lang.S["GameTask_11426_cc2b4e"], country, area);
+        Logger.LogInformation("将传送至 {country} {area} 七天神像", country, area);
         await Tp(x, y, MapTypes.Teyvat.ToString(), false);
         if (_tpConfig.ShouldMove || _tpConfig.IsReviveInNearestStatueOfTheSeven)
         {
@@ -175,7 +175,7 @@ public class TpTask
         }
 
         // 获取最近的神像位置
-        return nearestGiTpPosition ?? throw new InvalidOperationException(Lang.S["GameTask_11425_ac0456"]);
+        return nearestGiTpPosition ?? throw new InvalidOperationException("没找到最近的七天神像");
     }
 
     /// <summary>
@@ -202,8 +202,8 @@ public class TpTask
             {
                 if (retryCount > 1)
                 {
-                    Logger.LogError(Lang.S["GameTask_11424_9c9a16"], i + 1);
-                    Logger.LogDebug(e, Lang.S["GameTask_11424_9c9a16"], i + 1);
+                    Logger.LogError("打开大地图失败，重试 {I} 次", i + 1);
+                    Logger.LogDebug(e, "打开大地图失败，重试 {I} 次", i + 1);
                     await _blessingOfTheWelkinMoonTask.Start(ct);
                 }
 
@@ -260,13 +260,13 @@ public class TpTask
             {
                 await AdjustMapZoomLevel(zoomLevel, DisplayTpPointZoomLevel);
                 zoomLevel = DisplayTpPointZoomLevel;
-                Logger.LogInformation(Lang.S["GameTask_11423_41fdad"], DisplayTpPointZoomLevel);
+                Logger.LogInformation("当前缩放等级过大，调整为 {zoomLevel:0.00}", DisplayTpPointZoomLevel);
             }
             else if (zoomLevel < _tpConfig.MinZoomLevel - _tpConfig.PrecisionThreshold)
             {
                 await AdjustMapZoomLevel(zoomLevel, _tpConfig.MinZoomLevel);
                 zoomLevel = _tpConfig.MinZoomLevel;
-                Logger.LogInformation(Lang.S["GameTask_11422_437a7d"], _tpConfig.MinZoomLevel);
+                Logger.LogInformation("当前缩放等级过小，调整为 {zoomLevel:0.00}", _tpConfig.MinZoomLevel);
             }
         }
 
@@ -275,13 +275,13 @@ public class TpTask
         {
             if (_tpConfig.MapZoomEnabled)
             {
-                Logger.LogInformation(Lang.S["GameTask_11421_dc0c22"], minZoomLevel);
+                Logger.LogInformation("目标传送点有相近传送点，到目标传送点附近将缩放到{zoomLevel:0.00}", minZoomLevel);
                 await MoveMapTo(x, y, mapName, minZoomLevel);
                 await Delay(300, ct); // 等待地图移动完成
             }
             else
             {
-                Logger.LogInformation(Lang.S["GameTask_11420_af0ea5"]);
+                Logger.LogInformation("目标传送点有相近传送点，可能传送失败。如果失败请到设置-大地图地图传送设置开启地图缩放");
                 // TODO 部分无法区分点位强制缩放，即使没有zoomEnabled。
             }
         }
@@ -294,11 +294,11 @@ public class TpTask
             if (IsPointInBigMapWindow(mapName, bigMapInAllMapRect, x, y)) break;
             if (retryCount++ >= 5) // 防止死循环
             {
-                Logger.LogWarning(Lang.S["GameTask_11419_dee60c"]);
-                throw new Exception(Lang.S["GameTask_11419_dee60c"]);
+                Logger.LogWarning("多次尝试未移动到目标传送点，传送失败");
+                throw new Exception("多次尝试未移动到目标传送点，传送失败");
             }
 
-            Logger.LogInformation(Lang.S["GameTask_11418_51f53c"]);
+            Logger.LogInformation("传送点不在当前大地图范围内，重新调整地图位置");
             await MoveMapTo(x, y, mapName);
             await Delay(300, ct);
             bigMapInAllMapRect = GetBigMapRect(mapName);
@@ -308,7 +308,7 @@ public class TpTask
         // Debug.WriteLine($"({x},{y}) 在 {bigMapInAllMapRect} 内，计算它在窗体内的位置");
         // 注意这个坐标的原点是中心区域某个点，所以要转换一下点击坐标（点击坐标是左上角为原点的坐标系），不能只是缩放
         var (clickX, clickY) = ConvertToGameRegionPosition(mapName, bigMapInAllMapRect, x, y);
-        Logger.LogInformation(Lang.S["GameTask_11417_dab970"]);
+        Logger.LogInformation("点击传送点");
         CaptureToRectArea().ClickTo((int)clickX, (int)clickY);
 
         // 7. 触发一次快速传送功能
@@ -333,7 +333,7 @@ public class TpTask
             using var capture = CaptureToRectArea();
             if (Bv.IsInMainUi(capture))
             {
-                Logger.LogInformation(Lang.S["GameTask_11416_aaf9eb"]);
+                Logger.LogInformation("传送完成，返回主界面");
                 return;
             }
             //增加容错，小概率情况下碰到，前面点击传送失败
@@ -343,7 +343,7 @@ public class TpTask
             await _blessingOfTheWelkinMoonTask.Start(ct);
         }
 
-        Logger.LogWarning(Lang.S["GameTask_11415_54ec13"]);
+        Logger.LogWarning("传送等待超时，换台电脑吧");
     }
 
     /// <summary>
@@ -393,7 +393,7 @@ public class TpTask
     {
         var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)x, (float)y));
         var picRect = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
-        Debug.WriteLine($"{Lang.S["GameTask_11414_049611"]});
+        Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
         var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
         var clickY = (picY - picRect.Y) / picRect.Height * _captureRect.Height;
         return (clickX, clickY);
@@ -408,7 +408,7 @@ public class TpTask
             await Delay(500, ct);
             if (!await TryToOpenBigMapUi())
             {
-                throw new RetryException(Lang.S["GameTask_11413_c9b156"]);
+                throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
             }
         }
     }
@@ -460,7 +460,7 @@ public class TpTask
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(300, ct);
                 // throw; // 不抛出异常，继续重试
-                Logger.LogWarning(e.Message + Lang.S["GameTask_11412_132c5c"]);
+                Logger.LogWarning(e.Message + "  重试");
             }
             catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
             {
@@ -468,12 +468,12 @@ public class TpTask
             }
             catch (Exception e)
             {
-                Logger.LogError(Lang.S["GameTask_11411_cc9aac"], i + 1);
-                Logger.LogDebug(e, Lang.S["GameTask_11411_cc9aac"], i + 1);
+                Logger.LogError("传送失败，重试 {I} 次", i + 1);
+                Logger.LogDebug(e, "传送失败，重试 {I} 次", i + 1);
             }
         }
 
-        throw new InvalidOperationException(Lang.S["GameTask_11410_aa2679"]);
+        throw new InvalidOperationException("传送失败");
     }
 
     /// <summary>
@@ -546,7 +546,7 @@ public class TpTask
             // 非常接近目标点，不再进一步调整
             if (mouseDistance < _tpConfig.Tolerance)
             {
-                Logger.LogDebug(Lang.S["GameTask_11409_b676a0"], iteration + 1);
+                Logger.LogDebug("移动 {I} 次鼠标后，已经接近目标点，不再移动地图。", iteration + 1);
                 break;
             }
 
@@ -565,10 +565,10 @@ public class TpTask
             {
                 if (++exceptionTimes > 2)
                 {
-                    throw new Exception(Lang.S["GameTask_11408_6dede2"]);
+                    throw new Exception("多次中心点识别失败，重新传送");
                 }
 
-                Logger.LogWarning(Lang.S["GameTask_11407_0a7419"]);
+                Logger.LogWarning("中心点识别失败，预测移动的距离");
                 mapCenterPoint += new Point2f((float)(moveMouseX * currentZoomLevel / _tpConfig.MapScaleFactor),
                     (float)(moveMouseY * currentZoomLevel / _tpConfig.MapScaleFactor));
             }
@@ -749,21 +749,21 @@ public class TpTask
                     // 滚轮调整后再次识别
                     Simulation.SendInput.Mouse.VerticalScroll(2);
                     Sleep(500);
-                    throw new RetryException(Lang.S["GameTask_11404_aafa60"]);
+                    throw new RetryException("识别大地图位置失败");
                 }
             }
             else
             {
-                throw new RetryException(Lang.S["GameTask_11402_e8f2f7"]);
+                throw new RetryException("当前不在地图界面");
             }
         }, TimeSpan.FromMilliseconds(500), 5);
 
         if (rect == default)
         {
-            throw new InvalidOperationException(Lang.S["GameTask_11406_fdb9b1"]);
+            throw new InvalidOperationException("多次重试后，识别大地图位置失败");
         }
 
-        Debug.WriteLine(Lang.S["GameTask_11405_26046d"] + rect);
+        Debug.WriteLine("识别大地图在全地图位置矩形：" + rect);
         // 提瓦特大陆由于用的256的图，需要做特殊逻辑
         if (mapName == MapTypes.Teyvat.ToString())
         {
@@ -784,10 +784,10 @@ public class TpTask
             var p = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapPosition(ra.CacheGreyMat);
             if (p.IsEmpty())
             {
-                throw new InvalidOperationException(Lang.S["GameTask_11404_aafa60"]);
+                throw new InvalidOperationException("识别大地图位置失败");
             }
 
-            Debug.WriteLine(Lang.S["GameTask_11403_d6e509"] + p);
+            Debug.WriteLine("识别大地图在全地图位置：" + p);
             // 提瓦特大陆由于用的256的图，需要做特殊逻辑
             var (x, y) = (p.X, p.Y);
             if (mapName == MapTypes.Teyvat.ToString())
@@ -799,7 +799,7 @@ public class TpTask
         }
         else
         {
-            throw new InvalidOperationException(Lang.S["GameTask_11402_e8f2f7"]);
+            throw new InvalidOperationException("当前不在地图界面");
         }
     }
 
@@ -842,7 +842,7 @@ public class TpTask
         if (bigMapCenterPointNullable != null)
         {
             var bigMapCenterPoint = bigMapCenterPointNullable.Value;
-            Logger.LogDebug(Lang.S["GameTask_11401_e92ed4"], bigMapCenterPoint);
+            Logger.LogDebug("识别当前大地图位置：{Pos}", bigMapCenterPoint);
             minDistance = Math.Sqrt(Math.Pow(bigMapCenterPoint.X - x, 2) + Math.Pow(bigMapCenterPoint.Y - y, 2));
             if (minDistance < 50)
             {
@@ -851,7 +851,7 @@ public class TpTask
             }
         }
 
-        string minCountry = Lang.S["GameTask_11399_5eac11"];
+        string minCountry = "当前位置";
         foreach (var (country, position) in MapLazyAssets.Instance.CountryPositions)
         {
             var distance = Math.Sqrt(Math.Pow(position[0] - x, 2) + Math.Pow(position[1] - y, 2));
@@ -862,8 +862,8 @@ public class TpTask
             }
         }
 
-        Logger.LogDebug(Lang.S["GameTask_11400_5e5276"], minCountry);
-        if (minCountry != Lang.S["GameTask_11399_5eac11"])
+        Logger.LogDebug("离目标传送点最近的区域是：{Country}", minCountry);
+        if (minCountry != "当前位置")
         {
             if (forceCountry != null)
             {
@@ -888,23 +888,23 @@ public class TpTask
             RegionOfInterest = new Rect(ra.Width * 2 / 3, 0, ra.Width / 3, ra.Height),
             ReplaceDictionary = new Dictionary<string, string[]>
             {
-                [Lang.S["GameTask_11397_9e13be"]] = ["渊下宮"],
+                ["渊下宫"] = ["渊下宮"],
             },
         });
         string minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         Region? matchRect = list.OrderByDescending(r => r.Y).FirstOrDefault(r => r.Text.Contains(minCountryLocalized));
         if (matchRect == null)
         {
-            Logger.LogWarning(Lang.S["GameTask_11396_a5dc38"], areaName);
+            Logger.LogWarning("切换区域失败：{Country}", areaName);
             if (areaName == MapTypes.TheChasm.GetDescription() || areaName == MapTypes.Enkanomiya.GetDescription() || areaName == MapTypes.SeaOfBygoneEras.GetDescription() || areaName == MapTypes.AncientSacredMountain.GetDescription())
             {
-                throw new Exception($"{Lang.S["GameTask_11395_907421"]});
+                throw new Exception($"切换独立地图区域[{areaName}]失败");
             }
         }
         else
         {
             matchRect.Click();
-            Logger.LogInformation(Lang.S["GameTask_11394_4a5dcf"], areaName);
+            Logger.LogInformation("切换到区域：{Country}", areaName);
         }
 
         await Delay(500, ct);
@@ -925,7 +925,7 @@ public class TpTask
     public async Task ClickTpPoint(ImageRegion imageRegion)
     {
         // 1.判断是否在地图界面
-        if (!Bv.IsInBigMapUi(imageRegion)) throw new RetryException(Lang.S["GameTask_11393_a989fe"]);
+        if (!Bv.IsInBigMapUi(imageRegion)) throw new RetryException("不在地图界面");
 
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
@@ -934,12 +934,12 @@ public class TpTask
         // 3. 没点出传送按钮，且不存在外部地图关闭按钮
         // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表
         var mapCloseRa1 = imageRegion.Find(_assets.MapCloseButtonRo);
-        if (!mapCloseRa1.IsEmpty()) throw new TpPointNotActivate(Lang.S["GameTask_11392_36665c"]);
+        if (!mapCloseRa1.IsEmpty()) throw new TpPointNotActivate("传送点未激活或不存在");
 
         // 4. 循环判断选项列表是否有传送点(未激活点位也在里面)
         var hasMapChooseIcon = CheckMapChooseIcon(imageRegion);
         // 没有传送点说明不是传送点
-        if (!hasMapChooseIcon) throw new TpPointNotActivate(Lang.S["GameTask_11391_d02878"]);
+        if (!hasMapChooseIcon) throw new TpPointNotActivate("选项列表不存在传送点");
         var teleportButtonFound = await NewRetry.WaitForElementAppear(
             _assets.TeleportButtonRo,
             () => { },
@@ -947,7 +947,7 @@ public class TpTask
             6,
             300
         );
-        if (!teleportButtonFound) throw new TpPointNotActivate(Lang.S["GameTask_11390_0238fc"]);
+        if (!teleportButtonFound) throw new TpPointNotActivate("选项列表的传送点未激活");
         await NewRetry.WaitForElementDisappear(
             _assets.TeleportButtonRo,
             screen =>
@@ -1008,7 +1008,7 @@ public class TpTask
                     continue;
                 }
 
-                Logger.LogInformation(Lang.S["GameTask_11389_b0535c"], textRegion.Text.Replace(">", ""));
+                Logger.LogInformation("传送：点击 {Option}", textRegion.Text.Replace(">", ""));
                 var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
                 time = time < 500 ? 500 : time;
                 Thread.Sleep(time);

@@ -9,7 +9,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoWood.Utils;
 
@@ -110,13 +109,13 @@ internal sealed class Login3rdParty
                 if (loginWindow != IntPtr.Zero)
                 {
                     var dpiScale = TaskContext.Instance().DpiScale;
-                    if (windowType.Contains(Lang.S["GameTask_11476_faa1ad"]))
+                    if (windowType.Contains("协议"))
                     {
                         GameCaptureRegion.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
 
                         // 检查窗口是否还存在
                         var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
-                        if (remainingWindow == IntPtr.Zero || !remainingType.Contains(Lang.S["GameTask_11476_faa1ad"]))
+                        if (remainingWindow == IntPtr.Zero || !remainingType.Contains("协议"))
                         {
                             // 协议窗口已消失，继续等待登录窗口
                             return false;
@@ -124,7 +123,7 @@ internal sealed class Login3rdParty
                         // 协议窗口仍然存在，继续尝试
                         return false;
                     }
-                    if (windowType.Contains(Lang.S["GameTask_11475_402d19"]))
+                    if (windowType.Contains("登录"))
                     {
                         Thread.Sleep(2000);
                         GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
@@ -187,23 +186,23 @@ internal sealed class Login3rdParty
                                 bool isEnabled = User32.IsWindowEnabled(hWnd);
 
                                 // 检查协议窗口
-                                if (titleText.Contains(Lang.S["GameTask_11476_faa1ad"], StringComparison.OrdinalIgnoreCase))
+                                if (titleText.Contains("协议", StringComparison.OrdinalIgnoreCase))
                                 {
                                     if (isEnabled)
                                     {
                                         bHWnd = hWnd.DangerousGetHandle();
-                                        windowType = Lang.S["GameTask_11476_faa1ad"];
+                                        windowType = "协议";
                                         return false;
                                     }
                                 }
 
                                 // 检查登录窗口
-                                if (titleText.Contains(Lang.S["GameTask_11475_402d19"], StringComparison.OrdinalIgnoreCase))
+                                if (titleText.Contains("登录", StringComparison.OrdinalIgnoreCase))
                                 {
                                     if (isEnabled)
                                     {
                                         bHWnd = hWnd.DangerousGetHandle();
-                                        windowType = Lang.S["GameTask_11475_402d19"];
+                                        windowType = "登录";
                                         return false;
                                     }
                                 }
@@ -214,7 +213,7 @@ internal sealed class Login3rdParty
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"{Lang.S["GameTask_11474_2d3340"]});
+                Debug.WriteLine($"[AutoWood] 枚举窗口时出错: {ex.Message}");
             }
 
             return true;

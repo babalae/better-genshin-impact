@@ -6,7 +6,6 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using OpenCvSharp;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Layer;
 
@@ -27,8 +26,8 @@ public class BigMapTeyvat256Layer : BaseMapLayer
         var layerDir = Path.Combine(Global.Absolute(@"Assets\Map\"), baseMap.Type.ToString());
         var kpFilePath = Path.Combine(layerDir, "Teyvat_0_256_SIFT.kp.bin");
         var matFilePath = Path.Combine(layerDir, "Teyvat_0_256_SIFT.mat.png");
-        TrainKeyPoints = FeatureStorageHelper.LoadKeyPointArray(kpFilePath) ?? throw new Exception($"{Lang.S["GameTask_11659_ec32bf"]});
-        TrainDescriptors = FeatureStorageHelper.LoadDescriptorMat(matFilePath) ?? throw new Exception($"{Lang.S["GameTask_11658_5ae9a6"]});
+        TrainKeyPoints = FeatureStorageHelper.LoadKeyPointArray(kpFilePath) ?? throw new Exception($"地图数据加载失败，文件: {kpFilePath}");
+        TrainDescriptors = FeatureStorageHelper.LoadDescriptorMat(matFilePath) ?? throw new Exception($"地图数据加载失败，文件: {matFilePath}");
 
         _mapSize256 = new Size(baseMap.MapSize.Width / BigMap256ScaleTo2048, baseMap.MapSize.Height / BigMap256ScaleTo2048);
         SplitBlocks = KeyPointFeatureBlockHelper.SplitFeatures(_mapSize256, TeyvatMap.GameMapRows * 4, TeyvatMap.GameMapCols * 4, TrainKeyPoints, TrainDescriptors);
@@ -106,7 +105,7 @@ public class BigMapTeyvat256Layer : BaseMapLayer
         var res = _siftMatcher.KnnMatchRect(keyPoints, descriptors, greyBigMapMat);
         if (res == default)
         {
-            Debug.WriteLine(Lang.S["GameTask_11687_73e5a6"]);
+            Debug.WriteLine("[提瓦特大地图]自适应扩展搜索失败，退回全图搜索");
             return _siftMatcher.KnnMatchRect(TrainKeyPoints, TrainDescriptors, greyBigMapMat);
         }
         return res;

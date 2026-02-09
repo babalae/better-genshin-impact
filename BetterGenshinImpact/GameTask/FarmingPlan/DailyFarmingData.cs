@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,8 +73,8 @@ public class DailyFarmingData
             double sumNormalMobCount = tdrs.Sum(t => t.NormalMobCount);
             var totalEliteMobCount = MiyousheTotalEliteMobCount+sumEliteMobCount;
             var totalNormalMobCount = MiyousheTotalNormalMobCount+sumNormalMobCount;
-            FarmingStatsRecorder.debugInfo($"{Lang.S["GameTask_11705_50a709"]});
-            FarmingStatsRecorder.debugInfo($"{Lang.S["GameTask_11704_729be3"]});
+            FarmingStatsRecorder.debugInfo($"精英统计：{totalEliteMobCount} = {MiyousheTotalEliteMobCount}+{sumEliteMobCount}");
+            FarmingStatsRecorder.debugInfo($"小怪统计：{totalNormalMobCount} = {MiyousheTotalNormalMobCount}+{sumNormalMobCount}");
             return  (totalEliteMobCount,totalNormalMobCount);
         }
         return (TotalEliteMobCount, TotalNormalMobCount);

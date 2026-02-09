@@ -78,7 +78,7 @@ public partial class JsListViewModel : ViewModel
             }
             catch (Exception e)
             {
-                Toast.Warning($"{Lang.S["JsList_12293_c0b00c"]});
+                Toast.Warning($"脚本 {f.Name} 载入失败：{e.Message}");
             }
         }
     }
@@ -122,8 +122,8 @@ public partial class JsListViewModel : ViewModel
 
         if (!string.IsNullOrEmpty(item.Manifest.SettingsUi))
         {
-            Toast.Information(Lang.S["JsList_1011_310f9b"]);
-            _logger.LogWarning(Lang.S["JsList_12292_89cd8d"]);
+            Toast.Information("此脚本存在配置，不配置可能无法正常运行，建议请添加至【调度器】，并右键修改配置后使用！");
+            _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
         }
 
         await _scriptService.RunMulti([new ScriptGroupProject(item)]);
@@ -146,10 +146,10 @@ public partial class JsListViewModel : ViewModel
         // 显示确认对话框
         var messageBox = new Wpf.Ui.Controls.MessageBox
         {
-            Title = Lang.S["JsList_1012_50eaf9"],
-            Content = Lang.S["JsList_12290_dfcd95"]{item.Manifest.Name}\" 吗？\n\n此操作将永久删除脚本文件夹及其所有内容，无法恢复！",
-            PrimaryButtonText = Lang.S["Btn_Delete"],
-            CloseButtonText = Lang.S["Btn_Cancel"],
+            Title = "删除确认",
+            Content = $"确定要删除脚本 \"{item.Manifest.Name}\" 吗？\n\n此操作将永久删除脚本文件夹及其所有内容，无法恢复！",
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
@@ -163,21 +163,21 @@ public partial class JsListViewModel : ViewModel
                 if (Directory.Exists(item.ProjectPath))
                 {
                     Directory.Delete(item.ProjectPath, true);
-                    Toast.Success($"{Lang.S["JsList_12289_fed773"]});
-                    _logger.LogInformation(Lang.S["JsList_12288_fbc0d2"], item.Manifest.Name, item.ProjectPath);
+                    Toast.Success($"已删除脚本: {item.Manifest.Name}");
+                    _logger.LogInformation("已删除脚本: {Name} ({Path})", item.Manifest.Name, item.ProjectPath);
                     
                     // 刷新列表
                     InitScriptListViewData();
                 }
                 else
                 {
-                    Toast.Warning(Lang.S["JsList_1013_e76143"]);
+                    Toast.Warning("脚本目录不存在");
                 }
             }
             catch (Exception ex)
             {
-                Toast.Error($"{Lang.S["JsList_12287_0f5ee7"]});
-                _logger.LogError(ex, Lang.S["JsList_12286_705b98"]);
+                Toast.Error($"删除脚本失败: {ex.Message}");
+                _logger.LogError(ex, "删除脚本失败");
             }
         }
     }
@@ -309,7 +309,7 @@ public partial class JsListViewModel : ViewModel
 
             contentPanel.Children.Add(new TextBlock
             {
-                Text = $"{Lang.S["JsList_12285_0d0663"]},
+                Text = $"版本: {scriptProject.Manifest.Version}",
                 Margin = new Thickness(0, 0, 0, 10)
             });
 

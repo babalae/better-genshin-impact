@@ -30,7 +30,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 
 public class AutoFightTask : ISoloTask
 {
-    public string Name => Lang.S["Task_018_1ac1b5"];
+    public string Name => "自动战斗";
 
     private readonly AutoFightParam _taskParam;
 
@@ -225,7 +225,7 @@ public class AutoFightTask : ISoloTask
                 Thread.Sleep(retryDelayMs); // 可选：延迟再试
             }
         }
-        throw new Exception(Lang.S["GameTask_10564_fba382"]);
+        throw new Exception("识别队伍角色失败（已重试 5 次）");
     }
     // 方法1：判断是否是单个数字
 
@@ -242,7 +242,7 @@ public class AutoFightTask : ISoloTask
         /*var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
-            throw new Exception(Lang.S["GameTask_10563_998b0c"]);
+            throw new Exception("识别队伍角色失败");
         }*/
 
 
@@ -258,7 +258,7 @@ public class AutoFightTask : ISoloTask
             .ToList();
         if (commandAvatarNames.Count <= 0)
         {
-            throw new Exception(Lang.S["GameTask_10562_233b10"]);
+            throw new Exception("没有可用战斗脚本");
         }
 
         // 新的取消token
@@ -321,7 +321,7 @@ public class AutoFightTask : ISoloTask
                             .Select(a => a.GetSkillCdSeconds()).Min();
                         if (minCoolDown > 0)
                         {
-                            Logger.LogInformation(Lang.S["GameTask_10561_1e3f48"], Math.Round(minCoolDown, 2));
+                            Logger.LogInformation("队伍中所有角色的技能都在冷却中,等待{MinCoolDown}秒后继续。", Math.Round(minCoolDown, 2));
                             await Delay((int)Math.Ceiling(minCoolDown * 1000), ct);
                         }
                     }
@@ -382,13 +382,13 @@ public class AutoFightTask : ISoloTask
                                     var manualSkillCd = avatar.ManualSkillCd;
                                     if (manualSkillCd > 0)
                                     {
-                                        Logger.LogInformation(Lang.S["GameTask_10560_91e1eb"],
+                                        Logger.LogInformation("{commandName}cd冷却为{skillCd}秒,剩余{Cd}秒,跳过此次行动",
                                             command.Name,
                                             manualSkillCd, Math.Round(cd, 2));
                                     }
                                     else
                                     {
-                                        Logger.LogInformation(Lang.S["GameTask_10559_045008"], command.Name,
+                                        Logger.LogInformation("{CommandName}cd冷却剩余{Cd}秒,跳过此次行动", command.Name,
                                             Math.Round(cd, 2));
                                     }
                                 }
@@ -406,7 +406,7 @@ public class AutoFightTask : ISoloTask
 
                         if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
                         {
-                            Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? Lang.S["GameTask_10557_01f5e6"] : "战斗超时结束");
+                            Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                             fightEndFlag = true;
                             timeOutFlag = true;
                             break;
@@ -484,14 +484,14 @@ public class AutoFightTask : ISoloTask
         await fightTask;
         if (_taskParam.BattleThresholdForLoot>=2 && countFight < _taskParam.BattleThresholdForLoot)
         {
-            Logger.LogInformation($"{Lang.S["GameTask_10556_a75874"]});
+            Logger.LogInformation($"战斗人次（{countFight}）低于配置人次（{_taskParam.BattleThresholdForLoot}），跳过此次拾取！");
             return;
         }
         
         if (_taskParam.KazuhaPickupEnabled)
         {
             // 队伍中存在万叶的时候使用一次长E
-            var picker = combatScenes.SelectAvatar(Lang.S["GameTask_10547_4afc93"]) ?? combatScenes.SelectAvatar("琴");
+            var picker = combatScenes.SelectAvatar("枫原万叶") ?? combatScenes.SelectAvatar("琴");
             
             string? oldPartyName = null;
             if (RunnerContext.Instance.PartyName is not null)
@@ -500,7 +500,7 @@ public class AutoFightTask : ISoloTask
             }
             else if(picker is null && !string.IsNullOrEmpty(_taskParam.KazuhaPartyName))
             {
-                Logger.LogWarning(Lang.S["GameTask_10555_f84429"]);
+                Logger.LogWarning("换队拾取：当前队伍名称为空，尝试读取！");
                 await Delay(1000, ct);
                 await _returnMainUiTask.Start(ct);
 
@@ -516,7 +516,7 @@ public class AutoFightTask : ISoloTask
                     );
                     if(attempt == 5 && !enterGameAppear)
                     {
-                        Logger.LogWarning(Lang.S["GameTask_10554_ccd4fd"]);
+                        Logger.LogWarning("换队拾取：读取队伍名称失败，跳过换队拾取步骤");
                     }
                 }
             }
@@ -550,7 +550,7 @@ public class AutoFightTask : ISoloTask
                     {
                         //有概率把编辑图标识别为字符，并且含有空格或换行符，需要过滤
                         var tempName = rawPartyName
-                            .Replace("\"", "Lang.S["GameTask_10553_1cc94b"]"问题）
+                            .Replace("\"", "")        // 移除所有双引号（核心新增，解决日志里的""问题）
                             .Replace("\r\n", "")      // 清理Windows换行符
                             .Replace("\r", "");   // 先清理所有双引号，避免引号干扰后续处理
                             
@@ -566,9 +566,9 @@ public class AutoFightTask : ISoloTask
                     }
                     
                     // 后续原有逻辑不变
-                    Logger.LogInformation(Lang.S["GameTask_10552_2832f4"], oldPartyName);
+                    Logger.LogInformation("换队拾取：当前队伍名称读取为：{oldPartyName}", oldPartyName);
                     // 加在rawPartyName赋值后，打印原始文本的“原始形态”（转义符会显示）
-                    Logger.LogDebug(Lang.S["GameTask_10551_f43744"], rawPartyName);
+                    Logger.LogDebug("OCR原始识别文本（含转义）：{rawPartyName}", rawPartyName);
                     RunnerContext.Instance.PartyName = oldPartyName;
                         // await _returnMainUiTask.Start(ct);
                         break;
@@ -583,33 +583,33 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    Logger.LogInformation($"{Lang.S["GameTask_10550_d1e835"]});
+                    Logger.LogInformation($"切换为拾取队伍：{_taskParam.KazuhaPartyName}");
                     var success = await new SwitchPartyTask().Start(_taskParam.KazuhaPartyName, ct);
                     if (success)
                     {
-                        Logger.LogInformation($"{Lang.S["GameTask_10549_a09876"]});
+                        Logger.LogInformation($"成功切换队伍为{_taskParam.KazuhaPartyName}");
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
                         var cs = await RunnerContext.Instance.GetCombatScenes(ct);
-                        picker = cs.SelectAvatar(Lang.S["GameTask_10547_4afc93"]) ?? cs.SelectAvatar("琴");
+                        picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
                     }
                 }
                 catch (Exception e)
                 {
-                    Logger.LogInformation(Lang.S["GameTask_10548_a7d802"]);
+                    Logger.LogInformation("切换队伍异常，跳过此步骤！");
                 }
 
             }
             
             if (picker != null)
             {
-                if (picker.Name == Lang.S["GameTask_10547_4afc93"])
+                if (picker.Name == "枫原万叶")
                 {
                     var time = TimeSpan.FromSeconds(picker.GetSkillCdSeconds());
                     if (!(lastFightName == picker.Name && time.TotalSeconds > 3))
                     {
-                        Logger.LogInformation(Lang.S["GameTask_10546_6a59fb"]);
+                        Logger.LogInformation("使用 枫原万叶-长E 拾取掉落物");
                         await Delay(200, ct);
                         if (picker.TrySwitch(10))
                         {
@@ -622,16 +622,16 @@ public class AutoFightTask : ISoloTask
                     }
                     else
                     {
-                        Logger.LogInformation(Lang.S["GameTask_10545_ba8e0f"]);
+                        Logger.LogInformation("距最近一次万叶出招，时间过短，跳过此次万叶拾取！");
                     }
                 }
                 else if (picker.Name == "琴")
                 {
-                    Logger.LogInformation(Lang.S["GameTask_10544_b4fad4"]);
+                    Logger.LogInformation("使用 琴-长E 拾取掉落物");
                     
                     var actionsToUse = PickUpCollectHandler.PickUpActions
-                        .Where(action => action.StartsWith(Lang.S["GameTask_10543_d6f7dc"] + " ", StringComparison.OrdinalIgnoreCase))
-                        .Select(action => action.Replace(Lang.S["GameTask_10543_d6f7dc"],"琴", StringComparison.OrdinalIgnoreCase))
+                        .Where(action => action.StartsWith("琴-长E" + " ", StringComparison.OrdinalIgnoreCase))
+                        .Select(action => action.Replace("琴-长E","琴", StringComparison.OrdinalIgnoreCase))
                         .ToArray();
 
                     var find = _taskParam.QinDoublePickUp;
@@ -682,7 +682,7 @@ public class AutoFightTask : ISoloTask
 
                                 if (i == 0)
                                 {
-                                    Logger.LogInformation(Lang.S["GameTask_10542_b79b72"]);
+                                    Logger.LogInformation("自动拾取；尝试再次执行 琴-长E 拾取");
                                     // picker.LastSkillTime = DateTime.Now;不正确
                                     picker.AfterUseSkill();
                                 }
@@ -702,11 +702,11 @@ public class AutoFightTask : ISoloTask
             {
                 try
                 {
-                    Logger.LogInformation($"{Lang.S["GameTask_10541_785e84"]});
+                    Logger.LogInformation($"切换为原队伍：{oldPartyName}");
                     var success = await new SwitchPartyTask().Start(oldPartyName, ct);
                     if (success)
                     {
-                        Logger.LogInformation($"{Lang.S["GameTask_10540_2ed9f2"]});
+                        Logger.LogInformation($"切换为原队伍{oldPartyName}");
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = oldPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
@@ -716,7 +716,7 @@ public class AutoFightTask : ISoloTask
                 }
                 catch (Exception e)
                 {
-                    Logger.LogInformation(Lang.S["GameTask_10539_2deaa8"]);
+                    Logger.LogInformation("恢复原队伍失败，跳过此步骤！");
                 }
                     
             }
@@ -731,7 +731,7 @@ public class AutoFightTask : ISoloTask
 
     private void LogScreenResolution()
     {
-        AssertUtils.CheckGameResolution(Lang.S["Task_018_1ac1b5"]);
+        AssertUtils.CheckGameResolution("自动战斗");
     }
 
     static bool AreDifferencesWithinBounds((int, int, int) a, (int, int, int) b, (int, int, int) c)
@@ -753,7 +753,7 @@ public class AutoFightTask : ISoloTask
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, Lang.S["GameTask_10538_06acfd"]);
+                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
                 result = false;
             }
             
@@ -769,7 +769,7 @@ public class AutoFightTask : ISoloTask
         if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
         
         // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
-        Logger.LogInformation(Lang.S["GameTask_10522_26cf01"]);
+        Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束
         Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(detectDelayTime, _ct);
@@ -786,7 +786,7 @@ public class AutoFightTask : ISoloTask
                 b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/
            )
         {
-            Logger.LogInformation(Lang.S["GameTask_10537_8a921c"]);
+            Logger.LogInformation("识别到战斗结束");
             //取消正在进行的换队
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
             return true;
@@ -794,7 +794,7 @@ public class AutoFightTask : ISoloTask
 
         // Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
-        Logger.LogInformation($"{Lang.S["GameTask_10536_2b6efc"]});
+        Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
 
         if (_finishDetectConfig.RotateFindEnemyEnabled)
         {

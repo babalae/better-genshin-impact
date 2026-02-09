@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -114,7 +113,7 @@ public class PathExecutor
 
         if (_skipOtherOperations)
         {
-            Logger.LogWarning(Lang.S["GameTask_11051_6e75ae"]);
+            Logger.LogWarning("已到达上次点位，地图追踪功能恢复");
         }
 
         _skipOtherOperations = false;
@@ -123,7 +122,7 @@ public class PathExecutor
     //记录点位，方便后面恢复
     public void StartSkipOtherOperations()
     {
-        Logger.LogWarning(Lang.S["GameTask_11050_0c0cb2"]);
+        Logger.LogWarning("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作");
         _skipOtherOperations = true;
         RecordWaypoints = CurWaypoints;
         RecordWaypoint = CurWaypoint;
@@ -140,7 +139,7 @@ public class PathExecutor
 
         if (!task.Positions.Any())
         {
-            Logger.LogWarning(Lang.S["GameTask_11049_165ccd"]);
+            Logger.LogWarning("没有路径点，寻路结束");
             return;
         }
 
@@ -313,7 +312,7 @@ public class PathExecutor
         if (Bv.ClickIfInReviveModal(ra))
         {
             await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation(Lang.S["GameTask_11035_f25136"]);
+            Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
@@ -322,7 +321,7 @@ public class PathExecutor
         var pRaList = ra.FindMulti(AutoFightAssets.Instance.PRa); // 判断是否联机
         if (pRaList.Count > 0)
         {
-            Logger.LogInformation(Lang.S["GameTask_11048_067726"]);
+            Logger.LogInformation("处于联机状态下，不切换队伍");
         }
         else
         {
@@ -332,7 +331,7 @@ public class PathExecutor
                 var partyName = FilterPartyNameByConditionConfig(task);
                 if (!await SwitchParty(partyName))
                 {
-                    Logger.LogError(Lang.S["GameTask_11047_410ccd"]);
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查地图追踪设置！");
                     return false;
                 }
             }
@@ -340,7 +339,7 @@ public class PathExecutor
             {
                 if (!await SwitchParty(PartyConfig.PartyName))
                 {
-                    Logger.LogError(Lang.S["GameTask_11046_33432a"]);
+                    Logger.LogError("切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！");
                     return false;
                 }
             }
@@ -361,16 +360,16 @@ public class PathExecutor
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError(Lang.S["GameTask_11045_edb178"],
+            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用地图追踪功能！",
                 gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception(Lang.S["GameTask_11044_832492"]);
+            throw new Exception("游戏窗口分辨率不是 16:9 ！无法使用地图追踪功能！");
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogError(Lang.S["GameTask_11043_176ced"],
+            Logger.LogError("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏地图追踪的效果非常差！",
                 gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception(Lang.S["GameTask_11042_9634a2"]);
+            throw new Exception("游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！");
         }
     }
 
@@ -457,10 +456,10 @@ public class PathExecutor
         // 校验角色是否存在
         if (task.HasAction(ActionEnum.NahidaCollect.Code))
         {
-            var avatar = _combatScenes.SelectAvatar(Lang.S["GameTask_10596_8279ac"]);
+            var avatar = _combatScenes.SelectAvatar("纳西妲");
             if (avatar == null)
             {
-                Logger.LogError(Lang.S["GameTask_11041_c86b3a"]);
+                Logger.LogError("此路径存在纳西妲收集动作，队伍中没有纳西妲角色，无法执行此路径！");
                 return false;
             }
 
@@ -499,7 +498,7 @@ public class PathExecutor
                 }
             }
 
-            Logger.LogError(Lang.S["GameTask_11040_28c95c"], el.ToChinese(),
+            Logger.LogError("此路径存在 {El}元素采集 动作，队伍中没有对应元素角色:{Names}，无法执行此路径！", el.ToChinese(),
                 string.Join(",", ElementalCollectAvatarConfigs.GetAvatarNameList(el)));
             return false;
         }
@@ -551,7 +550,7 @@ public class PathExecutor
         if (_combatScenes is null) return false;
         foreach (var avatar in _combatScenes.GetAvatars())
         {
-            if (avatar.Name == Lang.S["GameTask_11039_7dd64e"])
+            if (avatar.Name == "白术")
             {
                 if (avatar.TrySwitch())
                 {
@@ -567,7 +566,7 @@ public class PathExecutor
 
                 break;
             }
-            else if (avatar.Name == Lang.S["GameTask_11038_5a6431"])
+            else if (avatar.Name == "希格雯")
             {
                 if (avatar.TrySwitch())
                 {
@@ -579,7 +578,7 @@ public class PathExecutor
 
                 break;
             }
-            else if (avatar.Name == Lang.S["GameTask_11037_10ecec"])
+            else if (avatar.Name == "珊瑚宫心海")
             {
                 if (avatar.TrySwitch())
                 {
@@ -609,18 +608,18 @@ public class PathExecutor
         using var region = CaptureToRectArea();
         if (Bv.CurrentAvatarIsLowHp(region) && !(await TryPartyHealing() && Bv.CurrentAvatarIsLowHp(region)))
         {
-            Logger.LogInformation(Lang.S["GameTask_11036_04ee32"]);
+            Logger.LogInformation("当前角色血量过低，去七天神像恢复");
             await TpStatueOfTheSeven();
-            throw new RetryException(Lang.S["GameTask_11034_79d434"]);
+            throw new RetryException("回血完成后重试路线");
         }
         else if (Bv.ClickIfInReviveModal(region))
         {
             await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation(Lang.S["GameTask_11035_f25136"]);
+            Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
-            throw new RetryException(Lang.S["GameTask_11034_79d434"]);
+            throw new RetryException("回血完成后重试路线");
         }
     }
 
@@ -629,7 +628,7 @@ public class PathExecutor
         // tp 到七天神像回血
         var tpTask = new TpTask(ct);
         await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
-        Logger.LogInformation(Lang.S["GameTask_10600_9601c7"]);
+        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
 
     /// <summary>
@@ -660,21 +659,21 @@ public class PathExecutor
             var textRect = new Rect(60, 20, 160, 260);
             var textMat = new Mat(ra1.SrcMat, textRect);
             string text = OcrFactory.Paddle.Ocr(textMat);
-            if (text.Contains(Lang.S["GameTask_11033_fdb315"]))
+            if (text.Contains("探索派遣奖励"))
             {
                 changeBigMap = true;
-                Logger.LogInformation(Lang.S["GameTask_11032_497f1f"]);
+                Logger.LogInformation("开始自动领取派遣任务！");
                 try
                 {
                     RunnerContext.Instance.isAutoFetchDispatch = true;
                     await RunnerContext.Instance.StopAutoPickRunTask(
                         async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, ct, null, true),
                         5);
-                    Logger.LogInformation(Lang.S["GameTask_11031_c9ed77"]);
+                    Logger.LogInformation("自动领取派遣结束，回归原任务！");
                 }
                 catch (Exception e)
                 {
-                    Logger.LogInformation(Lang.S["GameTask_11030_2052d1"]);
+                    Logger.LogInformation("未知原因，发生异常，尝试继续执行任务！");
                 }
                 finally
                 {
@@ -704,7 +703,7 @@ public class PathExecutor
         var screen = CaptureToRectArea();
         var position = await GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogDebug(Lang.S["GameTask_11029_422041"], $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await WaitUntilRotatedTo(targetOrientation, 2);
         await Delay(500, ct);
     }
@@ -719,7 +718,7 @@ public class PathExecutor
         var screen = CaptureToRectArea();
         var (position, additionalTimeInMs) = await GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogDebug(Lang.S["GameTask_11028_7ccaca"], $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await WaitUntilRotatedTo(targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
@@ -741,8 +740,8 @@ public class PathExecutor
             num++;
             if ((DateTime.UtcNow - moveToStartTime).TotalSeconds > 240)
             {
-                Logger.LogWarning(Lang.S["GameTask_11027_81147b"]);
-                throw new RetryException(Lang.S["GameTask_11026_48e422"]);
+                Logger.LogWarning("执行超时，放弃此次追踪");
+                throw new RetryException("路径点执行超时，放弃整条路径");
             }
 
             screen = CaptureToRectArea();
@@ -761,10 +760,10 @@ public class PathExecutor
                  additionalTimeInMs = additionalTimeInMs + 1000;//当做起步补偿
              }
             var distance = Navigation.GetDistance(waypoint, position);
-            Debug.WriteLine($"{Lang.S["GameTask_11025_402e76"]});
+            Debug.WriteLine($"接近目标点中，距离为{distance}");
             if (distance < 4)
             {
-                Logger.LogDebug(Lang.S["GameTask_11024_9cc783"]);
+                Logger.LogDebug("到达路径点附近");
                 break;
             }
 
@@ -772,7 +771,7 @@ public class PathExecutor
             {
                 if (pathExecutorSuspend.CheckAndResetSuspendPoint())
                 {
-                    throw new RetryNoCountException(Lang.S["GameTask_11006_f02744"]);
+                    throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
                 }
                 else
                 {
@@ -781,12 +780,12 @@ public class PathExecutor
                     {
                         if (position == new Point2f())
                         {
-                            throw new HandledException(Lang.S["GameTask_11023_72e008"]);
+                            throw new HandledException("重试多次后，当前点位无法被识别，放弃此路径！");
                         }
                         else
                         {
-                            Logger.LogWarning($"{Lang.S["GameTask_11022_9ef2fa"]});
-                            throw new HandledException(Lang.S["GameTask_11021_d4d50e"]);
+                            Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试多次后仍然失败，放弃此路径点！");
+                            throw new HandledException("目标距离过远，可能是当前点位无法识别，放弃此路径！");
                         }
                     }
                     else
@@ -794,13 +793,13 @@ public class PathExecutor
                         // 取余减少日志输出频率
                         if (distanceTooFarRetryCount % 5 == 0)
                         {
-                            Logger.LogWarning($"{Lang.S["GameTask_11020_91673d"]});
+                            Logger.LogWarning($"距离过远（{position.X},{position.Y}）->（{waypoint.X},{waypoint.Y}）={distance}，重试");
                         }
                         // 取余减少判断频率
                         if (distanceTooFarRetryCount % 10 == 0)
                         {
                             await ResolveAnomalies(screen);
-                            Logger.LogInformation($"{Lang.S["GameTask_11019_c157a4"]});
+                            Logger.LogInformation($"重置到上次正确识别的坐标 ({prevNotTooFarPosition.X},{prevNotTooFarPosition.Y})");
                             Navigation.SetPrevPosition(prevNotTooFarPosition.X, prevNotTooFarPosition.Y);
                             // 淡入淡出特效
                             await Delay(500, ct);
@@ -829,16 +828,16 @@ public class PathExecutor
                             _inTrap++;
                             if (_inTrap > 2)
                             {
-                                throw new RetryException(Lang.S["GameTask_11018_fd541f"]);
+                                throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
                             }
 
-                            Logger.LogWarning(Lang.S["GameTask_11017_16f1f4"]);
+                            Logger.LogWarning("疑似卡死，尝试脱离...");
 
                             //调用脱困代码，由TrapEscaper接管移动
                             await _trapEscaper.RotateAndMove();
                             await _trapEscaper.MoveTo(waypoint);
                             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                            Logger.LogInformation(Lang.S["GameTask_11016_fd50ed"]);
+                            Logger.LogInformation("卡死脱离结束");
                             continue;
                         }
                     }
@@ -874,7 +873,7 @@ public class PathExecutor
                 var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
                 if (!isFlying)
                 {
-                    Debug.WriteLine(Lang.S["GameTask_11015_c7dcaa"]);
+                    Debug.WriteLine("未进入飞行状态，按下空格");
                     Simulation.SendInput.SimulateAction(GIActions.Jump);
                     await Delay(200, ct);
                 }
@@ -926,7 +925,7 @@ public class PathExecutor
                 {
                     if (s < 1)
                     {
-                        Logger.LogWarning(Lang.S["GameTask_11014_bbff96"]);
+                        Logger.LogWarning("元素战技冷却时间设置太短，不执行！");
                         return;
                     }
 
@@ -983,7 +982,7 @@ public class PathExecutor
         await Delay(200, ct);
 
         // 切人
-        Logger.LogInformation(Lang.S["GameTask_11013_f1e294"]);
+        Logger.LogInformation("切换盾、回血角色，使用元素战技");
         var avatar = await SwitchAvatar(PartyConfig.GuardianAvatarIndex, true);
         if (avatar == null)
         {
@@ -991,7 +990,7 @@ public class PathExecutor
         }
 
         // 钟离往身后放柱子
-        if (avatar.Name == Lang.S["Gen_10027_ff31f7"])
+        if (avatar.Name == "钟离")
         {
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             await Delay(50, ct);
@@ -1002,7 +1001,7 @@ public class PathExecutor
         avatar.UseSkill(PartyConfig.GuardianElementalSkillLongPress);
 
         // 钟离往身后放柱子 后继续走路
-        if (avatar.Name == Lang.S["Gen_10027_ff31f7"])
+        if (avatar.Name == "钟离")
         {
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         }
@@ -1013,7 +1012,7 @@ public class PathExecutor
         ImageRegion screen;
         Point2f position;
         int targetOrientation;
-        Logger.LogDebug(Lang.S["GameTask_11012_a4fbe0"], $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
 
         var stepsTaken = 0;
         while (!ct.IsCancellationRequested)
@@ -1021,7 +1020,7 @@ public class PathExecutor
             stepsTaken++;
             if (stepsTaken > 25)
             {
-                Logger.LogWarning(Lang.S["GameTask_11011_08e2f2"]);
+                Logger.LogWarning("精确接近超时");
                 break;
             }
 
@@ -1032,7 +1031,7 @@ public class PathExecutor
             position = await GetPosition(screen, waypoint);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
-                Logger.LogDebug(Lang.S["GameTask_11010_a28efa"]);
+                Logger.LogDebug("已到达路径点");
                 break;
             }
 
@@ -1120,7 +1119,7 @@ public class PathExecutor
         if (avatar == null) return null;
         if (needSkill && !avatar.IsSkillReady())
         {
-            Logger.LogInformation(Lang.S["GameTask_11009_3c7769"], avatar.Name);
+            Logger.LogInformation("角色{Name}技能未冷却，跳过。", avatar.Name);
             return null;
         }
 
@@ -1131,7 +1130,7 @@ public class PathExecutor
             return avatar;
         }
 
-        Logger.LogInformation(Lang.S["GameTask_11008_5815b2"], avatar.Name);
+        Logger.LogInformation("尝试切换角色{Name}失败！", avatar.Name);
         return null;
     }
     
@@ -1207,7 +1206,7 @@ public class PathExecutor
         {
             if (!Bv.IsInMainUi(imageRegion))
             {
-                Logger.LogDebug(Lang.S["GameTask_11007_06cad0"]);
+                Logger.LogDebug("小地图位置定位失败，且当前不是主界面，进入异常处理");
                 await ResolveAnomalies(imageRegion);
             }
         }
@@ -1217,7 +1216,7 @@ public class PathExecutor
         if (position is {X:0,Y:0} && GetPositionAndTimeSuspendFlag)
         {
             GetPositionAndTimeSuspendFlag = false;
-            throw new RetryNoCountException(Lang.S["GameTask_11006_f02744"]);
+            throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
         }
         //何时处理   pathTooFar  路径过远  unrecognized 未识别
         if ((position is {X:0,Y:0} && waypoint.Misidentification.Type.Contains("unrecognized")) || (distance>500 && waypoint.Misidentification.Type.Contains("pathTooFar")))
@@ -1227,7 +1226,7 @@ public class PathExecutor
                 if (prePosition != default)
                 {
                     position = prePosition;
-                    Logger.LogInformation(@Lang.S["GameTask_11005_336bbe"]);
+                    Logger.LogInformation(@$"未识别到具体路径，取上次点位");
                 }
             }else if (waypoint.Misidentification.HandlingMode == "mapRecognition"){
                 //大地图识别坐标
@@ -1240,7 +1239,7 @@ public class PathExecutor
                 }
                 catch (Exception e)
                 {
-                    Logger.LogInformation(@Lang.S["GameTask_11004_865fef"]);
+                    Logger.LogInformation(@$"地图中心点识别失败！");
                 }
                
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
@@ -1248,7 +1247,7 @@ public class PathExecutor
                 await WaitForCloseMap(10,200);
                 DateTime end = DateTime.Now;
                 time=(int)(end - start).TotalMilliseconds;
-                Logger.LogInformation(@$"{Lang.S["GameTask_11003_6aca2a"]});
+                Logger.LogInformation(@$"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
             }
             
             /*if (prePosition!=default)
@@ -1306,7 +1305,7 @@ public class PathExecutor
                 return;
             }
 
-            Logger.LogInformation(Lang.S["GameTask_11002_efcaf1"]);
+            Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             await Delay(1000, ct); // 等待界面关闭
         }
@@ -1328,7 +1327,7 @@ public class PathExecutor
         var disabledUiButtonRa = ra.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
         if (disabledUiButtonRa.IsExist())
         {
-            Logger.LogWarning(Lang.S["GameTask_11001_978c08"]);
+            Logger.LogWarning("进入剧情，自动点击剧情直到结束");
 
             if (_autoSkipTrigger == null)
             {
@@ -1337,7 +1336,7 @@ public class PathExecutor
                     Enabled = true,
                     QuicklySkipConversationsEnabled = true, // 快速点击过剧情
                     ClosePopupPagedEnabled = true,
-                    ClickChatOption = Lang.S["GameTask_11000_9cfc83"],
+                    ClickChatOption = "优先选择最后一个选项",
                 });
                 _autoSkipTrigger.Init();
             }
@@ -1358,7 +1357,7 @@ public class PathExecutor
                     noDisabledUiButtonTimes++;
                     if (noDisabledUiButtonTimes > 10)
                     {
-                        Logger.LogInformation(Lang.S["GameTask_10999_bab074"]);
+                        Logger.LogInformation("自动剧情结束");
                         break;
                     }
                 }
@@ -1372,7 +1371,7 @@ public class PathExecutor
     {
         if (EndAction != null && EndAction(ra))
         {
-            throw new HandledException(Lang.S["GameTask_10998_be5ee4"]);
+            throw new HandledException("达成结束条件，结束地图追踪");
         }
     }
 }

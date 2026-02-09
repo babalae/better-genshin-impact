@@ -2,23 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoEat
 {
     public enum FoodEffectType
     {
-        [Description(Lang.S["GameTask_10507_3b56f5"])]
+        [Description("恢复类料理")]
         RecoveryDish,
-        [Description(Lang.S["GameTask_10506_064b6b"])]
+        [Description("攻击类料理")]
         ATKBoostingDish,
-        [Description(Lang.S["GameTask_10505_00b6b4"])]
+        [Description("冒险类料理")]
         AdventurersDish,
-        [Description(Lang.S["GameTask_10504_9ae19b"])]
+        [Description("防御类料理")]
         DEFBoostingDish,
-        [Description(Lang.S["GameTask_10503_722479"])]
+        [Description("药剂")]
         Potion,
-        [Description(Lang.S["GameTask_10502_0d98c7"])]
+        [Description("其他")]
         Other
     }
 }

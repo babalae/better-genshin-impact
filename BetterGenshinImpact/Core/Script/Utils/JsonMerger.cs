@@ -1,4 +1,3 @@
-using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
@@ -104,7 +103,7 @@ public class JsonMerger
          }
          catch (Exception e)
          {
-             TaskControl.Logger.LogError($"{Lang.S["Gen_10268_8910ac"]});
+             TaskControl.Logger.LogError($"加载追踪控制文件或合并异常，请检查{pathingPath} 所在目录：{e.Message}");
          }
          
          return json;

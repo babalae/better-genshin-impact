@@ -74,7 +74,7 @@ public partial class ArtifactOcrDialog
             if (this.javaScript != null)
             {
                 bool isMatch = await AutoArtifactSalvageTask.IsMatchJavaScript(artifact, this.javaScript);
-                this.RegexResult.Text = isMatch ? Lang.S["View_12162_f50498"] : "不匹配";
+                this.RegexResult.Text = isMatch ? "匹配" : "不匹配";
             }
         }
         catch (Exception e)
@@ -86,10 +86,10 @@ public partial class ArtifactOcrDialog
 
     private static async Task HandleOcrExceptionAsync(Exception e, Mat srcMat)
     {
-        Logger.LogError(e, Lang.S["View_12161_86bbd8"]);
+        Logger.LogError(e, "自动分解圣遗物-OCR识别异常");
         var result = await ThemedMessageBox.ErrorAsync(
-            $"{Lang.S["View_12160_172650"]},
-            Lang.S["GameTask_10364_80ce45"],
+            $"{e.Message}\n是否保存该圣遗物截图？（至log/autoArtifactSalvageException/）",
+            "识别失败",
             MessageBoxButton.YesNo,
             MessageBoxResult.No
         );
