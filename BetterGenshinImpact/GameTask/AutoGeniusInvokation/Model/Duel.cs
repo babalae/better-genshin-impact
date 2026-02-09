@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
@@ -61,7 +62,7 @@ public class Duel
         LogScreenResolution();
         try
         {
-            Notify.Event(NotificationEvent.TcgStart).Success("自动七圣召唤启动");
+            Notify.Event(NotificationEvent.TcgStart).Success(Lang.S["GameTask_10960_be057b"]);
             
             AutoGeniusInvokationAssets.DestroyInstance();
             
@@ -90,7 +91,7 @@ public class Duel
                     CharacterCardRects.Add(defaultCharacterCardRects[i].Multiply(assetScale));
                 }
 
-                _logger.LogInformation("获取角色区域失败，使用默认区域");
+                _logger.LogInformation(Lang.S["GameTask_10959_870f58"]);
             }
 
             for (var i = 1; i < 4; i++)
@@ -105,7 +106,7 @@ public class Duel
             // 开始执行回合
             while (true)
             {
-                _logger.LogInformation("--------------第{RoundNum}回合--------------", RoundNum);
+                _logger.LogInformation(Lang.S["GameTask_10958_0d8dbd"], RoundNum);
                 ClearCharacterStatus(); // 清空单回合的异常状态
                 if (RoundNum == 1)
                 {
@@ -131,10 +132,10 @@ public class Duel
                 while (true)
                 {
                     // 没骰子了就结束行动
-                    _logger.LogInformation("行动开始,当前骰子数[{CurrentDiceCount}],当前手牌数[{CurrentCardCount}]", CurrentDiceCount, CurrentCardCount);
+                    _logger.LogInformation(Lang.S["GameTask_10957_4bb881"], CurrentDiceCount, CurrentCardCount);
                     if (CurrentDiceCount <= 0)
                     {
-                        _logger.LogInformation("骰子已经用完");
+                        _logger.LogInformation(Lang.S["GameTask_10956_a3576f"]);
                         GeniusInvokationControl.GetInstance().Sleep(2000);
                         break;
                     }
@@ -149,12 +150,12 @@ public class Duel
                         var diceDiff = Math.Abs(CurrentDiceCount - diceCountFromOcr);
                         if (diceDiff is > 0 and <= 4)
                         {
-                            _logger.LogInformation("可能存在场地牌影响了骰子数[{CurrentDiceCount}] -> [{DiceCountFromOcr}]", CurrentDiceCount, diceCountFromOcr);
+                            _logger.LogInformation(Lang.S["GameTask_10955_82a547"], CurrentDiceCount, diceCountFromOcr);
                             CurrentDiceCount = diceCountFromOcr;
                         }
                         else if (diceDiff > 4)
                         {
-                            _logger.LogWarning(" OCR识别到的骰子数[{DiceCountFromOcr}]和计算得出的骰子数[{CurrentDiceCount}]差距较大，舍弃结果", diceCountFromOcr, CurrentDiceCount);
+                            _logger.LogWarning(Lang.S["GameTask_10954_246cbe"], diceCountFromOcr, CurrentDiceCount);
                         }
                     }
 
@@ -192,12 +193,12 @@ public class Duel
                                     TargetIndex = actionCommand.Character.Index
                                 };
                                 alreadyExecutedActionCommand.Add(switchAction);
-                                _logger.LogInformation("→指令执行完成：{Action}", switchAction);
+                                _logger.LogInformation(Lang.S["GameTask_10951_a102a4"], switchAction);
                                 break;
                             }
                             else
                             {
-                                _logger.LogInformation("骰子不足以进行下一步：切换角色 {CharacterIndex}", actionCommand.Character.Index);
+                                _logger.LogInformation(Lang.S["GameTask_10953_bb0019"], actionCommand.Character.Index);
                                 break;
                             }
                         }
@@ -205,7 +206,7 @@ public class Duel
                         // 2. 判断使用技能
                         if (actionCommand.GetAllDiceUseCount() > CurrentDiceCount)
                         {
-                            _logger.LogInformation("骰子不足以进行下一步：{Action}", actionCommand);
+                            _logger.LogInformation(Lang.S["GameTask_10952_6a01b4"], actionCommand);
                             break;
                         }
                         else
@@ -216,9 +217,9 @@ public class Duel
                                 CurrentDiceCount -= actionCommand.GetAllDiceUseCount();
                                 alreadyExecutedActionIndex.Add(i);
                                 alreadyExecutedActionCommand.Add(actionCommand);
-                                _logger.LogInformation("→指令执行完成：{Action}", actionCommand);
+                                _logger.LogInformation(Lang.S["GameTask_10951_a102a4"], actionCommand);
                                 // 刻晴的E加手牌
-                                if (actionCommand.Character.Name == "刻晴" && actionCommand.TargetIndex == 2)
+                                if (actionCommand.Character.Name == Lang.S["GameTask_10950_68f76f"] && actionCommand.TargetIndex == 2)
                                 {
                                     _keqingECount++;
                                     if (_keqingECount % 2 == 0)
@@ -233,7 +234,7 @@ public class Duel
                             }
                             else
                             {
-                                _logger.LogWarning("→指令执行失败(可能是手牌不够)：{Action}", actionCommand);
+                                _logger.LogWarning(Lang.S["GameTask_10949_38066e"], actionCommand);
                                 GeniusInvokationControl.GetInstance().Sleep(1000);
                                 GeniusInvokationControl.GetInstance().ClickGameWindowCenter();
                             }
@@ -272,13 +273,13 @@ public class Duel
 
                     if (ActionCommandQueue.Count == 0)
                     {
-                        throw new NormalEndException("策略中所有指令已经执行完毕，结束自动打牌");
+                        throw new NormalEndException(Lang.S["GameTask_10948_738453"]);
                     }
                 }
 
                 // 回合结束
                 GeniusInvokationControl.GetInstance().Sleep(1000);
-                _logger.LogInformation("我方点击回合结束");
+                _logger.LogInformation(Lang.S["GameTask_10947_b69f89"]);
                 GeniusInvokationControl.GetInstance().RoundEnd();
 
                 // 等待对方行动+回合结算
@@ -294,7 +295,7 @@ public class Duel
         }
         catch (NormalEndException ex)
         {
-            _logger.LogInformation("对局结束");
+            _logger.LogInformation(Lang.S["GameTask_10946_97f948"]);
             // throw;
         }
         catch (System.Exception ex)
@@ -306,7 +307,7 @@ public class Duel
             throw;
         }
         
-        Notify.Event(NotificationEvent.TcgEnd).Success("自动七圣召唤结束");
+        Notify.Event(NotificationEvent.TcgEnd).Success(Lang.S["GameTask_10945_25a88f"]);
     }
 
     private HashSet<ElementalType> PredictionDiceType()
@@ -387,7 +388,7 @@ public class Duel
             }
 
             // 莫娜切换等待3秒
-            if (command.Character.Name == "莫娜" && command.Action == ActionEnum.SwitchLater)
+            if (command.Character.Name == Lang.S["GameTask_10944_06bb01"] && command.Action == ActionEnum.SwitchLater)
             {
                 return 3000;
             }
@@ -437,8 +438,8 @@ public class Duel
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width != 1920 || gameScreenSize.Height != 1080)
         {
-            _logger.LogWarning("游戏窗口分辨率不是 1920x1080 ！当前分辨率为 {Width}x{Height} , 非 1920x1080 分辨率的游戏可能无法正常使用自动七圣召唤 !", gameScreenSize.Width, gameScreenSize.Height);
-            throw new System.Exception("游戏窗口分辨率不是 1920x1080");
+            _logger.LogWarning(Lang.S["GameTask_10943_507818"], gameScreenSize.Width, gameScreenSize.Height);
+            throw new System.Exception(Lang.S["GameTask_10942_f43f0a"]);
         }
     }
 }

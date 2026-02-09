@@ -109,7 +109,7 @@ public class ImageRegion : Region
     {
         if (ro == null)
         {
-            throw new Exception("识别对象不能为null");
+            throw new Exception(Lang.S["GameTask_11827_520d8d"]);
         }
 
         if (RecognitionTypes.TemplateMatch.Equals(ro.RecognitionType))
@@ -139,7 +139,7 @@ public class ImageRegion : Region
 
             if (template == null)
             {
-                throw new Exception($"[TemplateMatch]识别对象{ro.Name}的模板图片不能为null");
+                throw new Exception($"{Lang.S["GameTask_11826_2d44b7"]});
             }
 
             if (ro.RegionOfInterest != default)
@@ -150,7 +150,7 @@ public class ImageRegion : Region
                       && 0 <= ro.RegionOfInterest.Y && 0 <= ro.RegionOfInterest.Height &&
                       ro.RegionOfInterest.Y + ro.RegionOfInterest.Height <= roi.Rows))
                 {
-                    TaskControl.Logger.LogError("在图像{W1}x{H1}中查找模板,名称：{Name},ROI位置{X2}x{Y2},区域{H2}x{W2},边界溢出！",
+                    TaskControl.Logger.LogError(Lang.S["GameTask_11830_4c6af9"],
                         roi.Width, roi.Height, ro.Name, ro.RegionOfInterest.X, ro.RegionOfInterest.Y,
                         ro.RegionOfInterest.Width, ro.RegionOfInterest.Height);
                 }
@@ -186,7 +186,7 @@ public class ImageRegion : Region
         {
             if (ro.AllContainMatchText.Count == 0 && ro.OneContainMatchText.Count == 0 && ro.RegexMatchText.Count == 0)
             {
-                throw new Exception($"[OCR]识别对象{ro.Name}的匹配文本不能全为空");
+                throw new Exception($"{Lang.S["GameTask_11829_ae6c32"]});
             }
 
             var roi = SrcMat;
@@ -334,7 +334,7 @@ public class ImageRegion : Region
         }
         else
         {
-            throw new Exception($"ImageRegion不支持的识别类型{ro.RecognitionType}");
+            throw new Exception($"{Lang.S["GameTask_11828_b7fa25"]});
         }
     }
 
@@ -355,7 +355,7 @@ public class ImageRegion : Region
     {
         if (ro == null)
         {
-            throw new Exception("识别对象不能为null");
+            throw new Exception(Lang.S["GameTask_11827_520d8d"]);
         }
 
         if (RecognitionTypes.TemplateMatch.Equals(ro.RecognitionType))
@@ -376,7 +376,7 @@ public class ImageRegion : Region
 
             if (template == null)
             {
-                throw new Exception($"[TemplateMatch]识别对象{ro.Name}的模板图片不能为null");
+                throw new Exception($"{Lang.S["GameTask_11826_2d44b7"]});
             }
 
             if (ro.RegionOfInterest != default)
@@ -460,7 +460,7 @@ public class ImageRegion : Region
         }
         else
         {
-            throw new Exception($"RectArea多目标识别不支持的识别类型{ro.RecognitionType}");
+            throw new Exception($"{Lang.S["GameTask_11825_41a635"]});
         }
     }
 

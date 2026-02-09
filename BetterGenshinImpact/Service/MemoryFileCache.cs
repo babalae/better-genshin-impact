@@ -246,7 +246,7 @@ public sealed class MemoryFileCache
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "读取缓存文件失败: {CacheKey}", cacheKey);
+            _logger.LogDebug(ex, Lang.S["Service_12046_7e6dff"], cacheKey);
             return false;
         }
     }
@@ -280,7 +280,7 @@ public sealed class MemoryFileCache
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "写入缓存文件失败: {CacheKey}", cacheKey);
+            _logger.LogDebug(ex, Lang.S["Service_12045_e91762"], cacheKey);
             TryDeleteFile(tmpPath);
         }
     }

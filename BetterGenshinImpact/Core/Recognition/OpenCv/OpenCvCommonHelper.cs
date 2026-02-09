@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using OpenCvSharp;
@@ -149,7 +150,7 @@ public class OpenCvCommonHelper
             {
                 if (x < 0 || x >= width || y < 0 || y >= height)
                 {
-                    Debug.WriteLine($"坐标({x}, {y}) 超过图片范围 ({width}, {height})");
+                    Debug.WriteLine($"{Lang.S["Gen_10080_887e1e"]});
                     continue;
                 }
                 var index = isContinuous ? (y * width + x) * channels : y * step + x * channels;

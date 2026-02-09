@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
@@ -90,7 +91,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             else
             {
                 await TaskControl.Delay(300, ct);
-                this.logger.LogInformation("滚动到底部了");
+                this.logger.LogInformation(Lang.S["GameTask_11843_caac23"]);
                 return false;
             }
         }

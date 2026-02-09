@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 
 namespace BetterGenshinImpact.Model;
@@ -14,8 +15,8 @@ public static class HotKeyTypeEnumExtension
     {
         return type switch
         {
-            HotKeyTypeEnum.GlobalRegister => "全局热键",
-            HotKeyTypeEnum.KeyboardMonitor => "键鼠监听",
+            HotKeyTypeEnum.GlobalRegister => Lang.S["Gen_12016_fedaa5"],
+            HotKeyTypeEnum.KeyboardMonitor => Lang.S["Gen_12015_255785"],
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
         };
     }

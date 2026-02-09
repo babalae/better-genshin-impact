@@ -46,7 +46,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask : ISoloTask
 {
-    public string Name => "自动秘境";
+    public string Name => Lang.S["Task_059_1f7122"];
 
     private readonly AutoDomainParam _taskParam;
 
@@ -87,15 +87,15 @@ public class AutoDomainTask : ISoloTask
         IStringLocalizer<AutoDomainTask> stringLocalizer =
             App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "挑战达成");
-        this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "自动退出");
-        this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "跳过");
-        this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "地脉异常");
-        this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
-        this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
-        this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
-        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全开");
-        this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, "限时开放");
+        this.challengeCompletedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10478_31227f"]);
+        this.autoLeavingLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10477_0fc0ef"]);
+        this.skipLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10380_92636e"]);
+        this.leyLineDisorderLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10476_4aa502"]);
+        this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10475_b56caa"]);
+        this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10474_fd4ae0"]);
+        this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10473_b13ea6"]);
+        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10472_96cff4"]);
+        this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10471_0056ad"]);
     }
 
     private static RecognitionObject GetConfirmRa(params string[] targetText)
@@ -113,7 +113,7 @@ public class AutoDomainTask : ISoloTask
         _ct = ct;
 
         Init();
-        Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
+        Notify.Event(NotificationEvent.DomainStart).Success(Lang.S["GameTask_10470_f23957"]);
 
         // 复活重试
         for (var i = 0; i < _config.ReviveRetryCount; i++)
@@ -130,12 +130,12 @@ public class AutoDomainTask : ISoloTask
                 if (!string.IsNullOrEmpty(_taskParam.DomainName))
                 {
                     var msg = e.Message;
-                    if (msg.Contains("复活"))
+                    if (msg.Contains(Lang.S["GameTask_10469_a8a79c"]))
                     {
-                        msg = "存在角色死亡，复活后重试秘境...";
+                        msg = Lang.S["GameTask_10468_bb1983"];
                     }
 
-                    Logger.LogWarning("自动秘境：{Text}", msg);
+                    Logger.LogWarning(Lang.S["GameTask_10421_8f46b3"], msg);
                     await Delay(2000, ct);
                     Notify.Event(NotificationEvent.DomainRetry).Error(msg);
                     continue;
@@ -151,7 +151,7 @@ public class AutoDomainTask : ISoloTask
         await Delay(2000, ct);
 
         await ArtifactSalvage();
-        Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
+        Notify.Event(NotificationEvent.DomainEnd).Success(Lang.S["GameTask_10467_45a31a"]);
     }
 
     private async Task DoDomain()
@@ -168,7 +168,7 @@ public class AutoDomainTask : ISoloTask
         for (var i = 0; i < _taskParam.DomainRoundNum; i++)
         {
             // 0. 关闭秘境提示
-            Logger.LogDebug("0. 关闭秘境提示");
+            Logger.LogDebug(Lang.S["GameTask_10466_23d4b0"]);
             await CloseDomainTip();
 
             //0.5. 初始化队伍，只执行一次
@@ -183,32 +183,32 @@ public class AutoDomainTask : ISoloTask
             var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
 
             // 1. 走到钥匙处启动
-            Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
+            Logger.LogInformation(Lang.S["GameTask_10421_8f46b3"], "1. 走到钥匙处启动");
             await WalkToPressF();
 
             // 2. 执行战斗（战斗线程、视角线程、检测战斗完成线程）
-            Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略");
+            Logger.LogInformation(Lang.S["GameTask_10421_8f46b3"], "2. 执行战斗策略");
             await StartFight(combatScenes, combatCommands);
             combatScenes.AfterTask();
             EndFightWait();
 
             // 3. 寻找石化古树 并左右移动直到石化古树位于屏幕中心
-            Logger.LogInformation("自动秘境：{Text}", "3. 寻找石化古树");
+            Logger.LogInformation(Lang.S["GameTask_10421_8f46b3"], "3. 寻找石化古树");
             await FindPetrifiedTree();
 
             // 4. 走到石化古树处
-            Logger.LogInformation("自动秘境：{Text}", "4. 走到石化古树处");
+            Logger.LogInformation(Lang.S["GameTask_10421_8f46b3"], "4. 走到石化古树处");
             await WalkToPressF();
 
             // 5. 快速领取奖励并判断是否有下一轮
-            Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
+            Logger.LogInformation(Lang.S["GameTask_10421_8f46b3"], "5. 领取奖励");
             if (!await GettingTreasure())
             {
-                Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
+                Logger.LogInformation(Lang.S["GameTask_10460_bf7571"]);
                 break;
             }
 
-            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
+            Notify.Event(NotificationEvent.DomainReward).Success(Lang.S["GameTask_10459_485b94"]);
         }
     }
 
@@ -222,11 +222,11 @@ public class AutoDomainTask : ISoloTask
 
         if (_config.SpecifyResinUse)
         {
-            Logger.LogInformation("→ {Text} 指定使用树脂", "自动秘境，");
+            Logger.LogInformation(Lang.S["GameTask_10458_4e8665"], "自动秘境，");
         }
         else
         {
-            Logger.LogInformation("→ {Text} 用尽所有浓缩树脂和原粹树脂后结束", "自动秘境，");
+            Logger.LogInformation(Lang.S["GameTask_10456_c81dfc"], "自动秘境，");
         }
     }
 
@@ -235,14 +235,14 @@ public class AutoDomainTask : ISoloTask
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
-            Logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height} , 非 16:9 分辨率的游戏无法正常使用自动秘境功能 !",
+            Logger.LogError(Lang.S["GameTask_10455_634fe1"],
                 gameScreenSize.Width, gameScreenSize.Height);
-            throw new Exception("游戏窗口分辨率不是 16:9");
+            throw new Exception(Lang.S["GameTask_10454_708f7d"]);
         }
 
         if (gameScreenSize.Width < 1920 || gameScreenSize.Height < 1080)
         {
-            Logger.LogWarning("游戏窗口分辨率小于 1920x1080 ！当前分辨率为 {Width}x{Height} , 小于 1920x1080 的分辨率的游戏可能无法正常使用自动秘境功能 !",
+            Logger.LogWarning(Lang.S["GameTask_10453_104863"],
                 gameScreenSize.Width, gameScreenSize.Height);
         }
     }
@@ -254,7 +254,7 @@ public class AutoDomainTask : ISoloTask
             combatScenes.InitializeTeam(CaptureToRectArea());
             if (!combatScenes.CheckTeamInitialized())
             {
-                throw new Exception("识别队伍角色失败，请在较暗背景下重试，比如游戏时间调整成夜晚。或者直接使用强制指定当前队伍角色的功能。");
+                throw new Exception(Lang.S["GameTask_10452_517a4d"]);
             }
         }
     }
@@ -266,13 +266,13 @@ public class AutoDomainTask : ISoloTask
         {
             if (MapLazyAssets.Instance.DomainPositionMap.TryGetValue(_taskParam.DomainName, out var domainPosition))
             {
-                Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
+                Logger.LogInformation(Lang.S["GameTask_10451_98a525"], _taskParam.DomainName);
                 await new TpTask(_ct).Tp(domainPosition.X, domainPosition.Y);
                 await Delay(1000, _ct);
                 await Bv.WaitForMainUi(_ct);
 
                 var menuFound = false;
-                if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
+                if (Lang.S["GameTask_10450_f6dfdf"].Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
                         AutoPickAssets.Instance.PickRo,
@@ -283,7 +283,7 @@ public class AutoDomainTask : ISoloTask
                     );
                     Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
                 }
-                else if ("无妄引咎密宫".Equals(_taskParam.DomainName))
+                else if (Lang.S["GameTask_10449_8d6c1e"].Equals(_taskParam.DomainName))
                 {
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     Thread.Sleep(500);
@@ -298,7 +298,7 @@ public class AutoDomainTask : ISoloTask
                     );
                     Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                 }
-                else if ("太山府".Equals(_taskParam.DomainName))
+                else if (Lang.S["GameTask_10448_647201"].Equals(_taskParam.DomainName))
                 {
                     menuFound = await NewRetry.WaitForElementAppear(
                         AutoPickAssets.Instance.PickRo,
@@ -322,11 +322,11 @@ public class AutoDomainTask : ISoloTask
 
                 if (!menuFound)
                 {
-                    throw new Exception("请检查是否在秘境门前");
+                    throw new Exception(Lang.S["GameTask_10447_044c32"]);
                 }
 
                 var menu = await NewRetry.WaitForElementAppear(
-                    GetConfirmRa("单人挑战"),
+                    GetConfirmRa(Lang.S["GameTask_10434_2dfd63"]),
                     () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
                     _ct,
                     20,
@@ -334,13 +334,13 @@ public class AutoDomainTask : ISoloTask
                 );
                 if (!menu)
                 {
-                    throw new Exception("请检查是否已进入秘境页面");
+                    throw new Exception(Lang.S["GameTask_10446_92356a"]);
                 }
             }
             else
             {
-                Logger.LogError("自动秘境：未找到对应的秘境{Text}的传送点", _taskParam.DomainName);
-                throw new Exception($"未找到对应的秘境{_taskParam.DomainName}的传送点");
+                Logger.LogError(Lang.S["GameTask_10445_739e93"], _taskParam.DomainName);
+                throw new Exception($"{Lang.S["GameTask_10444_48f508"]});
             }
         }
     }
@@ -367,7 +367,7 @@ public class AutoDomainTask : ISoloTask
         var fightAssets = AutoFightAssets.Instance;
 
         var menuFound = await NewRetry.WaitForElementAppear(
-            GetConfirmRa("单人挑战"),
+            GetConfirmRa(Lang.S["GameTask_10434_2dfd63"]),
             () => Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk),
             _ct,
             10,
@@ -375,7 +375,7 @@ public class AutoDomainTask : ISoloTask
         );
         if (!menuFound)
         {
-            Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
+            Logger.LogWarning(Lang.S["GameTask_10443_dec35c"]);
         }
 
         using var limitedFullyStringRa = CaptureToRectArea();
@@ -387,7 +387,7 @@ public class AutoDomainTask : ISoloTask
         // 检测是否为限时全开秘境
         if (limitedFullyStringRaocrListdone != null)
         {
-            Logger.LogInformation("自动秘境：{Text}", "检测到秘境限时全开");
+            Logger.LogInformation(Lang.S["GameTask_10421_8f46b3"], "检测到秘境限时全开");
         }
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
@@ -400,7 +400,7 @@ public class AutoDomainTask : ISoloTask
                 {
                     if (sundaySelectedValue > 0)
                     {
-                        Logger.LogInformation(limitedFullyStringRaocrListdone != null ? "自动秘境：限时全开秘境奖励序号 {sundaySelectedValue}" : "自动秘境：周日设置了秘境奖励序号 {sundaySelectedValue}", sundaySelectedValue);
+                        Logger.LogInformation(limitedFullyStringRaocrListdone != null ? Lang.S["GameTask_10440_81c2e6"] : "自动秘境：周日设置了秘境奖励序号 {sundaySelectedValue}", sundaySelectedValue);
                         using var abnormalscreenRa = CaptureToRectArea();
                         GlobalMethod.MoveMouseTo(abnormalscreenRa.Width / 4, abnormalscreenRa.Height / 2); //移到左侧
                         for (var i = 0; i < 100; i++)
@@ -433,7 +433,7 @@ public class AutoDomainTask : ISoloTask
                                     GlobalMethod.Click(done.X, done.Y);
                                     break;
                                 default:
-                                    Logger.LogWarning("无效的 sundaySelectedValue 值: {sundaySelectedValue}",
+                                    Logger.LogWarning(Lang.S["GameTask_10439_65c145"],
                                         sundaySelectedValue);
                                     break;
                             }
@@ -441,12 +441,12 @@ public class AutoDomainTask : ISoloTask
                     }
                     else
                     {
-                        Logger.LogInformation(limitedFullyStringRaocrListdone != null ? "自动秘境：限时全开秘境未设置特定秘境奖励" : "自动秘境：周日秘境未设置特定秘境奖励");
+                        Logger.LogInformation(limitedFullyStringRaocrListdone != null ? Lang.S["GameTask_10437_b37038"] : "自动秘境：周日秘境未设置特定秘境奖励");
                     }
                 }
                 else
                 {
-                    Logger.LogWarning(_taskParam.SundaySelectedValue == "" ? "未设置秘境奖励序号" : "设置秘境奖励序号错误，请检查配置页面");
+                    Logger.LogWarning(_taskParam.SundaySelectedValue == "" ? Lang.S["GameTask_10435_2de903"] : "设置秘境奖励序号错误，请检查配置页面");
                 }
             }
 
@@ -464,15 +464,15 @@ public class AutoDomainTask : ISoloTask
                 {
                     ra2.Click();
                     ra2.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "单人挑战");
+                    Logger.LogInformation(Lang.S["GameTask_10425_1b3bc2"], "单人挑战");
                 }
 
                 using var confirmRectArea2 = ra.Find(RecognitionObject.Ocr(ra.Width * 0.263, ra.Height * 0.32,
                     ra.Width - ra.Width * 0.263 * 2, ra.Height - ra.Height * 0.32 - ra.Height * 0.353));
-                if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains("是否仍要挑战该秘境"))
+                if (confirmRectArea2.IsExist() && confirmRectArea2.Text.Contains(Lang.S["GameTask_10433_53552e"]))
                 {
-                    Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
-                    throw new Exception("当前树脂不足，自动秘境停止运行。");
+                    Logger.LogWarning(Lang.S["GameTask_10432_78453e"], confirmRectArea2.Text);
+                    throw new Exception(Lang.S["GameTask_10431_eacdb4"]);
                 }
             },
             _ct,
@@ -483,14 +483,14 @@ public class AutoDomainTask : ISoloTask
         // 等待队伍选择界面出现
         var teamUiFound = await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.PartyBtnChooseView,
-            () => { Logger.LogInformation("自动秘境：进入 {Text}", "队伍选择界面"); },
+            () => { Logger.LogInformation(Lang.S["GameTask_10429_f2310e"], "队伍选择界面"); },
             _ct,
             10,
             1000
         );
         if (!teamUiFound)
         {
-            Logger.LogWarning("队伍选择界面未出现，跳过切换队伍。");
+            Logger.LogWarning(Lang.S["GameTask_10428_5220a0"]);
         }
         else
         {
@@ -499,14 +499,14 @@ public class AutoDomainTask : ISoloTask
 
         // 点击开始挑战确认并等待“开始挑战”文字消失
         var startFightFound = await NewRetry.WaitForElementDisappear(
-            GetConfirmRa("开始挑战"),
+            GetConfirmRa(Lang.S["GameTask_10427_33aae2"]),
             screen =>
             {
                 screen.Find(fightAssets.ConfirmRa, ra =>
                 {
                     ra.Click();
                     ra.Dispose();
-                    Logger.LogInformation("自动秘境：点击 {Text}", "开始挑战");
+                    Logger.LogInformation(Lang.S["GameTask_10425_1b3bc2"], "开始挑战");
                 });
             },
             _ct,
@@ -515,7 +515,7 @@ public class AutoDomainTask : ISoloTask
         );
         if (!startFightFound)
         {
-            Logger.LogWarning("开始挑战按钮未出现或未能点击。");
+            Logger.LogWarning(Lang.S["GameTask_10426_68828d"]);
         }
 
         // 载入
@@ -536,7 +536,7 @@ public class AutoDomainTask : ISoloTask
         }, _ct, 40, 500);
         if (!domainTipFound)
         {
-            Logger.LogWarning("秘境提示未出现或未能点击。");
+            Logger.LogWarning(Lang.S["GameTask_10424_2b83d6"]);
         }
 
         //持续点击，直到左下角出现目标文字
@@ -552,7 +552,7 @@ public class AutoDomainTask : ISoloTask
             {
                 done.Click();
                 done.Dispose();
-                Logger.LogInformation("自动秘境：点击 {Text}", done.Text);
+                Logger.LogInformation(Lang.S["GameTask_10425_1b3bc2"], done.Text);
             }
 
             // 检查左下角区域是否还存在目标文字，消失则继续，存在则结束
@@ -564,7 +564,7 @@ public class AutoDomainTask : ISoloTask
         {
             //尝试随意点击一下右下角
             GameCaptureRegion.GameRegion1080PPosClick(1515, 892);
-            Logger.LogWarning("秘境提示未出现或未能点击。");
+            Logger.LogWarning(Lang.S["GameTask_10424_2b83d6"]);
         }
 
         await Delay(500, _ct);
@@ -611,7 +611,7 @@ public class AutoDomainTask : ISoloTask
                     }
                     else
                     {
-                        Logger.LogInformation("检测到交互键");
+                        Logger.LogInformation(Lang.S["GameTask_10423_d4417d"]);
                         Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                         break;
                     }
@@ -619,8 +619,8 @@ public class AutoDomainTask : ISoloTask
                     // 超时直接放弃整个秘境
                     if (DateTime.Now - startTime > TimeSpan.FromSeconds(60))
                     {
-                        Logger.LogWarning("自动秘境：{Text}", "前往目标位置处超时，如果选择了秘境名称，将在传送后重试秘境！");
-                        Avatar.TpForRecover(_ct, new RetryException("前往目标位置处超时，先传送到七天神像，然后重试秘境"));
+                        Logger.LogWarning(Lang.S["GameTask_10421_8f46b3"], "前往目标位置处超时，如果选择了秘境名称，将在传送后重试秘境！");
+                        Avatar.TpForRecover(_ct, new RetryException(Lang.S["GameTask_10420_427869"]));
                     }
                 }
             }
@@ -658,7 +658,7 @@ public class AutoDomainTask : ISoloTask
             }
             catch (NormalEndException e)
             {
-                Logger.LogInformation("战斗操作中断：{Msg}", e.Message);
+                Logger.LogInformation(Lang.S["GameTask_10419_85c3aa"], e.Message);
             }
             catch (Exception e)
             {
@@ -667,7 +667,7 @@ public class AutoDomainTask : ISoloTask
             }
             finally
             {
-                Logger.LogInformation("自动战斗线程结束");
+                Logger.LogInformation(Lang.S["GameTask_10418_b5582c"]);
                 Simulation.ReleaseAllKey();
                 AutoFightTask.FightStatusFlag = false;
             }
@@ -693,7 +693,7 @@ public class AutoDomainTask : ISoloTask
         var s = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
         if (s > 0)
         {
-            Logger.LogInformation("战斗结束后等待 {Second} 秒", s);
+            Logger.LogInformation(Lang.S["GameTask_10417_09b7a0"], s);
             Sleep((int)(s * 1000), _ct);
         }
     }
@@ -732,7 +732,7 @@ public class AutoDomainTask : ISoloTask
         var text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.challengeCompletedLocalizedString))
         {
-            Logger.LogInformation("检测到秘境结束提示(挑战达成)，结束秘境");
+            Logger.LogInformation(Lang.S["GameTask_10416_204900"]);
             return true;
         }
 
@@ -740,7 +740,7 @@ public class AutoDomainTask : ISoloTask
         text = OcrFactory.Paddle.Ocr(endTipsRect.SrcMat);
         if (Regex.IsMatch(text, this.autoLeavingLocalizedString))
         {
-            Logger.LogInformation("检测到秘境结束提示(xxx秒后自动退出)，结束秘境");
+            Logger.LogInformation(Lang.S["GameTask_10415_2fbfa9"]);
             return true;
         }
 
@@ -758,7 +758,7 @@ public class AutoDomainTask : ISoloTask
 
             if (!IsTakeFood())
             {
-                Logger.LogInformation("未装备 “{Tool}”，不启用红血自动吃药功能", "便携营养袋");
+                Logger.LogInformation(Lang.S["GameTask_10413_9e7aec"], "便携营养袋");
                 return;
             }
 
@@ -770,7 +770,7 @@ public class AutoDomainTask : ISoloTask
                     {
                         // 模拟按键 "Z"
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-                        Logger.LogInformation("检测到红血，按Z吃药");
+                        Logger.LogInformation(Lang.S["GameTask_10412_da36ff"]);
                         // TODO 吃饱了会一直吃
                     }
 
@@ -779,7 +779,7 @@ public class AutoDomainTask : ISoloTask
             }
             catch (Exception e)
             {
-                Logger.LogDebug(e, "红血自动吃药检测时发生异常");
+                Logger.LogDebug(e, Lang.S["GameTask_10411_1d3563"]);
             }
         }, ct);
     }
@@ -840,7 +840,7 @@ public class AutoDomainTask : ISoloTask
                     {
                         backwardsAndForwardsCount = 0;
                         // 树在左边 往左走
-                        Debug.WriteLine($"树在左边 往左走 {treeMiddleX}  {middleX}");
+                        Debug.WriteLine($"{Lang.S["GameTask_10410_06ee59"]});
                         if (rightKeyDown)
                         {
                             // 先松开D键
@@ -858,7 +858,7 @@ public class AutoDomainTask : ISoloTask
                     {
                         backwardsAndForwardsCount = 0;
                         // 树在右边 往右走
-                        Debug.WriteLine($"树在右边 往右走 {treeMiddleX}  {middleX}");
+                        Debug.WriteLine($"{Lang.S["GameTask_10409_47f1b7"]});
                         if (leftKeyDown)
                         {
                             // 先松开A键
@@ -1055,7 +1055,7 @@ public class AutoDomainTask : ISoloTask
                 Sleep(100, _ct);
             }
 
-            Logger.LogInformation("锁定东方向视角线程结束");
+            Logger.LogInformation(Lang.S["GameTask_10408_7c1aba"]);
             VisionContext.Instance().DrawContent.ClearAll();
         });
     }
@@ -1074,7 +1074,7 @@ public class AutoDomainTask : ISoloTask
         {
             using var ra = CaptureToRectArea();
             var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-            var res = regionList.FirstOrDefault(t => t.Text.Contains("石化古树"));
+            var res = regionList.FirstOrDefault(t => t.Text.Contains(Lang.S["GameTask_10407_38000b"]));
             if (res != null)
             {
                 // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了，界面上点一下
@@ -1084,16 +1084,16 @@ public class AutoDomainTask : ISoloTask
 
             return false;
         }, _ct, 10, 500);
-        Debug.WriteLine("识别到选择树脂页");
+        Debug.WriteLine(Lang.S["GameTask_10406_b4bdc2"]);
         await Delay(800, _ct);
 
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => t.Text.Contains("数量不足") || t.Text.Contains("补充原粹树脂")))
+        if (textListInPrompt.Any(t => t.Text.Contains(Lang.S["GameTask_10404_d82611"]) || t.Text.Contains("补充原粹树脂")))
         {
             // 没有原粹树脂，直接退出秘境
-            Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
+            Logger.LogInformation(Lang.S["GameTask_10403_4c2100"]);
             await ExitDomain();
             return false;
         }
@@ -1111,7 +1111,7 @@ public class AutoDomainTask : ISoloTask
 
                 if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
                 {
-                    Logger.LogWarning("树脂不足");
+                    Logger.LogWarning(Lang.S["GameTask_10401_dd437f"]);
                     await ExitDomain();
                     return false;
                 }
@@ -1119,18 +1119,18 @@ public class AutoDomainTask : ISoloTask
                 bool resinUsed = false;
                 if (resinStatus.CondensedResinCount > 0)
                 {
-                    (resinUsed, _) = PressUseResin(ra3, "浓缩树脂");
+                    (resinUsed, _) = PressUseResin(ra3, Lang.S["GameTask_10385_a7b73a"]);
                     resinStatus.CondensedResinCount -= 1;
                 }
                 else if (resinStatus.OriginalResinCount >= 20)
                 {
-                    (resinUsed, var num) = PressUseResin(ra3, "原粹树脂");
+                    (resinUsed, var num) = PressUseResin(ra3, Lang.S["GameTask_10384_9fa864"]);
                     resinStatus.OriginalResinCount -= num;
                 }
 
                 if (!resinUsed)
                 {
-                    Logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
+                    Logger.LogWarning(Lang.S["GameTask_10400_5d873d"], "树脂不足", "OCR 识别失败");
                     await ExitDomain();
                     return false;
                 }
@@ -1155,7 +1155,7 @@ public class AutoDomainTask : ISoloTask
                         if (success)
                         {
                             record.RemainCount -= 1;
-                            Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
+                            Logger.LogInformation(Lang.S["GameTask_10399_7babb1"], record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
                             successCount++;
                             break;
                         }
@@ -1171,8 +1171,8 @@ public class AutoDomainTask : ISoloTask
                 if (successCount == 0)
                 {
                     // 没有找到对应的树脂
-                    Logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
-                    Logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
+                    Logger.LogWarning(Lang.S["GameTask_10398_2bbfc5"]);
+                    Logger.LogInformation(Lang.S["GameTask_10397_51e265"], string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
                     await ExitDomain();
                     return false;
                 }
@@ -1220,9 +1220,9 @@ public class AutoDomainTask : ISoloTask
                         // 真没树脂了还有提示兜底
                         await Delay(900, _ct);
                         var textListInNoResinPrompt = CaptureToRectArea().FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-                        if (textListInNoResinPrompt.Any(t => t.Text.Contains("是否仍要") && t.Text.Contains("挑战") && t.Text.Contains("秘境")))
+                        if (textListInNoResinPrompt.Any(t => t.Text.Contains(Lang.S["GameTask_10394_d42a1f"]) && t.Text.Contains("挑战") && t.Text.Contains("秘境")))
                         {
-                            var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => t.Text.Contains("取消"));
+                            var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => t.Text.Contains(Lang.S["Btn_Cancel"]));
                             if (cancelBtn != null)
                             {
                                 cancelBtn.Click();
@@ -1238,7 +1238,7 @@ public class AutoDomainTask : ISoloTask
             Sleep(300, _ct);
         }
 
-        throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
+        throw new NormalEndException(Lang.S["GameTask_10393_a00fd0"]);
     }
 
     private async Task ExitDomain()
@@ -1262,7 +1262,7 @@ public class AutoDomainTask : ISoloTask
         if (resinKey != null)
         {
             // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
-            var useList = regionList.Where(t => t.Text.Contains("使用")).ToList();
+            var useList = regionList.Where(t => t.Text.Contains(Lang.S["GameTask_10392_ecff77"])).ToList();
             if (useList.Count != 0)
             {
                 // 找到使用按键
@@ -1276,17 +1276,17 @@ public class AutoDomainTask : ISoloTask
                     Sleep(60);
                     useKey.Click();
                     var num = GetResinNum(resinKey, resinName);
-                    Logger.LogInformation("自动秘境：使用 {ResinName}, 数量：{Num}", resinName, num);
+                    Logger.LogInformation(Lang.S["GameTask_10391_225cef"], resinName, num);
                     return (true, num);
                 }
                 else
                 {
-                    Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                    Logger.LogWarning(Lang.S["GameTask_10390_685db5"], resinName);
                 }
             }
             else
             {
-                Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                Logger.LogWarning(Lang.S["GameTask_10390_685db5"], resinName);
             }
         }
 
@@ -1295,7 +1295,7 @@ public class AutoDomainTask : ISoloTask
 
     private static int GetResinNum(Region region, string resinName)
     {
-        if (resinName == "原粹树脂")
+        if (resinName == Lang.S["GameTask_10384_9fa864"])
         {
             if (region.Text.Contains("20"))
             {
@@ -1307,17 +1307,17 @@ public class AutoDomainTask : ISoloTask
             }
             else
             {
-                Logger.LogWarning("自动秘境：未识别到原粹树脂消耗体力数量，默认按20计算");
+                Logger.LogWarning(Lang.S["GameTask_10389_a6decf"]);
                 return 20;
             }
         }
-        else if (resinName == "浓缩树脂" || resinName == "脆弱树脂" || resinName == "须臾树脂")
+        else if (resinName == Lang.S["GameTask_10385_a7b73a"] || resinName == "脆弱树脂" || resinName == "须臾树脂")
         {
             return 1;
         }
         else
         {
-            throw new ArgumentException("未知的树脂名称");
+            throw new ArgumentException(Lang.S["GameTask_10387_ad5a2e"]);
         }
     }
 

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using Range = OpenCvSharp.Range;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
@@ -14,7 +15,7 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo] 
-    [Range(600, Int32.MaxValue, ErrorMessage = "恰当的地图缩小的最小距离：>= 600")]
+    [Range(600, Int32.MaxValue, ErrorMessage = Lang.S["GameTask_11388_4bdb8d"])]
     private int _mapZoomOutDistance = 1000; // 地图缩小的最小距离，单位：像素
     partial void OnMapZoomOutDistanceChanged(int value)
     {
@@ -27,7 +28,7 @@ public partial class TpConfig : ObservableValidator
     
     [ObservableProperty]
     [NotifyDataErrorInfo] 
-    [Range(200, 600, ErrorMessage = "恰当的地图缩小的最小距离:200-600")]
+    [Range(200, 600, ErrorMessage = Lang.S["GameTask_11387_a86c7e"])]
     private int _mapZoomInDistance = 400; // 地图放大的最大距离，单位：像素
     partial void OnMapZoomInDistanceChanged(int value)
     {
@@ -39,7 +40,7 @@ public partial class TpConfig : ObservableValidator
     
     [ObservableProperty]
     [NotifyDataErrorInfo] 
-    [Range(2, 100, ErrorMessage = "恰当的鼠标移动时间间隔:2-100")]
+    [Range(2, 100, ErrorMessage = Lang.S["GameTask_11386_fff2b2"])]
     private int _stepIntervalMilliseconds = 20; // 鼠标移动时间间隔，单位：ms
     partial void OnStepIntervalMillisecondsChanged(int value)
     {
@@ -65,10 +66,10 @@ public partial class TpConfig : ObservableValidator
     private double _reviveStatueOfTheSevenPointY = -824.4; // 七天神像点位Y坐标
     
     [ObservableProperty] 
-    private string _reviveStatueOfTheSevenArea = "道成林";  // 七天神像所在区域
+    private string _reviveStatueOfTheSevenArea = Lang.S["GameTask_11385_12513e"];  // 七天神像所在区域
 
     [ObservableProperty] 
-    private string _reviveStatueOfTheSevenCountry = "须弥";  // 七天神像所在国家
+    private string _reviveStatueOfTheSevenCountry = Lang.S["GameTask_11384_5b7ef3"];  // 七天神像所在国家
     
     [ObservableProperty]
     [property: JsonIgnore]
@@ -83,7 +84,7 @@ public partial class TpConfig : ObservableValidator
 
     [ObservableProperty]
     [NotifyDataErrorInfo] 
-    [Range(1.0, 30.0, ErrorMessage = "恰当的回血等待时间：1.0-30.0")]
+    [Range(1.0, 30.0, ErrorMessage = Lang.S["GameTask_11383_b6fd42"])]
     private double _hpRestoreDuration = 5.0;  // 回血等待时间
 
     partial void OnHpRestoreDurationChanged(double value)

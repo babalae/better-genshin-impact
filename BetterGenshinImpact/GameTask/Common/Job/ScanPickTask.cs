@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,8 +37,8 @@ public class ScanPickTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "拾取周边物品异常");
-            Logger.LogError("拾取周边物品异常: {Msg}", e.Message);
+            Logger.LogDebug(e, Lang.S["GameTask_11633_9412f9"]);
+            Logger.LogError(Lang.S["GameTask_11632_eb891a"], e.Message);
         }
         finally
         {
@@ -89,7 +90,7 @@ public class ScanPickTask
             await Delay(200, ct);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
-        Logger.LogInformation("超时或视野内没有可拾取物品，结束扫描");
+        Logger.LogInformation(Lang.S["GameTask_11631_0bd887"]);
         Simulation.ReleaseAllKey();
         Simulation.SendInput.SimulateAction(GIActions.Drop);
     }

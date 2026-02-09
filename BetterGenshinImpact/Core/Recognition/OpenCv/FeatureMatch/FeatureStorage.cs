@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using OpenCvSharp;
 using OpenCvSharp.Internal.Vectors;
@@ -38,7 +39,7 @@ public class FeatureStorage
         {
             using var fs = File.Open(kpPath, FileMode.Open);
             var sizeOfKeyPoint = Marshal.SizeOf<KeyPoint>();
-            if (fs.Length % sizeOfKeyPoint != 0) throw new FileFormatException("无法识别的KeyPoint格式");
+            if (fs.Length % sizeOfKeyPoint != 0) throw new FileFormatException(Lang.S["Gen_10083_03bf15"]);
             using var kpVector = new VectorOfKeyPoint((nuint)(fs.Length / sizeOfKeyPoint));
             using var ms = new UnmanagedMemoryStream((byte*)kpVector.ElemPtr, fs.Length, fs.Length, FileAccess.Write);
             fs.CopyTo(ms);

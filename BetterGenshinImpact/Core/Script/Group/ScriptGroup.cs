@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -48,7 +49,7 @@ public partial class ScriptGroup : ObservableObject
 
     public static ScriptGroup FromJson(string json)
     {
-        var group = JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception("解析配置组JSON配置失败");
+        var group = JsonConvert.DeserializeObject<ScriptGroup>(json) ?? throw new Exception(Lang.S["Gen_10246_9376cd"]);
         ResetGroupInfo(group);
         return group;
     }

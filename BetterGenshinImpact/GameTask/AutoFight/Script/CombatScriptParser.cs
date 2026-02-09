@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.AutoFight.Config;
 using Microsoft.Extensions.Logging;
 using System;
@@ -10,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 
 public class CombatScriptParser
 {
-    public static string CurrentAvatarName = "当前角色";
+    public static string CurrentAvatarName = Lang.S["GameTask_10666_d8a5b7"];
     
     public static CombatScriptBag ReadAndParse(string path)
     {
@@ -23,8 +24,8 @@ public class CombatScriptParser
             var files = Directory.GetFiles(path, "*.txt", SearchOption.AllDirectories);
             if (files.Length == 0)
             {
-                Logger.LogError("战斗脚本文件不存在：{Path}", path);
-                throw new Exception("战斗脚本文件不存在");
+                Logger.LogError(Lang.S["GameTask_10664_0d3a6c"], path);
+                throw new Exception(Lang.S["GameTask_10663_f1304f"]);
             }
 
             var combatScripts = new List<CombatScript>();
@@ -36,7 +37,7 @@ public class CombatScriptParser
                 }
                 catch (Exception e)
                 {
-                    Logger.LogWarning("解析战斗脚本文件失败：{Path} , {Msg} ", file, e.Message);
+                    Logger.LogWarning(Lang.S["GameTask_10665_186f6e"], file, e.Message);
                 }
             }
 
@@ -44,8 +45,8 @@ public class CombatScriptParser
         }
         else
         {
-            Logger.LogError("战斗脚本文件不存在：{Path}", path);
-            throw new Exception("战斗脚本文件不存在");
+            Logger.LogError(Lang.S["GameTask_10664_0d3a6c"], path);
+            throw new Exception(Lang.S["GameTask_10663_f1304f"]);
         }
     }
 
@@ -121,8 +122,8 @@ public class CombatScriptParser
         {
             if (validate)
             {
-                Logger.LogError("战斗脚本格式错误，必须以空格分隔角色和指令");
-                throw new Exception("战斗脚本格式错误，必须以空格分隔角色和指令");
+                Logger.LogError(Lang.S["GameTask_10662_cbe4e0"]);
+                throw new Exception(Lang.S["GameTask_10662_cbe4e0"]);
             }
         }
 
@@ -136,22 +137,22 @@ public class CombatScriptParser
         // 支持Round(1)、Round(1,3,5)、Round(2-4)、Round(1,3-5)等格式
         var activatingRounds = new List<int>();
         if (roundCommand.Args == null || roundCommand.Args.Count == 0) {
-            Logger.LogError("round方法必须有入参，代表在哪些回合执行后续指令，例：round(1)、round(1,3-5)");
-            throw new ArgumentException("round方法必须有入参，代表在哪些回合执行后续指令，例：round(1)、round(1,3-5)");
+            Logger.LogError(Lang.S["GameTask_10661_650e03"]);
+            throw new ArgumentException(Lang.S["GameTask_10661_650e03"]);
         }
         foreach (var arg in roundCommand.Args) {
             if (arg.Contains('-')) {
                 // 范围
                 var parts = arg.Split('-', StringSplitOptions.TrimEntries);
                 if (parts.Length != 2) {
-                    Logger.LogError("round方法的入参格式错误，例：round(1-3)");
-                    throw new ArgumentException("round方法的入参格式错误，例：round(1-3)");
+                    Logger.LogError(Lang.S["GameTask_10660_6f4b15"]);
+                    throw new ArgumentException(Lang.S["GameTask_10660_6f4b15"]);
                 }
                 var start = int.Parse(parts[0]);
                 var end = int.Parse(parts[1]);
                 if (start > end || start <= 0) {
-                    Logger.LogError("round方法的入参格式错误，起始回合必须小于等于结束回合且大于0，例：round(1-3)");
-                    throw new ArgumentException("round方法的入参格式错误，起始回合必须小于等于结束回合且大于0，例：round(1-3)");
+                    Logger.LogError(Lang.S["GameTask_10659_dcc48c"]);
+                    throw new ArgumentException(Lang.S["GameTask_10659_dcc48c"]);
                 }
                 for (int i = start; i <= end; i++) {
                     activatingRounds.Add(i);
@@ -160,8 +161,8 @@ public class CombatScriptParser
                 // 单个回合
                 var round = int.Parse(arg);
                 if (round <= 0) {
-                    Logger.LogError("round方法的入参格式错误，回合数必须大于0，例：round(1)");
-                    throw new ArgumentException("round方法的入参格式错误，回合数必须大于0，例：round(1)");
+                    Logger.LogError(Lang.S["GameTask_10658_c06a0f"]);
+                    throw new ArgumentException(Lang.S["GameTask_10658_c06a0f"]);
                 }
                 activatingRounds.Add(round);
             }
@@ -216,8 +217,8 @@ public class CombatScriptParser
                     command += "," + commandArray[j];
                     if (command.Count("(".Contains) > 1)
                     {
-                        Logger.LogError("战斗脚本格式错误，指令 {Cmd} 括号无法配对", command);
-                        throw new Exception("战斗脚本格式错误，指令括号无法配对");
+                        Logger.LogError(Lang.S["GameTask_10657_bec547"], command);
+                        throw new Exception(Lang.S["GameTask_10656_2037b9"]);
                     }
 
                     if (command.Contains(')'))
@@ -231,8 +232,8 @@ public class CombatScriptParser
 
                 if (!(command.Contains('(') && command.Contains(')')))
                 {
-                    Logger.LogError("战斗脚本格式错误，指令 {Cmd} 括号不完整", command);
-                    throw new Exception("战斗脚本格式错误，指令括号不完整");
+                    Logger.LogError(Lang.S["GameTask_10655_53056d"], command);
+                    throw new Exception(Lang.S["GameTask_10654_1014ad"]);
                 }
             }
 

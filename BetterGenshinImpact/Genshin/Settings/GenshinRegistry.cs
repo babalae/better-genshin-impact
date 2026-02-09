@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using Microsoft.Win32;
 using System;
 using System.Diagnostics;
@@ -20,7 +21,7 @@ internal class GenshinRegistry
             if (type == GenshinRegistryType.Auto)
             {
                 {
-                    if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
+                    if (hkcu.OpenSubKey(Lang.S["Gen_11886_ada5f1"], true) is RegistryKey sk)
                     {
                         return sk;
                     }
@@ -34,7 +35,7 @@ internal class GenshinRegistry
             }
             else if (type == GenshinRegistryType.Chinese)
             {
-                if (hkcu.OpenSubKey(@"SOFTWARE\miHoYo\原神", true) is RegistryKey sk)
+                if (hkcu.OpenSubKey(Lang.S["Gen_11886_ada5f1"], true) is RegistryKey sk)
                 {
                     return sk;
                 }

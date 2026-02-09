@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Windows.System;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
@@ -30,9 +31,9 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<string, string>> _onlyPickEliteDropsSource  = new()
     {
-        new KeyValuePair<string, string>("Closed", "关闭功能"),
-        new KeyValuePair<string, string>("AllowAutoPickupForNonElite", "非精英允许自动拾取"),
-        new KeyValuePair<string, string>("DisableAutoPickupForNonElite", "非精英关闭自动拾取")
+        new KeyValuePair<string, string>("Closed", Lang.S["Gen_12469_1f5c46"]),
+        new KeyValuePair<string, string>("AllowAutoPickupForNonElite", Lang.S["Gen_12468_bfddb6"]),
+        new KeyValuePair<string, string>("DisableAutoPickupForNonElite", Lang.S["Gen_12467_f6afb0"])
     };    
     //跳过策略
     //GroupPhysicalPathSkipPolicy:  配置组且物理路径相同跳过
@@ -41,16 +42,16 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<string, string>> _skipPolicySource  = new()
     {
-        new KeyValuePair<string, string>("GroupPhysicalPathSkipPolicy", "配置组且物理路径相同跳过"),
-        new KeyValuePair<string, string>("PhysicalPathSkipPolicy", "物理路径相同跳过"),
-        new KeyValuePair<string, string>("SameNameSkipPolicy", "同类型同名跳过")
+        new KeyValuePair<string, string>("GroupPhysicalPathSkipPolicy", Lang.S["Gen_12466_f32b83"]),
+        new KeyValuePair<string, string>("PhysicalPathSkipPolicy", Lang.S["Gen_12465_5e15c1"]),
+        new KeyValuePair<string, string>("SameNameSkipPolicy", Lang.S["Gen_12464_700ada"])
     };     
     
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<string, string>> _referencePointSource  = new()
     {
-        new KeyValuePair<string, string>("StartTime", "开始时间"),
-        new KeyValuePair<string, string>("EndTime", "结束时间")
+        new KeyValuePair<string, string>("StartTime", Lang.S["GameTask_11797_592c59"]),
+        new KeyValuePair<string, string>("EndTime", Lang.S["GameTask_11796_f78277"])
     };  
     public ScriptGroupConfigViewModel(AllConfig config, ScriptGroupConfig scriptGroupConfig)
     {
@@ -78,11 +79,11 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
         var index = _pathingConfig.TaskCycleConfig.GetExecutionOrder();
         if (index == -1)
         {
-            Toast.Error("计算失败，请检查参数！");
+            Toast.Error(Lang.S["Gen_1067_729062"]);
         }
         else
         {
-            Toast.Success("当前执行序号为："+index);
+            Toast.Success(Lang.S["Gen_1068_48e692"]+index);
         }
     }
 
@@ -101,6 +102,6 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnGoToAutoEatUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/dev/js/dispatcher.html#autoeat-自动吃食物"));
+        await Launcher.LaunchUriAsync(new Uri(Lang.S["Gen_12463_fc1746"]));
     }
 }

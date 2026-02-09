@@ -51,7 +51,7 @@ public class ResinStatus
         var originalResinRes = crop1.Find(originalResinTopIconRa);
         if (originalResinRes.IsEmpty())
         {
-            throw new Exception("未找到原粹树脂图标");
+            throw new Exception(Lang.S["GameTask_10480_18d84c"]);
         }
 
         var originalResinCountRect = new Rect(crop1.X + originalResinRes.Right + (int)(25 * assetScale), (int)(37 * assetScale), (int)(110 * assetScale)/* 考虑最长的“200/200” */, (int)(24 * assetScale));
@@ -96,7 +96,7 @@ public class ResinStatus
     {
         // logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}，须臾树脂：{Cnt3}，脆弱树脂：{Cnt4}", 
         //     OriginalResinCount, CondensedResinCount, FragileResinCount, TransientResinCount);
-        logger.LogInformation("原粹树脂：{Cnt1}，浓缩树脂：{Cnt2}",
+        logger.LogInformation(Lang.S["GameTask_10479_1396b3"],
             OriginalResinCount, CondensedResinCount);
     }
 }

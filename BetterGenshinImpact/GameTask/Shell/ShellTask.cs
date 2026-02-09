@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Shell;
 
@@ -20,22 +21,22 @@ public class ShellTask(ShellTaskParam param) : ISoloTask
     {
         if (param.Disable)
         {
-            TaskControl.Logger.LogWarning("无法执行Shell: Shell任务被禁用");
+            TaskControl.Logger.LogWarning(Lang.S["GameTask_11858_572bf1"]);
             return;
         }
 
         if (string.IsNullOrEmpty(param.Command))
         {
-            TaskControl.Logger.LogWarning("无法执行Shell: Shell为空");
+            TaskControl.Logger.LogWarning(Lang.S["GameTask_11857_7fc721"]);
             return;
         }
 
         if (ct.IsCancellationRequested)
         {
-            TaskControl.Logger.LogError("shell {Shell} 被取消", param.Command);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11854_cdb29f"], param.Command);
         }
 
-        TaskControl.Logger.LogInformation("执行shell:{Shell},超时时间为 {Wait} 秒", param.Command, param.TimeoutSeconds);
+        TaskControl.Logger.LogInformation(Lang.S["GameTask_11856_9367dd"], param.Command, param.TimeoutSeconds);
 
         var mixedToken = ct;
         var waitForExit = true;
@@ -61,10 +62,10 @@ public class ShellTask(ShellTaskParam param) : ISoloTask
         {
             if (timeoutSignal is { IsCancellationRequested: true })
             {
-                TaskControl.Logger.LogError("shell {Shell} 执行超时", param.Command);
+                TaskControl.Logger.LogError(Lang.S["GameTask_11855_3bb5a9"], param.Command);
                 return;
             }
-            TaskControl.Logger.LogError("shell {Shell} 被取消", param.Command);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11854_cdb29f"], param.Command);
             return;
         }
 
@@ -72,11 +73,11 @@ public class ShellTask(ShellTaskParam param) : ISoloTask
         {
             if (param.Output && result.HasOutput)
             {
-                TaskControl.Logger.LogInformation("shell {End} 运行结束,输出:{Output}", result.Shell, result.Output);
+                TaskControl.Logger.LogInformation(Lang.S["GameTask_11853_50f804"], result.Shell, result.Output);
                 return;
             }
 
-            TaskControl.Logger.LogInformation("shell {End} 运行结束", param.Command);
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11852_51b491"], param.Command);
         }
 
         SystemControl.ActivateWindow();

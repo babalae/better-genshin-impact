@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using OpenCvSharp;
 using System;
@@ -11,7 +12,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 [Serializable]
 public partial class AutoGeniusInvokationConfig : ObservableObject
 {
-    [ObservableProperty] private string _strategyName = "1.莫娜砂糖琴";
+    [ObservableProperty] private string _strategyName = Lang.S["GameTask_10848_3daf00"];
 
     [ObservableProperty] private int _sleepDelay = 0;
 

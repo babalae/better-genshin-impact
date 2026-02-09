@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask;
 using Gma.System.MouseKeyHook;
 using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -56,12 +57,12 @@ public class KeyMouseHook: IDisposable
     {
         if (ex is ScriptEngineException scriptEx)
         {
-            _logger.LogError("执行{eventType}JS回调时发生错误：{scriptEx.Message}，清除所有回调",eventType, scriptEx.Message); 
+            _logger.LogError(Lang.S["Gen_10228_3f93f9"],eventType, scriptEx.Message); 
             _logger.LogDebug("{scriptEx}",scriptEx);
         }
         else
         {
-            _logger.LogError("执行{eventType}回调时发生错误:{ex.Message}，清除所有回调,如果此异常出现在JS脚本结束时,请在JS脚本结束前手动调用Dispose()方法",eventType,ex.Message);
+            _logger.LogError(Lang.S["Gen_10227_d1cb82"],eventType,ex.Message);
             _logger.LogDebug("{ex}",ex);
         }
 
@@ -81,14 +82,14 @@ public class KeyMouseHook: IDisposable
             // 检查TaskContext是否已初始化
             if (!TaskContext.Instance().IsInitialized)
             {
-                _logger.LogError("TaskContext未初始化，无法获取游戏窗口信息");
+                _logger.LogError(Lang.S["Gen_10226_76938d"]);
                 return (-1, -1); 
             }
             
             var gameHandle = TaskContext.Instance().GameHandle;
             if (gameHandle == IntPtr.Zero)
             {
-                _logger.LogError("游戏窗口句柄无效，无法获取游戏窗口位置");
+                _logger.LogError(Lang.S["Gen_10225_251bcf"]);
                 return (-1, -1); 
             }
             
@@ -98,7 +99,7 @@ public class KeyMouseHook: IDisposable
             // 检查捕获区域是否有效
             if (captureRect.Width <= 0 || captureRect.Height <= 0)
             {
-                _logger.LogError("获取的游戏窗口捕获区域无效，宽度或高度为0");
+                _logger.LogError(Lang.S["Gen_10224_05ddf2"]);
                 return (-1, -1); 
             }
             
@@ -110,7 +111,7 @@ public class KeyMouseHook: IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "转换鼠标坐标时发生错误");
+            _logger.LogError(ex, Lang.S["Gen_10223_45b236"]);
             return (-1, -1); 
         }
     }
@@ -151,7 +152,7 @@ public class KeyMouseHook: IDisposable
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "键鼠钩子后台处理器发生异常");
+                _logger.LogError(ex, Lang.S["Gen_10222_9f9e3a"]);
             }
         });
 
@@ -176,7 +177,7 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "键盘按下事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10221_0dc680"]);
                             return;
                         }
                     }
@@ -190,13 +191,13 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "键盘按下事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10221_0dc680"]);
                             return;
                         }
                     } 
                 }))
             { 
-                _logger.LogWarning("事件队列已满或已关闭，忽略键盘按下回调");
+                _logger.LogWarning(Lang.S["Gen_10220_badfb4"]);
             }
         };
         
@@ -219,7 +220,7 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "键盘释放事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10219_1374ee"]);
                             return;
                         }
                     }
@@ -233,13 +234,13 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "键盘释放事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10219_1374ee"]);
                             return;
                         }
                     }
                 }))
             { 
-                _logger.LogWarning("事件队列已满或已关闭，忽略键盘释放回调");
+                _logger.LogWarning(Lang.S["Gen_10218_b685cd"]);
             }
         };
         
@@ -261,13 +262,13 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "鼠标按下事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10217_df7919"]);
                             return;
                         }
                     }
                 }))
             { 
-                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标按下回调");
+                _logger.LogWarning(Lang.S["Gen_10216_e35b92"]);
             }
         };
         
@@ -289,13 +290,13 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "鼠标释放事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10215_23f058"]);
                             return;
                         }
                     }
                 }))
             {
-                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标释放回调");
+                _logger.LogWarning(Lang.S["Gen_10214_e5527c"]);
             }
         };
         
@@ -333,13 +334,13 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "鼠标移动事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10213_46b373"]);
                             return;
                         }
                     }
                 }))
             {
-                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标移动回调");
+                _logger.LogWarning(Lang.S["Gen_10212_66a7d0"]);
             }
         };
         
@@ -361,13 +362,13 @@ public class KeyMouseHook: IDisposable
                         }
                         catch (Exception ex)
                         {
-                            HandleCallbackException(ex, "鼠标滚轮事件");
+                            HandleCallbackException(ex, Lang.S["Gen_10211_9d17ff"]);
                             return;
                         }
                     }
                 }))
             {
-                _logger.LogWarning("事件队列已满或已关闭，忽略鼠标滚轮回调");
+                _logger.LogWarning(Lang.S["Gen_10210_4894d8"]);
             }
         };
         

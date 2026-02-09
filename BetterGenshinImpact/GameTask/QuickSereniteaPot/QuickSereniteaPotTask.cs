@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
@@ -23,7 +24,7 @@ public class QuickSereniteaPotTask
             using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.BagCloseButtonRo);
             if (ra2.IsEmpty())
             {
-                throw new RetryException("背包未打开");
+                throw new RetryException(Lang.S["GameTask_11850_c1237a"]);
             }
         }, TimeSpan.FromMilliseconds(500), 5);
     }
@@ -36,7 +37,7 @@ public class QuickSereniteaPotTask
             using var ra2 = TaskControl.CaptureToRectArea(forceNew: true).Find(QuickSereniteaPotAssets.Instance.SereniteaPotIconRo);
             if (ra2.IsEmpty())
             {
-                throw new RetryException("未检测到壶");
+                throw new RetryException(Lang.S["GameTask_11849_702854"]);
             }
             else
             {
@@ -49,7 +50,7 @@ public class QuickSereniteaPotTask
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先启动");
+            Toast.Warning(Lang.S["GameTask_11820_8e1773"]);
             return;
         }
 
@@ -104,13 +105,13 @@ public class QuickSereniteaPotTask
                 }
             }
             // 校验F交互是否是 进入[尘歌壶]
-            bool canIn = Bv.FindF(TaskControl.CaptureToRectArea(), "进入","尘歌壶");
+            bool canIn = Bv.FindF(TaskControl.CaptureToRectArea(), Lang.S["GameTask_11848_84b2bd"],"尘歌壶");
 
             if (canIn) {
-                TaskControl.Logger.LogInformation("快速进入尘歌壶:识别到 进入尘歌壶");
+                TaskControl.Logger.LogInformation(Lang.S["GameTask_11847_b358c1"]);
                 // 按F进入
                 Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
-                TaskControl.Logger.LogInformation("快速进入尘歌壶:F进入尘歌壶");
+                TaskControl.Logger.LogInformation(Lang.S["GameTask_11846_5e4652"]);
                 TaskControl.CheckAndSleep(200);
                 // 点击进入尘歌壶
                 // 如果不是联机状态，此时玩家应已进入传送界面，本次点击不会影响实际功能
@@ -118,7 +119,7 @@ public class QuickSereniteaPotTask
             }
             else
             {
-                TaskControl.Logger.LogInformation("快速进入尘歌壶:未识别到 进入尘歌壶");
+                TaskControl.Logger.LogInformation(Lang.S["GameTask_11845_74ba02"]);
             }
         }
         catch (Exception e)

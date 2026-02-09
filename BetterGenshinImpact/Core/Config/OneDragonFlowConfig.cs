@@ -20,11 +20,11 @@ public partial class OneDragonFlowConfig : ObservableObject
    
     // 合成树脂的国家
     [ObservableProperty]
-    private string _craftingBenchCountry = "枫丹";
+    private string _craftingBenchCountry = Lang.S["Gen_10019_6b7572"];
 
     // 冒险者协会的国家
     [ObservableProperty]
-    private string _adventurersGuildCountry = "枫丹";
+    private string _adventurersGuildCountry = Lang.S["Gen_10019_6b7572"];
 
     // 自动战斗配置的队伍名称
     [ObservableProperty]
@@ -55,7 +55,7 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     // 尘歌壶传送方式，1. 地图传送 2. 尘歌壶道具
     [ObservableProperty]
-    private string _sereniteaPotTpType = "地图传送";
+    private string _sereniteaPotTpType = Lang.S["Gen_10018_c63dd3"];
     
     // 尘歌壶洞天购买商品
     [ObservableProperty]

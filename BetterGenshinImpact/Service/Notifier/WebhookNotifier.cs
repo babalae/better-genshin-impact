@@ -8,6 +8,7 @@ using BetterGenshinImpact.Service.Notification.Model;
 using System.Collections.Generic;
 using BetterGenshinImpact.Service.Notification;
 using System;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -38,7 +39,7 @@ public class WebhookNotifier : INotifier
     {
         if (string.IsNullOrEmpty(Endpoint))
         {
-            throw new NotifierException("Webhook 地址为空");
+            throw new NotifierException(Lang.S["Service_12127_c7d0f1"]);
         }
         
         try

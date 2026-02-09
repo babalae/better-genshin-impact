@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.View.Windows;
 using Meziantou.Framework.Win32;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Helpers.Win32;
 
@@ -23,13 +24,13 @@ public static class MirrorChyanHelper
         var credential = CredentialManagerHelper.ReadCredential(MirrorChyanCdkAppName);
         if (credential == null || credential.Password == null)
         {
-            var cdk = PromptDialog.Prompt("Mirror酱是独立的第三方软件下载平台，提供付费的软件下载加速服务。\n如果你有 Mirror酱的 CDK，可以在这里输入。",
-                "请输入Mirror酱CDK",
+            var cdk = PromptDialog.Prompt(Lang.S["Gen_11921_122813"],
+                Lang.S["Gen_11923_9900ea"],
                 string.Empty,
                 new PromptDialogConfig
                 {
                     ShowLeftButton = true,
-                    LeftButtonText = "获取CDK",
+                    LeftButtonText = Lang.S["Gen_11919_3b3340"],
                     LeftButtonClick = (sender, args) =>
                     {
                         OpenMirrorChyanWebsite();
@@ -38,7 +39,7 @@ public static class MirrorChyanHelper
             );
             if (string.IsNullOrEmpty(cdk))
             {
-                Toast.Warning("输入CDK为空，无法继续操作");
+                Toast.Warning(Lang.S["Gen_11922_ef3dd7"]);
                 return null;
             }
 
@@ -59,13 +60,13 @@ public static class MirrorChyanHelper
     public static void EditCdk()
     {
         var credential = CredentialManagerHelper.ReadCredential(MirrorChyanCdkAppName);
-        var cdk = PromptDialog.Prompt("Mirror酱是独立的第三方软件下载平台，提供付费的软件下载加速服务。\n如果你有 Mirror酱的 CDK，可以在这里输入。",
-            "修改Mirror酱CDK",
+        var cdk = PromptDialog.Prompt(Lang.S["Gen_11921_122813"],
+            Lang.S["Gen_11920_56c5ca"],
             credential?.Password!,
             new PromptDialogConfig
             {
                 ShowLeftButton = true,
-                LeftButtonText = "获取CDK",
+                LeftButtonText = Lang.S["Gen_11919_3b3340"],
                 LeftButtonClick = (sender, args) =>
                 {
                     OpenMirrorChyanWebsite();

@@ -608,7 +608,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanExpBottleBigRo = new RecognitionObject
         {
-            Name = "祝圣精华",
+            Name = Lang.S["OneDragon_052_8dc5de"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_big.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -616,7 +616,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanExpBottleSmallRo = new RecognitionObject
         {
-            Name = "祝圣油膏",
+            Name = Lang.S["OneDragon_053_374692"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_bottle_small.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -640,7 +640,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         SereniteapotExpBookRo = new RecognitionObject
         {
-            Name = "大英雄的经验",
+            Name = Lang.S["OneDragon_048_5c94a2"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -648,7 +648,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         SereniteapotExpBookSmallRo = new RecognitionObject
         {
-            Name = "流浪者的经验",
+            Name = Lang.S["OneDragon_049_7d0006"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "exp_book_small.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -656,7 +656,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanClothRo = new RecognitionObject
         {
-            Name = "布匹",
+            Name = Lang.S["OneDragon_046_92f5e1"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_cloth.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -664,7 +664,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanresinRo = new RecognitionObject
         {
-            Name = "须臾树脂",
+            Name = Lang.S["OneDragon_047_6fe57c"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_resin.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -672,7 +672,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanMagicmineralprecisionRo = new RecognitionObject
         {
-            Name = "精锻用魔矿",
+            Name = Lang.S["OneDragon_050_5787cc"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_magicmineralprecision.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -680,7 +680,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         AYuanMOlaRo = new RecognitionObject
         {
-            Name = "摩拉",
+            Name = Lang.S["OneDragon_051_077b44"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "ayuan_mola.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width * 7 / 10, CaptureRect.Height),
@@ -688,7 +688,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
         }.InitTemplate();
         FingerIconRo = new RecognitionObject
         {
-            Name = "尘歌壶小手",
+            Name = Lang.S["GameTask_11485_688a92"],
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "finger.png", systemInfo),
             RegionOfInterest = new Rect(CaptureRect.Width - (int)(600 * AssetScale), 0, (int)(80 * AssetScale), (int)(80 * AssetScale)),

@@ -37,7 +37,7 @@ public class UseRedemptionCodeTask : ISoloTask
             .ToList();
     }
 
-    public string Name => "使用兑换码";
+    public string Name => Lang.S["GameTask_11882_90520e"];
 
     public async Task Start(CancellationToken ct)
     {
@@ -51,7 +51,7 @@ public class UseRedemptionCodeTask : ISoloTask
 
             var page = new BvPage(ct);
 
-            _logger.LogInformation("使用兑换码: {Msg}", "打开设置");
+            _logger.LogInformation(Lang.S["GameTask_11879_7bb258"], "打开设置");
             // 按ESC键打开菜单
             page.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             // 等待ESC后菜单出现
@@ -61,15 +61,15 @@ public class UseRedemptionCodeTask : ISoloTask
             await page.Wait(1000);
 
             // 点击账户
-            _logger.LogInformation("使用兑换码: {Msg}", "点击账户 —— 前往兑换");
-            await page.GetByText("账户").WithRoi(captureRect.CutLeft(0.2)).Click();
+            _logger.LogInformation(Lang.S["GameTask_11879_7bb258"], "点击账户 —— 前往兑换");
+            await page.GetByText(Lang.S["GameTask_11878_7116e7"]).WithRoi(captureRect.CutLeft(0.2)).Click();
             await page.Wait(300);
 
             // 点击前往兑换
-            await page.GetByText("前往兑换").WithRoi(captureRect.CutRight(0.3)).Click();
+            await page.GetByText(Lang.S["GameTask_11877_8b6043"]).WithRoi(captureRect.CutRight(0.3)).Click();
 
             // 等待兑换码输入框出现
-            await page.GetByText("兑换奖励").WaitFor();
+            await page.GetByText(Lang.S["GameTask_11876_7fa5e2"]).WaitFor();
 
 
             foreach (var redeemCode in _list)
@@ -84,8 +84,8 @@ public class UseRedemptionCodeTask : ISoloTask
         }
         catch (Exception ex)
         {
-            _logger.LogError("使用兑换码时发生错误: {Message}", ex.Message);
-            _logger.LogDebug(ex, "使用兑换码时发生错误");
+            _logger.LogError(Lang.S["GameTask_11875_a4e45c"], ex.Message);
+            _logger.LogDebug(ex, Lang.S["GameTask_11874_545398"]);
         }
         finally
         {
@@ -101,35 +101,35 @@ public class UseRedemptionCodeTask : ISoloTask
     {
         Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
         
-        _logger.LogInformation("输入兑换码: {Code}", redeemCode.Code);
+        _logger.LogInformation(Lang.S["GameTask_11873_6aa41c"], redeemCode.Code);
         // 将要输入的文本复制到剪贴板
         UIDispatcherHelper.Invoke(() => Clipboard.SetDataObject(redeemCode.Code!));
         // 粘贴兑换码
-        await page.GetByText("粘贴").WithRoi(captureRect.CutRight(0.5)).Click();
+        await page.GetByText(Lang.S["GameTask_11872_eafbec"]).WithRoi(captureRect.CutRight(0.5)).Click();
         // 点击兑换
         await page.Locator(ElementAssets.Instance.BtnWhiteConfirm).Click();
 
         // 兑换成功
-        var list = await page.GetByText("兑换成功").TryWaitFor(1000);
+        var list = await page.GetByText(Lang.S["GameTask_11871_fe4fa6"]).TryWaitFor(1000);
         if (list.Count > 0)
         {
-            _logger.LogInformation("兑换码 {Code} 兑换成功", redeemCode.Code);
+            _logger.LogInformation(Lang.S["GameTask_11870_71825e"], redeemCode.Code);
             // 点击确认
             await page.Locator(ElementAssets.Instance.BtnBlackConfirm).Click();
             await page.Wait(5100);
         }
         else
         {
-            _logger.LogWarning("兑换码 {Code} 兑换失败，可能是过期、错误或已被使用", redeemCode.Code);
+            _logger.LogWarning(Lang.S["GameTask_11869_2fb095"], redeemCode.Code);
             // 点击清除
-            await page.GetByText("清除").WithRoi(captureRect.CutRight(0.5)).Click();
+            await page.GetByText(Lang.S["GameTask_11868_4403fc"]).WithRoi(captureRect.CutRight(0.5)).Click();
         }
     }
 
 
     private static void InitLog(List<RedeemCode> list)
     {
-        _logger.LogInformation("开始使用兑换码:");
+        _logger.LogInformation(Lang.S["GameTask_11867_1e8441"]);
         foreach (var redeemCode in list)
         {
             if (string.IsNullOrEmpty(redeemCode.Items))

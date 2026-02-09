@@ -4,6 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  Width="500"
                  Height="225"
                  MinWidth="400"
@@ -59,7 +60,7 @@
                            Margin="5"
                            HorizontalAlignment="Left"
                            Appearance="Success"
-                           Content="左下角按钮" 
+                           Content="{Binding [Dialog_LeftBottomButton], Source={x:Static helpers:Lang.S}}" 
                            Grid.Column="0" />
 
             <!-- 原有的右侧按钮 -->
@@ -69,12 +70,12 @@
                                Margin="5"
                                Appearance="Primary"
                                Click="BtnOkClick"
-                               Content="确定"
+                               Content="{Binding [Btn_OK], Source={x:Static helpers:Lang.S}}"
                                IsDefault="True" />
                 <ui:Button Name="BtnCancel"
                                Margin="5"
                                Click="BtnCancelClick"
-                               Content="取消"
+                               Content="{Binding [Btn_Cancel], Source={x:Static helpers:Lang.S}}"
                                IsCancel="True" />
             </StackPanel>
         </Grid>

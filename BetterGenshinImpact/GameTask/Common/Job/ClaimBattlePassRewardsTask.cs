@@ -31,7 +31,7 @@ public class ClaimBattlePassRewardsTask
     {
         IStringLocalizer<ClaimBattlePassRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimBattlePassRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.claimAllLocalizedStrings = ((string[])["一键", "领取"]).Select(i => stringLocalizer.WithCultureGet(cultureInfo, i)).ToArray();
+        this.claimAllLocalizedStrings = ((string[])[Lang.S["GameTask_11514_77c0fc"], "领取"]).Select(i => stringLocalizer.WithCultureGet(cultureInfo, i)).ToArray();
     }
 
     public async Task Start(CancellationToken ct)
@@ -42,8 +42,8 @@ public class ClaimBattlePassRewardsTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "领取纪行奖励异常");
-            Logger.LogError("领取纪行奖励异常: {Msg}", e.Message);
+            Logger.LogDebug(e, Lang.S["GameTask_11513_b3ca0a"]);
+            Logger.LogError(Lang.S["GameTask_11512_bfbeca"], e.Message);
         }
     }
 
@@ -93,7 +93,7 @@ public class ClaimBattlePassRewardsTask
         if (wt != null)
         {
             wt.Click();
-            Logger.LogInformation("纪行：{Text}", "一键领取");
+            Logger.LogInformation(Lang.S["GameTask_11509_266b17"], "一键领取");
             await Delay(1000, ct);
             using var ra2 = CaptureToRectArea();
             if (ra2.Find(ElementAssets.Instance.PrimogemRo).IsExist())
@@ -105,7 +105,7 @@ public class ClaimBattlePassRewardsTask
         }
         else
         {
-            Logger.LogInformation("纪行：{Text}", "无需领取");
+            Logger.LogInformation(Lang.S["GameTask_11509_266b17"], "无需领取");
             return false;
         }
     }

@@ -76,7 +76,7 @@ public partial class PictureInPictureWindow : Window
         }
         else
         {
-            Debug.WriteLine("截图失败");
+            Debug.WriteLine(Lang.S["GameTask_10694_4dad2c"]);
         }
     }
 

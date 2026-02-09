@@ -12,6 +12,7 @@ using OpenCvSharp.Extensions;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using Size = OpenCvSharp.Size;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
@@ -81,7 +82,7 @@ public class PaddleOcrService : IOcrService, IDisposable
                     }
                 }
 
-                throw new InvalidOperationException("未在 YAML 的 PostProcess 部分找到 character_dict。");
+                throw new InvalidOperationException(Lang.S["Gen_10046_b13be5"]);
             };
 
 
@@ -247,11 +248,11 @@ public class PaddleOcrService : IOcrService, IDisposable
 
         // 预热模型
         using var preHeatImageMat = Cv2.ImRead(modelType.PreHeatImagePath) ??
-                                    throw new FileNotFoundException($"预热图片未找到: {modelType.PreHeatImagePath}");
+                                    throw new FileNotFoundException($"{Lang.S["Gen_10045_6fa5fe"]});
         // Debug输出结果
         var preHeatResult = RunAll(preHeatImageMat, 1);
         Debug.WriteLine(
-            $"PaddleOcrService 预热完成，使用模型: {modelType.DetectionModel.Name} 和 {modelType.RecognitionModel.Name}，结果: {preHeatResult.Text}");
+            $"{Lang.S["Gen_10044_f1c078"]});
     }
 
     /// <summary>
@@ -284,7 +285,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         var startTime = Stopwatch.GetTimestamp();
         var str = _localRecModel.Run(mat).Text;
         var time = Stopwatch.GetElapsedTime(startTime);
-        Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
+        Debug.WriteLine($"{Lang.S["Gen_10043_20677b"]});
         return str;
     }
 
@@ -293,7 +294,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         var startTime = Stopwatch.GetTimestamp();
         var result = RunAll(mat);
         var time = Stopwatch.GetElapsedTime(startTime);
-        Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
+        Debug.WriteLine($"{Lang.S["Gen_10042_6ee2d6"]});
         return result;
     }
 

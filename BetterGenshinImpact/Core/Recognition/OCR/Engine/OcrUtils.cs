@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using OpenCvSharp.Dnn;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Engine;
 
@@ -69,7 +70,7 @@ public static class OcrUtils
         // 获取图像参数
         var channels = src.Channels();
         if (channels != 3)
-            throw new ArgumentException($"图像通道数必须为3,当前为{channels}");
+            throw new ArgumentException($"{Lang.S["Gen_10041_3aa339"]});
         // var data = rt.T(OcrOperationImpl.NormalizeImageOperation(src, scale, mean, std));
         var stdMat = rt.NewMat();
         Mat[] bgr = [];

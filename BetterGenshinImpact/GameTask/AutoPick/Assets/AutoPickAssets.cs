@@ -79,15 +79,15 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             }
             catch (Exception e)
             {
-                _logger.LogDebug(e, "加载自定义拾取按键时发生异常");
-                _logger.LogError("加载自定义拾取按键失败，继续使用默认的F键");
+                _logger.LogDebug(e, Lang.S["GameTask_11217_cc09b1"]);
+                _logger.LogError(Lang.S["GameTask_11216_79ecef"]);
                 TaskContext.Instance().Config.AutoPickConfig.PickKey = "F";
                 return;
             }
 
             if (keyName != "F")
             {
-                _logger.LogInformation("自定义拾取按键：{Key}", keyName);
+                _logger.LogInformation(Lang.S["GameTask_11215_a1f313"], keyName);
             }
         }
     }

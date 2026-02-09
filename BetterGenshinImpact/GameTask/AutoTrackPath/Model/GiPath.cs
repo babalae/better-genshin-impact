@@ -21,7 +21,7 @@ public class GiPath
             var distance = MathHelper.Distance(giPathPoint.Pt, lastPoint.Pt);
             if (distance == 0 || distance > 50)
             {
-                Debug.WriteLine($"距离上个点太近或者太远: {distance}，舍弃");
+                Debug.WriteLine($"{Lang.S["GameTask_11427_6a7ba3"]});
                 return;
             }
         }

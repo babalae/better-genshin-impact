@@ -29,7 +29,7 @@ namespace BetterGenshinImpact.GameTask.AutoEat;
 /// </summary>
 public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 {
-    public string Name => "自动吃药";
+    public string Name => Lang.S["Trigger_049_4815ef"];
 
     private readonly AutoEatParam _taskParam;
     private readonly AutoEatConfig _config;
@@ -53,13 +53,13 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
         _ct = ct;
 
         Init();
-        _logger.LogInformation("自动吃药任务启动");
+        _logger.LogInformation(Lang.S["GameTask_10497_44bf4b"]);
 
         if (String.IsNullOrWhiteSpace(_taskParam.FoodName))
         {
             if (!IsTakeFood())
             {
-                _logger.LogWarning("未装备 \"{Tool}\"，无法启用自动吃药功能", "便携营养袋");
+                _logger.LogWarning(Lang.S["GameTask_10495_cc3081"]{Tool}\"，无法启用自动吃药功能", "便携营养袋");
                 return null;
             }
 
@@ -69,19 +69,19 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "自动吃药任务发生异常");
+                _logger.LogError(e, Lang.S["GameTask_10494_da9072"]);
                 throw;
             }
             finally
             {
-                _logger.LogInformation("自动吃药任务结束");
+                _logger.LogInformation(Lang.S["GameTask_10493_a21e96"]);
             }
 
             return null;
         }
         else
         {
-            _logger.LogInformation("打开背包寻找{name}……", _taskParam.FoodName);
+            _logger.LogInformation(Lang.S["GameTask_10492_4c605f"], _taskParam.FoodName);
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenInventory(GridScreenName.Food, _input, _logger, _ct);
 
@@ -114,7 +114,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                         else
                         {
                             count = -2;
-                            _logger.LogWarning("无法识别食物数量：{text}，依然尝试使用", numStr);
+                            _logger.LogWarning(Lang.S["GameTask_10491_c097c9"], numStr);
                         }
                         #endregion
 
@@ -126,7 +126,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                         {
                             ra.Click();
                         }
-                        _logger.LogInformation("吃了一份{name}，真香！", predName);
+                        _logger.LogInformation(Lang.S["GameTask_10490_7daeda"], predName);
                         break;
                     }
                 }
@@ -138,7 +138,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             if (count == null)
             {
                 count = -1;
-                _logger.LogInformation("没有找到{name}", _taskParam.FoodName);
+                _logger.LogInformation(Lang.S["GameTask_10489_37213d"], _taskParam.FoodName);
             }
             await new ReturnMainUiTask().Start(ct);
 
@@ -148,8 +148,8 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 
     private void Init()
     {
-        _logger.LogInformation("→ {Text} 检测间隔: {Interval}ms", "自动吃药，", _config.CheckInterval);
-        _logger.LogInformation("→ {Text} 吃药间隔: {Interval}ms", "自动吃药，", _config.EatInterval);
+        _logger.LogInformation(Lang.S["GameTask_10488_3b844b"], "自动吃药，", _config.CheckInterval);
+        _logger.LogInformation(Lang.S["GameTask_10486_ff1c23"], "自动吃药，", _config.EatInterval);
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                         lastEatTime = now;
 
-                        _logger.LogInformation("检测到红血，自动吃药");
+                        _logger.LogInformation(Lang.S["GameTask_10485_8cc42c"]);
                     }
                 }
 
@@ -187,7 +187,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             }
             catch (Exception e)
             {
-                _logger.LogDebug(e, "自动吃药检测时发生异常");
+                _logger.LogDebug(e, Lang.S["GameTask_10484_7f5c02"]);
                 await Delay(1000, _ct); // 异常时稍作等待
             }
         }
@@ -210,7 +210,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "检测便携营养袋时发生异常");
+            _logger.LogDebug(e, Lang.S["GameTask_10483_7d3158"]);
             return false;
         }
     }

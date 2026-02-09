@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -74,7 +75,7 @@ public class RunnerContext : Singleton<RunnerContext>
             _combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
             if (!_combatScenes.CheckTeamInitialized())
             {
-                Logger.LogError("队伍角色识别失败");
+                Logger.LogError(Lang.S["GameTask_10295_ded726"]);
                 _combatScenes = null;
             }
         }
@@ -126,7 +127,7 @@ public class RunnerContext : Singleton<RunnerContext>
     public void StopAutoPick(int time = -1)
     {
         AutoPickTriggerStopCount++;
-        Logger.LogInformation("暂停自动拾取拾取:"+AutoPickTriggerStopCount);
+        Logger.LogInformation(Lang.S["GameTask_10294_56643b"]+AutoPickTriggerStopCount);
         ResumeAutoPick(time);
     }
     /// <summary>
@@ -141,7 +142,7 @@ public class RunnerContext : Singleton<RunnerContext>
 
         if (time>0)
         {
-            Logger.LogInformation(time+"秒后恢复自动拾取:"+AutoPickTriggerStopCount);
+            Logger.LogInformation(time+Lang.S["GameTask_10293_6be9f5"]+AutoPickTriggerStopCount);
         }
        
         if (time <= 0)
@@ -149,7 +150,7 @@ public class RunnerContext : Singleton<RunnerContext>
             if (AutoPickTriggerStopCount>0)
             {
                 AutoPickTriggerStopCount--;
-                Logger.LogInformation("恢复自动拾取:"+AutoPickTriggerStopCount);
+                Logger.LogInformation(Lang.S["GameTask_10292_87af65"]+AutoPickTriggerStopCount);
             }
         }
         else

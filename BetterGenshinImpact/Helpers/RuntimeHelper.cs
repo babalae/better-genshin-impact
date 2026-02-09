@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service;
@@ -100,7 +101,7 @@ internal static class RuntimeHelper
                         await Task.Delay(50);
                     }
 
-                    ThemedMessageBox.Error("以管理员权限启动 BetterGI 失败，非管理员权限下所有模拟操作功能均不可用！\r\n请尝试 右键 —— 以管理员身份运行 的方式启动 BetterGI");
+                    ThemedMessageBox.Error(Lang.S["Gen_11913_f6bfc6"]);
                 }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
                 return;
             }
@@ -151,10 +152,10 @@ internal static class RuntimeHelper
     {
         if (!Directory.Exists(Global.Absolute("Assets")) || !Directory.Exists(Global.Absolute("GameTask")))
         {
-            StringBuilder stringBuilder = new("发现有关键文件缺失，");
+            StringBuilder stringBuilder = new(Lang.S["Gen_11912_4686b5"]);
             stringBuilder.Append(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) == Global.StartUpPath
-                ? "请不要把主程序exe文件剪切到桌面。正确的做法：请右键点击主程序，在弹出的菜单中选择“发送到”选项，然后选择“桌面创建快捷方式”。"
-                : "请重新安装软件");
+                ? Lang.S["Gen_11911_3889b3"]
+                : Lang.S["Gen_11910_5b78e4"]);
 
             ThemedMessageBox.Warning(stringBuilder.ToString());
             Environment.Exit(0xFFFF);

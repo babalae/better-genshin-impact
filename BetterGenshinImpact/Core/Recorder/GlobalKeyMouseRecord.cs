@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
@@ -41,13 +42,13 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
+            Toast.Warning(Lang.S["KeyMouse_1014_c08c56"]);
             return;
         }
 
         if (Status != KeyMouseRecorderStatus.Stop)
         {
-            Toast.Warning("已经在录制状态，请不要重复启动录制功能");
+            Toast.Warning(Lang.S["Gen_10102_e7e22a"]);
             return;
         }
 
@@ -55,12 +56,12 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         SystemControl.ActivateWindow();
 
-        _logger.LogInformation("录制：{Text}", "实时任务已暂停");
-        _logger.LogInformation("注意：录制时遇到主界面（鼠标永远在界面中心）和其他界面（鼠标可自由移动，比如地图等）的切换，请把手离开鼠标等待录制模式切换日志");
+        _logger.LogInformation(Lang.S["Gen_10093_1542d7"], "实时任务已暂停");
+        _logger.LogInformation(Lang.S["Gen_10100_24485f"]);
 
         for (var i = 3; i >= 1; i--)
         {
-            _logger.LogInformation("{Sec}秒后启动录制...", i);
+            _logger.LogInformation(Lang.S["Gen_10099_abf190"], i);
             await Task.Delay(1000);
         }
 
@@ -74,14 +75,14 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         Status = KeyMouseRecorderStatus.Recording;
 
-        _logger.LogInformation("录制：{Text}", "已启动");
+        _logger.LogInformation(Lang.S["Gen_10093_1542d7"], "已启动");
     }
 
     public string StopRecord()
     {
         if (Status != KeyMouseRecorderStatus.Recording)
         {
-            throw new InvalidOperationException("未处于录制中状态，无法停止");
+            throw new InvalidOperationException(Lang.S["Gen_10097_1b7706"]);
         }
 
         var macro = _recorder?.ToJsonMacro() ?? string.Empty;
@@ -92,7 +93,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
 
         _timer.Stop();
 
-        _logger.LogInformation("录制：{Text}", "结束录制");
+        _logger.LogInformation(Lang.S["Gen_10093_1542d7"], "结束录制");
 
         TaskTriggerDispatcher.Instance().StartTimer();
 
@@ -108,7 +109,7 @@ public class GlobalKeyMouseRecord : Singleton<GlobalKeyMouseRecord>
         var exist = iconRa.IsExist();
         if (exist != _isInMainUi)
         {
-            _logger.LogInformation("录制：{Text}", exist ? "进入主界面，捕获鼠标相对移动" : "离开主界面，捕获鼠标绝对移动");
+            _logger.LogInformation(Lang.S["Gen_10093_1542d7"], exist ? "进入主界面，捕获鼠标相对移动" : "离开主界面，捕获鼠标绝对移动");
         }
         _isInMainUi = exist;
         iconRa.Dispose();

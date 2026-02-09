@@ -50,18 +50,18 @@ public class ScriptParser
                     continue;
                 }
 
-                if (stage == "角色定义:")
+                if (stage == Lang.S["GameTask_10910_17b3fb"])
                 {
                     var character = ParseCharacter(line);
                     duel.Characters[character.Index] = character;
                 }
-                else if (stage == "策略定义:")
+                else if (stage == Lang.S["GameTask_10909_12e6f0"])
                 {
-                    MyAssert(duel.Characters[3] != null, "角色未定义");
+                    MyAssert(duel.Characters[3] != null, Lang.S["GameTask_10908_f268a5"]);
 
                     string[] actionParts = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
-                    MyAssert(actionParts.Length == 3, "策略中的行动命令解析错误");
-                    MyAssert(actionParts[1] == "使用", "策略中的行动命令解析错误");
+                    MyAssert(actionParts.Length == 3, Lang.S["GameTask_10907_4cf47d"]);
+                    MyAssert(actionParts[1] == Lang.S["GameTask_10392_ecff77"], "策略中的行动命令解析错误");
 
                     var actionCommand = new ActionCommand();
                     var action = actionParts[1].ChineseToActionEnum();
@@ -78,25 +78,25 @@ public class ScriptParser
                         }
                     }
 
-                    MyAssert(j <= 3, "策略中的行动命令解析错误：角色名称无法从角色定义中匹配到");
+                    MyAssert(j <= 3, Lang.S["GameTask_10906_6ada9b"]);
 
                     int skillNum = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(actionParts[2], ""));
-                    MyAssert(skillNum < 5, "策略中的行动命令解析错误：技能编号错误");
+                    MyAssert(skillNum < 5, Lang.S["GameTask_10905_19735d"]);
                     actionCommand.TargetIndex = skillNum;
                     duel.ActionCommandQueue.Add(actionCommand);
                 }
                 else
                 {
-                    throw new System.Exception($"未知的定义字段：{stage}");
+                    throw new System.Exception($"{Lang.S["GameTask_10904_007d5b"]});
                 }
             }
 
-            MyAssert(duel.Characters[3] != null, "角色未定义，请确认策略文本格式是否为UTF-8");
+            MyAssert(duel.Characters[3] != null, Lang.S["GameTask_10903_fa74e3"]);
         }
         catch (System.Exception ex)
         {
-            MyLogger.LogError($"解析脚本错误，行号：{i + 1}，错误信息：{ex}");
-            ThemedMessageBox.Error($"解析脚本错误，行号：{i + 1}，错误信息：{ex}", "策略解析失败");
+            MyLogger.LogError($"{Lang.S["GameTask_10901_ba69de"]});
+            ThemedMessageBox.Error($"{Lang.S["GameTask_10901_ba69de"]}, "策略解析失败");
             return default!;
         }
 
@@ -119,7 +119,7 @@ public class ScriptParser
 
         var parts = characterAndSkill[0].Split('=');
         character.Index = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(parts[0].Trim(), ""));
-        MyAssert(character.Index >= 1 && character.Index <= 3, "角色序号必须在1-3之间");
+        MyAssert(character.Index >= 1 && character.Index <= 3, Lang.S["GameTask_10900_99c3f1"]);
 
         if (parts[1].Contains('|'))
         {
@@ -155,7 +155,7 @@ public class ScriptParser
             }
             else
             {
-                throw new System.Exception($"角色【{standardName}】暂无默认卡牌定义配置，请自行进行角色定义");
+                throw new System.Exception($"{Lang.S["GameTask_10899_789c84"]});
             }
         }
 
@@ -174,7 +174,7 @@ public class ScriptParser
         var skill = new Skill();
         var parts = oneSkillStr.Split('=');
         skill.Index = short.Parse(RegexHelper.ExcludeNumberRegex().Replace(parts[0], ""));
-        MyAssert(skill.Index >= 1 && skill.Index <= 5, "技能序号必须在1-5之间");
+        MyAssert(skill.Index >= 1 && skill.Index <= 5, Lang.S["GameTask_10898_2f6c84"]);
         var costStr = parts[1];
         var costParts = costStr.Split('+');
         skill.SpecificElementCost = int.Parse(costParts[0][..1]);

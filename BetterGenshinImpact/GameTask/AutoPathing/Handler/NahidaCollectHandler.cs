@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,24 +19,24 @@ public class NahidaCollectHandler : IActionHandler
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
+        Logger.LogInformation(Lang.S["GameTask_11134_cfecbd"], "纳西妲");
 
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
-            Logger.LogError("队伍识别未初始化成功！");
+            Logger.LogError(Lang.S["GameTask_11074_f6bb4a"]);
             return;
         }
 
         // 切人
-        var nahida = combatScenes.SelectAvatar("纳西妲");
+        var nahida = combatScenes.SelectAvatar(Lang.S["GameTask_10596_8279ac"]);
         if (nahida is not null)
         {
             nahida.TrySwitch();
         }
         else
         {
-            Logger.LogError("队伍中未找到纳西妲角色！");
+            Logger.LogError(Lang.S["GameTask_11133_ef90b5"]);
             return;
         }
 
@@ -84,7 +85,7 @@ public class NahidaCollectHandler : IActionHandler
             {
                 await Delay(200, ct);
                 var cd = nahida.AfterUseSkill();
-                Logger.LogInformation("{Nhd} 长按E转圈,cd:{Cd}", "纳西妲", Math.Round(cd, 2));
+                Logger.LogInformation(Lang.S["GameTask_11132_3e87c2"], "纳西妲", Math.Round(cd, 2));
             }
         }
 

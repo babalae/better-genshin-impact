@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
@@ -175,13 +176,13 @@ internal class GameTaskManager
 
         if (!Directory.Exists(assetsFolder))
         {
-            throw new FileNotFoundException($"未找到{featName}的素材文件夹");
+            throw new FileNotFoundException($"{Lang.S["GameTask_10291_573c78"]});
         }
 
         var filePath = Path.Combine(assetsFolder, assertName);
         if (!File.Exists(filePath))
         {
-            throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
+            throw new FileNotFoundException($"{Lang.S["GameTask_10290_c2bff8"]});
         }
 
         var mat = Mat.FromStream(File.OpenRead(filePath), flags);

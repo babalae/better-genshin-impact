@@ -32,7 +32,7 @@ public class GetGridIconsTask : ISoloTask
 
     private CancellationToken ct;
 
-    public string Name => "获取Grid界面物品图标独立任务";
+    public string Name => Lang.S["GameTask_11739_c55a43"];
 
     private readonly int? maxNumToGet;
 
@@ -70,11 +70,11 @@ public class GetGridIconsTask : ISoloTask
                 await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             case GridScreenName.ArtifactSetFilter:
-                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                logger.LogInformation(Lang.S["GameTask_11738_87834f"], gridScreenName.GetDescription());
                 await GetArtifactSetFilterGridIcons(count, directory);
                 return;
             default:
-                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                logger.LogInformation(Lang.S["GameTask_11738_87834f"], gridScreenName.GetDescription());
                 break;
         }
 
@@ -118,11 +118,11 @@ public class GetGridIconsTask : ISoloTask
                             {
                                 itemRegion.SrcMat.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                             }
-                            logger.LogInformation("图片保存成功：{Text}", fileName);
+                            logger.LogInformation(Lang.S["GameTask_11735_2473c2"], fileName);
                         }
                         catch (Exception e)
                         {
-                            logger.LogError(e, "图片保存失败：{Text}", fileName);
+                            logger.LogError(e, Lang.S["GameTask_11734_d52a63"], fileName);
                         }
                     });
                     saveThread.IsBackground = true; // 设置为后台线程
@@ -130,13 +130,13 @@ public class GetGridIconsTask : ISoloTask
                 }
                 else
                 {
-                    logger.LogInformation("重复的物品：{Text}", fileName);
+                    logger.LogInformation(Lang.S["GameTask_11733_8d4a02"], fileName);
                 }
 
                 count--;
                 if (count <= 0)
                 {
-                    logger.LogInformation("检查次数已耗尽");
+                    logger.LogInformation(Lang.S["GameTask_10358_142aaa"]);
                     break;
                 }
             }
@@ -163,7 +163,7 @@ public class GetGridIconsTask : ISoloTask
                 using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
                 var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
 
-                var flowerWithGlyph = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains("套装包含")).Skip(1).FirstOrDefault();
+                var flowerWithGlyph = ocrResult.Regions.OrderBy(r => r.Rect.Center.Y).SkipWhile(r => !r.Text.Contains(Lang.S["GameTask_11737_99245b"])).Skip(1).FirstOrDefault();
                 if (flowerWithGlyph == default)
                 {
                     nameRegion.Move();
@@ -196,7 +196,7 @@ public class GetGridIconsTask : ISoloTask
                 await TaskControl.Delay(300, this.ct);
                 if (!tryGetFlower(out flowerName))
                 {
-                    throw new Exception("尝试获取生之花失败");
+                    throw new Exception(Lang.S["GameTask_11736_90eb9c"]);
                     //flowerName = $"识别失败{nameRegion.GetHashCode()}";
                 }
             }
@@ -214,11 +214,11 @@ public class GetGridIconsTask : ISoloTask
                             using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion);
                             img125.ToBitmap().Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                         }
-                        logger.LogInformation("图片保存成功：{Text}", fileName);
+                        logger.LogInformation(Lang.S["GameTask_11735_2473c2"], fileName);
                     }
                     catch (Exception e)
                     {
-                        logger.LogError(e, "图片保存失败：{Text}", fileName);
+                        logger.LogError(e, Lang.S["GameTask_11734_d52a63"], fileName);
                     }
                 });
                 saveThread.IsBackground = true; // 设置为后台线程
@@ -226,13 +226,13 @@ public class GetGridIconsTask : ISoloTask
             }
             else
             {
-                logger.LogInformation("重复的物品：{Text}", fileName);
+                logger.LogInformation(Lang.S["GameTask_11733_8d4a02"], fileName);
             }
 
             count--;
             if (count <= 0)
             {
-                logger.LogInformation("检查次数已耗尽");
+                logger.LogInformation(Lang.S["GameTask_10358_142aaa"]);
                 break;
             }
         }

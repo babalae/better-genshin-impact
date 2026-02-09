@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
@@ -38,12 +39,12 @@ public class HangoutOption : IDisposable
         }
         else
         {
-            TaskControl.Logger.LogError("自动邀约：识别到错误位置的选项图标 {Rect}", IconRect);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11294_5866ab"], IconRect);
         }
 
         if (r.Width < captureArea.Width / 8)
         {
-            TaskControl.Logger.LogError("自动邀约：选项文字区域过小 {Rect}", TextRect);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11293_dd33a8"], TextRect);
             r = default;
         }
 

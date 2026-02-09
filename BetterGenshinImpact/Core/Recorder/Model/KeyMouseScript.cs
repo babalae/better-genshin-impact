@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,7 +21,7 @@ public class KeyMouseScript
         {
             if (Info == null || Info.Width == 0 || Info.Height == 0)
             {
-                Debug.WriteLine("错误的脚本数据 Info.Width == 0 || Info.Height == 0");
+                Debug.WriteLine(Lang.S["Gen_10107_4fbe05"]);
                 break;
             }
 

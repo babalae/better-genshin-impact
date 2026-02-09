@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Helpers.Win32;
 
@@ -52,7 +53,7 @@ public static class ConsoleHelper
         {
             _consoleAllocated = true;
             InitializeConsoleStreams();
-            Console.WriteLine("\n=== BetterGI 控制台输出 ===");
+            Console.WriteLine(Lang.S["Gen_11918_d0e2d0"]);
             return true;
         }
 

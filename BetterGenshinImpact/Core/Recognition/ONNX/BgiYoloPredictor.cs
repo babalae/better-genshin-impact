@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
@@ -59,7 +60,7 @@ public class BgiYoloPredictor : IDisposable
             }
         }
 
-        Debug.WriteLine("YOLO识别结果:" + JsonSerializer.Serialize(dict));
+        Debug.WriteLine(Lang.S["Gen_10067_651b74"] + JsonSerializer.Serialize(dict));
 
         var list = result
             .Select(box => new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height))

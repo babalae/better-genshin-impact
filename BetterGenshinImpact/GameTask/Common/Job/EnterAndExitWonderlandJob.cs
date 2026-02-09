@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -16,7 +17,7 @@ public class EnterAndExitWonderlandJob
 
     public async Task Start(CancellationToken ct)
     {
-        Logger.LogInformation("进入千星奇域");
+        Logger.LogInformation(Lang.S["GameTask_11535_36a715"]);
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
 
         // 等待千星奇域界面出现
@@ -92,11 +93,11 @@ public class EnterAndExitWonderlandJob
 
         if (mainUiFound1)
         {
-            Logger.LogInformation("已进入千星奇域大厅，准备返回提瓦特");
+            Logger.LogInformation(Lang.S["GameTask_11534_946235"]);
         }
         else
         {
-            Logger.LogWarning("未检测到主界面，可能未处于千星奇域");
+            Logger.LogWarning(Lang.S["GameTask_11533_7e3395"]);
         }
 
         await Delay(500, ct);
@@ -152,11 +153,11 @@ public class EnterAndExitWonderlandJob
 
         if (mainUiFound2)
         {
-            Logger.LogInformation("已返回提瓦特");
+            Logger.LogInformation(Lang.S["GameTask_11532_5bbd2c"]);
         }
         else
         {
-            Logger.LogWarning("未检测到主界面，可能未处于提瓦特");
+            Logger.LogWarning(Lang.S["GameTask_11531_44f799"]);
         }
 
         await Delay(500, ct);

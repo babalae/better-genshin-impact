@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -48,7 +49,7 @@ public class ExpeditionTask
             }
         }
 
-        TaskControl.Logger.LogInformation("探索派遣：{Text}", "重新派遣完成");
+        TaskControl.Logger.LogInformation(Lang.S["GameTask_11286_c4abac"], "重新派遣完成");
         VisionContext.Instance().DrawContent.ClearAll();
     }
 
@@ -74,7 +75,7 @@ public class ExpeditionTask
         {
             var result = CaptureAndOcr(content,
                 new Rect(0, 0, captureRect.Width - (int)(480 * assetScale), captureRect.Height));
-            var rect = result.FindRectByText("探险完成");
+            var rect = result.FindRectByText(Lang.S["GameTask_11279_325f09"]);
             // TODO i>1 的时候,可以通过关键词“探索派遣限制 4 / 5 ”判断是否已经派遣完成？
             if (rect != default)
             {
@@ -85,7 +86,7 @@ public class ExpeditionTask
                 TaskControl.Sleep(100);
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
-                rect = result.FindRectByText("领取");
+                rect = result.FindRectByText(Lang.S["GameTask_11284_9c1b27"]);
                 if (rect != default)
                 {
                     using var ra = content.CaptureRectArea.Derive(rect);
@@ -98,7 +99,7 @@ public class ExpeditionTask
 
                     // 选择角色
                     result = CaptureAndOcr(content);
-                    rect = result.FindRectByText("选择角色");
+                    rect = result.FindRectByText(Lang.S["GameTask_11285_1c77cb"]);
                     if (rect != default)
                     {
                         content.CaptureRectArea.Derive(rect).Click();
@@ -112,7 +113,7 @@ public class ExpeditionTask
                 }
                 else
                 {
-                    TaskControl.Logger.LogWarning("探索派遣：找不到 {Text} 文字", "领取");
+                    TaskControl.Logger.LogWarning(Lang.S["GameTask_11283_1aa4e2"], "领取");
                 }
             }
             else
@@ -126,7 +127,7 @@ public class ExpeditionTask
     {
         var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
         var result = CaptureAndOcr(content, new Rect(0, 0, captureRect.Width / 2, captureRect.Height));
-        if (result.RegionHasText("角色选择"))
+        if (result.RegionHasText(Lang.S["GameTask_11282_c2076c"]))
         {
             var cards = GetCharacterCards(result);
             if (cards.Count > 0)
@@ -137,7 +138,7 @@ public class ExpeditionTask
 
                 using var ra = content.CaptureRectArea.Derive(rect);
                 ra.Click();
-                TaskControl.Logger.LogInformation("探索派遣：派遣 {Name}", card.Name);
+                TaskControl.Logger.LogInformation(Lang.S["GameTask_11281_e73570"], card.Name);
                 TaskControl.Sleep(500);
                 return true;
             }
@@ -166,8 +167,8 @@ public class ExpeditionTask
         var cards = new List<ExpeditionCharacterCard>();
         foreach (var ocrResultRect in ocrResultRects)
         {
-            if (ocrResultRect.Text.Contains("时间缩短") || ocrResultRect.Text.Contains("奖励增加") ||
-                ocrResultRect.Text.Contains("暂无加成"))
+            if (ocrResultRect.Text.Contains(Lang.S["GameTask_11277_ae1493"]) || ocrResultRect.Text.Contains("奖励增加") ||
+                ocrResultRect.Text.Contains(Lang.S["GameTask_11276_d2feb6"]))
             {
                 var card = new ExpeditionCharacterCard();
                 card.Rects.Add(ocrResultRect.Rect);
@@ -178,18 +179,18 @@ public class ExpeditionTask
                         && ocrResultRect2.Rect.Y + ocrResultRect2.Rect.Height <
                         ocrResultRect.Rect.Y + ocrResultRect.Rect.Height)
                     {
-                        if (ocrResultRect2.Text.Contains("探险完成") || ocrResultRect2.Text.Contains("探险中"))
+                        if (ocrResultRect2.Text.Contains(Lang.S["GameTask_11279_325f09"]) || ocrResultRect2.Text.Contains("探险中"))
                         {
                             card.Idle = false;
-                            var name = ocrResultRect2.Text.Replace("探险完成", "").Replace("探险中", "").Replace("/", "")
+                            var name = ocrResultRect2.Text.Replace(Lang.S["GameTask_11279_325f09"], "").Replace("探险中", "").Replace("/", "")
                                 .Trim();
                             if (!string.IsNullOrEmpty(name))
                             {
                                 card.Name = name;
                             }
                         }
-                        else if (!ocrResultRect2.Text.Contains("时间缩短") && !ocrResultRect2.Text.Contains("奖励增加") &&
-                                 !ocrResultRect2.Text.Contains("暂无加成"))
+                        else if (!ocrResultRect2.Text.Contains(Lang.S["GameTask_11277_ae1493"]) && !ocrResultRect2.Text.Contains("奖励增加") &&
+                                 !ocrResultRect2.Text.Contains(Lang.S["GameTask_11276_d2feb6"]))
                         {
                             card.Name = ocrResultRect2.Text;
                         }
@@ -204,7 +205,7 @@ public class ExpeditionTask
                 }
                 else
                 {
-                    TaskControl.Logger.LogWarning("探索派遣：存在未找到角色命的识别内容");
+                    TaskControl.Logger.LogWarning(Lang.S["GameTask_11275_6e2858"]);
                 }
             }
         }

@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// </summary>
 public class BlessingOfTheWelkinMoonTask
 {
-    public string Name => "自动点击空月祝福";
+    public string Name => Lang.S["GameTask_11494_67f0bc"];
 
     public async Task Start(CancellationToken ct)
     {
@@ -27,7 +27,7 @@ public class BlessingOfTheWelkinMoonTask
                 using var ra = CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra) || ra.Find(ElementAssets.Instance.PrimogemRo).IsExist())
                 {
-                    Logger.LogInformation("检测到空月祝福界面，自动点击");
+                    Logger.LogInformation(Lang.S["GameTask_11493_508079"]);
                     GameCaptureRegion.GameRegion1080PPosMove(100, 100);
                     for (int i = 0, j = 0; i < 20 && j < 3; ++i)
                     {
@@ -55,13 +55,13 @@ public class BlessingOfTheWelkinMoonTask
                             ++j;
                         }
                     }
-                    Logger.LogInformation("空月祝福处理完毕");
+                    Logger.LogInformation(Lang.S["GameTask_11492_25c261"]);
                 }
             }
         }
         catch (Exception e)
         {
-            Logger.LogError("月卡判断异常：" + e.Message);
+            Logger.LogError(Lang.S["GameTask_11491_42cf11"] + e.Message);
         }
     }
 }

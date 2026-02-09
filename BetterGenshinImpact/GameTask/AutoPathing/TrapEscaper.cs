@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
@@ -51,7 +52,7 @@ public class TrapEscaper(CancellationToken ct)
             }
             if ((now - startTime).TotalSeconds > 25)
             {
-                Logger.LogError("卡死脱困超时！");
+                Logger.LogError(Lang.S["GameTask_11064_4dd4d8"]);
                 break;
             }
 

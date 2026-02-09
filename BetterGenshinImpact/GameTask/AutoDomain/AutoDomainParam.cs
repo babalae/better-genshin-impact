@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -31,8 +32,8 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     // 使用树脂优先级
     public List<string> ResinPriorityList { get; set; } =
     [
-        "浓缩树脂",
-        "原粹树脂"
+        Lang.S["GameTask_10385_a7b73a"],
+        Lang.S["GameTask_10384_9fa864"]
     ];
 
     // 使用原粹树脂刷取副本次数
@@ -98,7 +99,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
             strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
         }
 
-        if ("根据队伍自动选择".Equals(strategyName))
+        if (Lang.S["GameTask_10386_0bfb2b"].Equals(strategyName))
         {
             return Global.Absolute(@"User\AutoFight\");
         }

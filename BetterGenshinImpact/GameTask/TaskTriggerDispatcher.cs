@@ -70,7 +70,7 @@ namespace BetterGenshinImpact.GameTask
         {
             if (_instance == null)
             {
-                throw new Exception("请先在启动页启动BetterGI，如果已经启动请重启");
+                throw new Exception(Lang.S["GameTask_10326_e186e1"]);
             }
 
             return _instance;
@@ -84,7 +84,7 @@ namespace BetterGenshinImpact.GameTask
 
                 if (_instance.GameCapture == null)
                 {
-                    throw new Exception("截图器未初始化!");
+                    throw new Exception(Lang.S["GameTask_10325_cee290"]);
                 }
 
                 return _instance.GameCapture;
@@ -223,11 +223,11 @@ namespace BetterGenshinImpact.GameTask
                 {
                     if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
                     {
-                        _logger.LogError("截图器未初始化!");
+                        _logger.LogError(Lang.S["GameTask_10325_cee290"]);
                     }
                     else
                     {
-                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                        _logger.LogInformation(Lang.S["GameTask_10324_9771e0"]);
                     }
 
                     PictureInPictureService.Hide(resetManual: true);
@@ -249,14 +249,14 @@ namespace BetterGenshinImpact.GameTask
                     // 检查游戏是否已结束
                     if (TaskContext.Instance().SystemInfo.GameProcess.HasExited)
                     {
-                        _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                        _logger.LogInformation(Lang.S["GameTask_10324_9771e0"]);
                         UiTaskStopTickEvent?.Invoke(sender, e);
                         return;
                     }
 
                     if (_prevGameActive)
                     {
-                        Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
+                        Debug.WriteLine(Lang.S["GameTask_10323_36f9a9"]);
                     }
 
                     if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
@@ -340,11 +340,11 @@ namespace BetterGenshinImpact.GameTask
                 var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
                 var bitmap = GameCapture.Capture();
-                speedTimer.Record("截图");
+                speedTimer.Record(Lang.S["GameTask_10322_369abf"]);
 
                 if (bitmap == null)
                 {
-                    _logger.LogWarning("截图失败!");
+                    _logger.LogWarning(Lang.S["GameTask_10321_65d26e"]);
                     return;
                 }
 
@@ -439,10 +439,10 @@ namespace BetterGenshinImpact.GameTask
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    _logger.LogError(Lang.S["GameTask_10320_3a7b13"], _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
                     UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
                     UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
-                    _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
+                    _logger.LogInformation(Lang.S["GameTask_10319_c0eb3e"]);
                 }
 
                 _gameRect = new RECT(currentRect);
@@ -496,7 +496,7 @@ namespace BetterGenshinImpact.GameTask
                 }
                 catch (Exception)
                 {
-                    _logger.LogInformation("截图失败，未获取到图像");
+                    _logger.LogInformation(Lang.S["GameTask_10318_017d68"]);
                     return;
                 }
 
@@ -519,12 +519,12 @@ namespace BetterGenshinImpact.GameTask
 
                 mat.Dispose();
 
-                _logger.LogInformation("截图已保存: {Name}", name);
+                _logger.LogInformation(Lang.S["GameTask_10317_18bd5d"], name);
             }
             catch (Exception e)
             {
-                _logger.LogError("截图保存失败: {Message}", e.Message);
-                _logger.LogDebug("截图保存失败: {StackTrace}", e.StackTrace);
+                _logger.LogError(Lang.S["GameTask_10316_63ee53"], e.Message);
+                _logger.LogDebug(Lang.S["GameTask_10315_ed3c0e"], e.StackTrace);
             }
         }
     }

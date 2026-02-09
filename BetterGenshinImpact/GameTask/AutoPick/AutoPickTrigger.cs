@@ -27,7 +27,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     private readonly ILogger<AutoPickTrigger> _logger = App.GetLogger<AutoPickTrigger>();
     private readonly ITextInference _pickTextInference = TextInferenceFactory.Pick;
 
-    public string Name => "自动拾取";
+    public string Name => Lang.S["Trigger_002_8e559f"];
     public bool IsEnabled { get; set; }
     public int Priority => 30;
     public bool IsExclusive => false;
@@ -141,8 +141,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取黑/白名单失败");
-            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            _logger.LogError(e, Lang.S["GameTask_11214_032855"]);
+            ThemedMessageBox.Error(Lang.S["GameTask_11213_c8ea01"]);
         }
 
         return [];
@@ -161,8 +161,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取黑/白名单失败");
-            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            _logger.LogError(e, Lang.S["GameTask_11214_032855"]);
+            ThemedMessageBox.Error(Lang.S["GameTask_11213_c8ea01"]);
         }
 
         return [];
@@ -181,8 +181,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "读取拾取黑/白名单失败");
-            ThemedMessageBox.Error("读取拾取黑/白名单失败，请确认修改后的拾取黑/白名单内容格式是否正确！");
+            _logger.LogError(e, Lang.S["GameTask_11214_032855"]);
+            ThemedMessageBox.Error(Lang.S["GameTask_11213_c8ea01"]);
         }
 
         return [];
@@ -225,11 +225,11 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        speedTimer.Record($"识别到拾取键");
+        speedTimer.Record(Lang.S["GameTask_11212_fb3a59"]);
 
         if (_externalConfig is { ForceInteraction: true })
         {
-            LogPick(content, "直接拾取");
+            LogPick(content, Lang.S["GameTask_11211_bed3ea"]);
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
             return;
         }
@@ -250,7 +250,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
             (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
         using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
-        speedTimer.Record("识别聊天图标");
+        speedTimer.Record(Lang.S["GameTask_11210_cddd6f"]);
         if (!chatIconRa.IsEmpty())
         {
             // 物品图标是聊天气泡，一般是NPC对话，文字不在白名单不拾取
@@ -260,7 +260,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             _autoPickAssets.SettingsIconRo.RegionOfInterest = _autoPickAssets.ChatIconRo.RegionOfInterest;
             using var settingsIconRa = content.CaptureRectArea.Find(_autoPickAssets.SettingsIconRo);
-            speedTimer.Record("识别设置图标");
+            speedTimer.Record(Lang.S["GameTask_11209_9e0b70"]);
             if (!settingsIconRa.IsEmpty())
             {
                 // 物品图标是设置图标，一般是解谜、活动、电梯等
@@ -278,7 +278,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             // 没有黑白名单直接拾取
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
-            LogPick(content, "黑名单未启用，直接拾取");
+            LogPick(content, Lang.S["GameTask_11208_975300"]);
         }
 
         //if (config.FastModeEnabled && !isExcludeIcon)
@@ -300,7 +300,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (textRect.X + textRect.Width > content.CaptureRectArea.CacheGreyMat.Width
             || textRect.Y + textRect.Height > content.CaptureRectArea.CacheGreyMat.Height)
         {
-            Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
+            Debug.WriteLine(Lang.S["GameTask_11207_882fa2"]);
             return;
         }
 
@@ -309,7 +309,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
         if (avgGrad < -3)
         {
-            Debug.WriteLine($"AutoPickTrigger: 已在拾取中，跳过本次拾取 {avgGrad}");
+            Debug.WriteLine($"{Lang.S["GameTask_11206_ebfbef"]});
             return;
         }
 
@@ -350,12 +350,12 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
             else
             {
-                Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
+                Debug.WriteLine(Lang.S["GameTask_11205_2f4a88"]);
                 text = OcrFactory.Paddle.Ocr(textMat);
             }
         }
 
-        speedTimer.Record("文字识别");
+        speedTimer.Record(Lang.S["GameTask_11204_53cce5"]);
 
         if (!string.IsNullOrEmpty(text))
         {
@@ -381,7 +381,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                 Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                 return;
             }
-            speedTimer.Record("白名单判断");
+            speedTimer.Record(Lang.S["GameTask_11203_915e4d"]);
             if (isExcludeIcon)
             {
                 //Debug.WriteLine("AutoPickTrigger: 物品图标是聊天气泡，一般是NPC对话，不拾取");
@@ -401,7 +401,7 @@ public partial class AutoPickTrigger : ITaskTrigger
                     }
                 }
             }
-            speedTimer.Record("黑名单判断");
+            speedTimer.Record(Lang.S["GameTask_11202_0824b1"]);
             LogPick(content, text);
             Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
         }
@@ -412,35 +412,35 @@ public partial class AutoPickTrigger : ITaskTrigger
     private bool DoNotPick(string text)
     {
         // 唯一一个动态拾取项，特殊处理，不拾取
-        if (text.Contains("长时间"))
+        if (text.Contains(Lang.S["GameTask_11201_bbb6f0"]))
         {
             return true;
         }
 
         // 纳塔部落中文名特殊处理，不拾取
-        if (text.Contains("我在") && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
-                                    text.Contains("流泉")))
+        if (text.Contains(Lang.S["GameTask_11197_b7669c"]) && (text.Contains("声望") || text.Contains("回声") || text.Contains("悬木人") ||
+                                    text.Contains(Lang.S["GameTask_11196_de6324"])))
         {
             return true;
         }
 
         // 挪德卡莱聚所中文名特殊处理，不拾取
-        if (text.Contains("聚所"))
+        if (text.Contains(Lang.S["GameTask_11195_2c7e4c"]))
         {
             return true;
         }
 
-        if (text.Contains("霜月") && text.Contains("坊"))
+        if (text.Contains(Lang.S["GameTask_11194_534b55"]) && text.Contains("坊"))
         {
             return true;
         }
 
-        if (text.Contains("叮铃") || text.Contains("眶螂") || (text.Contains("蛋卷") && text.Contains("坊")))
+        if (text.Contains(Lang.S["GameTask_11191_b45f16"]) || text.Contains("眶螂") || (text.Contains("蛋卷") && text.Contains("坊")))
         {
             return true;
         }
 
-        if (text.Contains("西风成垒") || text.Contains("望崖营壁") || text.Contains("魔女的花园"))
+        if (text.Contains(Lang.S["GameTask_11188_d25716"]) || text.Contains("望崖营壁") || text.Contains("魔女的花园"))
         {
             return true;
         }
@@ -495,7 +495,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     {
         if (_lastText != text || (_lastText == text && Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 5))
         {
-            _logger.LogInformation("交互或拾取：{Text}", text);
+            _logger.LogInformation(Lang.S["GameTask_11187_69abfd"], text);
         }
 
         _lastText = text;
@@ -598,13 +598,13 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (hasLeftQuote && !hasRightQuote)
         {
             // 有「但没有」，在末尾补充」
-            Debug.WriteLine("补充缺失的右引号");
+            Debug.WriteLine(Lang.S["GameTask_11186_535ccb"]);
             return string.Concat(cleanedSpan, "」");
         }
         else if (hasRightQuote && !hasLeftQuote)
         {
             // 有」但没有「，在开头补充「
-            Debug.WriteLine("补充缺失的左引号");
+            Debug.WriteLine(Lang.S["GameTask_11185_9b4ea3"]);
             return string.Concat("「", cleanedSpan);
         }
 

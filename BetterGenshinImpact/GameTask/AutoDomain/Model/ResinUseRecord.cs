@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.Model;
 
@@ -30,24 +31,24 @@ public class ResinUseRecord
         {
             if (taskParam.CondensedResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("浓缩树脂", taskParam.CondensedResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["GameTask_10385_a7b73a"], taskParam.CondensedResinUseCount));
             }
             if (taskParam.OriginalResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("原粹树脂", taskParam.OriginalResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["GameTask_10384_9fa864"], taskParam.OriginalResinUseCount));
             }
             if (taskParam.TransientResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("须臾树脂", taskParam.TransientResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["OneDragon_047_6fe57c"], taskParam.TransientResinUseCount));
             }
             if (taskParam.FragileResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("脆弱树脂", taskParam.FragileResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["GameTask_10388_ad104b"], taskParam.FragileResinUseCount));
             }
 
             if (list.Count == 0)
             {
-                throw new Exception("你选择了指定树脂刷取次数，请至少配置一种树脂的刷取次数！");
+                throw new Exception(Lang.S["GameTask_10481_fd87af"]);
             }
         }
 
@@ -61,24 +62,24 @@ public class ResinUseRecord
         {
             if (taskParam.CondensedResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("浓缩树脂", taskParam.CondensedResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["GameTask_10385_a7b73a"], taskParam.CondensedResinUseCount));
             }
             if (taskParam.OriginalResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("原粹树脂", taskParam.OriginalResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["GameTask_10384_9fa864"], taskParam.OriginalResinUseCount));
             }
             if (taskParam.TransientResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("须臾树脂", taskParam.TransientResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["OneDragon_047_6fe57c"], taskParam.TransientResinUseCount));
             }
             if (taskParam.FragileResinUseCount > 0)
             {
-                list.Add(new ResinUseRecord("脆弱树脂", taskParam.FragileResinUseCount));
+                list.Add(new ResinUseRecord(Lang.S["GameTask_10388_ad104b"], taskParam.FragileResinUseCount));
             }
 
             if (list.Count == 0)
             {
-                throw new Exception("你选择了指定树脂刷取次数，请至少配置一种树脂的刷取次数！");
+                throw new Exception(Lang.S["GameTask_10481_fd87af"]);
             }
         }
 

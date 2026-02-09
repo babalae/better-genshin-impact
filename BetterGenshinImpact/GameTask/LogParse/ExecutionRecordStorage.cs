@@ -149,7 +149,7 @@ public class ExecutionRecordStorage
     {
         // 验证分界时间是否有效
         if (boundaryHour < 0 || boundaryHour > 23)
-            throw new ArgumentOutOfRangeException(nameof(boundaryHour), "分界时间必须在0-23之间");
+            throw new ArgumentOutOfRangeException(nameof(boundaryHour), Lang.S["GameTask_11754_77509f"]);
 
         DateTimeOffset now = isBoundaryTimeBasedOnServerTime
             ? ServerTimeHelper.GetServerTimeNow()
@@ -256,48 +256,48 @@ public class ExecutionRecordStorage
                     folderName == record.FolderName)
                 {
                     // 组和物理路径匹配策略
-                    matchReason = "组和物理路径匹配一致";
+                    matchReason = Lang.S["GameTask_11753_242776"];
                     isMatchFound = true;
                 }
                 else if (config.SkipPolicy == "PhysicalPathSkipPolicy" &&
                          folderName == record.FolderName)
                 {
                     // 物理路径匹配策略
-                    matchReason = "物理路径相同";
+                    matchReason = Lang.S["GameTask_11752_ec981c"];
                     isMatchFound = true;
                 }
                 else if (config.SkipPolicy == "SameNameSkipPolicy")
                 {
                     // 名称匹配策略（只需要项目名称相同）
-                    matchReason = "名称相同";
+                    matchReason = Lang.S["GameTask_11751_e0151a"];
                     isMatchFound = true;
                 }
                 else
                 {
                     // 未知的跳过策略
-                    Console.WriteLine("ExecutionRecordStorage: 未预期的跳过策略！");
+                    Console.WriteLine(Lang.S["GameTask_11750_ea564e"]);
                     continue; // 继续检查下一条记录
                 }
 
                 if (isMatchFound)
                 {
                     // 构建匹配消息
-                    message = $"检查出满足跳过条件: {matchReason}";
+                    message = $"{Lang.S["GameTask_11749_f93e8f"]};
 
                     // 添加时间相关信息
                     if (config.LastRunGapSeconds >= 0)
                     {
                         // 计算下次可执行时间
                         DateTime nextExecutionTime = calcTime.AddSeconds(config.LastRunGapSeconds);
-                        message += $", 需在 {nextExecutionTime:yyyy-M-d H:mm:ss} 之后才能开始执行";
+                        message += $"{Lang.S["GameTask_11748_f68c5a"]};
                     }
                     else if (boundaryTimeEnable)
                     {
-                        message += $", 需在下一日 {config.BoundaryTime} 点后才能开始执行";
+                        message += $"{Lang.S["GameTask_11747_d9d975"]};
                     }
 
                     // 添加匹配记录的ID
-                    message += $", 匹配记录 GUID={record.Id}";
+                    message += $"{Lang.S["GameTask_11746_c4cafc"]};
 
                     return true; // 找到匹配记录，返回true
                 }

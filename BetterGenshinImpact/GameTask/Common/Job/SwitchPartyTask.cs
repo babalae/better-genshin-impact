@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -22,7 +23,7 @@ public class SwitchPartyTask
 {
     private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
 
-    public string Name => "切换队伍";
+    public string Name => Lang.S["GameTask_11651_6fd3c4"];
 
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
@@ -30,7 +31,7 @@ public class SwitchPartyTask
     {
         bool isInPartyViewUi = false;
 
-        Logger.LogInformation("尝试切换至队伍: {Name}", partyName);
+        Logger.LogInformation(Lang.S["GameTask_11650_6e8309"], partyName);
         using var ra1 = CaptureToRectArea();
 
         if (!Bv.IsInPartyViewUi(ra1))
@@ -44,7 +45,7 @@ public class SwitchPartyTask
                 using var raAfterMain = CaptureToRectArea();
                 if (!Bv.IsInMainUi(raAfterMain))
                 {
-                    throw new InvalidOperationException("未能返回主界面");
+                    throw new InvalidOperationException(Lang.S["GameTask_11649_323622"]);
                 }
             }
 
@@ -76,7 +77,7 @@ public class SwitchPartyTask
 
             if (!isOpened)
             {
-                throw new PartySetupFailedException("未能打开队伍配置界面");
+                throw new PartySetupFailedException(Lang.S["GameTask_11645_35def0"]);
             }
         }
 
@@ -94,7 +95,7 @@ public class SwitchPartyTask
         }).Text;
         
         var tempName = currTeamName
-            .Replace("\"", "")        // 移除所有双引号（核心新增，解决日志里的""问题）
+            .Replace("\"", "Lang.S["GameTask_10553_1cc94b"]"问题）
             .Replace("\r\n", "")      // 清理Windows换行符
             .Replace("\r", "");   // 先清理所有双引号，避免引号干扰后续处理
                               
@@ -108,10 +109,10 @@ public class SwitchPartyTask
         // 最后统一去首尾所有空白（空格、制表符、回车符\r等），得到纯净队伍名
         currTeamName = tempName.Trim();
 
-        Logger.LogInformation("切换队伍，当前队伍名称: {Text}，使用正则表达式规则进行模糊匹配", currTeamName);
+        Logger.LogInformation(Lang.S["GameTask_11648_3ad9a3"], currTeamName);
         if (Regex.IsMatch(currTeamName, partyName))
         {
-            Logger.LogInformation("当前队伍[{Name}]即为目标队伍，无需切换", currTeamName);
+            Logger.LogInformation(Lang.S["GameTask_11647_ca4836"], currTeamName);
             if (isInPartyViewUi)
             {
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
@@ -131,7 +132,7 @@ public class SwitchPartyTask
         );
         if (!menu)
         {
-            throw new PartySetupFailedException("未能打开队伍选择页面");
+            throw new PartySetupFailedException(Lang.S["GameTask_11646_bf238d"]);
         }
 
         ImageRegion? switchRa = null;
@@ -147,7 +148,7 @@ public class SwitchPartyTask
 
             if (!openPartyChooseSuccess || switchRa == null || partyDeleteBtn == null)
             {
-                throw new PartySetupFailedException("未能打开队伍配置界面");
+                throw new PartySetupFailedException(Lang.S["GameTask_11645_35def0"]);
             }
         }
 
@@ -166,7 +167,7 @@ public class SwitchPartyTask
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = regionOfInterest,
             DrawOnWindow = true,
-            Name = "队伍名称",
+            Name = Lang.S["GameTask_11644_890db9"],
             DrawOnWindowPen= System.Drawing.Pens.White
         };
         // 逐页查找
@@ -180,7 +181,7 @@ public class SwitchPartyTask
 
                 if (partySwitchNameRaList == null || partySwitchNameRaList.Count <= 0)
                 {
-                    Logger.LogInformation("管理队伍界面文字识别失败");
+                    Logger.LogInformation(Lang.S["GameTask_11643_4ec31d"]);
                     break;
                 }
 
@@ -191,7 +192,7 @@ public class SwitchPartyTask
                     {
                         page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
                         await Delay(200, ct);
-                        Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
+                        Logger.LogInformation(Lang.S["GameTask_11642_daecfa"], textRegion.Text);
                         await ConfirmParty(page, ct, isInPartyViewUi);
 
                         RunnerContext.Instance.ClearCombatScenes();
@@ -200,11 +201,11 @@ public class SwitchPartyTask
                 }
 
                 Region lowest = partySwitchNameRaList.Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale).OrderBy(r => r.Y).Last();
-                lowest.DrawSelf("底部的队伍");
+                lowest.DrawSelf(Lang.S["GameTask_11641_03ea40"]);
 
                 if (lowest.Y < 777 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
                 {
-                    Logger.LogInformation("已抵达最后一个队伍");
+                    Logger.LogInformation(Lang.S["GameTask_11640_823fe6"]);
                     break;
                 }
 
@@ -226,8 +227,8 @@ public class SwitchPartyTask
         }
 
         // 未找到
-        Logger.LogError("未找到队伍: {Name}，返回主界面", partyName);
-        Logger.LogInformation("如果找不到设定的队伍名，有可能是文字识别效果不佳，请尝试正则表达式");
+        Logger.LogError(Lang.S["GameTask_11639_1b827e"], partyName);
+        Logger.LogInformation(Lang.S["GameTask_11638_c75452"]);
         await _returnMainUiTask.Start(ct);
         return false;
     }
@@ -242,7 +243,7 @@ public class SwitchPartyTask
         }, ct, 10);
         if (!partyChooseUiClosed)
         {
-            throw new PartySetupFailedException("选择队伍失败，等待队伍切换超时！");
+            throw new PartySetupFailedException(Lang.S["GameTask_11637_b9084f"]);
         }
         await Delay(200, ct);
         using var ra = CaptureToRectArea();

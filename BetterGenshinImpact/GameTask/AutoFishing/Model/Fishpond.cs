@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using OpenCvSharp;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -97,7 +98,7 @@ public class Fishpond
     
     private void Print(YoloResult<Detection> result)
     {
-        Debug.Write("鱼塘YOLO识别结果：");
+        Debug.Write(Lang.S["GameTask_10813_065f59"]);
         foreach (var box in result)
         {
             Debug.Write(box.ToString());

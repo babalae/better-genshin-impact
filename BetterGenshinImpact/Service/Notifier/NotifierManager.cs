@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -45,7 +46,7 @@ public class NotifierManager
         }
         catch (System.Exception ex)
         {
-            Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
+            Logger.LogWarning(Lang.S["Service_12122_213682"], notifier.Name, ex.Message);
         }
     }
 

@@ -47,12 +47,12 @@ public class TaskRunner
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)
         {
-            _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+            _logger.LogError(Lang.S["GameTask_10314_cd959c"]);
             return;
         }
         try
         {
-            _logger.LogInformation("→ {Text}", _name + "任务启动！");
+            _logger.LogInformation("→ {Text}", _name + Lang.S["GameTask_10313_82fa0d"]);
 
             // 初始化
             Init();
@@ -64,8 +64,8 @@ public class TaskRunner
         }
         catch (NormalEndException e)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("任务手动取消，或正常结束");
-            _logger.LogInformation("任务中断:{Msg}", e.Message);
+            Notify.Event(NotificationEvent.TaskCancel).Success(Lang.S["GameTask_10312_89117c"]);
+            _logger.LogInformation(Lang.S["GameTask_10309_aef630"], e.Message);
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -74,8 +74,8 @@ public class TaskRunner
         }
         catch (TaskCanceledException e)
         {
-            Notify.Event(NotificationEvent.TaskCancel).Success("任务被手动取消");
-            _logger.LogInformation("任务中断:{Msg}", "任务被取消");
+            Notify.Event(NotificationEvent.TaskCancel).Success(Lang.S["GameTask_10311_63fb9b"]);
+            _logger.LogInformation(Lang.S["GameTask_10309_aef630"], "任务被取消");
             if (RunnerContext.Instance.IsContinuousRunGroup)
             {
                 // 连续执行时，抛出异常，终止执行
@@ -84,14 +84,14 @@ public class TaskRunner
         }
         catch (Exception e)
         {
-            Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
+            Notify.Event(NotificationEvent.TaskError).Error(Lang.S["GameTask_10308_43c0a4"], e);
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
         }
         finally
         {
             End();
-            _logger.LogInformation("→ {Text}", _name + "任务结束");
+            _logger.LogInformation("→ {Text}", _name + Lang.S["GameTask_10307_5ab90c"]);
 
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
@@ -117,7 +117,7 @@ public class TaskRunner
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
         // 没启动的时候先启动
-        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") && !soloTask.Name.Contains("幽境危战");
+        bool waitForMainUi = soloTask.Name != Lang.S["Task_002_16fb22"] && !soloTask.Name.Contains("自动音游") && !soloTask.Name.Contains("幽境危战");
         await ScriptService.StartGameTask(waitForMainUi);
         await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
@@ -126,8 +126,8 @@ public class TaskRunner
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在启动页，启动截图器再使用本功能"); });
-            throw new NormalEndException("请先在启动页，启动截图器再使用本功能");
+            UIDispatcherHelper.Invoke(() => { Toast.Warning(Lang.S["KeyMouse_1014_c08c56"]); });
+            throw new NormalEndException(Lang.S["KeyMouse_1014_c08c56"]);
         }
 
         // 清空实时任务触发器

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.Placeholder;
 /// </summary>
 public class TestTrigger : ITaskTrigger
 {
-    public string Name => "自定义占位触发器";
+    public string Name => Lang.S["GameTask_11844_11ef7b"];
     public bool IsEnabled { get; set; }
     public int Priority => 9999;
     public bool IsExclusive { get; private set; }

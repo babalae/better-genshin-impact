@@ -1,29 +1,30 @@
 using System.ComponentModel;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing.Model;
 
 public enum BaitType
 {
-    [Description("果酿饵")]
+    [Description(Lang.S["GameTask_10792_426fae"])]
     FruitPasteBait,
-    [Description("赤糜饵")]
+    [Description(Lang.S["GameTask_10791_b90580"])]
     RedrotBait,
-    [Description("蠕虫假饵")]
+    [Description(Lang.S["GameTask_10790_68f322"])]
     FalseWormBait,
-    [Description("飞蝇假饵")]
+    [Description(Lang.S["GameTask_10789_096261"])]
     FakeFlyBait,
-    [Description("甘露饵")]
+    [Description(Lang.S["GameTask_10788_9ef271"])]
     SugardewBait,
-    [Description("酸桔饵")]
+    [Description(Lang.S["GameTask_10787_f831db"])]
     SourBait,
-    [Description("维护机关频闪诱饵")]
+    [Description(Lang.S["GameTask_10786_03c246"])]
     FlashingMaintenanceMekBait,
-    [Description("澄晶果粒饵")]
+    [Description(Lang.S["GameTask_10785_69d669"])]
     SpinelgrainBait,
-    [Description("温火饵")]
+    [Description(Lang.S["GameTask_10784_bf3a09"])]
     EmberglowBait,
-    [Description("槲梭饵")]
+    [Description(Lang.S["GameTask_10783_1f602c"])]
     BerryBait,
-    [Description("清白饵")]
+    [Description(Lang.S["GameTask_10782_2959f2"])]
     RefreshingLakkaBait
 }

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 
@@ -20,7 +21,7 @@ Output = (hasATK && hasDEF) || (hasHP && hasDEF);";
     // 正则表达式
     [Obsolete]
     [ObservableProperty]
-    private string _regularExpression = @"(?=[\S\s]*攻击力\+[\d]*\n)(?=[\S\s]*防御力\+[\d]*\n)";
+    private string _regularExpression = Lang.S["GameTask_10343_ceeb7d"];
 
     // 快速分解圣遗物的最大星级
     // 1~4

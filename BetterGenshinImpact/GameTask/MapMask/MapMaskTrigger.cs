@@ -19,7 +19,7 @@ public class MapMaskTrigger : ITaskTrigger
 {
     private readonly ILogger<MapMaskTrigger> _logger = App.GetLogger<MapMaskTrigger>();
 
-    public string Name => "地图遮罩";
+    public string Name => Lang.S["Trigger_061_2d9d05"];
     public bool IsEnabled { get; set; }
     public int Priority => 1; // 低优先级
     public bool IsExclusive => false;
@@ -135,7 +135,7 @@ public class MapMaskTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "实时地图定位时发生异常");
+            _logger.LogDebug(e, Lang.S["GameTask_11821_72745b"]);
         }
     }
 }

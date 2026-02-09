@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Security;
 using BetterGenshinImpact.View.Windows;
 using TextBox = Wpf.Ui.Controls.TextBox;
@@ -47,8 +48,8 @@ public class RedeemCodeManager
             Text = codes.Aggregate("", (current, code) => current + $"{code}\n"),
         };
         var p = new PromptDialog(
-            "从剪切版中获取到下面的兑换码，是否自动使用？",
-            "自动使用兑换码",
+            Lang.S["Dialog_ClipboardRedeemCodePrompt"],
+            Lang.S["Dialog_AutoUseRedeemCode"],
             multilineTextBox,
             null);
         p.Height = 500;

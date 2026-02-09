@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ public class UpDownGrabLeafHandler : IActionHandler
     
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("尝试寻找 {syy}", "四叶印");
+        Logger.LogInformation(Lang.S["GameTask_11152_05f1f6"], "四叶印");
         int direction = 1;
         if (!String.IsNullOrEmpty(waypointForTrack?.ActionParams))
         {
@@ -46,7 +47,7 @@ public class UpDownGrabLeafHandler : IActionHandler
             if (currentDetection)
             {
                 consecutiveDetections++;
-                Logger.LogInformation("检测到四叶印 ({current}/{required})", consecutiveDetections, ConsecutiveDetectionsRequired);
+                Logger.LogInformation(Lang.S["GameTask_11151_2b3b80"], consecutiveDetections, ConsecutiveDetectionsRequired);
                 
                 if (consecutiveDetections >= ConsecutiveDetectionsRequired)
                 {
@@ -67,7 +68,7 @@ public class UpDownGrabLeafHandler : IActionHandler
         // 失败后视角回正
         Simulation.SendInput.Mouse.MiddleButtonClick();
         await Delay(300, ct);
-        Logger.LogError("没有找到四叶印");
+        Logger.LogError(Lang.S["GameTask_11150_27d2de"]);
     }
     
     private bool DetectLeaf()
@@ -92,7 +93,7 @@ public class UpDownGrabLeafHandler : IActionHandler
     
     private async Task InteractWithLeaf(CancellationToken ct)
     {
-        Logger.LogInformation("连续检测到 {syy}，开始交互", "四叶印");
+        Logger.LogInformation(Lang.S["GameTask_11148_0d2629"], "四叶印");
         Simulation.SendInput.SimulateAction(GIActions.InteractionInSomeMode);
         await Delay(200, ct);
         Simulation.SendInput.Mouse.MiddleButtonClick();

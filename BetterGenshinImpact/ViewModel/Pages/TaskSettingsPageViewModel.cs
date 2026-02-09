@@ -57,7 +57,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoGeniusInvokationEnabled;
 
     [ObservableProperty]
-    private string _switchAutoGeniusInvokationButtonText = "启动";
+    private string _switchAutoGeniusInvokationButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private int _autoWoodRoundNum;
@@ -69,7 +69,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoWoodEnabled;
 
     [ObservableProperty]
-    private string _switchAutoWoodButtonText = "启动";
+    private string _switchAutoWoodButtonText = Lang.S["Home_Start"];
 
     //[ObservableProperty]
     //private string[] _combatStrategyList;
@@ -81,7 +81,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoDomainEnabled;
 
     [ObservableProperty]
-    private string _switchAutoDomainButtonText = "启动";
+    private string _switchAutoDomainButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private int _autoStygianOnslaughtRoundNum;
@@ -90,31 +90,31 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoStygianOnslaughtEnabled;
 
     [ObservableProperty]
-    private string _switchAutoStygianOnslaughtButtonText = "启动";
+    private string _switchAutoStygianOnslaughtButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private bool _switchAutoFightEnabled;
 
     [ObservableProperty]
-    private string _switchAutoFightButtonText = "启动";
+    private string _switchAutoFightButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
-    private string _switchAutoTrackButtonText = "启动";
+    private string _switchAutoTrackButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
-    private string _switchAutoTrackPathButtonText = "启动";
+    private string _switchAutoTrackPathButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private bool _switchAutoMusicGameEnabled;
 
     [ObservableProperty]
-    private string _switchAutoMusicGameButtonText = "启动";
+    private string _switchAutoMusicGameButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private bool _switchAutoAlbumEnabled;
 
     [ObservableProperty]
-    private string _switchAutoAlbumButtonText = "启动";
+    private string _switchAutoAlbumButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private List<string> _domainNameList;
@@ -126,7 +126,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
 
     [ObservableProperty]
-    private List<string> _autoMusicLevelList = ["传说", "大师", "困难", "普通", "所有"];
+    private List<string> _autoMusicLevelList = [Lang.S["GameTask_10973_e84ebf"], "大师", "困难", "普通", "所有"];
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;
@@ -138,7 +138,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _switchAutoFishingEnabled;
 
     [ObservableProperty]
-    private string _switchAutoFishingButtonText = "启动";
+    private string _switchAutoFishingButtonText = Lang.S["Home_Start"];
 
     [ObservableProperty]
     private FrozenDictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
@@ -173,7 +173,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private bool _switchGetGridIconsEnabled;
     [ObservableProperty]
-    private string _switchGetGridIconsButtonText = "启动";
+    private string _switchGetGridIconsButtonText = Lang.S["Home_Start"];
     [ObservableProperty]
     private FrozenDictionary<Enum, string> _gridNameDict = Enum.GetValues(typeof(GridScreenName))
         .Cast<GridScreenName>()
@@ -185,13 +185,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .Description ?? e.ToString());
 
     [ObservableProperty]
-    private string _switchGridIconsAccuracyTestButtonText = "运行模型准确率测试";
+    private string _switchGridIconsAccuracyTestButtonText = Lang.S["Task_12443_7eca49"];
 
     [ObservableProperty]
     private bool _switchAutoRedeemCodeEnabled;
 
     [ObservableProperty]
-    private string _switchAutoRedeemCodeButtonText = "启动";
+    private string _switchAutoRedeemCodeButtonText = Lang.S["Home_Start"];
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
@@ -217,7 +217,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             OneDragonFlowViewModel.OnNavigatedTo();
             if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
             {
-                Toast.Warning("未设置任务!");
+                Toast.Warning(Lang.S["Task_NoTaskSet"]);
                 return;
             }
         }
@@ -273,7 +273,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         content = string.Empty;
         if (string.IsNullOrEmpty(Config.AutoGeniusInvokationConfig.StrategyName))
         {
-            Toast.Warning("请先选择策略");
+            Toast.Warning(Lang.S["Task_SelectStrategyFirst"]);
             return true;
         }
 
@@ -281,7 +281,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         if (!File.Exists(path))
         {
-            Toast.Error("策略文件不存在");
+            Toast.Error(Lang.S["Task_StrategyFileNotFound"]);
             return true;
         }
 
@@ -355,20 +355,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         if (string.IsNullOrEmpty(strategyName))
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在下拉列表配置中选择战斗策略！"); });
+            UIDispatcherHelper.Invoke(() => { Toast.Warning(Lang.S["Task_SelectCombatStrategyFirst"]); });
             path = string.Empty;
             return true;
         }
 
         path = Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
-        if ("根据队伍自动选择".Equals(strategyName))
+        if (Lang.S["GameTask_10386_0bfb2b"].Equals(strategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
 
         if (!File.Exists(path) && !Directory.Exists(path))
         {
-            UIDispatcherHelper.Invoke(() => { Toast.Error("当前选择的自动战斗策略文件不存在"); });
+            UIDispatcherHelper.Invoke(() => { Toast.Error(Lang.S["Task_CombatStrategyFileNotFound"]); });
             return true;
         }
 
@@ -554,7 +554,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnOpenArtifactSalvageTestOCRWindow()
     {
-        ArtifactOcrDialog ocrDialog = new ArtifactOcrDialog(0.70, 0.112, 0.275, 0.50, "圣遗物分解", this.Config.AutoArtifactSalvageConfig.JavaScript);
+        ArtifactOcrDialog ocrDialog = new ArtifactOcrDialog(0.70, 0.112, 0.275, 0.50, Lang.S["Task_ArtifactSalvage"], this.Config.AutoArtifactSalvageConfig.JavaScript);
         if (await ocrDialog.CaptureAsync()) { ocrDialog.ShowDialog(); }
     }
 
@@ -564,7 +564,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var list = ScriptControlViewModel.LoadAllJsScriptProjects();
         var stackPanel = ScriptControlViewModel.CreateJsScriptSelectionPanel(list, typeof(RadioButton));
 
-        var result = PromptDialog.Prompt("请选择需要复制的JS脚本", "请选择需要复制的JS脚本", stackPanel, new Size(500, 600));
+        var result = PromptDialog.Prompt(Lang.S["Task_SelectJsScriptToCopy"], Lang.S["Task_SelectJsScriptToCopy"], stackPanel, new Size(500, 600));
         if (!string.IsNullOrEmpty(result))
         {
             string? selectedFolderName = null;
@@ -590,7 +590,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 Text = jsCode,
                 IsReadOnly = true
             };
-            var p = new PromptDialog($"{scriptProject.Manifest.Name}\r\n{scriptProject.Manifest.ShortDescription}\r\n\r\n将覆盖现有的JavaScript，是否继续？", $"预览 - {scriptProject.FolderName}", multilineTextBox, null);
+            var p = new PromptDialog($"{scriptProject.Manifest.Name}\r\n{scriptProject.Manifest.ShortDescription}\r\n\r\n{Lang.S["Task_OverwriteJavaScriptConfirm"]}", string.Format(Lang.S["Task_Preview"], scriptProject.FolderName), multilineTextBox, null);
             p.Height = 600;
             p.MaxWidth = 800;
             p.ShowDialog();
@@ -659,11 +659,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
             AcceptsReturn = true,
             VerticalAlignment = VerticalAlignment.Stretch,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            PlaceholderText = "请在此输入兑换码，每行一条记录"
+            PlaceholderText = Lang.S["Dialog_RedeemCodePlaceholder"]
         };
         var p = new PromptDialog(
-            "输入兑换码",
-            "自动使用兑换码",
+            Lang.S["Dialog_EnterRedeemCode"],
+            Lang.S["Dialog_AutoUseRedeemCode"],
             multilineTextBox,
             null);
         p.Height = 500;
@@ -679,7 +679,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
             if (codes.Count == 0)
             {
-                Toast.Warning("没有有效的兑换码");
+                Toast.Warning(Lang.S["Dialog_NoValidRedeemCode"]);
                 return;
             }
 

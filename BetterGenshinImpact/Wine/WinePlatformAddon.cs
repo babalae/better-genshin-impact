@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Platform.Wine
 {
@@ -40,7 +41,7 @@ namespace BetterGenshinImpact.Platform.Wine
             {
                 // 强制使用软件渲染，解决 WPF 硬件加速在 Wine 下的黑屏/崩溃问题
                 RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-                System.Diagnostics.Debug.WriteLine("【兼容层】Wine环境检测：已启用软件渲染模式。");
+                System.Diagnostics.Debug.WriteLine(Lang.S["Gen_12481_663a6b"]);
             }
         }
 
@@ -89,7 +90,7 @@ namespace BetterGenshinImpact.Platform.Wine
             if (!_pollingTimer.Enabled)
             {
                 _pollingTimer.Start();
-                _logger?.LogInformation($"【兼容层】已启动轮询定时器 (Interval: {intervalMs}ms)");
+                _logger?.LogInformation($"{Lang.S["Gen_12480_3d5a57"]});
             }
         }
 

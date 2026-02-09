@@ -8,6 +8,7 @@ using System.Linq;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Notifier
 {
@@ -130,7 +131,7 @@ namespace BetterGenshinImpact.Service.Notifier
         {
             // 输入验证
             if (string.IsNullOrEmpty(deviceKeys))
-                throw new ArgumentException("必须提供至少一个设备密钥", nameof(deviceKeys));
+                throw new ArgumentException(Lang.S["Service_12117_555c32"], nameof(deviceKeys));
 
             // 确保主机名格式正确
             apiHost = apiHost.TrimEnd('/');
@@ -143,7 +144,7 @@ namespace BetterGenshinImpact.Service.Notifier
             _deviceKeys = deviceKeys.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             
             if (_deviceKeys.Length == 0)
-                throw new ArgumentException("必须提供至少一个有效的设备密钥", nameof(deviceKeys));
+                throw new ArgumentException(Lang.S["Service_12116_66ebb8"], nameof(deviceKeys));
             
             // 初始化默认选项
             _defaultOptions = options ?? new BarkOptions();
@@ -252,7 +253,7 @@ namespace BetterGenshinImpact.Service.Notifier
             }
             catch (System.Exception ex)
             {
-                throw new NotifierException($"Bark通知发送失败: {ex.Message}");
+                throw new NotifierException($"{Lang.S["Service_12115_ee0d98"]});
             }
         }
         
@@ -267,8 +268,8 @@ namespace BetterGenshinImpact.Service.Notifier
                 var requestUrl = $"{_apiBaseUrl}/{deviceKey}";
                 
                 // 输出请求信息用于调试
-                Console.WriteLine($"发送通知到: {requestUrl}");
-                Console.WriteLine($"请求内容: {jsonPayload}");
+                Console.WriteLine($"{Lang.S["Service_12114_f1f483"]});
+                Console.WriteLine($"{Lang.S["Service_12113_417874"]});
                 
                 // 发送到API端点
                 var response = await _httpClient.PostAsync(requestUrl, httpContent);
@@ -278,18 +279,18 @@ namespace BetterGenshinImpact.Service.Notifier
                 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.Error.WriteLine($"服务器返回错误: {(int)response.StatusCode} {response.StatusCode}");
-                    Console.Error.WriteLine($"响应内容: {responseContent}");
-                    throw new HttpRequestException($"服务器返回错误: {(int)response.StatusCode} {response.StatusCode}, 响应内容: {responseContent}");
+                    Console.Error.WriteLine($"{Lang.S["Service_12112_9b5d83"]});
+                    Console.Error.WriteLine($"{Lang.S["Service_12111_a12ba2"]});
+                    throw new HttpRequestException($"{Lang.S["Service_12110_5154f6"]});
                 }
                 
-                Console.WriteLine($"通知发送成功: {responseContent}");
+                Console.WriteLine($"{Lang.S["Service_12109_5888e4"]});
             }
             catch (HttpRequestException ex)
             {
                 // 记录发送失败
-                Console.Error.WriteLine($"设备 {deviceKey} 通知发送失败: {ex.Message}");
-                throw new NotifierException($"Bark通知发送失败 (设备: {deviceKey}): {ex.Message}");
+                Console.Error.WriteLine($"{Lang.S["Service_12108_154d0c"]});
+                throw new NotifierException($"{Lang.S["Service_12107_896fd6"]});
             }
         }
 
@@ -329,7 +330,7 @@ namespace BetterGenshinImpact.Service.Notifier
         /// </summary>
         private string FormatNotificationTitle(BaseNotificationData content)
         {
-            return $"通知 - {content.GetType().Name}";
+            return $"{Lang.S["Service_12106_5713a6"]};
         }
 
         /// <summary>

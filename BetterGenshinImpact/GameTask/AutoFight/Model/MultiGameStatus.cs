@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Threading;
 using OpenCvSharp;
@@ -50,7 +51,7 @@ public class MultiGameStatus
                     2 => 2,
                     3 => 2,
                     4 => 1,
-                    _ => throw new ArgumentOutOfRangeException(nameof(PlayerCount), "自己为主机时，联机总人数异常")
+                    _ => throw new ArgumentOutOfRangeException(nameof(PlayerCount), Lang.S["GameTask_10629_e3d39a"])
                 };
             }
             else
@@ -60,7 +61,7 @@ public class MultiGameStatus
                     2 => 2,
                     3 => 1,
                     4 => 1,
-                    _ => throw new ArgumentOutOfRangeException(nameof(PlayerCount), "进入别人世界时，联机总人数异常")
+                    _ => throw new ArgumentOutOfRangeException(nameof(PlayerCount), Lang.S["GameTask_10628_e08a42"])
                 };
             }
         }

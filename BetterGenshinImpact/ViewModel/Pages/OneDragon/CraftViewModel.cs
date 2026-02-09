@@ -1,8 +1,9 @@
+using BetterGenshinImpact.Helpers;
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.OneDragon;
 
 public partial class CraftViewModel : OneDragonBaseViewModel
 {
-    public override string Title { get; } = "合成浓缩树脂";
+    public override string Title { get; } = Lang.S["Gen_12460_704181"];
 }

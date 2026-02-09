@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -133,7 +134,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
             {
                 PropertyNameCaseInsensitive = true
             });
-            if (apiResponse.Message == "未登录")
+            if (apiResponse.Message == Lang.S["GameTask_11819_63e85d"])
             {
                 throw new NoLoginException();
             }

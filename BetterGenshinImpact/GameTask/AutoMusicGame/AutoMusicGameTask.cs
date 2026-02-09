@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
 public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 {
-    public string Name => "自动音游";
+    public string Name => Lang.S["GameTask_10305_efa51c"];
 
 
     // private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
@@ -54,7 +54,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
     {
         try
         {
-            Logger.LogInformation("开始自动演奏");
+            Logger.LogInformation(Lang.S["GameTask_10994_2fd242"]);
             var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
             // var taskFactory = new TaskFactory();
             var taskList = new List<Task>();
@@ -74,7 +74,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         finally
         {
             Simulation.ReleaseAllKey();
-            Logger.LogInformation("结束自动演奏");
+            Logger.LogInformation(Lang.S["GameTask_10993_232bf8"]);
         }
     }
 
@@ -244,9 +244,9 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     public static void LogScreenResolution()
     {
-        AssertUtils.CheckGameResolution("自动音游");
+        AssertUtils.CheckGameResolution(Lang.S["GameTask_10305_efa51c"]);
 
-        Logger.LogInformation("{Name}：回到游戏主界面时记得关闭自动音游任务！", "千音雅集");
-        Logger.LogWarning("{Name}：默认的样式“轻漾涟漪”是{No}的！需要手动完成几首曲目获得{Money}千音币后兑换并使用胡桃样式“{Hutao}”！", "千音雅集", "不可用", 600, "疏影引蝶映梅红");
+        Logger.LogInformation(Lang.S["GameTask_10992_e0d0e0"], "千音雅集");
+        Logger.LogWarning(Lang.S["GameTask_10988_37050a"], "千音雅集", "不可用", 600, "疏影引蝶映梅红");
     }
 }

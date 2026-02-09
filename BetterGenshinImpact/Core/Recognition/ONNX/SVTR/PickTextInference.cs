@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -28,7 +29,7 @@ public class PickTextInference : ITextInference
         _session = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateInferenceSession(BgiOnnxModel.YapModelTraining,true);
 
         var wordJsonPath = Global.Absolute(@"Assets\Model\Yap\index_2_word.json");
-        if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);
+        if (!File.Exists(wordJsonPath)) throw new FileNotFoundException(Lang.S["Gen_10070_3c9d1c"], wordJsonPath);
 
         var json = File.ReadAllText(wordJsonPath);
         _wordDictionary = JsonSerializer.Deserialize<Dictionary<int, string>>(json) ??
@@ -81,13 +82,13 @@ public class PickTextInference : ITextInference
 
             TimeSpan time = Stopwatch.GetElapsedTime(startTime);
             string result = ans.ToString();
-            Debug.WriteLine($"Yap模型识别 耗时{time.TotalMilliseconds}ms 结果: {result}");
+            Debug.WriteLine($"{Lang.S["Gen_10069_827603"]});
             return result;
         }
     }
 
 
-    [Obsolete("使用CV DNN替代")]
+    [Obsolete(Lang.S["Gen_10068_7789be"])]
     public static Tensor<float> ToTensorUnsafe(Mat src, out IMemoryOwner<float> tensorMemoryOwnser)
     {
         var channels = src.Channels();

@@ -71,7 +71,7 @@ public partial class MaskWindow : Window
     {
         if (_maskWindow == null)
         {
-            throw new Exception("MaskWindow 未初始化");
+            throw new Exception(Lang.S["View_12154_d20571"]);
         }
 
         return _maskWindow;
@@ -320,17 +320,17 @@ public partial class MaskWindow : Window
 
     private void PrintSystemInfo()
     {
-        _logger.LogInformation("更好的原神 {Version}", Global.Version);
+        _logger.LogInformation(Lang.S["View_12153_eeabc5"], Global.Version);
         var systemInfo = TaskContext.Instance().SystemInfo;
         var width = systemInfo.GameScreenSize.Width;
         var height = systemInfo.GameScreenSize.Height;
         var dpiScale = TaskContext.Instance().DpiScale;
-        _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
+        _logger.LogInformation(Lang.S["View_12152_a24fe0"],
             width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
 
         if (width * 9 != height * 16)
         {
-            _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
+            _logger.LogError(Lang.S["View_12151_4ec6a6"]);
         }
 
         AfterburnerWarning();
@@ -346,7 +346,7 @@ public partial class MaskWindow : Window
     {
         if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
         {
-            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！");
+            _logger.LogWarning(Lang.S["View_12150_a04de4"]);
         }
     }
 
@@ -462,7 +462,7 @@ public partial class MaskWindow : Window
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "切换地图标点分类时发生异常");
+            _logger.LogWarning(ex, Lang.S["View_12149_658059"]);
         }
     }
 

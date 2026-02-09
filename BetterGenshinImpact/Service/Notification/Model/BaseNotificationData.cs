@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using System.Text.Json.Serialization;
@@ -53,7 +54,7 @@ public class BaseNotificationData
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogDebug(e, "发送通知失败");
+            TaskControl.Logger.LogDebug(e, Lang.S["Service_12086_b9a8db"]);
         }
     }
 

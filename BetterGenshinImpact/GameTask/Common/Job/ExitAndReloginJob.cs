@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -19,7 +20,7 @@ public class ExitAndReloginJob
 
     public async Task Start(CancellationToken ct)
     {
-        Logger.LogInformation("退出至登录页面");
+        Logger.LogInformation(Lang.S["GameTask_11541_a48ba3"]);
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
 
         // 等待菜单界面出现
@@ -59,14 +60,14 @@ public class ExitAndReloginJob
         await Delay(1000, ct);
 
         //============== 重新登录流程 ==============
-        Logger.LogInformation("点击登录");
+        Logger.LogInformation(Lang.S["GameTask_11540_a1f629"]);
         _login3rdParty.RefreshAvailabled();
         if (_login3rdParty is { Type: Login3rdParty.The3rdPartyType.Bilibili, IsAvailabled: true })
         {
             // await Delay(1, ct);
             Thread.Sleep(100);
             _login3rdParty.Login(ct);
-            Logger.LogInformation("退出重登启用 B 服模式");
+            Logger.LogInformation(Lang.S["GameTask_11539_d31c9d"]);
         }
 
         // 等待进入游戏按钮出现并点击
@@ -79,7 +80,7 @@ public class ExitAndReloginJob
         );
         if (!enterGameAppear)
         {
-            throw new RetryException("未检测进入游戏界面");
+            throw new RetryException(Lang.S["GameTask_11428_e5f6a7"]);
         }
 
         // 点击进入游戏按钮直到它消失
@@ -92,7 +93,7 @@ public class ExitAndReloginJob
         );
         if (!waitForEnterGameRoDisappear)
         {
-            throw new RetryException("未检测到进入游戏按钮消失, 可能未点击成功");
+            throw new RetryException(Lang.S["GameTask_11538_091d61"]);
         }
 
 
@@ -107,11 +108,11 @@ public class ExitAndReloginJob
 
         if (mainUiFound)
         {
-            Logger.LogInformation("退出重新登录结束！");
+            Logger.LogInformation(Lang.S["GameTask_11537_effc6e"]);
         }
         else
         {
-            Logger.LogWarning("未检测到主界面，登录可能未完成");
+            Logger.LogWarning(Lang.S["GameTask_11536_52ede5"]);
         }
 
         await Delay(500, ct);

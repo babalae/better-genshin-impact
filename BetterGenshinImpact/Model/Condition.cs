@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
@@ -10,7 +11,7 @@ public partial class Condition : ObservableObject
     private string? _subject;// 主体
 
     [ObservableProperty]
-    private string _predicate = "包含"; // 谓语
+    private string _predicate = Lang.S["Gen_11924_e13556"]; // 谓语
 
     [ObservableProperty]
     private ObservableCollection<string> _object = []; // 宾语

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -17,7 +18,7 @@ internal partial class GameExePath
 {
     public static readonly FrozenSet<string> GameRegistryPaths = FrozenSet.ToFrozenSet(
     [
-        @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\原神",
+        Lang.S["Gen_11884_15130b"],
         @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Genshin Impact",
         // @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\云·原神",
     ]);
@@ -68,7 +69,7 @@ internal partial class GameExePath
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogWarning(e, "从注册表和启动器查找游戏路径失败");
+            TaskControl.Logger.LogWarning(e, Lang.S["Gen_11883_5ceb4a"]);
         }
 
         return null;

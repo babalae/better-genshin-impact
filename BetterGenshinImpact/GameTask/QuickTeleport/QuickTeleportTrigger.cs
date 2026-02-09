@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -16,7 +17,7 @@ namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
 internal class QuickTeleportTrigger : ITaskTrigger
 {
-    public string Name => "快速传送";
+    public string Name => Lang.S["Trigger_054_5a66c8"];
     public bool IsEnabled { get; set; }
     public int Priority => 21;
     public bool IsExclusive { get; set; }
@@ -151,7 +152,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
 
                 if ((DateTime.Now - _prevClickOptionButtonTime).TotalMilliseconds > 500)
                 {
-                    TaskControl.Logger.LogInformation("快速传送：点击 {Option}", textRegion.Text.Replace(">", ""));
+                    TaskControl.Logger.LogInformation(Lang.S["GameTask_11851_aa9620"], textRegion.Text.Replace(">", ""));
                 }
 
                 _prevClickOptionButtonTime = DateTime.Now;

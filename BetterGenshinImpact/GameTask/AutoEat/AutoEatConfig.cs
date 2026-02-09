@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoEat;
 
@@ -44,7 +45,7 @@ public partial class AutoEatConfig : ObservableObject
     /// 默认的攻击类料理名称
     /// </summary>
     [ObservableProperty]
-    private string? _defaultAtkBoostingDishName = "炸萝卜丸子";
+    private string? _defaultAtkBoostingDishName = Lang.S["GameTask_10482_761e6b"];
 
     /// <summary>
     /// 默认的冒险类料理名称

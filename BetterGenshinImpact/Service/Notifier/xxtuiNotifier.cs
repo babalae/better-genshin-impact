@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +52,7 @@ public class XxtuiNotifier : INotifier
     /// <param name="channels">推送渠道，默认为微信公众号</param>
     public XxtuiNotifier(
         string apiKey,
-        string from = "Better原神",
+        string from = Lang.S["Notify_111_d70fb7"],
         params XxtuiChannel[] channels)
     {
         _httpClient = new HttpClient();
@@ -74,7 +75,7 @@ public class XxtuiNotifier : INotifier
     /// <summary>
     ///     通知名称
     /// </summary>
-    public string Name => "信息推送";
+    public string Name => Lang.S["Service_12131_5ebcfe"];
 
     /// <summary>
     ///     发送通知
@@ -119,12 +120,12 @@ public class XxtuiNotifier : INotifier
 
             // 记录结果（可选）
             var responseContent = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("Xxtui推送结果: " + responseContent);
+            Console.WriteLine(Lang.S["Service_12130_409cbc"] + responseContent);
         }
         catch (System.Exception ex)
         {
             // 记录错误
-            Console.WriteLine("通过Xxtui发送通知失败: " + ex.Message);
+            Console.WriteLine(Lang.S["Service_12129_ceaa5e"] + ex.Message);
         }
     }
 }

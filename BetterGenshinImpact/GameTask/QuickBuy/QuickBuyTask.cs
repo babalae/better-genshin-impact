@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
@@ -18,7 +19,7 @@ public class QuickBuyTask
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先启动");
+            Toast.Warning(Lang.S["GameTask_11820_8e1773"]);
             return;
         }
         if (!SystemControl.IsGenshinImpactActiveByProcess())

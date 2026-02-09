@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Simulator;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,7 +20,7 @@ public class ElementalSkillHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行 {Text}", "释放元素战技");
+        Logger.LogInformation(Lang.S["GameTask_11069_7cad94"], "释放元素战技");
         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
         await Delay(1000, ct);
     }

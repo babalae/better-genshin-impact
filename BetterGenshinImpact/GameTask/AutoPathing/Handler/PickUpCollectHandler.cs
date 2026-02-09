@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,10 +26,10 @@ public class PickUpCollectHandler : IActionHandler
     /// </summary>
     public static readonly string[] PickUpActions =
     [
-        "枫原万叶-长E keydown(E),wait(0.7),keyup(E),attack(0.2),wait(0.5)",
-        "枫原万叶-短E e,attack(0.15)",
-        "琴-短E wait(0.1),keydown(E),wait(0.4),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,-3500),wait(1.8),keyup(E),wait(0.3),click(middle)",
-        "琴-长E wait(0.1),click(middle),keydown(E),click(middle),wait(0.4),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
+        Lang.S["GameTask_11144_a1d8db"],
+        Lang.S["GameTask_11143_74ad29"],
+        Lang.S["GameTask_11142_52d7f9"],
+        Lang.S["GameTask_11141_507738"] +
         "moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
         "moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
         "moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +
@@ -49,12 +50,12 @@ public class PickUpCollectHandler : IActionHandler
     
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("简易策略：执行 {Nhd} 动作","聚集材料");
+        Logger.LogInformation(Lang.S["GameTask_11139_2cbd72"],"聚集材料");
 
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
-            Logger.LogError("队伍识别未初始化成功！");
+            Logger.LogError(Lang.S["GameTask_11074_f6bb4a"]);
             return;
         }
 
@@ -159,7 +160,7 @@ public class PickUpCollectHandler : IActionHandler
                     }
                     else
                     {
-                        Logger.LogError($"未找到角色 {pickerName} 对应的动作");
+                        Logger.LogError($"{Lang.S["GameTask_11138_c1ff0e"]});
                         return; 
                     }
                 }
@@ -176,7 +177,7 @@ public class PickUpCollectHandler : IActionHandler
             }
             else
             {
-                Logger.LogError("未找到ActionParams");
+                Logger.LogError(Lang.S["GameTask_11137_2ef0bc"]);
                 return;
             }
 
@@ -207,7 +208,7 @@ public class PickUpCollectHandler : IActionHandler
         catch (Exception ex)
         {
             // 处理异常
-            Console.WriteLine($"PickUpCollectHandler 异常: {ex.Message}");
+            Console.WriteLine($"{Lang.S["GameTask_11136_f6c1a9"]});
         }
     }
     

@@ -25,7 +25,7 @@ class CultureInfoNameToKVPConverter : IValueConverter
         }
 
         var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ?? throw new NullReferenceException();
-        var description = stringLocalizer.WithCultureGet(new CultureInfo(cultureInfoName), "简体中文");
+        var description = stringLocalizer.WithCultureGet(new CultureInfo(cultureInfoName), Lang.S["View_12159_d688a3"]);
 
         return new KeyValuePair<string, string>(cultureInfoName, description);
     }

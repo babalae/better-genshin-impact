@@ -213,7 +213,7 @@ public partial class App : Application
         {
             // DEBUG only, no overhead
             Debug.WriteLine(ex);
-            ConsoleHelper.WriteError($"应用程序启动失败: {ex.Message}");
+            ConsoleHelper.WriteError($"{Lang.S["App_10001_2f12f9"]}: {ex.Message}");
 
             if (Debugger.IsAttached)
             {
@@ -229,7 +229,7 @@ public partial class App : Application
     {
         base.OnExit(e);
 
-        ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
+        ConsoleHelper.WriteLine(Lang.S["App_10000_0b8bc1"]);
         
         TempManager.CleanUp();
 

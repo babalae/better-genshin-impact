@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
@@ -18,27 +19,27 @@ public class MiningHandler : IActionHandler
 {
     private readonly string[] _miningActions =
     [
-        "爱诺 attack(0.8)",
-        "诺艾尔 attack(1.25)",
-        "玛薇卡 attack(0.20),j,wait(0.5),attack(0.6)",
-        "迪希雅 attack(0.6),mousedown,wait(2.1),mouseup,j",
-        "娜维娅 attack(1.25)",
-        "辛焱 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "重云 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "荒泷一斗 attack(0.1),charge(1.9),j,wait(0.5),attack(0.2)",
-        "基尼奇 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "菲米尼 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "卡维 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "优菈 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "嘉明 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "多莉 attack(2.0)",
-        "北斗 attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8),attack(0.28),jump,wait(0.8)",
-        "早柚 attack(0.23),j,wait(0.6),attack(0.23),j,wait(0.6),attack(0.23),j,wait(0.6),attack(0.23),j,wait(0.6)",
-        "迪卢克 charge(3.15),j",
-        "坎蒂丝 e(hold,wait)",
-        "雷泽 e(hold,wait)",
-        "凝光 attack(4.0)",
-        "钟离 e(hold,wait)"
+        Lang.S["GameTask_11131_5759b3"],
+        Lang.S["GameTask_11130_5dd485"],
+        Lang.S["GameTask_11129_42f87a"],
+        Lang.S["GameTask_11128_12572e"],
+        Lang.S["GameTask_11127_d4635d"],
+        Lang.S["GameTask_11126_3ded08"],
+        Lang.S["GameTask_11125_9e6c85"],
+        Lang.S["GameTask_11124_01ebc6"],
+        Lang.S["GameTask_11123_93161b"],
+        Lang.S["GameTask_11122_21f83e"],
+        Lang.S["GameTask_11121_cf929b"],
+        Lang.S["GameTask_11120_1fa42f"],
+        Lang.S["GameTask_11119_316eea"],
+        Lang.S["GameTask_11118_a5680c"],
+        Lang.S["GameTask_11117_96c2d8"],
+        Lang.S["GameTask_11116_08a1f1"],
+        Lang.S["GameTask_11115_8a2791"],
+        Lang.S["GameTask_11114_d74d37"],
+        Lang.S["GameTask_11113_79f01a"],
+        Lang.S["GameTask_11112_827e70"],
+        Lang.S["GameTask_11111_0cfe4a"]
     ];
     
 
@@ -49,7 +50,7 @@ public class MiningHandler : IActionHandler
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
-            Logger.LogError("队伍识别未初始化成功！");
+            Logger.LogError(Lang.S["GameTask_11074_f6bb4a"]);
             return;
         }
 

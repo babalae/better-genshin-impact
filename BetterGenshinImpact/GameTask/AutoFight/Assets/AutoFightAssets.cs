@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.Helpers;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -106,20 +107,20 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
 
         AvatarCostumeMap = new Dictionary<string, string>
         {
-            { "Flamme", "殷红终夜" },
-            { "Bamboo", "雨化竹身" },
-            { "Dai", "冷花幽露" },
-            { "Yu", "玄玉瑶芳" },
-            { "Dancer", "帆影游风" },
-            { "Witch", "琪花星烛" },
-            { "Wic", "和谐" },
-            { "Studentin", "叶隐芳名" },
-            { "Fruhling", "花时来信" },
-            { "Highness", "极夜真梦" },
-            { "Feather", "霓裾翩跹" },
-            { "Floral", "纱中幽兰" },
-            { "Summertime", "闪耀协奏" },
-            { "Sea", "海风之梦" },
+            { "Flamme", Lang.S["GameTask_10588_4138a4"] },
+            { "Bamboo", Lang.S["GameTask_10587_a7e489"] },
+            { "Dai", Lang.S["GameTask_10586_7193d7"] },
+            { "Yu", Lang.S["GameTask_10585_d21af2"] },
+            { "Dancer", Lang.S["GameTask_10584_fe526e"] },
+            { "Witch", Lang.S["GameTask_10583_66a19c"] },
+            { "Wic", Lang.S["GameTask_10582_b511eb"] },
+            { "Studentin", Lang.S["GameTask_10581_8e8770"] },
+            { "Fruhling", Lang.S["GameTask_10580_7e02c9"] },
+            { "Highness", Lang.S["GameTask_10579_533c7b"] },
+            { "Feather", Lang.S["GameTask_10578_5beda6"] },
+            { "Floral", Lang.S["GameTask_10577_d1968b"] },
+            { "Summertime", Lang.S["GameTask_10576_92f88e"] },
+            { "Sea", Lang.S["GameTask_10575_0cb73f"] },
         };
 
         // 联机

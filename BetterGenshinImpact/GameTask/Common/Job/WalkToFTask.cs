@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
@@ -38,11 +39,11 @@ public class WalkToFTask
                     Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
                 }
 
-                Logger.LogInformation("检测到交互键");
+                Logger.LogInformation(Lang.S["GameTask_10423_d4417d"]);
             }
             else
             {
-                Logger.LogWarning("前往目标[F]超时！");
+                Logger.LogWarning(Lang.S["GameTask_11652_ea2c51"]);
             }
 
             return res;

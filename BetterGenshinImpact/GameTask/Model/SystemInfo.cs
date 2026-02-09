@@ -59,7 +59,7 @@ namespace BetterGenshinImpact.GameTask.Model
         public SystemInfo(IntPtr hWnd)
         {
             var p = SystemControl.GetProcessByHandle(hWnd);
-            GameProcess = p ?? throw new ArgumentException("通过句柄获取游戏进程失败");
+            GameProcess = p ?? throw new ArgumentException(Lang.S["GameTask_11824_36e662"]);
             GameProcessName = GameProcess.ProcessName;
             GameProcessId = GameProcess.Id;
 
@@ -69,7 +69,7 @@ namespace BetterGenshinImpact.GameTask.Model
             // 判断最小化
             if (User32.IsIconic(hWnd))
             {
-                throw new ArgumentException("游戏窗口不能最小化");
+                throw new ArgumentException(Lang.S["GameTask_11823_0763d1"]);
             }
 
             // 注意截图区域要和游戏窗口实际区域一致
@@ -77,7 +77,7 @@ namespace BetterGenshinImpact.GameTask.Model
             GameScreenSize = SystemControl.GetGameScreenRect(hWnd);
             if (GameScreenSize.Width < 800 || GameScreenSize.Height < 600)
             {
-                throw new ArgumentException("游戏窗口分辨率不得小于 800x600 ！");
+                throw new ArgumentException(Lang.S["GameTask_11822_b02ee8"]);
             }
 
             // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
@@ -61,15 +62,15 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         public override string ToString()
         {
             StringBuilder sb = new();
-            sb.Append($"角色{Index}，");
+            sb.Append($"{Lang.S["GameTask_10941_b98c8c"]});
             if (Hp != -2)
             {
                 sb.Append($"HP={Hp}，");
             }
-            sb.Append($"充能={EnergyByRecognition}，");
+            sb.Append($"{Lang.S["GameTask_10940_b7dc48"]});
             if (StatusList?.Count > 0)
             {
-                sb.Append($"状态：{string.Join(",", StatusList)}");
+                sb.Append(Lang.S["GameTask_10939_9cfd4f"],", StatusList)}");
             }
 
             return sb.ToString();
@@ -102,7 +103,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// <returns></returns>
         public void SwitchWhenTakenOut()
         {
-            _logger.LogInformation("有角色被打败,当前选择{Name}出战", Name);
+            _logger.LogInformation(Lang.S["GameTask_10938_8febaf"], Name);
             var p = GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint());
             // 选择角色
             p.Click();
@@ -121,7 +122,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             }
             else
             {
-                _logger.LogWarning("没有足够的手牌或元素骰子释放技能");
+                _logger.LogWarning(Lang.S["GameTask_10937_c0fcc0"]);
                 return false;
             }
         }

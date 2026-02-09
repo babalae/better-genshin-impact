@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.Service.Notifier;
 
 public class WindowsUwpNotifier : INotifier
 {
-    public string Name => "Windows通知";
+    public string Name => Lang.S["Service_12128_87dbb4"];
 
     public Task SendAsync(BaseNotificationData data)
     {

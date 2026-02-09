@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -244,7 +245,7 @@ public partial class NotificationConfig : ObservableObject
     /// <summary>
     ///     xx信息推送通知来源
     /// </summary>
-    [ObservableProperty] private string _xxtuiFrom = "Better原神";
+    [ObservableProperty] private string _xxtuiFrom = Lang.S["Notify_111_d70fb7"];
 
     /// <summary>
     ///     信息推送通知是否启用
@@ -264,7 +265,7 @@ public partial class NotificationConfig : ObservableObject
     /// <summary>
     ///     Discord Webhook用户名
     /// </summary>
-    [ObservableProperty] private string _discordWebhookUsername = "BetterGI·更好的原神";
+    [ObservableProperty] private string _discordWebhookUsername = Lang.S["Service_12077_56fb4d"];
 
     /// <summary>
     ///     Discord Webhook头像地址

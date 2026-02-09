@@ -211,7 +211,7 @@ public static partial class Bv
         using var scaleRa = region.Find(QuickTeleportAssets.Instance.MapScaleButtonRo);
         if (scaleRa.IsEmpty())
         {
-            throw new Exception("当前未处于大地图界面，不能使用GetBigMapScale方法");
+            throw new Exception(Lang.S["GameTask_11484_47b6c8"]);
         }
 
         // 原先这里的起止区间和config里写死的值差1
@@ -256,7 +256,7 @@ public static partial class Bv
 
             CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
             IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
-            string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
+            string revival = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_11483_5456ff"]);
             if (list.Any(r => r.Text.Contains(revival)))
             {
                 return true;
@@ -278,7 +278,7 @@ public static partial class Bv
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = new Rect(0, region.Height / 4 * 3, region.Width, region.Height / 4)
         });
-        using var r = list.FirstOrDefault(r => r.Text.Contains("复苏"));
+        using var r = list.FirstOrDefault(r => r.Text.Contains(Lang.S["GameTask_11483_5456ff"]));
         if (r != null)
         {
             r.Click();

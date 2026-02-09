@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -19,8 +20,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 /// </summary>
 public class OneKeyFightTask : Singleton<OneKeyFightTask>
 {
-    public static readonly string HoldOnMode = "按住时重复";
-    public static readonly string TickMode = "触发";
+    public static readonly string HoldOnMode = Lang.S["GameTask_10574_fbbbfc"];
+    public static readonly string TickMode = Lang.S["GameTask_10573_d6c6e0"];
 
     private Dictionary<string, List<CombatCommand>>? _avatarMacros;
     private CancellationTokenSource? _cts = null;
@@ -45,7 +46,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             _activeMacroPriority = TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
             _avatarMacros = LoadAvatarMacros();
-            Logger.LogInformation("加载一键宏配置完成");
+            Logger.LogInformation(Lang.S["GameTask_10572_18072e"]);
         }
 
         if (IsHoldOnMode())
@@ -134,12 +135,12 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_currentCombatScenes == null)
             {
-                Logger.LogError("首次队伍角色识别失败");
+                Logger.LogError(Lang.S["GameTask_10571_e91fe3"]);
                 return Task.CompletedTask;
             }
             else
             {
-                Logger.LogWarning("队伍角色识别失败，使用上次识别结果，队伍未切换时无影响");
+                Logger.LogWarning(Lang.S["GameTask_10570_8687cd"]);
             }
         }
         else
@@ -152,14 +153,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         var avatarName = _currentCombatScenes.CurrentAvatar(true, imageRegion, ct);
         if (avatarName is null)
         {
-            Logger.LogError("无法识别出战角色");
+            Logger.LogError(Lang.S["GameTask_10569_789fb8"]);
             return Task.CompletedTask;
         }
 
         var activeAvatar = _currentCombatScenes.SelectAvatar(avatarName);
         if (activeAvatar is null)
         {
-            Logger.LogError("获取出战角色{Name}失败", avatarName);
+            Logger.LogError(Lang.S["GameTask_10568_4fbce4"], avatarName);
             return Task.CompletedTask;
         }
 
@@ -170,7 +171,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                 var round = 1;
                 while (!ct.IsCancellationRequested && IsEnabled())
                 {
-                    Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
+                    Logger.LogInformation(Lang.S["GameTask_10567_9e0037"], activeAvatar.Name, round);
                     if (IsHoldOnMode() && !_isKeyDown)
                     {
                         break;
@@ -189,12 +190,12 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                     round++;
                 }
 
-                Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
+                Logger.LogInformation(Lang.S["GameTask_10566_c9299e"], activeAvatar.Name);
             });
         }
         else
         {
-            Logger.LogWarning("→ {Name}配置[{Priority}]为空，请先配置一键宏", activeAvatar.Name, _activeMacroPriority);
+            Logger.LogWarning(Lang.S["GameTask_10565_31eec4"], activeAvatar.Name, _activeMacroPriority);
             return Task.CompletedTask;
         }
     }

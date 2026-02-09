@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
@@ -25,7 +26,7 @@ public class SettingsContainer
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogDebug(e, "读取原神注册表信息出错");
+            TaskControl.Logger.LogDebug(e, Lang.S["Settings_11887_688216"]);
         }
     }
 

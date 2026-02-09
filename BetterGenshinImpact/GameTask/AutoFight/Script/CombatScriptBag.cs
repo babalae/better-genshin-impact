@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using Microsoft.Extensions.Logging;
 using System;
@@ -30,7 +31,7 @@ public class CombatScriptBag(List<CombatScript> combatScripts)
                 if (matchCount != avatars.Count) continue;
                 // Logger.LogInformation("匹配到战斗脚本：{Name}，共{Cnt}条指令，涉及角色：{Str}", 
                 // combatScript.Name, combatScript.CombatCommands.Count, string.Join(",", combatScript.AvatarNames)); 
-                Logger.LogInformation("匹配到战斗脚本：{Name}", combatScript.Name); 
+                Logger.LogInformation(Lang.S["GameTask_10653_bef8e5"], combatScript.Name); 
                 return combatScript.CombatCommands;
             }
 
@@ -42,10 +43,10 @@ public class CombatScriptBag(List<CombatScript> combatScripts)
         CombatScripts.Sort((a, b) => b.MatchCount.CompareTo(a.MatchCount));
         if (CombatScripts[0].MatchCount == 0)
         {
-            throw new Exception("未匹配到任何战斗脚本");
+            throw new Exception(Lang.S["GameTask_10652_6dbf4b"]);
         }
 
-        Logger.LogWarning("未完整匹配到四人队伍，使用匹配度最高的队伍：{Name}", CombatScripts[0].Name);
+        Logger.LogWarning(Lang.S["GameTask_10651_ca33ea"], CombatScripts[0].Name);
         return CombatScripts[0].CombatCommands;
     }
 }

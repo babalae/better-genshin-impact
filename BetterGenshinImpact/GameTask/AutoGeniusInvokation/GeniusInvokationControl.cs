@@ -112,14 +112,14 @@ public class GeniusInvokationControl
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
                 var name = SystemControl.GetActiveByProcess();
-                _logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，暂停");
-                throw new RetryException("当前获取焦点的窗口不是原神");
+                _logger.LogWarning($"{Lang.S["GameTask_10897_f60dcf"]});
+                throw new RetryException(Lang.S["GameTask_10896_27f7d3"]);
             }
         }, TimeSpan.FromSeconds(1), 100);
 
         if (_ct is { IsCancellationRequested: true })
         {
-            throw new TaskCanceledException("任务取消");
+            throw new TaskCanceledException(Lang.S["GameTask_10895_dc49fc"]);
         }
     }
 
@@ -127,23 +127,23 @@ public class GeniusInvokationControl
     {
         // 1. 选择初始手牌
         Sleep(1000);
-        _logger.LogInformation("开始选择初始手牌");
+        _logger.LogInformation(Lang.S["GameTask_10894_0f7963"]);
         while (!ClickConfirm())
         {
             // 循环等待选择卡牌画面
             Sleep(1000);
         }
 
-        _logger.LogInformation("点击确认");
+        _logger.LogInformation(Lang.S["GameTask_10893_6ed498"]);
 
         // 2. 选择出战角色
         // 此处选择第2个角色 雷神
-        _logger.LogInformation("等待3s对局准备...");
+        _logger.LogInformation(Lang.S["GameTask_10892_4d9d3c"]);
         Sleep(3000);
 
         // 是否是再角色出战选择界面
         NewRetry.Do(IsInCharacterPickRetryThrowable, TimeSpan.FromSeconds(0.8), 20);
-        _logger.LogInformation("识别到已经在角色出战界面，等待1.5s");
+        _logger.LogInformation(Lang.S["GameTask_10891_cd1dcd"]);
         Sleep(1500);
     }
 
@@ -165,7 +165,7 @@ public class GeniusInvokationControl
         // 打印排序后的顺序
         var msg = _assets.ActionPhaseDiceMats.Aggregate("",
             (current, kvp) => current + $"{kvp.Key.ToElementalType().ToChinese()}| ");
-        _logger.LogDebug("当前骰子排序：{Msg}", msg);
+        _logger.LogDebug(Lang.S["GameTask_10890_c84958"], msg);
     }
 
     /// <summary>
@@ -234,13 +234,13 @@ public class GeniusInvokationControl
 
         if (y1 == 0 || y2 == 0)
         {
-            _logger.LogWarning("未识别到角色卡牌区域（Y轴）");
+            _logger.LogWarning(Lang.S["GameTask_10889_7694c7"]);
             if (OutputImageWhenError)
             {
                 Cv2.ImWrite("log\\character_card_error.jpg", bottomMat);
             }
 
-            throw new RetryException("未获取到角色区域");
+            throw new RetryException(Lang.S["GameTask_10887_291576"]);
         }
 
         //if (y1 < windowRect.Height / 2 || y2 < windowRect.Height / 2)
@@ -292,13 +292,13 @@ public class GeniusInvokationControl
 
         if (colLines.Count != 6)
         {
-            _logger.LogWarning("未识别到角色卡牌区域（X轴识别点{Count}个）", colLines.Count);
+            _logger.LogWarning(Lang.S["GameTask_10888_8e9d99"], colLines.Count);
             if (OutputImageWhenError)
             {
                 Cv2.ImWrite("log\\character_card_error.jpg", bottomMat);
             }
 
-            throw new RetryException("未获取到角色区域");
+            throw new RetryException(Lang.S["GameTask_10887_291576"]);
         }
 
         var rects = new List<Rect>();
@@ -314,7 +314,7 @@ public class GeniusInvokationControl
 
         if (rects == null || rects.Count != 3)
         {
-            throw new RetryException("未获取到角色区域");
+            throw new RetryException(Lang.S["GameTask_10887_291576"]);
         }
 
         //_logger.LogInformation("识别到角色卡牌区域:{Rects}", rects);
@@ -406,12 +406,12 @@ public class GeniusInvokationControl
 
         if (count != 8)
         {
-            _logger.LogDebug("投骰子界面识别到了{Count}个骰子,等待重试", count);
+            _logger.LogDebug(Lang.S["GameTask_10886_169a79"], count);
             return false;
         }
         else
         {
-            _logger.LogInformation("投骰子界面识别到了{Count}个骰子", count);
+            _logger.LogInformation(Lang.S["GameTask_10885_ad9699"], count);
         }
 
         int upper = 0, lower = 0;
@@ -432,7 +432,7 @@ public class GeniusInvokationControl
 
         if (upper != 4 || lower != 4)
         {
-            _logger.LogInformation("骰子识别位置错误,重试");
+            _logger.LogInformation(Lang.S["GameTask_10884_85eff7"]);
             return false;
         }
 
@@ -475,12 +475,12 @@ public class GeniusInvokationControl
     public void ReRollDice(params ElementalType[] holdElementalTypes)
     {
         // 3.重投骰子
-        _logger.LogInformation("等待5s投骰动画...");
+        _logger.LogInformation(Lang.S["GameTask_10883_c7ce60"]);
 
         var msg = holdElementalTypes.Aggregate(" ",
             (current, elementalType) => current + (elementalType.ToChinese() + " "));
 
-        _logger.LogInformation("保留{Msg}骰子", msg);
+        _logger.LogInformation(Lang.S["GameTask_10882_358e3d"], msg);
         Sleep(5000);
         var retryCount = 0;
         // 保留 x、万能 骰子
@@ -490,25 +490,25 @@ public class GeniusInvokationControl
 
             if (IsDuelEnd())
             {
-                throw new NormalEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException(Lang.S["GameTask_10865_c13c4d"]);
             }
 
             //MyLogger.Debug("识别骰子数量不正确,第{}次重试中...", retryCount);
             Sleep(500);
             if (retryCount > 35)
             {
-                throw new System.Exception("识别骰子数量不正确,重试超时,停止自动打牌！");
+                throw new System.Exception(Lang.S["GameTask_10881_842b73"]);
             }
         }
 
         ClickConfirm();
-        _logger.LogInformation("选择需要重投的骰子后点击确认完毕");
+        _logger.LogInformation(Lang.S["GameTask_10880_bca152"]);
 
         Sleep(1000);
         // 鼠标移动到中心
         ClickGameWindowCenter();
 
-        _logger.LogInformation("等待5s对方重投");
+        _logger.LogInformation(Lang.S["GameTask_10879_8da2f8"]);
         Sleep(5000);
     }
 
@@ -538,7 +538,7 @@ public class GeniusInvokationControl
             msg += $"{kvp.Key.ToElementalType().ToChinese()} {kvp.Value.Count}| ";
         }
 
-        _logger.LogInformation("当前骰子状态：{Res}", msg);
+        _logger.LogInformation(Lang.S["GameTask_10878_9841bd"], msg);
         return result;
     }
 
@@ -617,7 +617,7 @@ public class GeniusInvokationControl
         if (foundRectArea.IsEmpty())
         {
             // 多点几次保证点击到
-            _logger.LogInformation("使用技能{SkillIndex}", skillIndex);
+            _logger.LogInformation(Lang.S["GameTask_10877_ee164f"], skillIndex);
             ClickExtension.Click(x, y);
             Sleep(500);
             ClickGameWindowCenter(); // 复位
@@ -647,7 +647,7 @@ public class GeniusInvokationControl
             {
                 if (retryCount > 20)
                 {
-                    throw new System.Exception("骰子数量与预期不符，重试次数过多，可能出现了未知错误！");
+                    throw new System.Exception(Lang.S["GameTask_10876_4e68f2"]);
                 }
 
                 if (dCount == 9 && duel.CurrentDiceCount == 8 && diceStatus[ElementalType.Omni.ToLowerString()] > 0)
@@ -658,13 +658,13 @@ public class GeniusInvokationControl
                         // 支援区存在 鲸井小弟 情况下骰子数量增加导致识别出错的问题 #1
                         // 5次重试后仍然是9个骰子并且至少有一个万能骰子，出现多识别的情况是很稀少的，此时可以基本认为 支援区存在 鲸井小弟
                         // TODO : 但是这个方法并不是100%准确，后续需要添加支援区判断
-                        _logger.LogInformation("期望的骰子数量8，应为开局期望，重试多次后累计实际识别9个骰子的情况为5次");
+                        _logger.LogInformation(Lang.S["GameTask_10875_3de248"]);
                         duel.CurrentDiceCount = 9; // 修正当前骰子数量
                         break;
                     }
                 }
 
-                _logger.LogInformation("当前骰子数量{Count}与期望的骰子数量{Expect}不相等，重试", dCount, duel.CurrentDiceCount);
+                _logger.LogInformation(Lang.S["GameTask_10874_204828"], dCount, duel.CurrentDiceCount);
                 diceStatus = ActionPhaseDice();
                 retryCount++;
                 Sleep(1000);
@@ -681,23 +681,23 @@ public class GeniusInvokationControl
         {
             if (duel.CurrentCardCount < needSpecifyElementDiceCount)
             {
-                _logger.LogInformation("当前手牌数{Current}小于需要烧牌数量{Expect}，无法释放技能", duel.CurrentCardCount,
+                _logger.LogInformation(Lang.S["GameTask_10873_5f58b8"], duel.CurrentCardCount,
                     needSpecifyElementDiceCount);
                 return false;
             }
 
-            _logger.LogInformation("当前需要的元素骰子数量不足{Cost}个，还缺{Lack}个，当前手牌数{Current}，烧牌", diceCost,
+            _logger.LogInformation(Lang.S["GameTask_10872_d6aac3"], diceCost,
                 needSpecifyElementDiceCount, duel.CurrentCardCount);
 
             for (var i = 0; i < needSpecifyElementDiceCount; i++)
             {
-                _logger.LogInformation("- 烧第{Count}张牌", i + 1);
+                _logger.LogInformation(Lang.S["GameTask_10871_f93cb4"], i + 1);
                 ActionPhaseElementalTuning(duel.CurrentCardCount);
                 Sleep(1200);
                 var res = ActionPhaseElementalTuningConfirm();
                 if (res == false)
                 {
-                    _logger.LogWarning("烧牌失败，重试");
+                    _logger.LogWarning(Lang.S["GameTask_10870_24efa2"]);
                     i--;
                     ClickGameWindowCenter(); // 复位
                     Sleep(1000);
@@ -744,7 +744,7 @@ public class GeniusInvokationControl
     {
         if (!IsInCharacterPick())
         {
-            throw new RetryException("当前不在角色出战选择界面");
+            throw new RetryException(Lang.S["GameTask_10869_bc730d"]);
         }
     }
 
@@ -801,7 +801,7 @@ public class GeniusInvokationControl
     {
         if (rects == null || rects.Count != 3)
         {
-            throw new System.Exception("未能获取到我方角色卡位置");
+            throw new System.Exception(Lang.S["GameTask_10858_c23ac7"]);
         }
 
         var pList = MatchTemplateHelper.MatchTemplateMulti(CaptureGameGreyMat(), _assets.CharacterDefeatedMat, 0.8);
@@ -867,7 +867,7 @@ public class GeniusInvokationControl
     {
         if (waitTime > 0)
         {
-            _logger.LogInformation("等待对方行动{Time}s", waitTime / 1000);
+            _logger.LogInformation(Lang.S["GameTask_10868_e4af6f"], waitTime / 1000);
             Sleep(waitTime);
         }
 
@@ -894,16 +894,16 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new NormalEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException(Lang.S["GameTask_10865_c13c4d"]);
             }
 
             retryCount++;
             if (retryCount >= 60)
             {
-                throw new System.Exception("等待对方行动超时,停止自动打牌！");
+                throw new System.Exception(Lang.S["GameTask_10863_6b5a03"]);
             }
 
-            _logger.LogInformation("对方仍在行动中,继续等待(次数{Count})...", retryCount);
+            _logger.LogInformation(Lang.S["GameTask_10867_17f6a5"], retryCount);
             Sleep(1000);
         }
     }
@@ -922,11 +922,11 @@ public class GeniusInvokationControl
         {
             if (IsInOpponentAction())
             {
-                _logger.LogInformation("对方仍在行动中,继续等待(次数{Count})...", retryCount);
+                _logger.LogInformation(Lang.S["GameTask_10867_17f6a5"], retryCount);
             }
             else if (IsEndPhase())
             {
-                _logger.LogInformation("正在回合结束阶段,继续等待(次数{Count})...", retryCount);
+                _logger.LogInformation(Lang.S["GameTask_10866_f78bb2"], retryCount);
             }
             else if (IsInMyAction())
             {
@@ -937,7 +937,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new NormalEndException("对战已结束,停止自动打牌！");
+                throw new NormalEndException(Lang.S["GameTask_10865_c13c4d"]);
             }
             else
             {
@@ -948,14 +948,14 @@ public class GeniusInvokationControl
                 }
                 else
                 {
-                    _logger.LogError("等待对方回合 和 回合结束阶段 时程序未识别到有效内容(次数{Count})...", retryCount);
+                    _logger.LogError(Lang.S["GameTask_10864_f1389f"], retryCount);
                 }
             }
 
             retryCount++;
             if (retryCount >= 60)
             {
-                throw new System.Exception("等待对方行动超时,停止自动打牌！");
+                throw new System.Exception(Lang.S["GameTask_10863_6b5a03"]);
             }
 
             Sleep(1000 + rd.Next(1, 500));
@@ -969,7 +969,7 @@ public class GeniusInvokationControl
     /// <exception cref="NormalEndException"></exception>
     public void DoWhenCharacterDefeated(Duel duel)
     {
-        _logger.LogInformation("当前出战角色被打败，需要选择新的出战角色");
+        _logger.LogInformation(Lang.S["GameTask_10862_297f3c"]);
         var defeatedArray = WhatCharacterDefeated(duel.CharacterCardRects);
 
         for (var i = defeatedArray.Length - 1; i >= 0; i--)
@@ -980,7 +980,7 @@ public class GeniusInvokationControl
         var orderList = duel.GetCharacterSwitchOrder();
         if (orderList.Count == 0)
         {
-            throw new NormalEndException("后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)");
+            throw new NormalEndException(Lang.S["GameTask_10861_ee9a9d"]);
         }
 
         foreach (var j in orderList)
@@ -1025,7 +1025,7 @@ public class GeniusInvokationControl
 
         character.Hp = hp;
 
-        _logger.LogInformation("当前出战{Character}", character);
+        _logger.LogInformation(Lang.S["GameTask_10860_ebbd7a"], character);
     }
 
     public Character WhichCharacterActiveWithRetry(Duel duel)
@@ -1044,7 +1044,7 @@ public class GeniusInvokationControl
     {
         if (duel.CharacterCardRects == null || duel.CharacterCardRects.Count != 3)
         {
-            throw new System.Exception("未能获取到我方角色卡位置");
+            throw new System.Exception(Lang.S["GameTask_10858_c23ac7"]);
         }
 
         var srcMat = CaptureGameMat();
@@ -1107,14 +1107,14 @@ public class GeniusInvokationControl
             }
         }
 
-        throw new RetryException("未识别到个出战角色");
+        throw new RetryException(Lang.S["GameTask_10859_348c55"]);
     }
 
     public Character WhichCharacterActiveByHpOcr(Duel duel)
     {
         if (duel.CharacterCardRects == null || duel.CharacterCardRects.Count != 3)
         {
-            throw new System.Exception("未能获取到我方角色卡位置");
+            throw new System.Exception(Lang.S["GameTask_10858_c23ac7"]);
         }
 
         var imageRegion = CaptureToRectArea();
@@ -1136,7 +1136,7 @@ public class GeniusInvokationControl
                 _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
             var text = OcrFactory.Paddle.Ocr(hpMat);
             //Cv2.ImWrite($"log\\hp_n_{i}.jpg", hpMat);
-            Debug.WriteLine($"角色{i}未出战HP位置识别结果{text}");
+            Debug.WriteLine($"{Lang.S["GameTask_10857_7a4fcf"]});
             if (!string.IsNullOrWhiteSpace(text))
             {
                 // 说明这个角色未出战
@@ -1149,7 +1149,7 @@ public class GeniusInvokationControl
                     _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
                 text = OcrFactory.Paddle.Ocr(hpMat);
                 //Cv2.ImWrite($"log\\hp_active_{i}.jpg", hpMat);
-                Debug.WriteLine($"角色{i}出战HP位置识别结果{text}");
+                Debug.WriteLine($"{Lang.S["GameTask_10856_25c12d"]});
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     var hp = -2;
@@ -1170,14 +1170,14 @@ public class GeniusInvokationControl
         {
             // 找到并不等1的
             var index = hpArray.ToList().FindIndex(x => x != 1);
-            Debug.WriteLine($"通过OCR HP的方式没有识别到出战角色，但是通过排除法确认角色{index + 1}处于出战状态！");
+            Debug.WriteLine($"{Lang.S["GameTask_10855_aff45a"]});
             duel.CurrentCharacter = duel.Characters[index + 1];
             AppendCharacterStatus(duel.CurrentCharacter, imageRegion.CacheGreyMat);
             return duel.CurrentCharacter;
         }
 
         // 上面判断失效
-        _logger.LogWarning("通过OCR HP的方式未识别到出战角色 {Array}", hpArray);
+        _logger.LogWarning(Lang.S["GameTask_10854_e7e1f0"], hpArray);
         return NewRetry.Do(() => WhichCharacterActiveByHpWord(duel), TimeSpan.FromSeconds(0.3), 2);
     }
 
@@ -1228,7 +1228,7 @@ public class GeniusInvokationControl
             .Replace("⑮", "15");
         if (string.IsNullOrWhiteSpace(text))
         {
-            _logger.LogWarning("通过OCR识别当前骰子数量结果为空,无影响");
+            _logger.LogWarning(Lang.S["GameTask_10853_79d9ae"]);
 #if DEBUG
             Cv2.ImWrite($"log\\dice_count_empty{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
 #endif
@@ -1236,12 +1236,12 @@ public class GeniusInvokationControl
         }
         else if (RegexHelper.FullNumberRegex().IsMatch(text))
         {
-            _logger.LogInformation("通过OCR识别当前骰子数量: {Text}", text);
+            _logger.LogInformation(Lang.S["GameTask_10852_1a71f7"], text);
             return int.Parse(text);
         }
         else
         {
-            _logger.LogWarning("通过OCR识别当前骰子结果: {Text}", text);
+            _logger.LogWarning(Lang.S["GameTask_10851_03c841"], text);
 #if DEBUG
             Cv2.ImWrite($"log\\dice_count_error_{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.jpg", diceCountMap);
 #endif

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Concurrent;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
@@ -32,7 +33,7 @@ public class ActionFactory
                 "set_time" => new SetTimeHandler(),
                 "use_gadget" => new UseGadgetHandler(),
                 "pick_up_collect" => new PickUpCollectHandler(),
-                _ => throw new ArgumentException("未知的后置 action 类型")
+                _ => throw new ArgumentException(Lang.S["GameTask_11066_d7a553"])
             };
         });
     }
@@ -45,7 +46,7 @@ public class ActionFactory
             {
                 "up_down_grab_leaf" => new UpDownGrabLeafHandler(),
                 "stop_flying" => new StopFlyingHandler(),
-                _ => throw new ArgumentException("未知的前置 action 类型")
+                _ => throw new ArgumentException(Lang.S["GameTask_11065_e8ee59"])
             };
         });
     }

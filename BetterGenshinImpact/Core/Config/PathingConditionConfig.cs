@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -44,23 +45,23 @@ public partial class PathingConditionConfig : ObservableObject
         [
             new Condition
             {
-                Subject = "队伍中角色",
-                Object = ["绮良良", "莱依拉", "茜特菈莉", "芭芭拉", "七七"],
-                Result = "循环短E"
+                Subject = Lang.S["Gen_10026_37033c"],
+                Object = [Lang.S["Gen_10028_4265ec"], "莱依拉", "茜特菈莉", "芭芭拉", "七七"],
+                Result = Lang.S["Gen_10022_37be95"]
             },
 
             new Condition
             {
-                Subject = "队伍中角色",
-                Object = ["钟离"],
-                Result = "循环长E"
+                Subject = Lang.S["Gen_10026_37033c"],
+                Object = [Lang.S["Gen_10027_ff31f7"]],
+                Result = Lang.S["Gen_10021_f3edab"]
             },
 
             new Condition
             {
-                Subject = "队伍中角色",
-                Object = ["迪希雅"],
-                Result = "作为主要行走角色"
+                Subject = Lang.S["Gen_10026_37033c"],
+                Object = [Lang.S["Gen_10025_df2eea"]],
+                Result = Lang.S["Gen_10020_2354d2"]
             }
         ]
     };
@@ -88,7 +89,7 @@ public partial class PathingConditionConfig : ObservableObject
                     continue; // 不校验
                 }
 
-                var condition = PartyConditions.FirstOrDefault(c => c.Subject == "动作" && c.Object.Contains(actionCn));
+                var condition = PartyConditions.FirstOrDefault(c => c.Subject == Lang.S["KeyBind_002_c500cf"] && c.Object.Contains(actionCn));
                 if (condition is { Result: not null })
                 {
                     return condition.Result;
@@ -100,7 +101,7 @@ public partial class PathingConditionConfig : ObservableObject
         Condition? materialCondition = null;
         if (!string.IsNullOrEmpty(materialName))
         {
-            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object.Contains(materialName));
+            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == Lang.S["Gen_10023_15d7ae"] && c.Object.Contains(materialName));
         }
         if (materialCondition is { Result: not null })
         {
@@ -108,7 +109,7 @@ public partial class PathingConditionConfig : ObservableObject
         }
         else
         {
-            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == "采集物" && c.Object.Contains("全部"));
+            materialCondition = PartyConditions.FirstOrDefault(c => c.Subject == Lang.S["Gen_10023_15d7ae"] && c.Object.Contains("全部"));
             if (materialCondition is { Result: not null })
             {
                 return materialCondition.Result;
@@ -128,14 +129,14 @@ public partial class PathingConditionConfig : ObservableObject
         // 使用最优先匹配上的条件
         foreach (var avatarCondition in AvatarConditions)
         {
-            if (avatarCondition.Result == "循环短E" || avatarCondition.Result == "循环长E")
+            if (avatarCondition.Result == Lang.S["Gen_10022_37be95"] || avatarCondition.Result == "循环长E")
             {
                 foreach (var avatar in combatScenes.GetAvatars())
                 {
                     if (avatarCondition is { Object: not null } && avatarCondition.Object.Contains(avatar.Name))
                     {
                         partyConfig.GuardianAvatarIndex = avatar.Index.ToString();
-                        if (avatarCondition.Result == "循环长E")
+                        if (avatarCondition.Result == Lang.S["Gen_10021_f3edab"])
                         {
                             partyConfig.GuardianElementalSkillLongPress = true;
                             partyConfig.GuardianElementalSkillSecondInterval = avatar.CombatAvatar.SkillHoldCd.ToString(CultureInfo.CurrentCulture);
@@ -158,7 +159,7 @@ public partial class PathingConditionConfig : ObservableObject
 
         foreach (var avatarCondition in AvatarConditions)
         {
-            if (avatarCondition.Result == "作为主要行走角色")
+            if (avatarCondition.Result == Lang.S["Gen_10020_2354d2"])
             {
                 foreach (var avatar in combatScenes.GetAvatars())
                 {

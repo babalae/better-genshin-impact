@@ -54,7 +54,7 @@ public partial class ScriptRepoWindow
     // 添加进度相关的可观察属性
     [ObservableProperty] private bool _isUpdating;
     [ObservableProperty] private int _updateProgressValue;
-    [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
+    [ObservableProperty] private string _updateProgressText = Lang.S["View_12190_ecc674"];
     [ObservableProperty] private ScriptConfig _config = TaskContext.Instance().Config.ScriptConfig;
 
     // Git 凭据相关属性
@@ -75,7 +75,7 @@ public partial class ScriptRepoWindow
             {
                 return "";
             }
-            return SelectedRepoChannel.Name == "自定义" ? Config.CustomRepoUrl : SelectedRepoChannel.Url;
+            return SelectedRepoChannel.Name == Lang.S["View_12191_f1d4ff"] ? Config.CustomRepoUrl : SelectedRepoChannel.Url;
         }
     }
 
@@ -97,7 +97,7 @@ public partial class ScriptRepoWindow
             WindowHelper.TryApplySystemBackdrop(this);
 
             // 设置仓库地址的只读状态
-            IsRepoUrlReadOnly = SelectedRepoChannel == null || SelectedRepoChannel.Name != "自定义";
+            IsRepoUrlReadOnly = SelectedRepoChannel == null || SelectedRepoChannel.Name != Lang.S["View_12191_f1d4ff"];
         };
     }
 
@@ -175,7 +175,7 @@ public partial class ScriptRepoWindow
             new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
             new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
             new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
-            new("自定义", "https://example.com/custom-repo")
+            new(Lang.S["View_12191_f1d4ff"], "https://example.com/custom-repo")
         };
 
         // 根据配置中保存的渠道名称恢复选择
@@ -210,7 +210,7 @@ public partial class ScriptRepoWindow
         Config.SelectedChannelName = SelectedRepoChannel.Name;
 
         // 更新仓库地址只读状态
-        IsRepoUrlReadOnly = SelectedRepoChannel.Name != "自定义";
+        IsRepoUrlReadOnly = SelectedRepoChannel.Name != Lang.S["View_12191_f1d4ff"];
 
         // 通知界面更新CurrentRepoUrl
         OnPropertyChanged(nameof(CurrentRepoUrl));
@@ -221,7 +221,7 @@ public partial class ScriptRepoWindow
     {
         if (SelectedRepoChannel is null)
         {
-            Toast.Warning("请选择一个脚本仓库更新渠道。");
+            Toast.Warning(Lang.S["ScriptRepo_SelectChannel"]);
             return;
         }
 
@@ -231,31 +231,31 @@ public partial class ScriptRepoWindow
         // 验证URL
         if (string.IsNullOrWhiteSpace(repoUrl))
         {
-            Toast.Warning("请输入自定义仓库URL。");
+            Toast.Warning(Lang.S["ScriptRepo_EnterCustomUrl"]);
             return;
         }
 
         if (repoUrl == "https://example.com/custom-repo")
         {
-            Toast.Warning("请修改默认的自定义URL为有效的仓库地址。");
+            Toast.Warning(Lang.S["ScriptRepo_ModifyDefaultUrl"]);
             return;
         }
 
         if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out _))
         {
-            Toast.Warning("请输入有效的URL地址。");
+            Toast.Warning(Lang.S["ScriptRepo_EnterValidUrl"]);
             return;
         }
 
         try
         {
             // 显示更新中提示
-            Toast.Information("正在更新脚本仓库，请耐心等待...");
+            Toast.Information(Lang.S["ScriptRepo_Updating"]);
 
             // 设置进度显示
             IsUpdating = true;
             UpdateProgressValue = 0;
-            UpdateProgressText = "准备更新，请耐心等待...";
+            UpdateProgressText = Lang.S["View_12190_ecc674"];
 
             // 执行更新
             var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
@@ -270,16 +270,16 @@ public partial class ScriptRepoWindow
             // 更新结果提示
             if (updated)
             {
-                Toast.Success("脚本仓库更新成功，有新内容");
+                Toast.Success(Lang.S["ScriptRepo_UpdateSuccess"]);
             }
             else
             {
-                Toast.Success("脚本仓库已是最新");
+                Toast.Success(Lang.S["ScriptRepo_AlreadyLatest"]);
             }
         }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
+            await ThemedMessageBox.ErrorAsync($"{Lang.S["View_12189_624ea5"]});
         }
         finally
         {
@@ -367,14 +367,14 @@ public partial class ScriptRepoWindow
     {
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前更新完成后再进行重置操作。");
+            Toast.Warning(Lang.S["ScriptRepo_WaitUpdateComplete"]);
             return;
         }
 
         // 添加确认对话框
         var result = await ThemedMessageBox.ShowAsync(
-            "确定要重置脚本仓库吗？无法正常更新时候可以使用本功能，重置后请重新更新脚本仓库。",
-            "确认重置",
+            Lang.S["ScriptRepo_ResetConfirm"],
+            Lang.S["ScriptRepo_ResetConfirmTitle"],
             MessageBoxButton.YesNo,
             ThemedMessageBox.MessageBoxIcon.Warning);
 
@@ -385,16 +385,16 @@ public partial class ScriptRepoWindow
                 if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
                 {
                     DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                    Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
+                    Toast.Success(Lang.S["ScriptRepo_ResetSuccess"]);
                 }
                 else
                 {
-                    Toast.Information("脚本仓库不存在，无需重置");
+                    Toast.Information(Lang.S["ScriptRepo_NoNeedReset"]);
                 }
             }
             catch (Exception ex)
             {
-                Toast.Error($"重置失败: {ex.Message}");
+                Toast.Error($"{Lang.S["View_12188_f9c2c3"]});
             }
         }
     }
@@ -405,13 +405,13 @@ public partial class ScriptRepoWindow
     {
         if (string.IsNullOrWhiteSpace(OnlineDownloadUrl))
         {
-            Toast.Warning("请输入有效的下载地址。");
+            Toast.Warning(Lang.S["ScriptRepo_EnterValidDownloadUrl"]);
             return;
         }
 
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前操作完成后再进行下载。");
+            Toast.Warning(Lang.S["ScriptRepo_WaitOperationComplete"]);
             return;
         }
 
@@ -419,7 +419,7 @@ public partial class ScriptRepoWindow
         {
             IsUpdating = true;
             UpdateProgressValue = 0;
-            UpdateProgressText = "正在下载脚本仓库...";
+            UpdateProgressText = Lang.S["View_12187_d0a174"];
 
             using var httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromMinutes(10);
@@ -434,7 +434,7 @@ public partial class ScriptRepoWindow
                 await response.Content.CopyToAsync(fileStream);
             }
 
-            UpdateProgressText = "正在解压并导入...";
+            UpdateProgressText = Lang.S["View_12186_5445d5"];
             UpdateProgressValue = 50;
 
             // 导入下载的zip文件
@@ -446,11 +446,11 @@ public partial class ScriptRepoWindow
                 File.Delete(tempZipPath);
             }
 
-            Toast.Success("在线脚本仓库下载并导入成功！");
+            Toast.Success(Lang.S["ScriptRepo_DownloadSuccess"]);
         }
         catch (Exception ex)
         {
-            Toast.Error($"下载失败: {ex.Message}");
+            Toast.Error($"{Lang.S["View_12185_7154d8"]});
         }
         finally
         {
@@ -463,7 +463,7 @@ public partial class ScriptRepoWindow
     {
         if (IsUpdating)
         {
-            Toast.Warning("请等待当前操作完成后再进行导入。");
+            Toast.Warning(Lang.S["ScriptRepo_WaitImportComplete"]);
             return;
         }
 
@@ -471,8 +471,8 @@ public partial class ScriptRepoWindow
         {
             var openFileDialog = new OpenFileDialog
             {
-                Title = "选择脚本仓库压缩包",
-                Filter = "压缩包文件 (*.zip)|*.zip",
+                Title = Lang.S["View_12184_dba2c5"],
+                Filter = Lang.S["View_12183_b899ab"],
                 Multiselect = false
             };
 
@@ -480,15 +480,15 @@ public partial class ScriptRepoWindow
             {
                 IsUpdating = true;
                 UpdateProgressValue = 0;
-                UpdateProgressText = "正在导入脚本仓库，请耐心等待...";
+                UpdateProgressText = Lang.S["View_12182_66eaa7"];
 
                 await ImportZipFile(openFileDialog.FileName);
-                Toast.Success("脚本仓库导入成功！");
+                Toast.Success(Lang.S["ScriptRepo_ImportSuccess"]);
             }
         }
         catch (Exception ex)
         {
-            Toast.Error($"导入失败: {ex.Message}");
+            Toast.Error($"{Lang.S["View_12181_b9a363"]});
         }
         finally
         {
@@ -507,7 +507,7 @@ public partial class ScriptRepoWindow
                 Dispatcher.Invoke(() =>
                 {
                     UpdateProgressValue = 0;
-                    UpdateProgressText = "正在准备导入环境...";
+                    UpdateProgressText = Lang.S["View_12180_937a96"];
                 });
 
                 var tempUnzipDir = Path.Combine(tempPath, "importZipFile");
@@ -521,7 +521,7 @@ public partial class ScriptRepoWindow
                 Dispatcher.Invoke(() =>
                 {
                     UpdateProgressValue = 10;
-                    UpdateProgressText = "准备完成，开始解压文件...";
+                    UpdateProgressText = Lang.S["View_12179_3ab163"];
                 });
 
                 // 阶段2: 解压zip文件 (10-50%)
@@ -530,14 +530,14 @@ public partial class ScriptRepoWindow
                 Dispatcher.Invoke(() =>
                 {
                     UpdateProgressValue = 50;
-                    UpdateProgressText = "文件解压完成，正在验证仓库结构...";
+                    UpdateProgressText = Lang.S["View_12178_cb48d9"];
                 });
 
                 // 阶段3: 查找并验证 repo.json (50-60%)
                 var repoJsonPath = Directory.GetFiles(tempUnzipDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
                 if (repoJsonPath == null)
                 {
-                    throw new FileNotFoundException("未找到 repo.json 文件，导入失败。");
+                    throw new FileNotFoundException(Lang.S["View_12177_07b9ec"]);
                 }
 
                 var repoDir = Path.GetDirectoryName(repoJsonPath)!;
@@ -545,7 +545,7 @@ public partial class ScriptRepoWindow
                 Dispatcher.Invoke(() =>
                 {
                     UpdateProgressValue = 60;
-                    UpdateProgressText = "仓库结构验证通过，正在清理旧数据...";
+                    UpdateProgressText = Lang.S["View_12176_82e834"];
                 });
 
                 // 阶段4: 删除旧的目标目录 (60-70%)
@@ -557,7 +557,7 @@ public partial class ScriptRepoWindow
                 Dispatcher.Invoke(() =>
                 {
                     UpdateProgressValue = 70;
-                    UpdateProgressText = "旧数据清理完成，正在复制新仓库...";
+                    UpdateProgressText = Lang.S["View_12175_64f921"];
                 });
 
                 // 阶段5: 复制新目录 (70-95%)
@@ -566,7 +566,7 @@ public partial class ScriptRepoWindow
                 Dispatcher.Invoke(() =>
                 {
                     UpdateProgressValue = 95;
-                    UpdateProgressText = "仓库复制完成，正在清理临时文件...";
+                    UpdateProgressText = Lang.S["View_12174_ec3b0e"];
                 });
             }
             finally
@@ -581,7 +581,7 @@ public partial class ScriptRepoWindow
         Dispatcher.Invoke(() =>
         {
             UpdateProgressValue = 100;
-            UpdateProgressText = "导入完成";
+            UpdateProgressText = Lang.S["View_12173_8edcee"];
         });
     }
 
@@ -602,7 +602,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            ThemedMessageBox.Warning($"无法打开链接: {ex.Message}", "错误");
+            ThemedMessageBox.Warning($"{Lang.S["View_12172_efc9c6"]}, "错误");
         }
         e.Handled = true;
     }

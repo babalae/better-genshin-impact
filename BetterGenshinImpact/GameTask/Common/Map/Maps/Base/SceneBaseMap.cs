@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -77,9 +78,9 @@ public abstract class SceneBaseMap : ISceneMap
                 {
                     if (_layers.Count == 0)
                     {
-                        TaskControl.Logger.LogInformation("[SIFT]地图特征点加载中，预计耗时2秒，请等待...");
+                        TaskControl.Logger.LogInformation(Lang.S["GameTask_11679_59dd46"]);
                         _layers = BaseMapLayer.LoadLayers(this);
-                        TaskControl.Logger.LogInformation("地图特征点加载完成！");
+                        TaskControl.Logger.LogInformation(Lang.S["GameTask_11678_7d49a2"]);
                     }
                 }
             }
@@ -110,7 +111,7 @@ public abstract class SceneBaseMap : ISceneMap
 
     public virtual void WarmUp()
     {
-        Console.WriteLine("提前加载地图，层数：" + Layers.Count);
+        Console.WriteLine(Lang.S["GameTask_11677_40e651"] + Layers.Count);
     }
 
     public virtual Point2f GetBigMapPosition(Mat greyBigMapMat)
@@ -138,7 +139,7 @@ public abstract class SceneBaseMap : ISceneMap
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"地图{Type}层数{layer.Floor},特征匹配失败:{e.Message}");
+                Debug.WriteLine($"{Lang.S["GameTask_11676_931740"]});
             }
         }
 
@@ -170,7 +171,7 @@ public abstract class SceneBaseMap : ISceneMap
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"地图{Type}层数{layer.Floor},特征匹配失败:{e.Message}");
+                Debug.WriteLine($"{Lang.S["GameTask_11676_931740"]});
             }
         }
 

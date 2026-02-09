@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using Wpf.Ui.Controls;
 using MessageBoxButton = System.Windows.MessageBoxButton;
@@ -123,7 +124,7 @@ public partial class ThemedMessageBox : FluentWindow
     /// </remarks>
     public static MessageBoxResult Show(
         string content,
-        string title = "提示",
+        string title = "",
         MessageBoxButton button = MessageBoxButton.OK,
         MessageBoxIcon icon = MessageBoxIcon.Information,
         MessageBoxResult defaultResult = MessageBoxResult.None,
@@ -131,7 +132,7 @@ public partial class ThemedMessageBox : FluentWindow
     {
         var messageBox = new ThemedMessageBox
         {
-            Title = title
+            Title = string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Prompt"] : title
         };
 
         // 设置父窗口，需要防止将自己设置为父窗口，以及处理 MainWindow 未初始化的情况
@@ -175,7 +176,7 @@ public partial class ThemedMessageBox : FluentWindow
     /// </remarks>
     public static Task<MessageBoxResult> ShowAsync(
         string content,
-        string title = "提示",
+        string title = "",
         MessageBoxButton button = MessageBoxButton.OK,
         MessageBoxIcon icon = MessageBoxIcon.Information,
         MessageBoxResult defaultResult = MessageBoxResult.None,
@@ -236,30 +237,30 @@ public partial class ThemedMessageBox : FluentWindow
         switch (button)
         {
             case MessageBoxButton.OK:
-                messageBox.PrimaryButton.Content = "确定";
+                messageBox.PrimaryButton.Content = Lang.S["Btn_OK"];
                 messageBox.PrimaryButton.Visibility = Visibility.Visible;
                 break;
 
             case MessageBoxButton.OKCancel:
-                messageBox.PrimaryButton.Content = "确定";
+                messageBox.PrimaryButton.Content = Lang.S["Btn_OK"];
                 messageBox.PrimaryButton.Visibility = Visibility.Visible;
-                messageBox.SecondaryButton.Content = "取消";
+                messageBox.SecondaryButton.Content = Lang.S["Btn_Cancel"];
                 messageBox.SecondaryButton.Visibility = Visibility.Visible;
                 break;
 
             case MessageBoxButton.YesNo:
-                messageBox.PrimaryButton.Content = "是";
+                messageBox.PrimaryButton.Content = Lang.S["MsgBox_Button_Yes"];
                 messageBox.PrimaryButton.Visibility = Visibility.Visible;
-                messageBox.SecondaryButton.Content = "否";
+                messageBox.SecondaryButton.Content = Lang.S["MsgBox_Button_No"];
                 messageBox.SecondaryButton.Visibility = Visibility.Visible;
                 break;
 
             case MessageBoxButton.YesNoCancel:
-                messageBox.PrimaryButton.Content = "是";
+                messageBox.PrimaryButton.Content = Lang.S["MsgBox_Button_Yes"];
                 messageBox.PrimaryButton.Visibility = Visibility.Visible;
-                messageBox.SecondaryButton.Content = "否";
+                messageBox.SecondaryButton.Content = Lang.S["MsgBox_Button_No"];
                 messageBox.SecondaryButton.Visibility = Visibility.Visible;
-                messageBox.CloseButton.Content = "取消";
+                messageBox.CloseButton.Content = Lang.S["Btn_Cancel"];
                 messageBox.CloseButton.Visibility = Visibility.Visible;
                 break;
         }
@@ -270,13 +271,13 @@ public partial class ThemedMessageBox : FluentWindow
     /// <summary>
     /// 显示错误消息框（同步，阻塞调用）
     /// </summary>
-    public static void Error(string message, string title = "错误") =>
+    public static void Error(string message, string title = Lang.S["ScriptRepo_Error"]) =>
         Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Error);
 
     public static MessageBoxResult Error(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
         Show(message, title, button, MessageBoxIcon.Error, defaultResult);
 
-    public static Task<MessageBoxResult> ErrorAsync(string message, string title = "错误") =>
+    public static Task<MessageBoxResult> ErrorAsync(string message, string title = Lang.S["ScriptRepo_Error"]) =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Error);
 
     public static Task<MessageBoxResult> ErrorAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
@@ -289,17 +290,17 @@ public partial class ThemedMessageBox : FluentWindow
     /// <summary>
     /// 显示警告消息框（同步，阻塞调用）
     /// </summary>
-    public static void Warning(string message, string title = "警告") =>
+    public static void Warning(string message, string title = "") =>
         Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning);
 
     public static MessageBoxResult Warning(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        Show(message, title, button, MessageBoxIcon.Warning, defaultResult);
+        Show(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Warning"] : title, button, MessageBoxIcon.Warning, defaultResult);
 
-    public static Task<MessageBoxResult> WarningAsync(string message, string title = "警告") =>
+    public static Task<MessageBoxResult> WarningAsync(string message, string title = "") =>
         ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Warning);
 
     public static Task<MessageBoxResult> WarningAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        ShowAsync(message, title, button, MessageBoxIcon.Warning, defaultResult);
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Warning"] : title, button, MessageBoxIcon.Warning, defaultResult);
 
     #endregion
 
@@ -308,17 +309,17 @@ public partial class ThemedMessageBox : FluentWindow
     /// <summary>
     /// 显示信息消息框（同步，阻塞调用）
     /// </summary>
-    public static void Information(string message, string title = "信息") =>
-        Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Information);
+    public static void Information(string message, string title = "") =>
+        Show(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Info"] : title, MessageBoxButton.OK, MessageBoxIcon.Information);
 
     public static MessageBoxResult Information(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        Show(message, title, button, MessageBoxIcon.Information, defaultResult);
+        Show(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Info"] : title, button, MessageBoxIcon.Information, defaultResult);
 
-    public static Task<MessageBoxResult> InformationAsync(string message, string title = "信息") =>
-        ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Information);
+    public static Task<MessageBoxResult> InformationAsync(string message, string title = "") =>
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Info"] : title, MessageBoxButton.OK, MessageBoxIcon.Information);
 
     public static Task<MessageBoxResult> InformationAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        ShowAsync(message, title, button, MessageBoxIcon.Information, defaultResult);
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Info"] : title, button, MessageBoxIcon.Information, defaultResult);
 
     #endregion
 
@@ -327,17 +328,17 @@ public partial class ThemedMessageBox : FluentWindow
     /// <summary>
     /// 显示成功消息框（同步，阻塞调用）
     /// </summary>
-    public static void Success(string message, string title = "成功") =>
-        Show(message, title, MessageBoxButton.OK, MessageBoxIcon.Success);
+    public static void Success(string message, string title = "") =>
+        Show(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Success"] : title, MessageBoxButton.OK, MessageBoxIcon.Success);
 
     public static MessageBoxResult Success(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        Show(message, title, button, MessageBoxIcon.Success, defaultResult);
+        Show(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Success"] : title, button, MessageBoxIcon.Success, defaultResult);
 
-    public static Task<MessageBoxResult> SuccessAsync(string message, string title = "成功") =>
-        ShowAsync(message, title, MessageBoxButton.OK, MessageBoxIcon.Success);
+    public static Task<MessageBoxResult> SuccessAsync(string message, string title = "") =>
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Success"] : title, MessageBoxButton.OK, MessageBoxIcon.Success);
 
     public static Task<MessageBoxResult> SuccessAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        ShowAsync(message, title, button, MessageBoxIcon.Success, defaultResult);
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Success"] : title, button, MessageBoxIcon.Success, defaultResult);
 
     #endregion
 
@@ -346,11 +347,11 @@ public partial class ThemedMessageBox : FluentWindow
     public static MessageBoxResult Question(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
         Show(message, title, button, MessageBoxIcon.Question, defaultResult);
 
-    public static Task<MessageBoxResult> QuestionAsync(string message, string title = "确认") =>
-        ShowAsync(message, title, MessageBoxButton.YesNo, MessageBoxIcon.Question);
+    public static Task<MessageBoxResult> QuestionAsync(string message, string title = "") =>
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Confirm"] : title, MessageBoxButton.YesNo, MessageBoxIcon.Question);
 
     public static Task<MessageBoxResult> QuestionAsync(string message, string title, MessageBoxButton button, MessageBoxResult defaultResult = MessageBoxResult.None) =>
-        ShowAsync(message, title, button, MessageBoxIcon.Question, defaultResult);
+        ShowAsync(message, string.IsNullOrEmpty(title) ? Lang.S["MsgBox_Title_Confirm"] : title, button, MessageBoxIcon.Question, defaultResult);
 
     #endregion
 }

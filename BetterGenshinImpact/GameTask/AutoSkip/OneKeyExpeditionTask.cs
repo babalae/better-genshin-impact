@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
@@ -27,7 +28,7 @@ public class OneKeyExpeditionTask
                 if (!ra.IsEmpty())
                 {
                     ra.Click();
-                    Logger.LogInformation("探索派遣：{Text}", "全部领取");
+                    Logger.LogInformation(Lang.S["GameTask_11286_c4abac"], "全部领取");
                     Sleep(1100);
                     // 2.重新派遣
                     NewRetry.Do(() =>
@@ -37,27 +38,27 @@ public class OneKeyExpeditionTask
                         var ra2 = region.Find(assets.ReRo);
                         if (ra2.IsEmpty())
                         {
-                            throw new RetryException("未检测到弹出菜单");
+                            throw new RetryException(Lang.S["GameTask_11291_784f27"]);
                         }
                         else
                         {
                             ra2.Click();
-                            Logger.LogInformation("探索派遣：{Text}", "再次派遣");
+                            Logger.LogInformation(Lang.S["GameTask_11286_c4abac"], "再次派遣");
                         }
                     }, TimeSpan.FromSeconds(1), 3);
 
                     // 3.退出派遣页面 ESC
                     Sleep(500);
                     Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
-                    Logger.LogInformation("探索派遣：{Text}", "完成");
+                    Logger.LogInformation(Lang.S["GameTask_11286_c4abac"], "完成");
                     break;
                 }
                 else
                 {
-                    Logger.LogInformation("探索派遣：{Text}", "未找到领取按钮");
+                    Logger.LogInformation(Lang.S["GameTask_11286_c4abac"], "未找到领取按钮");
                     if (i == 0)
                     {
-                        Logger.LogInformation("探索派遣：{Text}", "等待1s后重试");
+                        Logger.LogInformation(Lang.S["GameTask_11286_c4abac"], "等待1s后重试");
                         Sleep(1000);
                     }
                     continue;

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -34,8 +35,8 @@ public class AutoPathingScript
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogDebug(e,"执行地图追踪时候发生错误");
-            TaskControl.Logger.LogError("执行地图追踪时候发生错误: {Msg}",e.Message);
+            TaskControl.Logger.LogDebug(e,Lang.S["Gen_10177_1223f5"]);
+            TaskControl.Logger.LogError(Lang.S["Gen_10176_09de4d"],e.Message);
         }
     }
 
@@ -48,8 +49,8 @@ public class AutoPathingScript
         }
         catch (Exception e)
         {
-            TaskControl.Logger.LogDebug(e,"读取文件时发生错误");
-            TaskControl.Logger.LogError("读取文件时发生错误: {Msg}",e.Message);
+            TaskControl.Logger.LogDebug(e,Lang.S["Gen_10175_0d917f"]);
+            TaskControl.Logger.LogError(Lang.S["Gen_10174_9ed3c8"],e.Message);
         }
     }
 

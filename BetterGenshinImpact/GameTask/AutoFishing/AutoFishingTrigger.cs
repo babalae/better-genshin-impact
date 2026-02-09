@@ -19,6 +19,7 @@ using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.Extensions.Localization;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
@@ -27,7 +28,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private readonly ILogger<AutoFishingTrigger> _logger = App.GetLogger<AutoFishingTrigger>();
         private readonly InputSimulator input = Simulation.SendInput;
 
-        public string Name => "自动钓鱼";
+        public string Name => Lang.S["GameTask_10738_cc5fa3"];
         public bool IsEnabled { get; set; }
         public int Priority => 15;
 
@@ -57,13 +58,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             BehaviourTreeLaTiao = FluentBuilder.Create<ImageRegion>()
                 .MySimpleParallel("root", policy: SimpleParallelPolicy.OnlyOneMustSucceed)
-                .Do("检查是否在钓鱼界面", CheckFishingUserInterface)
-                .UntilSuccess("拉条循环")
-                .Sequence("拉条")
-                .PushLeaf(() => new FishBite("自动提竿", blackboard, _logger, false, input, ocrService,
+                .Do(Lang.S["GameTask_10737_9f666e"], CheckFishingUserInterface)
+                .UntilSuccess(Lang.S["GameTask_10736_50ed48"])
+                .Sequence(Lang.S["GameTask_10735_57e04b"])
+                .PushLeaf(() => new FishBite(Lang.S["GameTask_10710_4cee06"], blackboard, _logger, false, input, ocrService,
                     cultureInfo: autoFishingTaskParam.GameCultureInfo, stringLocalizer: autoFishingTaskParam.StringLocalizer))
-                .PushLeaf(() => new GetFishBoxArea("等待拉条出现", blackboard, _logger, false))
-                .PushLeaf(() => new Fishing("钓鱼拉条", blackboard, _logger, false, input))
+                .PushLeaf(() => new GetFishBoxArea(Lang.S["GameTask_10705_2a9ba4"], blackboard, _logger, false))
+                .PushLeaf(() => new Fishing(Lang.S["GameTask_10704_2d23c6"], blackboard, _logger, false, input))
                 .End()
                 .End()
                 .End()
@@ -324,7 +325,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 if (IsEnabled && !prevIsExclusive)
                 {
-                    _logger.LogInformation("→ {Text}", "半自动钓鱼，启动！");
+                    _logger.LogInformation("→ {Text}", Lang.S["GameTask_10734_d9283e"]);
                     // _logger.LogInformation("当前自动选饵抛竿状态[{Enabled}]", TaskContext.Instance().Config.AutoFishingConfig.AutoThrowRodEnabled.ToChinese());
                 }
 
@@ -334,7 +335,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             {
                 if (prevIsExclusive)
                 {
-                    _logger.LogInformation("← {Text}", "退出钓鱼界面");
+                    _logger.LogInformation("← {Text}", Lang.S["GameTask_10733_ea6025"]);
                 }
 
                 return BehaviourStatus.Failed;

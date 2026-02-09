@@ -1,16 +1,17 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System.ComponentModel;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
     public enum FishingTimePolicy
     {
-        [Description("全天")]
+        [Description(Lang.S["GameTask_10781_bd4357"])]
         All,
-        [Description("白天")]
+        [Description(Lang.S["GameTask_10780_4ed52b"])]
         Daytime,
-        [Description("夜晚")]
+        [Description(Lang.S["GameTask_10779_86de2b"])]
         Nighttime,
-        [Description("不调")]
+        [Description(Lang.S["GameTask_10778_bfa7fc"])]
         DontChange
     }
 }

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System.Windows;
 using System.Windows.Input;
 using Wpf.Ui.Controls;
@@ -37,7 +38,7 @@ public class TwoStateButton : Button
         set => SetValue(IsCheckedProperty, value);
     }
 
-    private static readonly DependencyProperty EnableContentProperty = DependencyProperty.Register(nameof(EnableContent), typeof(object), typeof(TwoStateButton), new PropertyMetadata("启动"));
+    private static readonly DependencyProperty EnableContentProperty = DependencyProperty.Register(nameof(EnableContent), typeof(object), typeof(TwoStateButton), new PropertyMetadata(Lang.S["Home_Start"]));
 
     public object EnableContent
     {
@@ -61,7 +62,7 @@ public class TwoStateButton : Button
         set => SetValue(EnableCommandProperty, value);
     }
 
-    private static readonly DependencyProperty DisableContentProperty = DependencyProperty.Register(nameof(DisableContent), typeof(object), typeof(TwoStateButton), new PropertyMetadata("停止"));
+    private static readonly DependencyProperty DisableContentProperty = DependencyProperty.Register(nameof(DisableContent), typeof(object), typeof(TwoStateButton), new PropertyMetadata(Lang.S["Home_Stop"]));
 
     public object DisableContent
     {

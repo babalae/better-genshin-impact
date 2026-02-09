@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model;
@@ -31,7 +32,7 @@ public partial class PathingConfigViewModel : ObservableObject, IViewModel
     {
         Config.PathingConditionConfig.AvatarConditions.Add(new Condition
         {
-            Subject = "队伍中角色"
+            Subject = Lang.S["Gen_10026_37033c"]
         });
     }
 

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -18,7 +19,7 @@ public class NormalAttackHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行 {Text}", "普通攻击");
+        Logger.LogInformation(Lang.S["GameTask_11069_7cad94"], "普通攻击");
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
         await Delay(1000, ct);
     }

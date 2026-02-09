@@ -111,11 +111,11 @@ public class Avatar
     {
         if (Bv.IsInRevivePrompt(region))
         {
-            Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
+            Logger.LogWarning(Lang.S["GameTask_10607_d6439e"]);
             // 先打开地图
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, ct);
-            TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
+            TpForRecover(ct, new RetryException(Lang.S["GameTask_10607_d6439e"]));
         }
         else if(AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
         {
@@ -127,7 +127,7 @@ public class Avatar
                     return;
                 }
                 
-                Logger.LogInformation("游泳检测：尝试回到战斗地点");
+                Logger.LogInformation(Lang.S["GameTask_10606_1f5a09"]);
                 var cts = new CancellationTokenSource();
                 var pathExecutor = new PathExecutor(cts.Token);
                 
@@ -143,11 +143,11 @@ public class Avatar
                 }
                 catch (TaskCanceledException)
                 {
-                    Logger.LogError("游泳检测：回到战斗地点任务被取消");
+                    Logger.LogError(Lang.S["GameTask_10605_75fe51"]);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "游泳检测：回到战斗地点异常");
+                    Logger.LogError(ex, Lang.S["GameTask_10604_0af4a7"]);
                 }
                 finally
                 {
@@ -157,15 +157,15 @@ public class Avatar
                 using var bitmap2 = CaptureToRectArea();
                 if (!SwimmingConfirm(bitmap2))
                 {
-                    Logger.LogInformation("游泳检测：游泳脱困成功");
+                    Logger.LogInformation(Lang.S["GameTask_10603_c27c12"]);
                    return;
                 }
                 
-                Logger.LogWarning("游泳检测：回到战斗地点失败");
+                Logger.LogWarning(Lang.S["GameTask_10602_8ab835"]);
             }
             
-            Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
-            TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
+            Logger.LogWarning(Lang.S["GameTask_10601_f98d9f"]);
+            TpForRecover(ct, new RetryException(Lang.S["GameTask_10601_f98d9f"]));
         }
     }
     
@@ -198,7 +198,7 @@ public class Avatar
         // tp 到七天神像复活
         var tpTask = new TpTask(ct);
         tpTask.TpToStatueOfTheSeven().Wait(ct);
-        Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+        Logger.LogInformation(Lang.S["GameTask_10600_9601c7"]);
         throw ex;
     }
 
@@ -268,7 +268,7 @@ public class Avatar
             Sleep(250, Ct);
         }
         
-        Logger.LogWarning("切换角色失败:{Name}", Name);
+        Logger.LogWarning(Lang.S["GameTask_10599_12373f"], Name);
 
         return false;
     }
@@ -329,7 +329,7 @@ public class Avatar
     {
         if (IndexRect == default)
         {
-            throw new Exception("IndexRect为空");
+            throw new Exception(Lang.S["GameTask_10598_db460b"]);
         }
         else
         {
@@ -401,7 +401,7 @@ public class Avatar
             }
         }
 
-        Logger.LogInformation("{Name} 当前出战", Name);
+        Logger.LogInformation(Lang.S["GameTask_10597_2f18ae"], Name);
         return true;
     }
 
@@ -438,7 +438,7 @@ public class Avatar
 
             if (hold)
             {
-                if (Name == "纳西妲")
+                if (Name == Lang.S["GameTask_10596_8279ac"])
                 {
                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Sleep(300, Ct);
@@ -451,7 +451,7 @@ public class Avatar
                     Sleep(300); // 持续操作不应该被cts取消
                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                 }
-                else if (Name == "坎蒂丝")
+                else if (Name == Lang.S["GameTask_10595_0af029"])
                 {
                     Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                     Thread.Sleep(3000);
@@ -672,7 +672,7 @@ public class Avatar
         {
             if (printLog)
             {
-                Logger.LogInformation("{Name}的E技能未准备好,CD还有{Seconds}秒", Name, Math.Round(cd, 2));
+                Logger.LogInformation(Lang.S["GameTask_10594_5b6a0d"], Name, Math.Round(cd, 2));
             }
 
             return false;
@@ -700,7 +700,7 @@ public class Avatar
                         : OcrSkillCd;
                 var result = now > target ? 0d : (target - now).TotalSeconds;
                 if (!(result > maxCd)) return result;
-                Logger.LogWarning("{Name}的当前技能CD大于其最大技能CD{MaxCd}。如果你没有调整系统时间的话，这是一个bug。", Name, maxCd);
+                Logger.LogWarning(Lang.S["GameTask_10593_85065d"], Name, maxCd);
                 return maxCd;
             }
             case > 0:
@@ -732,7 +732,7 @@ public class Avatar
         }
 
         var s = GetSkillCdSeconds() + 0.2;
-        Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, Math.Round(s, 2));
+        Logger.LogInformation(Lang.S["GameTask_10592_8490e4"], Name, Math.Round(s, 2));
         await Delay((int)Math.Ceiling(s * 1000), ct);
     }
 
@@ -754,7 +754,7 @@ public class Avatar
             ms = 1000;
         }
 
-        if (Name == "那维莱特")
+        if (Name == Lang.S["GameTask_10591_86ddf3"])
         {
             var dpi = TaskContext.Instance().DpiScale;
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
@@ -772,7 +772,7 @@ public class Avatar
 
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
         }
-        else if (Name == "恰斯卡")
+        else if (Name == Lang.S["GameTask_10590_02b120"])
         {
             var dpi = TaskContext.Instance().DpiScale;
             Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);

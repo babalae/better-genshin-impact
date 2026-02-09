@@ -30,10 +30,10 @@ public class CheckRewardsTask
     {
         IStringLocalizer<CheckRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<CheckRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "今日奖励已领取");
+        this._dailyRewardsClaimedLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_11502_dabda7"]);
     }
 
-    public string Name => "检查奖励并通知的任务";
+    public string Name => Lang.S["GameTask_11504_6f82da"];
     
     private static RecognitionObject GetConfirmRa(bool isOcrMatch = false,params string[] targetText)
     {
@@ -54,13 +54,13 @@ public class CheckRewardsTask
             await new ReturnMainUiTask().Start(ct);
             
             _ = await NewRetry.WaitForElementAppear(
-                GetConfirmRa(true,"每日委托奖励"),
+                GetConfirmRa(true,Lang.S["GameTask_11503_514e8c"]),
                 ()=>
                 {
                     Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook); 
                     var screen = CaptureToRectArea();
                     var ra = screen.FindMulti(GetConfirmRa())
-                        .FirstOrDefault(btn => btn.Text == "委托");
+                        .FirstOrDefault(btn => btn.Text == Lang.S["GameTask_11242_f6b0bb"]);
                         ra?.Click();
                 },ct,4,1000);
             
@@ -70,19 +70,19 @@ public class CheckRewardsTask
                 ct,4,500);
             if (done)
             {
-                Logger.LogInformation("检查每日奖励结果：{Msg}", "今日奖励已领取");
-                Notify.Event(NotificationEvent.DailyReward).Success("检查每日奖励：已领取");
+                Logger.LogInformation(Lang.S["GameTask_11501_04ba62"], "今日奖励已领取");
+                Notify.Event(NotificationEvent.DailyReward).Success(Lang.S["GameTask_11500_a4c3c1"]);
             }
             else
             {
-                Logger.LogWarning("检查每日奖励结果：{Msg}，请手动检查！", "未领取");
-                Notify.Event(NotificationEvent.DailyReward).Error("检查到每日奖励未领取，请手动查看！");
+                Logger.LogWarning(Lang.S["GameTask_11498_5e929c"], "未领取");
+                Notify.Event(NotificationEvent.DailyReward).Error(Lang.S["GameTask_11497_b0eaaf"]);
             }
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "检查奖励并通知的任务异常");
-            Logger.LogError("检查奖励并通知的任务异常: {Msg}", e.Message);
+            Logger.LogDebug(e, Lang.S["GameTask_11496_86ad36"]);
+            Logger.LogError(Lang.S["GameTask_11495_a35e77"], e.Message);
         }
     }
 }

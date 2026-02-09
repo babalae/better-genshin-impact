@@ -13,6 +13,7 @@ using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.ViewModel;
 
@@ -79,14 +80,14 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             var service = App.GetService<IMaskMapPointService>();
             if (service == null)
             {
-                TextError = "地图服务未就绪";
+                TextError = Lang.S["Gen_12207_1c009e"];
                 return;
             }
 
             var info = await service.GetPointInfoAsync(point, ct);
             ct.ThrowIfCancellationRequested();
 
-            Text = string.IsNullOrEmpty(info.Text) ? "暂无描述" : info.Text;
+            Text = string.IsNullOrEmpty(info.Text) ? Lang.S["Service_12027_8c3ec9"] : info.Text;
             IsTextLoading = false;
             if (info.UrlList is { Count: > 0 })
             {
@@ -111,14 +112,14 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
                     {
                         if (GifSourceUri == null && GifSourceStream == null)
                         {
-                            ImageError = "图片加载失败";
+                            ImageError = Lang.S["Gen_12205_b3b83e"];
                         }
                     }
                     else
                     {
                         if (Image == null)
                         {
-                            ImageError = "图片加载失败";
+                            ImageError = Lang.S["Gen_12205_b3b83e"];
                         }
                     }
                 }
@@ -128,8 +129,8 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "加载点位图片失败");
-                    ImageError = "图片加载失败";
+                    _logger.LogDebug(ex, Lang.S["Gen_12206_318393"]);
+                    ImageError = Lang.S["Gen_12205_b3b83e"];
                 }
                 finally
                 {
@@ -142,8 +143,8 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "查询地图点位详情失败");
-            TextError = "查询失败";
+            _logger.LogDebug(ex, Lang.S["Gen_12204_0158d2"]);
+            TextError = Lang.S["Service_12029_0d66ed"];
         }
         finally
         {
@@ -302,7 +303,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "打开链接失败: {Url}", url);
+            _logger.LogDebug(ex, Lang.S["Gen_12203_d05f25"], url);
         }
     }
 

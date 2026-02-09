@@ -53,10 +53,10 @@ public class PathRecorder : Singleton<PathRecorder>
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         Navigation.WarmUp(matchingMethod);
         _pathingTask = new PathingTask();
-        TaskControl.Logger.LogInformation("开始路径点记录");
+        TaskControl.Logger.LogInformation(Lang.S["GameTask_11063_51f752"]);
         if (GetMapName() == nameof(MapTypes.Teyvat))
         {
-            TaskControl.Logger.LogInformation("如果需要切换其他地图，请在 {Msg} 中切换", "地图追踪——开发者工具");
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11061_a54b78"], "地图追踪——开发者工具");
         }
 
         var waypoint = new Waypoint();
@@ -65,7 +65,7 @@ public class PathRecorder : Singleton<PathRecorder>
         var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (nullablePosition == null)
         {
-            TaskControl.Logger.LogWarning("未识别到当前位置！");
+            TaskControl.Logger.LogWarning(Lang.S["GameTask_11059_50630b"]);
             return;
         }
         else
@@ -79,11 +79,11 @@ public class PathRecorder : Singleton<PathRecorder>
         _pathingTask.Positions.Add(waypoint);
         if (_webWindow == null)
         {
-            TaskControl.Logger.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11060_1f57da"], waypoint.X, waypoint.Y);
         }
         else
         {
-            TaskControl.Logger.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11058_e3fcb1"], waypoint.X, waypoint.Y);
             AddPosToEditor(waypoint.X, waypoint.Y);
         }
     }
@@ -97,7 +97,7 @@ public class PathRecorder : Singleton<PathRecorder>
         var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (nullablePosition == null)
         {
-            TaskControl.Logger.LogWarning("未识别到当前位置！");
+            TaskControl.Logger.LogWarning(Lang.S["GameTask_11059_50630b"]);
             return;
         }
         else
@@ -109,7 +109,7 @@ public class PathRecorder : Singleton<PathRecorder>
         waypoint.Y = position.Y;
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;
         _pathingTask.Positions.Add(waypoint);
-        TaskControl.Logger.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
+        TaskControl.Logger.LogInformation(Lang.S["GameTask_11058_e3fcb1"], waypoint.X, waypoint.Y);
         AddPosToEditor(waypoint.X, waypoint.Y);
     }
 
@@ -120,7 +120,7 @@ public class PathRecorder : Singleton<PathRecorder>
             var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
             _pathingTask.Info = new PathingTaskInfo
             {
-                Name = "未命名路线",
+                Name = Lang.S["GameTask_11057_b61afc"],
                 Type = PathingTaskType.Collect.Code,
                 MapName = GetMapName(),
                 MapMatchMethod = matchingMethod,
@@ -128,13 +128,13 @@ public class PathRecorder : Singleton<PathRecorder>
             };
             var name = $@"{DateTime.Now:yyyyMMdd_HHmmss}.json";
             _pathingTask.SaveToFile(Path.Combine(MapPathingViewModel.PathJsonPath, name));
-            TaskControl.Logger.LogInformation("录制编辑器未打开，直接保存路径点记录:{Name}", name);
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11056_713e7a"], name);
         }
         else
         {
-            TaskControl.Logger.LogInformation("路径点记录结束，请在录制编辑器中查看并编辑结果");
-            TaskControl.Logger.LogInformation("如果要重新录制新的路径，请在录制编辑器中删除已有路径或创建新的路径");
-            TaskControl.Logger.LogInformation("修改完毕后请务必记得导出路径！");
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11055_673b56"]);
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11054_1b6a69"]);
+            TaskControl.Logger.LogInformation(Lang.S["GameTask_11053_edd114"]);
         }
     }
 
@@ -152,7 +152,7 @@ public class PathRecorder : Singleton<PathRecorder>
         {
             _webWindow = new WebpageWindow
             {
-                Title = "地图路径点编辑器",
+                Title = Lang.S["GameTask_11052_c764b6"],
                 Width = 1366,
                 Height = 768,
                 // Owner = Application.Current.MainWindow,

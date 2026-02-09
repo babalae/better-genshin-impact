@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Windows.Forms;
@@ -324,14 +325,14 @@ public static class KeyIdConverter
         return value switch
         {
             // 需要单独翻译的按键
-            KeyId.None => "<未指定>",
-            KeyId.Unknown => "<未知>",
-            KeyId.MouseLeftButton => "鼠标左键",
-            KeyId.MouseRightButton => "鼠标右键",
-            KeyId.MouseMiddleButton => "鼠标中键",
-            KeyId.MouseSideButton1 => "鼠标侧键1",
-            KeyId.MouseSideButton2 => "鼠标侧键2",
-            KeyId.Apps => "菜单键",
+            KeyId.None => Lang.S["Gen_10017_af56a0"],
+            KeyId.Unknown => Lang.S["Gen_10016_bfe9f4"],
+            KeyId.MouseLeftButton => Lang.S["Gen_10015_a53260"],
+            KeyId.MouseRightButton => Lang.S["Gen_10014_f018ad"],
+            KeyId.MouseMiddleButton => Lang.S["Gen_10013_205df4"],
+            KeyId.MouseSideButton1 => Lang.S["Gen_10012_45e5cb"],
+            KeyId.MouseSideButton2 => Lang.S["Gen_10011_db0edc"],
+            KeyId.Apps => Lang.S["Gen_10010_997ecc"],
             // 无需单独翻译的部分
             _ => EnglishKeyNameToChinese(value),
         };
@@ -430,8 +431,8 @@ public static class KeyIdConverter
         return value switch
         {
             // 这两个值在VK中没有，抛异常
-            KeyId.None => throw new ArgumentOutOfRangeException(nameof(value), "未指定按键，无法转换为VK。"),
-            KeyId.Unknown => throw new ArgumentOutOfRangeException(nameof(value), "未知按键，无法转换为VK。"),
+            KeyId.None => throw new ArgumentOutOfRangeException(nameof(value), Lang.S["Gen_10009_6bdf03"]),
+            KeyId.Unknown => throw new ArgumentOutOfRangeException(nameof(value), Lang.S["Gen_10008_9b69a9"]),
             // 剩下的值相同，直接转
             _ => (VK)value,
         };
@@ -494,7 +495,7 @@ public static class KeyIdConverter
             KeyId.MouseMiddleButton => MouseButton.Middle,
             KeyId.MouseSideButton1 => MouseButton.XButton1,
             KeyId.MouseSideButton2 => MouseButton.XButton2,
-            _ => throw new ArgumentOutOfRangeException(nameof(value), "键盘按键请使用ToInputKey方法"),
+            _ => throw new ArgumentOutOfRangeException(nameof(value), Lang.S["Gen_10007_d6c569"]),
         };
     }
 

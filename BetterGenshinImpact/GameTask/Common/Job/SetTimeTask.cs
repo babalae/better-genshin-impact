@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,8 +31,8 @@ public class SetTimeTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "设置时间异常");
-            Logger.LogError("设置时间异常: {Msg}", e.Message);
+            Logger.LogDebug(e, Lang.S["GameTask_11636_6abb9b"]);
+            Logger.LogError(Lang.S["GameTask_11635_fbfdbf"], e.Message);
         }
         finally
         {
@@ -49,7 +50,7 @@ public class SetTimeTask
         int h = (int)Math.Floor(hour + minute / 60.0);
         int m = hour * 60 + minute - h * 60;
         h = ((h % 24) + 24) % 24;
-        Logger.LogInformation($"设置时间到 {h} 点 {m} 分");
+        Logger.LogInformation($"{Lang.S["GameTask_11634_9a5957"]});
         Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
         await Delay(800, ct);
         GameCaptureRegion.GameRegion1080PPosClick(50, 700);

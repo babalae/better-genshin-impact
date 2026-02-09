@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Linq;
 using System.Threading;
@@ -16,12 +17,12 @@ public class CombatScriptHandler : IActionHandler
     {
         if (waypointForTrack is { CombatScript: not null })
         {
-            Logger.LogInformation("执行 {Text}", "简易策略脚本");
+            Logger.LogInformation(Lang.S["GameTask_11069_7cad94"], "简易策略脚本");
             var combatScript = waypointForTrack.CombatScript;
             var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
             if (combatScenes == null)
             {
-                Logger.LogError("队伍识别未初始化成功！");
+                Logger.LogError(Lang.S["GameTask_11074_f6bb4a"]);
                 return;
             }
 
@@ -35,7 +36,7 @@ public class CombatScriptHandler : IActionHandler
                 bool hasAvatar = combatScenes.GetAvatars().Any(avatar => combatScript.AvatarNames.Contains(avatar.Name));
                 if (!hasAvatar)
                 {
-                    Logger.LogError("简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：{AvatarNames}", string.Join(", ", combatScript.AvatarNames));
+                    Logger.LogError(Lang.S["GameTask_11073_28b514"], string.Join(", ", combatScript.AvatarNames));
                     return;
                 }
             }
@@ -53,17 +54,17 @@ public class CombatScriptHandler : IActionHandler
             }
             catch (RetryException e)
             {
-                Logger.LogWarning("简易策略脚本执行时出现重试异常，原因：{Msg}，重试中...", e.Message);
+                Logger.LogWarning(Lang.S["GameTask_11072_5b2892"], e.Message);
                 throw;
             }
             catch (Exception e)
             {
-                Logger.LogError(e, "执行简易策略脚本时发生错误！");
+                Logger.LogError(e, Lang.S["GameTask_11071_767737"]);
             }
         }
         else
         {
-            Logger.LogError("策略脚本action_params内容为空");
+            Logger.LogError(Lang.S["GameTask_11070_302f28"]);
         }
     }
 

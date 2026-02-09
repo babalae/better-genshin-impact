@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Model.MaskMap;
 
@@ -25,5 +26,5 @@ public sealed class MaskMapLink
 
     public string Url { get; set; } = string.Empty;
 
-    public string DisplayText => string.IsNullOrWhiteSpace(Text) ? "视频攻略" : Text;
+    public string DisplayText => string.IsNullOrWhiteSpace(Text) ? Lang.S["Gen_12026_22ac1c"] : Text;
 }

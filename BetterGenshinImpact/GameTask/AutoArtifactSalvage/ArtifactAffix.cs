@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
 {
@@ -17,25 +18,25 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage
         public bool IsUnactivated { get; private set; } = isUnactivated;
 
         public static FrozenDictionary<ArtifactAffixType, string> DefaultStrDic { get; } = new Dictionary<ArtifactAffixType, string>() {
-            { ArtifactAffixType.ATK, "攻击力" },
-            { ArtifactAffixType.ATKPercent, "攻击力" },
-            { ArtifactAffixType.DEF, "防御力" },
-            { ArtifactAffixType.DEFPercent, "防御力" },
-            { ArtifactAffixType.HP, "生命值" },
-            { ArtifactAffixType.HPPercent, "生命值" },
-            { ArtifactAffixType.CRITRate, "暴击率" },
-            { ArtifactAffixType.CRITDMG, "暴击伤害" },
-            { ArtifactAffixType.ElementalMastery, "元素精通" },
-            { ArtifactAffixType.EnergyRecharge, "元素充能效率" },
-            { ArtifactAffixType.HealingBonus, "治疗加成" },
-            { ArtifactAffixType.PhysicalDMGBonus, "物理伤害加成" },
-            { ArtifactAffixType.PyroDMGBonus, "火元素伤害加成" },
-            { ArtifactAffixType.HydroDMGBonus, "水元素伤害加成" },
-            { ArtifactAffixType.DendroDMGBonus, "草元素伤害加成" },
-            { ArtifactAffixType.ElectroDMGBonus, "雷元素伤害加成" },
-            { ArtifactAffixType.AnemoDMGBonus, "风元素伤害加成" },
-            { ArtifactAffixType.CryoDMGBonus, "冰元素伤害加成" },
-            { ArtifactAffixType.GeoDMGBonus, "岩元素伤害加成" }
+            { ArtifactAffixType.ATK, Lang.S["GameTask_10342_067f52"] },
+            { ArtifactAffixType.ATKPercent, Lang.S["GameTask_10342_067f52"] },
+            { ArtifactAffixType.DEF, Lang.S["GameTask_10341_0aba42"] },
+            { ArtifactAffixType.DEFPercent, Lang.S["GameTask_10341_0aba42"] },
+            { ArtifactAffixType.HP, Lang.S["GameTask_10340_37be5a"] },
+            { ArtifactAffixType.HPPercent, Lang.S["GameTask_10340_37be5a"] },
+            { ArtifactAffixType.CRITRate, Lang.S["GameTask_10339_1b2a12"] },
+            { ArtifactAffixType.CRITDMG, Lang.S["GameTask_10338_32eaa2"] },
+            { ArtifactAffixType.ElementalMastery, Lang.S["GameTask_10337_06402c"] },
+            { ArtifactAffixType.EnergyRecharge, Lang.S["GameTask_10336_62f0d2"] },
+            { ArtifactAffixType.HealingBonus, Lang.S["GameTask_10335_54e972"] },
+            { ArtifactAffixType.PhysicalDMGBonus, Lang.S["GameTask_10334_f6d170"] },
+            { ArtifactAffixType.PyroDMGBonus, Lang.S["GameTask_10333_bbc335"] },
+            { ArtifactAffixType.HydroDMGBonus, Lang.S["GameTask_10332_9d5cec"] },
+            { ArtifactAffixType.DendroDMGBonus, Lang.S["GameTask_10331_9c9d9d"] },
+            { ArtifactAffixType.ElectroDMGBonus, Lang.S["GameTask_10330_e3f1b2"] },
+            { ArtifactAffixType.AnemoDMGBonus, Lang.S["GameTask_10329_54650c"] },
+            { ArtifactAffixType.CryoDMGBonus, Lang.S["GameTask_10328_59d6d1"] },
+            { ArtifactAffixType.GeoDMGBonus, Lang.S["GameTask_10327_b467ee"] }
         }.ToFrozenDictionary();
     }
 

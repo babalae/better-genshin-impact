@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -11,7 +12,7 @@ public class ConditionDefinition
     public string? Description { get; set; } // 选项描述
 
     // 谓语选项
-    public List<string> PredicateOptions { get; set; } = ["包含"];
+    public List<string> PredicateOptions { get; set; } = [Lang.S["Gen_11924_e13556"]];
 
     public IEnumerable<string>? ObjectOptions { get; set; } // 宾语选项
 
@@ -24,127 +25,127 @@ public class ConditionDefinitions
     public static Dictionary<string, ConditionDefinition> Definitions { get; set; } = new()
     {
         {
-            "采集物", new ConditionDefinition
+            Lang.S["Gen_10023_15d7ae"], new ConditionDefinition
             {
-                Subject = "采集物",
-                Description = "地图追踪此采集物时使用的队伍名称。队伍名称是你在游戏中手动设置的队伍名称文字。建议勾选全部并配置存在盾、加血的角色队伍。",
-                ObjectOptions = new List<string> { "全部",
-                    "万相石",
-                    "初露之源",
-                    "劫波莲",
-                    "卷心菜",
-                    "嘟嘟莲",
-                    "圣金虫",
-                    "堇瓜",
-                    "塞西莉亚",
-                    "墩墩桃",
-                    "夜泊石",
-                    "天云草实",
-                    "子探测单元",
-                    "小灯草",
-                    "帕蒂莎兰",
-                    "幽光星星",
-                    "幽灯蕈",
-                    "悼灵花",
-                    "慕风蘑菇",
-                    "日落果",
-                    "星螺",
-                    "星银矿石",
-                    "晶化骨髓",
-                    "月莲",
-                    "松果",
-                    "松茸",
-                    "柔灯铃",
-                    "树王圣体菇",
-                    "树莓",
-                    "椰枣",
-                    "水晶块",
-                    "沉玉仙茗",
-                    "沙脂蛹",
-                    "泡泡桔",
-                    "浪沫羽鳃",
-                    "海灵芝",
-                    "海草",
-                    "海露花",
-                    "清心",
-                    "清水玉",
-                    "湖光铃兰",
-                    "澄晶石",
-                    "灼灼彩菊",
-                    "灼灼彩菊",
-                    "珊瑚真珠",
-                    "琉璃百合",
-                    "琉璃袋",
-                    "甜甜花",
-                    "电气水晶",
-                    "白萝卜",
-                    "白铁块",
-                    "石珀",
-                    "神秘的肉",
-                    "竹笋",
-                    "紫晶块",
-                    "绝云椒椒",
-                    "绯樱绣球",
-                    "肉龙掌",
-                    "胡萝卜",
-                    "苍晶螺",
-                    "苦种",
-                    "茉洁草",
-                    "莲蓬",
-                    "萃凝晶",
-                    "落落莓",
-                    "蒲公英",
-                    "薄荷",
-                    "蘑菇",
-                    "虹彩蔷薇",
-                    "血斛",
-                    "赤念果",
-                    "金鱼草",
-                    "钩钩果",
-                    "铁块",
-                    "霓裳花",
-                    "青蜜莓",
-                    "须弥蔷薇",
-                    "风车菊",
-                    "香辛果",
-                    "马尾",
-                    "鬼兜虫",
-                    "魔晶块",
-                    "鸟蛋",
-                    "鸣草" },
+                Subject = Lang.S["Gen_10023_15d7ae"],
+                Description = Lang.S["Gen_12014_3d3d6e"],
+                ObjectOptions = new List<string> { Lang.S["Gen_10024_a8b0c2"],
+                    Lang.S["Gen_12013_20edf4"],
+                    Lang.S["Gen_12012_40c9d8"],
+                    Lang.S["Gen_12011_fadfa0"],
+                    Lang.S["Gen_12010_191c96"],
+                    Lang.S["Gen_12009_3ee46d"],
+                    Lang.S["Gen_12008_d68101"],
+                    Lang.S["Gen_12007_8bc0e4"],
+                    Lang.S["Gen_12006_ec1a6e"],
+                    Lang.S["Gen_12005_86ef46"],
+                    Lang.S["Gen_12004_908d6b"],
+                    Lang.S["Gen_12003_249299"],
+                    Lang.S["Gen_12002_90da87"],
+                    Lang.S["Gen_12001_000041"],
+                    Lang.S["Gen_12000_ea8588"],
+                    Lang.S["Gen_11999_b86665"],
+                    Lang.S["Gen_11998_c7d804"],
+                    Lang.S["Gen_11997_7427f0"],
+                    Lang.S["Gen_11996_0bd233"],
+                    Lang.S["Gen_11995_1832ee"],
+                    Lang.S["Gen_11994_1762a8"],
+                    Lang.S["Gen_11993_fd57b4"],
+                    Lang.S["Gen_11992_7e9516"],
+                    Lang.S["Gen_11991_a23a8c"],
+                    Lang.S["Gen_11990_ecd410"],
+                    Lang.S["Gen_11989_7b603f"],
+                    Lang.S["Gen_11988_9f7870"],
+                    Lang.S["Gen_11987_4d7bd8"],
+                    Lang.S["Gen_11986_3f27c8"],
+                    Lang.S["Gen_11985_01a6e3"],
+                    Lang.S["Gen_11984_a172ac"],
+                    Lang.S["Gen_11983_40e543"],
+                    Lang.S["Gen_11982_dd1714"],
+                    Lang.S["Gen_11981_278b15"],
+                    Lang.S["Gen_11980_8ff4c1"],
+                    Lang.S["Gen_11979_23b9bc"],
+                    Lang.S["Gen_11978_10fbcb"],
+                    Lang.S["Gen_11977_f1eae9"],
+                    Lang.S["Gen_11976_273f7b"],
+                    Lang.S["Gen_11975_6a46ed"],
+                    Lang.S["Gen_11974_87ad72"],
+                    Lang.S["Gen_11973_7977e0"],
+                    Lang.S["Gen_11972_933730"],
+                    Lang.S["Gen_11972_933730"],
+                    Lang.S["Gen_11971_154fec"],
+                    Lang.S["Gen_11970_2008bd"],
+                    Lang.S["Gen_11969_e21c92"],
+                    Lang.S["Gen_11968_8d9150"],
+                    Lang.S["Gen_11967_a14dce"],
+                    Lang.S["Gen_11966_58837f"],
+                    Lang.S["Gen_11965_684aa2"],
+                    Lang.S["Gen_11964_0c72f3"],
+                    Lang.S["Gen_11963_e7fb11"],
+                    Lang.S["Gen_11962_1321ba"],
+                    Lang.S["Gen_11961_9c7313"],
+                    Lang.S["Gen_11960_37bc1f"],
+                    Lang.S["Gen_11959_1fa9c9"],
+                    Lang.S["Gen_11958_2d5fcb"],
+                    Lang.S["Gen_11957_f62e9f"],
+                    Lang.S["Gen_11956_17f79e"],
+                    Lang.S["Gen_11955_1be69a"],
+                    Lang.S["Gen_11954_e9b6f7"],
+                    Lang.S["Gen_11953_8f1e87"],
+                    Lang.S["Gen_11952_93c94a"],
+                    Lang.S["Gen_11951_6966e3"],
+                    Lang.S["Gen_11950_28a75d"],
+                    Lang.S["Gen_11949_13ce55"],
+                    Lang.S["Gen_11948_f12098"],
+                    Lang.S["Gen_11947_0ff7f8"],
+                    Lang.S["Gen_11946_c88aef"],
+                    Lang.S["Gen_11945_0bb003"],
+                    Lang.S["Gen_11944_932ab9"],
+                    Lang.S["Gen_11943_66e743"],
+                    Lang.S["Gen_11942_d9b934"],
+                    Lang.S["Gen_11941_710422"],
+                    Lang.S["Gen_11940_595691"],
+                    Lang.S["Gen_11939_f28e1f"],
+                    Lang.S["Gen_11938_274b5c"],
+                    Lang.S["Gen_11937_f41eb3"],
+                    Lang.S["Gen_11936_2be531"],
+                    Lang.S["Gen_11935_cde1e6"],
+                    Lang.S["Gen_11934_54ab59"],
+                    Lang.S["Gen_11933_8d4c23"],
+                    Lang.S["Gen_11932_008e6f"] },
             }
         },
         {
-            "动作", new ConditionDefinition
+            Lang.S["KeyBind_002_c500cf"], new ConditionDefinition
             {
-                Subject = "动作",
-                Description = "路线中含有特殊动作时使用的队伍名称，优先级高于采集物配置。队伍名称是你在游戏中手动设置的队伍名称文字。队伍中，必须存在和动作相关的角色。程序会自动识别并使用对应的角色执行动作，具体见文档",
-                ObjectOptions = new List<string> { "纳西妲采集", "水元素采集", "雷元素采集", "风元素采集", "火元素采集" },
+                Subject = Lang.S["KeyBind_002_c500cf"],
+                Description = Lang.S["Gen_11931_fca6d0"],
+                ObjectOptions = new List<string> { Lang.S["Gen_11929_343418"], "水元素采集", "雷元素采集", "风元素采集", "火元素采集" },
             }
         },
         {
-            "队伍中角色", new ConditionDefinition
+            Lang.S["Gen_10026_37033c"], new ConditionDefinition
             {
-                Subject = "队伍中角色",
-                Description = "队伍中存在配置角色时候，该角色循环执行的策略。配置多个角色时优先级从左到右。具体策略产生的行为见文档。",
+                Subject = Lang.S["Gen_10026_37033c"],
+                Description = Lang.S["Gen_11930_edd66b"],
                 ObjectOptions = DefaultAutoFightConfig.CombatAvatarNames,
                 ResultOptions = AvatarResultList
             }
         },
     };
 
-    public static List<string> PartySubjects { get; } = ["采集物", "动作"];
+    public static List<string> PartySubjects { get; } = [Lang.S["Gen_10023_15d7ae"], "动作"];
 
-    public static List<string> AvatarSubjects { get; } = ["队伍中角色"];
+    public static List<string> AvatarSubjects { get; } = [Lang.S["Gen_10026_37033c"]];
 
-    public static List<string> AvatarResultList { get; } = ["循环短E", "循环长E", "作为主要行走角色"];
+    public static List<string> AvatarResultList { get; } = [Lang.S["Gen_10022_37be95"], "循环长E", "作为主要行走角色"];
 
     public static Dictionary<string, string> ActionCnDic { get; } = new()
     {
-        { "nahida_collect", "纳西妲采集" },
-        { "hydro_collect", "水元素采集" },
-        { "electro_collect", "雷元素采集" },
-        { "anemo_collect", "风元素采集" },
-        { "pyro_collect", "火元素采集" },
+        { "nahida_collect", Lang.S["Gen_11929_343418"] },
+        { "hydro_collect", Lang.S["Gen_11928_52008c"] },
+        { "electro_collect", Lang.S["Gen_11927_104220"] },
+        { "anemo_collect", Lang.S["Gen_11926_cc749b"] },
+        { "pyro_collect", Lang.S["Gen_11925_736b93"] },
     };
 }

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -71,7 +72,7 @@ public class CameraRotateTask(CancellationToken ct)
 
             if (count > maxTryTimes)
             {
-                Logger.LogWarning("视角转动到目标角度超时，停止转动");
+                Logger.LogWarning(Lang.S["GameTask_10997_4f4bf9"]);
                 break;
             }
 

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
@@ -67,7 +68,7 @@ public partial class AutoSkipConfig : ObservableObject
     /// 不选择选项
     /// </summary>
     [ObservableProperty]
-    private string _clickChatOption = "优先选择第一个选项";
+    private string _clickChatOption = Lang.S["GameTask_11220_d17997"];
     
     /// <summary>
     /// 自定义优先选项启用
@@ -107,16 +108,16 @@ public partial class AutoSkipConfig : ObservableObject
 
     public bool IsClickFirstChatOption()
     {
-        return ClickChatOption == "优先选择第一个选项";
+        return ClickChatOption == Lang.S["GameTask_11220_d17997"];
     }
 
     public bool IsClickRandomChatOption()
     {
-        return ClickChatOption == "随机选择选项";
+        return ClickChatOption == Lang.S["GameTask_11219_1f4054"];
     }
     public bool IsClickNoneChatOption()
     {
-        return ClickChatOption == "不选择选项";
+        return ClickChatOption == Lang.S["GameTask_11218_47e22d"];
     }
 
     /// <summary>

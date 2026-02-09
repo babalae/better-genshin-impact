@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Script.Dependence;
@@ -93,7 +94,7 @@ public class EngineExtend
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"从 library 字段读取路径 '{path}' 失败: {ex.Message}", ex);
+                    throw new Exception($"{Lang.S["Gen_10108_7a8a4d"]}, ex);
                 }
             }
 

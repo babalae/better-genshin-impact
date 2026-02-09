@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
@@ -14,9 +15,9 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             type = type.ToLower();
             return type switch
             {
-                "出战" => /* ActionEnum.ChooseFirst, */ throw new ArgumentOutOfRangeException(nameof(type), type, null),
-                "切换" => /* ActionEnum.SwitchLater, */ throw new ArgumentOutOfRangeException(nameof(type), type, null),
-                "使用" => ActionEnum.UseSkill,
+                Lang.S["GameTask_10936_8cbf72"] => /* ActionEnum.ChooseFirst, */ throw new ArgumentOutOfRangeException(nameof(type), type, null),
+                Lang.S["GameTask_10935_bec7e4"] => /* ActionEnum.SwitchLater, */ throw new ArgumentOutOfRangeException(nameof(type), type, null),
+                Lang.S["GameTask_10392_ecff77"] => ActionEnum.UseSkill,
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             };
         }
@@ -25,9 +26,9 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         {
             return type switch
             {
-                ActionEnum.ChooseFirst => "出战",
-                ActionEnum.SwitchLater => "切换",
-                ActionEnum.UseSkill => "使用",
+                ActionEnum.ChooseFirst => Lang.S["GameTask_10936_8cbf72"],
+                ActionEnum.SwitchLater => Lang.S["GameTask_10935_bec7e4"],
+                ActionEnum.UseSkill => Lang.S["GameTask_10392_ecff77"],
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
             };
         }

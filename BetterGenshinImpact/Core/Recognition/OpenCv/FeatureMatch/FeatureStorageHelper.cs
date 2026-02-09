@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -16,7 +17,7 @@ public class FeatureStorageHelper
             var sizeOfKeyPoint = Marshal.SizeOf<KeyPoint>();
             if (fs.Length % sizeOfKeyPoint != 0)
             {
-                throw new FileFormatException("无法识别的KeyPoint格式");
+                throw new FileFormatException(Lang.S["Gen_10083_03bf15"]);
             }
 
             using var kpVector = new VectorOfKeyPoint((nuint)(fs.Length / sizeOfKeyPoint));

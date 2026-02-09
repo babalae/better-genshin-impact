@@ -76,14 +76,14 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private bool _isMapPointsLoading;
 
-        [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
+        [ObservableProperty] private string _mapPointsLoadingText = Lang.S["Gen_12220_b57b35"];
 
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
 
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
         [
-            new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
-            new(MapPointApiProvider.KongyingTavern, "空荧酒馆")
+            new(MapPointApiProvider.MihoyoMap, Lang.S["Gen_12219_8734bf"]),
+            new(MapPointApiProvider.KongyingTavern, Lang.S["Gen_12218_f20243"])
         ];
 
         [ObservableProperty] private MapPointApiProviderOption? _selectedMapPointApiProviderOption;
@@ -113,11 +113,11 @@ namespace BetterGenshinImpact.ViewModel
         {
             if (Config != null)
             {
-                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
-                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
-                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
-                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig));
-                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12217_b67f18"], Config.AutoPickConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12216_a9bc59"], Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12215_70cfc9"], Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12214_737f04"], Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12213_10809f"], Config.QuickTeleportConfig));
             }
         }
 
@@ -249,7 +249,7 @@ namespace BetterGenshinImpact.ViewModel
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "切换地图点位来源时发生异常");
+                _logger.LogWarning(ex, Lang.S["Gen_12212_650c78"]);
             }
         }
 
@@ -418,7 +418,7 @@ namespace BetterGenshinImpact.ViewModel
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "加载地图点位树时发生异常");
+                _logger.LogWarning(ex, Lang.S["Gen_12211_111307"]);
             }
             finally
             {
@@ -483,7 +483,7 @@ namespace BetterGenshinImpact.ViewModel
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "刷新地图点位列表时发生异常");
+                _logger.LogWarning(ex, Lang.S["Gen_12210_e68e7e"]);
             }
             finally
             {
@@ -628,7 +628,7 @@ namespace BetterGenshinImpact.ViewModel
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "加载地图点位图标失败");
+                _logger.LogDebug(ex, Lang.S["Gen_12209_5cc5d1"]);
             }
         }
 
@@ -651,7 +651,7 @@ namespace BetterGenshinImpact.ViewModel
                 return labelName;
             }
 
-            return $"点位 {point.Id}";
+            return $"{Lang.S["Gen_12208_985652"]};
         }
 
         [RelayCommand]

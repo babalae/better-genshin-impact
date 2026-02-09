@@ -58,7 +58,7 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 UIDispatcherHelper.Invoke(() =>
                 {
-                    Debug.WriteLine("更新地图位置");
+                    Debug.WriteLine(Lang.S["Gen_12476_8abfaf"]);
                     try
                     {
                         MapBitmap.Lock();
@@ -76,7 +76,7 @@ public partial class MapViewerViewModel : ObservableObject
             }
             else if (msg.PropertyName == "UpdateCurrentPathing")
             {
-                Debug.WriteLine("更新当前追踪的路径图像");
+                Debug.WriteLine(Lang.S["Gen_12475_163fd9"]);
                 _currentPathingMap = GenTaskMat((PathingTask)msg.NewValue);
             }
         });
@@ -108,7 +108,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
         else
         {
-            throw new Exception("暂时不支持展示路径的地图类型:" + mapName);
+            throw new Exception(Lang.S["Gen_12474_bc9200"] + mapName);
         }
     }
 
@@ -139,7 +139,7 @@ public partial class MapViewerViewModel : ObservableObject
             // 实现剪切 Mat 的逻辑
             if (_currentPathingMap.Empty())
             {
-                Debug.WriteLine("_currentPathingMap 未初始化");
+                Debug.WriteLine(Lang.S["Gen_12473_e997b3"]);
                 return new Mat(_mapImage, new Rect(rect.X / _scale, rect.Y / _scale, rect.Width, rect.Height));
             }
             else

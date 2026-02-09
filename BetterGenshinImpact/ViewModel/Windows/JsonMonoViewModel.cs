@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
@@ -32,7 +33,7 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("读取黑白名单出错：" + e.ToString());
+            ThemedMessageBox.Error(Lang.S["Gen_1073_45e12f"] + e.ToString());
         }
     }
 
@@ -45,18 +46,18 @@ public partial class JsonMonoViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("保存失败：" + e.ToString());
+            ThemedMessageBox.Error(Lang.S["Gen_1074_78d235"] + e.ToString());
             return;
         }
 
         try
         {
             Global.WriteAllText(JsonPath, JsonText);
-            Toast.Success("保存成功");
+            Toast.Success(Lang.S["Gen_1075_3b1083"]);
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Error("保存失败：" + e.ToString());
+            ThemedMessageBox.Error(Lang.S["Gen_1074_78d235"] + e.ToString());
         }
     }
 

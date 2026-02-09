@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
 using Microsoft.ClearScript.JavaScript;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -29,12 +30,12 @@ public class ScriptProject
         ProjectPath = Path.Combine(Global.ScriptPath(), folderName);
         if (!Directory.Exists(ProjectPath))
         {
-            throw new DirectoryNotFoundException("脚本文件夹不存在:" + ProjectPath);
+            throw new DirectoryNotFoundException(Lang.S["Gen_10267_420edd"] + ProjectPath);
         }
         ManifestFile = Path.GetFullPath(Path.Combine(ProjectPath, "manifest.json"));
         if (!File.Exists(ManifestFile))
         {
-            throw new FileNotFoundException("manifest.json文件不存在，请确认此脚本是JS脚本类型。" + ManifestFile);
+            throw new FileNotFoundException(Lang.S["Gen_10266_e8ca03"] + ManifestFile);
         }
 
         Manifest = Manifest.FromJson(File.ReadAllText(ManifestFile));

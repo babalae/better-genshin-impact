@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
@@ -22,7 +23,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 
 public partial class TriggerSettingsPageViewModel : ViewModel
 {
-    [ObservableProperty] private string[] _clickChatOptionNames = ["优先选择第一个选项", "随机选择选项", "优先选择最后一个选项", "不选择选项"];
+    [ObservableProperty] private string[] _clickChatOptionNames = [Lang.S["GameTask_11220_d17997"], "随机选择选项", "优先选择最后一个选项", "不选择选项"];
 
     [ObservableProperty] private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
 
@@ -33,8 +34,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     [ObservableProperty] private Dictionary<string, string> _pictureInPictureSourceTypeDict =
         new()
         {
-            { nameof(PictureSourceType.CaptureLoop), "60帧模式" },
-            { nameof(PictureSourceType.TriggerDispatcher), "截图器供图" }
+            { nameof(PictureSourceType.CaptureLoop), Lang.S["Trigger_12459_f410a0"] },
+            { nameof(PictureSourceType.TriggerDispatcher), Lang.S["Trigger_12458_2cc03e"] }
         };
 
     public AllConfig Config { get; set; }
@@ -145,14 +146,14 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         
         var exactLabel = new Wpf.Ui.Controls.TextBlock
         {
-            Text = "精确匹配黑名单：",
+            Text = Lang.S["Trigger_12457_f334eb"],
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(0, 0, 0, 5)
         };
         
         var fuzzyLabel = new Wpf.Ui.Controls.TextBlock
         {
-            Text = "模糊匹配黑名单：",
+            Text = Lang.S["Trigger_12456_a913d9"],
             FontWeight = FontWeights.Bold,
             Margin = new Thickness(0, 10, 0, 5)
         };
@@ -163,13 +164,13 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         stackPanel.Children.Add(fuzzyRichTextBox);
 
         var p = new PromptDialog(
-            "黑名单配置\n" +
-            "每行一条记录。\n" +
-            "示例：\n" +
-            "精致的宝箱\n" +
-            "史莱姆凝液\n" +
-            "牢固的箭簇",
-            "黑名单配置",
+            Lang.S["Trigger_12455_16f388"] +
+            Lang.S["Trigger_12454_9d3826"] +
+            Lang.S["Trigger_12447_89e5c1"] +
+            Lang.S["Trigger_12453_d9826d"] +
+            Lang.S["Trigger_12452_c46ccf"] +
+            Lang.S["Trigger_12451_4db31f"],
+            Lang.S["Trigger_12450_b662c9"],
             stackPanel,
             null);
         p.Height = 600;
@@ -205,19 +206,19 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             //Height = 340,
             VerticalAlignment = VerticalAlignment.Stretch,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            PlaceholderText = "请在此输入白名单配置，每行一条记录。\n" +
-                              "示例：\n" +
-                              "调查\n" +
-                              "合成\n" +
-                              "启动"
+            PlaceholderText = Lang.S["Trigger_12449_2d6c74"] +
+                              Lang.S["Trigger_12447_89e5c1"] +
+                              Lang.S["Trigger_12446_26a9d4"] +
+                              Lang.S["Trigger_12445_fec96c"] +
+                              Lang.S["Home_Start"]
         };
         var p = new PromptDialog(
-            "白名单配置，每行一条记录\n" +
-            "示例：\n" +
-            "调查\n" +
-            "合成\n" +
-            "启动",
-            "白名单配置",
+            Lang.S["Trigger_12448_277197"] +
+            Lang.S["Trigger_12447_89e5c1"] +
+            Lang.S["Trigger_12446_26a9d4"] +
+            Lang.S["Trigger_12445_fec96c"] +
+            Lang.S["Home_Start"],
+            Lang.S["Trigger_12444_d22346"],
             multilineTextBox,
             text);
         p.Height = 500;

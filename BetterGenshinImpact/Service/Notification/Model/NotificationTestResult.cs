@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿namespace BetterGenshinImpact.Service.Notification.Model;
 
 public class NotificationTestResult
@@ -7,7 +8,7 @@ public class NotificationTestResult
 
     public static NotificationTestResult Success()
     {
-        return new NotificationTestResult { IsSuccess = true, Message = "通知成功" };
+        return new NotificationTestResult { IsSuccess = true, Message = Lang.S["Service_12087_4e3605"] };
     }
 
     public static NotificationTestResult Error(string message)

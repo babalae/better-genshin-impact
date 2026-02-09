@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.BgiVision;
@@ -11,7 +12,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 public class ReturnMainUiTask
 {
-    public string Name => "返回主界面";
+    public string Name => Lang.S["GameTask_11630_2824d0"];
 
     public async Task Start(CancellationToken ct)
     {

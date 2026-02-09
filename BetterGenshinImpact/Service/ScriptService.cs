@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -56,7 +57,7 @@ public partial class ScriptService : IScriptService
         {
             if (IsCurrentHourEqual(project.GroupInfo.Config.PathingConfig.SkipDuring))
             {
-                _logger.LogInformation($"{project.Name}任务已到禁止执行时段，将跳过！");
+                _logger.LogInformation($"{Lang.S["Service_12072_1530f2"]});
                 return true;
             }
 
@@ -66,11 +67,11 @@ public partial class ScriptService : IScriptService
                 int index = tcc.GetExecutionOrder();
                 if (index == -1)
                 {
-                    _logger.LogInformation($"{project.Name}周期配置参数错误，配置将不生效，任务正常执行！");
+                    _logger.LogInformation($"{Lang.S["Service_12071_1ca395"]});
                 }
                 else if (index != tcc.Index)
                 {
-                    _logger.LogInformation($"{project.Name}任务已经不在执行周期（当前值${index}!=配置值${tcc.Index}），将跳过此任务！");
+                    _logger.LogInformation($"{Lang.S["Service_12070_970682"]});
                     return true;
                 }
                
@@ -90,13 +91,13 @@ public partial class ScriptService : IScriptService
                 string message;
                 if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
                 {
-                    _logger.LogInformation($"{project.Name}:{message},跳过此任务！");
+                    _logger.LogInformation($"{Lang.S["Service_12069_ef30c0"]});
                     return true;
                 }
             }
             catch (Exception e)
             {
-                TaskControl.Logger.LogError($"锄地规划统计异常：{e.Message}");
+                TaskControl.Logger.LogError($"{Lang.S["Service_12068_a7abc1"]});
             }
 
             
@@ -104,7 +105,7 @@ public partial class ScriptService : IScriptService
         string skipMessage;
         if (ExecutionRecordStorage.IsSkipTask(project,out skipMessage))
         {
-            TaskControl.Logger.LogInformation($"{project.Name}:{skipMessage},跳过此任务！");
+            TaskControl.Logger.LogInformation($"{Lang.S["Service_12067_63c3db"]});
             return true;
         }
         return false; // 不跳过
@@ -118,7 +119,7 @@ public partial class ScriptService : IScriptService
     
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
-        groupName ??= "默认";
+        groupName ??= Lang.S["Service_12066_18c634"];
 
         var list = ReloadScriptProjects(projectList);
         
@@ -149,7 +150,7 @@ public partial class ScriptService : IScriptService
             //     _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
             // }
 
-            _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
+            _logger.LogInformation(Lang.S["Service_12065_e02731"], groupName, list.Count);
         }
 
         // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
@@ -233,7 +234,7 @@ public partial class ScriptService : IScriptService
                             if (preExecutionProjects.Count > 0)
                             {
    
-                                _logger.LogInformation($"存在{preExecutionProjects.Count}个需优先执行的任务！");
+                                _logger.LogInformation($"{Lang.S["Service_12064_7e18d8"]});
                                 // 设置执行状态，进入优先执行任务
                                 RunnerContext.Instance.IsPreExecution = true;
                                 //重新构造需要执行的配置组
@@ -280,7 +281,7 @@ public partial class ScriptService : IScriptService
                         await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
                         if (exeProject.Status != "Enabled")
                         {
-                            _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", exeProject.Name);
+                            _logger.LogInformation(Lang.S["Service_12063_77b133"], exeProject.Name);
                             continue;
                         }
 
@@ -293,7 +294,7 @@ public partial class ScriptService : IScriptService
                         if (fisrt )
                         {
                             fisrt = false;
-                            Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+                            Notify.Event(NotificationEvent.GroupStart).Success($"{Lang.S["Service_12062_79f0d5"]});
                         }
 
                         if (!RunnerContext.Instance.IsPreExecution &&taskProgress != null)
@@ -348,13 +349,13 @@ public partial class ScriptService : IScriptService
                             }
                             catch (TaskCanceledException e)
                             {
-                                _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
+                                _logger.LogInformation(Lang.S["Service_12061_045039"], e.Message);
                                 throw;
                             }
                             catch (Exception e)
                             {
-                                _logger.LogDebug(e, "执行脚本时发生异常");
-                                _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                                _logger.LogDebug(e, Lang.S["Service_12060_60d4ab"]);
+                                _logger.LogError(Lang.S["Service_12059_e025b2"], e.Message);
                                 if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.CurrentScriptGroupProjectInfo != null)
                                 {
                                     taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
@@ -365,7 +366,7 @@ public partial class ScriptService : IScriptService
                                 stopwatch.Stop();
                                 var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
                                 // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
-                                _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", exeProject.Name,
+                                _logger.LogInformation(Lang.S["Service_12058_c062cd"], exeProject.Name,
                                     elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
                                 _logger.LogInformation("------------------------------");
                             }
@@ -401,8 +402,8 @@ public partial class ScriptService : IScriptService
                             var autoconfig = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
                             if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
                             {
-                                _logger.LogInformation("调度器任务出现未预期的异常，自动重启bgi");
-                                Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
+                                _logger.LogInformation(Lang.S["Service_12057_6dea1b"]);
+                                Notify.Event(NotificationEvent.GroupEnd).Error(Lang.S["Service_12057_6dea1b"]);
                                 if (autoconfig.RestartGameTogether
                                     && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled
                                     && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
@@ -424,14 +425,14 @@ public partial class ScriptService : IScriptService
         
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
         {
-            _logger.LogInformation("配置组 {Name} 执行结束", groupName);
+            _logger.LogInformation(Lang.S["Service_12056_8ba255"], groupName);
         }
 
         if (!fisrt&&!RunnerContext.Instance.IsPreExecution)
         {
             if (CancellationContext.Instance.IsManualStop is false)
             {
-                Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
+                Notify.Event(NotificationEvent.GroupEnd).Success($"{Lang.S["Service_12055_14e315"]});
             }
         }
 
@@ -511,29 +512,29 @@ public partial class ScriptService : IScriptService
         {
             if (project.Project == null)
             {
-                throw new Exception("Project 为空");
+                throw new Exception(Lang.S["Service_12054_746f03"]);
             }
 
-            _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
+            _logger.LogInformation(Lang.S["Service_12053_f2d203"], project.Name);
+            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation(Lang.S["Service_12049_25b1da"]);
             await project.Run();
         }
         else if (project.Type == "KeyMouse")
         {
-            _logger.LogInformation("→ 开始执行键鼠脚本: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
+            _logger.LogInformation(Lang.S["Service_12052_d8bdfb"], project.Name);
+            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation(Lang.S["Service_12049_25b1da"]);
             await project.Run();
         }
         else if (project.Type == "Pathing")
         {
-            _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
+            _logger.LogInformation(Lang.S["Service_12051_efcf6a"], project.Name);
+            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation(Lang.S["Service_12049_25b1da"]);
             await project.Run();
         }
         else if (project.Type == "Shell")
         {
-            _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
+            _logger.LogInformation(Lang.S["Service_12050_60ce78"], project.Name);
+            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation(Lang.S["Service_12049_25b1da"]);
             await project.Run();
         }
     }
@@ -592,8 +593,8 @@ public partial class ScriptService : IScriptService
                         if (first)
                         {
                             first = false;
-                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
+                            TaskControl.Logger.LogInformation(Lang.S["Service_12048_141b27"]);
+                            TaskControl.Logger.LogInformation(Lang.S["Service_12047_6a23ff"]);
                         }
 
                         await Task.Delay(500);

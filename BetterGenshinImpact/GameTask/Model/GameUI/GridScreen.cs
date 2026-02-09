@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
@@ -443,7 +444,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             public static bool IsCorrectBottomColor(Mat image, int tolerance = 30)
             {
                 if (image.Empty())
-                    throw new ArgumentException("输入图像为空");
+                    throw new ArgumentException(Lang.S["GameTask_11832_8a7c22"]);
 
                 Scalar bgrColor = new Scalar(0xdc, 0xe5, 0xe9);
 

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
@@ -107,7 +108,7 @@ public class CharacterCard
     {
         try
         {
-            source.Element = characterCard.Element.Replace("元素", "").ChineseToElementalType();
+            source.Element = characterCard.Element.Replace(Lang.S["GameTask_10930_eeb2c6"], "").ChineseToElementalType();
             source.Hp = characterCard.Hp;
             source.Skills = new Skill[characterCard.Skills.Count + 1];
 
@@ -115,7 +116,7 @@ public class CharacterCard
             for (var i = characterCard.Skills.Count - 1; i >= 0; i--)
             {
                 var skillsItem = characterCard.Skills[i];
-                if (skillsItem.SkillTag.Contains("被动技能"))
+                if (skillsItem.SkillTag.Contains(Lang.S["GameTask_10929_f6791d"]))
                 {
                     continue;
                 }
@@ -128,8 +129,8 @@ public class CharacterCard
         }
         catch (System.Exception e)
         {
-            TaskControl.Logger.LogError($"角色【{characterCard.Name}】卡牌配置解析失败：{e.Message}");
-            throw new System.Exception($"角色【{characterCard.Name}】卡牌配置解析失败：{e.Message}。请自行进行角色定义", e);
+            TaskControl.Logger.LogError($"{Lang.S["GameTask_10928_3ecbad"]});
+            throw new System.Exception($"{Lang.S["GameTask_10927_743ae2"]}, e);
         }
     }
 
@@ -160,7 +161,7 @@ public class CharacterCard
 
         if (specificElementNum != 1)
         {
-            throw new System.Exception($"技能[{skillsItem.Name}]默认技能数据技能解析失败");
+            throw new System.Exception($"{Lang.S["GameTask_10926_24c0fd"]});
         }
 
         skill.AllCost = skill.SpecificElementCost + skill.AnyElementCost;

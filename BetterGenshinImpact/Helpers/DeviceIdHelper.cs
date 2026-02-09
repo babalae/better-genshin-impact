@@ -1,6 +1,7 @@
 using System;
 using DeviceId;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -25,7 +26,7 @@ public class DeviceIdHelper
         }
         catch (Exception e)
         {
-            _logger.LogDebug("获取设备ID异常：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
+            _logger.LogDebug(Lang.S["Gen_11895_98eb05"] + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
                              Environment.NewLine + e.Message);
             return string.Empty;
         }

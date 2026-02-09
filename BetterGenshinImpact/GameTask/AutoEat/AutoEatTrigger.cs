@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static Vanara.PInvoke.User32;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoEat;
 
@@ -21,7 +22,7 @@ public class AutoEatTrigger : ITaskTrigger
 {
     private readonly ILogger<AutoEatTrigger> _logger = App.GetLogger<AutoEatTrigger>();
 
-    public string Name => "自动吃药";
+    public string Name => Lang.S["Trigger_049_4815ef"];
     public bool IsEnabled { get; set; }
     public int Priority => 25; // 中等优先级
     public bool IsExclusive => false;
@@ -83,7 +84,7 @@ public class AutoEatTrigger : ITaskTrigger
                         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                         _lastEatTime = now;
                         
-                        _logger.LogInformation("检测到红血且不在CD，自动吃药");
+                        _logger.LogInformation(Lang.S["GameTask_10501_901e11"]);
                     }
                 }
             }
@@ -97,13 +98,13 @@ public class AutoEatTrigger : ITaskTrigger
                     // 按z键复活
                     Simulation.SendInput.Keyboard.KeyPress(VK.VK_Z);
                     _lastResurrectionTime = now;
-                    _logger.LogInformation("检测到复活图标，自动复活");
+                    _logger.LogInformation(Lang.S["GameTask_10500_b2362b"]);
                 }
             }
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "自动吃药检测时发生异常");
+            _logger.LogDebug(e, Lang.S["GameTask_10484_7f5c02"]);
         }
     }
 
@@ -119,7 +120,7 @@ public class AutoEatTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "检测Recovery图标时发生异常");
+            _logger.LogDebug(e, Lang.S["GameTask_10499_5d30ae"]);
             return false;
         }
     }
@@ -136,7 +137,7 @@ public class AutoEatTrigger : ITaskTrigger
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "检测Resurrection图标时发生异常");
+            _logger.LogDebug(e, Lang.S["GameTask_10498_62ece0"]);
             return false;
         }
     }

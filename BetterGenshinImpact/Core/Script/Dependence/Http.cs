@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Text;
 using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -22,25 +23,25 @@ public class Http
         var currentProject = TaskContext.Instance().CurrentScriptProject;
         if (!currentProject?.AllowJsHTTP ?? false)
         {
-            throw new UnauthorizedAccessException("当前JS脚本不允许使用HTTP请求，请在调度器通用设置中启用“JS HTTP权限”");
+            throw new UnauthorizedAccessException(Lang.S["Gen_10209_524396"]);
         }
         var allowedUrls = currentProject?.Project?.Manifest.HttpAllowedUrls ?? [];
         if (allowedUrls.Length == 0)
         {
-            throw new UnauthorizedAccessException("当前JS脚本没有配置允许请求的URL，请在脚本的manifest.json中配置http_allowed_urls");
+            throw new UnauthorizedAccessException(Lang.S["Gen_10208_0f8867"]);
         }
         if (allowedUrls.Any(allowedUrl =>
         {
             // fuzzy match
             var pattern = "^" + System.Text.RegularExpressions.Regex.Escape(allowedUrl).Replace("\\*", ".*") + "$";
-            _logger.LogDebug($"[HTTP] 检查URL {url} 是否符合: {pattern}");
+            _logger.LogDebug($"{Lang.S["Gen_10207_0d5a3e"]});
             var regex = new System.Text.RegularExpressions.Regex(pattern);
             return regex.IsMatch(url);
         }))
         {
             return;
         }
-        throw new UnauthorizedAccessException($"当前JS脚本不允许请求此URL: {url}，请在脚本的manifest.json中配置http_allowed_urls，当前允许的URL列表: [{string.Join(", ", allowedUrls)}]");
+        throw new UnauthorizedAccessException($"{Lang.S["Gen_10206_22fc59"]}, ", allowedUrls)}]");
     }
 
     public class HttpReponse
@@ -61,7 +62,7 @@ public class Http
     /// <returns></returns>
     public async Task<HttpReponse> Request(string method, string url, string? body = null, string? headersJson = null)
     {
-        _logger.LogDebug($"[HTTP] 发送HTTP请求: {method} {url} Body: {(body != null ? body : "null")} Headers: {(headersJson != null ? headersJson : "null")}");
+        _logger.LogDebug($"{Lang.S["Gen_10205_e60e21"]}null")} Headers: {(headersJson != null ? headersJson : "null")}");
         CheckHttpPermission(url);
 
         var dictHeaders = new Dictionary<string, string>();
@@ -77,7 +78,7 @@ public class Http
             }
             catch (JsonException)
             {
-                throw new ArgumentException("Headers JSON格式错误");
+                throw new ArgumentException(Lang.S["Gen_10204_b3d31d"]);
             }
         }
 

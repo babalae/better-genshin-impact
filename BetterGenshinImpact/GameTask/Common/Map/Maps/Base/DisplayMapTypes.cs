@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.ComponentModel;
 
@@ -5,18 +6,18 @@ namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 public enum DisplayMapTypes
 {
-    [Description("提瓦特大陆")]
+    [Description(Lang.S["GameTask_11673_32269b"])]
     Teyvat,
 
-    [Description("层岩巨渊")]
+    [Description(Lang.S["GameTask_11672_94e546"])]
     TheChasm,
 
-    [Description("渊下宫")]
+    [Description(Lang.S["GameTask_11397_9e13be"])]
     Enkanomiya,
 
-    [Description("旧日之海")]
+    [Description(Lang.S["GameTask_11671_9778f1"])]
     SeaOfBygoneEras,
 
-    [Description("远古圣山")]
+    [Description(Lang.S["GameTask_11670_c37935"])]
     AncientSacredMountain,
 }

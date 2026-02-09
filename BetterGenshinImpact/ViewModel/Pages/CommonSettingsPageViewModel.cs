@@ -49,13 +49,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
 
     private string _selectedCountry = string.Empty;
-    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", "枫丹", "稻妻", "璃月", "蒙德"];
+    [ObservableProperty] private List<string> _adventurersGuildCountry = ["无", Lang.S["Gen_10019_6b7572"], "稻妻", "璃月", "蒙德"];
     
     [ObservableProperty] private List<Tuple<TimeSpan, string>> _serverTimeZones =
     [
-        Tuple.Create(TimeSpan.FromHours(8), "其他 UTC+08"),
-        Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
-        Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
+        Tuple.Create(TimeSpan.FromHours(8), Lang.S["Settings_12226_f99ea1"]),
+        Tuple.Create(TimeSpan.FromHours(1), Lang.S["Settings_12225_d57003"]),
+        Tuple.Create(TimeSpan.FromHours(-5), Lang.S["Settings_12224_570ddf"])
     ];
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
@@ -85,7 +85,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
                     CultureInfo.CurrentUICulture = new CultureInfo(c);
                     var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ??
                                           throw new NullReferenceException();
-                    return stringLocalizer["简体中文"].ToString();
+                    return stringLocalizer[Lang.S["View_12159_d688a3"]].ToString();
                 }
             );
 
@@ -125,7 +125,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         //            Owner = this,
         WebpageWindow cookieWin = new()
         {
-            Title = "日志分析",
+            Title = Lang.S["Script_014_409074"],
             Width = 800,
             Height = 600,
 
@@ -206,7 +206,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public void OnRefreshMaskSettings()
     {
         WeakReferenceMessenger.Default.Send(
-            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+            new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), Lang.S["Settings_12223_23b4b5"]));
     }
 
     [RelayCommand]
@@ -299,11 +299,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
             if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
             {
                 DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
-                ThemedMessageBox.Information("脚本仓库离线包导入成功！");
+                ThemedMessageBox.Information(Lang.S["Settings_12222_5605d3"]);
             }
             else
             {
-                ThemedMessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
+                ThemedMessageBox.Error(Lang.S["Settings_1001_917efb"]);
                 DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
             }
         }
@@ -339,7 +339,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
-        var result = await ThemedMessageBox.ShowAsync("测试版本非常不稳定！\n测试版本非常不稳定！\n测试版本非常不稳定！\n\n是否继续检查更新？", "警告", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
+        var result = await ThemedMessageBox.ShowAsync(Lang.S["Settings_12221_b8e932"], "警告", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
         if (result != MessageBoxResult.Yes)
         {
             return;

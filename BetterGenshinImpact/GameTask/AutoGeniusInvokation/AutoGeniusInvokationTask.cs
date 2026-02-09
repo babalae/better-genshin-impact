@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
@@ -7,7 +8,7 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 
 public class AutoGeniusInvokationTask(GeniusInvokationTaskParam taskParam) : ISoloTask
 {
-    public string Name => "自动七圣召唤";
+    public string Name => Lang.S["Task_002_16fb22"];
 
     public Task Start(CancellationToken ct)
     {
@@ -19,8 +20,8 @@ public class AutoGeniusInvokationTask(GeniusInvokationTaskParam taskParam) : ISo
         }
         catch (System.Exception e)
         {
-            TaskControl.Logger.LogDebug(e, "执行自动七圣召唤任务异常");
-            TaskControl.Logger.LogError("执行自动七圣召唤任务异常：{Exception}", e.Message);
+            TaskControl.Logger.LogDebug(e, Lang.S["GameTask_10850_f0b873"]);
+            TaskControl.Logger.LogError(Lang.S["GameTask_10849_97787d"], e.Message);
         }
         return Task.CompletedTask;
     }

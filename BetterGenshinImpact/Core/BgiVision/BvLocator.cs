@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Helpers;
 
 
 namespace BetterGenshinImpact.Core.BgiVision;
@@ -68,7 +69,7 @@ public class BvLocator
         }
         else
         {
-            throw new NotSupportedException($"不被 Locator 支持的识别类型: {RecognitionObject.RecognitionType}");
+            throw new NotSupportedException($"{Lang.S["Gen_10006_f5be50"]});
         }
     }
 
@@ -124,15 +125,15 @@ public class BvLocator
     {
         if (RecognitionObject.RecognitionType == RecognitionTypes.Ocr)
         {
-            return new TimeoutException($"识别文字[{RecognitionObject.Text}]在 {actualTimeout}ms 后超时未出现！");
+            return new TimeoutException($"{Lang.S["Gen_10005_353a3d"]});
         }
         else if (RecognitionObject.RecognitionType == RecognitionTypes.TemplateMatch)
         {
-            return new TimeoutException($"识别图像[{RecognitionObject.Name}]在 {actualTimeout}ms 后超时未出现！");
+            return new TimeoutException($"{Lang.S["Gen_10004_958adf"]});
         }
         else
         {
-            return new TimeoutException($"识别元素在 {actualTimeout}ms 后超时未出现！");
+            return new TimeoutException($"{Lang.S["Gen_10003_5bc163"]});
         }
     }
 
@@ -167,7 +168,7 @@ public class BvLocator
 
         if (!retryRes)
         {
-            throw new TimeoutException($"识别元素在 {actualTimeout}ms 后超时未消失！");
+            throw new TimeoutException($"{Lang.S["Gen_10002_7efd0f"]});
         }
     }
 

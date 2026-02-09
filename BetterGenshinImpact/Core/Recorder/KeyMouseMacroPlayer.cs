@@ -24,7 +24,7 @@ public class KeyMouseMacroPlayer
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
+            Toast.Warning(Lang.S["KeyMouse_1014_c08c56"]);
             return;
         }
 
@@ -36,11 +36,11 @@ public class KeyMouseMacroPlayer
         {
             for (var i = 3; i >= 1; i--)
             {
-                TaskControl.Logger.LogInformation("{Sec}秒后进行重放...", i);
+                TaskControl.Logger.LogInformation(Lang.S["Gen_10106_90f720"], i);
                 await Task.Delay(1000, ct);
             }
 
-            TaskControl.Logger.LogInformation("开始重放");
+            TaskControl.Logger.LogInformation(Lang.S["Gen_10105_b74179"]);
         }
 
         await PlayMacro(script.MacroEvents, ct);
@@ -60,7 +60,7 @@ public class KeyMouseMacroPlayer
             var timeToWait = e.Time - (Kernel32.GetTickCount() - startTime);
             if (timeToWait < 0)
             {
-                TaskControl.Logger.LogDebug("无法原速重放事件{Event}，落后{TimeToWait}ms", e.Type.ToString(), (-timeToWait).ToString("F0"));
+                TaskControl.Logger.LogDebug(Lang.S["Gen_10104_0460a4"], e.Type.ToString(), (-timeToWait).ToString("F0"));
             }
             else
             {
@@ -184,7 +184,7 @@ public class KeyMouseMacroPlayer
                         //过滤一下特别大的角度偏差
                         if (diff != 0 && diff < 8 && diff > -8)
                         {
-                            TaskControl.Logger.LogWarning("视角重放偏差{diff}°，尝试修正", diff);
+                            TaskControl.Logger.LogWarning(Lang.S["Gen_10103_df198b"], diff);
                             e.MouseX -= diff;
                         }
                     }

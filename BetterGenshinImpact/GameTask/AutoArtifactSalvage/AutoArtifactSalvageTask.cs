@@ -44,7 +44,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private CancellationToken ct;
 
-    public string Name => "圣遗物分解独立任务";
+    public string Name => Lang.S["GameTask_10378_d34823"];
 
     private readonly int star;
 
@@ -76,13 +76,13 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
         var stringLocalizer = param.StringLocalizer;
         this.cultureInfo = param.GameCultureInfo;
-        quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
+        quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10377_1b054b"]);
         numOfStarLocalizedString =
         [
-            stringLocalizer.WithCultureGet(cultureInfo, "1星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "2星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "3星圣遗物"),
-            stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
+            stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10376_d490e1"]),
+            stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10375_e76005"]),
+            stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10374_3eeaa8"]),
+            stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_10373_daea51"])
         ];
 
         artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
@@ -132,7 +132,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 recognitionObjectUnchecked = ElementAssets.Instance.BagFurnishingUnchecked;
                 break;
             default:
-                throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}");
+                throw new NotSupportedException($"{Lang.S["GameTask_10372_37a1e2"]});
         }
 
         // B键打开背包
@@ -170,7 +170,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             // 如果还在主界面就尝试再按下B键打开背包
             if (Bv.IsInMainUi(ra))
             {
-                Debug.WriteLine("背包打开失败,再次尝试打开背包");
+                Debug.WriteLine(Lang.S["GameTask_10371_3dd19d"]);
                 input.SimulateAction(GIActions.OpenInventory);
             }
 
@@ -179,7 +179,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         if (!openBagSuccess)
         {
-            logger.LogError("未找到背包中{name}菜单按钮,打开背包失败", gridScreenName.GetDescription());
+            logger.LogError(Lang.S["GameTask_10370_99312a"], gridScreenName.GetDescription());
             return;
         }
 
@@ -207,7 +207,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
         else
         {
-            logger.LogError("未找到圣遗物分解按钮");
+            logger.LogError(Lang.S["GameTask_10369_2a2750"]);
             return;
         }
 
@@ -227,7 +227,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
         if (!quickSelectBtnFound)
         {
-            logger.LogError("没有找到可匹配{regex}的按钮，终止分解", quickSelectLocalizedString);
+            logger.LogError(Lang.S["GameTask_10368_60a6c0"], quickSelectLocalizedString);
             return;
         }
 
@@ -252,7 +252,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 }
                 if (!numOfStarFound)
                 {
-                    logger.LogError("没有找到可匹配{regex}的按钮，终止分解", numOfStarLocalizedString[i]);
+                    logger.LogError(Lang.S["GameTask_10368_60a6c0"], numOfStarLocalizedString[i]);
                     return;
                 }
             }
@@ -277,7 +277,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             using var ra6 = CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra6))
             {
-                logger.LogInformation("完成{Star}星圣遗物快速分解", star);
+                logger.LogInformation(Lang.S["GameTask_10367_8509f1"], star);
                 await Delay(400, ct);
                 if (javaScript != null)
                 {
@@ -287,12 +287,12 @@ public class AutoArtifactSalvageTask : ISoloTask
             }
             else
             {
-                logger.LogInformation("未找到进行分解按钮，可能发生了卡顿");
+                logger.LogInformation(Lang.S["GameTask_10366_413985"]);
             }
         }
         else
         {
-            logger.LogInformation("未找到圣遗物分解按钮，可能已经没有圣遗物需要快速分解");
+            logger.LogInformation(Lang.S["GameTask_10365_14e634"]);
         }
 
         // 分解5星
@@ -325,7 +325,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                             var rectDrawable = itemRegion.SelfToRectDrawable(drawKey);
                             drawRectList.Add(rectDrawable);
                             VisionContext.Instance().DrawContent.PutOrRemoveRectList(drawKey, drawRectList);
-                            drawTextList.Add(new TextDrawable("识别失败", new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
+                            drawTextList.Add(new TextDrawable(Lang.S["GameTask_10364_80ce45"], new System.Windows.Point(rectDrawable.Rect.X + rectDrawable.Rect.Width / 3, rectDrawable.Rect.Y)));
                             VisionContext.Instance().DrawContent.TextList.GetOrAdd(drawKey, drawTextList);
                         }
                         else
@@ -359,7 +359,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
             // 逐一点选查看面板筛选
             await Salvage5Star();
-            logger.LogInformation("筛选完毕，请复查并手动分解");
+            logger.LogInformation(Lang.S["GameTask_10363_3f1e5e"]);
         }
         else
         {
@@ -374,9 +374,9 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private async Task Salvage5Star()
     {
-        string javaScript = this.javaScript ?? throw new ArgumentException($"{nameof(this.javaScript)}不能为空");
-        int count = this.maxNumToCheck ?? throw new ArgumentException($"{nameof(this.maxNumToCheck)}不能为空");
-        RecognitionFailurePolicy recognitionFailurePolicy = this.recognitionFailurePolicy ?? throw new ArgumentException($"{nameof(this.recognitionFailurePolicy)}不能为空");
+        string javaScript = this.javaScript ?? throw new ArgumentException($"{Lang.S["GameTask_10362_ee0eff"]});
+        int count = this.maxNumToCheck ?? throw new ArgumentException($"{Lang.S["GameTask_10361_529da2"]});
+        RecognitionFailurePolicy recognitionFailurePolicy = this.recognitionFailurePolicy ?? throw new ArgumentException($"{Lang.S["GameTask_10360_5971cf"]});
 
         GridParams gridParams = GridParams.Templates[GridScreenName.ArtifactSalvage];
         GridScreen gridScreen = new GridScreen(gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
@@ -408,7 +408,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         {
                             if (recognitionFailurePolicy == RecognitionFailurePolicy.Skip)
                             {
-                                logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
+                                logger.LogError(Lang.S["GameTask_10359_eefd5a"], e.Message);
 
                                 itemRegion.Click(); // 反选取消
                                 await Delay(100, ct);
@@ -434,7 +434,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                     count--;
                     if (count <= 0)
                     {
-                        logger.LogInformation("检查次数已耗尽");
+                        logger.LogInformation(Lang.S["GameTask_10358_142aaa"]);
                         break;
                     }
                 }
@@ -468,7 +468,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"中断失败: {ex.Message}");
+                Console.WriteLine($"{Lang.S["GameTask_10357_f21160"]});
             }
         });
         try
@@ -482,19 +482,19 @@ public class AutoArtifactSalvageTask : ISoloTask
             // 检查是否有输出
             if (!engine.Script.propertyIsEnumerable("Output"))
             {
-                throw new InvalidOperationException("JavaScript没有设置Output输出");
+                throw new InvalidOperationException(Lang.S["GameTask_10356_9f1a12"]);
             }
 
             if (engine.Script.Output is not bool)
             {
-                throw new InvalidOperationException("JavaScript的Output输出不是布尔类型");
+                throw new InvalidOperationException(Lang.S["GameTask_10355_4d576c"]);
             }
 
             return (bool)engine.Script.Output;
         }
         catch (ScriptInterruptedException)
         {
-            logger.LogWarning("脚本执行超出3秒限制，请使用正确的JS代码（JavaScript execution timeout!）");
+            logger.LogWarning(Lang.S["GameTask_10354_ad0849"]);
             throw;
         }
         catch (ScriptEngineException ex)
@@ -510,16 +510,16 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             if (string.IsNullOrEmpty(match.Value))
             {
-                msg = "匹配成功！";
+                msg = Lang.S["GameTask_10353_2f7807"];
             }
             else
             {
-                msg = $"匹配成功：{match.Value}";
+                msg = $"{Lang.S["GameTask_10352_7ce58f"]};
             }
         }
         else
         {
-            msg = "匹配失败！";
+            msg = Lang.S["GameTask_10351_c878cf"];
         }
 
         return match.Success;
@@ -572,7 +572,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         #region 主词条
         var defaultMainAffix = this.artifactAffixStrDic.Select(kvp => kvp.Value).Distinct();
-        string mainAffixTypeLine = mainAffixLines.SingleOrDefault(l => defaultMainAffix.Contains(l)) ?? throw new Exception($"未找到主词条对应的行：\n{mainAffixText}");
+        string mainAffixTypeLine = mainAffixLines.SingleOrDefault(l => defaultMainAffix.Contains(l)) ?? throw new Exception($"{Lang.S["GameTask_10350_39a780"]});
         ArtifactAffixType mainAffixType = this.artifactAffixStrDic.First(kvp => kvp.Value == mainAffixTypeLine).Key;
         string mainAffixValueLine = mainAffixLines.Select(l =>
         {
@@ -599,10 +599,10 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 return null;
             }
-        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到主词条数值对应的行：\n{mainAffixText}");
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"{Lang.S["GameTask_10349_ba3ae9"]});
         if (!float.TryParse(mainAffixValueLine, NumberStyles.Any, this.cultureInfo, out float value))
         {
-            throw new Exception($"未识别的主词条数值：{mainAffixValueLine}");
+            throw new Exception($"{Lang.S["GameTask_10348_f87e6a"]});
         }
         ArtifactAffix mainAffix = new ArtifactAffix(mainAffixType, value);
         #endregion
@@ -671,12 +671,12 @@ public class AutoArtifactSalvageTask : ISoloTask
             }
             else
             {
-                throw new Exception($"未识别的副词条：{match.Groups[1].Value}");
+                throw new Exception($"{Lang.S["GameTask_10347_7e3255"]});
             }
 
             if (!float.TryParse(match.Groups[2].Value.Replace("。", "."), NumberStyles.Any, cultureInfo, out float affixValue))
             {
-                throw new Exception($"未识别的副词条数值：{match.Groups[2].Value}");
+                throw new Exception($"{Lang.S["GameTask_10346_c80206"]});
             }
 
             bool isUnactivated = false;
@@ -729,10 +729,10 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 return null;
             }
-        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"未找到等级对应的行：\n{levelAndMinorAffixLines}");
+        }).Where(l => l != null).Cast<string>().SingleOrDefault() ?? throw new Exception($"{Lang.S["GameTask_10345_b088d3"]});
         if (!int.TryParse(levelLine, out int level) || level < 0 || level > 20)
         {
-            throw new Exception($"未识别的等级：{levelLine}");
+            throw new Exception($"{Lang.S["GameTask_10344_579b33"]});
         }
         #endregion
 

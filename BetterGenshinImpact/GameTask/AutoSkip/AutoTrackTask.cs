@@ -47,13 +47,13 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             hasLock = await TaskSemaphore.WaitAsync(0);
             if (!hasLock)
             {
-                Logger.LogError("启动自动追踪功能失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+                Logger.LogError(Lang.S["GameTask_11274_80b0bb"]);
                 return;
             }
 
             SystemControl.ActivateWindow();
 
-            Logger.LogInformation("→ {Text}", "自动追踪，启动！");
+            Logger.LogInformation("→ {Text}", Lang.S["GameTask_11273_d2ad58"]);
 
             _ct = CancellationContext.Instance.Cts.Token;
 
@@ -61,7 +61,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         }
         catch (NormalEndException e)
         {
-            Logger.LogInformation("自动追踪中断:" + e.Message);
+            Logger.LogInformation(Lang.S["GameTask_11272_c0666f"] + e.Message);
         }
         catch (Exception e)
         {
@@ -71,7 +71,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         finally
         {
             VisionContext.Instance().DrawContent.ClearAll();
-            Logger.LogInformation("→ {Text}", "自动追踪结束");
+            Logger.LogInformation("→ {Text}", Lang.S["GameTask_11271_8a1a01"]);
 
             if (hasLock)
             {
@@ -99,14 +99,14 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         var textRaList = OcrMissionTextRaList(paimonMenuRa);
         if (textRaList.Count == 0)
         {
-            Logger.LogInformation("未找到任务文字");
+            Logger.LogInformation(Lang.S["GameTask_11270_164bd6"]);
             Sleep(5000, _ct);
             return;
         }
 
         // 从任务文字中提取距离
         var distance = GetDistanceFromMissionText(textRaList);
-        Logger.LogInformation("任务追踪：{Text}", "距离" + distance + "m");
+        Logger.LogInformation(Lang.S["GameTask_11258_42a0d0"], "距离" + distance + "m");
         if (distance >= 150)
         {
             // 距离大于150米，先传送到最近的传送点
@@ -147,7 +147,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
 
                 if (Bv.IsInBigMapUi(CaptureToRectArea()))
                 {
-                    Logger.LogWarning("仍旧在大地图界面，传送失败");
+                    Logger.LogWarning(Lang.S["GameTask_11268_161ee3"]);
                 }
                 else
                 {
@@ -156,8 +156,8 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     {
                         if (!Bv.IsInMainUi(CaptureToRectArea()))
                         {
-                            Logger.LogInformation("未进入到主界面，继续等待");
-                            throw new RetryException("未进入到主界面");
+                            Logger.LogInformation(Lang.S["GameTask_11267_8569d9"]);
+                            throw new RetryException(Lang.S["GameTask_11266_491d78"]);
                         }
                     }, TimeSpan.FromSeconds(1), 100);
                     StartTrackPoint();
@@ -165,7 +165,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             }
             else
             {
-                Logger.LogWarning("未找到传送点");
+                Logger.LogWarning(Lang.S["GameTask_11265_83a590"]);
             }
         }
         else
@@ -188,7 +188,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         }
         else
         {
-            Logger.LogWarning("首次未找到追踪点");
+            Logger.LogWarning(Lang.S["GameTask_11264_2091bd"]);
         }
     }
 
@@ -217,7 +217,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         wDown = false;
                     }
-                    Debug.WriteLine("使追踪点位于俯视角上方");
+                    Debug.WriteLine(Lang.S["GameTask_11263_99443d"]);
                     continue;
                 }
 
@@ -233,7 +233,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 if (moveX != 0)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
-                    Debug.WriteLine("调整方向:" + moveX);
+                    Debug.WriteLine(Lang.S["GameTask_11262_47c067"] + moveX);
                 }
 
                 if (moveX == 0 || prevMoveX * moveX < 0)
@@ -256,10 +256,10 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                     var text = OcrFactory.Paddle.OcrWithoutDetector(ra.CacheGreyMat[_missionDistanceRect]);
                     if (StringUtils.TryExtractPositiveInt(text) is > -1 and <= 3)
                     {
-                        Logger.LogInformation("任务追踪：到达目标,识别结果[{Text}]", text);
+                        Logger.LogInformation(Lang.S["GameTask_11261_ce14ab"], text);
                         break;
                     }
-                    Logger.LogInformation("任务追踪：到达目标");
+                    Logger.LogInformation(Lang.S["GameTask_11260_4531ea"]);
                     break;
                 }
 
@@ -268,7 +268,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
             else
             {
                 // 随机移动
-                Logger.LogInformation("未找到追踪点");
+                Logger.LogInformation(Lang.S["GameTask_11259_f7547c"]);
             }
 
             Simulation.SendInput.Mouse.MoveMouseBy(0, 500); // 保证俯视角
@@ -281,7 +281,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     {
         // 打印所有任务文字
         var text = textRaList.Aggregate(string.Empty, (current, textRa) => current + textRa.Text.Trim() + "|");
-        Logger.LogInformation("任务追踪：{Text}", text);
+        Logger.LogInformation(Lang.S["GameTask_11258_42a0d0"], text);
 
         foreach (var textRa in textRaList)
         {

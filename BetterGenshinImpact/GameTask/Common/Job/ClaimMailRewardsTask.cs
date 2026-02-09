@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Linq;
 using System.Threading;
@@ -27,8 +28,8 @@ public class ClaimMailRewardsTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "领取邮件奖励异常");
-            Logger.LogError("领取邮件奖励异常: {Msg}", e.Message);
+            Logger.LogDebug(e, Lang.S["GameTask_11524_711194"]);
+            Logger.LogError(Lang.S["GameTask_11523_a6c420"], e.Message);
         }
     }
 
@@ -53,7 +54,7 @@ public class ClaimMailRewardsTask
             if (claimAll.IsExist())
             {
                 claimAll.Click();
-                Logger.LogInformation("邮件：{Text}", "全部领取");
+                Logger.LogInformation(Lang.S["GameTask_11521_4836fd"], "全部领取");
                 await Delay(200, ct);
                 // TODO 截图
                 
@@ -62,7 +63,7 @@ public class ClaimMailRewardsTask
         }
         else
         {
-            Logger.LogInformation("邮件：{Text}", "没有邮件奖励");
+            Logger.LogInformation(Lang.S["GameTask_11521_4836fd"], "没有邮件奖励");
         }
 
         ra.Dispose();

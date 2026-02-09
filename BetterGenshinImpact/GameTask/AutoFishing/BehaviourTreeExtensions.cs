@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BehaviourTree.Composites;
 using BehaviourTree.FluentBuilder;
 using BehaviourTree;
@@ -149,7 +150,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 if (saveScreenshotOnTerminate)
                 {
                     string fileName = $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_{Status}.png";
-                    logger.LogInformation("保存截图: {Name}", fileName);
+                    logger.LogInformation(Lang.S["GameTask_10777_24799b"], fileName);
                     SaveScreenshot(context, fileName);
                 }
                 OnTerminate(Status);

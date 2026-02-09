@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -101,7 +102,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
             strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
         }
 
-        if ("根据队伍自动选择".Equals(strategyName))
+        if (Lang.S["GameTask_10386_0bfb2b"].Equals(strategyName))
         {
             CombatStrategyPath =  Global.Absolute(@"User\AutoFight\");
         }

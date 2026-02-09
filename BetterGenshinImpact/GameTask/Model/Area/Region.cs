@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.GameTask.Model.Area.Converter;
 using BetterGenshinImpact.View.Drawable;
 using Fischless.WindowsInput;
@@ -317,7 +318,7 @@ public class Region : IDisposable
     {
         if (this is ImageRegion imageRegion)
         {
-            Debug.WriteLine("ToImageRegion 但已经是 ImageRegion");
+            Debug.WriteLine(Lang.S["GameTask_11831_fdd94a"]);
             return imageRegion;
         }
 

@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.Helpers;
 namespace BetterGenshinImpact.GameTask.AutoOpenChest;
 
 /// <summary>
@@ -16,7 +17,7 @@ namespace BetterGenshinImpact.GameTask.AutoOpenChest;
 /// </summary>
 public class AutoOpenChestTask : ISoloTask
 {
-    public string Name => "识别并开启宝箱";
+    public string Name => Lang.S["GameTask_10996_3fc9d9"];
 
     private AutoOpenChestAssets assets = AutoOpenChestAssets.Instance;
 
@@ -42,7 +43,7 @@ public class AutoOpenChestTask : ISoloTask
                     int limit = chestIcon.Width;
                     if (!chestIcon.IsExist())
                     {
-                        Logger.LogInformation("未找到宝箱图标");
+                        Logger.LogInformation(Lang.S["GameTask_10995_4686c6"]);
                         return;
                     }
 

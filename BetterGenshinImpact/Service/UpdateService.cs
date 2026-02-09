@@ -73,7 +73,7 @@ public class UpdateService : IUpdateService
             {
                 if (option.Trigger == UpdateTrigger.Manual)
                 {
-                    await ThemedMessageBox.InformationAsync("当前已是最新版本！");
+                    await ThemedMessageBox.InformationAsync(Lang.S["Update_AlreadyLatest"]);
                 }
 
                 return;
@@ -90,9 +90,9 @@ public class UpdateService : IUpdateService
         }
         catch (Exception e)
         {
-            Debug.WriteLine("获取最新版本信息失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
+            Debug.WriteLine(Lang.S["Update_12076_61a71e"] + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" +
                             Environment.NewLine + e.Message);
-            _logger.LogWarning("获取 BetterGI 最新版本信息失败");
+            _logger.LogWarning(Lang.S["Update_12075_5df22c"]);
         }
     }
 
@@ -102,7 +102,7 @@ public class UpdateService : IUpdateService
         {
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Title = $"发现新版本 {newVersion}",
+            Title = $"{Lang.S["Update_12074_674f81"]} {newVersion}",
             UserInteraction = async (sender, button) =>
             {
                 CheckUpdateWindow win = (CheckUpdateWindow)sender;
@@ -130,7 +130,7 @@ public class UpdateService : IUpdateService
                         string updaterExePath = Global.Absolute("BetterGI.update.exe");
                         if (!File.Exists(updaterExePath))
                         {
-                            await ThemedMessageBox.ErrorAsync("更新程序不存在，请选择其他更新方式！");
+                            await ThemedMessageBox.ErrorAsync(Lang.S["Update_UpdaterNotFound"]);
                             return;
                         }
 
@@ -219,7 +219,7 @@ public class UpdateService : IUpdateService
                 else if (result.Code < 0)
                 {
                     Toast.Error(
-                        $"Mirror酱源更新检查失败，意料之外的严重错误，请及时联系 Mirror 酱的技术支持处理\n，错误代码：{result.Code}，错误信息：{result.Msg}");
+                        $"{Lang.S["Update_MirrorCheckFailedDetail"]}\n，错误代码：{result.Code}，错误信息：{result.Msg}");
                     return string.Empty;
                 }
                 else
@@ -230,8 +230,8 @@ public class UpdateService : IUpdateService
         }
         catch (Exception e)
         {
-            _logger.LogDebug(e, "Mirror源更新检查失败");
-            Toast.Warning($"Mirror源更新检查失败,{e.Message}");
+            _logger.LogDebug(e, Lang.S["Update_MirrorCheckFailed"]);
+            Toast.Warning($"{Lang.S["Update_MirrorCheckFailed"]},{e.Message}");
 
         }
 
@@ -242,27 +242,27 @@ public class UpdateService : IUpdateService
     {
         if (response.Code == 7001)
         {
-            Toast.Warning("Mirror酱 CDK 已过期，请重新获取CDK");
+            Toast.Warning(Lang.S["Update_MirrorCDKExpired"]);
         }
         else if (response.Code == 7002)
         {
-            Toast.Warning("Mirror酱 CDK 错误!");
+            Toast.Warning(Lang.S["Update_MirrorCDKError"]);
         }
         else if (response.Code == 7003)
         {
-            Toast.Warning("Mirror酱 CDK 今日下载次数已达上限");
+            Toast.Warning(Lang.S["Update_MirrorCDKLimit"]);
         }
         else if (response.Code == 7004)
         {
-            Toast.Warning("Mirror酱 CDK 类型和待下载的资源不匹配");
+            Toast.Warning(Lang.S["Update_MirrorCDKMismatch"]);
         }
         else if (response.Code == 7005)
         {
-            Toast.Warning("Mirror酱 CDK 已被封禁");
+            Toast.Warning(Lang.S["Update_MirrorCDKBanned"]);
         }
         else
         {
-            Toast.Warning($"Mirror酱源更新检查失败，错误信息：{response.Msg}");
+            Toast.Warning($"{Lang.S["Update_MirrorCheckFailedDetail"]}{response.Msg}");
         }
     }
 

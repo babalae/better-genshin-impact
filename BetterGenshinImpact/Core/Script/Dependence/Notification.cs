@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,21 +70,21 @@ public class Notification
     {
         if (!CheckNotificationPermission())
         {
-            _logger.LogWarning("JS 通知关闭，消息被拦截: " + message);
+            _logger.LogWarning(Lang.S["Gen_10243_0f1d42"] + message);
             return;
         }
         if (!CheckRateLimit())
         {
-            _logger.LogWarning("通知频率超限，消息被拦截: " + message);
+            _logger.LogWarning(Lang.S["Gen_10242_d844b9"] + message);
             return;
         }
         if (!ValidateContent(message))
         {
-            _logger.LogWarning("通知内容违规，消息被拦截: " + message);
+            _logger.LogWarning(Lang.S["Gen_10241_4133cf"] + message);
             return;
         }
         Notify.Event(NotificationEvent.JsCustom).Send(message);
-        _logger.LogInformation("通知发送成功：" + message);
+        _logger.LogInformation(Lang.S["Gen_10244_c4181a"] + message);
     }
 
     /// <summary>
@@ -94,21 +95,21 @@ public class Notification
     {
         if (!CheckNotificationPermission())
         {
-            _logger.LogWarning("JS 通知关闭，消息被拦截: " + message);
+            _logger.LogWarning(Lang.S["Gen_10243_0f1d42"] + message);
             return;
         }
         if (!CheckRateLimit())
         {
-            _logger.LogWarning("通知频率超限，消息被拦截: " + message);
+            _logger.LogWarning(Lang.S["Gen_10242_d844b9"] + message);
             return;
         }
 
         if (!ValidateContent(message))
         {
-            _logger.LogWarning("通知内容违规，消息被拦截: " + message);
+            _logger.LogWarning(Lang.S["Gen_10241_4133cf"] + message);
             return;
         }
         Notify.Event(NotificationEvent.JsError).Error(message);
-        _logger.LogInformation("错误通知发送成功：" + message);
+        _logger.LogInformation(Lang.S["Gen_10240_e089f5"] + message);
     }
 }

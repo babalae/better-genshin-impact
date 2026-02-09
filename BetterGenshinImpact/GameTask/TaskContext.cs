@@ -60,7 +60,7 @@ namespace BetterGenshinImpact.GameTask
             {
                 if (ConfigService.Config == null)
                 {
-                    throw new Exception("Config未初始化");
+                    throw new Exception(Lang.S["GameTask_10304_815494"]);
                 }
 
                 return ConfigService.Config;

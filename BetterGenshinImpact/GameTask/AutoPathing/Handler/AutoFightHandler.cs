@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.Common;
@@ -25,7 +26,7 @@ internal class AutoFightHandler : IActionHandler
 
     private async Task StartFight(CancellationToken ct, object? config = null , WaypointForTrack? waypointForTrack = null)
     {
-        TaskControl.Logger.LogInformation("执行 {Text}", "自动战斗");
+        TaskControl.Logger.LogInformation(Lang.S["GameTask_11069_7cad94"], "自动战斗");
         // 爷们要战斗
         AutoFightParam taskParams = null;
         if (config != null && config is PathingPartyConfig patyConfig && patyConfig.AutoFightEnabled)
@@ -52,7 +53,7 @@ internal class AutoFightHandler : IActionHandler
                    //允许自动拾取，即只关闭配置上的拾取即刻
                    taskParams.KazuhaPickupEnabled = false;
                    taskParams.PickDropsAfterFightEnabled = false;
-                   _logger.LogInformation("当前非精英或传奇点位，关闭战斗拾取配置！");
+                   _logger.LogInformation(Lang.S["GameTask_11068_c98e43"]);
                    //禁止自动拾取，除了关闭配置拾取外，连自动拾取都关掉
                    if (taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
                    {
@@ -80,14 +81,14 @@ internal class AutoFightHandler : IActionHandler
     private string GetFightStrategy(AutoFightConfig config)
     {
         var path = Global.Absolute(@"User\AutoFight\" + config.StrategyName + ".txt");
-        if ("根据队伍自动选择".Equals(config.StrategyName))
+        if (Lang.S["GameTask_10386_0bfb2b"].Equals(config.StrategyName))
         {
             path = Global.Absolute(@"User\AutoFight\");
         }
 
         if (!File.Exists(path) && !Directory.Exists(path))
         {
-            throw new Exception("战斗策略文件不存在");
+            throw new Exception(Lang.S["GameTask_11067_e0f101"]);
         }
 
         return path;

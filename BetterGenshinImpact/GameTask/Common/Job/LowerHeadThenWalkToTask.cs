@@ -49,8 +49,8 @@ public class LowerHeadThenWalkToTask
     {
         if (CaptureToRectArea().Find(_trackPoint).IsEmpty())
         {
-            Logger.LogInformation("未找到追踪点，停止任务");
-            throw new Exception("未找到追踪点");
+            Logger.LogInformation(Lang.S["GameTask_11629_fa809d"]);
+            throw new Exception(Lang.S["GameTask_11259_f7547c"]);
         }
 
         return await MakeTrackPointDirectlyAbove(ct);
@@ -76,7 +76,7 @@ public class LowerHeadThenWalkToTask
                         Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
-                        Debug.WriteLine("使追踪点位于俯视角上方");
+                        Debug.WriteLine(Lang.S["GameTask_11263_99443d"]);
                         continue;
                     }
 
@@ -94,7 +94,7 @@ public class LowerHeadThenWalkToTask
                     if (moveX != 0)
                     {
                         Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
-                        Debug.WriteLine("调整方向:" + moveX);
+                        Debug.WriteLine(Lang.S["GameTask_11262_47c067"] + moveX);
                     }
 
                     if (moveX == 0 || prevMoveX * moveX < 0)
@@ -108,9 +108,9 @@ public class LowerHeadThenWalkToTask
 
                     // 识别F
                     var text = Bv.FindFKeyText(ra);
-                    if (!string.IsNullOrEmpty(text) && text.Contains("激活"))
+                    if (!string.IsNullOrEmpty(text) && text.Contains(Lang.S["GameTask_11628_83a991"]))
                     {
-                        Logger.LogInformation("追踪：识别到[{Msg}]", text);
+                        Logger.LogInformation(Lang.S["GameTask_11627_e029d1"], text);
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         return true;
                     }
@@ -120,12 +120,12 @@ public class LowerHeadThenWalkToTask
                 else
                 {
                     // 随机移动
-                    Logger.LogInformation("未找到追踪目标");
+                    Logger.LogInformation(Lang.S["GameTask_11626_5035ca"]);
                 }
 
                 if (DateTime.Now - startTime > TimeSpan.FromMilliseconds(_timeoutMilliseconds))
                 {
-                    Logger.LogInformation("追踪超时");
+                    Logger.LogInformation(Lang.S["GameTask_11625_601ab1"]);
                     return false;
                 }
 

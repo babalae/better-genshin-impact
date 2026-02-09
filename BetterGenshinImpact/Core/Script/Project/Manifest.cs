@@ -9,6 +9,7 @@ using BetterGenshinImpact.Model;
 using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 using System.Linq;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -59,7 +60,7 @@ public class Manifest
         // 比较版本号大小 BgiVersion
         if (!string.IsNullOrWhiteSpace(BgiVersion) && Global.IsNewVersion(BgiVersion))
         {
-            TaskControl.Logger.LogError("脚本 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 脚本可能无法正常工作，请更新 BetterGI 版本！", Name, BgiVersion, Global.Version);
+            TaskControl.Logger.LogError(Lang.S["Gen_10265_d684b8"], Name, BgiVersion, Global.Version);
         }
     }
 

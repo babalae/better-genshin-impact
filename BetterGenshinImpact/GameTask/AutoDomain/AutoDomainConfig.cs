@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
@@ -61,8 +62,8 @@ public partial class AutoDomainConfig : ObservableObject
     [ObservableProperty]
     private List<string> _resinPriorityList =
     [
-        "浓缩树脂",
-        "原粹树脂"
+        Lang.S["GameTask_10385_a7b73a"],
+        Lang.S["GameTask_10384_9fa864"]
     ];
     
     // 使用原粹树脂刷取副本次数

@@ -32,7 +32,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
     private CancellationToken ct;
 
-    public string Name => "获取Grid界面物品图标独立任务";
+    public string Name => Lang.S["GameTask_11739_c55a43"];
 
     private readonly int? maxNumToTest;
 
@@ -59,7 +59,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
         if (!metadata.CustomMetadataMap.TryGetValue("prefix_list", out string? prefixListJson))
         {
-            throw new Exception("模型文件缺少prefix_list");
+            throw new Exception(Lang.S["GameTask_11745_9e6fcc"]);
         }
         List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
         #endregion
@@ -98,7 +98,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
                 await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             default:
-                logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
+                logger.LogInformation(Lang.S["GameTask_11738_87834f"], gridScreenName.GetDescription());
                 break;
         }
 
@@ -144,22 +144,22 @@ public class GridIconsAccuracyTestTask : ISoloTask
                 total_count++;
                 if (predName == null)
                 {
-                    logger.LogInformation($"模型没有识别，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+                    logger.LogInformation($"{Lang.S["GameTask_11744_071d9f"]});
                 }
                 else if (itemName.Contains(predName) && predStarNum == itemStarNum)
                 {
                     total_acc++;
-                    logger.LogInformation($"{predName}|{predStarNum}星，✔，正确率{total_acc / total_count:0.00}");
+                    logger.LogInformation($"{Lang.S["GameTask_11743_ff41ac"]});
                 }
                 else
                 {
-                    logger.LogInformation($"{predName}|{predStarNum}星，应为：{itemName}|{itemStarNum}星，❌，正确率{total_acc / total_count:0.00}");
+                    logger.LogInformation($"{Lang.S["GameTask_11742_69b3e4"]});
                 }
 
                 count--;
                 if (count <= 0)
                 {
-                    logger.LogInformation("检查次数已耗尽");
+                    logger.LogInformation(Lang.S["GameTask_10358_142aaa"]);
                     break;
                 }
             }
@@ -182,7 +182,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
     {
         if (mat.Size().Width != 125 || mat.Size().Height != 125)
         {
-            throw new ArgumentOutOfRangeException(nameof(mat), "输入图像尺寸应为125*125");
+            throw new ArgumentOutOfRangeException(nameof(mat), Lang.S["GameTask_11741_3484c6"]);
         }
         using Mat rgb = mat.CvtColor(ColorConversionCodes.BGR2RGB);
         var tensor = new DenseTensor<float>(new[] { 1, 3, rgb.Height, rgb.Width });  // todo 放到BgiOnnxFactory那边去做个Mat->NamedOnnxValue的通用方法？
@@ -218,7 +218,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
         if (min2 == null)
         {
-            throw new Exception("特征数据为空");
+            throw new Exception(Lang.S["GameTask_11740_d6069f"]);
         }
         // min2 = Math.Sqrt(min2.Value);
         int pred_star = results[2].AsEnumerable<float>().ToList().IndexOf(results[2].AsEnumerable<float>().Max());

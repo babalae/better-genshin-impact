@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using System;
@@ -74,7 +75,7 @@ public class PathingTask
         var fileNames = relativePath.Split(Path.DirectorySeparatorChar);
         
         // 获取ConditionDefinitions采集物列表
-        var conditionDefinition = ConditionDefinitions.Definitions["采集物"];
+        var conditionDefinition = ConditionDefinitions.Definitions[Lang.S["Gen_10023_15d7ae"]];
         var materialList = conditionDefinition.ObjectOptions?.ToList() ?? new List<string>();
         
         //跳过第一个目录，i从1开始,（一级目录必定不是采集物），对比每一个采集物名称 
@@ -103,9 +104,9 @@ public class PathingTask
         // 比较版本号大小 BgiVersion
         if (!string.IsNullOrWhiteSpace(task.Info.BgiVersion) && Global.IsNewVersion(task.Info.BgiVersion))
         {
-            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 禁止运行，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
-            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 禁止运行，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
-            TaskControl.Logger.LogError("地图追踪任务 {Name} 版本号要求 {BgiVersion} 大于当前 BetterGI 版本号 {CurrentVersion} ， 禁止运行，请更新 BetterGI 版本！", task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11157_c976cf"], task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11157_c976cf"], task.FileName, task.Info.BgiVersion, Global.Version);
+            TaskControl.Logger.LogError(Lang.S["GameTask_11157_c976cf"], task.FileName, task.Info.BgiVersion, Global.Version);
             return null;
         }
         return task;

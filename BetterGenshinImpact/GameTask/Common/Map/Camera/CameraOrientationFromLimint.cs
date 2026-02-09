@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -215,7 +216,7 @@ public class CameraOrientationFromLimint
             }
 
             float rotationConfidence = (conv[maxIndex] + mean.Skip(thetaLength - peakWidth).Sum()) / (peakWidth * 255);
-            Debug.WriteLine($"视角度:{degree},置信度:{rotationConfidence}");
+            Debug.WriteLine($"{Lang.S["GameTask_11654_265386"]});
             // if (rotationConfidence < confidence)
             // {
             //     Debug.WriteLine($"置信度{rotationConfidence}<{confidence}, 不可靠视角 {degree}");

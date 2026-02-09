@@ -30,7 +30,7 @@ public class ClaimEncounterPointsRewardsTask
     {
         IStringLocalizer<ClaimEncounterPointsRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimEncounterPointsRewardsTask>>() ?? throw new NullReferenceException();
         CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
-        this.commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
+        this.commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, Lang.S["GameTask_11242_f6b0bb"]);
     }
 
     public async Task Start(CancellationToken ct)
@@ -41,8 +41,8 @@ public class ClaimEncounterPointsRewardsTask
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "领取长效历练点奖励异常");
-            Logger.LogError("领取长效历练点奖励异常: {Msg}", e.Message);
+            Logger.LogDebug(e, Lang.S["GameTask_11520_12feb2"]);
+            Logger.LogError(Lang.S["GameTask_11519_26ee35"], e.Message);
         }
     }
 
@@ -85,7 +85,7 @@ public class ClaimEncounterPointsRewardsTask
 
         if (!f1Success)
         {
-            Logger.LogError("{F}未找到委托按钮,F1打开冒险之证失败", "历练点：");
+            Logger.LogError(Lang.S["GameTask_11518_63fd2b"], "历练点：");
             return;
         }
 
@@ -118,14 +118,14 @@ public class ClaimEncounterPointsRewardsTask
         if (claimBtn.IsExist())
         {
             claimBtn.Click();
-            Logger.LogInformation("{F}领取长效历练点奖励", "历练点：");
+            Logger.LogInformation(Lang.S["GameTask_11517_f23ad1"], "历练点：");
 
 
             return true;
         }
         else
         {
-            Logger.LogInformation("{F}未找到领取历练点奖励按钮", "历练点：");
+            Logger.LogInformation(Lang.S["GameTask_11515_12d978"], "历练点：");
             return false;
         }
     }

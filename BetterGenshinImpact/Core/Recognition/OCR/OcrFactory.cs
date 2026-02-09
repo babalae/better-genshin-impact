@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using System;
 using System.Globalization;
 using System.Threading.Tasks;
@@ -40,9 +41,9 @@ public class OcrFactory : IDisposable
         var result = type switch
         {
             OcrEngineTypes.Paddle => CreatePaddleOcrInstance(),
-            _ => throw new ArgumentOutOfRangeException(Enum.GetName(type), type, "不支持的 OCR 引擎类型")
+            _ => throw new ArgumentOutOfRangeException(Enum.GetName(type), type, Lang.S["Gen_10040_5a6e87"])
         };
-        _logger.LogDebug("创建了类型为 {Type} 的 OCR服务", Enum.GetName(type));
+        _logger.LogDebug(Lang.S["Gen_10039_630ec0"], Enum.GetName(type));
         return result;
     }
 
@@ -61,7 +62,7 @@ public class OcrFactory : IDisposable
         catch (Exception e)
         {
             // 如果配置获取失败，使用默认配置
-            _logger.LogWarning(e, "获取 OCR 配置失败，使用默认配置");
+            _logger.LogWarning(e, Lang.S["Gen_10038_cba9a5"]);
             return new OtherConfig.Ocr();
         }
     }
@@ -80,7 +81,7 @@ public class OcrFactory : IDisposable
         catch (Exception e)
         {
             var result = new CultureInfo(new OtherConfig().GameCultureInfoName);
-            _logger.LogInformation("获取游戏文化信息失败，使用默认文化信息: {CultureInfo}", result.Name);
+            _logger.LogInformation(Lang.S["Gen_10037_15f911"], result.Name);
             return result;
         }
     }
@@ -116,7 +117,7 @@ public class OcrFactory : IDisposable
                 new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
                     PaddleOcrService.PaddleOcrModelType.V5Eslav),
             _ => throw new ArgumentOutOfRangeException(nameof(_config.PaddleOcrModelConfig),
-                _config.PaddleOcrModelConfig, "不支持的 Paddle OCR 模型配置")
+                _config.PaddleOcrModelConfig, Lang.S["Gen_10036_46023e"])
         };
     }
 
@@ -135,7 +136,7 @@ public class OcrFactory : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "卸载 OCR 服务时发生错误");
+            _logger.LogError(ex, Lang.S["Gen_10035_0a4c0a"]);
         }
 
         return Task.CompletedTask;

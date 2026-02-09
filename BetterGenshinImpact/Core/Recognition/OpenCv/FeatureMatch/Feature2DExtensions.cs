@@ -55,7 +55,7 @@ public static class Feature2DExtensions
 #pragma warning disable CS8604 // 引用类型参数可能为 null。
         feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
-        speedTimer.Record("模板生成KeyPoint");
+        speedTimer.Record(Lang.S["Gen_10081_78167c"]);
 
         var matches = GetMatcher(matcherType).Match(queryDescriptors, trainDescriptors);
         //Finding the Minimum and Maximum Distance
@@ -143,7 +143,7 @@ public static class Feature2DExtensions
 #pragma warning disable CS8604 // 引用类型参数可能为 null。
         feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
-        speedTimer.Record("模板生成KeyPoint");
+        speedTimer.Record(Lang.S["Gen_10081_78167c"]);
         var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
         speedTimer.Record("FlannMatch");
 
@@ -199,7 +199,7 @@ public static class Feature2DExtensions
 #pragma warning disable CS8604 // 引用类型参数可能为 null。
         feature2D.DetectAndCompute(queryMat, queryMatMask, out var queryKeyPoints, queryDescriptors);
 #pragma warning restore CS8604 // 引用类型参数可能为 null。
-        speedTimer.Record("模板生成KeyPoint");
+        speedTimer.Record(Lang.S["Gen_10081_78167c"]);
         var matches = GetMatcher(matcherType).KnnMatch(queryDescriptors, trainDescriptors, k: 2);
         speedTimer.Record("FlannMatch");
 

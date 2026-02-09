@@ -209,7 +209,7 @@ public class WebpagePanel : UserControl
     {
         var button = new Button
         {
-            Content = "查看需要安装 Microsoft Edge WebView2 点击这里开始下载",
+            Content = Lang.S["View_12158_ba305f"],
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Padding = new Thickness(20, 6, 20, 6)

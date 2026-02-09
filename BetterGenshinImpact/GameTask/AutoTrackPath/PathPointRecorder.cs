@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
@@ -44,7 +45,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
         }
         catch (NormalEndException)
         {
-            Logger.LogInformation("关闭路线录制");
+            Logger.LogInformation(Lang.S["GameTask_11382_6316d8"]);
         }
         catch (Exception e)
         {
@@ -95,7 +96,7 @@ public class PathPointRecorder : Singleton<PathPointRecorder>
 #if DEBUG
             File.WriteAllText(Global.Absolute($@"log\way\{DateTime.Now:yyyy-MM-dd HH：mm：ss：ffff}.json"), JsonSerializer.Serialize(way, ConfigService.JsonOptions));
 #endif
-            Logger.LogInformation("路线录制结束");
+            Logger.LogInformation(Lang.S["GameTask_11381_f114bf"]);
         }, ct);
     }
 }

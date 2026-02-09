@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Genshin.Paths;
 
@@ -21,7 +22,7 @@ public partial class UnityLogGameLocator
         {
             string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string logFilePathOversea = Path.Combine(appDataPath, @"..\LocalLow\miHoYo\Genshin Impact\output_log.txt");
-            string logFilePathChinese = Path.Combine(appDataPath, @"..\LocalLow\miHoYo\原神\output_log.txt");
+            string logFilePathChinese = Path.Combine(appDataPath, Lang.S["Gen_11885_363469"]);
 
             var p1 = await LocateGamePathAsync(logFilePathChinese).ConfigureAwait(false);
             if (p1 is not null)

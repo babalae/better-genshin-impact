@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
@@ -15,7 +16,7 @@ public partial class OneDragonFlowPage
     
     private readonly Dictionary<CheckBox, string> _checkBoxMappings;
     
-    public static readonly List<string> SereniteaPotSchedule = new List<string> { "每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" };
+    public static readonly List<string> SereniteaPotSchedule = new List<string> { Lang.S["GameTask_11571_33f80e"], "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" };
 
     public OneDragonFlowPage(OneDragonFlowViewModel viewModel)
     {
@@ -24,14 +25,14 @@ public partial class OneDragonFlowPage
         
         _checkBoxMappings = new Dictionary<CheckBox, string>
         {
-            { ClothCheckBox, "布匹" },
-            { MomentResinCheckBox, "须臾树脂" },
-            { SereniteapotExpBookCheckBox, "大英雄的经验" },
-            { SereniteapotExpBookSmallCheckBox, "流浪者的经验" },
-            { MagicmineralprecisionCheckBox, "精锻用魔矿" },
-            { MOlaCheckBox, "摩拉" },
-            { ExpBottleBigCheckBox, "祝圣精华" },
-            { ExpBottleSmallCheckBox, "祝圣油膏" }
+            { ClothCheckBox, Lang.S["OneDragon_046_92f5e1"] },
+            { MomentResinCheckBox, Lang.S["OneDragon_047_6fe57c"] },
+            { SereniteapotExpBookCheckBox, Lang.S["OneDragon_048_5c94a2"] },
+            { SereniteapotExpBookSmallCheckBox, Lang.S["OneDragon_049_7d0006"] },
+            { MagicmineralprecisionCheckBox, Lang.S["OneDragon_050_5787cc"] },
+            { MOlaCheckBox, Lang.S["OneDragon_051_077b44"] },
+            { ExpBottleBigCheckBox, Lang.S["OneDragon_052_8dc5de"] },
+            { ExpBottleSmallCheckBox, Lang.S["OneDragon_053_374692"] }
         };
         
     }
@@ -58,7 +59,7 @@ public partial class OneDragonFlowPage
         {
             if (!ViewModel.SelectedConfig.SecretTreasureObjects.Any())
             {
-                ViewModel.SelectedConfig.SecretTreasureObjects.Add("每天重复"); 
+                ViewModel.SelectedConfig.SecretTreasureObjects.Add(Lang.S["GameTask_11571_33f80e"]); 
             }
           
             SereniteaPotComboBox.SelectedItem = ViewModel.SelectedConfig.SecretTreasureObjects[0];

@@ -32,9 +32,9 @@ public partial class CaptureTestWindow
             CompositionTarget.Rendering -= Loop;
             _capture?.Stop();
 
-            Debug.WriteLine("平均截图耗时:" + _captureTime * 1.0 / _captureCount);
-            Debug.WriteLine("平均转换耗时:" + _transferTime * 1.0 / _captureCount);
-            Debug.WriteLine("平均总耗时:" + (_captureTime + _transferTime) * 1.0 / _captureCount);
+            Debug.WriteLine(Lang.S["View_12146_3702ca"] + _captureTime * 1.0 / _captureCount);
+            Debug.WriteLine(Lang.S["View_12145_f9eccf"] + _transferTime * 1.0 / _captureCount);
+            Debug.WriteLine(Lang.S["View_12144_63a833"] + (_captureTime + _transferTime) * 1.0 / _captureCount);
         };
     }
 
@@ -42,7 +42,7 @@ public partial class CaptureTestWindow
     {
         if (hWnd == IntPtr.Zero)
         {
-            Toast.Warning("请选择窗口");
+            Toast.Warning(Lang.S["View_12143_5dde72"]);
             return;
         }
 
@@ -64,7 +64,7 @@ public partial class CaptureTestWindow
         sw.Start();
         using var mat = _capture?.Capture();
         sw.Stop();
-        Debug.WriteLine("截图耗时:" + sw.ElapsedMilliseconds);
+        Debug.WriteLine(Lang.S["View_12142_5b8e41"] + sw.ElapsedMilliseconds);
         _captureTime += sw.ElapsedMilliseconds;
 
         if (mat != null)
@@ -83,12 +83,12 @@ public partial class CaptureTestWindow
                 mat.UpdateWriteableBitmap((WriteableBitmap)DisplayCaptureResultImage.Source);
             }
             sw.Stop();
-            Debug.WriteLine("转换耗时:" + sw.ElapsedMilliseconds);
+            Debug.WriteLine(Lang.S["View_12141_bceaef"] + sw.ElapsedMilliseconds);
             _transferTime += sw.ElapsedMilliseconds;
         }
         else
         {
-            Debug.WriteLine("截图失败");
+            Debug.WriteLine(Lang.S["GameTask_10694_4dad2c"]);
         }
     }
 }

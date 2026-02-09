@@ -7,6 +7,7 @@ using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Model;
 using Newtonsoft.Json;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 
@@ -18,13 +19,13 @@ public class MapLazyAssets : Singleton<MapLazyAssets>
     // 每个地区点击后处于的中心位置
     public readonly Dictionary<string, double[]> CountryPositions = new()
     {
-        { "蒙德", [-876, 2278] },
-        { "璃月", [270, -666] },
-        { "稻妻", [-4400, -3050] },
-        { "须弥", [2877, -374] },
-        { "枫丹", [4515, 3631] },
-        { "纳塔", [8973.5, -1879.1] },
-        { "挪德卡莱", [9542.25, 1661.84] },
+        { Lang.S["GameTask_11490_fe3d71"], [-876, 2278] },
+        { Lang.S["GameTask_11489_a1a91e"], [270, -666] },
+        { Lang.S["GameTask_11488_1e99da"], [-4400, -3050] },
+        { Lang.S["GameTask_11384_5b7ef3"], [2877, -374] },
+        { Lang.S["Gen_10019_6b7572"], [4515, 3631] },
+        { Lang.S["GameTask_11487_e8392e"], [8973.5, -1879.1] },
+        { Lang.S["GameTask_11486_1ae0f3"], [9542.25, 1661.84] },
     };
 
     public readonly Dictionary<string, GiTpPosition> DomainPositionMap = new();
