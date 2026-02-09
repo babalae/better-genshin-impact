@@ -379,7 +379,7 @@ public partial class MaskWindow : Window
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 100)
+        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 1000)
         {
             (p.Inlines as System.Collections.IList).RemoveAt(0);
         }
