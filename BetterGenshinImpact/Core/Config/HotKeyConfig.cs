@@ -237,4 +237,11 @@ public partial class HotKeyConfig : ObservableObject
 
     [ObservableProperty]
     private string _onedragonHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
+    // 地图遮罩开关
+    [ObservableProperty]
+    private string _mapMaskEnabledHotkey = "";
+
+    [ObservableProperty]
+    private string _mapMaskEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 }
