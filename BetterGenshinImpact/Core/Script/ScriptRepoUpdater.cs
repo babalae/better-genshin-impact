@@ -823,10 +823,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                                 _logger.LogError(moveEx, "处理临时文件夹失败，清理临时目录，保留原仓库");
                                 if (Directory.Exists(tempPath))
                                     DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
+                                cloneSucceeded = false; // move 失败，视为未更新
                             }
                         }
 
-                        updated = true;
+                        updated = cloneSucceeded;
                         return;
                     }
 
