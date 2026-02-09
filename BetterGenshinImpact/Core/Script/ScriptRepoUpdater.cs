@@ -682,7 +682,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 生成不重复的文件夹名（使用数字后缀 _1, _2, ...）
     /// </summary>
-    private static string GenerateUniqueFolderName(string baseName, string repoUrl)
+    private static string GenerateUniqueFolderName(string baseName)
     {
         for (int i = 1; i < 100; i++)
         {
@@ -814,7 +814,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                                 {
                                     // 内容重合度低 → 不同仓库，创建新文件夹
                                     var baseName = DeriveBaseFolderName(repoUrl.TrimEnd('/'));
-                                    var uniqueName = GenerateUniqueFolderName(baseName, repoUrl);
+                                    var uniqueName = GenerateUniqueFolderName(baseName);
                                     var newRepoPath = Path.Combine(ReposPath, uniqueName);
                                     _logger.LogInformation("内容重合度 {Ratio:P0}，判定为不同仓库，创建新文件夹: {Folder}", overlapRatio, uniqueName);
                                     Directory.Move(tempPath, newRepoPath);
@@ -1913,7 +1913,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
                 else
                 {
-                    targetFolderName = GenerateUniqueFolderName(baseName, zipFilePath);
+                    targetFolderName = GenerateUniqueFolderName(baseName);
                 }
                 targetPath = Path.Combine(ReposPath, targetFolderName);
                 _logger.LogInformation("Zip导入：内容重合度 {Ratio:P0}，创建新文件夹 {Folder}", bestOverlap, targetFolderName);
