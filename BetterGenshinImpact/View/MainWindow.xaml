@@ -3,13 +3,14 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
                  xmlns:tray="http://schemas.lepo.co/wpfui/2022/xaml/tray"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
-                 Title="更好的原神"
+                 Title="{Binding [AppTitle], Source={x:Static helpers:Lang.S}}"
                  Width="900"
                  Height="600"
                  d:Background="#D2D2D2"
@@ -58,7 +59,7 @@
                            IsFooterSeparatorVisible="False"
                            OpenPaneLength="160">
             <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Content="启动"
+                <ui:NavigationViewItem Content="{Binding [Nav_Launch], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:HomePage}">
                     <ui:NavigationViewItem.Icon>
@@ -66,14 +67,14 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="实时触发"
+                <ui:NavigationViewItem Content="{Binding [Nav_RealtimeTrigger], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:TriggerSettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Timer24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="独立任务"
+                <ui:NavigationViewItem Content="{Binding [Nav_StandaloneTask], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:TaskSettingsPage}">
                     <ui:NavigationViewItem.Icon>
@@ -83,7 +84,7 @@
 
                 <!--<ui:NavigationViewItemSeparator />-->
 
-                <ui:NavigationViewItem Content="一条龙"
+                <ui:NavigationViewItem Content="{Binding [Nav_OneDragon], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:OneDragonFlowPage}">
                     <ui:NavigationViewItem.Icon>
@@ -91,7 +92,7 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="全自动">
+                <ui:NavigationViewItem Content="{Binding [Nav_FullAuto], Source={x:Static helpers:Lang.S}}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Bot24" />
                     </ui:NavigationViewItem.Icon>
@@ -99,7 +100,7 @@
 
                         <!--<ui:NavigationViewItemSeparator />-->
                         <!--  ConvertRange20  -->
-                        <ui:NavigationViewItem Content="调度器"
+                        <ui:NavigationViewItem Content="{Binding [Nav_Scheduler], Source={x:Static helpers:Lang.S}}"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:ScriptControlPage}">
                             <ui:NavigationViewItem.Icon>
@@ -107,7 +108,7 @@
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                         <!--  WebAsset24 | DocumentJs16 | Script16  -->
-                        <ui:NavigationViewItem Content="JS 脚本"
+                        <ui:NavigationViewItem Content="{Binding [Nav_JsScript], Source={x:Static helpers:Lang.S}}"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:JsListPage}">
                             <ui:NavigationViewItem.Icon>
@@ -115,7 +116,7 @@
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                         <!--  Map24  -->
-                        <ui:NavigationViewItem Content="地图追踪"
+                        <ui:NavigationViewItem Content="{Binding [Nav_MapPathing], Source={x:Static helpers:Lang.S}}"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:MapPathingPage}">
                             <ui:NavigationViewItem.Icon>
@@ -123,7 +124,7 @@
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
                         <!--  Script16  -->
-                        <ui:NavigationViewItem Content="录制回放"
+                        <ui:NavigationViewItem Content="{Binding [Nav_Recording], Source={x:Static helpers:Lang.S}}"
                                                NavigationCacheMode="Enabled"
                                                TargetPageType="{x:Type pages:KeyMouseRecordPage}">
                             <ui:NavigationViewItem.Icon>
@@ -133,7 +134,7 @@
                     </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="辅助操控"
+                <ui:NavigationViewItem Content="{Binding [Nav_MacroControl], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:MacroSettingsPage}">
                     <ui:NavigationViewItem.Icon>
@@ -141,7 +142,7 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="快捷键"
+                <ui:NavigationViewItem Content="{Binding [Nav_Hotkey], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:HotKeyPage}">
                     <ui:NavigationViewItem.Icon>
@@ -155,7 +156,7 @@
                         <ui:SymbolIcon Symbol="KeyboardMouse16" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>-->
-                <ui:NavigationViewItem Content="通知"
+                <ui:NavigationViewItem Content="{Binding [Nav_Notification], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:NotificationSettingsPage}">
                     <ui:NavigationViewItem.Icon>
@@ -164,7 +165,7 @@
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
-                <ui:NavigationViewItem Content="设置"
+                <ui:NavigationViewItem Content="{Binding [Nav_Settings], Source={x:Static helpers:Lang.S}}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:CommonSettingsPage}">
                     <ui:NavigationViewItem.Icon>
@@ -194,7 +195,7 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Gift16}"
                                Foreground="{Binding RedeemCodeButtonForeground}"
-                               ToolTip="获取兑换码信息" />
+                               ToolTip="{Binding [TitleBar_GetRedeemCode], Source={x:Static helpers:Lang.S}}" />
                     <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"
@@ -202,7 +203,7 @@
                                Command="{Binding SwitchBackdropCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Blur24}"
-                               ToolTip="切换深浅主题或背景样式" />
+                               ToolTip="{Binding [TitleBar_SwitchTheme], Source={x:Static helpers:Lang.S}}" />
                     <ui:Button Width="32"
                                Height="32"
                                Background="Transparent"
@@ -210,7 +211,7 @@
                                Command="{Binding HideCommand}"
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon CaretDown24}"
-                               ToolTip="最小化到托盘" />
+                               ToolTip="{Binding [TitleBar_MinToTray], Source={x:Static helpers:Lang.S}}" />
                 </StackPanel>
             </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
@@ -227,11 +228,11 @@
                         <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
                     </ContextMenu.DataContext>
                     <ui:MenuItem Command="{Binding CheckUpdateCommand}"
-                                 Header="检查更新"
+                                 Header="{Binding [Tray_CheckUpdate], Source={x:Static helpers:Lang.S}}"
                                  Icon="{ui:SymbolIcon ArrowAutofitUp24}" />
                     <Separator />
                     <ui:MenuItem Command="{Binding ExitCommand}"
-                                 Header="退出"
+                                 Header="{Binding [Tray_Exit], Source={x:Static helpers:Lang.S}}"
                                  Icon="{ui:SymbolIcon Dismiss24}" />
                 </ContextMenu>
             </tray:NotifyIcon.Menu>

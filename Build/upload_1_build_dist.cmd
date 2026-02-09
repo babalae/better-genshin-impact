@@ -18,22 +18,22 @@ set "setupFile=BetterGI_Setup_v%b%.exe"
 
 echo [build app using vs2022]
 cd /d %~dp0
-rd /s /q ..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\
+rd /s /q ..\BetterGenshinImpact\bin\x64\Release\net10.0-windows10.0.22621.0\publish\win-x64\
 cd ..\
 dotnet publish -c Release -p:PublishProfile=FolderProfile
 
 echo [pack app using 7z]
 cd /d %~dp0
-cd /d ..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\
+cd /d ..\BetterGenshinImpact\bin\x64\Release\net10.0-windows10.0.22621.0\publish\win-x64\
 xcopy * "%tmpfolder%" /E /C /I /Y
 cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
 del /f /q %tmpfolder%\*ffmpeg*.dll
 
-:: Ìí¼ÓÒ»Ğ©ÅäÖÃÎÄ¼ş¿ªÊ¼£¨´óÎÄ¼ş²»ÊÊºÏ·ÅÔÚGithub£©
+:: ï¿½ï¿½ï¿½ï¿½Ò»Ğ©ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ÊºÏ·ï¿½ï¿½ï¿½Githubï¿½ï¿½
 if exist "E:\HuiTask\BetterGIBuild\BetterGI" (
     xcopy "E:\HuiTask\BetterGIBuild\BetterGI\*" "%tmpfolder%" /E /C /I /Y
 )
-:: Ìí¼ÓÒ»Ğ©ÅäÖÃÎÄ¼ş½áÊø
+:: ï¿½ï¿½ï¿½ï¿½Ò»Ğ©ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
 
 @pause

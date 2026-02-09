@@ -24,7 +24,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="独立任务设置" />
+                      Text="{Binding [Task_001_703f81], Source={x:Static helpers:Lang.S}}" />
         <!--  ~1~  停止任务  @1@  -->
         <!-- <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon DismissCircle24}"> -->
         <!--     <ui:CardControl.Header> -->
@@ -70,16 +70,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动七圣召唤"
+                                  Text="{Binding [Task_002_16fb22], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动打牌 -
+                        <Run Text="{Binding [Task_511_886165], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoGeniusInvokationUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -87,7 +87,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoGeniusInvokationCommand}"
                                              EnableContent="{Binding SwitchAutoGeniusInvokationButtonText}"
                                              IsChecked="{Binding SwitchAutoGeniusInvokationEnabled}" />
@@ -107,18 +107,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择卡组"
+                                  Text="{Binding [Task_003_673f53], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择你想要使用的卡组与策略"
+                                  Text="{Binding [Task_004_f8ed7c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
-                               Content="脚本仓库"
+                               Content="{Binding [Btn_ScriptRepo], Source={x:Static helpers:Lang.S}}"
                                Command="{Binding OpenLocalScriptRepoCommand}"
                                Icon="{ui:SymbolIcon Archive24}" />
                     <ComboBox Grid.Row="0"
@@ -148,12 +148,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="设置延时（毫秒）"
+                                  Text="{Binding [Task_005_c45ec0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果频繁出现操作速度过快，操作动画未播放完毕的情况可以添加延时"
+                                  Text="{Binding [Task_006_d9ea13], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -184,16 +184,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动伐木"
+                                  Text="{Binding [Task_007_1cb8df], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        装备「王树瑞佑」，通过循环重启游戏刷新并收集木材 -
+                        <Run Text="{Binding [Task_513_f71899], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoWoodUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -201,7 +201,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoWoodCommand}"
                                              EnableContent="{Binding SwitchAutoWoodButtonText}"
                                              IsChecked="{Binding SwitchAutoWoodEnabled}" />
@@ -220,12 +220,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用进出千星奇域刷新树木CD"
+                                  Text="{Binding [Task_008_50483d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="需要确保已解锁并进入过千星奇域"
+                                  Text="{Binding [Task_009_e80613], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -245,12 +245,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="循环次数"
+                                  Text="{Binding [Task_010_2dbd74], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="循环伐木多少次，输入 0 则为无限循环直到手动终止"
+                                  Text="{Binding [Task_011_76b48b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -271,12 +271,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用OCR伐木数量限制（需1080P以上分辨率）"
+                                  Text="{Binding [Task_012_675eed], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="伐木后OCR识别并累计木材数，达到上限后自动停止伐木"
+                                  Text="{Binding [Task_013_2eaf09], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -296,12 +296,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="伐木数量上限（原神每日每种木材最多2000）"
+                                  Text="{Binding [Task_014_ef0701], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="启用伐木数量限制后生效，达到配置上限后自动停止伐木"
+                                  Text="{Binding [Task_015_2fcb65], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -322,12 +322,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用小道具后的额外延迟（毫秒）"
+                                  Text="{Binding [Task_016_748195], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果希望看到使用小道具后获得木材的提示，可以调整这个值"
+                                  Text="{Binding [Task_017_de8baa], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -382,16 +382,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动战斗"
+                                  Text="{Binding [Task_018_1ac1b5], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动执行选择的战斗策略 -
+                        <Run Text="{Binding [Task_514_fc7435], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoFightUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -399,7 +399,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoFightCommand}"
                                              EnableContent="{Binding SwitchAutoFightButtonText}"
                                              IsChecked="{Binding SwitchAutoFightEnabled}" />
@@ -420,18 +420,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择战斗策略"
+                                  Text="{Binding [Task_019_6f4503], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于战斗"
+                                  Text="{Binding [Task_020_81eec2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
-                               Content="脚本仓库"
+                               Content="{Binding [Btn_ScriptRepo], Source={x:Static helpers:Lang.S}}"
                                Command="{Binding OpenLocalScriptRepoCommand}"
                                Icon="{ui:SymbolIcon Archive24}" />
                     <ui:Button Grid.Row="0"
@@ -439,7 +439,7 @@
                                Grid.Column="2"
                                Margin="0,0,12,0"
                                Command="{Binding OpenFightFolderCommand}"
-                               Content="打开目录" />
+                               Content="{Binding [Btn_OpenDir], Source={x:Static helpers:Lang.S}}" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="3"
@@ -467,12 +467,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="根据技能CD优化出招人员"
+                                  Text="{Binding [Task_021_6ac9e0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="根据填入人或人和cd，来决定当此人元素战技cd未结束时，跳过此人出招，来优化战斗流程，可填入人名或人名数字（用逗号分隔），多种用分号分隔，例如:白术;钟离,12;，如果人名，则用内置cd检查（或填入数字也小于0），如果是人名和数字，则把数字当做出招cd(秒)。"
+                                  Text="{Binding [Task_022_a17f28], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -505,12 +505,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动检测战斗结束"
+                                              Text="{Binding [Task_023_f7ae10], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="检测到战斗已经结束的情况下，停止自动战斗功能"
+                                              Text="{Binding [Task_024_799bc3], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -549,12 +549,12 @@
                                                 <ui:TextBlock Grid.Row="0"
                                                               Grid.Column="0"
                                                               FontTypography="Body"
-                                                              Text="更快检查结束战斗"
+                                                              Text="{Binding [Task_025_c5513f], Source={x:Static helpers:Lang.S}}"
                                                               TextWrapping="Wrap" />
                                                 <ui:TextBlock Grid.Row="1"
                                                               Grid.Column="0"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                              Text="快速检查战斗结束，在一轮脚本中，可以每隔一定秒数（默认为5）或指定角色操作后，去检查（在每个角色完成该轮脚本时）。"
+                                                              Text="{Binding [Task_026_185be0], Source={x:Static helpers:Lang.S}}"
                                                               TextWrapping="Wrap" />
                                                 <ui:ToggleSwitch Grid.Row="0"
                                                                  Grid.RowSpan="2"
@@ -576,12 +576,12 @@
                                                 <ui:TextBlock Grid.Row="0"
                                                               Grid.Column="0"
                                                               FontTypography="Body"
-                                                              Text="更快检查结束战斗参数"
+                                                              Text="{Binding [Task_027_100954], Source={x:Static helpers:Lang.S}}"
                                                               TextWrapping="Wrap" />
                                                 <ui:TextBlock Grid.Row="1"
                                                               Grid.Column="0"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                              Text="快速检查战斗结束的参数，可填入数字和人名，多种用分号分隔，例如:5;白术;钟离;，如果是数字（小于等于0则不会根据时间去检查，单位为秒），则指定检查间隔，如果是人名，则该角色执行一轮操作后进行检查。同时每轮结束后检查不变。"
+                                                              Text="{Binding [Task_028_6dce0b], Source={x:Static helpers:Lang.S}}"
                                                               TextWrapping="Wrap" />
                                                 <ui:TextBox Grid.Row="0"
                                                             Grid.RowSpan="2"
@@ -612,7 +612,7 @@
                                     <ui:TextBlock Grid.Row="0"
                                                   Grid.Column="0"
                                                   FontTypography="Body"
-                                                  Text="旋转寻找敌人位置"
+                                                  Text="{Binding [Task_029_a33288], Source={x:Static helpers:Lang.S}}"
                                                   Margin="0,0,0,10"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Center"
@@ -622,7 +622,7 @@
                                                   FontTypography="Body"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   FontSize="9"
-                                                  Text="旋转速度(建议单次360°左右)："
+                                                  Text="{Binding [Task_030_eb19af], Source={x:Static helpers:Lang.S}}"
                                                   Margin="5,8,0,10"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Center"
@@ -645,7 +645,7 @@
                                                   VerticalAlignment="Stretch"
                                                   Margin="0,0,5,0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)"
+                                                  Text="{Binding [Task_031_5e2d43], Source={x:Static helpers:Lang.S}}"
                                                   TextWrapping="Wrap" />
                                     
                                     <ui:ToggleSwitch Grid.Row="0"
@@ -661,7 +661,7 @@
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   Margin="0,20,25,-10"
                                                   FontTypography="Body"
-                                                  Text="Q前检测"
+                                                  Text="{Binding [Task_032_e28a87], Source={x:Static helpers:Lang.S}}"
                                                   TextWrapping="Wrap" />
                                     <ui:ToggleSwitch Grid.Row="1"
                                                      Grid.Column="3"
@@ -684,7 +684,7 @@
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   Margin="0,0,25,-45"
                                                   FontTypography="Body"
-                                                  Text="尝试面敌"
+                                                  Text="{Binding [Task_033_3eb344], Source={x:Static helpers:Lang.S}}"
                                                   TextWrapping="Wrap" />
                                 </Grid>
 
@@ -700,12 +700,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="检查战斗结束的延时"
+                                              Text="{Binding [Task_034_799fa3], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="检查战斗结束的延时，不同角色招式结束后的延时不一定相同，默认为1.5秒。也可以指定特定角色之后延时多少秒检查，未指定角色名，则默认为该值。格式如：2.5;白术,1.5;钟离,1.0;"
+                                              Text="{Binding [Task_035_cd1c23], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
@@ -725,12 +725,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="按键触发后检查延时"
+                                              Text="{Binding [Task_036_e97fba], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="按下切换队伍后去检查屏幕色块的延时，默认为0.45秒。若频繁误判可以适当提高这个值，比如到0.75。确保这个延时不会真的把队伍配置界面切出来。"
+                                              Text="{Binding [Task_037_088482], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
@@ -814,12 +814,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="盾奶位角色优先释放技能"
+                                          Text="{Binding [Task_038_6d6722], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="战斗过程实时检测和释放盾奶位角E战技（空选为关闭此功能）"
+                                          Text="{Binding [Task_039_3b10b4], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardExpander.Header>
@@ -852,12 +852,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="盾奶位角色在队伍中的位置"
+                                      Text="{Binding [Task_040_57da5c], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="实时检测盾奶位战技CD"
+                                      Text="{Binding [Task_041_ff56a5], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         
                         <ComboBox Grid.Row="0"
@@ -875,7 +875,7 @@
                                       Margin="0,0,8,0"
                                       HorizontalAlignment="Right"
                                       FontTypography="Body"
-                                      Text="禁用该角色的战斗策略"
+                                      Text="{Binding [Task_042_b7a32b], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap"
                                       Style="{StaticResource GuardianVisibilityStyle}"/>
 
@@ -884,7 +884,7 @@
                                       Margin="0,0,10,0"
                                       HorizontalAlignment="Right"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="自动释放E或Q战技"
+                                      Text="{Binding [Task_043_8532a5], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap"
                                       Style="{StaticResource GuardianVisibilityStyle}"/>
                         
@@ -895,7 +895,7 @@
                                        FontSize="8"
                                        HorizontalAlignment="Center"
                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                       Text="E战技"
+                                       Text="{Binding [Task_044_0764fd], Source={x:Static helpers:Lang.S}}"
                                        TextWrapping="Wrap"
                                        Style="{StaticResource GuardianVisibilityStyle}"/>
 
@@ -924,7 +924,7 @@
                                        FontSize="8"
                                        HorizontalAlignment="Center"
                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                       Text="Q爆发"
+                                       Text="{Binding [Task_045_96d846], Source={x:Static helpers:Lang.S}}"
                                        TextWrapping="Wrap"
                                        Style="{StaticResource GuardianVisibilityStyle}"/>
                         
@@ -953,7 +953,7 @@
                                       FontTypography="Body"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Center"
-                                      Text="检测盾奶位战技短按或长按，禁用:短按 / 启用:长按"
+                                      Text="{Binding [Task_046_be39d4], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" 
                                       Style="{StaticResource GuardianVisibilityStyle}"/>
                         
@@ -1000,12 +1000,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动拾取掉落物"
+                                              Text="{Binding [Task_047_8fca43], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
+                                              Text="{Binding [Task_048_f89952], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -1027,12 +1027,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动拾取掉落物时长"
+                                              Text="{Binding [Task_049_761414], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="单位为秒。0表示不自动拾取掉落物。"
+                                              Text="{Binding [Task_050_055992], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
@@ -1058,7 +1058,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="聚集材料动作"
+                                  Text="{Binding [Task_051_7f0d42], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -1067,13 +1067,13 @@
                                   FontSize="10"
                                   FontTypography="Body"
                                   VerticalAlignment="Bottom"
-                                  Text="(琴二次拾取：首次拾取空,再次拾取)"
+                                  Text="{Binding [Task_052_f893d6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="战斗结束后，如存在(万叶/琴)，则执行长E聚集材料动作"
+                                  Text="{Binding [Task_053_3c3ad1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1096,7 +1096,7 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Margin="0,0,38,26"
                                   FontTypography="Body"
-                                  Text="琴二次拾取"
+                                  Text="{Binding [Task_054_021155], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
                 <Separator Margin="-18,0"
@@ -1116,12 +1116,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动战斗超时(秒)"
+                                  Text="{Binding [Task_055_662ef9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="到达指定时间后，自动停止战斗"
+                                  Text="{Binding [Task_056_002851], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1134,12 +1134,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="2"
                                   FontTypography="Body"
-                                  Text="游泳检测(自动战斗过程中)"
+                                  Text="{Binding [Task_057_60e26b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="2"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="先回战斗节点，失败则去七天神像"
+                                  Text="{Binding [Task_058_76f379], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1170,16 +1170,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动秘境"
+                                  Text="{Binding [Task_059_1f7122], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        基于钟离的自动循环刷本 -
+                        <Run Text="{Binding [Task_515_c0d81c], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoDomainUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -1187,7 +1187,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoDomainCommand}"
                                              EnableContent="{Binding SwitchAutoDomainButtonText}"
                                              IsChecked="{Binding SwitchAutoDomainEnabled}" />
@@ -1208,18 +1208,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择战斗策略"
+                                  Text="{Binding [Task_019_6f4503], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于战斗"
+                                  Text="{Binding [Task_020_81eec2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
-                               Content="脚本仓库"
+                               Content="{Binding [Btn_ScriptRepo], Source={x:Static helpers:Lang.S}}"
                                Command="{Binding OpenLocalScriptRepoCommand}"
                                Icon="{ui:SymbolIcon Archive24}" />
                     <ui:Button Grid.Row="0"
@@ -1227,7 +1227,7 @@
                                Grid.Column="2"
                                Margin="0,0,12,0"
                                Command="{Binding OpenFightFolderCommand}"
-                               Content="打开目录" />
+                               Content="{Binding [Btn_OpenDir], Source={x:Static helpers:Lang.S}}" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="3"
@@ -1256,12 +1256,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动切换到指定队伍"
+                                  Text="{Binding [Task_060_418cec], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="注意队伍名称是游戏内你手动设置的名称"
+                                  Text="{Binding [Task_061_d369a6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1283,12 +1283,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="指定要前往的秘境"
+                                  Text="{Binding [Task_062_420656], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动传送到刷取的秘境"
+                                  Text="{Binding [Task_063_7f0846], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <controls:DomainSelector Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1309,12 +1309,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="刷取至树脂耗尽"
+                                  Text="{Binding [Task_064_957e63], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
+                                  Text="{Binding [Task_065_65cb9c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1336,12 +1336,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="指定每种树脂刷取次数"
+                                  Text="{Binding [Task_066_37fb1c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="开启后会根据配置的次数使用对应的树脂"
+                                  Text="{Binding [Task_067_ddcdde], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1362,7 +1362,7 @@
                         <!-- 原粹树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,8,0,12">
-                            <ui:TextBlock Text="原粹树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_068_2f6063], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1377,7 +1377,7 @@
                         <!-- 浓缩树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,12">
-                            <ui:TextBlock Text="浓缩树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_069_4aecd0], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1392,7 +1392,7 @@
                         <!-- 须臾树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,12">
-                            <ui:TextBlock Text="须臾树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_070_b15696], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1407,7 +1407,7 @@
                         <!-- 脆弱树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,0">
-                            <ui:TextBlock Text="脆弱树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_071_d45ca8], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1434,12 +1434,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="结束后自动分解圣遗物"
+                                  Text="{Binding [Task_072_5f6371], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="需要快速分解圣遗物的最高星级"
+                                  Text="{Binding [Task_073_f10580], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1469,12 +1469,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="战斗完成后等待时间（秒）"
+                                  Text="{Binding [Task_074_e113ee], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="战斗结束后，寻找石化古树前的延迟时间，等一些角色技能完全结束"
+                                  Text="{Binding [Task_075_0f29f9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1495,12 +1495,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="寻找古树时使用小步伐行走（正常用户请不要启用）"
+                                  Text="{Binding [Task_076_40b8d4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果电脑性能较差，寻找古树时间过久，可以尝试使用这个功能"
+                                  Text="{Binding [Task_077_4c895f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1520,12 +1520,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="步行前往开启秘境和领取奖励"
+                                  Text="{Binding [Task_078_b422f1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果电脑性能较差，开启秘境或者领取奖励的F点击不到，可以尝试此功能"
+                                  Text="{Binding [Task_079_4ff3a6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1545,12 +1545,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="寻找古树时确认位置左右移动的次数（正常用户不要修改）"
+                                  Text="{Binding [Task_080_64b2ee], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="小步伐行走的时候左右确认位置的次数"
+                                  Text="{Binding [Task_081_7687b2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1571,12 +1571,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动吃药"
+                                  Text="{Binding [Trigger_049_4815ef], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="请先装备 “便携营养袋” ，在红血时候后自动按Z键吃药"
+                                  Text="{Binding [Task_082_79e772], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1596,12 +1596,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="角色死亡后重试次数"
+                                  Text="{Binding [Task_083_6b9872], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="秘境战斗中，发生角色死亡重试的次数"
+                                  Text="{Binding [Task_084_1a71e7], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Text="{Binding Config.AutoDomainConfig.ReviveRetryCount, Mode=TwoWay}"
                                 Grid.Row="0"
@@ -1631,16 +1631,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动幽境危战"
+                                  Text="{Binding [Task_085_4fdef3], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动传送并进入幽境危战 -
+                        <Run Text="{Binding [Task_516_eb6ecc], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoStygianOnslaughtUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -1648,7 +1648,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoStygianOnslaughtCommand}"
                                              EnableContent="{Binding SwitchAutoStygianOnslaughtButtonText}"
                                              IsChecked="{Binding SwitchAutoStygianOnslaughtEnabled}" />
@@ -1669,18 +1669,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择战斗策略"
+                                  Text="{Binding [Task_019_6f4503], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于战斗"
+                                  Text="{Binding [Task_020_81eec2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,12,0"
-                               Content="脚本仓库"
+                               Content="{Binding [Btn_ScriptRepo], Source={x:Static helpers:Lang.S}}"
                                Command="{Binding OpenLocalScriptRepoCommand}"
                                Icon="{ui:SymbolIcon Archive24}" />
                     <ui:Button Grid.Row="0"
@@ -1688,7 +1688,7 @@
                                Grid.Column="2"
                                Margin="0,0,12,0"
                                Command="{Binding OpenFightFolderCommand}"
-                               Content="打开目录" />
+                               Content="{Binding [Btn_OpenDir], Source={x:Static helpers:Lang.S}}" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="3"
@@ -1718,12 +1718,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="指定刷取的战场"
+                                  Text="{Binding [Task_086_784e9b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="从上到下战场一、二、三"
+                                  Text="{Binding [Task_087_063570], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1748,12 +1748,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="指定战斗队伍"
+                                  Text="{Binding [Task_088_c9d28e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="输入预设队伍的名称，留空则不更换队伍"
+                                  Text="{Binding [Task_089_101fb9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1761,7 +1761,7 @@
                                 Width="200"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.AutoStygianOnslaughtConfig.FightTeamName, Mode=TwoWay}" 
-                                PlaceholderText="例如：队伍1" />
+                                PlaceholderText="{Binding [Task_090_9febc7], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
 
                 <Grid Margin="16">
@@ -1776,12 +1776,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="刷取至树脂耗尽"
+                                  Text="{Binding [Task_064_957e63], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先使用浓缩树脂，然后使用原粹树脂，其余树脂不使用"
+                                  Text="{Binding [Task_065_65cb9c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1803,12 +1803,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="指定每种树脂刷取次数"
+                                  Text="{Binding [Task_066_37fb1c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="开启后会根据配置的次数使用对应的树脂"
+                                  Text="{Binding [Task_067_ddcdde], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1829,7 +1829,7 @@
                         <!-- 原粹树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,8,0,12">
-                            <ui:TextBlock Text="原粹树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_068_2f6063], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1844,7 +1844,7 @@
                         <!-- 浓缩树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,12">
-                            <ui:TextBlock Text="浓缩树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_069_4aecd0], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1859,7 +1859,7 @@
                         <!-- 须臾树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,12">
-                            <ui:TextBlock Text="须臾树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_070_b15696], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1874,7 +1874,7 @@
                         <!-- 脆弱树脂设置 -->
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,0">
-                            <ui:TextBlock Text="脆弱树脂刷取次数："
+                            <ui:TextBlock Text="{Binding [Task_071_d45ca8], Source={x:Static helpers:Lang.S}}"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0" />
                             <ui:NumberBox
@@ -1901,12 +1901,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="结束后自动分解圣遗物"
+                                  Text="{Binding [Task_072_5f6371], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="需要快速分解圣遗物的最高星级"
+                                  Text="{Binding [Task_073_f10580], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2017,16 +2017,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动千音雅集"
+                                  Text="{Binding [Task_091_199303], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        可以自动演奏单个，也可以全自动完成整个专辑 -
+                        <Run Text="{Binding [Task_517_5e9f02], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                 </Grid>
@@ -2045,16 +2045,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="【乐曲】 演奏单个乐曲"
+                                  Text="{Binding [Task_092_31b07c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        进入演奏界面使用，下落模式必须选择垂落模式 -
+                        <Run Text="{Binding [Task_518_3da30b], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -2062,7 +2062,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoMusicGameCommand}"
                                              EnableContent="{Binding SwitchAutoMusicGameButtonText}"
                                              IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
@@ -2079,16 +2079,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="【专辑】 全自动完成整个专辑"
+                                  Text="{Binding [Task_093_3d1eaf], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        进入专辑界面使用，自动演奏未完成乐曲 -
+                        <Run Text="{Binding [Task_519_d92fdb], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoMusicGameUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -2096,7 +2096,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoAlbumCommand}"
                                              EnableContent="{Binding SwitchAutoAlbumButtonText}"
                                              IsChecked="{Binding SwitchAutoAlbumEnabled}" />
@@ -2113,12 +2113,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="【专辑】 自动演奏未达成【大音天籁】的乐曲"
+                                  Text="{Binding [Task_094_ec7e28], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="关闭时，奖励已经领取就会跳过乐曲。开启时，达成了【大音天籁】才会跳过乐曲"
+                                  Text="{Binding [Task_095_651c81], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2138,12 +2138,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="【专辑】 自动演奏的目标难度选择"
+                                  Text="{Binding [Task_096_4ee7fd], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="设置为【传说】，【大师】即可获取所有奖励，设置【所有】则会对乐曲的所有难度进行自动演奏"
+                                  Text="{Binding [Task_097_165c5f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2175,16 +2175,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="全自动钓鱼（单个鱼塘）"
+                                  Text="{Binding [Task_098_6f8539], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        不要携带跟宠！在出现钓鱼F按钮的位置启动本任务 -
+                        <Run Text="{Binding [Task_520_d9d264], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToAutoFishingUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -2192,7 +2192,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoFishingCommand}"
                                              EnableContent="{Binding SwitchAutoFishingButtonText}"
                                              IsChecked="{Binding SwitchAutoFishingEnabled}" />
@@ -2239,12 +2239,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="上钩等待超时时间"
+                                  Text="{Binding [Task_099_59e5e6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="超过这个时间将自动提竿，并重新识别并选择鱼饵进行抛竿"
+                                  Text="{Binding [Task_100_21e9fb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -2268,12 +2268,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="整个任务超时时间"
+                                  Text="{Binding [Task_101_1f00ff], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="超过这个时间将强制结束任务"
+                                  Text="{Binding [Task_102_2ea5c2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -2297,12 +2297,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="昼夜策略"
+                                  Text="{Binding [Task_103_0d36e3], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="钓全天的鱼、还是只钓白天或夜晚的鱼、亦或不调整时间"
+                                  Text="{Binding [Task_104_916ec8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2326,12 +2326,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="关键帧保存截图（开发者）"
+                                  Text="{Binding [Task_105_965632], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在流程判断的关键时刻保存当时的截图，供分析判断。会大量写入，非调试时请关闭。需要启用保存截图功能"
+                                  Text="{Binding [Task_106_dad73d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2352,18 +2352,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="torch库文件地址（仅限2.5.1版本）"
+                                  Text="{Binding [Task_107_9a25c9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        请
+                        <Run Text="{Binding [Task_521_d1a34a], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToTorchPreviousVersionsCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            下载
+                            <Run Text="{Binding [Task_522_f26ef9], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
-                        到本地后填入torch_cpu.dll或torch_cuda.dll的完整地址。如未生效可尝试重启BGI。
+                        <Run Text="{Binding [Task_523_e86a32], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
 
                     </ui:TextBlock>
                     <ui:TextBox Grid.Row="0"
@@ -2393,20 +2393,20 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动使用兑换码"
+                                  Text="{Binding [Task_108_09ff3a], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        自动使用输入的兑换码
+                        <Run Text="{Binding [Task_524_156aaf], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchAutoRedeemCodeCommand}"
                                              EnableContent="{Binding SwitchAutoRedeemCodeButtonText}"
                                              IsChecked="{Binding SwitchAutoRedeemCodeEnabled}" />
@@ -2425,12 +2425,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="获取剪切板上的兑换码"
+                                  Text="{Binding [Task_109_7aaafb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在切换到软件界面时候，自动提取兑换码并提示"
+                                  Text="{Binding [Task_110_35f573], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2459,16 +2459,16 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动分解圣遗物"
+                                  Text="{Binding [Task_111_18f177], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        指定匹配表达式逐一筛选分解，支持5星圣遗物 -
+                        <Run Text="{Binding [Task_525_b8559c], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToArtifactSalvageUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -2476,7 +2476,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchArtifactSalvageCommand}"
                                              EnableContent="{Binding SwitchAutoFishingButtonText}"
                                              IsChecked="{Binding SwitchArtifactSalvageEnabled}" />
@@ -2495,18 +2495,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试识别效果"
+                                  Text="{Binding [Task_112_4a0fa2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="请先将游戏界面切换至圣遗物分解界面"
+                                  Text="{Binding [Task_113_8964e6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
-                               Content="打开测试窗口"
+                               Content="{Binding [Btn_OpenTestWindow], Source={x:Static helpers:Lang.S}}"
                                Command="{Binding OpenArtifactSalvageTestOCRWindowCommand}" />
                 </Grid>
                 <Grid Margin="16">
@@ -2526,20 +2526,20 @@
                         JavaScript - 
                         <Hyperlink Command="{Binding GoToArtifactSalvageUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        只要满足的圣遗物都会被选中
+                        <Run Text="{Binding [Task_526_0cf95c], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
-                               Content="从脚本仓库复制"
+                               Content="{Binding [Btn_CopyFromRepo], Source={x:Static helpers:Lang.S}}"
                                Command="{Binding CopyArtifactSalvageJavaScriptFromRepositoryCommand}" />
                     <ui:TextBox Grid.Row="2"
                                 Grid.RowSpan="2"
@@ -2563,16 +2563,15 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  TextWrapping="Wrap">
-                        按套装筛选
-                    </ui:TextBlock>
+                                  TextWrapping="Wrap"
+                                  Text="{Binding [Task_527_710332], Source={x:Static helpers:Lang.S}}"/>
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        利用游戏自带的筛选功能先行筛选
+                        <Run Text="{Binding [Task_528_456547], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <LineBreak/>
-                        一般填写套装内生之花名，可填入多个名称；留空则不用
+                        <Run Text="{Binding [Task_529_6b1d5d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                     <ui:TextBox Grid.Row="1"
                                 Grid.RowSpan="2"
@@ -2595,12 +2594,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="需要快速分解圣遗物的最高星级"
+                                  Text="{Binding [Task_073_f10580], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="先会进行一次快速分解选择"
+                                  Text="{Binding [Task_114_6920a4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2623,12 +2622,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="最大检查数量"
+                                  Text="{Binding [Task_115_ad40a0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="达到最大检查数量后也会停止"
+                                  Text="{Binding [Task_116_a4b924], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -2650,12 +2649,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="识别失败策略"
+                                  Text="{Binding [Task_117_180a82], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="识别单个圣遗物面板信息失败时，是跳过还是终止"
+                                  Text="{Binding [Task_118_0852f4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2690,14 +2689,14 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截取物品图标（开发者）"
+                                  Text="{Binding [Task_119_c6b26b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" Grid.ColumnSpan="2" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Grid.RowSpan="2"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap" Grid.ColumnSpan="2">
-                        须要打开设置-启用保存截图功能，文件保存在
+                        <Run Text="{Binding [Task_530_6fa3e5], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToGetGridIconsFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
                             log/gridIcons
@@ -2705,7 +2704,7 @@
                         <LineBreak/>
                         <Hyperlink Command="{Binding GoToGetGridIconsUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看使用教程
+                            <Run Text="{Binding [Task_512_d3757d], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <controls:TwoStateButton Grid.Row="0"
@@ -2713,7 +2712,7 @@
                                              Grid.Column="2"
                                              Margin="0,0,24,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchGetGridIconsCommand}"
                                              EnableContent="{Binding SwitchGetGridIconsButtonText}"
                                              IsChecked="{Binding SwitchGetGridIconsEnabled}" VerticalAlignment="Top" />
@@ -2732,12 +2731,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="界面名称"
+                                  Text="{Binding [Task_120_5b59d1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="不同界面的参数不一样，请选择你要扫描的界面"
+                                  Text="{Binding [Task_121_5fcc57], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2762,12 +2761,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用星星作为名称后缀"
+                                  Text="{Binding [Task_122_b93b39], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="有些物品具有相同的名称，但具有不同的图标和星星数"
+                                  Text="{Binding [Task_123_077b7f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2787,12 +2786,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="使用等级作为名称后缀（待开发）"
+                                  Text="{Binding [Task_124_292a28], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="有些物品具有相同的名称，但具有不同的图标和等级"
+                                  Text="{Binding [Task_125_f91faa], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2813,12 +2812,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="最大截取数量"
+                                  Text="{Binding [Task_126_f3a3a1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="达到最大截取数量后会停止"
+                                  Text="{Binding [Task_127_aec89c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -2840,19 +2839,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试识别效果"
+                                  Text="{Binding [Task_112_4a0fa2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="请先将游戏界面切换至待测试分类界面"
+                                  Text="{Binding [Task_128_060c12], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <controls:TwoStateButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
                                              DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
+                                             DisableContent="{Binding [Home_Stop], Source={x:Static helpers:Lang.S}}"
                                              EnableCommand="{Binding SwitchGridIconsModelAccuracyTestCommand}"
                                              EnableContent="{Binding SwitchGridIconsAccuracyTestButtonText}"
                                              IsChecked="{Binding SwitchGetGridIconsEnabled}" />
@@ -2888,7 +2887,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         Margin="0,0,24,0"
-                        Content="绑定快捷键"
+                        Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}"
                         Command="{Binding GoToHotKeyPageCommand}" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -2946,7 +2945,7 @@
             </ui:CardControl.Header>
             <ui:Button
                 Margin="0,0,36,0"
-                Content="绑定快捷键"
+                Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}"
                 Command="{Binding GoToHotKeyPageCommand}" />
         </ui:CardControl>-->
     </StackPanel>

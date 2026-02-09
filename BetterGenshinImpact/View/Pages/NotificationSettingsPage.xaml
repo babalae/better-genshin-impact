@@ -5,6 +5,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       Title="NotificationSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:NotificationSettingsPageViewModel}"
       d:DesignHeight="1500"
@@ -18,7 +19,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="通知设置" />
+                      Text="{Binding [Notify_001_748a48], Source={x:Static helpers:Lang.S}}" />
 
         <!--  全局通知设置  -->
         <ui:CardExpander Margin="0,0,0,12"
@@ -37,12 +38,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="全局通知设置"
+                                  Text="{Binding [Notify_002_9e93a5], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="影响下方所有通知的设置"
+                                  Text="{Binding [Notify_003_6b80a0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <!--<ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -64,12 +65,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知时包含截图"
+                                  Text="{Binding [Notify_004_1c8e66], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="总是在通知中包含截图"
+                                  Text="{Binding [Notify_005_cce0ac], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -89,12 +90,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="是否允许 JS 通知"
+                                  Text="{Binding [Notify_006_ca02b4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="开启时允许 JS 脚本发送通知"
+                                  Text="{Binding [Notify_007_325d76], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -114,12 +115,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="需要通知的事件"
+                                  Text="{Binding [Notify_008_7ca625], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="英文逗号分割，为空为全部通知"
+                                  Text="{Binding [Notify_009_a1bfc4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -149,12 +150,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Webhook"
+                                  Text="{Binding [Notify_010_685aab], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Webhook 相关设置"
+                                  Text="{Binding [Notify_011_26ebd8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -176,12 +177,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Webhook 端点"
+                                  Text="{Binding [Notify_012_012503], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Webhook 端点"
+                                  Text="{Binding [Notify_013_898339], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -204,12 +205,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="发送对象"
+                                  Text="{Binding [Notify_014_72ed95], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写发送对象"
+                                  Text="{Binding [Notify_015_c14c92], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -232,12 +233,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试"
+                                  Text="{Binding [Notify_016_db06c7], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试载荷"
+                                  Text="{Binding [Notify_017_0f42c8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.Column="1"
@@ -245,7 +246,7 @@
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right"
                                Command="{Binding TestWebhookCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -266,12 +267,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 WebSocket"
+                                  Text="{Binding [Notify_018_8e9ba1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="WebSocket 相关设置"
+                                  Text="{Binding [Notify_019_e831d0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -293,12 +294,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="WebSocket 端点"
+                                  Text="{Binding [Notify_020_d6ca52], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 WebSocket 端点"
+                                  Text="{Binding [Notify_021_5d438c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -321,19 +322,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 WebSocket 通知"
+                                  Text="{Binding [Notify_022_417b0f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWebSocketNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -355,12 +356,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Windows 通知"
+                                  Text="{Binding [Notify_024_a2821b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Windows 通知别与游戏界面重叠，否则易误点通知"
+                                  Text="{Binding [Notify_025_82b9ca], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -382,19 +383,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Windows 通知"
+                                  Text="{Binding [Notify_026_704ed7], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWindowsUwpNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -416,12 +417,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用飞书通知"
+                                  Text="{Binding [Notify_027_b132cf], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="飞书通知相关设置"
+                                  Text="{Binding [Notify_028_d3582c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -443,12 +444,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="飞书通知地址"
+                                  Text="{Binding [Notify_029_e4e8bf], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写飞书通知地址"
+                                  Text="{Binding [Notify_030_dc8e38], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -471,12 +472,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="飞书AppId"
+                                  Text="{Binding [Notify_031_adcbdb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="若填写AppId、AppSecret则发送图片"
+                                  Text="{Binding [Notify_032_4dea54], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -499,12 +500,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="飞书AppSecret"
+                                  Text="{Binding [Notify_033_2413d6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="若填写AppId、AppSecret则发送图片"
+                                  Text="{Binding [Notify_032_4dea54], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -527,19 +528,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试飞书通知"
+                                  Text="{Binding [Notify_034_e6ce2f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestFeishuNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -561,12 +562,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 OneBot 通知"
+                                  Text="{Binding [Notify_035_23c1e0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="OneBot 通知相关设置"
+                                  Text="{Binding [Notify_036_e17d8a], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -588,12 +589,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="OneBot 请求地址"
+                                  Text="{Binding [Notify_037_f78bf3], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 OneBot 请求地址"
+                                  Text="{Binding [Notify_038_03d9b9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -616,12 +617,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="QQ 号"
+                                  Text="{Binding [Notify_039_8e50f4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写接收消息的 QQ 号"
+                                  Text="{Binding [Notify_040_addcac], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -644,12 +645,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="群号"
+                                  Text="{Binding [Notify_041_68404f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写接收消息的群号"
+                                  Text="{Binding [Notify_042_2d1dd6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -677,7 +678,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 OneBot Token（可选）"
+                                  Text="{Binding [Notify_043_aeb4ea], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -700,19 +701,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 OneBot 通知"
+                                  Text="{Binding [Notify_044_a094ed], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestOneBotNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -734,12 +735,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用企业微信通知"
+                                  Text="{Binding [Notify_045_5d4cfe], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="企业微信通知相关设置"
+                                  Text="{Binding [Notify_046_120727], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -761,12 +762,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="企业微信通知地址"
+                                  Text="{Binding [Notify_047_2246d1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写企业微信通知地址"
+                                  Text="{Binding [Notify_048_57748c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -789,19 +790,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试企业微信通知"
+                                  Text="{Binding [Notify_049_3a4406], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestWorkWeixinNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -823,12 +824,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用邮箱通知"
+                                  Text="{Binding [Notify_050_84726f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="邮箱相关设置（账号密码完全保存于本地）"
+                                  Text="{Binding [Notify_051_c7567e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -850,12 +851,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 服务器"
+                                  Text="{Binding [Notify_052_1f130d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 服务器"
+                                  Text="{Binding [Notify_053_0e73d0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -878,12 +879,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 服务器端口"
+                                  Text="{Binding [Notify_054_e074f6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 服务器端口，一般为：587"
+                                  Text="{Binding [Notify_055_1f6c16], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -907,12 +908,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 用户名"
+                                  Text="{Binding [Notify_056_e2df57], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 用户名"
+                                  Text="{Binding [Notify_057_18a994], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -935,12 +936,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="SMTP 密码"
+                                  Text="{Binding [Notify_058_42c048], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 SMTP 密码"
+                                  Text="{Binding [Notify_059_6100e2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -963,12 +964,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="发件人邮箱"
+                                  Text="{Binding [Notify_060_b9d830], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写发件人邮箱"
+                                  Text="{Binding [Notify_061_c940f6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -991,12 +992,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="发件人姓名"
+                                  Text="{Binding [Notify_062_52cb1d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写发件人姓名"
+                                  Text="{Binding [Notify_063_2c3827], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1019,12 +1020,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="收件人邮箱"
+                                  Text="{Binding [Notify_064_78dd8a], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写收件人邮箱"
+                                  Text="{Binding [Notify_065_b74c67], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1047,19 +1048,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试邮箱通知"
+                                  Text="{Binding [Notify_066_efb332], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestEmailNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1080,12 +1081,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Bark 通知"
+                                  Text="{Binding [Notify_067_3799aa], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Bark ios 推送通知"
+                                  Text="{Binding [Notify_068_4325c2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1107,12 +1108,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Bark API 端点"
+                                  Text="{Binding [Notify_069_c08d29], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Bark API 端点,例如：api.day.app"
+                                  Text="{Binding [Notify_070_34a9c9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1136,12 +1137,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="设备 Key"
+                                  Text="{Binding [Notify_071_e72e28], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="多个设备使用英文逗号、分号或空格分隔"
+                                  Text="{Binding [Notify_072_f4dca1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
 
                     <ui:TextBox Grid.Row="0"
@@ -1167,12 +1168,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="推送级别"
+                                  Text="{Binding [Notify_073_c37d5f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="修改推送级别"
+                                  Text="{Binding [Notify_074_590d34], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1181,10 +1182,10 @@
                               SelectedValuePath="Tag"
                               Margin="0,0,36,0"
                               MinWidth="120">
-                        <ComboBoxItem Content="passive（通知但不提醒）" Tag="passive" />
-                        <ComboBoxItem Content="critical（重要通知）" Tag="critical" />
-                        <ComboBoxItem Content="active（默认通知）" Tag="active" />
-                        <ComboBoxItem Content="sensitive（专注通知）" Tag="timeSensitive" />
+                        <ComboBoxItem Content="{Binding [Notify_075_b06ecb], Source={x:Static helpers:Lang.S}}" Tag="passive" />
+                        <ComboBoxItem Content="{Binding [Notify_076_e824ff], Source={x:Static helpers:Lang.S}}" Tag="critical" />
+                        <ComboBoxItem Content="{Binding [Notify_077_edf19e], Source={x:Static helpers:Lang.S}}" Tag="active" />
+                        <ComboBoxItem Content="{Binding [Notify_078_b021e0], Source={x:Static helpers:Lang.S}}" Tag="timeSensitive" />
                     </ComboBox>
                 </Grid>
 
@@ -1200,12 +1201,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知声音"
+                                  Text="{Binding [Notify_079_6bb113], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择通知声音"
+                                  Text="{Binding [Notify_080_66504c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1232,12 +1233,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知图标"
+                                  Text="{Binding [Notify_081_f3b24e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自定义通知图标"
+                                  Text="{Binding [Notify_082_f1c7d6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1261,12 +1262,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知分组"
+                                  Text="{Binding [Notify_083_7b0f80], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="按组显示在通知中心"
+                                  Text="{Binding [Notify_084_f30c3b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1290,12 +1291,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="保存推送历史"
+                                  Text="{Binding [Notify_085_bfe3ae], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选择是否保存推送历史"
+                                  Text="{Binding [Notify_086_635519], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1305,8 +1306,8 @@
                               Margin="0,0,36,0"
                               SelectedValue="{Binding Config.NotificationConfig.BarkIsArchive, Mode=TwoWay}"
                               SelectedValuePath="Tag">
-                        <ComboBoxItem Content="是" Tag="1" />
-                        <ComboBoxItem Content="否" Tag="0" />
+                        <ComboBoxItem Content="{Binding [Notify_087_0a60ac], Source={x:Static helpers:Lang.S}}" Tag="1" />
+                        <ComboBoxItem Content="{Binding [Notify_088_c9744f], Source={x:Static helpers:Lang.S}}" Tag="0" />
                     </ComboBox>
                 </Grid>
                 <Grid Margin="16">
@@ -1321,12 +1322,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="加密密钥"
+                                  Text="{Binding [Notify_089_3691e7], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="推送内容加密密钥"
+                                  Text="{Binding [Notify_090_512752], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1350,19 +1351,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Bark 通知"
+                                  Text="{Binding [Notify_091_324dcb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestBarkNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1383,12 +1384,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Telegram 通知"
+                                  Text="{Binding [Notify_092_52a8fb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Telegram 机器人相关设置"
+                                  Text="{Binding [Notify_093_595f61], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1410,12 +1411,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="机器人 Token"
+                                  Text="{Binding [Notify_094_7a4bcf], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Telegram 机器人的 Token"
+                                  Text="{Binding [Notify_095_9ed3a2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1439,12 +1440,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="聊天 ID"
+                                  Text="{Binding [Notify_096_88e500], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写接收消息的聊天 ID"
+                                  Text="{Binding [Notify_097_96faf4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1468,12 +1469,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="API 基础 URL（可选）"
+                                  Text="{Binding [Notify_098_205882], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="留空使用官方 API，或填写第三方 API 地址"
+                                  Text="{Binding [Notify_099_40ef5e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1497,12 +1498,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用代理"
+                                  Text="{Binding [Notify_100_06fef6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="是否启用代理连接"
+                                  Text="{Binding [Notify_101_1cdf3d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1523,12 +1524,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="代理地址"
+                                  Text="{Binding [Notify_102_7c1212], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="格式：http://127.0.0.1:7890"
+                                  Text="{Binding [Notify_103_aab05e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1553,19 +1554,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Telegram 通知"
+                                  Text="{Binding [Notify_104_4bd900], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestTelegramNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1586,12 +1587,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 xxtui 信息推送"
+                                  Text="{Binding [Notify_105_2d138d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="xxtui 信息推送通知相关设置"
+                                  Text="{Binding [Notify_106_1341ee], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1613,12 +1614,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="API密钥"
+                                  Text="{Binding [Notify_107_6f5c56], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写信息推送通知API密钥"
+                                  Text="{Binding [Notify_108_433cc0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1640,12 +1641,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知来源"
+                                  Text="{Binding [Notify_109_5cee8e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写信息推送通知来源"
+                                  Text="{Binding [Notify_110_7fbe9e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1654,7 +1655,7 @@
                                 MaxWidth="800"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.XxtuiFrom, Mode=TwoWay}"
-                                PlaceholderText="Better原神"
+                                PlaceholderText="{Binding [Notify_111_d70fb7], Source={x:Static helpers:Lang.S}}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">
@@ -1669,12 +1670,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="通知渠道"
+                                  Text="{Binding [Notify_112_9f0fb5], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写信息推送通知渠道"
+                                  Text="{Binding [Notify_113_6b04a3], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1696,12 +1697,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试信息推送通知"
+                                  Text="{Binding [Notify_114_bfeaba], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1709,7 +1710,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestXxtuiNotificationCommand}"
                                CommandParameter="xxtuiNotifier"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1730,12 +1731,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用钉钉机器人通知"
+                                  Text="{Binding [Notify_115_3a5595], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="钉钉机器人通知相关设置"
+                                  Text="{Binding [Notify_116_b3d289], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1757,12 +1758,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="钉钉机器人通知地址"
+                                  Text="{Binding [Notify_117_ac0f28], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写钉钉机器人通知地址"
+                                  Text="{Binding [Notify_118_b1e169], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1786,12 +1787,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="钉钉机器人密钥"
+                                  Text="{Binding [Notify_119_c601e0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写钉钉机器人密钥"
+                                  Text="{Binding [Notify_120_9314fa], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1814,12 +1815,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试钉钉机器人通知"
+                                  Text="{Binding [Notify_121_a22965], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1827,7 +1828,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestDingDingWebhookNotificationCommand}"
                                CommandParameter="DingDingWebhook"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -1848,12 +1849,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 Discord Webhook 通知"
+                                  Text="{Binding [Notify_122_5c7faf], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Discord Webhook 通知相关设置"
+                                  Text="{Binding [Notify_123_eb13ac], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1875,12 +1876,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="Webhook 网址"
+                                  Text="{Binding [Notify_124_753410], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 Discord 提供的 Webhook 网址"
+                                  Text="{Binding [Notify_125_a51cef], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1903,12 +1904,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="用户名"
+                                  Text="{Binding [Notify_126_819767], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="讯息显示的名称，为空时使用 Discord 中预先设定的名字"
+                                  Text="{Binding [Notify_127_b109c1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1931,12 +1932,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="头像网址"
+                                  Text="{Binding [Notify_128_951562], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="讯息显示的头像，为空时使用 Discord 中预先设定的头像"
+                                  Text="{Binding [Notify_129_2d9ac7], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -1959,12 +1960,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="截图编码"
+                                  Text="{Binding [Notify_130_428e36], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="PNG 无损，JPEG 快速压缩，WebP 档案小，按需选择"
+                                  Text="{Binding [Notify_131_32c788], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -1986,12 +1987,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 Discord Webhook 通知"
+                                  Text="{Binding [Notify_132_eefed6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1999,7 +2000,7 @@
                                Margin="0,0,36,0"
                                Command="{Binding TestDiscordWebhookNotificationCommand}"
                                CommandParameter="DiscordWebhook"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -2020,12 +2021,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用 ServerChan 通知"
+                                  Text="{Binding [Notify_133_68b897], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="ServerChan 推送通知相关设置"
+                                  Text="{Binding [Notify_134_2eb813], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2052,7 +2053,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="填写 ServerChan 的 SendKey"
+                                  Text="{Binding [Notify_135_3b9bf8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -2075,19 +2076,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="测试 ServerChan 通知"
+                                  Text="{Binding [Notify_136_e2740f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="发送测试通知"
+                                  Text="{Binding [Notify_023_f3ab6f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding TestServerChanNotificationCommand}"
-                               Content="发送" />
+                               Content="{Binding [Btn_Send], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

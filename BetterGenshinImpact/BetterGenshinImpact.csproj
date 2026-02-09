@@ -5,7 +5,7 @@
 		<Version>0.56.3-alpha.1</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+		<TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>true</UseWindowsForms>
@@ -182,6 +182,9 @@
 		<None Update="User\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<Content Include="User\Lang\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 		<None Update="GameTask\LogParse\Assets\log.css">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

@@ -6,6 +6,7 @@
              xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=pages:ScriptControlViewModel}"
@@ -43,7 +44,7 @@
                         BorderThickness="0,0,0,1">
                     <ui:TextBlock Margin="4,4,8,4"
                                   FontTypography="BodyStrong"
-                                  Text="配置组"
+                                  Text="{Binding [Script_001_22f6f8], Source={x:Static helpers:Lang.S}}"
                                   TextAlignment="Center" />
                 </Border>
                 <ui:ListView Grid.Row="1"
@@ -71,19 +72,19 @@
                     </ui:ListView.ItemTemplate>
                     <ui:ListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddScriptGroupCommand}" Header="新增组" />
+                            <MenuItem Command="{Binding AddScriptGroupCommand}" Header="{Binding [Script_002_99e704], Source={x:Static helpers:Lang.S}}" />
                             <MenuItem Command="{Binding DeleteScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="删除组" />
+                                      Header="{Binding [Script_003_c73ef1], Source={x:Static helpers:Lang.S}}" />
                             <MenuItem Command="{Binding RenameScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="重命名" />
+                                      Header="{Binding [Script_004_c8ce4b], Source={x:Static helpers:Lang.S}}" />
                             <MenuItem Command="{Binding CopyScriptGroupCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="复制组" />
+                                      Header="{Binding [Script_005_4c2b3e], Source={x:Static helpers:Lang.S}}" />
                             <MenuItem Command="{Binding AddScriptGroupNextFlagCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="连续任务从此开始执行" />
+                                      Header="{Binding [Script_006_3634f9], Source={x:Static helpers:Lang.S}}" />
                         </ContextMenu>
                     </ui:ListView.ContextMenu>
                 </ui:ListView>
@@ -97,13 +98,13 @@
                                Margin="2"
                                HorizontalAlignment="Stretch"
                                Command="{Binding StartMultiScriptGroupCommand}"
-                               Content="连续执行" />
+                               Content="{Binding [Btn_LoopExec], Source={x:Static helpers:Lang.S}}" />
 
                     <ui:Button Grid.Row="1"
                                Margin="2"
                                HorizontalAlignment="Stretch"
                                Command="{Binding ContinueMultiScriptGroupCommand}"
-                               Content="继续执行" />
+                               Content="{Binding [Btn_ContinueExec], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </Grid>
         </Grid>
@@ -142,22 +143,22 @@
                 <StackPanel>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验功能）请在左侧栏选择或新增配置组" />
+                                  Text="{Binding [Script_007_3c0095], Source={x:Static helpers:Lang.S}}" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在左侧栏目右键可以新增/修改配置组，拖拽进行配置组排序。配置组内可以添加并配置软件内的 Javascript 脚本、键鼠脚本等，并能够控制执行次数、顺序等，
+                        <Run Text="{Binding [Script_531_209085], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToScriptGroupUrlCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看调度器使用教程
+                            <Run Text="{Binding [Script_532_8710e4], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="在左侧栏目右键可以新增配置组，或者直接点击下面按钮新增配置组" />
+                                  Text="{Binding [Script_008_fd1219], Source={x:Static helpers:Lang.S}}" />
                     <ui:Button Margin="0,0,0,12"
                                Command="{Binding AddScriptGroupCommand}"
-                               Content="新增配置组" />
+                               Content="{Binding [Btn_AddConfig], Source={x:Static helpers:Lang.S}}" />
                     <!--  示例配置组  -->
                     <!--<ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
@@ -206,7 +207,7 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal">
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
-                                  Text="（实验功能）配置组 - " />
+                                  Text="{Binding [Script_009_f801df], Source={x:Static helpers:Lang.S}}" />
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontTypography="BodyStrong"
                                   Text="{Binding SelectedScriptGroup.Name}" />
@@ -216,43 +217,43 @@
                               Margin="0,0,0,8"
                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                               TextWrapping="Wrap">
-                    在下方列表中右键可以添加配置，拖拽可以调整执行顺序。支持 BetterGI 内的 Javascript 脚本、键鼠录制脚本等，通过调度器可以设置脚本执行次数、顺序等。
+                    <Run Text="{Binding [Script_533_c3a64f], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                 </ui:TextBlock>
 
 
                 <StackPanel Grid.Row="2" Orientation="Horizontal">
                     <ui:Button Command="{Binding StartScriptGroupCommand}"
-                               Content="运行"
+                               Content="{Binding [Btn_Run], Source={x:Static helpers:Lang.S}}"
                                Icon="{ui:SymbolIcon Play24}" />
                     <Separator Width="10" Opacity="0" />
 
 
-                    <ui:DropDownButton Content="添加" Icon="{ui:SymbolIcon Add24}">
+                    <ui:DropDownButton Content="{Binding [Btn_Add], Source={x:Static helpers:Lang.S}}" Icon="{ui:SymbolIcon Add24}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu> 
-                                <MenuItem Header="JS脚本" Command="{Binding AddJsScriptCommand}" />
-                                <MenuItem Header="地图追踪任务" Command="{Binding AddPathingCommand}" />
-                                <MenuItem Header="键鼠脚本" Command="{Binding AddKmScriptCommand}" />
+                                <MenuItem Header="{Binding [Script_010_86c033], Source={x:Static helpers:Lang.S}}" Command="{Binding AddJsScriptCommand}" />
+                                <MenuItem Header="{Binding [Script_011_7c48bd], Source={x:Static helpers:Lang.S}}" Command="{Binding AddPathingCommand}" />
+                                <MenuItem Header="{Binding [Script_012_ea035d], Source={x:Static helpers:Lang.S}}" Command="{Binding AddKmScriptCommand}" />
                                 <MenuItem Header="Shell" Command="{Binding AddShellCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
-                    <ui:DropDownButton Content="更多功能">
+                    <ui:DropDownButton Content="{Binding [Btn_MoreFeatures], Source={x:Static helpers:Lang.S}}">
                         <ui:DropDownButton.Flyout>
                             <ContextMenu>
-                                <MenuItem Header="清空" Command="{Binding ClearTasksCommand}" />
-                                <MenuItem Header="日志分析" Command="{Binding OpenLogParseCommand}" />
-                                <MenuItem Header="打开脚本仓库" Command="{Binding OpenLocalScriptRepoCommand}" />
-                                <MenuItem Header="根据文件夹更新" Command="{Binding UpdateTasksCommand}" />
-                                <MenuItem Header="任务倒序排列" Command="{Binding ReverseTaskOrderCommand}" />
-                                <MenuItem Header="导出根据控制文件修改任务" Command="{Binding ExportMergerJsonsCommand}" />
+                                <MenuItem Header="{Binding [Script_013_288f0c], Source={x:Static helpers:Lang.S}}" Command="{Binding ClearTasksCommand}" />
+                                <MenuItem Header="{Binding [Script_014_409074], Source={x:Static helpers:Lang.S}}" Command="{Binding OpenLogParseCommand}" />
+                                <MenuItem Header="{Binding [Script_015_04a18a], Source={x:Static helpers:Lang.S}}" Command="{Binding OpenLocalScriptRepoCommand}" />
+                                <MenuItem Header="{Binding [Script_016_d7f2f8], Source={x:Static helpers:Lang.S}}" Command="{Binding UpdateTasksCommand}" />
+                                <MenuItem Header="{Binding [Script_017_593b3d], Source={x:Static helpers:Lang.S}}" Command="{Binding ReverseTaskOrderCommand}" />
+                                <MenuItem Header="{Binding [Script_018_c36121], Source={x:Static helpers:Lang.S}}" Command="{Binding ExportMergerJsonsCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
                     <Separator Width="10" Opacity="0" />
                     <ui:Button Command="{Binding OpenScriptGroupSettingsCommand}"
-                               Content="设置"
+                               Content="{Binding [Btn_Settings], Source={x:Static helpers:Lang.S}}"
                                Icon="{ui:SymbolIcon Settings24}" />
                     <!--<ui:TextBlock VerticalAlignment="Center"
                                   FontSize="16"
@@ -297,7 +298,7 @@
                                             Header="#" />
                             <GridViewColumn Width="{Binding ElementName=Col2, Path=ActualWidth}"
                                   
-                                            Header="名称" >
+                                            Header="{Binding [Script_019_d7ec2d], Source={x:Static helpers:Lang.S}}" >
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Name}" FontSize="14" ToolTip="{Binding FolderName}">
@@ -318,8 +319,8 @@
                             </GridViewColumn>
                             <GridViewColumn Width="{Binding ElementName=Col3, Path=ActualWidth}"
                                             DisplayMemberBinding="{Binding TypeDesc}"
-                                            Header="类型" />
-                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="启用状态">
+                                            Header="{Binding [Script_020_226b09], Source={x:Static helpers:Lang.S}}" />
+                            <GridViewColumn Width="{Binding ElementName=Col4, Path=ActualWidth}" Header="{Binding [Script_021_a4fc48], Source={x:Static helpers:Lang.S}}">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <ui:ToggleSwitch
@@ -331,20 +332,20 @@
                     </ListView.View>
                     <ListView.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="添加JS脚本" />
-                            <MenuItem Command="{Binding AddPathingCommand}" Header="添加地图追踪任务" />
-                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
-                            <MenuItem Command="{Binding AddShellCommand}" Header="添加Shell" />
-                            <MenuItem Command="{Binding AddNextFlagCommand}" Header="下一次任务从此处执行"
+                            <MenuItem Command="{Binding AddJsScriptCommand}" Header="{Binding [Script_022_9c8554], Source={x:Static helpers:Lang.S}}" />
+                            <MenuItem Command="{Binding AddPathingCommand}" Header="{Binding [Script_023_dd011f], Source={x:Static helpers:Lang.S}}" />
+                            <MenuItem Command="{Binding AddKmScriptCommand}" Header="{Binding [Script_024_f34b14], Source={x:Static helpers:Lang.S}}" />
+                            <MenuItem Command="{Binding AddShellCommand}" Header="{Binding [Script_025_b7d598], Source={x:Static helpers:Lang.S}}" />
+                            <MenuItem Command="{Binding AddNextFlagCommand}" Header="{Binding [Script_026_5a0124], Source={x:Static helpers:Lang.S}}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       />
                             
                             <MenuItem Command="{Binding EditScriptCommonCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="修改通用配置" />
+                                      Header="{Binding [Script_027_15c5d7], Source={x:Static helpers:Lang.S}}" />
                             <MenuItem Command="{Binding EditJsScriptSettingsCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="修改JS脚本自定义配置">
+                                      Header="{Binding [Script_028_830e41], Source={x:Static helpers:Lang.S}}">
                                 <MenuItem.Style>
                                     <Style TargetType="MenuItem">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -360,7 +361,7 @@
                             </MenuItem>
                             <MenuItem Command="{Binding OpenScriptFolderCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="打开所在目录">
+                                      Header="{Binding [Script_029_5218ae], Source={x:Static helpers:Lang.S}}">
                                 <MenuItem.Style>
                                     <Style TargetType="MenuItem">
                                         <Setter Property="Visibility" Value="Visible" />
@@ -376,10 +377,10 @@
                             </MenuItem>
                             <MenuItem Command="{Binding DeleteScriptCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="移除" />
+                                      Header="{Binding [Script_030_86048b], Source={x:Static helpers:Lang.S}}" />
                             <MenuItem Command="{Binding DeleteScriptByFolderCommand}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                      Header="根据文件夹移除">
+                                      Header="{Binding [Script_031_3d6ed2], Source={x:Static helpers:Lang.S}}">
                                 <MenuItem.Style>
                                     <Style TargetType="MenuItem">
                                         <Setter Property="Visibility" Value="Collapsed" />

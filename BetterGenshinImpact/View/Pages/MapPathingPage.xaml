@@ -7,6 +7,7 @@
              xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
@@ -40,27 +41,27 @@
             <ui:TextBlock Grid.Row="0"
                           Margin="0,0,0,8"
                           FontTypography="BodyStrong"
-                          Text="地图追踪（实验功能）" />
+                          Text="{Binding [MapPath_001_e925ab], Source={x:Static helpers:Lang.S}}" />
             <ui:TextBlock Grid.Row="1"
                           Margin="0,0,0,8"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                           TextWrapping="Wrap">
-                可以实现自动采集、自动挖矿、自动锄地等功能。请在调度器中使用！
+                <Run Text="{Binding [MapPath_538_cae83b], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                 <Hyperlink Command="{Binding GoToPathingUrlCommand}"
                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                    点击查看地图追踪与录制使用教程
+                    <Run Text="{Binding [MapPath_539_14f455], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                 </Hyperlink>
             </ui:TextBlock>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal">
                 <ui:Button Command="{Binding OpenScriptsFolderCommand}"
-                           Content="打开任务目录"
+                           Content="{Binding [Btn_OpenTaskDir], Source={x:Static helpers:Lang.S}}"
                            Icon="{ui:SymbolIcon FolderOpen24}" />
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Icon="{ui:SymbolIcon Archive24}">
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <ui:TextBlock>脚本仓库</ui:TextBlock>
+                        <ui:TextBlock Text="{Binding [Btn_ScriptRepo], Source={x:Static helpers:Lang.S}}"/>
                         <ui:InfoBadge Margin="0,-8,-14,0"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Top"
@@ -71,11 +72,11 @@
                 </ui:Button>
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenSettingsCommand}"
-                           Content="设置"
+                           Content="{Binding [Btn_Settings], Source={x:Static helpers:Lang.S}}"
                            Icon="{ui:SymbolIcon Settings24}" />
                 <ui:Button Margin="10,0,0,0"
                            Command="{Binding OpenDevToolsCommand}"
-                           Content="开发者工具" />
+                           Content="{Binding [Btn_DevTools], Source={x:Static helpers:Lang.S}}" />
             </StackPanel>
 
             <Separator Grid.Row="3"
@@ -111,7 +112,7 @@
                         <ui:TreeListView.Columns>
                             <GridViewColumnCollection>
                                 <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}"
-                                                   Header="名称">
+                                                   Header="{Binding [Script_019_d7ec2d], Source={x:Static helpers:Lang.S}}">
                                     <ui:GridViewColumn.CellTemplate>
                                         <DataTemplate>
                                             <ui:TreeRowExpander>
@@ -137,12 +138,12 @@
                             <ContextMenu>
                                 <MenuItem Command="{Binding StartCommand}"
                                           CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                          Header="执行任务" />
-                                <MenuItem Command="{Binding RefreshCommand}" Header="刷新" />
+                                          Header="{Binding [MapPath_002_2cd5ea], Source={x:Static helpers:Lang.S}}" />
+                                <MenuItem Command="{Binding RefreshCommand}" Header="{Binding [Btn_Refresh], Source={x:Static helpers:Lang.S}}" />
                                 <Separator />
                                 <MenuItem Command="{Binding DeleteCommand}"
                                           CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
-                                          Header="删除" />
+                                          Header="{Binding [Btn_Delete], Source={x:Static helpers:Lang.S}}" />
                             </ContextMenu>
                         </ui:TreeListView.ContextMenu>
                     </ui:TreeListView>

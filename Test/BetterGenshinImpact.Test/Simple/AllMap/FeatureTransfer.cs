@@ -35,7 +35,7 @@ public class FeatureTransfer
     //     return null;
     // }
     
-    private static readonly string _rootPath = @"E:\HuiPrograming\MainProject\better-genshin-impact\BetterGenshinImpact\bin\x64\Debug\net8.0-windows10.0.22621.0\Assets\Map";
+    private static readonly string _rootPath = @"E:\HuiPrograming\MainProject\better-genshin-impact\BetterGenshinImpact\bin\x64\Debug\net10.0-windows10.0.22621.0\Assets\Map";
     private static readonly string _name = "mainMap256Block";
     
     private static string TypeName { get; set; } = nameof(Feature2DType.SIFT);

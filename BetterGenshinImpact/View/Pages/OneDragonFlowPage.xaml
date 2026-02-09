@@ -11,6 +11,7 @@
              xmlns:oneDragonView="clr-namespace:BetterGenshinImpact.View.Pages.OneDragon"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
              d:DesignHeight="1000"
              d:DesignWidth="800"
@@ -36,10 +37,10 @@
        <DockPanel Grid.Column="0">
            <DockPanel.ContextMenu>
                <ContextMenu>
-                   <MenuItem Command="{Binding AddTaskGroupCommand}" Header="新增配置" />
+                   <MenuItem Command="{Binding AddTaskGroupCommand}" Header="{Binding [OneDragon_001_80e2ca], Source={x:Static helpers:Lang.S}}" />
                    <MenuItem Command="{Binding DeleteTaskGroupCommand}"
                              CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ui:ListView}}"
-                             Header="删除配置" />
+                             Header="{Binding [OneDragon_002_26c753], Source={x:Static helpers:Lang.S}}" />
            </ContextMenu>
        </DockPanel.ContextMenu>
        <Grid DockPanel.Dock="Top"
@@ -56,7 +57,7 @@
             VerticalAlignment="Center"
             FontSize="16"
             FontWeight="Bold"
-            Text="任务列表" />
+            Text="{Binding [OneDragon_003_ca27b7], Source={x:Static helpers:Lang.S}}" />
         <ui:Button
             Grid.Column="1"
             Grid.Row="0"
@@ -162,7 +163,7 @@
                             <Setter.Value>
                                 <DataTemplate>
                                     <TextBlock Margin="0,0,0,0"
-                                               Text="      ± 鼠标右击添加或删除任务       "
+                                               Text="{Binding [OneDragon_004_ab5a8d], Source={x:Static helpers:Lang.S}}"
                                                VerticalAlignment="Top"
                                                HorizontalAlignment="Left"
                                                FontSize="14"
@@ -228,7 +229,7 @@
                            FontSize="16"
                            FontWeight="Bold"
                            VerticalAlignment="Center"
-                           Text="配置" 
+                           Text="{Binding [Settings_Config], Source={x:Static helpers:Lang.S}}" 
                            x:Name="ConfigListGrid"/>
                 <ComboBox Grid.Column="1"
                           MinWidth="200"
@@ -269,7 +270,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="合成树脂" />
+                               Text="{Binding [OneDragon_005_4762ca], Source={x:Static helpers:Lang.S}}" />
                     
                     <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon WeatherMoon24}">
 
@@ -290,7 +291,7 @@
                                               Width="Auto"
                                               HorizontalAlignment="Left"
                                               FontTypography="Body"
-                                              Text="合成树脂合成台"
+                                              Text="{Binding [OneDragon_006_2c9988], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
@@ -298,7 +299,7 @@
                                               Width="Auto"
                                               HorizontalAlignment="Left"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="指定地区合成树脂"
+                                              Text="{Binding [OneDragon_007_b4be19], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ComboBox 
                                     Grid.Row="0"
@@ -317,7 +318,7 @@
                                               Margin=" 15,0,0,0"
                                               HorizontalAlignment="Left"
                                               FontTypography="Body"
-                                              Text="合成后保留"
+                                              Text="{Binding [OneDragon_008_dbf078], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="2"
@@ -325,7 +326,7 @@
                                               Width="Auto"
                                               HorizontalAlignment="Left"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="原粹树脂数量"
+                                              Text="{Binding [OneDragon_009_2d0e59], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <TextBox Grid.Row="0"
                                          Grid.Column="3"
@@ -347,11 +348,11 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
                         <TextBlock FontSize="14"
                                    Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                   Text="自动秘境" />
+                                   Text="{Binding [Task_059_1f7122], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Margin="4,0,0,0"
                                    VerticalAlignment="Center"
                                    FontSize="11"
-                                   Text="（此处未覆盖的配置可在 独立任务-自动秘境 中配置）" />
+                                   Text="{Binding [OneDragon_010_2a5257], Source={x:Static helpers:Lang.S}}" />
                     </StackPanel>
  
 
@@ -372,12 +373,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="每日秘境刷取配置"
+                                              Text="{Binding [OneDragon_011_cbac35], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="前往指定秘境消耗树脂，并自动领取奖励。"
+                                              Text="{Binding [OneDragon_012_0b7c7f], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap">
                                 </ui:TextBlock>
                                 <ui:ToggleSwitch Grid.Row="0"
@@ -400,12 +401,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="进入秘境切换的队伍名称"
+                                              Text="{Binding [OneDragon_013_8cdf22], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="注意是游戏内你设置的名称"
+                                              Text="{Binding [OneDragon_014_c5d202], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
@@ -414,7 +415,7 @@
                                             MaxWidth="800"
                                             Margin="20,0,36,0"
                                             Text="{Binding SelectedConfig.PartyName, Mode=TwoWay}"
-                                            PlaceholderText="填写队伍名称"
+                                            PlaceholderText="{Binding [OneDragon_015_23b353], Source={x:Static helpers:Lang.S}}"
                                             TextAlignment="Center"
                                             TextWrapping="Wrap" />
                             </Grid>
@@ -434,14 +435,14 @@
                                               Grid.Column="0"
                                               FontTypography="Body"
                                               HorizontalAlignment="Left"
-                                              Text="选择秘境"
+                                              Text="{Binding [OneDragon_016_c1d0a9], Source={x:Static helpers:Lang.S}}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               HorizontalAlignment="Left"
-                                              Text="秘境名称"
+                                              Text="{Binding [OneDragon_017_e59727], Source={x:Static helpers:Lang.S}}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <controls:DomainSelector Grid.Row="0"
@@ -456,7 +457,7 @@
                                               Margin="10,0,10,0"
                                               FontTypography="Body"
                                               HorizontalAlignment="Right"
-                                              Text="周日或限时"
+                                              Text="{Binding [OneDragon_018_1e39d9], Source={x:Static helpers:Lang.S}}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
@@ -464,7 +465,7 @@
                                               Margin="10,0,10,0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               HorizontalAlignment="Right"
-                                              Text="选择序号"
+                                              Text="{Binding [OneDragon_019_323e42], Source={x:Static helpers:Lang.S}}"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
@@ -500,12 +501,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="每周秘境刷取配置"
+                                              Text="{Binding [OneDragon_020_9a73eb], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="启用后，每日刷取配置将会失效。"
+                                              Text="{Binding [OneDragon_021_bd94bb], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -525,7 +526,7 @@
                                               FontTypography="Body"
                                               FontSize="12"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="周期始于凌晨 4:00 ，如周一 4:00 至周二 3:59 刷取周一秘境" 
+                                              Text="{Binding [OneDragon_022_2276e6], Source={x:Static helpers:Lang.S}}" 
                                               TextWrapping="Wrap">
                                 </ui:TextBlock>
                            
@@ -539,7 +540,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周一"
+                                              Text="{Binding [OneDragon_023_1603b0], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -549,7 +550,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -567,7 +568,7 @@
                                               FontTypography="Body"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周二"
+                                              Text="{Binding [OneDragon_025_b5a6a0], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -577,7 +578,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -594,7 +595,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周三"
+                                              Text="{Binding [OneDragon_026_e60725], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -604,7 +605,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -622,7 +623,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周四"
+                                              Text="{Binding [OneDragon_027_170fc8], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -632,7 +633,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -650,7 +651,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周五"
+                                              Text="{Binding [OneDragon_028_eb79ce], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -660,7 +661,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -679,7 +680,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周六"
+                                              Text="{Binding [OneDragon_029_245751], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -689,7 +690,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -712,7 +713,7 @@
                                               Grid.Column="0"
                                               Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
-                                              Text="周日"
+                                              Text="{Binding [OneDragon_030_562d74], Source={x:Static helpers:Lang.S}}"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
@@ -722,7 +723,7 @@
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="{Binding [OneDragon_024_5c793b], Source={x:Static helpers:Lang.S}}" />
                                 <controls:DomainSelector Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
@@ -742,7 +743,7 @@
                                         Padding="10">
                                     <ui:TextBlock FontTypography="Body"
                                                   FontSize="13" 
-                                                  Text="周日或限时三种奖励,从上往下(1/2/3)序号:"
+                                                  Text="{Binding [OneDragon_031_4dea44], Source={x:Static helpers:Lang.S}}"
                                                   TextAlignment="Justify"
                                                   TextWrapping="Wrap" />
                                 </Border>
@@ -783,7 +784,7 @@
                                               VerticalAlignment="Center"
                                               HorizontalAlignment="Center"
                                               Margin="0,0,0,0"
-                                              Content="领奖树脂设定"
+                                              Content="{Binding [Btn_RewardSetting], Source={x:Static helpers:Lang.S}}"
                                               x:Name="ToggleButton">
                                 </ToggleButton>
                                 
@@ -791,13 +792,13 @@
                                               Grid.Column="1"
                                               FontTypography="Body"
                                               HorizontalAlignment="Right"
-                                              Text="分解圣遗物"
+                                              Text="{Binding [OneDragon_032_8ff9f0], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="1"
                                               HorizontalAlignment="Right"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="最高的星级"
+                                              Text="{Binding [OneDragon_033_5f61b5], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 
                                 <!-- 弹窗 -->
@@ -831,7 +832,7 @@
                                                 <ToggleButton Grid.Column="0"
                                                         Margin="0,0,0,0"
                                                         IsChecked="{Binding Config.AutoDomainConfig.SpecifyResinUse, Mode=TwoWay}"
-                                                        Content="模式切换" />
+                                                        Content="{Binding [Btn_ModeSwitching], Source={x:Static helpers:Lang.S}}" />
                                                 
                                                 <!-- 根据模SpecifyResinUse显示不同的文字 -->
                                                 <ui:TextBlock Grid.Column="1"
@@ -839,7 +840,7 @@
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
-                                                                Text="先用浓缩,后原粹,其余不用"
+                                                                Text="{Binding [OneDragon_034_38d9db], Source={x:Static helpers:Lang.S}}"
                                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
@@ -848,7 +849,7 @@
                                                                 FontSize="14"
                                                                 VerticalAlignment="Center"
                                                                 HorizontalAlignment="Right"
-                                                                Text="按下方配置数量使用树脂"
+                                                                Text="{Binding [OneDragon_035_6e2727], Source={x:Static helpers:Lang.S}}"
                                                                 Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                 TextWrapping="Wrap"
                                                                 Visibility="{Binding Config.AutoDomainConfig.SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -863,7 +864,7 @@
                                                 <!-- 原粹树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,10,0,12">
-                                                    <ui:TextBlock Text="原粹树脂刷取次数："
+                                                    <ui:TextBlock Text="{Binding [Task_068_2f6063], Source={x:Static helpers:Lang.S}}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -878,7 +879,7 @@
                                                 <!-- 浓缩树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,0,0,12">
-                                                    <ui:TextBlock Text="浓缩树脂刷取次数："
+                                                    <ui:TextBlock Text="{Binding [Task_069_4aecd0], Source={x:Static helpers:Lang.S}}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -893,7 +894,7 @@
                                                 <!-- 须臾树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,0,0,12">
-                                                    <ui:TextBlock Text="须臾树脂刷取次数："
+                                                    <ui:TextBlock Text="{Binding [Task_070_b15696], Source={x:Static helpers:Lang.S}}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -908,7 +909,7 @@
                                                 <!-- 脆弱树脂设置 -->
                                                 <StackPanel Orientation="Horizontal"
                                                             Margin="0,0,0,0">
-                                                    <ui:TextBlock Text="脆弱树脂刷取次数："
+                                                    <ui:TextBlock Text="{Binding [Task_071_d45ca8], Source={x:Static helpers:Lang.S}}"
                                                                   VerticalAlignment="Center"
                                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                                   Margin="0,0,8,0" />
@@ -943,7 +944,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="领取奖励" />
+                               Text="{Binding [OneDragon_036_baa612], Source={x:Static helpers:Lang.S}}" />
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
                             <ui:FontIcon Glyph="&#xf14e;" Style="{StaticResource FaFontIconStyle}" />
@@ -957,12 +958,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="领取奖励的冒险者协会"
+                                              Text="{Binding [OneDragon_037_19a6aa], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="前往指定地区冒险者协会领取"
+                                              Text="{Binding [OneDragon_038_72027b], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -984,7 +985,7 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="领取前切换队伍（好感队）"
+                                              Text="{Binding [OneDragon_039_ecbd0c], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
@@ -992,7 +993,7 @@
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="用于给指定队伍加好感度"
+                                              Text="{Binding [OneDragon_040_5fb04d], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -1001,7 +1002,7 @@
                             MaxWidth="800"
                             Margin="0,0,28,0"
                             Text="{Binding SelectedConfig.DailyRewardPartyName, Mode=TwoWay}"
-                            PlaceholderText="填写好感队名称"
+                            PlaceholderText="{Binding [OneDragon_041_2031e9], Source={x:Static helpers:Lang.S}}"
                             TextAlignment="Center"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
@@ -1012,7 +1013,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="尘歌壶配置" />
+                               Text="{Binding [OneDragon_042_f9b65e], Source={x:Static helpers:Lang.S}}" />
                    
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
@@ -1027,12 +1028,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="进壶方式选择"
+                                              Text="{Binding [OneDragon_043_703b0f], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="购买日期和商品"
+                                              Text="{Binding [OneDragon_044_5b78f0], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -1050,7 +1051,7 @@
                                 Height="36"
                                 Padding="0"
                                 ClickMode="Press"
-                                Content="购买选择"
+                                Content="{Binding [Btn_PurchaseSelect], Source={x:Static helpers:Lang.S}}"
                                 Click="SereniteaPotTpType_Clicked"
                                 x:Name="PotButton">
                             </ToggleButton>
@@ -1101,7 +1102,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="日期不影响领取好感和钱币"
+                                                              Text="{Binding [OneDragon_045_42d7ad], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 <ComboBox Grid.Row="1" 
@@ -1130,7 +1131,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="布匹"
+                                                              Text="{Binding [OneDragon_046_92f5e1], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1149,7 +1150,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="须臾树脂"
+                                                              Text="{Binding [OneDragon_047_6fe57c], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1168,7 +1169,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="大英雄的经验"
+                                                              Text="{Binding [OneDragon_048_5c94a2], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1187,7 +1188,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="流浪者的经验"
+                                                              Text="{Binding [OneDragon_049_7d0006], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1206,7 +1207,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="精锻用魔矿"
+                                                              Text="{Binding [OneDragon_050_5787cc], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1225,7 +1226,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="摩拉"
+                                                              Text="{Binding [OneDragon_051_077b44], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1244,7 +1245,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="祝圣精华"
+                                                              Text="{Binding [OneDragon_052_8dc5de], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                                 
@@ -1263,7 +1264,7 @@
                                                               FontSize="14"
                                                               HorizontalAlignment="Left"
                                                               VerticalAlignment="Center"
-                                                              Text="祝圣油膏"
+                                                              Text="{Binding [OneDragon_053_374692], Source={x:Static helpers:Lang.S}}"
                                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                               TextWrapping="Wrap"/>
                                             </Grid>  
@@ -1285,7 +1286,7 @@
                                                     VerticalContentAlignment="Center"
                                                     Width="70"
                                                     Margin="15,0,5,5"
-                                                    Content="确定" 
+                                                    Content="{Binding [Btn_OK], Source={x:Static helpers:Lang.S}}" 
                                                     x:Name="PopupConfirmButton"
                                                     Click="SereniteaPotTpType_Clicked"/>
                                                 <Button
@@ -1295,7 +1296,7 @@
                                                     VerticalContentAlignment="Center"
                                                     Width="70"
                                                     Margin="5,0,5,5"
-                                                    Content="取消" 
+                                                    Content="{Binding [Btn_Cancel], Source={x:Static helpers:Lang.S}}" 
                                                     x:Name="PopupCloseButton"
                                                     Click="SereniteaPotTpType_Clicked"/>
                                             </Grid>
@@ -1311,7 +1312,7 @@
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"
                                Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
-                               Text="完成后操作" />
+                               Text="{Binding [OneDragon_054_553920], Source={x:Static helpers:Lang.S}}" />
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
                             <ui:FontIcon Glyph="&#xf11e;" Style="{StaticResource FaFontIconStyle}" />
@@ -1325,12 +1326,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="任务完成后执行的操作"
+                                              Text="{Binding [OneDragon_055_3f1c9e], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="一条龙结束后操作"
+                                              Text="{Binding [OneDragon_056_c3884c], Source={x:Static helpers:Lang.S}}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>

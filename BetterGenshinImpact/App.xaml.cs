@@ -155,7 +155,11 @@ public partial class App : Application
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
                 
-                I18N.Culture = new CultureInfo("zh-Hans"); // #1846
+                I18N.Culture = new CultureInfo(all.OtherConfig.UiCultureInfoName ?? "zh-Hans");
+                // I18N.Culture = new CultureInfo("zh-Hans"); // #1846
+                
+                // Load JSON-based UI localization
+                Lang.S.Load(all.OtherConfig.UiCultureInfoName ?? "zh-Hans");
             }
         )
         .Build();

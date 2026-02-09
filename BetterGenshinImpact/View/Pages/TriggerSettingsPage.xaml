@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -20,7 +21,7 @@
 
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="实时触发的自动化任务设置" />
+                      Text="{Binding [Trigger_001_77acf9], Source={x:Static helpers:Lang.S}}" />
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon HandWave24}">
@@ -37,12 +38,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动拾取"
+                                  Text="{Binding [Trigger_002_8e559f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="选项不是NPC对话且不在黑名单时，自动按下 F 拾取/交互"
+                                  Text="{Binding [Trigger_003_1167cb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -92,12 +93,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择自动拾取文字识别引擎"
+                                  Text="{Binding [Trigger_004_521fc2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="Paddle可识别所有文字,速度慢,消耗少;Yap可识别部分文字,快且准,消耗大"
+                                  Text="{Binding [Trigger_005_01c41e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -119,12 +120,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="黑名单"
+                                  Text="{Binding [Trigger_006_bcbfe2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="排除 NPC 对话、各类交互选项、不需要拾取的物品等"
+                                  Text="{Binding [Trigger_007_07916c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -136,7 +137,7 @@
                             IsChecked="{Binding Config.AutoPickConfig.BlackListEnabled, Mode=TwoWay}" />
                         <ui:Button
                             Command="{Binding EditBlacklistCommand}"
-                            Content="前往设置" />
+                            Content="{Binding [Settings_GoToSettings], Source={x:Static helpers:Lang.S}}" />
                     </StackPanel>
 
                 </Grid>
@@ -152,12 +153,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="白名单"
+                                  Text="{Binding [Trigger_008_f6f18e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="需要主动按下 F 交互的内容，请配合黑名单使用"
+                                  Text="{Binding [Trigger_009_3326b5], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <StackPanel Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -169,7 +170,7 @@
                             IsChecked="{Binding Config.AutoPickConfig.WhiteListEnabled, Mode=TwoWay}" />
                         <ui:Button
                             Command="{Binding EditWhitelistCommand}"
-                            Content="前往设置" />
+                            Content="{Binding [Settings_GoToSettings], Source={x:Static helpers:Lang.S}}" />
                     </StackPanel>
                 </Grid>
                 <Grid Margin="16">
@@ -184,12 +185,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义拾取按键"
+                                  Text="{Binding [Trigger_010_ca9235], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="默认为 F，自带了 E 和 G 按键，需要改成其他键的请阅读文档"
+                                  Text="{Binding [Trigger_011_b647e2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -220,12 +221,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动剧情"
+                                  Text="{Binding [Trigger_012_8fe54f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速跳过剧情文本、自动选择选项、自动提交物品等"
+                                  Text="{Binding [Trigger_013_dfaa80], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -247,12 +248,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用后台模式（会只用交互键进行剧情）"
+                                  Text="{Binding [Trigger_014_9cc707], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏请不要最小化，不在对话中的时候鼠标会自动吸附回游戏中"
+                                  Text="{Binding [Trigger_015_4ecf29], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -273,12 +274,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="画中画窗口（建议和后台模式同时开启）"
+                                  Text="{Binding [Trigger_016_4205e0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="游戏失焦时展示小窗，滚轮缩放，左键返回游戏，右键关闭"
+                                  Text="{Binding [Trigger_017_b835da], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -332,12 +333,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速跳过对话文本"
+                                  Text="{Binding [Trigger_018_346349], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="如果你要听完整的主线语音的话，可以关闭此功能"
+                                  Text="{Binding [Trigger_019_0e9de3], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -357,12 +358,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自定义优先对话选项"
+                                  Text="{Binding [Trigger_020_946ec0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="优先级高于下边的 选择选项优先级"
+                                  Text="{Binding [Trigger_021_a5d6d9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -392,13 +393,13 @@
                     <ui:TextBlock Grid.Row="0"  
                                   Grid.Column="0"  
                                   FontTypography="Body"  
-                                  Text="自定义优先选项文本"  
+                                  Text="{Binding [Trigger_022_763a8b], Source={x:Static helpers:Lang.S}}"  
                                   TextWrapping="Wrap" />  
                     <ui:TextBlock Grid.Row="1"  
                                   Grid.Column="0"  
                                   Margin="0,-10,0,0"  
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"  
-                                  Text="多个选项用分号(中英文)分隔，或者换行"  
+                                  Text="{Binding [Trigger_023_fbf893], Source={x:Static helpers:Lang.S}}"  
                                   TextWrapping="Wrap" />  
                     <ui:TextBox Grid.Row="0"  
                                 Grid.RowSpan="2"  
@@ -423,12 +424,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择选项优先级"
+                                  Text="{Binding [Trigger_024_5c057a], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="进入对话后，对话选项的选择方式"
+                                  Text="{Binding [Trigger_025_ccba3c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -449,12 +450,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择对话选项前的延迟（毫秒）"
+                                  Text="{Binding [Trigger_026_c82b5b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动剧情的情况下，依旧能够看清楚选项"
+                                  Text="{Binding [Trigger_027_d02b7a], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -475,12 +476,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="点击对话框确认按钮之前的延迟（毫秒）"
+                                  Text="{Binding [Trigger_028_9ab700], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动剧情的情况下，依旧能够看完全部对话框文字"
+                                  Text="{Binding [Trigger_029_eee622], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -501,12 +502,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动提交物品"
+                                  Text="{Binding [Trigger_030_62b9d2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="对话过程中出现提交物品界面，会自动提交，支持多个物品"
+                                  Text="{Binding [Trigger_031_b754b8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -526,12 +527,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动关闭弹出页"
+                                  Text="{Binding [Trigger_032_a41e94], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="关闭对话过程中出现的弹出页面，可能会误关地图、相机"
+                                  Text="{Binding [Trigger_033_80a40b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -551,12 +552,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="凯瑟琳 - 自动领取『每日委托』奖励"
+                                  Text="{Binding [Trigger_034_b67153], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在与凯瑟琳对话时，会自动“领取『每日委托』奖励"
+                                  Text="{Binding [Trigger_035_4bfd9b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -577,12 +578,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="凯瑟琳 - 自动重新派遣"
+                                  Text="{Binding [Trigger_036_fb06eb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动领取已完成探索的奖励，并重新派遣"
+                                  Text="{Binding [Trigger_037_afdc5e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <!--<ui:Button
                         Grid.Row="0"
@@ -619,12 +620,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动邀约"
+                                  Text="{Binding [Trigger_038_82778d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="自动剧情开启的情况下此功能才会生效，自动选择邀约选项"
+                                  Text="{Binding [Trigger_039_3c37e6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -646,12 +647,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="存在跳过按钮时自动点击"
+                                  Text="{Binding [Trigger_040_41fe11], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="邀约过程中左上角存在跳过按钮时候，自动点击跳过"
+                                  Text="{Binding [Trigger_041_c5ec31], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -671,12 +672,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择邀约分支（不支持气泡联想选择）"
+                                  Text="{Binding [Trigger_042_c249c4], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="会按照选择分支的关键词进行选项选择"
+                                  Text="{Binding [Trigger_043_2fc045], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -697,12 +698,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="选择邀约选项前的延迟（毫秒）"
+                                  Text="{Binding [Trigger_044_e76691], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="方便在自动邀约的情况下，依旧能够看清楚选项"
+                                  Text="{Binding [Trigger_045_3453ba], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -730,12 +731,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="半自动钓鱼"
+                                  Text="{Binding [Trigger_046_aad18e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="半自动钓鱼需要手动抛竿（全自动钓鱼已迁移至独立任务下）"
+                                  Text="{Binding [Trigger_047_51f9db], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -757,13 +758,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="全自动钓鱼已迁移至独立任务下"
+                                  Text="{Binding [Trigger_048_cebbbc], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        全自动钓鱼已迁移至独立任务下，请到独立任务页配合快捷键使用
+                        <Run Text="{Binding [Trigger_504_512579], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                 </Grid>
             </StackPanel>
@@ -787,13 +788,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动吃药"
+                                  Text="{Binding [Trigger_049_4815ef], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        检测角色红血状态，自动使用便携营养袋回复生命值
+                        <Run Text="{Binding [Trigger_505_593906], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -815,12 +816,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="触发时间间隔（毫秒）"
+                                  Text="{Binding [Trigger_050_a2bbd1], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="多少时间检查一次是否红血或需要复活"
+                                  Text="{Binding [Trigger_051_d02fed], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -840,12 +841,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="吃药时间间隔（毫秒）"
+                                  Text="{Binding [Trigger_052_35fabb], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="防止频繁吃药"
+                                  Text="{Binding [Trigger_053_4b3511], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -874,12 +875,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速传送"
+                                  Text="{Binding [Trigger_054_5a66c8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在大地图上点击传送点（或列表中有传送点）时，自动点击传送"
+                                  Text="{Binding [Trigger_055_b58e9b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -901,12 +902,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="点击候选列表传送点的间隔时间（毫秒）"
+                                  Text="{Binding [Trigger_056_82d56f], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="普通用户请不要修改此配置，需要根据文字识别耗时配置，太低会导致点击失败"
+                                  Text="{Binding [Trigger_057_fda4c2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -927,12 +928,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="等待右侧传送弹出界面的时间（毫秒）"
+                                  Text="{Binding [Trigger_058_3b2033], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="普通用户请不要修改此配置，不建议低于80ms，太低会导致传送按钮识别不到"
+                                  Text="{Binding [Trigger_059_fe4c54], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -953,18 +954,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="启用快捷键传送"
+                                  Text="{Binding [Trigger_060_fa0399], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        按下
+                        <Run Text="{Binding [Trigger_506_70cf0a], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         <Hyperlink Command="{Binding GoToHotKeyPageCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            [手动触发快速传送触发快捷键]
+                            <Run Text="{Binding [Trigger_507_b14d1e], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
-                        后才进行快速传送
+                        <Run Text="{Binding [Trigger_508_6456a9], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -988,13 +989,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="地图遮罩"
+                                  Text="{Binding [Trigger_061_2d9d05], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        在遮罩窗口中显示大地图位置与标点信息
+                        <Run Text="{Binding [Trigger_509_1b0be1], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                 </Grid>
             </ui:CardControl.Header>
@@ -1015,13 +1016,13 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动烹饪"
+                                  Text="{Binding [Trigger_062_07ba68], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        手动烹饪时，自动在完美状态下结束烹饪（不用的时候请关闭）
+                        <Run Text="{Binding [Trigger_510_7c0109], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                     </ui:TextBlock>
                 </Grid>
             </ui:CardControl.Header>

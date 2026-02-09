@@ -4,6 +4,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="HomePage"
@@ -18,7 +19,7 @@
     <StackPanel Margin="42,16,42,12">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
-                      Text="辅助操控设置" />
+                      Text="{Binding [Macro_001_e46a28], Source={x:Static helpers:Lang.S}}" />
 
         <!--  一键战斗宏  -->
         <ui:CardExpander Margin="0,0,0,12"
@@ -37,12 +38,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键宏（按角色）"
+                                  Text="{Binding [Macro_002_4bc6a2], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="触发后会识别当前出战角色，并根据配置执行对应的宏"
+                                  Text="{Binding [Macro_003_003e38], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -64,12 +65,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快捷键触发方式"
+                                  Text="{Binding [Macro_004_b692a3], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="按住时重复：按住时重复执行；触发：按下启动再按关闭"
+                                  Text="{Binding [Macro_005_c83920], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -91,14 +92,14 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="宏配置"
+                                  Text="{Binding [Macro_006_a6f64b], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        配置每个角色执行的宏，比如：胡桃A重跳，<Hyperlink Command="{Binding GoToOneKeyMacroUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            点击查看说明
+                        <Run Text="{Binding [Macro_536_a67768], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/><Hyperlink Command="{Binding GoToOneKeyMacroUrlCommand}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            <Run Text="{Binding [Macro_537_8237b2], Source={x:Static helpers:Lang.S}, Mode=OneWay}"/>
                         </Hyperlink>
                     </ui:TextBlock>
                     <ui:Button Grid.Row="0"
@@ -106,7 +107,7 @@
                                Grid.Column="1"
                                Margin="0,0,36,0"
                                Command="{Binding EditAvatarMacroCommand}"
-                               Content="前往设置" />
+                               Content="{Binding [Settings_GoToSettings], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -120,12 +121,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="默认战斗宏编号"
+                                  Text="{Binding [Macro_007_b1fdf7], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="当角色的 macroPriority 设置为0时，使用此默认宏编号（1~5）"
+                                  Text="{Binding [Macro_008_730728], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -145,11 +146,11 @@
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="角色个性化宏编号设置"
+                                  Text="{Binding [Macro_009_013df6], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="上方宏配置支持为每个角色单独设置宏编号。在角色宏配置中设置 macroPriority 字段（1-5），设置为0则使用上面的默认战斗宏编号。"
+                                  Text="{Binding [Macro_010_50d3e8], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
@@ -172,19 +173,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="那维莱特 - 转圈圈"
+                                  Text="{Binding [Macro_011_538f35], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速水平平移鼠标，需要配置快捷键进行触发"
+                                  Text="{Binding [Macro_012_cfd9de], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,24,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -200,12 +201,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="移动鼠标距离"
+                                  Text="{Binding [Macro_013_c2d45d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="可以为负数，绝对值越大移动越快，请不要配置太大"
+                                  Text="{Binding [Macro_014_42d539], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -226,12 +227,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="移动鼠标间隔（毫秒）"
+                                  Text="{Binding [Macro_015_281e87], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="尽量设置大于0的数字，配置完毕后请切换页签生效（其他配置也一样）"
+                                  Text="{Binding [Macro_016_1f2e85], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
@@ -260,19 +261,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="快速强化圣遗物"
+                                  Text="{Binding [Macro_017_ee4d23], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速跳过强化结果展示，需要配置快捷键进行触发"
+                                  Text="{Binding [Macro_018_2838ea], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
                                Margin="0,0,24,0"
                                Command="{Binding GoToHotKeyPageCommand}"
-                               Content="绑定快捷键" />
+                               Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -288,12 +289,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="强化的额外等待时间（毫秒）"
+                                  Text="{Binding [Macro_019_1817a0], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="高延迟下无法跳过强化结果显示时，需要延长这个时间配置"
+                                  Text="{Binding [Macro_020_6d4e1e], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:NumberBox Grid.Row="0"
                                   Grid.RowSpan="2"
@@ -318,18 +319,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键购买"
+                                  Text="{Binding [Macro_021_138d3c], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在物品购买/兑换页使用，从选中物品处开始，长按持续购买"
+                                  Text="{Binding [Macro_022_6c003d], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding GoToHotKeyPageCommand}"
-                       Content="绑定快捷键" />
+                       Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}" />
         </ui:CardControl>
 
         <!--  一键进出尘歌壶  -->
@@ -343,18 +344,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键进出尘歌壶"
+                                  Text="{Binding [Macro_023_e56ab5], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="一键自动打开背包，放置尘歌壶并进入"
+                                  Text="{Binding [Macro_024_4ce5c9], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding GoToHotKeyPageCommand}"
-                       Content="绑定快捷键" />
+                       Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}" />
         </ui:CardControl>
 
         <!--  一键确认/取消  -->
@@ -368,18 +369,18 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="一键确认/取消"
+                                  Text="{Binding [Macro_025_b384db], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="绑定快捷键到原神的确认/取消按钮"
+                                  Text="{Binding [Macro_026_2f30ac], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
             <ui:Button Margin="0,0,36,0"
                        Command="{Binding GoToHotKeyPageCommand}"
-                       Content="绑定快捷键" />
+                       Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}" />
         </ui:CardControl>
 
 
@@ -395,12 +396,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="长按空格等于连续按下空格"
+                                  Text="{Binding [Macro_027_5c6f05], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="轻松解除冻结，由于在水下存在长按的空格的场景，所以不推荐启用"
+                                  Text="{Binding [Macro_028_e73443], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -417,12 +418,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="长按 F 等于连续按下 F "
+                                  Text="{Binding [Macro_029_d48115], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="快速拾取大量掉落物，有自动拾取的功能下，就显得比较鸡肋了"
+                                  Text="{Binding [Macro_030_97a795], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -453,7 +454,7 @@
             </ui:CardControl.Header>
             <ui:Button
                 Margin="0,0,36,0"
-                Content="绑定快捷键" />
+                Content="{Binding [Settings_BindHotkey], Source={x:Static helpers:Lang.S}}" />
         </ui:CardControl>-->
     </StackPanel>
 </Page>

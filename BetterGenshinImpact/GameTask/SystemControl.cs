@@ -215,7 +215,8 @@ public class SystemControl
         string exePath = Process.GetCurrentProcess().MainModule.FileName;
 
         // 构建参数字符串
-        string arguments = string.Join(" ", [..newArgs,"--no-single"]);
+        // 使用 IEnumerable<string> 重载，避免在新 .NET 上与 ReadOnlySpan 重载产生歧义
+        string arguments = string.Join(" ", newArgs.Append("--no-single"));
 
         // 启动新进程
         Process.Start(new ProcessStartInfo
