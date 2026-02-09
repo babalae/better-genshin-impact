@@ -667,12 +667,16 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
 
                 mapping[url.TrimEnd('/')] = folderName;
-                _folderMappingCache = mapping;
+                // 先写磁盘，成功后再更新缓存，确保一致性
                 var jsonOut = Newtonsoft.Json.JsonConvert.SerializeObject(mapping, Newtonsoft.Json.Formatting.Indented);
                 File.WriteAllText(FolderMappingPath, jsonOut);
+                _folderMappingCache = mapping;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"保存仓库文件夹映射失败: {ex.Message}");
+        }
     }
 
     /// <summary>
