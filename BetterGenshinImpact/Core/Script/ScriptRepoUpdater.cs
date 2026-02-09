@@ -695,6 +695,71 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         return $"{baseName}_{DateTime.Now.Ticks}";
     }
 
+    /// <summary>
+    /// 从映射中移除指定 URL 的条目（线程安全）
+    /// </summary>
+    private static void RemoveFolderMapping(string url)
+    {
+        try
+        {
+            lock (_cacheLock)
+            {
+                Dictionary<string, string>? mapping = null;
+                try
+                {
+                    if (File.Exists(FolderMappingPath))
+                    {
+                        var json = File.ReadAllText(FolderMappingPath);
+                        mapping = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                    }
+                }
+                catch { }
+
+                if (mapping == null) return;
+
+                var trimmed = url.TrimEnd('/');
+                if (!mapping.Remove(trimmed)) return;
+
+                var jsonOut = Newtonsoft.Json.JsonConvert.SerializeObject(mapping, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(FolderMappingPath, jsonOut);
+                _folderMappingCache = mapping;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"移除仓库映射失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 重置当前活跃仓库（带写锁，同时清理映射条目）
+    /// </summary>
+    public async Task ResetCurrentRepoAsync()
+    {
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            var config = TaskContext.Instance().Config.ScriptConfig;
+            var repoUrl = ResolveRepoUrl(config);
+            var repoPath = CenterRepoPath;
+
+            if (Directory.Exists(repoPath))
+            {
+                DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
+            }
+
+            // 清理 URL → 文件夹名 映射
+            if (!string.IsNullOrEmpty(repoUrl))
+            {
+                RemoveFolderMapping(repoUrl);
+            }
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
     public async Task<(string, bool)> UpdateCenterRepoByGit(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         await _repoWriteLock.WaitAsync();

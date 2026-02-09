@@ -379,15 +379,8 @@ public partial class ScriptRepoWindow
         {
             try
             {
-                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-                {
-                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                    Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
-                }
-                else
-                {
-                    Toast.Information("脚本仓库不存在，无需重置");
-                }
+                await ScriptRepoUpdater.Instance.ResetCurrentRepoAsync();
+                Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
             }
             catch (Exception ex)
             {
