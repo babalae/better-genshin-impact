@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: A-Little-AnQi/bettergi-script-web
+          repository: zaodonganqi/bettergi-script-web
       - uses: actions/setup-node@v4
         with:
           node-version: 20
