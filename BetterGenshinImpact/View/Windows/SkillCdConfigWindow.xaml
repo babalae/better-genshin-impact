@@ -52,7 +52,7 @@
                 <ItemsControl ItemsSource="{Binding Rules}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type skillCd:SkillCdRule}">
-                            <Grid Margin="0,0,0,10">
+                            <Grid Margin="0,5,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
@@ -74,11 +74,11 @@
                                             MinWidth="80"
                                             VerticalAlignment="Center" />
 
-                                <ui:Button Grid.Column="4" 
-                                           Icon="{ui:SymbolIcon Symbol=Delete24}" 
-                                           Appearance="Secondary" 
-                                           Margin="10,0,0,0" 
-                                           Width="36" 
+                                <ui:Button Grid.Column="4"
+                                           Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                           Appearance="Secondary"
+                                           Margin="10,0,0,0"
+                                           Width="36"
                                            Padding="0"
                                            VerticalAlignment="Stretch"
                                            Click="OnDeleteClick"/>
