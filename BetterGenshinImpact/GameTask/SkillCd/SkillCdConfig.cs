@@ -80,6 +80,62 @@ public partial class SkillCdConfig : ObservableObject
         if (value < 0.0) Scale = 0.0;
         else if (value > 10.0) Scale = 10.0;
     }
+
+    /// <summary>
+    /// CD大于0.8s时计时器背景色（默认白色 #FFFFFFFF）
+    /// </summary>
+    [ObservableProperty]
+    private string _backgroundNormalColor = "#FFFFFFFF";
+
+    partial void OnBackgroundNormalColorChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            BackgroundNormalColor = "#FFFFFFFF";
+        }
+    }
+
+    /// <summary>
+    /// CD大于0.8s时计时器文本色（默认 #DA4A23）
+    /// </summary>
+    [ObservableProperty]
+    private string _textNormalColor = "#DA4A23FF";
+
+    partial void OnTextNormalColorChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            TextNormalColor = "#DA4A23FF";
+        }
+    }
+
+    /// <summary>
+    /// CD小于0.8s时计时器背景色（默认白色 #FFFFFFFF）
+    /// </summary>
+    [ObservableProperty]
+    private string _backgroundReadyColor = "#FFFFFFFF";
+
+    partial void OnBackgroundReadyColorChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            BackgroundReadyColor = "#FFFFFFFF";
+        }
+    }
+
+    /// <summary>
+    /// CD小于0.8s时计时器文本色（默认 #5DCC17）
+    /// </summary>
+    [ObservableProperty]
+    private string _textReadyColor = "#5DCC17FF";
+
+    partial void OnTextReadyColorChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            TextReadyColor = "#5DCC17FF";
+        }
+    }
 }
 
 /// <summary>

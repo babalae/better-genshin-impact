@@ -559,17 +559,24 @@ public partial class MaskWindow : Window
                         if (isSkillCd)
                         {
                             // 自定义缩放
-                            var skillConfig = TaskContext.Instance().Config.SkillCdConfig.Scale;
-                            double scaledFontSize = (26 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            var skillConfigScale = TaskContext.Instance().Config.SkillCdConfig.Scale;
+                            double scaledFontSize = (26 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
                             var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
                             bool isZeroCd =
                                 double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
                                 && Math.Abs(cdValue) < 0.8;
 
-                            Brush textBrush = isZeroCd
-                                ? new SolidColorBrush(Color.FromRgb(93, 204, 23))
-                                : new SolidColorBrush(Color.FromRgb(218, 74, 35));
-                            
+                            // 从配置读取颜色
+                            var skillConfig = TaskContext.Instance().Config.SkillCdConfig;
+                            string textColorStr = isZeroCd ? skillConfig.TextReadyColor : skillConfig.TextNormalColor;
+                            string bgColorStr = isZeroCd ? skillConfig.BackgroundReadyColor : skillConfig.BackgroundNormalColor;
+
+                            Color textColor = ParseColor(textColorStr) ?? (isZeroCd ? Color.FromRgb(93, 204, 23) : Color.FromRgb(218, 74, 35));
+                            Color bgColor = ParseColor(bgColorStr) ?? Colors.White;
+
+                            Brush textBrush = new SolidColorBrush(textColor);
+                            Brush bgBrush = new SolidColorBrush(bgColor);
+
                             var formattedText = new FormattedText(
                                 drawable.Text,
                                 CultureInfo.GetCultureInfo("zh-cn"),
@@ -579,11 +586,11 @@ public partial class MaskWindow : Window
                                 textBrush,
                                 pixelsPerDip);
 
-                            double px = (6 * scaleTo1080 * skillConfig) / pixelsPerDip;
-                            double py = (2 * scaleTo1080 * skillConfig) / pixelsPerDip;
-                            double radius = (5 * scaleTo1080 * skillConfig) / pixelsPerDip;
+                            double px = (6 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
+                            double py = (2 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
+                            double radius = (5 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
                             var bgRect = new Rect(renderPoint.X - px, renderPoint.Y - py, formattedText.Width + px * 2, formattedText.Height + py * 2);
-                            drawingContext.DrawRoundedRectangle(Brushes.White, null, bgRect, radius, radius);
+                            drawingContext.DrawRoundedRectangle(bgBrush, null, bgRect, radius, radius);
                             drawingContext.DrawText(formattedText, renderPoint);
                         }
                         else
@@ -608,6 +615,49 @@ public partial class MaskWindow : Window
     }
 
     public RichTextBox LogBox => LogTextBox;
+
+    /// <summary>
+    /// 解析颜色字符串（支持RGB和RGBA的16进制表示）
+    /// </summary>
+    /// <param name="colorStr">颜色字符串，如 #RRGGBB 或 #RRGGBBAA</param>
+    /// <returns>解析后的Color，失败返回null</returns>
+    private static Color? ParseColor(string colorStr)
+    {
+        if (string.IsNullOrWhiteSpace(colorStr))
+        {
+            return null;
+        }
+
+        try
+        {
+            string hex = colorStr.Trim().TrimStart('#');
+
+            // 支持 #RRGGBB 或 #RRGGBBAA 格式
+            if (hex.Length == 6)
+            {
+                // RGB格式
+                byte r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+                byte g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+                byte b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
+                return Color.FromArgb(255, r, g, b); // Alpha = 255 (完全不透明)
+            }
+            else if (hex.Length == 8)
+            {
+                // RGBA格式
+                byte r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
+                byte g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
+                byte b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
+                byte a = byte.Parse(hex.Substring(6, 2), System.Globalization.NumberStyles.HexNumber);
+                return Color.FromArgb(a, r, g, b);
+            }
+        }
+        catch (Exception)
+        {
+            // 解析失败，返回null
+        }
+
+        return null;
+    }
 }
 
 file static class MaskWindowExtension
