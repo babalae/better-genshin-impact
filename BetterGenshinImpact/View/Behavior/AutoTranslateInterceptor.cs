@@ -46,21 +46,6 @@ namespace BetterGenshinImpact.View.Behavior
         public static bool GetEnableAutoTranslate(DependencyObject element)
             => (bool)element.GetValue(EnableAutoTranslateProperty);
 
-        public static readonly DependencyProperty ExcludeAutoTranslateProperty =
-            DependencyProperty.RegisterAttached(
-                "ExcludeAutoTranslate",
-                typeof(bool),
-                typeof(AutoTranslateInterceptor),
-                new FrameworkPropertyMetadata(
-                    false,
-                    FrameworkPropertyMetadataOptions.Inherits));
-
-        public static void SetExcludeAutoTranslate(DependencyObject element, bool value)
-            => element.SetValue(ExcludeAutoTranslateProperty, value);
-
-        public static bool GetExcludeAutoTranslate(DependencyObject element)
-            => (bool)element.GetValue(ExcludeAutoTranslateProperty);
-
         private static readonly DependencyProperty ScopeProperty =
             DependencyProperty.RegisterAttached(
                 "Scope",
@@ -325,11 +310,6 @@ namespace BetterGenshinImpact.View.Behavior
                 {
                     var current = queue.Dequeue();
                     if (!visited.Add(current))
-                    {
-                        continue;
-                    }
-
-                    if (GetExcludeAutoTranslate(current))
                     {
                         continue;
                     }
