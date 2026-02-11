@@ -399,7 +399,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     }
 
     /// <summary>
-    /// 领取每日委托奖励 后 10s 寻找原石是否出现，出现则按下esc
+    /// 领取每日委托奖励 后 10s 寻找原石是否出现，出现则点击(960, 900)坐标处
     /// </summary>
     private void GetDailyRewardsEsc(AutoSkipConfig config, CaptureContent content)
     {
@@ -416,7 +416,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         content.CaptureRectArea.Find(_autoSkipAssets.PrimogemRo, primogemRa =>
         {
             Thread.Sleep(100);
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            GameCaptureRegion.GameRegion1080PPosMove(960, 900);
+            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             _prevGetDailyRewardsTime = DateTime.MinValue;
             primogemRa.Dispose();
         });
@@ -622,7 +623,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 Thread.Sleep(800); // 等待探索派遣界面打开
                                 new OneKeyExpeditionTask().Run(_autoSkipAssets);
                             }
-                            else
+                            else if (!item.Text.Contains("每日")
+                                && !item.Text.Contains("委托")
+                                && !item.Text.Contains("探索")
+                                && !item.Text.Contains("派遣"))
                             {
                                 ClickOcrRegion(item);
                             }

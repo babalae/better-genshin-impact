@@ -538,8 +538,8 @@ public class PointsCanvas : FrameworkElement
         }
         _viewportRect = newRect;
         Debug.WriteLine($"Viewport updated: {_viewportRect}");
-        Refresh();
         ViewportChanged?.Invoke(this, EventArgs.Empty);
+        Refresh();
     }
 
     /// <summary>

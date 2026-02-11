@@ -1338,6 +1338,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     RestoreScriptFiles(path, repoPath);
                 }
 
+                // Resolving dependencies for JS scripts
+                if (first == "js")
+                {
+                    ResolveScriptDependencies(repoPath, destPath);
+                }
+
                 UpdateSubscribedScriptPaths();
                 Toast.Success("脚本订阅链接导入完成");
             }
@@ -1511,6 +1517,247 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             CopyDirectory(dir, destSubDir);
             // 图标处理
             DealWithIconFolder(destSubDir);
+        }
+    }
+
+    /// <summary>
+    /// 解析并下载脚本依赖 (packages)
+    /// </summary>
+    /// <param name="repoPath">仓库路径</param>
+    /// <param name="localScriptPath">本地脚本路径</param>
+    private void ResolveScriptDependencies(string repoPath, string localScriptPath)
+    {
+        try
+        {
+            var processedFiles = new HashSet<string>();
+            var processingQueue = new Queue<string>();
+            
+            // 确定根目录
+            string baseDestDir;
+            if (File.Exists(localScriptPath))
+            {
+                processingQueue.Enqueue(localScriptPath);
+                baseDestDir = Path.GetDirectoryName(localScriptPath) ?? localScriptPath;
+            }
+            else if (Directory.Exists(localScriptPath))
+            {
+                baseDestDir = localScriptPath;
+                // 初始加入目录下的所有 JS 文件
+                foreach (var f in Directory.GetFiles(localScriptPath, "*.js", SearchOption.AllDirectories))
+                {
+                    processingQueue.Enqueue(f);
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            // 清理 packages
+            var targetPackagesDir = Path.Combine(baseDestDir, "packages");
+            if (Directory.Exists(targetPackagesDir))
+            {
+                try
+                {
+                    Directory.Delete(targetPackagesDir, true);
+                    // _logger.LogInformation($"已清理旧依赖目录: {targetPackagesDir}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"清理依赖目录失败: {ex.Message}");
+                }
+            }
+
+            // 捕获导入的变量名
+            var regex = new System.Text.RegularExpressions.Regex(
+                @"(import\s+([\w\d_$]+)\s+from\s+['""]|import\s+(?:[\w\s{},*]*?from\s+)?['""]|export\s+(?:[\w\s{},*]*?from\s+)?['""]|import\s+['""]|require\s*\(\s*['""])([^'""\n]+)(['""])");
+
+            while (processingQueue.Count > 0)
+            {
+                var currentFile = processingQueue.Dequeue();
+                
+                // 避免重复处理
+                if (processedFiles.Contains(currentFile)) continue;
+                processedFiles.Add(currentFile);
+
+                try
+                {
+                    if (!File.Exists(currentFile)) continue;
+
+                    var content = File.ReadAllText(currentFile);
+                    var matches = regex.Matches(content);
+
+                    foreach (System.Text.RegularExpressions.Match match in matches)
+                    {
+                        var originalPath = match.Groups[3].Value;
+                        string? packagePath = null;
+
+                        // 识别是否为 packages 引用
+                        int packageIndex = originalPath.IndexOf("packages/", StringComparison.OrdinalIgnoreCase);
+                        if (packageIndex >= 0)
+                        {
+                            packagePath = originalPath.Substring(packageIndex).Replace('\\', '/');
+                        }
+                        // 识别是否为 packages 内部的相对引用
+                        else if (originalPath.StartsWith("."))
+                        {
+                            // 检查当前文件是否在 packages 目录下
+                            var localPackagesDir = Path.Combine(baseDestDir, "packages");
+                            if (currentFile.StartsWith(localPackagesDir, StringComparison.OrdinalIgnoreCase))
+                            {
+                                // 计算当前文件对应的 repo 路径
+                                var relToScript = Path.GetRelativePath(baseDestDir, currentFile);
+                                var relDir = Path.GetDirectoryName(relToScript); // e.g. packages/utils
+                                
+                                if (relDir != null)
+                                {
+                                    var depPackagePath = Path.Combine(relDir, originalPath).Replace('\\', '/');
+                                    // 规范化路径
+                                    depPackagePath = Path.GetFullPath(Path.Combine(baseDestDir, depPackagePath));
+                                    depPackagePath = Path.GetRelativePath(baseDestDir, depPackagePath).Replace('\\', '/');
+
+                                    if (depPackagePath.StartsWith("packages/", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        packagePath = depPackagePath;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (packagePath != null)
+                        {
+                            var destPath = Path.Combine(baseDestDir, packagePath);
+                            bool isCode = packagePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase);
+
+                            // 如果文件不存在，下载
+                            if (!File.Exists(destPath))
+                            {
+                                bool downloaded = false;
+                                
+                                // 尝试精确下载
+                                if (DownloadAndQueue(repoPath, packagePath, destPath, processingQueue)) 
+                                {
+                                    downloaded = true;
+                                }
+                                // 尝试 .js
+                                else if (isCode || packagePath.IndexOf('.') == -1) 
+                                {
+                                    // 尝试补充 .js
+                                    if (DownloadAndQueue(repoPath, packagePath + ".js", destPath + ".js", processingQueue)) downloaded = true;
+                                }
+
+                                if (!downloaded)
+                                {
+                                     _logger.LogWarning($"依赖未找到: {packagePath} (in {Path.GetFileName(currentFile)})");
+                                }
+                            }
+                            else
+                            {
+                                // 文件已存在
+                                if (isCode)
+                                {
+                                    if (!processedFiles.Contains(destPath) && !processingQueue.Contains(destPath)) processingQueue.Enqueue(destPath);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"分析文件依赖出错: {currentFile}, {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "解析脚本依赖主流程失败");
+        }
+    }
+
+    private bool DownloadAndQueue(string repoPath, string sourcePath, string destPath, Queue<string> queue)
+    {
+        if (CheckoutRepoRootPath(repoPath, sourcePath, destPath))
+        {
+            queue.Enqueue(destPath);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 从仓库根目录检出指定路径
+    /// </summary>
+    /// <returns>是否成功检出</returns>
+    private bool CheckoutRepoRootPath(string repoPath, string sourcePath, string destPath)
+    {
+         bool isGitRepo = IsGitRepository(repoPath);
+
+        if (isGitRepo)
+        {
+            using var repo = new Repository(repoPath);
+            var commit = repo.Head.Tip;
+
+            if (commit == null) throw new Exception("仓库HEAD未指向任何提交");
+
+            TreeEntry? entry = null;
+            var pathParts = sourcePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            Tree currentTree = commit.Tree; // Start from ROOT tree
+
+            for (int i = 0; i < pathParts.Length; i++)
+            {
+                entry = currentTree[pathParts[i]];
+                if (entry == null) return false; // Path not found
+
+                if (i < pathParts.Length - 1)
+                {
+                    if (entry.TargetType != TreeEntryTargetType.Tree)
+                         // 路径中间部分不是目录，说明路径错误
+                         return false;
+                    currentTree = (Tree)entry.Target;
+                }
+            }
+
+            if (entry == null) return false;
+
+            if (entry.TargetType == TreeEntryTargetType.Blob)
+            {
+                var blob = (Blob)entry.Target;
+                var dir = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+                using var contentStream = blob.GetContentStream();
+                using var fileStream = File.Create(destPath);
+                contentStream.CopyTo(fileStream);
+                return true;
+            }
+            else if (entry.TargetType == TreeEntryTargetType.Tree)
+            {
+                var tree = (Tree)entry.Target;
+                CheckoutTree(tree, destPath, sourcePath);
+                return true;
+            }
+            return false;
+        }
+        else
+        {
+            var potentialRoot = Directory.GetParent(repoPath)?.FullName;
+            if (potentialRoot != null)
+            {
+                var scriptPath = Path.Combine(potentialRoot, sourcePath);
+                 if (Directory.Exists(scriptPath))
+                {
+                    CopyDirectory(scriptPath, destPath);
+                    return true;
+                }
+                else if (File.Exists(scriptPath))
+                {
+                    var dir = Path.GetDirectoryName(destPath);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                    File.Copy(scriptPath, destPath, true);
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

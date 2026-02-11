@@ -83,10 +83,10 @@ public partial class MaskWindowConfig : ObservableObject
     private double _logTextBoxLeftRatio = 20.0 / 1920;
 
     [ObservableProperty]
-    private double _logTextBoxTopRatio = 832.0 / 1080;
+    private double _logTextBoxTopRatio = 822.0 / 1080;
 
     [ObservableProperty]
-    private double _logTextBoxWidthRatio = 477.0 / 1920;
+    private double _logTextBoxWidthRatio = 480.0 / 1920;
 
     [ObservableProperty]
     private double _logTextBoxHeightRatio = 188.0 / 1080;
@@ -95,10 +95,10 @@ public partial class MaskWindowConfig : ObservableObject
     private double _statusListLeftRatio = 20.0 / 1920;
 
     [ObservableProperty]
-    private double _statusListTopRatio = 807.0 / 1080;
+    private double _statusListTopRatio = 790.0 / 1080;
 
     [ObservableProperty]
-    private double _statusListWidthRatio = 477.0 / 1920;
+    private double _statusListWidthRatio = 480.0 / 1920;
 
     [ObservableProperty]
     private double _statusListHeightRatio = 24.0 / 1080;

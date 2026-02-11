@@ -352,12 +352,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
         });
     }
 
-    [RelayCommand]
-    private async Task GotoGithubActionAsync()
-    {
-        await Launcher.LaunchUriAsync(
-            new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
-    }
+    // [RelayCommand]
+    // private async Task GotoGithubActionAsync()
+    // {
+    //     await Launcher.LaunchUriAsync(
+    //         new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
+    // }
 
     [RelayCommand]
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)

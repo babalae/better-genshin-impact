@@ -76,6 +76,11 @@ public partial class MaskWindow : Window
 
         return _maskWindow;
     }
+    
+    public static MaskWindow? InstanceNullable()
+    {
+        return _maskWindow;
+    }
 
     public bool IsExist()
     {
@@ -144,7 +149,11 @@ public partial class MaskWindow : Window
             return;
         }
 
-        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.PointInfoPopup.CloseCommand.Execute(null);
+            vm.IsMapPointPickerOpen = false;
+        }
 
         if (_mapLabelSearchWindow != null)
         {
@@ -159,7 +168,11 @@ public partial class MaskWindow : Window
             return;
         }
 
-        (DataContext as MaskWindowViewModel)?.PointInfoPopup.CloseCommand.Execute(null);
+        if (DataContext is MaskWindowViewModel vm)
+        {
+            vm.PointInfoPopup.CloseCommand.Execute(null);
+            vm.IsMapPointPickerOpen = false;
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -205,7 +218,11 @@ public partial class MaskWindow : Window
 
     private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
     {
-        _viewModel?.PointInfoPopup.CloseCommand.Execute(null);
+        if (_viewModel != null)
+        {
+            _viewModel.PointInfoPopup.CloseCommand.Execute(null);
+            _viewModel.IsMapPointPickerOpen = false;
+        }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -249,6 +266,14 @@ public partial class MaskWindow : Window
             Dispatcher.Invoke(UpdateClickThroughState);
         }
 
+        if (e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
+        {
+            if (_viewModel?.IsMapPointPickerOpen != true && _mapLabelSearchWindow != null)
+            {
+                Dispatcher.Invoke(() => _mapLabelSearchWindow.Hide());
+            }
+        }
+
         if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
         {
             Dispatcher.Invoke(() =>
@@ -278,13 +303,13 @@ public partial class MaskWindow : Window
         {
             var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
             var inBigMapUi = _viewModel?.IsInBigMapUi == true;
-
+        
             if (editEnabled)
             {
                 this.SetClickThrough(false);
                 return;
             }
-
+        
             this.SetClickThrough(!inBigMapUi);
         }
         catch
@@ -354,7 +379,7 @@ public partial class MaskWindow : Window
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 100)
+        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 1000)
         {
             (p.Inlines as System.Collections.IList).RemoveAt(0);
         }
@@ -385,8 +410,8 @@ public partial class MaskWindow : Window
         var point = textbox.PointToScreen(new Point(0, 0));
         var popupHeight = _mapLabelSearchWindow.ActualHeight > 0 ? _mapLabelSearchWindow.ActualHeight : _mapLabelSearchWindow.Height;
 
-        _mapLabelSearchWindow.Left = point.X;
-        _mapLabelSearchWindow.Top = point.Y - popupHeight - 4;
+        _mapLabelSearchWindow.Left = point.X / DpiHelper.ScaleY;
+        _mapLabelSearchWindow.Top = (point.Y - 4) / DpiHelper.ScaleY - popupHeight;
 
         if (!_mapLabelSearchWindow.IsVisible)
         {
@@ -573,25 +598,9 @@ file static class MaskWindowExtension
 
     public static void SetClickThrough(this Window window, bool isClickThrough)
     {
-        SetClickThrough(new WindowInteropHelper(window).Handle, isClickThrough);
+        SetLayeredWindow(new WindowInteropHelper(window).Handle, isClickThrough);
     }
-
-    private static void SetClickThrough(nint hWnd, bool isClickThrough)
-    {
-        int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
-
-        if (isClickThrough)
-        {
-            style |= (int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
-        }
-        else
-        {
-            style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
-        }
-
-        _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
-    }
-
+    
     public static void SetChildWindow(this Window window)
     {
         SetChildWindow(new WindowInteropHelper(window).Handle);

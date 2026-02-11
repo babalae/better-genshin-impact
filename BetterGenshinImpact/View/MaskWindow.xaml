@@ -11,6 +11,7 @@
         xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
         xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -57,6 +58,8 @@
                 <ResourceDictionary Source="/View/Controls/Overlay/AdjustableOverlayItemStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <converters:OverlayRelativeOrAbsoluteConverter x:Key="OverlayRelativeOrAbsoluteConverter" />
+            <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
+            <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -657,8 +660,8 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="58*" />
                             <ColumnDefinition Width="12*" />
-                            <ColumnDefinition Width="540*" />
-                            <ColumnDefinition Width="1192*" />
+                            <ColumnDefinition Width="640*" />
+                            <ColumnDefinition Width="1092*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="328*" />
@@ -667,266 +670,9 @@
                             <RowDefinition Height="58*" />
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="1"
-                                Grid.Column="2"
-                                Width="540"
-                                Height="640"
-                                Background="#C81F232A"
-                                BorderBrush="#26FFFFFF"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Visibility="{Binding IsMapPointPickerOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Border.Effect>
-                                <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
-                            </Border.Effect>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-
-                                <Grid Grid.Row="0" Margin="12,12,12,8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <ComboBox Grid.Column="0"
-                                              Height="32"
-                                              MinWidth="140"
-                                              Margin="0,0,12,0"
-                                              Padding="12,0,6,0"
-                                              VerticalContentAlignment="Center"
-                                              ItemsSource="{Binding MapPointApiProviderOptions}"
-                                              SelectedItem="{Binding SelectedMapPointApiProviderOption, Mode=TwoWay}"
-                                              DisplayMemberPath="DisplayName" />
-
-                                    <ui:TextBox x:Name="MapLabelSearchTextBox"
-                                                Grid.Column="1"
-                                                Height="32"
-                                                PlaceholderText="搜索当前区域下的标点分类"
-                                                Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
-
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
-                                        <ui:Button Height="32"
-                                                   Padding="12,0"
-                                                   Background="#FF2B2F37"
-                                                   Foreground="White"
-                                                   Content="重置选择"
-                                                   Command="{Binding ResetSelectedMapLabelSelectionCommand}" />
-
-                                        <ui:Button Margin="8,0,0,0"
-                                                   Width="32"
-                                                   Height="32"
-                                                   Background="#FF2B2F37"
-                                                   Foreground="White"
-                                                   Icon="{ui:SymbolIcon Dismiss24}"
-                                                   Command="{Binding ToggleMapPointPickerCommand}" />
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Grid.Row="1" Margin="12,0,12,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="12" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border Grid.Column="0"
-                                            Background="#B2232831"
-                                            BorderBrush="#1FFFFFFF"
-                                            BorderThickness="1"
-                                            CornerRadius="10"
-                                            Padding="8">
-                                        <ui:ListView x:Name="MapLabelCategoriesListView"
-                                                     ItemsSource="{Binding MapLabelCategories}"
-                                                     SelectedItem="{Binding SelectedMapLabelCategory, Mode=TwoWay}"
-                                                     SelectionMode="Single"
-                                                     Background="Transparent"
-                                                     BorderThickness="0"
-                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                     PreviewMouseLeftButtonDown="MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown">
-                                            <ui:ListView.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Margin="0,1"
-                                                            Padding="6,6"
-                                                            Background="Transparent">
-                                                        <TextBlock Foreground="White"
-                                                                   Text="{Binding Name}"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ui:ListView.ItemTemplate>
-                                        </ui:ListView>
-                                    </Border>
-
-                                    <Border Grid.Column="2"
-                                            Background="#B2232831"
-                                            BorderBrush="#1FFFFFFF"
-                                            BorderThickness="1"
-                                            CornerRadius="10"
-                                            Padding="10">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="*" />
-                                            </Grid.RowDefinitions>
-
-                                            <ui:TextBlock Grid.Row="0"
-                                                          Margin="2,0,0,8"
-                                                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                          Text="{Binding SelectedMapLabelCategory.Name, TargetNullValue=''}" />
-
-                                            <ScrollViewer Grid.Row="1"
-                                                          VerticalScrollBarVisibility="Auto"
-                                                          HorizontalScrollBarVisibility="Disabled">
-                                                <ItemsControl ItemsSource="{Binding MapLabelItems}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <WrapPanel IsItemsHost="True" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Button Width="160"
-                                                                    Height="54"
-                                                                    Margin="0,0,8,8"
-                                                                    Background="#B22C323C"
-                                                                    BorderBrush="#403A424F"
-                                                                    BorderThickness="1"
-                                                                    Padding="8,0"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    VerticalContentAlignment="Center"
-                                                                    Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding}">
-                                                                <DockPanel HorizontalAlignment="Stretch"
-                                                                           VerticalAlignment="Center"
-                                                                           LastChildFill="True">
-                                                                    <Border DockPanel.Dock="Left"
-                                                                            Width="36"
-                                                                            Height="36"
-                                                                            CornerRadius="8"
-                                                                            Background="#80232831"
-                                                                            Margin="0,0,4,0">
-                                                                        <Image Width="28"
-                                                                               Height="28"
-                                                                               Stretch="Uniform"
-                                                                               Source="{Binding IconImage}" />
-                                                                    </Border>
-
-                                                                    <TextBlock DockPanel.Dock="Right"
-                                                                               Width="42"
-                                                                               VerticalAlignment="Center"
-                                                                               HorizontalAlignment="Right"
-                                                                               TextAlignment="Right"
-                                                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                                                               Text="{Binding PointCount}" />
-
-                                                                    <TextBlock VerticalAlignment="Center"
-                                                                               Foreground="White"
-                                                                               HorizontalAlignment="Stretch"
-                                                                               TextAlignment="Left"
-                                                                               Text="{Binding Name}"
-                                                                               TextTrimming="CharacterEllipsis" />
-                                                                </DockPanel>
-                                                            </Button>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </ScrollViewer>
-
-                                            <Grid Grid.Row="1"
-                                                  Visibility="{Binding IsMapLabelTreeLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                  Background="#AA232831">
-                                                <ui:TextBlock HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"
-                                                              Foreground="White"
-                                                              FontTypography="BodyStrong"
-                                                              Text="加载中..." />
-                                            </Grid>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-
-                            </Grid>
-                        </Border>
-
-                        <ItemsControl Grid.Row="1"
-                                      Grid.Column="3"
-                                      Width="64"
-                                      MaxHeight="640"
-                                      HorizontalAlignment="Left"
-                                      VerticalAlignment="Top"
-                                      Margin="12,0,0,0"
-                                      ItemsSource="{Binding SelectedMapLabelItems}">
-                            <ItemsControl.Style>
-                                <Style TargetType="ItemsControl">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <Trigger Property="HasItems" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </Trigger>
-                                        <DataTrigger Binding="{Binding IsMapPointPickerOpen}" Value="False">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ItemsControl.Style>
-                            <ItemsControl.Template>
-                                <ControlTemplate TargetType="ItemsControl">
-                                    <Border Background="#C81F232A"
-                                            BorderBrush="#26FFFFFF"
-                                            BorderThickness="1"
-                                            CornerRadius="12"
-                                            Padding="8">
-                                        <Border.Effect>
-                                            <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
-                                        </Border.Effect>
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                                      HorizontalScrollBarVisibility="Disabled"
-                                                      Padding="0"
-                                                      Margin="0">
-                                            <ItemsPresenter />
-                                        </ScrollViewer>
-                                    </Border>
-                                </ControlTemplate>
-                            </ItemsControl.Template>
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Vertical" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Width="40"
-                                            Height="40"
-                                            Margin="0,0,0,8"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Padding="0"
-                                            HorizontalContentAlignment="Center"
-                                            VerticalContentAlignment="Center"
-                                            Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}">
-                                        <Border Width="40"
-                                                Height="40"
-                                                CornerRadius="20"
-                                                Background="#C82C323C"
-                                                BorderBrush="#403A424F"
-                                                BorderThickness="1">
-                                            <Image Width="30"
-                                                   Height="30"
-                                                   Stretch="Uniform"
-                                                   Source="{Binding IconImage}" />
-                                        </Border>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <Viewbox Grid.Row="3" Grid.Column="0"
+                        <Viewbox x:Name="MapPointPickerToggleViewbox"
+                                Grid.Row="3"
+                                Grid.Column="0"
                                 Stretch="Uniform"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch">
@@ -958,6 +704,296 @@
                                 </Border>
                             </Grid>
                         </Viewbox>
+
+                        <Popup AllowsTransparency="True"
+                               IsOpen="{Binding IsMapPointPickerOpen}"
+                               PlacementTarget="{Binding ElementName=MapPointPickerToggleViewbox}"
+                               Placement="Top"
+                               HorizontalOffset="0"
+                               VerticalOffset="{StaticResource MapPointPickerVerticalOffset}"
+                               StaysOpen="True">
+                            <Grid VerticalAlignment="Top">
+                                <Grid.Height>
+                                    <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                                        <Binding Source="{StaticResource MapPointPickerHeightRatio}" />
+                                        <Binding Path="MaskWindowHeight" />
+                                    </MultiBinding>
+                                </Grid.Height>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="540" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0"
+                                        Width="540"
+                                        Background="#C81F232A"
+                                        BorderBrush="#26FFFFFF"
+                                        BorderThickness="1"
+                                        CornerRadius="12">
+                                    <Border.Effect>
+                                        <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
+                                    </Border.Effect>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0" Margin="12,12,12,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <ComboBox Grid.Column="0"
+                                                      Height="32"
+                                                      MinWidth="140"
+                                                      Margin="0,0,12,0"
+                                                      Padding="12,0,6,0"
+                                                      VerticalContentAlignment="Center"
+                                                      ItemsSource="{Binding MapPointApiProviderOptions}"
+                                                      SelectedItem="{Binding SelectedMapPointApiProviderOption, Mode=TwoWay}"
+                                                      DisplayMemberPath="DisplayName" />
+
+                                            <ui:TextBox x:Name="MapLabelSearchTextBox"
+                                                        Grid.Column="1"
+                                                        Height="32"
+                                                        PlaceholderText="搜索当前区域下的标点分类"
+                                                        Text="{Binding MapLabelSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                        PreviewMouseLeftButtonDown="MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown" />
+
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+                                                <ui:Button
+                                                           Width="32"
+                                                           Height="32"
+                                                           Background="#FF2B2F37"
+                                                           Foreground="White"
+                                                           Icon="{ui:SymbolIcon Dismiss24}"
+                                                           Command="{Binding ToggleMapPointPickerCommand}" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Grid Grid.Row="1" Margin="12,0,12,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0"
+                                                    Background="#B2232831"
+                                                    BorderBrush="#1FFFFFFF"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    Padding="8">
+                                                <ui:ListView x:Name="MapLabelCategoriesListView"
+                                                             ItemsSource="{Binding MapLabelCategories}"
+                                                             SelectedItem="{Binding SelectedMapLabelCategory, Mode=TwoWay}"
+                                                             SelectionMode="Single"
+                                                             Background="Transparent"
+                                                             BorderThickness="0"
+                                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                             PreviewMouseLeftButtonDown="MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown">
+                                                    <ui:ListView.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Margin="0,1"
+                                                                    Padding="6,6"
+                                                                    Background="Transparent">
+                                                                <TextBlock Foreground="White"
+                                                                           Text="{Binding Name}"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ui:ListView.ItemTemplate>
+                                                </ui:ListView>
+                                            </Border>
+
+                                            <Border Grid.Column="2"
+                                                    Background="#B2232831"
+                                                    BorderBrush="#1FFFFFFF"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    Padding="10">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="*" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <ui:TextBlock Grid.Row="0"
+                                                                  Margin="2,0,0,8"
+                                                                  Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                                  Text="{Binding SelectedMapLabelCategory.Name, TargetNullValue=''}" />
+
+                                                    <ScrollViewer Grid.Row="1"
+                                                                  VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled">
+                                                        <ItemsControl ItemsSource="{Binding MapLabelItems}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel IsItemsHost="True" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Width="160"
+                                                                            Height="54"
+                                                                            Margin="0,0,8,8"
+                                                                            Background="#B22C323C"
+                                                                            BorderBrush="#403A424F"
+                                                                            BorderThickness="1"
+                                                                            Padding="8,0"
+                                                                            HorizontalContentAlignment="Stretch"
+                                                                            VerticalContentAlignment="Center"
+                                                                            Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <DockPanel HorizontalAlignment="Stretch"
+                                                                                   VerticalAlignment="Center"
+                                                                                   LastChildFill="True">
+                                                                            <Border DockPanel.Dock="Left"
+                                                                                    Width="36"
+                                                                                    Height="36"
+                                                                                    CornerRadius="8"
+                                                                                    Background="#80232831"
+                                                                                    Margin="0,0,4,0">
+                                                                                <Image Width="28"
+                                                                                       Height="28"
+                                                                                       Stretch="Uniform"
+                                                                                       Source="{Binding IconImage}" />
+                                                                            </Border>
+
+                                                                            <TextBlock DockPanel.Dock="Right"
+                                                                                       Width="42"
+                                                                                       VerticalAlignment="Center"
+                                                                                       HorizontalAlignment="Right"
+                                                                                       TextAlignment="Right"
+                                                                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                                                       Text="{Binding PointCount}" />
+
+                                                                            <TextBlock VerticalAlignment="Center"
+                                                                                       Foreground="White"
+                                                                                       HorizontalAlignment="Stretch"
+                                                                                       TextAlignment="Left"
+                                                                                       Text="{Binding Name}"
+                                                                                       TextTrimming="CharacterEllipsis" />
+                                                                        </DockPanel>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </ScrollViewer>
+
+                                                    <Grid Grid.Row="1"
+                                                          Visibility="{Binding IsMapLabelTreeLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                          Background="#AA232831">
+                                                        <ui:TextBlock HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"
+                                                                      Foreground="White"
+                                                                      FontTypography="BodyStrong"
+                                                                      Text="加载中..." />
+                                                    </Grid>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                                <ItemsControl Grid.Column="2"
+                                              Width="64"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Stretch"
+                                              ItemsSource="{Binding SelectedMapLabelItems}">
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <Trigger Property="HasItems" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ItemsControl.Style>
+                                    <ItemsControl.Template>
+                                        <ControlTemplate TargetType="ItemsControl">
+                                            <Border Background="#C81F232A"
+                                                    BorderBrush="#26FFFFFF"
+                                                    BorderThickness="1"
+                                                    CornerRadius="12"
+                                                    Padding="8">
+                                                <Border.Effect>
+                                                    <DropShadowEffect Opacity="0.7" BlurRadius="28" ShadowDepth="0" Color="#FF000000" />
+                                                </Border.Effect>
+                                                <DockPanel LastChildFill="True">
+                                                    <Button DockPanel.Dock="Top"
+                                                            Width="40"
+                                                            Height="40"
+                                                            Margin="0,0,0,8"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="0"
+                                                            HorizontalContentAlignment="Center"
+                                                            VerticalContentAlignment="Center"
+                                                            ToolTip="重置选择"
+                                                            Command="{Binding ResetSelectedMapLabelSelectionCommand}">
+                                                        <Border Width="40"
+                                                                Height="40"
+                                                                CornerRadius="20"
+                                                                Background="#C82C323C"
+                                                                BorderBrush="#403A424F"
+                                                                BorderThickness="1">
+                                                            <ui:SymbolIcon Width="22"
+                                                                           Height="22"
+                                                                           Foreground="White"
+                                                                           Symbol="Broom24" />
+                                                        </Border>
+                                                    </Button>
+
+                                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled"
+                                                                  Padding="0"
+                                                                  Margin="0">
+                                                        <ItemsPresenter />
+                                                    </ScrollViewer>
+                                                </DockPanel>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ItemsControl.Template>
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Vertical" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Width="40"
+                                                    Height="40"
+                                                    Margin="0,0,0,8"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}">
+                                                <Border Width="40"
+                                                        Height="40"
+                                                        CornerRadius="20"
+                                                        Background="#C82C323C"
+                                                        BorderBrush="#403A424F"
+                                                        BorderThickness="1">
+                                                    <Image Width="30"
+                                                           Height="30"
+                                                           Stretch="Uniform"
+                                                           Source="{Binding IconImage}" />
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Popup>
                     </Grid>
 
                 </Grid>

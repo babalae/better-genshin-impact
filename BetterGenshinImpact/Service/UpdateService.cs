@@ -120,7 +120,7 @@ public class UpdateService : IUpdateService
                         }
                         else
                         {
-                            Process.Start(new ProcessStartInfo("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml") { UseShellExecute = true });
+                            Process.Start(new ProcessStartInfo("https://cnb.cool/bettergi/better-genshin-impact/-/releases") { UseShellExecute = true });
                         }
                         break;
 
