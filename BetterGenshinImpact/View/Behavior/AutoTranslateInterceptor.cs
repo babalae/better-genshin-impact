@@ -525,7 +525,7 @@ namespace BetterGenshinImpact.View.Behavior
                         }
                     }
 
-                    var translated = translator.Translate(original, MissingTextSource.UiStaticLiteral);
+                    var translated = translator.Translate(original, BuildSourceInfo(obj, property, MissingTextSource.UiStaticLiteral));
                     if (!ReferenceEquals(value, translated) && !string.Equals(value, translated, StringComparison.Ordinal))
                     {
                         obj.SetValue(property, translated);
@@ -599,7 +599,7 @@ namespace BetterGenshinImpact.View.Behavior
                     }
                 }
 
-                var translated = translator.Translate(original, MissingTextSource.UiStaticLiteral);
+                var translated = translator.Translate(original, BuildSourceInfo(obj, property, MissingTextSource.UiStaticLiteral));
                 if (!ReferenceEquals(currentValue, translated) && !string.Equals(currentValue, translated, StringComparison.Ordinal))
                 {
                     setter(translated);
@@ -690,6 +690,85 @@ namespace BetterGenshinImpact.View.Behavior
 
                     BindingOperations.GetBindingExpressionBase(obj, property)?.UpdateTarget();
                 }
+            }
+
+            private static TranslationSourceInfo BuildSourceInfo(DependencyObject element, DependencyProperty property, MissingTextSource source)
+            {
+                var viewElement = FindViewElement(element);
+                var viewType = viewElement?.GetType();
+                var xamlPath = GetViewXamlPath(viewType);
+
+                return new TranslationSourceInfo
+                {
+                    Source = source,
+                    ViewXamlPath = xamlPath,
+                    ViewType = viewType?.FullName,
+                    ElementType = element.GetType().FullName,
+                    ElementName = GetElementName(element),
+                    PropertyName = property.Name
+                };
+            }
+
+            private static DependencyObject? FindViewElement(DependencyObject? element)
+            {
+                var current = element;
+                while (current != null)
+                {
+                    if (current is Window || current is Page || current is UserControl)
+                    {
+                        return current;
+                    }
+
+                    var parent = LogicalTreeHelper.GetParent(current);
+                    if (parent == null && current is FrameworkElement fe)
+                    {
+                        parent = fe.Parent ?? fe.TemplatedParent as DependencyObject;
+                    }
+
+                    if (parent == null && current is FrameworkContentElement fce)
+                    {
+                        parent = fce.Parent;
+                    }
+
+                    if (parent == null)
+                    {
+                        parent = VisualTreeHelper.GetParent(current);
+                    }
+
+                    current = parent;
+                }
+
+                return null;
+            }
+
+            private static string? GetViewXamlPath(Type? viewType)
+            {
+                if (viewType == null)
+                {
+                    return null;
+                }
+
+                var ns = viewType.Namespace ?? string.Empty;
+                const string viewMarker = ".View.";
+                var index = ns.IndexOf(viewMarker, StringComparison.Ordinal);
+                if (index < 0)
+                {
+                    return null;
+                }
+
+                var relativeNamespace = ns[(index + viewMarker.Length)..];
+                var folder = string.IsNullOrWhiteSpace(relativeNamespace) ? "View" : $"View/{relativeNamespace.Replace('.', '/')}";
+                return $"{folder}/{viewType.Name}.xaml";
+            }
+
+            private static string? GetElementName(DependencyObject element)
+            {
+                return element switch
+                {
+                    FrameworkElement fe when !string.IsNullOrWhiteSpace(fe.Name) => fe.Name,
+                    FrameworkContentElement fce when !string.IsNullOrWhiteSpace(fce.Name) => fce.Name,
+                    _ => null
+                };
             }
         }
     }

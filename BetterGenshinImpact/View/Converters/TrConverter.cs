@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using BetterGenshinImpact.Service.Interface;
 
@@ -16,11 +17,13 @@ public sealed class TrConverter : IValueConverter
         }
 
         var translator = App.GetService<ITranslationService>();
-        return translator?.Translate(s, MissingTextSource.UiDynamicBinding) ?? s;
+        var source = parameter is MissingTextSource sourceParam ? sourceParam : MissingTextSource.UiDynamicBinding;
+        return translator?.Translate(s, TranslationSourceInfo.From(source)) ?? s;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return value ?? string.Empty;
     }
+
 }

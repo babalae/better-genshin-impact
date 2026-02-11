@@ -20,7 +20,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 {
     private readonly IConfigService _configService;
     private readonly object _sync = new();
-    private readonly ConcurrentDictionary<string, MissingTextSource> _missingKeys = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, TranslationSourceInfo> _missingKeys = new(StringComparer.Ordinal);
     private readonly Timer _flushTimer;
     private readonly OtherConfig _otherConfig;
 
@@ -56,10 +56,10 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
     public string Translate(string text)
     {
-        return Translate(text, MissingTextSource.Unknown);
+        return Translate(text, TranslationSourceInfo.From(MissingTextSource.Unknown));
     }
 
-    public string Translate(string text, MissingTextSource source)
+    public string Translate(string text, TranslationSourceInfo sourceInfo)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -84,10 +84,11 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             return translated;
         }
 
+        var normalizedSource = NormalizeSourceInfo(sourceInfo);
         _missingKeys.AddOrUpdate(
             text,
-            source,
-            (_, existingSource) => existingSource == MissingTextSource.Unknown ? source : existingSource);
+            normalizedSource,
+            (_, existingSource) => MergeSourceInfo(existingSource, normalizedSource));
         Interlocked.Exchange(ref _dirtyMissing, 1);
         return text;
     }
@@ -189,18 +190,45 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         foreach (var pair in missingSnapshot)
         {
             var key = pair.Key;
-            var source = pair.Value;
+            var sourceInfo = pair.Value;
+            var source = SourceToString(sourceInfo.Source);
 
             if (!existing.TryGetValue(key, out var existingItem))
             {
-                existing[key] = new MissingItem(key, string.Empty, SourceToString(source));
+                existing[key] = new MissingItem
+                {
+                    Key = key,
+                    Value = string.Empty,
+                    Source = source,
+                    SourceInfo = sourceInfo
+                };
                 updated = true;
                 continue;
             }
 
             if (string.IsNullOrWhiteSpace(existingItem.Source) || string.Equals(existingItem.Source, SourceToString(MissingTextSource.Unknown), StringComparison.Ordinal))
             {
-                existing[key] = new MissingItem(key, existingItem.Value ?? string.Empty, SourceToString(source));
+                existing[key] = new MissingItem
+                {
+                    Key = key,
+                    Value = existingItem.Value ?? string.Empty,
+                    Source = source,
+                    SourceInfo = sourceInfo
+                };
+                updated = true;
+                continue;
+            }
+
+            var mergedSourceInfo = MergeSourceInfo(existingItem.SourceInfo, sourceInfo);
+            if (!ReferenceEquals(mergedSourceInfo, existingItem.SourceInfo))
+            {
+                existing[key] = new MissingItem
+                {
+                    Key = key,
+                    Value = existingItem.Value ?? string.Empty,
+                    Source = existingItem.Source ?? source,
+                    SourceInfo = mergedSourceInfo
+                };
                 updated = true;
             }
         }
@@ -212,7 +240,13 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
         var items = existing.Values
             .OrderBy(i => i.Key, StringComparer.Ordinal)
-            .Select(i => new MissingItem(i.Key, i.Value ?? string.Empty, i.Source ?? SourceToString(MissingTextSource.Unknown)))
+            .Select(i => new MissingItem
+            {
+                Key = i.Key,
+                Value = i.Value ?? string.Empty,
+                Source = i.Source ?? SourceToString(MissingTextSource.Unknown),
+                SourceInfo = NormalizeSourceInfo(i.SourceInfo)
+            })
             .ToList();
         var jsonOut = JsonConvert.SerializeObject(items, Formatting.Indented);
         WriteAtomically(filePath, jsonOut);
@@ -231,14 +265,96 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
                 continue;
             }
 
-            var normalized = new MissingItem(
-                item.Key,
-                item.Value ?? string.Empty,
-                string.IsNullOrWhiteSpace(item.Source) ? SourceToString(MissingTextSource.Unknown) : item.Source);
+            var normalized = new MissingItem
+            {
+                Key = item.Key,
+                Value = item.Value ?? string.Empty,
+                Source = string.IsNullOrWhiteSpace(item.Source) ? SourceToString(MissingTextSource.Unknown) : item.Source,
+                SourceInfo = NormalizeSourceInfo(item.SourceInfo)
+            };
             dict[item.Key] = normalized;
         }
 
         return dict;
+    }
+
+    private static TranslationSourceInfo NormalizeSourceInfo(TranslationSourceInfo? sourceInfo)
+    {
+        if (sourceInfo == null)
+        {
+            return TranslationSourceInfo.From(MissingTextSource.Unknown);
+        }
+
+        return new TranslationSourceInfo
+        {
+            Source = sourceInfo.Source,
+            ViewXamlPath = sourceInfo.ViewXamlPath,
+            ViewType = sourceInfo.ViewType,
+            ElementType = sourceInfo.ElementType,
+            ElementName = sourceInfo.ElementName,
+            PropertyName = sourceInfo.PropertyName,
+            BindingPath = sourceInfo.BindingPath,
+            Notes = sourceInfo.Notes
+        };
+    }
+
+    private static TranslationSourceInfo MergeSourceInfo(TranslationSourceInfo? existing, TranslationSourceInfo? incoming)
+    {
+        if (incoming == null)
+        {
+            return NormalizeSourceInfo(existing);
+        }
+
+        if (existing == null)
+        {
+            return NormalizeSourceInfo(incoming);
+        }
+
+        if (existing.Source == MissingTextSource.Unknown && incoming.Source != MissingTextSource.Unknown)
+        {
+            return incoming;
+        }
+
+        if (existing.Source != MissingTextSource.Unknown && incoming.Source == MissingTextSource.Unknown)
+        {
+            return existing;
+        }
+
+        if (existing.Source != incoming.Source)
+        {
+            return existing;
+        }
+
+        var merged = new TranslationSourceInfo
+        {
+            Source = existing.Source,
+            ViewXamlPath = string.IsNullOrWhiteSpace(existing.ViewXamlPath) ? incoming.ViewXamlPath : existing.ViewXamlPath,
+            ViewType = string.IsNullOrWhiteSpace(existing.ViewType) ? incoming.ViewType : existing.ViewType,
+            ElementType = string.IsNullOrWhiteSpace(existing.ElementType) ? incoming.ElementType : existing.ElementType,
+            ElementName = string.IsNullOrWhiteSpace(existing.ElementName) ? incoming.ElementName : existing.ElementName,
+            PropertyName = string.IsNullOrWhiteSpace(existing.PropertyName) ? incoming.PropertyName : existing.PropertyName,
+            BindingPath = string.IsNullOrWhiteSpace(existing.BindingPath) ? incoming.BindingPath : existing.BindingPath,
+            Notes = string.IsNullOrWhiteSpace(existing.Notes) ? incoming.Notes : existing.Notes
+        };
+
+        if (IsSameSourceInfo(merged, existing))
+        {
+            return existing;
+        }
+
+        return merged;
+    }
+
+    private static bool IsSameSourceInfo(TranslationSourceInfo left, TranslationSourceInfo right)
+    {
+        return left.Source == right.Source
+               && string.Equals(left.ViewXamlPath, right.ViewXamlPath, StringComparison.Ordinal)
+               && string.Equals(left.ViewType, right.ViewType, StringComparison.Ordinal)
+               && string.Equals(left.ElementType, right.ElementType, StringComparison.Ordinal)
+               && string.Equals(left.ElementName, right.ElementName, StringComparison.Ordinal)
+               && string.Equals(left.PropertyName, right.PropertyName, StringComparison.Ordinal)
+               && string.Equals(left.BindingPath, right.BindingPath, StringComparison.Ordinal)
+               && string.Equals(left.Notes, right.Notes, StringComparison.Ordinal);
     }
 
     private static string SourceToString(MissingTextSource source)
@@ -320,7 +436,13 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         FlushMissingIfDirty();
     }
 
-    private sealed record MissingItem(string Key, string Value, string Source);
+    private sealed class MissingItem
+    {
+        public string Key { get; set; } = string.Empty;
+        public string? Value { get; set; }
+        public string? Source { get; set; }
+        public TranslationSourceInfo? SourceInfo { get; set; }
+    }
 
     private void OnOtherConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
