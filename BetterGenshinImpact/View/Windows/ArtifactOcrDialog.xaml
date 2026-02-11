@@ -1,9 +1,10 @@
-<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ArtifactOcrDialog"
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ArtifactOcrDialog"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  SizeToContent="WidthAndHeight"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -51,12 +52,12 @@
                            Margin="5"
                            Appearance="Primary"
                            Click="BtnOkClick"
-                           Content="刷新"
+                           Content="{Binding [Btn_Refresh], Source={x:Static helpers:Lang.S}}"
                            IsDefault="True" />
                 <ui:Button Name="BtnCancel"
                            Margin="5"
                            Click="BtnCancelClick"
-                           Content="退出"
+                           Content="{Binding [Tray_Exit], Source={x:Static helpers:Lang.S}}"
                            IsCancel="True" />
             </StackPanel>
         </StackPanel>

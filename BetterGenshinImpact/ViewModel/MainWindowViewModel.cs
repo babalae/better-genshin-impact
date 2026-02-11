@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
@@ -353,7 +353,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             // 低版本才需要迁移
             if (fileVersionInfo.FileVersion != null && !Global.IsNewVersion(fileVersionInfo.FileVersion))
             {
-                var res = await ThemedMessageBox.ShowAsync("检测到旧的 BetterGI 配置，是否迁移配置并清理旧目录？", "BetterGI",
+                var res = await ThemedMessageBox.ShowAsync(Lang.S["Gen_12197_25b4d5"], "BetterGI",
                     System.Windows.MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question);
                 if (res == System.Windows.MessageBoxResult.Yes)
                 {
@@ -361,7 +361,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     DirectoryHelper.CopyDirectory(embeddedUserPath, Global.Absolute("User"));
                     // 删除旧目录
                     DirectoryHelper.DeleteReadOnlyDirectory(embeddedPath);
-                    await ThemedMessageBox.InformationAsync("迁移配置成功, 软件将自动退出，请手动重新启动 BetterGI！");
+                    await ThemedMessageBox.InformationAsync(Lang.S["Gen_12196_888fe4"]);
                     Application.Current.Shutdown();
                 }
             }
@@ -402,7 +402,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     // string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
                     // await OcrFactory.ChangeCulture(gameCultureInfoName);
                     var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png")));
-                    Debug.WriteLine("PaddleOcr预热结果:" + s);
+                    Debug.WriteLine(Lang.S["Gen_12195_30ecb3"] + s);
                 }
                 catch (Exception e)
                 {
@@ -427,7 +427,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
+            ThemedMessageBox.Warning(Lang.S["MainWindowViewModel_20168_6f1fd0"] + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(
                 new ProcessStartInfo(

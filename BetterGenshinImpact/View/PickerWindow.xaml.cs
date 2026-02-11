@@ -167,11 +167,10 @@ public partial class PickerWindow : FluentWindow
 
     private static bool IsGenshinWindow(CapturableWindow window)
     {
-        return window is
-        { Name: "原神", ProcessName: "YuanShen" } or
-        { Name: "云·原神", ProcessName: "Genshin Impact Cloud Game" } or
-        { Name: "Genshin Impact", ProcessName: "GenshinImpact" } or
-        { Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud" };
+        return (window.Name == Lang.S["GameTask_10302_fc439d"] && window.ProcessName == "YuanShen") ||
+               (window.Name == Lang.S["GameTask_10301_3e559b"] && window.ProcessName == "Genshin Impact Cloud Game") ||
+               (window.Name == "Genshin Impact" && window.ProcessName == "GenshinImpact") ||
+               (window.Name == "Genshin Impact · Cloud" && window.ProcessName == "Genshin Impact Cloud");
     }
 
     private static bool AskIsThisGenshinImpact(CapturableWindow window)
@@ -182,7 +181,7 @@ public partial class PickerWindow : FluentWindow
 
             当前选择的窗口：{window.Name} ({window.ProcessName})
             """,
-            "确认选择",
+            Lang.S["View_12155_0faff9"],
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxResult.No
         );

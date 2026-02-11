@@ -8,6 +8,7 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:sdl="http://schemas.sdl.com/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  xmlns:view="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
                  Width="1000"
                  Height="500"
@@ -38,7 +39,7 @@
                     <ui:TextBlock Margin="0,0,0,8"
                                   FontSize="16"
                                   FontTypography="BodyStrong"
-                                  Text="地图追踪设置（相关配置优先级从高到低,UI样式还有问题未解决）" />
+                                  Text="{Binding [PathingConfigView_20042_c04e7e], Source={x:Static helpers:Lang.S}}" />
 
                 </StackPanel>
 
@@ -47,7 +48,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="队伍切换设置（路径中存在符合条件的动作、采集物的情况下，自动切换至对应队伍）" />
+                                      Text="{Binding [PathingConfigView_20043_352931], Source={x:Static helpers:Lang.S}}" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -112,7 +113,7 @@
                                         <Button
                                             Command="{Binding DataContext.RemovePartyConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="删除" />
+                                            Content="{Binding [Btn_Delete], Source={x:Static helpers:Lang.S}}" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -121,7 +122,7 @@
                         <!--  添加条件按钮  -->
                         <Button HorizontalAlignment="Left"
                                 Command="{Binding AddPartyConditionConfigCommand}"
-                                Content="+ 添加条件" />
+                                Content="{Binding [Btn_AddCondition], Source={x:Static helpers:Lang.S}}" />
                     </StackPanel>
                 </ui:Card>
 
@@ -130,7 +131,7 @@
 
                         <ui:TextBlock Margin="0,0,0,8"
                                       FontTypography="BodyStrong"
-                                      Text="角色设置（存在多个符合条件的角色情况下，优先使用游戏内编队编号更小的）" />
+                                      Text="{Binding [PathingConfigView_20044_a2df96], Source={x:Static helpers:Lang.S}}" />
                         <!--  使用ItemsControl来动态显示筛选条件  -->
                         <ItemsControl dd:DragDrop.IsDragSource="True"
                                       dd:DragDrop.IsDropTarget="True"
@@ -190,7 +191,7 @@
                                         <Button
                                             Command="{Binding DataContext.RemoveAvatarConditionConfigCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
-                                            Content="删除" />
+                                            Content="{Binding [Btn_Delete], Source={x:Static helpers:Lang.S}}" />
                                     </WrapPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -199,7 +200,7 @@
                         <!--  添加条件按钮  -->
                         <Button HorizontalAlignment="Left"
                                 Command="{Binding AddAvatarConditionConfigCommand}"
-                                Content="+ 添加条件" />
+                                Content="{Binding [Btn_AddCondition], Source={x:Static helpers:Lang.S}}" />
                     </StackPanel>
                 </ui:Card>
 
@@ -216,12 +217,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="使用小道具的间隔时间（毫秒）"
+                                          Text="{Binding [PathingConfigView_20045_adb10b], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="在移动期间自动使用小道具，填0为不使用"
+                                          Text="{Binding [PathingConfigView_20046_abb7f5], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -247,12 +248,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="开启自动吃药"
+                                          Text="{Binding [PathingConfigView_20047_8dfce2], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="检测到红血状态时自动使用便携营养袋"
+                                          Text="{Binding [PathingConfigView_20048_8ae2ca], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -276,12 +277,12 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="只在传送点时恢复"
+                                          Text="{Binding [PathingConfigView_20049_288d8e], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="只有路径在传送点时，才会去七天神像恢复"
+                                          Text="{Binding [PathingConfigView_20050_70c30a], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -293,7 +294,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="地图追踪设置">
+        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="{Binding [PathingConfigView_20051_228fbe], Source={x:Static helpers:Lang.S}}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Helpers.Ui;
 using MessageBoxResult = Wpf.Ui.Controls.MessageBoxResult;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -27,7 +28,7 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
         InitializeComponent();
 
         // 配置窗口属性
-        Title = "仓库更新提示";
+        Title = Lang.S["View_12171_0e9b6b"];
         MessageTextBlock.Text = $"脚本仓库已经 {daysSinceUpdate} 天未更新\n\n温馨提示：\n脚本内容跟随仓库版本，旧版仓库会订阅到旧版脚本。\n更新仓库后需要重新订阅脚本，以更新脚本内容。\n\n是否立即更新？";
         Owner = Application.Current.MainWindow;
 
@@ -104,7 +105,7 @@ public partial class RepoUpdateDialog : Wpf.Ui.Controls.FluentWindow
         else
         {
             // 倒计时结束，启用按钮
-            SecondaryButton.Content = "直接打开";
+            SecondaryButton.Content = Lang.S["Btn_OpenDirectly"];
             SecondaryButton.IsEnabled = true;
             _dialogTimer?.Stop();
         }

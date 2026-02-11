@@ -5,11 +5,12 @@
                  xmlns:local="clr-namespace:BetterGenshinImpact.View.Windows"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
                  xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
                  xmlns:webview="clr-namespace:BetterGenshinImpact.View.Controls.Webview"
                  x:Name="app"
-                 Title="发现新版本"
+                 Title="{Binding [CheckUpdateWindow_20128_78f209], Source={x:Static helpers:Lang.S}}"
                  Width="680"
                  MinHeight="10"
                  SizeToContent="Height"
@@ -50,7 +51,7 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="开源渠道"
+                                          Text="{Binding [CheckUpdateWindow_20129_3061cb], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
@@ -70,7 +71,7 @@
                         </ComboBox>
                         <ui:Button
                             Icon="{ui:SymbolIcon ArrowDownload24}"
-                            Content="立即更新"
+                            Content="{Binding [Btn_UpdateNow], Source={x:Static helpers:Lang.S}}"
                             Command="{Binding UpdateFromGitHostPlatformCommand}" />
                     </StackPanel>
                 </ui:CardControl>
@@ -86,12 +87,12 @@
                             </Grid.RowDefinitions>
                             <emoji:TextBlock Grid.Row="0"
                                              Grid.Column="0"
-                                             Text="Steambird 服务 🆓"
+                                             Text="{Binding [CheckUpdateWindow_20130_054cda], Source={x:Static helpers:Lang.S}}"
                                              TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="【国内】普通用户可点此直接更新"
+                                          Text="{Binding [CheckUpdateWindow_20131_bb1268], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -99,7 +100,7 @@
                         <ui:Button
                             Appearance="Success"
                             Icon="{ui:SymbolIcon ArrowDownload24}"
-                            Content="立即更新"
+                            Content="{Binding [Btn_UpdateNow], Source={x:Static helpers:Lang.S}}"
                             Command="{Binding UpdateFromSteambirdCommand}" />
                     </StackPanel>
                 </ui:CardControl>
@@ -115,12 +116,12 @@
                             </Grid.RowDefinitions>
                             <emoji:TextBlock Grid.Row="0"
                                           Grid.Column="0"
-                                          Text="Mirror酱服务 💰"
+                                          Text="{Binding [CheckUpdateWindow_20132_6b549b], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="【国内】Mirror酱用户可以输入CDK高速更新"
+                                          Text="{Binding [CheckUpdateWindow_20133_1c2f18], Source={x:Static helpers:Lang.S}}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardControl.Header>
@@ -129,11 +130,11 @@
                             Name="EditCdkButton"
                             Margin="0,0,8,0"
                             Icon="{ui:SymbolIcon TicketDiagonal24}"
-                            Content="修改CDK"
+                            Content="{Binding [Btn_ModifyCDK], Source={x:Static helpers:Lang.S}}"
                             Command="{Binding EditCdkCommand}" />
                         <ui:Button
                             Icon="{ui:SymbolIcon ArrowDownload24}"
-                            Content="立即更新"
+                            Content="{Binding [Btn_UpdateNow], Source={x:Static helpers:Lang.S}}"
                             Command="{Binding UpdateFromMirrorChyanCommand}" />
                     </StackPanel>
                 </ui:CardControl>
@@ -176,7 +177,7 @@
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding BackgroundUpdateCommand}"
-                           Content="后台更新"
+                           Content="{Binding [Btn_BackgroundUpdate], Source={x:Static helpers:Lang.S}}"
                            Visibility="Collapsed" />
                 <Grid Grid.Column="0">
                     <ui:Button x:Name="OtherUpdateButton"
@@ -185,7 +186,7 @@
                                MinWidth="90"
                                Margin="8,0,8,0"
                                Command="{Binding OtherUpdateCommand}"
-                               Content="手动下载" />
+                               Content="{Binding [Btn_ManualDownload], Source={x:Static helpers:Lang.S}}" />
                     <!-- 气泡提示 -->
                     <Popup x:Name="OtherUpdateTipPopup"
                             IsOpen="{Binding ShowOtherUpdateTip}"
@@ -208,7 +209,7 @@
                                                        ShadowDepth="2" 
                                                        BlurRadius="8"/>
                                  </Border.Effect>
-                                 <emoji:TextBlock Text="💡 如果上方更新渠道无法正常更新，可以点击此按钮手动下载安装包进行更新"
+                                 <emoji:TextBlock Text="{Binding [CheckUpdateWindow_20134_9f07b3], Source={x:Static helpers:Lang.S}}"
                                                   Foreground="#FFE6E6E6"
                                                   TextWrapping="Wrap"
                                                   FontSize="12"/>
@@ -233,12 +234,12 @@
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding IgnoreCommand}"
-                           Content="不再提示" />
+                           Content="{Binding [Btn_NoMoreReminder], Source={x:Static helpers:Lang.S}}" />
                 <ui:Button Grid.Column="3"
                            MinWidth="90"
                            Margin="8,0,8,0"
                            Command="{Binding CancelCommand}"
-                           Content="取消" />
+                           Content="{Binding [Btn_Cancel], Source={x:Static helpers:Lang.S}}" />
             </ui:Grid>
         </ui:Grid>
         <ui:TitleBar Title="{Binding Title, ElementName=app}"

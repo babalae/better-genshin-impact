@@ -6,6 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  d:DataContext="{d:DesignInstance Type=windows:MapPathingDevViewModel}"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
@@ -15,7 +16,7 @@
                  WindowBackdropType="Auto"
                  mc:Ignorable="d">
     <StackPanel>
-        <ui:TitleBar Title="地图追踪开发者工具">
+        <ui:TitleBar Title="{Binding [MapPathingDevWindow_20146_a0f3f0], Source={x:Static helpers:Lang.S}}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
@@ -38,11 +39,11 @@
             </ComboBox>
             <ui:Button Margin="5"
                        Command="{Binding OpenMapViewerCommand}"
-                       Content="查看实时追踪地图" />
+                       Content="{Binding [Btn_ViewRealtimeMap], Source={x:Static helpers:Lang.S}}" />
 
             <ui:Button Margin="5"
                        Command="{Binding OpenMapEditorCommand}"
-                       Content="录制编辑器" />
+                       Content="{Binding [Btn_RecordEditor], Source={x:Static helpers:Lang.S}}" />
         </StackPanel>
     </StackPanel>
 </ui:FluentWindow>

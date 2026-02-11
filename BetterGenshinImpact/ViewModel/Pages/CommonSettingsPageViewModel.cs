@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -339,7 +339,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task CheckUpdateAlphaAsync()
     {
-        var result = await ThemedMessageBox.ShowAsync(Lang.S["Settings_12221_b8e932"], "警告", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
+        var result = await ThemedMessageBox.ShowAsync(Lang.S["Settings_12221_b8e932"], Lang.S["MsgBox_Title_Warning"], MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning);
         if (result != MessageBoxResult.Yes)
         {
             return;

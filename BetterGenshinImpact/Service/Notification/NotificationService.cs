@@ -13,6 +13,7 @@ using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Notification;
 
@@ -81,7 +82,7 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public static NotificationService Instance()
     {
-        if (_instance == null) throw new InvalidOperationException("NotificationService 未初始化");
+        if (_instance == null) throw new InvalidOperationException(Lang.S["Service_12085_a272c2"]);
 
         return _instance;
     }
@@ -355,7 +356,7 @@ public class NotificationService : IHostedService, IDisposable
             var notifier = _notifierManager.GetNotifier<T>();
             if (notifier == null)
             {
-                return NotificationTestResult.Error("通知类型未启用");
+                return NotificationTestResult.Error(Lang.S["Service_12084_605b74"]);
             }
 
             var testData = CreateTestNotificationData();
@@ -381,7 +382,7 @@ public class NotificationService : IHostedService, IDisposable
         {
             Event = NotificationEvent.Test.Code,
             Result = NotificationEventResult.Success,
-            Message = "这是一条测试通知信息"
+            Message = Lang.S["Service_12082_fe3867"]
         };
 
         if (TaskContext.Instance().IsInitialized)

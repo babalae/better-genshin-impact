@@ -32,9 +32,13 @@ public sealed class Lang : INotifyPropertyChanged
     /// <summary>
     /// Indexer for XAML binding: {Binding [Key], Source={x:Static helpers:Lang.S}}
     /// Returns the localized string for the given key, or the key itself if not found.
+    /// The setter is intentionally a no-op to allow WPF TwoWay bindings without errors.
     /// </summary>
-    public string this[string key] =>
-        _strings.TryGetValue(key, out var val) ? val : key;
+    public string this[string key]
+    {
+        get => _strings.TryGetValue(key, out var val) ? val : key;
+        set { } // no-op setter to satisfy WPF TwoWay binding requirements
+    }
 
     /// <summary>
     /// Current culture name (e.g. "zh-Hans", "en", "fr")

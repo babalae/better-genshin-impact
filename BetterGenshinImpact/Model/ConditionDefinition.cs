@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Helpers;
+﻿using BetterGenshinImpact.Helpers;
 ﻿using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
@@ -120,7 +120,7 @@ public class ConditionDefinitions
             {
                 Subject = Lang.S["KeyBind_002_c500cf"],
                 Description = Lang.S["Gen_11931_fca6d0"],
-                ObjectOptions = new List<string> { Lang.S["Gen_11929_343418"], "水元素采集", "雷元素采集", "风元素采集", "火元素采集" },
+                ObjectOptions = new List<string> { Lang.S["Gen_11929_343418"], Lang.S["Gen_11928_52008c"], Lang.S["Gen_11927_104220"], Lang.S["Gen_11926_cc749b"], Lang.S["Gen_11925_736b93"] },
             }
         },
         {
@@ -134,11 +134,11 @@ public class ConditionDefinitions
         },
     };
 
-    public static List<string> PartySubjects { get; } = [Lang.S["Gen_10023_15d7ae"], "动作"];
+    public static List<string> PartySubjects { get; } = [Lang.S["Gen_10023_15d7ae"], Lang.S["KeyBind_002_c500cf"]];
 
     public static List<string> AvatarSubjects { get; } = [Lang.S["Gen_10026_37033c"]];
 
-    public static List<string> AvatarResultList { get; } = [Lang.S["Gen_10022_37be95"], "循环长E", "作为主要行走角色"];
+    public static List<string> AvatarResultList { get; } = [Lang.S["Gen_10022_37be95"], Lang.S["Gen_10021_f3edab"], Lang.S["Gen_10020_2354d2"]];
 
     public static Dictionary<string, string> ActionCnDic { get; } = new()
     {

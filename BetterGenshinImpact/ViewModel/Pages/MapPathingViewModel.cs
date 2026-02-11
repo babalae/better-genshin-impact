@@ -137,7 +137,7 @@ public partial class MapPathingViewModel : ViewModel
 
         if (item.IsDirectory)
         {
-            Toast.Warning("执行多个地图追踪任务的时候，请使用调度器功能");
+            Toast.Warning(Lang.S["MapPath_1016_072737"]);
             return;
         }
 
@@ -211,21 +211,21 @@ public partial class MapPathingViewModel : ViewModel
 
         if (string.IsNullOrEmpty(item.FilePath))
         {
-            Toast.Warning("无法删除：路径无效");
+            Toast.Warning(Lang.S["MapPath_1017_6cb12f"]);
             return;
         }
 
         // 确定删除的内容类型
-        string itemType = item.IsDirectory ? "文件夹" : "文件";
-        string itemName = item.FileName ?? "未知项目";
+        string itemType = item.IsDirectory ? Lang.S["MapPath_12366_1f4c10"] : Lang.S["MapPath_12367_2a0c47"];
+        string itemName = item.FileName ?? Lang.S["MapPath_12365_c08dda"];
 
         // 显示确认对话框
         var messageBox = new Wpf.Ui.Controls.MessageBox
         {
-            Title = "删除确认",
+            Title = Lang.S["JsList_1012_50eaf9"],
             Content = $"确定要删除{itemType} \"{itemName}\" 吗？\n\n此操作将永久删除该{itemType}及其所有内容，无法恢复！",
-            PrimaryButtonText = "删除",
-            CloseButtonText = "取消",
+            PrimaryButtonText = Lang.S["Btn_Delete"],
+            CloseButtonText = Lang.S["Btn_Cancel"],
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
@@ -246,7 +246,7 @@ public partial class MapPathingViewModel : ViewModel
                     }
                     else
                     {
-                        Toast.Warning("文件夹不存在");
+                        Toast.Warning(Lang.S["MapPath_1018_77cdd6"]);
                     }
                 }
                 else
@@ -260,7 +260,7 @@ public partial class MapPathingViewModel : ViewModel
                     }
                     else
                     {
-                        Toast.Warning("文件不存在");
+                        Toast.Warning(Lang.S["MapPath_1019_d9523e"]);
                     }
                 }
 
@@ -444,7 +444,7 @@ public partial class MapPathingViewModel : ViewModel
 
             contentPanel.Children.Add(new TextBlock
             {
-                Text = "这是一个目录，包含多个地图追踪任务。",
+                Text = Lang.S["MapPath_12355_294bad"],
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 15)
             });

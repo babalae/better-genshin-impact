@@ -1,10 +1,11 @@
-<UserControl x:Class="BetterGenshinImpact.View.Pages.View.HardwareAccelerationView"
+﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.View.HardwareAccelerationView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:HardwareAccelerationViewModel}"
              d:DesignHeight="600"
@@ -18,7 +19,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="硬件加速设置">
+        <ui:TitleBar Grid.Row="0" Title="{Binding [Gen_1006_09c053], Source={x:Static helpers:Lang.S}}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
@@ -45,7 +46,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="推理设备配置"
+                                      Text="{Binding [HardwareAccelerationView_20014_d65f03], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
@@ -71,7 +72,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="推理设备类型" />
+                                      Text="{Binding [HardwareAccelerationView_20015_6a3f34], Source={x:Static helpers:Lang.S}}" />
                         <ComboBox Grid.Row="0"
                                   Grid.RowSpan="2"
                                   Grid.Column="1"
@@ -81,7 +82,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="选择推理使用的硬件设备类型 默认使用CPU" />
+                                      Text="{Binding [HardwareAccelerationView_20016_4b85ae], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -100,16 +101,16 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="缓存文件管理" />
+                                      Text="{Binding [HardwareAccelerationView_20017_c149e2], Source={x:Static helpers:Lang.S}}" />
                         <ui:Button Grid.Row="0"
                                    Grid.RowSpan="2"
                                    Grid.Column="1"
                                    Command="{Binding OpenCacheFolderCommand}"
-                                   Content="打开缓存目录" />
+                                   Content="{Binding [Btn_OpenCacheDir], Source={x:Static helpers:Lang.S}}" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="旧版本的缓存文件可以手动删除。" />
+                                      Text="{Binding [HardwareAccelerationView_20018_d976f2], Source={x:Static helpers:Lang.S}}" />
                     </Grid>
                     <!--  CPU OCR  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
@@ -125,7 +126,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="强制OCR使用CPU" />
+                                      Text="{Binding [HardwareAccelerationView_20019_2ad658], Source={x:Static helpers:Lang.S}}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -133,7 +134,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="解决部分GPU推理性能和报错问题 默认关闭" />
+                                      Text="{Binding [HardwareAccelerationView_20020_370373], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -153,7 +154,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="GPU设备ID" />
+                                      Text="{Binding [HardwareAccelerationView_20021_60624a], Source={x:Static helpers:Lang.S}}" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
@@ -162,7 +163,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="指定使用的GPU设备编号 使用默认配置请设为0 可以在任务管理器中查看编号" />
+                                      Text="{Binding [HardwareAccelerationView_20022_cb279f], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -182,7 +183,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="是否输出优化后的模型文件到缓存" />
+                                      Text="{Binding [HardwareAccelerationView_20023_28955d], Source={x:Static helpers:Lang.S}}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -190,7 +191,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="注意:在不支持的执行器上使用会导致异常。默认关闭。" />
+                                      Text="{Binding [HardwareAccelerationView_20024_1e9d17], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -216,7 +217,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="CUDA配置"
+                                      Text="{Binding [HardwareAccelerationView_20025_79fe89], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
@@ -241,7 +242,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="CUDA设备ID" />
+                                      Text="{Binding [HardwareAccelerationView_20026_6b3573], Source={x:Static helpers:Lang.S}}" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
@@ -250,7 +251,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="指定CUDA设备编号 使用默认配置请设为0 可以在nvidia-smi中查看编号" />
+                                      Text="{Binding [HardwareAccelerationView_20027_96f797], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -269,7 +270,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="自动添加CUDA路径" />
+                                      Text="{Binding [HardwareAccelerationView_20028_eb0863], Source={x:Static helpers:Lang.S}}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -277,7 +278,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="自动添加系统CUDA环境路径 默认关闭" />
+                                      Text="{Binding [HardwareAccelerationView_20029_a77928], Source={x:Static helpers:Lang.S}}" />
                     </Grid>
                     <!--  _additionalPath  -->
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
@@ -293,12 +294,12 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="附加PATH"
+                                      Text="{Binding [HardwareAccelerationView_20030_4c2d2b], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="附加path，用;分割。默认为空。可用于附加DLL路径"
+                                      Text="{Binding [HardwareAccelerationView_20031_3dfe10], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
@@ -329,7 +330,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="TensorRT配置"
+                                      Text="{Binding [HardwareAccelerationView_20032_afa251], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
@@ -354,7 +355,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="启用TensorRT缓存" />
+                                      Text="{Binding [HardwareAccelerationView_20033_b5db11], Source={x:Static helpers:Lang.S}}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -362,7 +363,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="提升TensorRT模型加载速度 默认开启" />
+                                      Text="{Binding [HardwareAccelerationView_20034_ee4b60], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -383,7 +384,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="嵌入式引擎缓存" />
+                                      Text="{Binding [HardwareAccelerationView_20035_6bbec5], Source={x:Static helpers:Lang.S}}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -391,7 +392,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="将引擎缓存嵌入模型文件 默认开启" />
+                                      Text="{Binding [HardwareAccelerationView_20036_c7d74f], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
@@ -419,7 +420,7 @@
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="0"
                                       FontTypography="Body"
-                                      Text="OpenVino配置"
+                                      Text="{Binding [HardwareAccelerationView_20037_283fcc], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
@@ -445,7 +446,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="OpenVino 设备参数" />
+                                      Text="{Binding [HardwareAccelerationView_20038_63ef18], Source={x:Static helpers:Lang.S}}" />
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
@@ -457,7 +458,7 @@
                                       Grid.RowSpan="2"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="从“CPU”、“GPU”、“NPU”、“GPU.x”中选择，其中 x = 0,1,2 等，或者从可用的 HETERO/MULTI/AUTO 选项中选择。默认为 AUTO:GPU,CPU"
+                                      Text="{Binding [HardwareAccelerationView_20039_37e5cf], Source={x:Static helpers:Lang.S}}"
                                       TextWrapping="Wrap" />
                         <TextBlock Grid.Row="3"
                                    Grid.Column="0"
@@ -478,7 +479,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="是否启用 OpenVINO 缓存(实验性)，默认关闭。" />
+                                      Text="{Binding [HardwareAccelerationView_20040_5847bb], Source={x:Static helpers:Lang.S}}" />
                         <ui:ToggleSwitch Grid.Row="0"
                                          Grid.RowSpan="2"
                                          Grid.Column="1"
@@ -486,7 +487,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="启用后会在缓存文件夹下生成对应模型缓存，以加快模型载入速度。" />
+                                      Text="{Binding [HardwareAccelerationView_20041_d80597], Source={x:Static helpers:Lang.S}}" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"

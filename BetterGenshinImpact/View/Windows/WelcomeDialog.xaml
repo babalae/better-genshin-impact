@@ -17,6 +17,7 @@
                  WindowStartupLocation="CenterScreen"
                  WindowStyle="SingleBorderWindow"
                  xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  mc:Ignorable="d">
     <Grid>
         <Grid.RowDefinitions>
@@ -25,13 +26,13 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="1" Margin="12">
-            <emoji:TextBlock Text="🔹 本软件开源且免费，喜欢的可以点🌟Star -> " Margin="5" FontSize="16">
+            <emoji:TextBlock Text="{Binding [WelcomeDialog_20159_0ee9fe], Source={x:Static helpers:Lang.S}}" Margin="5" FontSize="16">
                 <Hyperlink NavigateUri="https://github.com/babalae/better-genshin-impact"
                            RequestNavigate="HyperlinkRequestNavigate" Foreground="#1E9BFA">
                     Github
                 </Hyperlink>
             </emoji:TextBlock>
-            <emoji:TextBlock Text="🔹 首次使用请先查看" Margin="5" FontSize="16">
+            <emoji:TextBlock Text="{Binding [WelcomeDialog_20160_f61b9e], Source={x:Static helpers:Lang.S}}" Margin="5" FontSize="16">
                 <Hyperlink NavigateUri="https://bettergi.com/quickstart.html"
                            RequestNavigate="HyperlinkRequestNavigate" Foreground="#1E9BFA">
                     《快速上手教程》
@@ -41,8 +42,8 @@
                 Margin="5"
                 FontSize="16"
                 TextWrapping="Wrap">
-                <Run Text="❗本软件从未授权任何第三方平台进行" /><Run Text="售卖" Foreground="Red" />
-                <Run Text="。如果你是付费获取的本软件（闲鱼、淘宝等），请举报商家并发起" /><Run Text="退款" Foreground="Red" /><Run Text="！" />
+                <Run Text="{Binding [WelcomeDialog_20161_931b9b], Source={x:Static helpers:Lang.S}}" /><Run Text="{Binding [WelcomeDialog_20162_8f225a], Source={x:Static helpers:Lang.S}}" Foreground="Red" />
+                <Run Text="{Binding [WelcomeDialog_20163_ed0e47], Source={x:Static helpers:Lang.S}}" /><Run Text="{Binding [WelcomeDialog_20164_44c198], Source={x:Static helpers:Lang.S}}" Foreground="Red" /><Run Text="{Binding [WelcomeDialog_Exclamation], Source={x:Static helpers:Lang.S}}" />
             </emoji:TextBlock>
             <!--<StackPanel Margin="5"
                         Orientation="Horizontal">
@@ -59,7 +60,7 @@
                            Margin="5"
                            Appearance="Primary"
                            Click="BtnOkClick"
-                           Content="确定"
+                           Content="{Binding [Btn_OK], Source={x:Static helpers:Lang.S}}"
                            IsDefault="True" />
             </StackPanel>
         </StackPanel>

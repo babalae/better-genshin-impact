@@ -1039,7 +1039,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="BGI UI Language"
+                                  Text="{Binding [Settings_UiLanguageDesc], Source={x:Static helpers:Lang.S}}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"

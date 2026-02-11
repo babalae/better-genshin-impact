@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.Oauth;
@@ -115,7 +116,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
         var result = JsonConvert.DeserializeObject<OauthTokenResponse>(json);
-        return result ?? throw new InvalidOperationException("oauth/token 返回内容无法反序列化");
+        return result ?? throw new InvalidOperationException(Lang.S["Service_12140_52e9e2"]);
     }
 
     public async Task RefreshToken(CancellationToken ct)
@@ -260,7 +261,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         var result = JsonConvert.DeserializeObject<KongyingTavernResponse<List<ListPageBinMd5Item>>>(json);
         if (result is null)
         {
-            throw new InvalidOperationException("item_doc/list_page_bin_md5 返回内容无法反序列化");
+            throw new InvalidOperationException(Lang.S["Service_12135_88ab72"]);
         }
 
         if (result.Error)
@@ -293,7 +294,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         var result = JsonConvert.DeserializeObject<KongyingTavernResponse<List<ListPageBinMd5Item>>>(json);
         if (result is null)
         {
-            throw new InvalidOperationException("marker_doc/list_page_bin_md5 返回内容无法反序列化");
+            throw new InvalidOperationException(Lang.S["Service_12133_2b76fd"]);
         }
 
         if (result.Error)

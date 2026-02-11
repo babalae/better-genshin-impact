@@ -1,11 +1,12 @@
-<ui:FluentWindow x:Class="BetterGenshinImpact.View.PickerWindow"
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.PickerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:view="clr-namespace:BetterGenshinImpact.View"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
         ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
         ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-        Title="选择捕获窗口"
+        Title="{Binding [Home_SelectCaptureWindow], Source={x:Static helpers:Lang.S}}"
         Width="800"
         Height="450"
         ExtendsContentIntoTitleBar="True"
@@ -69,13 +70,13 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="选择捕获窗口" 
+                <TextBlock Text="{Binding [Home_SelectCaptureWindow], Source={x:Static helpers:Lang.S}}" 
                          FontSize="24" 
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
 
                 <TextBlock Grid.Row="1"
-                         Text="双击选中要捕获的窗口" 
+                         Text="{Binding [PickerWindow_20121_414eb0], Source={x:Static helpers:Lang.S}}" 
                          Margin="0,8,0,0"
                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                          FontSize="14"/>

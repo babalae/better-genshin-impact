@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -83,7 +84,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     {
         if (!TaskContext.Instance().IsInitialized)
         {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
+            Toast.Warning(Lang.S["KeyMouse_1014_c08c56"]);
             return;
         }
         if (!IsRecording)
@@ -152,7 +153,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         }
         try
         {
-            var str = PromptDialog.Prompt("请输入要修改为的名称（实际就是文件名）", "修改名称");
+            var str = PromptDialog.Prompt(Lang.S["KeyMouse_1015_a45181"], Lang.S["KeyMouse_004_54a3dd"]);
             if (!string.IsNullOrEmpty(str))
             {
                 // 检查原始文件是否存在
@@ -162,7 +163,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
                     // 重命名文件
                     File.Move(originalFilePath, Path.Combine(Path.GetDirectoryName(originalFilePath)!, str + ".json"));
                     _snackbarService.Show(
-                        "修改名称成功",
+                        Lang.S["KeyMouse_12349_6e2a08"],
                         $"脚本名称 {item.Name} 修改为 {str}",
                         ControlAppearance.Success,
                         null,
@@ -174,7 +175,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         catch (Exception)
         {
             _snackbarService.Show(
-                "修改失败",
+                Lang.S["KeyMouse_12347_5badb3"],
                 $"{item.Name} 修改失败",
                 ControlAppearance.Danger,
                 null,
@@ -198,7 +199,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         {
             File.Delete(item.Path);
             _snackbarService.Show(
-                "删除成功",
+                Lang.S["KeyMouse_12345_0007d1"],
                 $"{item.Name} 已经被删除",
                 ControlAppearance.Success,
                 null,
@@ -208,7 +209,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         catch (Exception)
         {
             _snackbarService.Show(
-                "删除失败",
+                Lang.S["KeyMouse_12343_acf066"],
                 $"{item.Name} 删除失败",
                 ControlAppearance.Danger,
                 null,

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -47,14 +47,14 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private ObservableCollection<OneDragonTaskItem> _taskList =
     [
-        new("领取邮件"),
-        new("合成树脂"),
+        new(Lang.S["Gen_12025_21caea"]),
+        new(Lang.S["OneDragon_005_4762ca"]),
         // new ("每日委托"),
-        new("自动秘境"),
-        new ("自动幽境危战"),
+        new(Lang.S["Task_059_1f7122"]),
+        new (Lang.S["Task_085_4fdef3"]),
         // new ("自动刷地脉花"),
-        new("领取每日奖励"),
-        new ("领取尘歌壶奖励"),
+        new(Lang.S["Gen_12017_8fdc0b"]),
+        new (Lang.S["GameTask_11624_df031f"]),
         // new ("自动七圣召唤"),
     ];
 
@@ -81,12 +81,12 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private ObservableCollection<ScriptGroup> _scriptGroupsdefault =
         new ObservableCollection<ScriptGroup>()
         {
-            new() { Name = "领取邮件" },
-            new() { Name = "合成树脂" },
-            new() { Name = "自动秘境" },
-            new() { Name = "自动幽境危战" },
-            new() { Name = "领取每日奖励" },
-            new() {Name = "领取尘歌壶奖励" },
+            new() { Name = Lang.S["Gen_12025_21caea"] },
+            new() { Name = Lang.S["OneDragon_005_4762ca"] },
+            new() { Name = Lang.S["Task_059_1f7122"] },
+            new() { Name = Lang.S["Task_085_4fdef3"] },
+            new() { Name = Lang.S["Gen_12017_8fdc0b"] },
+            new() {Name = Lang.S["GameTask_11624_df031f"] },
         };
 
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
@@ -187,7 +187,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     if (pickTaskCount == 1)
                     {
-                        Toast.Success("一条龙任务添加成功");
+                        Toast.Success(Lang.S["OneDragon_1020_a6964b"]);
                     }
                 }
                 else
@@ -195,7 +195,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     TaskList.Add(taskItem);
                     if (pickTaskCount == 1)
                     {
-                        Toast.Success("配置组添加成功");
+                        Toast.Success(Lang.S["OneDragon_1021_5f7831"]);
                     }
                 }
             }
@@ -203,13 +203,13 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 if (pickTaskCount == 1)
                 {
-                    Toast.Warning("任务或配置组已存在");
+                    Toast.Warning(Lang.S["OneDragon_1022_fb6294"]);
                 }
             } 
         }
         if (pickTaskCount > 1)
         {
-                Toast.Success(pickTaskCount + " 个任务添加成功");  
+                Toast.Success(pickTaskCount + Lang.S["OneDragonFlowViewModel_20169_5671cf"]);  
         }
     }
 
@@ -235,14 +235,14 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-        Title = "选择增加的配置组（可多选）",
+        Title = Lang.S["OneDragon_1023_848dcb"],
         Content = new ScrollViewer
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         },
-        CloseButtonText = "关闭",
-        PrimaryButtonText = "确认",
+        CloseButtonText = Lang.S["Btn_Close"],
+        PrimaryButtonText = Lang.S["MsgBox_Title_Confirm"],
         Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
         WindowStartupLocation = WindowStartupLocation.CenterOwner,
         SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
@@ -265,7 +265,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     else
                     {
-                        Toast.Error("配置组加载失败");
+                        Toast.Error(Lang.S["OneDragon_1025_d87a78"]);
                     }
                 }
             }
@@ -380,7 +380,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 selected = new OneDragonFlowConfig
                 {
-                    Name = "默认配置"
+                    Name = Lang.S["GameTask_11558_c51efb"]
                 };
                 configs.Add(selected);
             }
@@ -424,7 +424,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         if (SelectedConfig == null || SelectedTask == null ||
             SelectedConfig.TaskEnabledList == null) //|| SelectedConfig.TaskEnabledList == null 
         {
-            Toast.Warning("请先选择配置组和任务");
+            Toast.Warning(Lang.S["OneDragon_1026_97b1e9"]);
             return;
         }
 
@@ -439,7 +439,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 TaskList.Add(taskItem);
                 taskItem = null;
-                Toast.Information("已经删除");
+                Toast.Information(Lang.S["OneDragon_1027_9b67d7"]);
             }
         }
     }
@@ -479,7 +479,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private void SaveActionConfig()
     {
         SaveConfig();
-        Toast.Information("排序已保存");
+        Toast.Information(Lang.S["OneDragon_1028_939fa5"]);
     }
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
@@ -528,7 +528,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         catch (Exception e)
         {
             _logger.LogDebug(e, "保存配置时失败");
-            Toast.Error("保存配置时失败");
+            Toast.Error(Lang.S["OneDragon_1029_bf37d4"]);
         }
     }
     
@@ -601,7 +601,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
         {
-            Toast.Warning("请先选择任务");
+            Toast.Warning(Lang.S["OneDragon_1030_728400"]);
             _logger.LogInformation("没有配置,退出执行!");
             return;
         }
@@ -620,7 +620,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             _logger.LogInformation("没有一条龙任务!");
         }
 
-        Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
+        Notify.Event(NotificationEvent.DragonStart).Success(Lang.S["Service_12098_a6b203"]);
         foreach (var task in taskListCopy)
         {
             if (task is { IsEnabled: true, Action: not null })
@@ -644,7 +644,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                             return;
                         }
 
-                        Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
+                        Notify.Event(NotificationEvent.DragonStart).Success(Lang.S["OneDragon_12376_5277f0"]);
 
                         if (SelectedConfig.TaskEnabledList[task.Name])
                         {
@@ -660,7 +660,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     catch (Exception e)
                     {
                         _logger.LogDebug(e, "执行配置组任务时失败");
-                        Toast.Error("执行配置组任务时失败");
+                        Toast.Error(Lang.S["OneDragon_1031_d5f9fc"]);
                     }
                 }
                 // 如果任务已经被取消，中断所有任务
@@ -669,7 +669,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     _logger.LogInformation("任务被取消，退出执行");
                     if (CancellationContext.Instance.IsManualStop is false)
                     {
-                        Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                        Notify.Event(NotificationEvent.DragonEnd).Success(Lang.S["OneDragon_12373_cc60ee"]);
                     }
                     return; // 后续的检查任务也不执行
                 }
@@ -683,26 +683,26 @@ public partial class OneDragonFlowViewModel : ViewModel
             await Task.Delay(500);
             if (CancellationContext.Instance.IsManualStop is false)
             {
-                Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
+                Notify.Event(NotificationEvent.DragonEnd).Success(Lang.S["OneDragon_12373_cc60ee"]);
             }
             _logger.LogInformation("一条龙和配置组任务结束");
 
             // 执行完成后操作
             if (SelectedConfig != null && !string.IsNullOrEmpty(SelectedConfig.CompletionAction))
             {
-                switch (SelectedConfig.CompletionAction)
+                if (SelectedConfig.CompletionAction == Lang.S["OneDragon_12372_9ee12c"])
                 {
-                    case "关闭游戏":
-                        SystemControl.CloseGame();
-                        break;
-                    case "关闭游戏和软件":
-                        SystemControl.CloseGame();
-                        Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
-                        break;
-                    case "关机":
-                        SystemControl.CloseGame();
-                        SystemControl.Shutdown();
-                        break;
+                    SystemControl.CloseGame();
+                }
+                else if (SelectedConfig.CompletionAction == Lang.S["OneDragon_12371_3147c3"])
+                {
+                    SystemControl.CloseGame();
+                    Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
+                }
+                else if (SelectedConfig.CompletionAction == Lang.S["OneDragon_12370_f2eebd"])
+                {
+                    SystemControl.CloseGame();
+                    SystemControl.Shutdown();
                 }
             }
         });
@@ -720,7 +720,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private void OnAddConfig()
     {
         // 添加配置
-        var str = PromptDialog.Prompt("请输入一条龙配置名称", "新增一条龙配置");
+        var str = PromptDialog.Prompt(Lang.S["OneDragon_1032_64b000"], Lang.S["OneDragonFlowViewModel_20170_f82937"]);
         if (!string.IsNullOrEmpty(str))
         {
             // 检查是否已存在
@@ -744,7 +744,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         if (SelectedConfig == null)
         {
-            Toast.Warning("请先选择要删除的配置");
+            Toast.Warning(Lang.S["OneDragon_1033_87821b"]);
             return;
         }
 
@@ -771,7 +771,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             {
                 var defaultConfig = new OneDragonFlowConfig
                 {
-                    Name = "默认配置"
+                    Name = Lang.S["GameTask_11558_c51efb"]
                 };
                 ConfigList.Add(defaultConfig);
                 SelectedConfig = defaultConfig;
@@ -792,12 +792,12 @@ public partial class OneDragonFlowViewModel : ViewModel
             // 保存配置
             SaveConfig();
 
-            Toast.Success("配置删除成功");
+            Toast.Success(Lang.S["OneDragon_1034_baaecf"]);
         }
         catch (Exception e)
         {
             _logger.LogError(e, "删除配置时失败");
-            Toast.Error("删除配置时失败");
+            Toast.Error(Lang.S["OneDragon_1035_24b117"]);
         }
     }
 
@@ -806,11 +806,11 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         if (SelectedConfig == null)
         {
-            Toast.Warning("请先选择要重命名的配置");
+            Toast.Warning(Lang.S["OneDragon_1036_1705d2"]);
             return;
         }
 
-        var newName = PromptDialog.Prompt("请输入新的配置名称", "重命名配置", SelectedConfig.Name);
+        var newName = PromptDialog.Prompt(Lang.S["OneDragon_1037_95fffd"], Lang.S["OneDragonFlowViewModel_20171_c4227b"], SelectedConfig.Name);
         if (string.IsNullOrEmpty(newName))
         {
             return;
@@ -848,12 +848,12 @@ public partial class OneDragonFlowViewModel : ViewModel
             // 更新全局配置名称
             TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = newName;
 
-            Toast.Success("配置重命名成功");
+            Toast.Success(Lang.S["OneDragon_1038_d8f48c"]);
         }
         catch (Exception e)
         {
             _logger.LogError(e, "重命名配置时失败");
-            Toast.Error("重命名配置时失败");
+            Toast.Error(Lang.S["OneDragon_1039_1f6c6b"]);
         }
     }
 }

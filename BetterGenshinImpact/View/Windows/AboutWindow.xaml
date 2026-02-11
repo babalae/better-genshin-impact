@@ -1,10 +1,11 @@
-<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AboutWindow"
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AboutWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="关于"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
+                 Title="{Binding [Settings_About], Source={x:Static helpers:Lang.S}}"
                  Width="400"
                  Height="300"
                  Background="#202020"
@@ -15,29 +16,29 @@
                  mc:Ignorable="d">
     <Grid>
         <ui:Grid Margin="0,48,0,0" RowDefinitions="Auto,*,Auto">
-            <ui:TextBlock Grid.Row="0" Margin="16,0,16,0" FontSize="16" FontWeight="Bold" Text="BetterGI 更好的原神" />
+            <ui:TextBlock Grid.Row="0" Margin="16,0,16,0" FontSize="16" FontWeight="Bold" Text="{Binding [AboutWindow_20122_24876a], Source={x:Static helpers:Lang.S}}" />
             <ui:TextBlock Grid.Row="1" Margin="16,0,16,0" TextWrapping="Wrap">
-                <Run Text="开源地址: " />
+                <Run Text="{Binding [AboutWindow_20123_5d66a0], Source={x:Static helpers:Lang.S}}" />
                 <Hyperlink NavigateUri="https://github.com/babalae/better-genshin-impact"
                            RequestNavigate="Hyperlink_RequestNavigate">
                     https://github.com/babalae/better-genshin-impact
                 </Hyperlink>
                 <LineBreak />
-                <Run Text="协议: GPLv3" />
+                <Run Text="{Binding [AboutWindow_20124_4c5b97], Source={x:Static helpers:Lang.S}}" />
                 <LineBreak />
-                <Run Text="作者: " />
+                <Run Text="{Binding [AboutWindow_20125_545958], Source={x:Static helpers:Lang.S}}" />
                 <Hyperlink NavigateUri="https://github.com/huiyadanli"
                            RequestNavigate="Hyperlink_RequestNavigate">
                     辉鸭蛋
                 </Hyperlink>
                 <LineBreak />
-                <Run Text="文档: " />
+                <Run Text="{Binding [AboutWindow_20126_08f3fc], Source={x:Static helpers:Lang.S}}" />
                 <Hyperlink NavigateUri="https://bettergi.com"
                            RequestNavigate="Hyperlink_RequestNavigate">
                     https://bettergi.com
                 </Hyperlink>
                 <LineBreak />
-                <Run Text="B站账号（视频教程）: " />
+                <Run Text="{Binding [AboutWindow_20127_3084c8], Source={x:Static helpers:Lang.S}}" />
                 <Hyperlink NavigateUri="https://space.bilibili.com/3546777483479879"
                            RequestNavigate="Hyperlink_RequestNavigate">
                     BetterGI
@@ -53,10 +54,10 @@
                     <LineBreak />
                 </ui:TextBlock>
             </ui:TextBlock>
-            <ui:Button Grid.Row="2" Margin="16" HorizontalAlignment="Right" Width="80" Content="关闭"
+            <ui:Button Grid.Row="2" Margin="16" HorizontalAlignment="Right" Width="80" Content="{Binding [Btn_Close], Source={x:Static helpers:Lang.S}}"
                        Click="CloseButton_Click" />
         </ui:Grid>
-        <ui:TitleBar Title="关于">
+        <ui:TitleBar Title="{Binding [Settings_About], Source={x:Static helpers:Lang.S}}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

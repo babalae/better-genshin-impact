@@ -4,8 +4,9 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
-                 Title="地图"
+                 Title="{Binding [MapViewer_20147_823ea4], Source={x:Static helpers:Lang.S}}"
                  Width="512"
                  Height="512"
                  d:DataContext="{d:DesignInstance Type=windows:MapViewerViewModel}"
@@ -30,7 +31,7 @@
         </Canvas>
 
 
-        <ui:TitleBar Title="地图" Grid.Row="0">
+        <ui:TitleBar Title="{Binding [MapViewer_20147_823ea4], Source={x:Static helpers:Lang.S}}" Grid.Row="0">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>

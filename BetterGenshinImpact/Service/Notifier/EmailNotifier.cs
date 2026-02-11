@@ -1,6 +1,7 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
@@ -48,7 +49,7 @@ namespace BetterGenshinImpact.Service.Notifier
         {
             if (string.IsNullOrEmpty(ToEmail))
             {
-                throw new NotifierException("收件人邮箱地址为空");
+                throw new NotifierException(Lang.S["Service_12121_adea5c"]);
             }
 
             // 创建邮件消息
@@ -162,7 +163,7 @@ namespace BetterGenshinImpact.Service.Notifier
             builder.AppendLine("<html><body style='font-family: Arial, sans-serif;'>");
 
             // 添加通知标题
-            builder.AppendLine("<h2 style='color: #333;'>通知详情</h2>");
+            builder.AppendLine(Lang.S["Service_12119_fdf2a2"]);
 
             // 添加通知内容
             foreach (var prop in content.GetType().GetProperties())
@@ -181,7 +182,7 @@ namespace BetterGenshinImpact.Service.Notifier
             // 添加提示信息
             if (content.Screenshot != null)
             {
-                builder.AppendLine("<p><em>截图已作为附件添加到邮件中。</em></p>");
+                builder.AppendLine(Lang.S["Service_12118_821caf"]);
             }
             
             builder.AppendLine("</body></html>");

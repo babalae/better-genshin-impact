@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -30,7 +31,7 @@ public class ServerChanNotifier : INotifier
     {
         if (string.IsNullOrEmpty(_sendKey))
         {
-            throw new NotifierException("ServerChan SendKey为空");
+            throw new NotifierException(Lang.S["Service_12126_815c3c"]);
         }
 
         try

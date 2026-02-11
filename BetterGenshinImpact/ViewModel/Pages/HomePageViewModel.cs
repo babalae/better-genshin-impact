@@ -179,7 +179,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                ThemedMessageBox.Error("选择的窗体句柄为空");
+                ThemedMessageBox.Error(Lang.S["Gen_1002_9a2665"]);
             }
         }
     }
@@ -197,7 +197,7 @@ public partial class HomePageViewModel : ViewModel
             }
             else
             {
-                ThemedMessageBox.Error("选择的窗体句柄为空！");
+                ThemedMessageBox.Error(Lang.S["Gen_1003_1a77a5"]);
             }
         }
     }
@@ -223,7 +223,7 @@ public partial class HomePageViewModel : ViewModel
             {
                 if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
                 {
-                    await ThemedMessageBox.ErrorAsync("没有找到原神的安装路径");
+                    await ThemedMessageBox.ErrorAsync(Lang.S["Gen_12238_0f5493"]);
                     return;
                 }
 
@@ -240,7 +240,7 @@ public partial class HomePageViewModel : ViewModel
 
             if (hWnd == IntPtr.Zero)
             {
-                await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
+                await ThemedMessageBox.ErrorAsync(Lang.S["Gen_12237_f88c90"]);
                 return;
             }
         }
@@ -255,7 +255,7 @@ public partial class HomePageViewModel : ViewModel
         {
             if (Config.TriggerInterval <= 0)
             {
-                ThemedMessageBox.Error("触发器触发频率必须大于0");
+                ThemedMessageBox.Error(Lang.S["Gen_1004_4647a1"]);
                 return;
             }
 
@@ -383,7 +383,7 @@ public partial class HomePageViewModel : ViewModel
             // 弹出选择文件夹对话框
             var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
             {
-                Filter = "原神|YuanShen.exe|原神国际服|GenshinImpact.exe|所有文件|*.*"
+                Filter = Lang.S["Gen_12235_b1b548"]
             };
             if (dialog.ShowDialog() == true)
             {
@@ -474,7 +474,7 @@ public partial class HomePageViewModel : ViewModel
         // 创建 TitleBar
         var titleBar = new TitleBar
         {
-            Title = "启动参数说明",
+            Title = Lang.S["Gen_1005_845503"],
             Icon = new ImageIcon
             {
                 Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(@"pack://application:,,,/Resources/Images/logo.png", UriKind.Absolute))
@@ -508,7 +508,7 @@ public partial class HomePageViewModel : ViewModel
     {
         var dialogWindow = new FluentWindow
         {
-            Title = "硬件加速设置",
+            Title = Lang.S["Gen_1006_09c053"],
             Content = new HardwareAccelerationView(new HardwareAccelerationViewModel()),
             Width = 800,
             Height = 600,
@@ -562,8 +562,8 @@ public partial class HomePageViewModel : ViewModel
         {
             var openFileDialog = new OpenFileDialog
             {
-                Title = "选择背景图片",
-                Filter = "图片文件|*.jpg;*.jpeg;*.png;*.bmp;*.gif|所有文件|*.*",
+                Title = Lang.S["Gen_1007_2c7b91"],
+                Filter = Lang.S["Gen_12231_89d3b4"],
                 Multiselect = false
             };
 
@@ -591,7 +591,7 @@ public partial class HomePageViewModel : ViewModel
                 bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; 
                 bitmap.EndInit();
                 BannerImageSource = bitmap;
-                Toast.Success("背景图片更换成功！");
+                Toast.Success(Lang.S["Gen_1008_60e507"]);
             }
         }
         catch (Exception ex)
@@ -622,13 +622,13 @@ public partial class HomePageViewModel : ViewModel
             if (File.Exists(customImageFullPath))
             {
                 File.Delete(customImageFullPath);
-                Toast.Success("已恢复为默认背景图片！");
+                Toast.Success(Lang.S["Gen_1009_756538"]);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "恢复默认背景图片失败");
-            Toast.Warning("已恢复为默认背景图片！但清除自定义图片失败，请手动删除文件。");
+            Toast.Warning(Lang.S["Gen_1010_e7f5a5"]);
         }
     }
 

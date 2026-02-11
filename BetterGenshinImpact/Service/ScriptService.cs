@@ -11,6 +11,7 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
@@ -118,7 +119,7 @@ public partial class ScriptService : IScriptService
     
     public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName = null,TaskProgress? taskProgress = null)
     {
-        groupName ??= "默认";
+        groupName ??= Lang.S["Service_12066_18c634"];
 
         var list = ReloadScriptProjects(projectList);
         
@@ -402,7 +403,7 @@ public partial class ScriptService : IScriptService
                             if (autoconfig.Enabled && taskProgress.ConsecutiveFailureCount >= autoconfig.FailureCount)
                             {
                                 _logger.LogInformation("调度器任务出现未预期的异常，自动重启bgi");
-                                Notify.Event(NotificationEvent.GroupEnd).Error("调度器任务出现未预期的异常，自动重启bgi");
+                                Notify.Event(NotificationEvent.GroupEnd).Error(Lang.S["Service_12057_6dea1b"]);
                                 if (autoconfig.RestartGameTogether
                                     && TaskContext.Instance().Config.GenshinStartConfig.LinkedStartEnabled
                                     && TaskContext.Instance().Config.GenshinStartConfig.AutoEnterGameEnabled)
@@ -511,7 +512,7 @@ public partial class ScriptService : IScriptService
         {
             if (project.Project == null)
             {
-                throw new Exception("Project 为空");
+                throw new Exception(Lang.S["Service_12054_746f03"]);
             }
 
             _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);

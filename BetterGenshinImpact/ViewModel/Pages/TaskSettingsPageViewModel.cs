@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
@@ -126,7 +126,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
 
     [ObservableProperty]
-    private List<string> _autoMusicLevelList = [Lang.S["GameTask_10973_e84ebf"], "大师", "困难", "普通", "所有"];
+    private List<string> _autoMusicLevelList = [Lang.S["GameTask_10973_e84ebf"], Lang.S["GameTask_10974_a4e6a6"], Lang.S["GameTask_10975_d6f39f"], Lang.S["GameTask_10976_35242c"], Lang.S["GameTask_10972_9a7b52"]];
 
     [ObservableProperty]
     private AutoFightViewModel? _autoFightViewModel;

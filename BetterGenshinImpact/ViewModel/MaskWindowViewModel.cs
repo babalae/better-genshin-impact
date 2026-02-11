@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Config;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
@@ -82,8 +82,8 @@ namespace BetterGenshinImpact.ViewModel
 
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
         [
-            new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
-            new(MapPointApiProvider.KongyingTavern, "空荧酒馆")
+            new(MapPointApiProvider.MihoyoMap, Lang.S["Gen_12219_8734bf"]),
+            new(MapPointApiProvider.KongyingTavern, Lang.S["Gen_12218_f20243"])
         ];
 
         [ObservableProperty] private MapPointApiProviderOption? _selectedMapPointApiProviderOption;
@@ -113,11 +113,11 @@ namespace BetterGenshinImpact.ViewModel
         {
             if (Config != null)
             {
-                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
-                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
-                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
-                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig));
-                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12217_b67f18"], Config.AutoPickConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12216_a9bc59"], Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12215_70cfc9"], Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12214_737f04"], Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem(Lang.S["Gen_12213_10809f"], Config.QuickTeleportConfig));
             }
         }
 

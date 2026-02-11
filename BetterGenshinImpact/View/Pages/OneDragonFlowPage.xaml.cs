@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Helpers;
+﻿using BetterGenshinImpact.Helpers;
 ﻿using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
@@ -16,7 +16,7 @@ public partial class OneDragonFlowPage
     
     private readonly Dictionary<CheckBox, string> _checkBoxMappings;
     
-    public static readonly List<string> SereniteaPotSchedule = new List<string> { Lang.S["GameTask_11571_33f80e"], "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" };
+    public static readonly List<string> SereniteaPotSchedule = new List<string> { Lang.S["GameTask_11571_33f80e"], Lang.S["GameTask_11578_5ce438"], Lang.S["GameTask_11577_34e521"], Lang.S["GameTask_11576_711d99"], Lang.S["GameTask_11575_3df6af"], Lang.S["GameTask_11574_450ea3"], Lang.S["GameTask_11573_1ae72f"], Lang.S["GameTask_11572_67b195"] };
 
     public OneDragonFlowPage(OneDragonFlowViewModel viewModel)
     {

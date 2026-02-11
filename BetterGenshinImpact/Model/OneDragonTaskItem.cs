@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Model;
 
@@ -54,98 +55,102 @@ public partial class OneDragonTaskItem : ObservableObject
             config.TaskEnabledList.Add(Name, IsEnabled);
         }
 
-        switch (Name)
+        if (Name == Lang.S["Gen_12025_21caea"])
         {
-            case "领取邮件":
-                Action = async () =>
+            Action = async () =>
+            {
+                await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+            };
+        }
+        else if (Name == Lang.S["OneDragon_005_4762ca"])
+        {
+            Action = async () =>
+            {
+                try
                 {
-                    await new ClaimMailRewardsTask().Start(CancellationContext.Instance.Cts.Token);
-                };
-                break;
-            case "合成树脂":
-                Action = async () =>
+                    await new GoToCraftingBenchTask().Start(config.CraftingBenchCountry,
+                        CancellationContext.Instance.Cts.Token);
+                }
+                catch (Exception e)
                 {
-                    try
-                    {
-                        await new GoToCraftingBenchTask().Start(config.CraftingBenchCountry,
-                            CancellationContext.Instance.Cts.Token);
-                    }
-                    catch (Exception e)
-                    {
-                        TaskControl.Logger.LogError("合成树脂执行异常：" + e.Message);
-                    }
-                };
-                break;
-            case "自动秘境":
-                Action = async () =>
+                    TaskControl.Logger.LogError("合成树脂执行异常：" + e.Message);
+                }
+            };
+        }
+        else if (Name == Lang.S["Task_059_1f7122"])
+        {
+            Action = async () =>
+            {
+                if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
-                    {
-                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = "根据队伍自动选择";
-                    }
+                    TaskContext.Instance().Config.AutoFightConfig.StrategyName = Lang.S["GameTask_10386_0bfb2b"];
+                }
 
-                    var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
-                    {
-                        TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
-                        return;
-                    }
-
-                    var (partyName, domainName, sundaySelectedValue) = config.GetDomainConfig();
-                    if (string.IsNullOrEmpty(domainName))
-                    {
-                        TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过", "未选择");
-                        return;
-                    }
-                    else
-                    {
-                        TaskControl.Logger.LogInformation("自动秘境任务：执行");
-                    }
-
-                    var autoDomainParam = new AutoDomainParam(0, path)
-                    {
-                        PartyName = partyName,
-                        DomainName = domainName,
-                        SundaySelectedValue = sundaySelectedValue
-                    };
-                    await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
-                };
-                break;
-            case "自动幽境危战":
-                Action = async () =>
+                var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+                if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName))
-                    {
-                        TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName = "根据队伍自动选择";
-                    }
+                    TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
+                    return;
+                }
 
-                    var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
-                    {
-                        TaskControl.Logger.LogError("自动幽境危战战斗策略{Msg}，跳过", "未配置");
-                        return;
-                    }
+                var (partyName, domainName, sundaySelectedValue) = config.GetDomainConfig();
+                if (string.IsNullOrEmpty(domainName))
+                {
+                    TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过", "未选择");
+                    return;
+                }
+                else
+                {
+                    TaskControl.Logger.LogInformation("自动秘境任务：执行");
+                }
 
-                    await new AutoStygianOnslaughtTask(TaskContext.Instance().Config.AutoStygianOnslaughtConfig, path).Start(CancellationContext.Instance.Cts.Token);
-                };
-                break;
-            case "领取每日奖励":
-                Action = async () =>
+                var autoDomainParam = new AutoDomainParam(0, path)
                 {
-                    await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry,
-                        CancellationContext.Instance.Cts.Token, config.DailyRewardPartyName);
-                    await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+                    PartyName = partyName,
+                    DomainName = domainName,
+                    SundaySelectedValue = sundaySelectedValue
                 };
-                break;
-            case "领取尘歌壶奖励":
-                Action = async () =>
+                await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
+            };
+        }
+        else if (Name == Lang.S["Task_085_4fdef3"])
+        {
+            Action = async () =>
+            {
+                if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName))
                 {
-                    await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token);
-                };
-                break;
-            default:
-                Action = () => Task.CompletedTask;
-                break;
+                    TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName = Lang.S["GameTask_10386_0bfb2b"];
+                }
+
+                var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
+                if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
+                {
+                    TaskControl.Logger.LogError("自动幽境危战战斗策略{Msg}，跳过", "未配置");
+                    return;
+                }
+
+                await new AutoStygianOnslaughtTask(TaskContext.Instance().Config.AutoStygianOnslaughtConfig, path).Start(CancellationContext.Instance.Cts.Token);
+            };
+        }
+        else if (Name == Lang.S["Gen_12017_8fdc0b"])
+        {
+            Action = async () =>
+            {
+                await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry,
+                    CancellationContext.Instance.Cts.Token, config.DailyRewardPartyName);
+                await new ClaimBattlePassRewardsTask().Start(CancellationContext.Instance.Cts.Token);
+            };
+        }
+        else if (Name == Lang.S["GameTask_11624_df031f"])
+        {
+            Action = async () =>
+            {
+                await new GoToSereniteaPotTask().Start(CancellationContext.Instance.Cts.Token);
+            };
+        }
+        else
+        {
+            Action = () => Task.CompletedTask;
         }
     }
 }

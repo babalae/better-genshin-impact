@@ -1,9 +1,10 @@
-<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.FeedWindow"
+﻿<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.FeedWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
                  Width="400"
                  Height="700"
                  MinWidth="400"
@@ -25,7 +26,7 @@
         </Grid.RowDefinitions>
 
         <!-- 标题栏 -->
-        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="兑换码">
+        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="{Binding [FeedWindow_20140_9bff7a], Source={x:Static helpers:Lang.S}}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
@@ -43,11 +44,11 @@
             <StackPanel Grid.Row="0" Margin="0,0,0,15">
                 <ui:TextBlock FontSize="24"
                               FontWeight="SemiBold"
-                              Text="最新兑换码动态"
+                              Text="{Binding [FeedWindow_20141_10666e], Source={x:Static helpers:Lang.S}}"
                               Margin="0,0,0,5" />
                 <ui:TextBlock FontSize="14"
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                              Text="查看最新的国服原神的兑换码，一键自动兑换"
+                              Text="{Binding [FeedWindow_20142_2ad646], Source={x:Static helpers:Lang.S}}"
                               TextWrapping="Wrap" />
             </StackPanel>
 
@@ -59,7 +60,7 @@
                         Margin="0,0,0,10"
                         Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" Margin="0,0,8,0" />
-                <ui:TextBlock Text="正在加载兑换码..." Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                <ui:TextBlock Text="{Binding [FeedWindow_20143_f1fbbb], Source={x:Static helpers:Lang.S}}" Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <!-- Feed 列表 -->
@@ -113,7 +114,7 @@
                                         </ui:TextBlock>
                                         <ui:TextBlock FontSize="12"
                                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="有效期至">
+                                                      Text="{Binding [FeedWindow_20144_6460f4], Source={x:Static helpers:Lang.S}}">
                                             <ui:TextBlock.Style>
                                                 <Style TargetType="{x:Type ui:TextBlock}">
                                                     <Style.Triggers>
@@ -218,14 +219,14 @@
                                     <StackPanel Grid.Row="5"
                                                 Orientation="Horizontal"
                                                 Margin="0,0,0,8">
-                                        <ui:Button Content="复制"
+                                        <ui:Button Content="{Binding [Btn_Copy], Source={x:Static helpers:Lang.S}}"
                                                    Appearance="Secondary"
                                                    FontSize="12"
                                                    Padding="12,6"
                                                    Margin="0,0,8,0"
                                                    Command="{Binding DataContext.CopyItemCodesCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                    CommandParameter="{Binding}" />
-                                        <ui:Button Content="一键兑换"
+                                        <ui:Button Content="{Binding [Btn_OneClickRedeem], Source={x:Static helpers:Lang.S}}"
                                                    Appearance="Primary"
                                                    FontSize="12"
                                                    Padding="12,6"
@@ -249,12 +250,12 @@
                 <ui:Button Name="BtnGetLiveCodes"
                            Margin="0,0,10,0"
                            Appearance="Secondary"
-                           Content="实时获取前瞻兑换码"
+                           Content="{Binding [Btn_GetRedeemCodes], Source={x:Static helpers:Lang.S}}"
                            Command="{Binding GetLiveRedeemCodesCommand}"
                            Visibility="{Binding IsDisplayBtnGetLiveCodes, Converter={StaticResource BooleanToVisibilityConverter}}"
                            />
                 <ui:Button Name="BtnClose"
-                           Content="关闭"
+                           Content="{Binding [Btn_Close], Source={x:Static helpers:Lang.S}}"
                            Click="BtnCloseClick" />
             </StackPanel>
         </Grid>
