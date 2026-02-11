@@ -313,6 +313,11 @@ namespace BetterGenshinImpact.View.Behavior
                     {
                         continue;
                     }
+                    
+                    if (IsInGridViewRowPresenter(current))
+                    {
+                        continue;
+                    }
 
                     TranslateKnown(current, translator);
 
@@ -749,6 +754,22 @@ namespace BetterGenshinImpact.View.Behavior
                     FrameworkContentElement fce when !string.IsNullOrWhiteSpace(fce.Name) => fce.Name,
                     _ => null
                 };
+            }
+            
+            private static bool IsInGridViewRowPresenter(DependencyObject obj)
+            {
+                DependencyObject? current = obj;
+                while (current != null)
+                {
+                    if (current is GridViewRowPresenter)
+                    {
+                        return true;
+                    }
+
+                    current = GetParentObject(current);
+                }
+
+                return false;
             }
         }
     }
