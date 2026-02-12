@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -257,6 +258,11 @@ namespace BetterGenshinImpact.View.Behavior
                     return;
                 }
 
+                if (IsInComboBoxContext(obj))
+                {
+                    return;
+                }
+
                 if (!_pendingApply.Add(obj))
                 {
                     return;
@@ -315,6 +321,11 @@ namespace BetterGenshinImpact.View.Behavior
                     }
                     
                     if (IsInGridViewRowPresenter(current))
+                    {
+                        continue;
+                    }
+
+                    if (IsInComboBoxContext(current))
                     {
                         continue;
                     }
@@ -762,6 +773,27 @@ namespace BetterGenshinImpact.View.Behavior
                 while (current != null)
                 {
                     if (current is GridViewRowPresenter)
+                    {
+                        return true;
+                    }
+
+                    current = GetParentObject(current);
+                }
+
+                return false;
+            }
+
+            private static bool IsInComboBoxContext(DependencyObject obj)
+            {
+                DependencyObject? current = obj;
+                while (current != null)
+                {
+                    if (current is ComboBox or ComboBoxItem)
+                    {
+                        return true;
+                    }
+
+                    if (current is Popup { PlacementTarget: ComboBox })
                     {
                         return true;
                     }
