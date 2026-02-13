@@ -10,6 +10,7 @@
         Height="600"
         Width="450"
         WindowStartupLocation="CenterOwner"
+        WindowBackdropType="Auto"
         ExtendsContentIntoTitleBar="True">
 
     <ui:FluentWindow.Resources>
