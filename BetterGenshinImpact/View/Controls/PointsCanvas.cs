@@ -234,25 +234,56 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
     {
-        var rect = new Rect(
-            centerX - width / 2.0,
-            centerY - height / 2.0,
-            width,
-            height);
-        
-        // 获取点位标签
+        double radius = width / 2.0;
+        double strokeThickness = 2.0;
+
+        Point circleCenter = new Point(centerX, centerY);
+
+        var fillBrush = new SolidColorBrush(
+            (Color)ColorConverter.ConvertFromString("#323947"));
+        fillBrush.Freeze();
+
+        // 边框颜色 #D3BC8E
+        var borderBrush = new SolidColorBrush(Color.FromRgb(0xD3, 0xBC, 0x8E));
+        borderBrush.Freeze();
+
+        var borderPen = new Pen(borderBrush, strokeThickness);
+        borderPen.Freeze();
+
+        var shadowBrush = new SolidColorBrush(Color.FromArgb(30, 0, 0, 0));
+        shadowBrush.Freeze();
+
+        var shadowOffset = new Point(2, 2);
+
+        // 绘制圆形阴影
+        var shadowCircleGeometry = new EllipseGeometry(
+            new Point(circleCenter.X + shadowOffset.X, circleCenter.Y + shadowOffset.Y),
+            radius, radius);
+        dc.DrawGeometry(shadowBrush, null, shadowCircleGeometry);
+
+        var circleGeometry = new EllipseGeometry(circleCenter, radius, radius);
+        dc.DrawGeometry(fillBrush, borderPen, circleGeometry);
+
         if (_labelMap.TryGetValue(point.LabelId, out var label))
         {
             var image = MapIconImageCache.TryGet(label.IconUrl);
-
             if (image != null)
             {
-                dc.DrawImage(image, rect);
+                Rect imageRect = new Rect(
+                    circleCenter.X - radius,
+                    circleCenter.Y - radius,
+                    width,
+                    height
+                );
+
+                dc.PushClip(circleGeometry);
+                dc.DrawImage(image, imageRect);
+                dc.Pop();
             }
             else
             {
                 _ = MapIconImageCache.GetAsync(label.IconUrl, CancellationToken.None);
-
+                
                 var brush = GetColorBrush(label);
                 dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
             }
