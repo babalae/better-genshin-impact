@@ -1316,19 +1316,19 @@ public class AutoDomainTask : ISoloTask
             var has40 = regionList.Any(t => t.Text.Contains("40"));
             if (expectedNum == 20 && has20)
             {
-                Logger.LogWarning("自动秘境：已切换到使用20原粹树脂" );
+                Logger.LogInformation("自动秘境：已切换到使用20原粹树脂" );
                 return true;
             }
             if (expectedNum == 40 && has40)
             {
-                Logger.LogWarning("自动秘境：已切换到使用40原粹树脂" );
+                Logger.LogInformation("自动秘境：已切换到使用40原粹树脂" );
                 return true;
             }
             //切换20/40原粹树脂的按钮是亮的
             var clickable = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnRo);  
             if (clickable.IsExist())  
             {  
-                Logger.LogWarning("自动秘境：切换原粹树脂使用数量" );
+                Logger.LogDebug("自动秘境：切换原粹树脂使用数量" );
                 clickable.Click();
             }  
             //切换20/40原粹树脂的按钮是暗的
