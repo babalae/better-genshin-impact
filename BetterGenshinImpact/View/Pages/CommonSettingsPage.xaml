@@ -32,6 +32,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -43,9 +44,15 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="UI Language"
                                   TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,12,0"
+                               Command="{Binding UpdateUiLanguageCommand}"
+                               Content="更新" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
-                              Grid.Column="1"
+                              Grid.Column="2"
                               Width="200"
                               Margin="0,0,36,0"
                               DisplayMemberPath="Value"

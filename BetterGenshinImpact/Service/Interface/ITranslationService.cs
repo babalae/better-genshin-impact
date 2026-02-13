@@ -35,5 +35,6 @@ public interface ITranslationService
     string Translate(string text);
     string Translate(string text, TranslationSourceInfo sourceInfo);
     CultureInfo GetCurrentCulture();
+    void Reload();
 }
 

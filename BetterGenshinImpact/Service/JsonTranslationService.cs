@@ -58,6 +58,39 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         }
     }
 
+    public void Reload()
+    {
+        var cultureName = _otherConfig.UiCultureInfoName ?? string.Empty;
+        string previousLoaded;
+        string currentLoaded;
+
+        lock (_sync)
+        {
+            previousLoaded = _loadedCultureName;
+            FlushMissingIfDirty(previousLoaded);
+
+            if (string.IsNullOrWhiteSpace(cultureName) || IsChineseCultureName(cultureName))
+            {
+                _loadedCultureName = string.Empty;
+                _map = new Dictionary<string, string>(StringComparer.Ordinal);
+                _existingMissingKeys = new HashSet<string>(StringComparer.Ordinal);
+            }
+            else
+            {
+                _loadedCultureName = cultureName;
+                _map = LoadMap(cultureName);
+                _existingMissingKeys = LoadExistingMissingKeys(cultureName);
+            }
+
+            _missingKeys.Clear();
+            Interlocked.Exchange(ref _dirtyMissing, 0);
+            currentLoaded = _loadedCultureName;
+        }
+
+        WeakReferenceMessenger.Default.Send(
+            new PropertyChangedMessage<object>(this, nameof(OtherConfig.UiCultureInfoName), previousLoaded, currentLoaded));
+    }
+
     public string Translate(string text)
     {
         return Translate(text, TranslationSourceInfo.From(MissingTextSource.Unknown));
