@@ -151,7 +151,7 @@ public sealed class SupabaseMissingTranslationReporter : IMissingTranslationRepo
             var requestUri = $"{url}?on_conflict=language,key";
 
             var payload = JsonSerializer.Serialize(
-                batch.Select(r => new SupabaseMissingRowSnake(r.Language, r.Key, "", r.Source, r.SourceInfo)),
+                batch.Select(r => new SupabaseMissingRowSnake(r.Language, r.Key, r.Source, r.SourceInfo)),
                 SupabaseJsonOptions);
 
             using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
@@ -341,7 +341,6 @@ public sealed class SupabaseMissingTranslationReporter : IMissingTranslationRepo
     private readonly record struct SupabaseMissingRowSnake(
         [property: JsonPropertyName("language")] string Language,
         [property: JsonPropertyName("key")] string Key,
-        [property: JsonPropertyName("value")] string Value,
         [property: JsonPropertyName("source")] string Source,
         [property: JsonPropertyName("source_info"), JsonConverter(typeof(TranslationSourceInfoWithoutSourceJsonConverter))] TranslationSourceInfo SourceInfo);
 

@@ -54,6 +54,29 @@ namespace BetterGenshinImpact.View.Behavior
                 typeof(AutoTranslateInterceptor),
                 new PropertyMetadata(null));
 
+        private static readonly DependencyProperty OriginalValuesProperty =
+            DependencyProperty.RegisterAttached(
+                "OriginalValues",
+                typeof(Dictionary<DependencyProperty, string>),
+                typeof(AutoTranslateInterceptor),
+                new PropertyMetadata(null));
+
+        private static Dictionary<DependencyProperty, string>? GetOriginalValuesMap(DependencyObject obj)
+            => (Dictionary<DependencyProperty, string>?)obj.GetValue(OriginalValuesProperty);
+
+        private static Dictionary<DependencyProperty, string> GetOrCreateOriginalValuesMap(DependencyObject obj)
+        {
+            var map = GetOriginalValuesMap(obj);
+            if (map != null)
+            {
+                return map;
+            }
+
+            map = new Dictionary<DependencyProperty, string>();
+            obj.SetValue(OriginalValuesProperty, map);
+            return map;
+        }
+
         private static void OnAnyElementLoaded(object sender, RoutedEventArgs e)
         {
             if (sender is not DependencyObject obj)
@@ -163,7 +186,6 @@ namespace BetterGenshinImpact.View.Behavior
             private readonly HashSet<ToolTip> _trackedToolTips = new();
             private readonly HashSet<DependencyObject> _pendingApply = new();
             private bool _applyScheduled;
-            private readonly Dictionary<(DependencyObject Obj, DependencyProperty Property), string> _originalValues = new();
             private bool _refreshScheduled;
 
             public Scope(FrameworkElement root)
@@ -244,7 +266,7 @@ namespace BetterGenshinImpact.View.Behavior
                             return;
                         }
 
-                        RestoreOriginalValues();
+                        RestoreOriginalValues(_root);
                         RefreshBoundValues(_root);
                         Apply(_root);
                     },
@@ -507,12 +529,13 @@ namespace BetterGenshinImpact.View.Behavior
                         continue;
                     }
 
-                    var key = (obj, property);
-                    if (!_originalValues.TryGetValue(key, out var original))
+                    var map = GetOriginalValuesMap(obj);
+                    if (map == null || !map.TryGetValue(property, out var original))
                     {
                         if (ContainsHan(value))
                         {
-                            _originalValues[key] = value;
+                            map = GetOrCreateOriginalValuesMap(obj);
+                            map[property] = value;
                             original = value;
                         }
                         else
@@ -581,12 +604,13 @@ namespace BetterGenshinImpact.View.Behavior
                     return;
                 }
 
-                var key = (obj, property);
-                if (!_originalValues.TryGetValue(key, out var original))
+                var map = GetOriginalValuesMap(obj);
+                if (map == null || !map.TryGetValue(property, out var original))
                 {
                     if (ContainsHan(currentValue))
                     {
-                        _originalValues[key] = currentValue;
+                        map = GetOrCreateOriginalValuesMap(obj);
+                        map[property] = currentValue;
                         original = currentValue;
                     }
                     else
@@ -602,17 +626,71 @@ namespace BetterGenshinImpact.View.Behavior
                 }
             }
 
-            private void RestoreOriginalValues()
+            private void RestoreOriginalValues(DependencyObject root)
             {
-                foreach (var pair in _originalValues)
+                var queue = new Queue<DependencyObject>();
+                var visited = new HashSet<DependencyObject>();
+                queue.Enqueue(root);
+
+                while (queue.Count > 0)
                 {
-                    var (obj, property) = pair.Key;
-                    if (BindingOperations.IsDataBound(obj, property))
+                    var current = queue.Dequeue();
+                    if (!visited.Add(current))
                     {
                         continue;
                     }
 
-                    obj.SetValue(property, pair.Value);
+                    var map = GetOriginalValuesMap(current);
+                    if (map != null)
+                    {
+                        foreach (var pair in map)
+                        {
+                            if (BindingOperations.IsDataBound(current, pair.Key))
+                            {
+                                continue;
+                            }
+
+                            current.SetValue(pair.Key, pair.Value);
+                        }
+                    }
+
+                    if (current is FrameworkElement feCurrent)
+                    {
+                        if (feCurrent.ContextMenu != null)
+                        {
+                            queue.Enqueue(feCurrent.ContextMenu);
+                        }
+
+                        if (feCurrent.ToolTip is DependencyObject tt)
+                        {
+                            queue.Enqueue(tt);
+                        }
+                    }
+
+                    if (current is Visual || current is System.Windows.Media.Media3D.Visual3D)
+                    {
+                        var count = VisualTreeHelper.GetChildrenCount(current);
+                        for (var i = 0; i < count; i++)
+                        {
+                            queue.Enqueue(VisualTreeHelper.GetChild(current, i));
+                        }
+                    }
+
+                    if (current is FrameworkElement || current is FrameworkContentElement)
+                    {
+                        foreach (var child in LogicalTreeHelper.GetChildren(current).OfType<DependencyObject>())
+                        {
+                            queue.Enqueue(child);
+                        }
+                    }
+
+                    if (current is TextBlock tb)
+                    {
+                        foreach (var inline in EnumerateInlineObjects(tb.Inlines))
+                        {
+                            queue.Enqueue(inline);
+                        }
+                    }
                 }
             }
 

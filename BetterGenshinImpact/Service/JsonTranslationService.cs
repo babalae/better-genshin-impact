@@ -28,6 +28,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
     private string _loadedCultureName = string.Empty;
     private IReadOnlyDictionary<string, string> _map = new Dictionary<string, string>(StringComparer.Ordinal);
+    private volatile IReadOnlySet<string> _existingMissingKeys = new HashSet<string>(StringComparer.Ordinal);
     private int _dirtyMissing;
 
     public JsonTranslationService(IConfigService configService, IMissingTranslationReporter missingTranslationReporter)
@@ -98,7 +99,10 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             normalizedSource,
             (_, existingSource) => MergeSourceInfo(existingSource, normalizedSource));
         Interlocked.Exchange(ref _dirtyMissing, 1);
-        _missingTranslationReporter.TryEnqueue(culture.Name, text, normalizedSource);
+        if (!_existingMissingKeys.Contains(text))
+        {
+            _missingTranslationReporter.TryEnqueue(culture.Name, text, normalizedSource);
+        }
         return text;
     }
 
@@ -120,6 +124,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             FlushMissingIfDirty(previousCultureName);
             _map = LoadMap(cultureName);
             _loadedCultureName = cultureName;
+            _existingMissingKeys = LoadExistingMissingKeys(cultureName);
             _missingKeys.Clear();
             Interlocked.Exchange(ref _dirtyMissing, 0);
         }
@@ -292,6 +297,24 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         }
 
         return dict;
+    }
+
+    private static IReadOnlySet<string> LoadExistingMissingKeys(string cultureName)
+    {
+        var filePath = GetMissingFilePath(cultureName);
+        if (!File.Exists(filePath))
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
+
+        try
+        {
+            return new HashSet<string>(LoadMissing(filePath).Keys, StringComparer.Ordinal);
+        }
+        catch
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
     }
 
     private static TranslationSourceInfo NormalizeSourceInfo(TranslationSourceInfo? sourceInfo)
@@ -608,11 +631,13 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             {
                 _loadedCultureName = string.Empty;
                 _map = new Dictionary<string, string>(StringComparer.Ordinal);
+                _existingMissingKeys = new HashSet<string>(StringComparer.Ordinal);
             }
             else
             {
                 _loadedCultureName = cultureName;
                 _map = LoadMap(cultureName);
+                _existingMissingKeys = LoadExistingMissingKeys(cultureName);
             }
 
             _missingKeys.Clear();
