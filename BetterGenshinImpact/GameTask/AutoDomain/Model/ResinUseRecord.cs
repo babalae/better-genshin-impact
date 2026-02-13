@@ -36,11 +36,11 @@ public class ResinUseRecord
             {
                 list.Add(new ResinUseRecord("原粹树脂40", taskParam.OriginalResin40UseCount));
             }
-            else if (taskParam.OriginalResin20UseCount > 0)
+            if (taskParam.OriginalResin20UseCount > 0)
             {
                 list.Add(new ResinUseRecord("原粹树脂20", taskParam.OriginalResin20UseCount));
             }
-            else if (taskParam.OriginalResinUseCount > 0)
+            if (taskParam.OriginalResinUseCount > 0)
             {
                 list.Add(new ResinUseRecord("原粹树脂", taskParam.OriginalResinUseCount));
             }

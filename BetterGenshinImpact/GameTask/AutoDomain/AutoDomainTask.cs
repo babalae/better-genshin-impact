@@ -1267,6 +1267,10 @@ public class AutoDomainTask : ISoloTask
 
     public static (bool, int) PressUseResin(List<Region> regionList, string resinName)
     {
+        if (resinName == "原粹树脂20" || resinName == "原粹树脂40")
+        {
+            resinName = "原粹树脂";
+        }
         var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
         if (resinKey != null)
         {
