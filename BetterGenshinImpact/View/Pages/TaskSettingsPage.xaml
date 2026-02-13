@@ -1067,7 +1067,7 @@
                                   FontSize="10"
                                   FontTypography="Body"
                                   VerticalAlignment="Bottom"
-                                  Text="(琴二次拾取：首次拾取空,再次拾取)"
+                                  Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
                                   TextWrapping="Wrap" />
                     
                     <ui:TextBlock Grid.Row="1"
@@ -1096,7 +1096,7 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Margin="0,0,38,26"
                                   FontTypography="Body"
-                                  Text="琴二次拾取"
+                                  Text="二次拾取"
                                   TextWrapping="Wrap" />
                 </Grid>
                 <Separator Margin="-18,0"
