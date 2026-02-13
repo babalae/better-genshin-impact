@@ -86,6 +86,7 @@ public partial class App : Application
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
+                services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
                 services.AddSingleton<ITranslationService, JsonTranslationService>();
                 services.AddLogging(logging =>
                 {

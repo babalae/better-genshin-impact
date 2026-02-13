@@ -13,12 +13,14 @@ using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Service;
 
 public sealed class JsonTranslationService : ITranslationService, IDisposable
 {
     private readonly IConfigService _configService;
+    private readonly IMissingTranslationReporter _missingTranslationReporter;
     private readonly object _sync = new();
     private readonly ConcurrentDictionary<string, TranslationSourceInfo> _missingKeys = new(StringComparer.Ordinal);
     private readonly Timer _flushTimer;
@@ -28,9 +30,10 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
     private IReadOnlyDictionary<string, string> _map = new Dictionary<string, string>(StringComparer.Ordinal);
     private int _dirtyMissing;
 
-    public JsonTranslationService(IConfigService configService)
+    public JsonTranslationService(IConfigService configService, IMissingTranslationReporter missingTranslationReporter)
     {
         _configService = configService;
+        _missingTranslationReporter = missingTranslationReporter;
         _otherConfig = _configService.Get().OtherConfig;
         _otherConfig.PropertyChanged += OnOtherConfigPropertyChanged;
         _flushTimer = new Timer(_ => FlushMissingIfDirty(), null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
@@ -77,6 +80,11 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             return text;
         }
 
+        if (string.IsNullOrWhiteSpace(culture.Name))
+        {
+            return text;
+        }
+
         EnsureMapLoaded(culture.Name);
 
         if (_map.TryGetValue(text, out var translated) && !string.IsNullOrWhiteSpace(translated))
@@ -90,6 +98,7 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             normalizedSource,
             (_, existingSource) => MergeSourceInfo(existingSource, normalizedSource));
         Interlocked.Exchange(ref _dirtyMissing, 1);
+        _missingTranslationReporter.TryEnqueue(culture.Name, text, normalizedSource);
         return text;
     }
 
@@ -144,6 +153,12 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
 
     private void FlushMissingIfDirty(string cultureName)
     {
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            Interlocked.Exchange(ref _dirtyMissing, 0);
+            return;
+        }
+
         if (IsChineseCultureName(cultureName))
         {
             Interlocked.Exchange(ref _dirtyMissing, 0);
@@ -191,7 +206,8 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         {
             var key = pair.Key;
             var sourceInfo = pair.Value;
-            var source = SourceToString(sourceInfo.Source);
+            var source = SourceToCompactString(sourceInfo.Source);
+            var missingSourceInfo = StripSource(sourceInfo);
 
             if (!existing.TryGetValue(key, out var existingItem))
             {
@@ -200,26 +216,26 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
                     Key = key,
                     Value = string.Empty,
                     Source = source,
-                    SourceInfo = sourceInfo
+                    SourceInfo = missingSourceInfo
                 };
                 updated = true;
                 continue;
             }
 
-            if (string.IsNullOrWhiteSpace(existingItem.Source) || string.Equals(existingItem.Source, SourceToString(MissingTextSource.Unknown), StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(existingItem.Source) || string.Equals(existingItem.Source, SourceToCompactString(MissingTextSource.Unknown), StringComparison.Ordinal))
             {
                 existing[key] = new MissingItem
                 {
                     Key = key,
                     Value = existingItem.Value ?? string.Empty,
                     Source = source,
-                    SourceInfo = sourceInfo
+                    SourceInfo = missingSourceInfo
                 };
                 updated = true;
                 continue;
             }
 
-            var mergedSourceInfo = MergeSourceInfo(existingItem.SourceInfo, sourceInfo);
+            var mergedSourceInfo = MergeSourceInfo(existingItem.SourceInfo, missingSourceInfo);
             if (!ReferenceEquals(mergedSourceInfo, existingItem.SourceInfo))
             {
                 existing[key] = new MissingItem
@@ -244,8 +260,8 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             {
                 Key = i.Key,
                 Value = i.Value ?? string.Empty,
-                Source = i.Source ?? SourceToString(MissingTextSource.Unknown),
-                SourceInfo = NormalizeSourceInfo(i.SourceInfo)
+                Source = string.IsNullOrWhiteSpace(i.Source) ? SourceToCompactString(MissingTextSource.Unknown) : i.Source,
+                SourceInfo = NormalizeSourceInfoForMissing(i.SourceInfo)
             })
             .ToList();
         var jsonOut = JsonConvert.SerializeObject(items, Formatting.Indented);
@@ -269,8 +285,8 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
             {
                 Key = item.Key,
                 Value = item.Value ?? string.Empty,
-                Source = string.IsNullOrWhiteSpace(item.Source) ? SourceToString(MissingTextSource.Unknown) : item.Source,
-                SourceInfo = NormalizeSourceInfo(item.SourceInfo)
+                Source = string.IsNullOrWhiteSpace(item.Source) ? SourceToCompactString(MissingTextSource.Unknown) : item.Source,
+                SourceInfo = NormalizeSourceInfoForMissing(item.SourceInfo)
             };
             dict[item.Key] = normalized;
         }
@@ -288,6 +304,26 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
         return new TranslationSourceInfo
         {
             Source = sourceInfo.Source,
+            ViewXamlPath = sourceInfo.ViewXamlPath,
+            ViewType = sourceInfo.ViewType,
+            ElementType = sourceInfo.ElementType,
+            ElementName = sourceInfo.ElementName,
+            PropertyName = sourceInfo.PropertyName,
+            BindingPath = sourceInfo.BindingPath,
+            Notes = sourceInfo.Notes
+        };
+    }
+
+    private static TranslationSourceInfo NormalizeSourceInfoForMissing(TranslationSourceInfo? sourceInfo)
+    {
+        return StripSource(NormalizeSourceInfo(sourceInfo));
+    }
+
+    private static TranslationSourceInfo StripSource(TranslationSourceInfo sourceInfo)
+    {
+        return new TranslationSourceInfo
+        {
+            Source = MissingTextSource.Unknown,
             ViewXamlPath = sourceInfo.ViewXamlPath,
             ViewType = sourceInfo.ViewType,
             ElementType = sourceInfo.ElementType,
@@ -357,15 +393,9 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
                && string.Equals(left.Notes, right.Notes, StringComparison.Ordinal);
     }
 
-    private static string SourceToString(MissingTextSource source)
+    private static string SourceToCompactString(MissingTextSource source)
     {
-        return source switch
-        {
-            MissingTextSource.Log => "Log",
-            MissingTextSource.UiStaticLiteral => "UiStaticLiteral",
-            MissingTextSource.UiDynamicBinding => "UiDynamicBinding",
-            _ => "Unknown"
-        };
+        return ((int)source).ToString(CultureInfo.InvariantCulture);
     }
 
     private static void WriteAtomically(string filePath, string content)
@@ -440,8 +470,122 @@ public sealed class JsonTranslationService : ITranslationService, IDisposable
     {
         public string Key { get; set; } = string.Empty;
         public string? Value { get; set; }
+        [JsonConverter(typeof(MissingSourceStringConverter))]
         public string? Source { get; set; }
+        [JsonConverter(typeof(MissingSourceInfoWithoutSourceConverter))]
         public TranslationSourceInfo? SourceInfo { get; set; }
+    }
+
+    private sealed class MissingSourceStringConverter : JsonConverter<string?>
+    {
+        public override void WriteJson(JsonWriter writer, string? value, JsonSerializer serializer)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            writer.WriteValue(value);
+        }
+
+        public override string? ReadJson(JsonReader reader, Type objectType, string? existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null)
+            {
+                return null;
+            }
+
+            if (reader.TokenType == JsonToken.Integer)
+            {
+                try
+                {
+                    return Convert.ToInt32(reader.Value).ToString(CultureInfo.InvariantCulture);
+                }
+                catch
+                {
+                    return SourceToCompactString(MissingTextSource.Unknown);
+                }
+            }
+
+            if (reader.TokenType == JsonToken.String)
+            {
+                var s = reader.Value as string;
+                if (string.IsNullOrWhiteSpace(s))
+                {
+                    return SourceToCompactString(MissingTextSource.Unknown);
+                }
+
+                if (int.TryParse(s, out var parsed))
+                {
+                    return parsed.ToString(CultureInfo.InvariantCulture);
+                }
+
+                return s switch
+                {
+                    "Log" => SourceToCompactString(MissingTextSource.Log),
+                    "UiStaticLiteral" => SourceToCompactString(MissingTextSource.UiStaticLiteral),
+                    "UiDynamicBinding" => SourceToCompactString(MissingTextSource.UiDynamicBinding),
+                    _ => SourceToCompactString(MissingTextSource.Unknown)
+                };
+            }
+
+            return SourceToCompactString(MissingTextSource.Unknown);
+        }
+    }
+
+    private sealed class MissingSourceInfoWithoutSourceConverter : JsonConverter<TranslationSourceInfo?>
+    {
+        public override void WriteJson(JsonWriter writer, TranslationSourceInfo? value, JsonSerializer serializer)
+        {
+            if (value == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            writer.WriteStartObject();
+            WriteIfNotNull(writer, "ViewXamlPath", value.ViewXamlPath);
+            WriteIfNotNull(writer, "ViewType", value.ViewType);
+            WriteIfNotNull(writer, "ElementType", value.ElementType);
+            WriteIfNotNull(writer, "ElementName", value.ElementName);
+            WriteIfNotNull(writer, "PropertyName", value.PropertyName);
+            WriteIfNotNull(writer, "BindingPath", value.BindingPath);
+            WriteIfNotNull(writer, "Notes", value.Notes);
+            writer.WriteEndObject();
+        }
+
+        public override TranslationSourceInfo? ReadJson(JsonReader reader, Type objectType, TranslationSourceInfo? existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null)
+            {
+                return null;
+            }
+
+            var obj = JObject.Load(reader);
+            return new TranslationSourceInfo
+            {
+                Source = MissingTextSource.Unknown,
+                ViewXamlPath = obj.Value<string>("ViewXamlPath") ?? obj.Value<string>("viewXamlPath"),
+                ViewType = obj.Value<string>("ViewType") ?? obj.Value<string>("viewType"),
+                ElementType = obj.Value<string>("ElementType") ?? obj.Value<string>("elementType"),
+                ElementName = obj.Value<string>("ElementName") ?? obj.Value<string>("elementName"),
+                PropertyName = obj.Value<string>("PropertyName") ?? obj.Value<string>("propertyName"),
+                BindingPath = obj.Value<string>("BindingPath") ?? obj.Value<string>("bindingPath"),
+                Notes = obj.Value<string>("Notes") ?? obj.Value<string>("notes")
+            };
+        }
+
+        private static void WriteIfNotNull(JsonWriter writer, string propertyName, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            writer.WritePropertyName(propertyName);
+            writer.WriteValue(value);
+        }
     }
 
     private void OnOtherConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)

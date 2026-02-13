@@ -21,7 +21,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
-using Windows.UI.Xaml.Automation;
 using BetterGenshinImpact.View.Windows;
 using LibGit2Sharp;
 using LibGit2Sharp.Handlers;
