@@ -340,6 +340,19 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         );
         timerDirectory.Children.Add(quickTeleportTickHotKeySettingModel);
 
+        var mapMaskEnabledHotKeySettingModel = new HotKeySettingModel(
+            "地图遮罩开关",
+            nameof(Config.HotKeyConfig.MapMaskEnabledHotkey),
+            Config.HotKeyConfig.MapMaskEnabledHotkey,
+            Config.HotKeyConfig.MapMaskEnabledHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.MapMaskConfig.Enabled = !TaskContext.Instance().Config.MapMaskConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "地图遮罩", ToChinese(TaskContext.Instance().Config.MapMaskConfig.Enabled));
+            }
+        );
+        timerDirectory.Children.Add(mapMaskEnabledHotKeySettingModel);
+
         var turnAroundHotKeySettingModel = new HotKeySettingModel(
             "长按旋转视角 - 那维莱特转圈",
             nameof(Config.HotKeyConfig.TurnAroundHotkey),
