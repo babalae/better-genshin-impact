@@ -41,7 +41,7 @@ using BetterGenshinImpact.GameTask.Common;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoFight;
-
+using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask : ISoloTask
@@ -1151,6 +1151,15 @@ public class AutoDomainTask : ISoloTask
                 {
                     if (record.RemainCount > 0)
                     {
+                        if (record.Name == "原粹树脂20" || record.Name == "原粹树脂40")
+                        {
+                            int expectedNum = record.Name == "原粹树脂20" ? 20 : 40;
+                            if (! SwitchOriginalResinType(expectedNum, _ct))
+                            {
+                                continue;
+                            }
+                        }
+
                         var (success, _) = PressUseResin(textListInPrompt2, record.Name);
                         if (success)
                         {
@@ -1291,6 +1300,42 @@ public class AutoDomainTask : ISoloTask
         }
 
         return (false, 0);
+    }
+
+    private bool SwitchOriginalResinType(int expectedNum, CancellationToken ct)
+    {
+        return  NewRetry.Do(() =>  
+        {  
+            using var ra0 = CaptureToRectArea();  
+            var regionList = ra0.FindMulti(RecognitionObject.Ocr(ra0.Width * 0.25, ra0.Height * 0.2, ra0.Width * 0.5, ra0.Height * 0.6));
+            var has20 = regionList.Any(t => t.Text.Contains("20"));
+            var has40 = regionList.Any(t => t.Text.Contains("40"));
+            if (expectedNum == 20 && has20)
+            {
+                Logger.LogWarning("自动秘境：已切换到使用20原粹树脂" );
+                return true;
+            }
+            if (expectedNum == 40 && has40)
+            {
+                Logger.LogWarning("自动秘境：已切换到使用40原粹树脂" );
+                return true;
+            }
+            //切换20/40原粹树脂的按钮是亮的
+            var clickable = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnRo);  
+            if (clickable.IsExist())  
+            {  
+                Logger.LogWarning("自动秘境：切换原粹树脂使用数量" );
+                clickable.Click();
+            }  
+            //切换20/40原粹树脂的按钮是暗的
+            var disabled = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnNoActiveRo);  
+            if (disabled.IsExist())  
+            {  
+                Logger.LogWarning("自动秘境：切换原粹树脂的使用数量失败，可能是体力不足，当前目标：{Num}", expectedNum);
+                return false; // 不可点击  
+            }  
+            throw new RetryException("未检测到按钮"); // 继续重试  
+        },  TimeSpan.FromMilliseconds(500), 10);  
     }
 
     private static int GetResinNum(Region region, string resinName)
