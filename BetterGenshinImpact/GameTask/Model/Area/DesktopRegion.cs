@@ -40,7 +40,7 @@ public class DesktopRegion : Region
             throw new System.NullReferenceException();
         }
         mouse.MoveMouseTo((x + (w * 1d / 2)) * 65535 / Width,
-            (y + (h * 1d / 2)) * 65535 / Height).LeftButtonDown().Sleep(50).LeftButtonUp();
+            (y + (h * 1d / 2)) * 65535 / Height).LeftButtonDown().Sleep(50).LeftButtonUp().Sleep(50);
     }
 
     public void DesktopRegionMove(int x, int y, int w, int h)
@@ -61,7 +61,7 @@ public class DesktopRegion : Region
     public static void DesktopRegionClick(double cx, double cy)
     {
         Simulation.SendInput.Mouse.MoveMouseTo(cx * 65535 * 1d / PrimaryScreen.WorkingArea.Width,
-            cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonDown().Sleep(50).LeftButtonUp();
+            cy * 65535 * 1d / PrimaryScreen.WorkingArea.Height).LeftButtonDown().Sleep(50).LeftButtonUp().Sleep(50);
     }
 
     public static void DesktopRegionMove(double cx, double cy)

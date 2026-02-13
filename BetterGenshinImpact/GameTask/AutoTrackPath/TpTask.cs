@@ -101,7 +101,7 @@ public class TpTask
             var center = GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
             var giTpPoint = GetNearestGoddess(center.X, center.Y);
             country = giTpPoint.Country;
-            area = giTpPoint.Area;
+            area = giTpPoint.Level1Area;
             x = giTpPoint.X;
             y = giTpPoint.Y;
             revivePoint = giTpPoint;
@@ -204,6 +204,7 @@ public class TpTask
                 {
                     Logger.LogError("打开大地图失败，重试 {I} 次", i + 1);
                     Logger.LogDebug(e, "打开大地图失败，重试 {I} 次", i + 1);
+                    await _blessingOfTheWelkinMoonTask.Start(ct);
                 }
 
                 if (i + 1 >= retryCount)
@@ -245,6 +246,7 @@ public class TpTask
             // 直接切换地区
             await SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
         }
+        await Delay(50, ct);
 
 
         // 3. 调整初始缩放等级，避免识别中心点失败
@@ -389,7 +391,7 @@ public class TpTask
     /// <returns></returns>
     private (double clickX, double clickY) ConvertToGameRegionPosition(string mapName, Rect bigMapInAllMapRect, double x, double y)
     {
-        var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates((float)x, (float)y);
+        var (picX, picY) = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)x, (float)y));
         var picRect = MapManager.GetMap(mapName, _mapMatchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(bigMapInAllMapRect);
         Debug.WriteLine($"({picX},{picY}) 在 {picRect} 内，计算它在窗体内的位置");
         var clickX = (picX - picRect.X) / picRect.Width * _captureRect.Width;
@@ -769,7 +771,7 @@ public class TpTask
             rect = new Rect(rect.X * s, rect.Y * s, rect.Width * s, rect.Height * s);
         }
 
-        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect);
+        return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(rect)!.Value;
     }
 
     public Point2f GetBigMapCenterPoint(string mapName)
@@ -793,7 +795,7 @@ public class TpTask
                 (x, y) = (p.X * TeyvatMap.BigMap256ScaleTo2048, p.Y * TeyvatMap.BigMap256ScaleTo2048);
             }
 
-            return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y));
+            return MapManager.GetMap(mapName, _mapMatchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f(x, y))!.Value;
         }
         else
         {
@@ -927,6 +929,7 @@ public class TpTask
 
         // 2. 判断是否已经点出传送按钮
         var hasTeleportButton = CheckTeleportButton(imageRegion);
+        await Delay(50, ct);
         if (hasTeleportButton) return;   // 可以传送了，结束
         // 3. 没点出传送按钮，且不存在外部地图关闭按钮
         // 说明只有两种可能，a. 点出来的是未激活传送点或者标点 b. 选择传送点选项列表

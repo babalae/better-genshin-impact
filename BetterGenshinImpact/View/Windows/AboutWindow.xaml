@@ -10,7 +10,7 @@
                  Background="#202020"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
-                 WindowBackdropType="None"
+                 WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Grid>

@@ -176,7 +176,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         var areas = MapLazyAssets.Instance.GoddessPositions.Values
             .Where(g => g.Country == country)
             .OrderBy(g => int.TryParse(g.Id, out var id) ? id : int.MaxValue)
-            .GroupBy(g => g.Area)
+            .GroupBy(g => g.Level1Area)
             .Select(grp => grp.Key);
         foreach (var area in areas)
         {
@@ -193,7 +193,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         if (string.IsNullOrEmpty(country) || string.IsNullOrEmpty(area)) return;
 
         var goddess = MapLazyAssets.Instance.GoddessPositions.Values
-            .FirstOrDefault(g => g.Country == country && g.Area == area);
+            .FirstOrDefault(g => g.Country == country && g.Level1Area == area);
         if (goddess == null) return;
         _tpConfig.ReviveStatueOfTheSevenCountry = country;
         _tpConfig.ReviveStatueOfTheSevenArea = area;
@@ -207,6 +207,23 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         WeakReferenceMessenger.Default.Send(
             new PropertyChangedMessage<object>(this, "RefreshSettings", new object(), "重新计算控件位置"));
+    }
+
+    [RelayCommand]
+    private void OnResetMaskOverlayLayout()
+    {
+        var c = Config.MaskWindowConfig;
+        c.StatusListLeftRatio = 20.0 / 1920;
+        c.StatusListTopRatio = 807.0 / 1080;
+        c.StatusListWidthRatio = 477.0 / 1920;
+        c.StatusListHeightRatio = 24.0 / 1080;
+
+        c.LogTextBoxLeftRatio = 20.0 / 1920;
+        c.LogTextBoxTopRatio = 832.0 / 1080;
+        c.LogTextBoxWidthRatio = 477.0 / 1920;
+        c.LogTextBoxHeightRatio = 188.0 / 1080;
+
+        OnRefreshMaskSettings();
     }
 
     [RelayCommand]
@@ -335,12 +352,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
         });
     }
 
-    [RelayCommand]
-    private async Task GotoGithubActionAsync()
-    {
-        await Launcher.LaunchUriAsync(
-            new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
-    }
+    // [RelayCommand]
+    // private async Task GotoGithubActionAsync()
+    // {
+    //     await Launcher.LaunchUriAsync(
+    //         new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
+    // }
 
     [RelayCommand]
     private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)

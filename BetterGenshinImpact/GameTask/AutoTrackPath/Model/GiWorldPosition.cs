@@ -1,4 +1,6 @@
-﻿namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
+﻿using System.Text.Json.Serialization;
+
+namespace BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 
 /// <summary>
 /// 原神世界坐标
@@ -6,12 +8,6 @@
 /// </summary>
 public class GiWorldPosition
 {
-    /// <summary>
-    /// 坐标描述和
-    /// </summary>
-    public string? Description { get; set; }
-    
-
     /// <summary>
     /// 坐标 x,y,z 三个值，分别代表纵向、高度、横向，采用原神实际的坐标系
     /// 由于这个坐标系和一般的坐标系不同，所以为了方便理解，设这3个值为a,b,c
@@ -37,8 +33,13 @@ public class GiTpPosition: GiWorldPosition
     public string? Name { get; set; } // tp 名称
     public string? Type { get; set; } // tp 类型
     public string? Country { get; set; }  // 所在国家
-    public string? Area { get; set; } // 所在区域
     
+    [JsonIgnore]
+    public string[] Areas { get; set; } = []; // 所在区域
+    [JsonIgnore]
+    public string[] Rewards { get; set; } = [];
+    [JsonIgnore]
+    public string Level1Area => Areas[0]; // 一级区域
     // 实际传送的坐标
     public decimal[] TranPosition { get; set; } = new decimal[3];
     public double TranX => (double)TranPosition[2];

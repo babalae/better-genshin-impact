@@ -40,6 +40,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool IsEnabled { get; set; }
     public int Priority => 20;
     public bool IsExclusive => false;
+    
+    public GameUiCategory SupportedGameUiCategory => GameUiCategory.Talk;
+
 
     public bool IsBackgroundRunning { get; private set; }
     
@@ -170,9 +173,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
         GetDailyRewardsEsc(_config, content);
 
         // 找左上角剧情自动的按钮
-        using var foundRectArea = content.CaptureRectArea.Find(_autoSkipAssets.DisabledUiButtonRo);
 
-        var isPlaying = !foundRectArea.IsEmpty(); // 播放中
+        var isPlaying = content.CurrentGameUiCategory == GameUiCategory.Talk
+                        || Bv.IsInTalkUi(content.CaptureRectArea); // 播放中
 
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
@@ -396,7 +399,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     }
 
     /// <summary>
-    /// 领取每日委托奖励 后 10s 寻找原石是否出现，出现则按下esc
+    /// 领取每日委托奖励 后 10s 寻找原石是否出现，出现则点击(960, 900)坐标处
     /// </summary>
     private void GetDailyRewardsEsc(AutoSkipConfig config, CaptureContent content)
     {
@@ -413,7 +416,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         content.CaptureRectArea.Find(_autoSkipAssets.PrimogemRo, primogemRa =>
         {
             Thread.Sleep(100);
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+            GameCaptureRegion.GameRegion1080PPosMove(960, 900);
+            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
             _prevGetDailyRewardsTime = DateTime.MinValue;
             primogemRa.Dispose();
         });
@@ -486,21 +490,18 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private bool ChatOptionChoose(ImageRegion region)
     {
-        if (_config.IsClickNoneChatOption())
-        {
-            return false;
-        }
-
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-
-        // 感叹号识别 遇到直接点击
-        using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
-        if (!exclamationIconRa.IsEmpty())
+        if (!_config.IsClickNoneChatOption())
         {
-            Thread.Sleep(_config.AfterChooseOptionSleepDelay);
-            exclamationIconRa.Click();
-            AutoSkipLog("点击感叹号选项");
-            return true;
+            // 感叹号识别 遇到直接点击
+            using var exclamationIconRa = region.Find(_autoSkipAssets.ExclamationIconRo);
+            if (!exclamationIconRa.IsEmpty())
+            {
+                Thread.Sleep(_config.AfterChooseOptionSleepDelay);
+                exclamationIconRa.Click();
+                AutoSkipLog("点击感叹号选项");
+                return true;
+            }
         }
 
         // 气泡识别
@@ -549,8 +550,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
             if (rs.Count > 0)
             {
-                // 自定义优先选项匹配  
-                if (_config.IsClickCustomPriorityOption() && !string.IsNullOrEmpty(_config.CustomPriorityOptions))  
+                // 自定义优先选项匹配
+                if (_config.CustomPriorityOptionsEnabled && !string.IsNullOrEmpty(_config.CustomPriorityOptions))  
                 {  
                     var customOptions = _config.CustomPriorityOptions  
                         .Split(new[] { '\r', '\n', ';', '；' }, StringSplitOptions.RemoveEmptyEntries)  
@@ -570,66 +571,78 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         }  
                     }  
                 }
-                // 内置关键词 匹配
-                foreach (var item in rs)
-                {
-                    // 选择关键词
-                    if (_selectList.Any(s => item.Text.Contains(s)))
-                    {
-                        ClickOcrRegion(item);
-                        return true;
-                    }
-
-                    // 不选择关键词
-                    if (_pauseList.Any(s => item.Text.Contains(s)))
-                    {
-                        return true;
-                    }
+                
+                if(_config.IsClickNoneChatOption()){
+                    return false;
                 }
-
-                // 橙色选项
-                foreach (var item in rs)
+                
+                
+                if (!_config.SkipBuiltInClickOptions)
                 {
-                    var textMat = item.ToImageRegion().SrcMat;
-                    if (IsOrangeOption(textMat))
+                    // 内置关键词 匹配
+                    foreach (var item in rs)
                     {
-                        if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
-                        {
-                            ClickOcrRegion(item, "每日委托");
-                            TaskControl.Sleep(800);
-                            
-                            // 6.2 每日提示确认
-                            var ra1 = TaskControl.CaptureToRectArea();
-                            if (Bv.ClickBlackConfirmButton(ra1))
-                            {
-                                _logger.LogInformation("存在提示并确认");
-                            }
-                            ra1.Dispose();
-                            
-                            _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
-                        }
-                        else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
-                        {
-                            ClickOcrRegion(item, "探索派遣");
-                            Thread.Sleep(800); // 等待探索派遣界面打开
-                            new OneKeyExpeditionTask().Run(_autoSkipAssets);
-                        }
-                        else
+                        // 选择关键词
+                        if (_selectList.Any(s => item.Text.Contains(s)))
                         {
                             ClickOcrRegion(item);
+                            return true;
                         }
 
-                        return true;
+                        // 不选择关键词
+                        if (_pauseList.Any(s => item.Text.Contains(s)))
+                        {
+                            return true;
+                        }
                     }
-                }
 
-                // 默认不选择关键词
-                foreach (var item in rs)
-                {
-                    // 不选择关键词
-                    if (_defaultPauseList.Any(s => item.Text.Contains(s)))
+                    // 橙色选项
+                    foreach (var item in rs)
                     {
-                        return true;
+                        var textMat = item.ToImageRegion().SrcMat;
+                        if (IsOrangeOption(textMat))
+                        {
+                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
+                            {
+                                ClickOcrRegion(item, "每日委托");
+                                TaskControl.Sleep(800);
+                                
+                                // 6.2 每日提示确认
+                                var ra1 = TaskControl.CaptureToRectArea();
+                                if (Bv.ClickBlackConfirmButton(ra1))
+                                {
+                                    _logger.LogInformation("存在提示并确认");
+                                }
+                                ra1.Dispose();
+                                
+                                _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
+                            }
+                            else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
+                            {
+                                ClickOcrRegion(item, "探索派遣");
+                                Thread.Sleep(800); // 等待探索派遣界面打开
+                                new OneKeyExpeditionTask().Run(_autoSkipAssets);
+                            }
+                            else if (!item.Text.Contains("每日")
+                                && !item.Text.Contains("委托")
+                                && !item.Text.Contains("探索")
+                                && !item.Text.Contains("派遣"))
+                            {
+                                ClickOcrRegion(item);
+                            }
+
+                            return true;
+                        }
+                    }
+
+                    // 默认不选择关键词
+                    foreach (var item in rs)
+                    {
+                        // 不选择关键词
+                        if (_defaultPauseList.Any(s => item.Text.Contains(s)))
+                        {
+                            return true;
+                        }
                     }
                 }
 

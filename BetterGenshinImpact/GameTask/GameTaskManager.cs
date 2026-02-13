@@ -16,14 +16,14 @@ using BetterGenshinImpact.GameTask.Placeholder;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot.Assets;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.View.Drawable;
-using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
 using OpenCvSharp;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.SkillCd;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -48,6 +48,8 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoFish", new AutoFishing.AutoFishingTrigger());
         TriggerDictionary.TryAdd("AutoCook", new AutoCook.AutoCookTrigger());
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
+        TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
+        TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
 
         return ConvertToTriggerList();
     }
@@ -122,6 +124,8 @@ internal class GameTaskManager
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
+            TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
+            TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }

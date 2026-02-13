@@ -201,7 +201,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
 
     public Dictionary<string, List<CombatCommand>> LoadAvatarMacros()
     {
-        var jsonPath = Global.Absolute("User/avatar_macro.json");
+        var jsonPath = GetAvatarMacroJsonPath();
         var json = File.ReadAllText(jsonPath);
         _lastUpdateTime = File.GetLastWriteTime(jsonPath);
         var avatarMacros = JsonSerializer.Deserialize<List<AvatarMacro>>(json, ConfigService.JsonOptions);
@@ -226,9 +226,19 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public bool IsAvatarMacrosEdited()
     {
         // 通过修改时间判断是否编辑过
-        var jsonPath = Global.Absolute("User/avatar_macro.json");
+        var jsonPath = GetAvatarMacroJsonPath();
         var lastWriteTime = File.GetLastWriteTime(jsonPath);
         return lastWriteTime > _lastUpdateTime;
+    }
+    
+    public static string GetAvatarMacroJsonPath()
+    {
+        var path = Global.Absolute("User/avatar_macro.json");
+        if (!File.Exists(path))
+        {
+            File.Copy(Global.Absolute("User/avatar_macro_default.json"), path);
+        }
+        return path;
     }
 
     public static bool IsEnabled()

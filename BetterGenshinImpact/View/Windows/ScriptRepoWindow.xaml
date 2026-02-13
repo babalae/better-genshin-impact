@@ -15,7 +15,7 @@
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  SizeToContent="Height"
-                 WindowBackdropType="None"
+                 WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
                  mc:Ignorable="d">
     <Grid>

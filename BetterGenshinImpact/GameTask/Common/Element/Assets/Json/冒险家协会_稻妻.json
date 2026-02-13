@@ -1,36 +1,57 @@
-{
+﻿{
   "info": {
-    "name": "稻妻凯瑟琳",
-    "type": "collect",
-    "author": "½",
-    "version": "1.0",
+    "authors": [
+      {
+        "links": "",
+        "name": "起个名字好难的喵"
+      }
+    ],
+    "bgi_version": "0.45.0",
     "description": "",
-    "bgiVersion": "0.35.1"
+    "last_modified_time": 1769342575161,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "冒险家协会_稻妻",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
   },
   "positions": [
     {
-      "id": 1,
       "action": "",
+      "action_params": "",
+      "id": 1,
       "move_mode": "walk",
       "type": "teleport",
-      "x": -4402.556640625,
-      "y": -3053.041015625
+      "x": -4402.544921875,
+      "y": -3052.9765625
     },
     {
+      "action": "",
+      "action_params": "",
       "id": 2,
-      "x": -4408.984375,
-      "y": -3068.2470703125,
-      "type": "path",
       "move_mode": "walk",
-      "action": ""
+      "type": "path",
+      "x": -4416.03515625,
+      "y": -3081.666015625
     },
     {
+      "action": "",
+      "action_params": "",
       "id": 3,
-      "x": -4418.185546875,
-      "y": -3086.4326171875,
-      "type": "path",
       "move_mode": "walk",
-      "action": ""
+      "type": "path",
+      "x": -4419.468791093892,
+      "y": -3086.062542740572
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 4,
+      "move_mode": "walk",
+      "type": "target",
+      "x": -4418.54296875,
+      "y": -3086.87890625
     }
   ]
 }

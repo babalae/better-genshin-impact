@@ -28,8 +28,6 @@ public class TheChasmMapTest : SceneBaseMapByTemplateMatch
         splitRow: 0,
         splitCol: 0)
     {
-        Layers = BaseMapLayerByTemplateMatch.LoadLayers(this);
         ExtractAndSaveFeature(Global.Absolute("Assets/Map/TheChasm/TheChasm_0_1024.png"));
-        SetBaseLayers(BaseMapLayer.LoadLayers(this));
     }
 }

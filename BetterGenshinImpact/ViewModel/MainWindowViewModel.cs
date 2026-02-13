@@ -261,6 +261,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 删除多余特征点
         Patch2();
 
+        // 启动时关闭布局编辑模式
+        if (Config.MaskWindowConfig.OverlayLayoutEditEnabled)
+        {
+            Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
+        }
+
         // 首次运行
         if (Config.CommonConfig.IsFirstRun)
         {

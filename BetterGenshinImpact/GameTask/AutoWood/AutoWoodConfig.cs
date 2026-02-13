@@ -21,6 +21,12 @@ public partial class AutoWoodConfig : ObservableObject
     [ObservableProperty]
     private bool _woodCountOcrEnabled = false;
 
+    /// <summary>
+    /// 使用进出千星奇域刷新CD
+    /// </summary>
+    [ObservableProperty]
+    private bool _useWonderlandRefresh = true;
+
     // /// <summary>
     // /// 按下两次ESC键，原因见：
     // /// https://github.com/babalae/better-genshin-impact/issues/235

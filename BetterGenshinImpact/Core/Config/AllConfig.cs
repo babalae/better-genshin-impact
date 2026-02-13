@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -23,6 +23,8 @@ using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -179,6 +181,16 @@ public partial class AllConfig : ObservableObject
     public AutoLeyLineOutcropConfig AutoLeyLineOutcropConfig { get; set; } = new();
     
     /// <summary>
+    ///   地图遮罩
+    /// </summary>
+    public MapMaskConfig MapMaskConfig { get; set; } = new();
+
+    /// <summary>
+    /// 技能 CD 提示
+    /// </summary>
+    public SkillCdConfig SkillCdConfig { get; set; } = new();
+
+    /// <summary>
     /// 自动使用
     /// </summary>
     public AutoRedeemCodeConfig AutoRedeemCodeConfig { get; set; } = new();
@@ -268,12 +280,14 @@ public partial class AllConfig : ObservableObject
         AutoRedeemCodeConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoLeyLineOutcropConfig.PropertyChanged += OnAnyPropertyChanged;
+        MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;
         ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
         PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
+        SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

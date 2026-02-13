@@ -81,16 +81,14 @@
                     <ui:ListView Grid.Column="2"
                               ItemsSource="{Binding FilteredDomains, ElementName=Root}"
                               SelectedValue="{Binding SelectedDomain, ElementName=Root, Mode=TwoWay}"
-                              SelectedValuePath="Name"
+                              SelectedValuePath="Item2.Name"
                               BorderThickness="0"
                               SelectionChanged="DomainListView_SelectionChanged"
                               ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Margin="8,4">
-                                    <Run Text="{Binding Description, Mode=OneWay}"/>
-                                    <Run Text="|"/>
-                                    <Run Text="{Binding Name, Mode=OneWay}"/>
+                                    <Run Text="{Binding Item1, Mode=OneWay}"/>
                                 </TextBlock>
                             </DataTemplate>
                         </ui:ListView.ItemTemplate>

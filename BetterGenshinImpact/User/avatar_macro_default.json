@@ -465,7 +465,7 @@
   {
     "name": "玛薇卡",
     "scriptContent1": "keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(0.08),keydown(space),keyup(space),wait(1.3)",
-    "scriptContent2": "mousedown(left),wait(0.3),mouseup(left),wait(0.6),mousedown(right),wait(0.08),mouseup(right),wait(0.02),mousedown(left),wait(0.15),mouseup(left),wait(0.05)",
+    "scriptContent2": "wait(0.03),mousedown(left),wait(0.33),mouseup(left),wait(0.05),mousedown(left),wait(0.18),mousedown(right),wait(0.05),mouseup(right),wait(0.05),mouseup(left),wait(0.05),mousedown(left),wait(0.18),mousedown(right),wait(0.05),mouseup(right),wait(1),mouseup(left),wait(0.27)",
     "macroPriority": 0
   },
   {

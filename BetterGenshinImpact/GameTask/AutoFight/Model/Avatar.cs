@@ -254,10 +254,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                if (needLog && i > 0)
-                {
-                    Logger.LogInformation("成功切换角色:{Name}", Name);
-                }
+                // if (needLog && i > 0)
+                // {
+                //     Logger.LogInformation("成功切换角色:{Name}", Name);
+                // }
 
                 return true;
             }
@@ -267,6 +267,8 @@ public class Avatar
 
             Sleep(250, Ct);
         }
+        
+        Logger.LogWarning("切换角色失败:{Name}", Name);
 
         return false;
     }
@@ -472,8 +474,8 @@ public class Avatar
             var cd = AfterUseSkill(region);
             if (cd > 0)
             {
-                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
-                    Math.Round(cd, 2));
+                // Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                //     Math.Round(cd, 2));
                 return;
             }
         }
@@ -628,6 +630,32 @@ public class Avatar
     public void Wait(int ms)
     {
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
+    }
+    
+    /// <summary>
+    /// 等待完成
+    /// </summary>
+    public void Ready()
+    {
+        Sleep(200, Ct);
+
+        for (int i = 0; i < 20; i++)
+        {
+            if (Ct is { IsCancellationRequested: true })
+            {
+                return;
+            }
+
+            using var region = CaptureToRectArea();
+            // 等待角色编号块出现
+            if (PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
+            {
+                region.Dispose();
+                return;
+            }
+
+            Sleep(150, Ct);
+        }
     }
 
     /// <summary>
@@ -864,6 +892,11 @@ public class Avatar
     public void MoveBy(int x, int y)
     {
         GlobalMethod.MoveMouseBy(x, y);
+    }
+
+    public void Scroll(int scrollAmountInClicks)
+    {
+        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
     }
 
     public void KeyDown(string key)

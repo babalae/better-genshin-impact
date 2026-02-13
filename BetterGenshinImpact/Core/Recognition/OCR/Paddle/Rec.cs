@@ -95,21 +95,33 @@ public class Rec(
                 // .AsParallel()
                 .Select(src =>
                 {
-                    using var channel3 = src.Channels() switch
+                    Mat? channel3 = default;
+                    try
                     {
-                        4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
-                        1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
-                        3 => src,
-                        var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
-                    };
-                    var result = OcrUtils.ResizeNormImg(channel3, new OcrShape(3, maxWidth, modelHeight),
-                        out var owner);
-                    lock (owners)
-                    {
-                        owners.Add(owner);
-                    }
+                        channel3 = src.Channels() switch
+                        {
+                            4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
+                            1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
+                            3 => src,
+                            var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
+                        };
+                        var result = OcrUtils.ResizeNormImg(channel3, new OcrShape(3, maxWidth, modelHeight),
+                            out var owner);
+                        lock (owners)
+                        {
+                            owners.Add(owner);
+                        }
 
-                    return result;
+                        return result;
+                    }
+                    finally
+                    {
+                        // Only dispose Mats created in this scope
+                        if (channel3 != null && !ReferenceEquals(channel3, src))
+                        {
+                            channel3.Dispose();
+                        }
+                    }
                 })
                 .Select(inputTensor =>
                     {

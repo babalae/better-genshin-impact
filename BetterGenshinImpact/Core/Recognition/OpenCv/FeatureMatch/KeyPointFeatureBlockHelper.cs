@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
+using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -79,6 +79,79 @@ public class KeyPointFeatureBlockHelper
         var cellCol = (int)Math.Round(x / cellWidth, 0);
 
         return (cellRow, cellCol);
+    }
+
+    public static (int RowStart, int RowEnd, int ColStart, int ColEnd) GetCellRange(Size originalImage, int rows, int cols, Rect rect)
+    {
+        int cellWidth = originalImage.Width / cols;
+        int cellHeight = originalImage.Height / rows;
+
+        var rowStart = (int)(rect.Y / cellHeight);
+        var rowEnd = (int)((rect.Y + rect.Height) / cellHeight);
+        var colStart = (int)(rect.X / cellWidth);
+        var colEnd = (int)((rect.X + rect.Width) / cellWidth);
+
+        rowStart = Math.Max(0, Math.Min(rowStart, rows - 1));
+        rowEnd = Math.Max(0, Math.Min(rowEnd, rows - 1));
+        colStart = Math.Max(0, Math.Min(colStart, cols - 1));
+        colEnd = Math.Max(0, Math.Min(colEnd, cols - 1));
+
+        if (rowEnd < rowStart)
+        {
+            rowEnd = rowStart;
+        }
+
+        if (colEnd < colStart)
+        {
+            colEnd = colStart;
+        }
+
+        return (rowStart, rowEnd, colStart, colEnd);
+    }
+
+    public static KeyPointFeatureBlock MergeFeaturesInRange(KeyPointFeatureBlock[][] splitKeyPoints, Mat matches, int rowStart, int rowEnd, int colStart, int colEnd)
+    {
+        var rows = splitKeyPoints.Length;
+        if (rows == 0)
+        {
+            return new KeyPointFeatureBlock();
+        }
+
+        var cols = splitKeyPoints[0].Length;
+
+        rowStart = Math.Max(0, Math.Min(rowStart, rows - 1));
+        rowEnd = Math.Max(0, Math.Min(rowEnd, rows - 1));
+        colStart = Math.Max(0, Math.Min(colStart, cols - 1));
+        colEnd = Math.Max(0, Math.Min(colEnd, cols - 1));
+
+        var matchesCols = matches.Cols;
+        var neighboringKeyPoints = new List<KeyPoint>();
+        var neighboringKeyPointIndices = new List<int>();
+
+        for (int i = rowStart; i <= rowEnd; i++)
+        {
+            for (int j = colStart; j <= colEnd; j++)
+            {
+                if (splitKeyPoints[i][j] != null)
+                {
+                    neighboringKeyPoints.AddRange(splitKeyPoints[i][j].KeyPointList);
+                    neighboringKeyPointIndices.AddRange(splitKeyPoints[i][j].KeyPointIndexList);
+                }
+            }
+        }
+
+        var mergedKeyPointBlock = new KeyPointFeatureBlock
+        {
+            MergedCenterCellCol = (colStart + colEnd) / 2,
+            MergedCenterCellRow = (rowStart + rowEnd) / 2,
+            KeyPointList = neighboringKeyPoints,
+            KeyPointIndexList = neighboringKeyPointIndices
+        };
+
+        mergedKeyPointBlock.Descriptor = new Mat(mergedKeyPointBlock.KeyPointIndexList.Count, matchesCols, MatType.CV_32FC1);
+        InitBlockMat(mergedKeyPointBlock.KeyPointIndexList, mergedKeyPointBlock.Descriptor, matches);
+
+        return mergedKeyPointBlock;
     }
 
     public static KeyPointFeatureBlock MergeNeighboringFeatures(KeyPointFeatureBlock[][] splitKeyPoints, Mat matches, int cellRow, int cellCol)

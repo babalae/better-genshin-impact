@@ -24,6 +24,7 @@
             <bgivc:NotNullConverter x:Key="NotNullConverter" />
             <bgivc:EnumToKVPConverter x:Key="EnumToKVPConverter" />
             <bgivc:CultureInfoNameToKVPConverter x:Key="CultureInfoNameToKVPConverter" />
+            <bgivc:StringToColorConverter x:Key="StringToColorConverter" />
             <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
             </Style>

@@ -35,7 +35,7 @@ public partial class MacroSettingsPageViewModel : ViewModel
     [RelayCommand]
     public void OnEditAvatarMacro()
     {
-        JsonMonoDialog.Show(@"User\avatar_macro.json");
+        JsonMonoDialog.Show(OneKeyFightTask.GetAvatarMacroJsonPath());
     }
 
     [RelayCommand]

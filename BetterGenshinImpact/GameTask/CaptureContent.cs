@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
 using System;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask;
@@ -17,6 +18,8 @@ public class CaptureContent : IDisposable
     public int FrameRate => (int)(1000 / TimerInterval);
 
     public ImageRegion CaptureRectArea { get; }
+    
+    public GameUiCategory CurrentGameUiCategory;
 
     public CaptureContent(Mat image, int frameIndex, double interval)
     {

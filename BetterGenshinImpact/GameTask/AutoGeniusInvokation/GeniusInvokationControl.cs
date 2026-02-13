@@ -715,13 +715,6 @@ public class GeniusInvokationControl
                     Sleep(500);
                 }
             }
-
-            // 存在吞星之鲸的情况下，烧牌后等待加血动画
-            if (duel.Characters.Any(c => c is { Name: "吞星之鲸" }))
-            {
-                Debug.WriteLine("存在吞星之鲸的情况下，烧牌后等待动画");
-                Sleep(5000);
-            }
         }
 
         return ActionPhaseUseSkill(skillIndex);

@@ -53,7 +53,9 @@ public class WaypointForTrack : Waypoint
         // 坐标系转换
         mapMatchMethod ??= TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         MapMatchMethod = mapMatchMethod;
-        (MatX, MatY) = MapManager.GetMap(mapName, MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates((float)waypoint.X, (float)waypoint.Y);
+        var MatP = MapManager.GetMap(mapName, MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new OpenCvSharp.Point2f((float)waypoint.X, (float)waypoint.Y));
+        MatX = MatP.X;
+        MatY = MatP.Y;
         X = MatX;
         Y = MatY;
         if (waypoint.Action == ActionEnum.CombatScript.Code)

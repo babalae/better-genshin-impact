@@ -92,6 +92,21 @@ public class SwitchPartyTask
             RegionOfInterest = new Rect(partyViewBtn.Right, partyViewBtn.Top, (int)(350 * _assetScale),
                 partyViewBtn.Height)
         }).Text;
+        
+        var tempName = currTeamName
+            .Replace("\"", "")        // 移除所有双引号（核心新增，解决日志里的""问题）
+            .Replace("\r\n", "")      // 清理Windows换行符
+            .Replace("\r", "");   // 先清理所有双引号，避免引号干扰后续处理
+                              
+        // 核心逻辑：找到第一个换行符(\n)的位置，截断并删除换行+后面所有字符
+        int firstNewLineIndex = tempName.IndexOf('\n');
+        if (firstNewLineIndex != -1) // 存在换行符，截取到换行符前
+        {
+            tempName = tempName.Substring(0, firstNewLineIndex);
+        }
+                          
+        // 最后统一去首尾所有空白（空格、制表符、回车符\r等），得到纯净队伍名
+        currTeamName = tempName.Trim();
 
         Logger.LogInformation("切换队伍，当前队伍名称: {Text}，使用正则表达式规则进行模糊匹配", currTeamName);
         if (Regex.IsMatch(currTeamName, partyName))
@@ -143,6 +158,7 @@ public class SwitchPartyTask
         Simulation.SendInput.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
         Simulation.SendInput.Mouse.LeftButtonUp();
+        await Task.Delay(100, ct);
 
         Rect regionOfInterest = new Rect(0, (int)(80 * _assetScale), partyDeleteBtn.Right, partyDeleteBtn.Top - (int)(80 * _assetScale));
         RecognitionObject recognitionObject = new RecognitionObject
@@ -197,6 +213,7 @@ public class SwitchPartyTask
                 {
                     // #ebe4d8 首次点一下第一个，防止第五个被点击过
                     page.ClickTo(600 * _assetScale, 200 * _assetScale);
+                    await Task.Delay(300, ct); // 等待动画
                 }
 
                 page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移

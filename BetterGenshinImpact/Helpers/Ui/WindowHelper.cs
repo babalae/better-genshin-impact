@@ -3,8 +3,8 @@ using System.Windows.Media;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using Wpf.Ui.Controls;
-
 using BetterGenshinImpact.Platform.Wine;
+
 namespace BetterGenshinImpact.Helpers.Ui;
 
 public class WindowHelper
@@ -20,15 +20,15 @@ public class WindowHelper
             {
                 ApplyThemeToWindow(window, themeType);
             }
-            catch 
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to apply theme in Wine");
+                Debug.WriteLine($"Failed to apply theme in Wine");
             }
         }
         else
-        {        
-          ApplyThemeToWindow(window, themeType);
-        };
+        {
+            ApplyThemeToWindow(window, themeType);
+        }
     }
 
     /// <summary>

@@ -62,13 +62,16 @@ public class PathRecorder : Singleton<PathRecorder>
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
-        if (position == default)
+        var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        if (nullablePosition == null)
         {
             TaskControl.Logger.LogWarning("未识别到当前位置！");
             return;
         }
-
-        position = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        else
+        {
+            position = nullablePosition.Value;
+        }
         waypoint.X = position.X;
         waypoint.Y = position.Y;
         waypoint.Type = WaypointType.Teleport.Code;
@@ -91,11 +94,15 @@ public class PathRecorder : Singleton<PathRecorder>
         var screen = TaskControl.CaptureToRectArea();
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
-        position = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
-        if (position == default)
+        var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
+        if (nullablePosition == null)
         {
             TaskControl.Logger.LogWarning("未识别到当前位置！");
             return;
+        }
+        else
+        {
+            position = nullablePosition.Value;
         }
 
         waypoint.X = position.X;
