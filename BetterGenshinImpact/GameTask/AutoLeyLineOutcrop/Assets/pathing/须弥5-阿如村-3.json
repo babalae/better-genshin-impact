@@ -1,0 +1,77 @@
+{
+  "info": {
+    "name": "须弥5-阿如村-3",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "佬记得检查这一篇代码",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 4234.8,
+      "y": -1912.06,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4205.16,
+      "y": -1921.99,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "down",
+      "locked": false
+    },
+    {
+      "id": 4,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "down",
+      "locked": false
+    },
+    {
+      "id": 5,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "down"
+    },
+    {
+      "id": 6,
+      "x": 4148.92,
+      "y": -2006.51,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 7,
+      "x": 4144.29,
+      "y": -2014.19,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

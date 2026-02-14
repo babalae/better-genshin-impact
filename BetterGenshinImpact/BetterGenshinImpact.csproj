@@ -128,6 +128,9 @@
 		<None Update="GameTask\AutoFishing\Assets\1920x1080\**">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoLeyLineOutcrop\Assets\**">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="GameTask\LogParse\Assets\**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

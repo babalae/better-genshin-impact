@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "枫丹2-芒索斯山东麓-3",
+    "type": "collect",
+    "author": "平面镜",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 5043.36,
+      "y": 4479.99,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

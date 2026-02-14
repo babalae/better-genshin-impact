@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "璃月9-南天门东-3-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 1561.71,
+      "y": 483.58,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

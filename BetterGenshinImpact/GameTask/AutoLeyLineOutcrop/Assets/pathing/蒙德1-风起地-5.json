@@ -1,0 +1,39 @@
+{
+  "info": {
+    "name": "蒙德1-风起地-5",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -914.82,
+      "y": 1795.51,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "action": "",
+      "move_mode": "dash",
+      "type": "path",
+      "x": -900.72,
+      "y": 1833.73,
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -895.08,
+      "y": 1833.84,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}
