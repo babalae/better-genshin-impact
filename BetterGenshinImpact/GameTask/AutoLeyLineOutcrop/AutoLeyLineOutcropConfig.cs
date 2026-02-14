@@ -10,7 +10,7 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     private string _leyLineOutcropType = "启示之花";
 
     [ObservableProperty]
-    private string _country = "稻妻";
+    private string _country = "蒙德";
 
     [ObservableProperty]
     private bool _isResinExhaustionMode = false;
