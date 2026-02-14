@@ -251,6 +251,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         int successCount = 0;
         int failCount = 0;
+        var succeededPaths = new HashSet<string>();
 
         // 逐个更新脚本
         foreach (var path in expandedPaths)
@@ -305,6 +306,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
 
                 successCount++;
+                succeededPaths.Add(path);
                 _logger.LogInformation("自动更新脚本成功: {Path}", path);
             }
             catch (Exception ex)
@@ -314,14 +316,24 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
         }
 
-        // 重置已更新脚本的 hasUpdate 标记
+        // 仅重置实际更新成功的脚本的 hasUpdate 标记，避免漏掉失败的更新
         if (successCount > 0)
         {
             try
             {
+                // 从展开后的成功路径反推需要重置的原始订阅路径
+                // 如果某个 pathsToUpdate 展开后的所有子路径都成功了，才重置该路径
                 foreach (var path in pathsToUpdate)
                 {
-                    ResetHasUpdateForPath(jsonObj, path);
+                    var expanded = ExpandTopLevelPaths(new List<string> { path }, repoPath);
+                    if (expanded.All(p => succeededPaths.Contains(p)))
+                    {
+                        ResetHasUpdateForPath(jsonObj, path);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("路径 {Path} 部分子路径更新失败，保留 hasUpdate 标记", path);
+                    }
                 }
 
                 var modifiedJson = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
