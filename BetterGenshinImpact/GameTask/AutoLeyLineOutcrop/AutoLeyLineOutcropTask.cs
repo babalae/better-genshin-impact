@@ -28,6 +28,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -98,6 +99,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 await RecheckResinAndContinue();
             }
+        }
+        catch (NormalEndException e)
+        {
+            Logger.LogInformation("任务结束：{Msg}", e.Message);
         }
         catch (Exception e)
         {
