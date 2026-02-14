@@ -1024,17 +1024,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var oldPaths = new HashSet<string>();
             var newPaths = new HashSet<string>();
 
-            CollectLeafPaths(oldJson["indexes"] as JArray, "", oldPaths);
-            CollectLeafPaths(newJson["indexes"] as JArray, "", newPaths);
+            CollectDirectoryPaths(oldJson["indexes"] as JArray, "", oldPaths);
+            CollectDirectoryPaths(newJson["indexes"] as JArray, "", newPaths);
 
             if (oldPaths.Count == 0 && newPaths.Count == 0) return 1.0;
             if (oldPaths.Count == 0 || newPaths.Count == 0) return 0.0;
 
             var intersection = oldPaths.Intersect(newPaths).Count();
-            var union = oldPaths.Union(newPaths).Count();
+            var minCount = Math.Min(oldPaths.Count, newPaths.Count);
 
-            var ratio = union > 0 ? (double)intersection / union : 0.0;
-            _logger.LogDebug("仓库内容重合度: {Ratio:P0} (旧 {OldCount} 个路径, 新 {NewCount} 个路径, 交集 {Intersection} 个)",
+            // 使用 Overlap Coefficient: intersection / min(|A|, |B|)
+            // 对仓库正常增长（目录只增不减）更加宽容
+            var ratio = minCount > 0 ? (double)intersection / minCount : 0.0;
+            _logger.LogDebug("仓库目录结构重合度(Overlap): {Ratio:P0} (旧 {OldCount} 个目录, 新 {NewCount} 个目录, 交集 {Intersection} 个)",
                 ratio, oldPaths.Count, newPaths.Count, intersection);
             return ratio;
         }
@@ -1046,9 +1048,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 递归收集 indexes 中的所有叶子节点路径
+    /// 递归收集 indexes 中的所有目录节点路径（仅 type == "directory" 的节点）
+    /// 只用目录结构判断仓库重合度，不受具体文件增删影响
     /// </summary>
-    private void CollectLeafPaths(JArray? nodes, string prefix, HashSet<string> paths)
+    private void CollectDirectoryPaths(JArray? nodes, string prefix, HashSet<string> paths)
     {
         if (nodes == null) return;
 
@@ -1057,15 +1060,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var name = node["name"]?.ToString();
             if (string.IsNullOrEmpty(name)) continue;
 
+            if (node["type"]?.ToString() != "directory") continue;
+
             var fullPath = string.IsNullOrEmpty(prefix) ? name : $"{prefix}/{name}";
+            paths.Add(fullPath);
 
             if (node["children"] is JArray children && children.Count > 0)
             {
-                CollectLeafPaths(children, fullPath, paths);
-            }
-            else
-            {
-                paths.Add(fullPath);
+                CollectDirectoryPaths(children, fullPath, paths);
             }
         }
     }
