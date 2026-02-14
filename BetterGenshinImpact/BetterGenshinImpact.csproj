@@ -194,6 +194,9 @@
 		<None Update="GameTask\Common\Element\Assets\1920x1080\in_domain.png">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="GameTask\AutoDomain\Assets\1920x1080\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>

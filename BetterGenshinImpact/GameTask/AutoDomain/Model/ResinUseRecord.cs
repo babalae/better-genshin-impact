@@ -32,6 +32,14 @@ public class ResinUseRecord
             {
                 list.Add(new ResinUseRecord("浓缩树脂", taskParam.CondensedResinUseCount));
             }
+            if (taskParam.OriginalResin40UseCount > 0)
+            {
+                list.Add(new ResinUseRecord("原粹树脂40", taskParam.OriginalResin40UseCount));
+            }
+            if (taskParam.OriginalResin20UseCount > 0)
+            {
+                list.Add(new ResinUseRecord("原粹树脂20", taskParam.OriginalResin20UseCount));
+            }
             if (taskParam.OriginalResinUseCount > 0)
             {
                 list.Add(new ResinUseRecord("原粹树脂", taskParam.OriginalResinUseCount));
