@@ -162,6 +162,166 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
+    /// <summary>
+    /// 手动一键更新已订阅的脚本（不检查 AutoUpdateSubscribedScripts 配置开关）
+    /// 强制更新所有订阅脚本，不依赖 hasUpdate 标记
+    /// </summary>
+    public async Task ManualUpdateSubscribedScripts()
+    {
+        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+        var subscribedPaths = scriptConfig.SubscribedScriptPaths;
+        if (subscribedPaths == null || subscribedPaths.Count == 0)
+        {
+            _logger.LogInformation("没有已订阅的脚本");
+            UIDispatcherHelper.Invoke(() => Toast.Information("没有已订阅的脚本，请先在仓库中订阅脚本"));
+            return;
+        }
+
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            // 第一步：拉取最新仓库
+            await UpdateCenterRepoSilently(scriptConfig);
+
+            // 检查仓库是否存在
+            if (!Directory.Exists(CenterRepoPath))
+            {
+                _logger.LogWarning("仓库文件夹不存在，请先更新仓库");
+                UIDispatcherHelper.Invoke(() => Toast.Warning("仓库文件夹不存在，请先更新仓库"));
+                return;
+            }
+
+            // 重新加载订阅路径
+            subscribedPaths = scriptConfig.SubscribedScriptPaths;
+            if (subscribedPaths == null || subscribedPaths.Count == 0)
+            {
+                return;
+            }
+
+            // 查找仓库路径
+            string repoPath;
+            try
+            {
+                repoPath = FindCenterRepoPath();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "查找中央仓库路径失败");
+                UIDispatcherHelper.Invoke(() => Toast.Warning("查找仓库路径失败，请先更新仓库"));
+                return;
+            }
+
+            // 展开所有订阅路径，直接全部更新（不需要检查 hasUpdate）
+            var expandedPaths = ExpandTopLevelPaths(subscribedPaths, repoPath);
+
+            int successCount = 0;
+            int failCount = 0;
+
+            foreach (var path in expandedPaths)
+            {
+                try
+                {
+                    var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
+                    if (!PathMapper.TryGetValue(first, out var userPath))
+                    {
+                        _logger.LogDebug("未知的脚本路径类型: {Path}", path);
+                        continue;
+                    }
+
+                    var destPath = Path.Combine(userPath, remainingPath);
+
+                    // 备份需要保存的文件（仅 JS 脚本）
+                    List<string> backupFiles = new();
+                    if (first == "js")
+                    {
+                        backupFiles = BackupScriptFiles(path, repoPath);
+                    }
+
+                    // 删除旧文件/目录
+                    if (Directory.Exists(destPath))
+                    {
+                        DirectoryHelper.DeleteDirectoryWithReadOnlyCheck(destPath);
+                    }
+                    else if (File.Exists(destPath))
+                    {
+                        File.Delete(destPath);
+                    }
+
+                    // 从仓库检出最新文件
+                    CheckoutPath(repoPath, path, destPath);
+
+                    // 图标处理（仅对目录）
+                    if (Directory.Exists(destPath))
+                    {
+                        DealWithIconFolder(destPath);
+                    }
+
+                    // 恢复备份的文件
+                    if (first == "js" && backupFiles.Count > 0)
+                    {
+                        RestoreScriptFiles(path, repoPath);
+                    }
+
+                    // 解析 JS 脚本依赖
+                    if (first == "js")
+                    {
+                        ResolveScriptDependencies(repoPath, destPath);
+                    }
+
+                    successCount++;
+                    _logger.LogInformation("一键更新脚本成功: {Path}", path);
+                }
+                catch (Exception ex)
+                {
+                    failCount++;
+                    _logger.LogWarning(ex, "一键更新脚本失败: {Path}", path);
+                }
+            }
+
+            // 全部更新后清除所有订阅路径的 hasUpdate 标记
+            if (successCount > 0)
+            {
+                try
+                {
+                    var updatedRepoJsonPath = RepoUpdatedJsonPath;
+                    if (File.Exists(updatedRepoJsonPath))
+                    {
+                        var json = await File.ReadAllTextAsync(updatedRepoJsonPath);
+                        var jsonObj = JObject.Parse(json);
+
+                        foreach (var path in subscribedPaths)
+                        {
+                            ResetHasUpdateForPath(jsonObj, path);
+                        }
+
+                        var modifiedJson = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
+                        await File.WriteAllTextAsync(updatedRepoJsonPath, modifiedJson);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "重置 hasUpdate 标记失败");
+                }
+
+                UpdateSubscribedScriptPaths();
+            }
+
+            _logger.LogInformation("一键更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
+            UIDispatcherHelper.Invoke(() =>
+            {
+                if (failCount == 0)
+                    Toast.Success($"已更新 {successCount} 个订阅脚本");
+                else
+                    Toast.Warning($"已更新 {successCount} 个订阅脚本，{failCount} 个失败");
+            });
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
     private async Task AutoUpdateSubscribedScriptsCore(ScriptConfig scriptConfig, List<string> subscribedPaths)
     {
 

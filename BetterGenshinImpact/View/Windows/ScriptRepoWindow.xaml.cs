@@ -494,6 +494,33 @@ public partial class ScriptRepoWindow
         }
     }
 
+    [RelayCommand]
+    private async Task UpdateSubscribedScripts()
+    {
+        if (IsUpdating)
+        {
+            Toast.Warning("请等待当前操作完成后再进行更新。");
+            return;
+        }
+
+        try
+        {
+            IsUpdating = true;
+            UpdateProgressValue = 0;
+            UpdateProgressText = "正在更新订阅脚本...";
+
+            await ScriptRepoUpdater.Instance.ManualUpdateSubscribedScripts();
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"更新订阅脚本失败: {ex.Message}");
+        }
+        finally
+        {
+            IsUpdating = false;
+        }
+    }
+
     /// <summary>
     /// 处理超链接点击事件
     /// </summary>
