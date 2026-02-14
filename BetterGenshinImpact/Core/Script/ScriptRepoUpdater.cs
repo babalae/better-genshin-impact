@@ -540,7 +540,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         var trimmedUrl = repoUrl.TrimEnd('/');
 
-        // 优先查找已保存的映射（基于内容重合度确定的文件夹名）
+        // 优先查找已保存的映射（基于目录结构重合度确定的文件夹名）
         var mapping = LoadFolderMapping();
         if (mapping.TryGetValue(trimmedUrl, out var savedName) && !string.IsNullOrEmpty(savedName))
             return savedName;
@@ -833,7 +833,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var origin = repo.Network.Remotes["origin"];
                     if (origin.Url != repoUrl)
                     {
-                        // 远程URL已更改，克隆到临时文件夹后基于内容重合度决定存放位置
+                        // 远程URL已更改，克隆到临时文件夹后基于目录结构重合度决定存放位置
                         _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}");
                         repo?.Dispose();
                         repo = null;
@@ -853,7 +853,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                                 DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
                         }
 
-                        // Step 2: 基于内容重合度决定存放位置
+                        // Step 2: 基于目录结构重合度决定存放位置
                         if (cloneSucceeded)
                         {
                             try
@@ -869,19 +869,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                                 if (overlapRatio >= 0.5)
                                 {
-                                    // 内容重合度高 → 同一仓库的不同镜像，替换原文件夹
-                                    _logger.LogInformation("内容重合度 {Ratio:P0}，判定为同一仓库镜像，替换原文件夹", overlapRatio);
+                                    // 目录结构重合度高 → 同一仓库的不同镜像，替换原文件夹
+                                    _logger.LogInformation("目录结构重合度 {Ratio:P0}，判定为同一仓库镜像，替换原文件夹", overlapRatio);
                                     DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
                                     Directory.Move(tempPath, repoPath);
                                     SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
                                 }
                                 else
                                 {
-                                    // 内容重合度低 → 不同仓库，创建新文件夹
+                                    // 目录结构重合度低 → 不同仓库，创建新文件夹
                                     var baseName = DeriveBaseFolderName(repoUrl.TrimEnd('/'));
                                     var uniqueName = GenerateUniqueFolderName(baseName);
                                     var newRepoPath = Path.Combine(ReposPath, uniqueName);
-                                    _logger.LogInformation("内容重合度 {Ratio:P0}，判定为不同仓库，创建新文件夹: {Folder}", overlapRatio, uniqueName);
+                                    _logger.LogInformation("目录结构重合度 {Ratio:P0}，判定为不同仓库，创建新文件夹: {Folder}", overlapRatio, uniqueName);
                                     Directory.Move(tempPath, newRepoPath);
                                     repoPath = newRepoPath;
                                     SaveFolderMapping(repoUrl.TrimEnd('/'), uniqueName);
@@ -961,11 +961,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 {
                     var repoUpdateContent = await File.ReadAllTextAsync(repoUpdateJsonPath);
 
-                    // 检查内容重合度，低于阈值则判定为不同仓库，不继承旧的更新标记
+                    // 检查目录结构重合度，低于阈值则判定为不同仓库，不继承旧的更新标记
                     var overlapRatio = CalculateRepoOverlapRatio(repoUpdateContent, newRepoJsonContent);
                     if (overlapRatio < 0.5)
                     {
-                        _logger.LogInformation("仓库内容重合度低 ({Ratio:P0})，判定为不同仓库，不继承旧的更新标记", overlapRatio);
+                        _logger.LogInformation("仓库目录结构重合度低 ({Ratio:P0})，判定为不同仓库，不继承旧的更新标记", overlapRatio);
                         updatedContent = newRepoJsonContent;
                     }
                     else
@@ -979,7 +979,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var overlapRatio = CalculateRepoOverlapRatio(oldRepoJsonContent, newRepoJsonContent);
                     if (overlapRatio < 0.5)
                     {
-                        _logger.LogInformation("仓库内容重合度低 ({Ratio:P0})，判定为不同仓库，不继承旧的更新标记", overlapRatio);
+                        _logger.LogInformation("仓库目录结构重合度低 ({Ratio:P0})，判定为不同仓库，不继承旧的更新标记", overlapRatio);
                         updatedContent = newRepoJsonContent;
                     }
                     else
@@ -1008,7 +1008,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 计算两个 repo.json 的内容重合度（基于脚本路径的 Jaccard 系数）
+    /// 计算两个 repo.json 的目录结构重合度（基于目录路径的 Overlap Coefficient）
     /// 用于判断是否为同一仓库的不同版本还是完全不同的仓库
     /// </summary>
     /// <param name="oldContent">旧版 repo.json 内容</param>
@@ -1857,7 +1857,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     /// <summary>
     /// 统一的本地 zip 导入方法
-    /// 解压后自动识别仓库内容，基于内容重合度决定覆盖已有仓库还是创建新文件夹，
+    /// 解压后自动识别仓库内容，基于目录结构重合度决定覆盖已有仓库还是创建新文件夹，
     /// 并生成 repo_updated.json 更新标记
     /// </summary>
     /// <param name="zipFilePath">本地 zip 文件路径</param>
@@ -1904,11 +1904,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var newRepoJsonContent = await File.ReadAllTextAsync(repoJsonPath);
             onProgress?.Invoke(55, "仓库结构验证通过，正在分析仓库内容...");
 
-            // 阶段4: 基于内容重合度决定目标文件夹 (55-70%)
+            // 阶段4: 基于目录结构重合度决定目标文件夹 (55-70%)
             string? bestMatchFolder = null;
             double bestOverlap = 0;
 
-            // 扫描已有仓库，找内容重合度最高的
+            // 扫描已有仓库，找目录结构重合度最高的
             if (Directory.Exists(ReposPath))
             {
                 foreach (var existingDir in Directory.GetDirectories(ReposPath))
@@ -1952,7 +1952,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 // 高重合度 → 覆盖已有仓库
                 targetFolderName = bestMatchFolder;
                 targetPath = Path.Combine(ReposPath, targetFolderName);
-                _logger.LogInformation("Zip导入：内容重合度 {Ratio:P0}，覆盖已有仓库 {Folder}", bestOverlap, targetFolderName);
+                _logger.LogInformation("Zip导入：目录结构重合度 {Ratio:P0}，覆盖已有仓库 {Folder}", bestOverlap, targetFolderName);
 
                 // 读取旧的 repo_updated.json 用于生成更新标记
                 var oldUpdatedPath = Path.Combine(targetPath, "repo_updated.json");
@@ -1983,7 +1983,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     targetFolderName = GenerateUniqueFolderName(baseName);
                 }
                 targetPath = Path.Combine(ReposPath, targetFolderName);
-                _logger.LogInformation("Zip导入：内容重合度 {Ratio:P0}，创建新文件夹 {Folder}", bestOverlap, targetFolderName);
+                _logger.LogInformation("Zip导入：目录结构重合度 {Ratio:P0}，创建新文件夹 {Folder}", bestOverlap, targetFolderName);
             }
             else
             {
@@ -2021,7 +2021,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     else
                     {
-                        // 内容差异太大，直接使用新内容
+                        // 目录结构差异太大，直接使用新内容
                         await File.WriteAllTextAsync(updatedJsonPath, newRepoJsonContent);
                     }
                 }
