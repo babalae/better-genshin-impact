@@ -7,6 +7,7 @@ using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
@@ -135,43 +136,53 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     public async Task AutoUpdateSubscribedScripts()
     {
-        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-
-        // 检查是否启用自动更新
-        if (!scriptConfig.AutoUpdateSubscribedScripts)
-        {
-            _logger.LogDebug("已禁用自动更新订阅脚本");
-            return;
-        }
-
-        var subscribedPaths = scriptConfig.SubscribedScriptPaths;
-        if (subscribedPaths == null || subscribedPaths.Count == 0)
-        {
-            _logger.LogDebug("没有已订阅的脚本，跳过自动更新");
-            return;
-        }
-
-        await _repoWriteLock.WaitAsync();
         try
         {
-            await AutoUpdateSubscribedScriptsCore(scriptConfig, subscribedPaths);
+            // 迁移旧 config.json 中的订阅路径到独立文件（仅首次）
+            MigrateSubscribedPathsFromConfig();
+
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+            // 检查是否启用自动更新
+            if (!scriptConfig.AutoUpdateSubscribedScripts)
+            {
+                _logger.LogDebug("已禁用自动更新订阅脚本");
+                return;
+            }
+
+            var subscribedPaths = GetSubscribedPathsForCurrentRepo();
+            if (subscribedPaths.Count == 0)
+            {
+                _logger.LogDebug("没有已订阅的脚本，跳过自动更新");
+                return;
+            }
+
+            await _repoWriteLock.WaitAsync();
+            try
+            {
+                await AutoUpdateSubscribedScriptsCore(scriptConfig, subscribedPaths);
+            }
+            finally
+            {
+                _repoWriteLock.Release();
+            }
         }
-        finally
+        catch (Exception e)
         {
-            _repoWriteLock.Release();
+            _logger.LogDebug(e, "自动更新订阅脚本失败");
         }
     }
 
     /// <summary>
     /// 手动一键更新已订阅的脚本（不检查 AutoUpdateSubscribedScripts 配置开关）
-    /// 强制更新所有订阅脚本，不依赖 hasUpdate 标记
+    /// 更新所有订阅脚本
     /// </summary>
     public async Task ManualUpdateSubscribedScripts()
     {
         var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
 
-        var subscribedPaths = scriptConfig.SubscribedScriptPaths;
-        if (subscribedPaths == null || subscribedPaths.Count == 0)
+        var subscribedPaths = GetSubscribedPathsForCurrentRepo();
+        if (subscribedPaths.Count == 0)
         {
             _logger.LogInformation("没有已订阅的脚本");
             UIDispatcherHelper.Invoke(() => Toast.Information("没有已订阅的脚本，请先在仓库中订阅脚本"));
@@ -181,132 +192,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         await _repoWriteLock.WaitAsync();
         try
         {
-            // 第一步：拉取最新仓库
-            await UpdateCenterRepoSilently(scriptConfig);
-
-            // 检查仓库是否存在
-            if (!Directory.Exists(CenterRepoPath))
-            {
-                _logger.LogWarning("仓库文件夹不存在，请先更新仓库");
-                UIDispatcherHelper.Invoke(() => Toast.Warning("仓库文件夹不存在，请先更新仓库"));
-                return;
-            }
-
-            // 重新加载订阅路径
-            subscribedPaths = scriptConfig.SubscribedScriptPaths;
-            if (subscribedPaths == null || subscribedPaths.Count == 0)
-            {
-                return;
-            }
-
-            // 查找仓库路径
-            string repoPath;
-            try
-            {
-                repoPath = FindCenterRepoPath();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "查找中央仓库路径失败");
-                UIDispatcherHelper.Invoke(() => Toast.Warning("查找仓库路径失败，请先更新仓库"));
-                return;
-            }
-
-            // 展开所有订阅路径，直接全部更新（不需要检查 hasUpdate）
-            var expandedPaths = ExpandTopLevelPaths(subscribedPaths, repoPath);
-
-            int successCount = 0;
-            int failCount = 0;
-
-            foreach (var path in expandedPaths)
-            {
-                try
-                {
-                    var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
-                    if (!PathMapper.TryGetValue(first, out var userPath))
-                    {
-                        _logger.LogDebug("未知的脚本路径类型: {Path}", path);
-                        continue;
-                    }
-
-                    var destPath = Path.Combine(userPath, remainingPath);
-
-                    // 备份需要保存的文件（仅 JS 脚本）
-                    List<string> backupFiles = new();
-                    if (first == "js")
-                    {
-                        backupFiles = BackupScriptFiles(path, repoPath);
-                    }
-
-                    // 删除旧文件/目录
-                    if (Directory.Exists(destPath))
-                    {
-                        DirectoryHelper.DeleteDirectoryWithReadOnlyCheck(destPath);
-                    }
-                    else if (File.Exists(destPath))
-                    {
-                        File.Delete(destPath);
-                    }
-
-                    // 从仓库检出最新文件
-                    CheckoutPath(repoPath, path, destPath);
-
-                    // 图标处理（仅对目录）
-                    if (Directory.Exists(destPath))
-                    {
-                        DealWithIconFolder(destPath);
-                    }
-
-                    // 恢复备份的文件
-                    if (first == "js" && backupFiles.Count > 0)
-                    {
-                        RestoreScriptFiles(path, repoPath);
-                    }
-
-                    // 解析 JS 脚本依赖
-                    if (first == "js")
-                    {
-                        ResolveScriptDependencies(repoPath, destPath);
-                    }
-
-                    successCount++;
-                    _logger.LogInformation("一键更新脚本成功: {Path}", path);
-                }
-                catch (Exception ex)
-                {
-                    failCount++;
-                    _logger.LogWarning(ex, "一键更新脚本失败: {Path}", path);
-                }
-            }
-
-            // 全部更新后清除所有订阅路径的 hasUpdate 标记
-            if (successCount > 0)
-            {
-                try
-                {
-                    var updatedRepoJsonPath = RepoUpdatedJsonPath;
-                    if (File.Exists(updatedRepoJsonPath))
-                    {
-                        var json = await File.ReadAllTextAsync(updatedRepoJsonPath);
-                        var jsonObj = JObject.Parse(json);
-
-                        foreach (var path in subscribedPaths)
-                        {
-                            ResetHasUpdateForPath(jsonObj, path);
-                        }
-
-                        var modifiedJson = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
-                        await File.WriteAllTextAsync(updatedRepoJsonPath, modifiedJson);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "重置 hasUpdate 标记失败");
-                }
-
-                UpdateSubscribedScriptPaths();
-            }
-
+            var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
             _logger.LogInformation("一键更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
             UIDispatcherHelper.Invoke(() =>
             {
@@ -322,77 +208,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
-    private async Task AutoUpdateSubscribedScriptsCore(ScriptConfig scriptConfig, List<string> subscribedPaths)
+    /// <summary>
+    /// 自动/手动更新所有订阅脚本的通用核心逻辑。
+    /// 更新全部订阅脚本，不检查 hasUpdate 标记。
+    /// </summary>
+    private async Task<(int successCount, int failCount)> UpdateAllSubscribedScriptsCore(ScriptConfig scriptConfig)
     {
-
         // 第一步：拉取最新仓库
         await UpdateCenterRepoSilently(scriptConfig);
 
         // 检查仓库是否存在
         if (!Directory.Exists(CenterRepoPath))
         {
-            _logger.LogDebug("仓库文件夹不存在，跳过自动更新");
-            return;
+            _logger.LogWarning("仓库文件夹不存在，请先更新仓库");
+            UIDispatcherHelper.Invoke(() => Toast.Warning("仓库文件夹不存在，请先更新仓库"));
+            return (0, 0);
         }
 
-        // 重新加载订阅路径（仓库更新后可能有变化）
-        subscribedPaths = scriptConfig.SubscribedScriptPaths;
-        if (subscribedPaths == null || subscribedPaths.Count == 0)
+        // 重新加载订阅路径
+        var subscribedPaths = GetSubscribedPathsForCurrentRepo();
+        if (subscribedPaths.Count == 0)
         {
-            return;
+            return (0, 0);
         }
-
-        // 读取 repo_updated.json 检查是否有更新标记
-        string repoJsonPath;
-        try
-        {
-            var updatedRepoJsonPath = RepoUpdatedJsonPath;
-            if (File.Exists(updatedRepoJsonPath))
-            {
-                repoJsonPath = updatedRepoJsonPath;
-            }
-            else
-            {
-                // 没有 repo_updated.json 说明还没做过对比，无法确定哪些有更新
-                _logger.LogDebug("没有 repo_updated.json ({Path})，跳过自动更新", updatedRepoJsonPath);
-                return;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "查找 repo_updated.json 失败");
-            return;
-        }
-
-        // 解析 repo_updated.json，收集有更新标记的订阅路径
-        List<string> pathsToUpdate;
-        JObject jsonObj;
-        try
-        {
-            var json = await File.ReadAllTextAsync(repoJsonPath);
-            jsonObj = JObject.Parse(json);
-            if (jsonObj["indexes"] is not JArray indexes)
-            {
-                _logger.LogDebug("repo_updated.json 中没有 indexes");
-                return;
-            }
-
-            pathsToUpdate = FindSubscribedPathsWithUpdates(indexes, subscribedPaths);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "解析 repo_updated.json 失败");
-            return;
-        }
-
-        if (pathsToUpdate.Count == 0)
-        {
-            _logger.LogDebug("所有已订阅的脚本均为最新版本");
-            return;
-        }
-
-        _logger.LogInformation("发现 {Count} 个已订阅脚本需要更新: {Paths}",
-            pathsToUpdate.Count, string.Join(", ", pathsToUpdate));
 
         // 查找仓库路径
         string repoPath;
@@ -402,18 +240,17 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "查找中央仓库路径失败，跳过自动更新");
-            return;
+            _logger.LogWarning(ex, "查找中央仓库路径失败");
+            UIDispatcherHelper.Invoke(() => Toast.Warning("查找仓库路径失败，请先更新仓库"));
+            return (0, 0);
         }
 
-        // 展开顶层路径（如 "pathing" -> "pathing/xxx", "pathing/yyy"）
-        var expandedPaths = ExpandTopLevelPaths(pathsToUpdate, repoPath);
+        // 展开所有订阅路径，直接全部更新
+        var expandedPaths = ExpandTopLevelPaths(subscribedPaths, repoPath);
 
         int successCount = 0;
         int failCount = 0;
-        var succeededPaths = new HashSet<string>();
 
-        // 逐个更新脚本
         foreach (var path in expandedPaths)
         {
             try
@@ -466,47 +303,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
 
                 successCount++;
-                succeededPaths.Add(path);
-                _logger.LogInformation("自动更新脚本成功: {Path}", path);
+                _logger.LogInformation("更新脚本成功: {Path}", path);
             }
             catch (Exception ex)
             {
                 failCount++;
-                _logger.LogWarning(ex, "自动更新脚本失败: {Path}", path);
+                _logger.LogWarning(ex, "更新脚本失败: {Path}", path);
             }
         }
 
-        // 仅重置实际更新成功的脚本的 hasUpdate 标记，避免漏掉失败的更新
         if (successCount > 0)
         {
-            try
-            {
-                // 从展开后的成功路径反推需要重置的原始订阅路径
-                // 如果某个 pathsToUpdate 展开后的所有子路径都成功了，才重置该路径
-                foreach (var path in pathsToUpdate)
-                {
-                    var expanded = ExpandTopLevelPaths(new List<string> { path }, repoPath);
-                    if (expanded.All(p => succeededPaths.Contains(p)))
-                    {
-                        ResetHasUpdateForPath(jsonObj, path);
-                    }
-                    else
-                    {
-                        _logger.LogDebug("路径 {Path} 部分子路径更新失败，保留 hasUpdate 标记", path);
-                    }
-                }
-
-                var modifiedJson = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
-                await File.WriteAllTextAsync(repoJsonPath, modifiedJson);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "重置 hasUpdate 标记失败");
-            }
-
-            // 更新订阅路径列表
             UpdateSubscribedScriptPaths();
+        }
 
+        return (successCount, failCount);
+    }
+
+    private async Task AutoUpdateSubscribedScriptsCore(ScriptConfig scriptConfig, List<string> subscribedPaths)
+    {
+        var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
+
+        if (successCount > 0)
+        {
             _logger.LogInformation("自动更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
             UIDispatcherHelper.Invoke(() => Toast.Success($"已自动更新 {successCount} 个订阅脚本"));
         }
@@ -2380,9 +2199,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             return;
         }
 
-        // 保存订阅信息
-        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-        scriptConfig.SubscribedScriptPaths.AddRange(paths);
+        // 保存订阅信息（按当前仓库存储到文件）
+        AddSubscribedPathsForCurrentRepo(paths);
 
         Toast.Information("获取最新仓库信息中...");
 
@@ -2569,13 +2387,246 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
-    // 更新订阅脚本路径列表，移除无效路径
+    // ========== 文件级订阅路径存储 ==========
+    // 订阅数据存储在 User/subscriptions/{repoFolderName}.json，与仓库目录和主配置解耦
+
+    /// <summary>
+    /// 订阅文件存储目录
+    /// </summary>
+    public static readonly string SubscriptionsPath = Global.Absolute(@"User\subscriptions");
+
+    /// <summary>
+    /// 获取当前活跃仓库的文件夹名称
+    /// </summary>
+    private static string GetCurrentRepoFolderName()
+    {
+        return Path.GetFileName(CenterRepoPath);
+    }
+
+    /// <summary>
+    /// 获取指定仓库的订阅文件路径
+    /// </summary>
+    private static string GetSubscriptionFilePath(string repoFolderName)
+    {
+        return Path.Combine(SubscriptionsPath, $"{repoFolderName}.json");
+    }
+
+    /// <summary>
+    /// 获取当前仓库的已订阅脚本路径列表
+    /// </summary>
+    public static List<string> GetSubscribedPathsForCurrentRepo()
+    {
+        var filePath = GetSubscriptionFilePath(GetCurrentRepoFolderName());
+        return ReadSubscriptionFile(filePath);
+    }
+
+    /// <summary>
+    /// 设置当前仓库的已订阅脚本路径列表
+    /// </summary>
+    private static void SetSubscribedPathsForCurrentRepo(List<string> paths)
+    {
+        var filePath = GetSubscriptionFilePath(GetCurrentRepoFolderName());
+        WriteSubscriptionFile(filePath, paths);
+    }
+
+    /// <summary>
+    /// 向当前仓库的已订阅路径中追加新路径
+    /// </summary>
+    private static void AddSubscribedPathsForCurrentRepo(List<string> paths)
+    {
+        var existing = GetSubscribedPathsForCurrentRepo();
+        existing.AddRange(paths);
+        SetSubscribedPathsForCurrentRepo(existing);
+    }
+
+    /// <summary>
+    /// 检查当前仓库是否有订阅路径
+    /// </summary>
+    private static bool HasSubscribedPathsForCurrentRepo()
+    {
+        return GetSubscribedPathsForCurrentRepo().Count > 0;
+    }
+
+    /// <summary>
+    /// 订阅文件读写锁，允许并发读、互斥写
+    /// </summary>
+    private static readonly ReaderWriterLockSlim _subscriptionRwLock = new();
+
+    /// <summary>
+    /// 从订阅文件读取路径列表
+    /// </summary>
+    private static List<string> ReadSubscriptionFile(string filePath)
+    {
+        _subscriptionRwLock.EnterReadLock();
+        try
+        {
+            if (!File.Exists(filePath))
+                return new List<string>();
+
+            var json = File.ReadAllText(filePath);
+            if (string.IsNullOrWhiteSpace(json))
+                return new List<string>();
+
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json, ConfigService.JsonOptions) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+        finally
+        {
+            _subscriptionRwLock.ExitReadLock();
+        }
+    }
+
+    /// <summary>
+    /// 将路径列表写入订阅文件
+    /// </summary>
+    private static void WriteSubscriptionFile(string filePath, List<string> paths)
+    {
+        _subscriptionRwLock.EnterWriteLock();
+        try
+        {
+            if (!Directory.Exists(SubscriptionsPath))
+                Directory.CreateDirectory(SubscriptionsPath);
+
+            if (paths.Count == 0)
+            {
+                // 空列表时删除文件
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+                return;
+            }
+
+            var json = System.Text.Json.JsonSerializer.Serialize(paths, ConfigService.JsonOptions);
+            File.WriteAllText(filePath, json);
+        }
+        finally
+        {
+            _subscriptionRwLock.ExitWriteLock();
+        }
+    }
+
+    /// <summary>
+    /// 在启动时从旧 config.json 中的 subscribedScriptPaths 迁移到独立订阅文件。
+    /// 通过框架反序列化读取旧数据，迁移后清空配置属性让框架自动保存。
+    /// </summary>
+    public void MigrateSubscribedPathsFromConfig()
+    {
+        try
+        {
+            // 如果订阅目录已存在且非空，说明已迁移过
+            if (Directory.Exists(SubscriptionsPath) && Directory.GetFiles(SubscriptionsPath, "*.json").Length > 0)
+                return;
+
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            var oldPaths = scriptConfig.SubscribedScriptPaths;
+            if (oldPaths.Count == 0)
+                return;
+
+            // 默认归入当前仓库
+            var repoFolderName = GetCurrentRepoFolderName();
+
+            // 如果存在多个仓库，尝试按 repo.json 分配路径
+            if (Directory.Exists(ReposPath))
+            {
+                var repoDirs = Directory.GetDirectories(ReposPath)
+                    .Where(d => !Path.GetFileName(d).Equals("Temp", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (repoDirs.Count > 1)
+                {
+                    var repoPathSets = new Dictionary<string, HashSet<string>>();
+                    foreach (var repoDir in repoDirs)
+                    {
+                        var repoJsonFile = Directory.GetFiles(repoDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
+                        if (string.IsNullOrEmpty(repoJsonFile)) continue;
+                        try
+                        {
+                            var json = File.ReadAllText(repoJsonFile);
+                            var jsonObj = JObject.Parse(json);
+                            if (jsonObj["indexes"] is JArray indexes)
+                            {
+                                var pathSet = new HashSet<string>();
+                                CollectAllPathsFromIndexes(indexes, "", pathSet);
+                                repoPathSets[Path.GetFileName(repoDir)] = pathSet;
+                            }
+                        }
+                        catch { /* ignore */ }
+                    }
+
+                    if (repoPathSets.Count > 1)
+                    {
+                        // 分配到各自对应的仓库
+                        foreach (var path in oldPaths)
+                        {
+                            var targetRepo = repoFolderName; // 默认归入当前仓库
+                            foreach (var (repoName, pathSet) in repoPathSets)
+                            {
+                                if (pathSet.Contains(path))
+                                {
+                                    targetRepo = repoName;
+                                    break;
+                                }
+                            }
+
+                            var filePath = GetSubscriptionFilePath(targetRepo);
+                            var existing = ReadSubscriptionFile(filePath);
+                            existing.Add(path);
+                            WriteSubscriptionFile(filePath, existing);
+                        }
+
+                        // 清空配置属性，框架自动保存
+                        scriptConfig.SubscribedScriptPaths = new List<string>();
+                        _logger.LogInformation("已完成订阅路径迁移到独立文件（多仓库分配）");
+                        return;
+                    }
+                }
+            }
+
+            // 单仓库：直接写入
+            WriteSubscriptionFile(GetSubscriptionFilePath(repoFolderName), new List<string>(oldPaths));
+
+            // 清空配置属性，框架自动保存
+            scriptConfig.SubscribedScriptPaths = new List<string>();
+            _logger.LogInformation("已完成订阅路径迁移到独立文件: {Count} 个路径", oldPaths.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "从 config.json 迁移订阅路径到独立文件失败");
+        }
+    }
+
+    /// <summary>
+    /// 递归收集 indexes 中所有路径（用于迁移时匹配）
+    /// </summary>
+    private static void CollectAllPathsFromIndexes(JArray nodes, string currentPath, HashSet<string> result)
+    {
+        foreach (var node in nodes)
+        {
+            if (node is JObject nodeObj)
+            {
+                var name = nodeObj["name"]?.ToString();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var fullPath = string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
+                    result.Add(fullPath);
+
+                    if (nodeObj["children"] is JArray children)
+                    {
+                        CollectAllPathsFromIndexes(children, fullPath, result);
+                    }
+                }
+            }
+        }
+    }
+
+    // 更新订阅脚本路径列表，移除无效路径（仅处理当前仓库的订阅）
     public void UpdateSubscribedScriptPaths()
     {
-        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
         var validRoots = PathMapper.Keys.ToHashSet();
 
-        var allPaths = scriptConfig.SubscribedScriptPaths
+        var allPaths = GetSubscribedPathsForCurrentRepo()
             .Distinct()
             .OrderBy(path => path)
             .ToList();
@@ -2708,9 +2759,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogError(ex, "添加父节点时发生错误");
         }
 
-        scriptConfig.SubscribedScriptPaths = pathsToKeep
+        SetSubscribedPathsForCurrentRepo(pathsToKeep
             .OrderBy(path => path)
-            .ToList();
+            .ToList());
     }
 
     private void CopyDirectory(string sourceDir, string destDir)

@@ -78,6 +78,28 @@ public sealed class RepoWebBridge
         return await File.ReadAllTextAsync(userConfigPath);
     }
 
+    /// <summary>
+    /// 获取当前仓库的已订阅脚本路径列表（JSON 数组）。
+    /// 相比 GetUserConfigJson() 更轻量，仅返回当前仓库的订阅路径。
+    /// </summary>
+    public string GetSubscribedScriptPaths()
+    {
+        try
+        {
+            var paths = ScriptRepoUpdater.GetSubscribedPathsForCurrentRepo();
+            if (paths.Count > 0)
+            {
+                return Newtonsoft.Json.JsonConvert.SerializeObject(paths);
+            }
+
+            return "[]";
+        }
+        catch
+        {
+            return "[]";
+        }
+    }
+
     public Task<string> GetFile(string relPath)
     {
         try
