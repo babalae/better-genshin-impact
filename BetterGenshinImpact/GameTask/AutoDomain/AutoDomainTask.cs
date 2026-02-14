@@ -42,6 +42,7 @@ using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoDomain.Assets;
+
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainTask : ISoloTask
@@ -1154,7 +1155,18 @@ public class AutoDomainTask : ISoloTask
                         if (record.Name == "原粹树脂20" || record.Name == "原粹树脂40")
                         {
                             int expectedNum = record.Name == "原粹树脂20" ? 20 : 40;
-                            if (! SwitchOriginalResinType(expectedNum, _ct))
+                            bool switched;
+                            try
+                            {
+                                switched = SwitchOriginalResinType(expectedNum, _ct);
+                            }
+                            catch (RetryException)
+                            {
+                                Logger.LogWarning("自动秘境：切换原粹树脂类型重试超时，跳过 {Name}", record.Name);
+                                switched = false;
+                            }
+
+                            if (!switched)
                             {
                                 continue;
                             }
@@ -1271,6 +1283,7 @@ public class AutoDomainTask : ISoloTask
         {
             resinName = "原粹树脂";
         }
+
         var resinKey = regionList.FirstOrDefault(t => t.Text.Contains(resinName));
         if (resinKey != null)
         {
@@ -1308,38 +1321,42 @@ public class AutoDomainTask : ISoloTask
 
     private bool SwitchOriginalResinType(int expectedNum, CancellationToken ct)
     {
-        return  NewRetry.Do(() =>  
-        {  
-            using var ra0 = CaptureToRectArea();  
+        return NewRetry.Do(() =>
+        {
+            using var ra0 = CaptureToRectArea();
             var regionList = ra0.FindMulti(RecognitionObject.Ocr(ra0.Width * 0.25, ra0.Height * 0.2, ra0.Width * 0.5, ra0.Height * 0.6));
             var has20 = regionList.Any(t => t.Text.Contains("20"));
             var has40 = regionList.Any(t => t.Text.Contains("40"));
             if (expectedNum == 20 && has20)
             {
-                Logger.LogInformation("自动秘境：已切换到使用20原粹树脂" );
+                Logger.LogInformation("自动秘境：已切换到使用20原粹树脂");
                 return true;
             }
+
             if (expectedNum == 40 && has40)
             {
-                Logger.LogInformation("自动秘境：已切换到使用40原粹树脂" );
+                Logger.LogInformation("自动秘境：已切换到使用40原粹树脂");
                 return true;
             }
+
             //切换20/40原粹树脂的按钮是亮的
-            var clickable = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnRo);  
-            if (clickable.IsExist())  
-            {  
-                Logger.LogDebug("自动秘境：切换原粹树脂使用数量" );
+            var clickable = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnRo);
+            if (clickable.IsExist())
+            {
+                Logger.LogDebug("自动秘境：切换原粹树脂使用数量");
                 clickable.Click();
-            }  
+            }
+
             //切换20/40原粹树脂的按钮是暗的
-            var disabled = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnNoActiveRo);  
-            if (disabled.IsExist())  
-            {  
+            var disabled = ra0.Find(AutoDomainAssets.Instance.ResinSwitchBtnNoActiveRo);
+            if (disabled.IsExist())
+            {
                 Logger.LogWarning("自动秘境：切换原粹树脂的使用数量失败，可能是体力不足，当前目标：{Num}", expectedNum);
                 return false; // 不可点击  
-            }  
+            }
+
             throw new RetryException("未检测到按钮"); // 继续重试  
-        },  TimeSpan.FromMilliseconds(500), 10);  
+        }, TimeSpan.FromMilliseconds(500), 10);
     }
 
     private static int GetResinNum(Region region, string resinName)
@@ -1384,7 +1401,7 @@ public class AutoDomainTask : ISoloTask
         return (region1Top <= region2Bottom && region1Bottom >= region2Top);
     }
 
-    private  async Task ArtifactSalvage()
+    private async Task ArtifactSalvage()
     {
         if (!_taskParam.AutoArtifactSalvage)
         {
