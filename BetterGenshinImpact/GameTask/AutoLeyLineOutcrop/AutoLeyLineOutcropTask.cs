@@ -111,6 +111,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 Notify.Event("AutoLeyLineOutcrop").Error($"任务失败: {e.Message}");
             }
+
             throw new Exception($"自动地脉花执行失败: {e.Message}", e);
         }
         finally
@@ -172,7 +173,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         // Load and validate the static ley line route config from disk.
         var workDir = Global.Absolute(@"GameTask\AutoLeyLineOutcrop");
-        var configPath = Path.Combine(workDir, "config.json");
+        var configPath = Path.Combine(workDir, "Assets", "config.json");
         if (!File.Exists(configPath))
         {
             throw new FileNotFoundException("config.json 未找到", configPath);
@@ -186,16 +187,17 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private void LoadRecognitionObjects()
     {
         // Template ROIs are tuned for the 1080p capture region.
-        _openRo = BuildTemplate("assets/icon/open.png");
-        _closeRo = BuildTemplate("assets/icon/close.png");
-        _paimonMenuRo = BuildTemplate("assets/icon/paimon_menu.png", new Rect(0, 0, ScaleTo1080(640), ScaleTo1080(216)));
-        _boxIconRo = BuildTemplate("assets/icon/box.png");
-        _mapSettingButtonRo = BuildTemplate("assets/icon/map_setting_button.bmp");
+        _openRo = BuildTemplate("Assets/icon/open.png");
+        _closeRo = BuildTemplate("Assets/icon/close.png");
+        _paimonMenuRo = BuildTemplate("Assets/icon/paimon_menu.png", new Rect(0, 0, ScaleTo1080(640), ScaleTo1080(216)));
+        _boxIconRo = BuildTemplate("Assets/icon/box.png");
+        _mapSettingButtonRo = BuildTemplate("Assets/icon/map_setting_button.bmp");
 
         _ocrRo1 = RecognitionObject.Ocr(ScaleTo1080(800), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(100));
         _ocrRo2 = RecognitionObject.Ocr(ScaleTo1080(0), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(300));
         _ocrRo3 = RecognitionObject.Ocr(ScaleTo1080(1200), ScaleTo1080(520), ScaleTo1080(300), ScaleTo1080(300));
     }
+
     private static int ScaleTo1080(int value)
     {
         // CaptureToRectArea returns a 1080p region already.
@@ -212,6 +214,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             ro.RegionOfInterest = roi.Value;
         }
+
         return ro;
     }
 
@@ -463,6 +466,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw;
         }
     }
+
     private (string Route, Node Node)? SelectBranchRoute(NodeData nodeData, Node currentNode)
     {
         string? selectedRoute = null;
@@ -629,7 +633,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         var lastRoute = path.Routes.Last();
-        var targetRoute = lastRoute.Replace("assets/pathing/", "assets/pathing/target/").Replace("-rerun", "");
+        var targetRoute = lastRoute.Replace("Assets/pathing/", "Assets/pathing/target/").Replace("-rerun", "");
         await ProcessLeyLineOutcrop(_config.Timeout, targetRoute);
 
         var rewardSuccess = await AttemptReward();
@@ -662,7 +666,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         var workDir = Global.Absolute(@"GameTask\AutoLeyLineOutcrop");
-        var nodePath = Path.Combine(workDir, "LeyLineOutcropData.json");
+        var nodePath = Path.Combine(workDir, "Assets", "LeyLineOutcropData.json");
         if (!File.Exists(nodePath))
         {
             throw new FileNotFoundException("LeyLineOutcropData.json 未找到", nodePath);
@@ -773,8 +777,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
         await _tpTask.AdjustMapZoomLevel(currentZoom, 3.0);
 
         var iconPath = type == "启示之花"
-            ? "assets/icon/Blossom_of_Revelation.png"
-            : "assets/icon/Blossom_of_Wealth.png";
+            ? "Assets/icon/Blossom_of_Revelation.png"
+            : "Assets/icon/Blossom_of_Wealth.png";
 
         using var ra = CaptureToRectArea();
         var iconRo = BuildTemplate(iconPath);
@@ -801,6 +805,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             Notify.Event("AutoLeyLineOutcrop").Error("未找到对应的地脉花策略");
         }
     }
+
     private async Task<bool> ProcessLeyLineOutcrop(int timeoutSeconds, string targetPath, int retries = 0)
     {
         const int maxRetries = 3;
@@ -1352,6 +1357,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 await TrySwitch20To40Resin();
             }
+
             return sortedButtons.FirstOrDefault();
         }
 
@@ -1371,6 +1377,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 await TrySwitch20To40Resin();
             }
+
             return sortedButtons.FirstOrDefault();
         }
 
@@ -1384,7 +1391,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<bool> TrySwitch20To40Resin()
     {
-        var switchRo = BuildTemplate("assets/icon/switch_button.png", null, 0.7);
+        var switchRo = BuildTemplate("Assets/icon/switch_button.png", null, 0.7);
         using var capture = CaptureToRectArea();
         var res = capture.Find(switchRo);
         if (res.IsEmpty())
@@ -1465,6 +1472,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             }
         }
     }
+
     private async Task FindLeyLineOutcropByBook(string country, string type)
     {
         await _returnMainUiTask.Start(_ct);
@@ -1670,7 +1678,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<int> CountOriginalResin()
     {
-        var icon = BuildTemplate("RecognitionObject/original_resin.png");
+        var icon = BuildTemplate("Assets/1920x1080/original_resin.png");
         using var capture = CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
@@ -1692,7 +1700,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<int> CountCondensedResin()
     {
-        var icon = BuildTemplate("RecognitionObject/condensed_resin.png");
+        var icon = BuildTemplate("Assets/1920x1080/condensed_resin.png");
         using var capture = CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
@@ -1713,7 +1721,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<int> CountTransientResin()
     {
-        var icon = BuildTemplate("RecognitionObject/transient_resin.png");
+        var icon = BuildTemplate("Assets/1920x1080/transient_resin.png");
         using var capture = CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
@@ -1728,7 +1736,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<int> CountFragileResin()
     {
-        var icon = BuildTemplate("RecognitionObject/fragile_resin.png");
+        var icon = BuildTemplate("Assets/1920x1080/fragile_resin.png");
         using var capture = CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
@@ -1762,19 +1770,19 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var icons = white
             ? new Dictionary<int, string>
             {
-                {0, "RecognitionObject/num0_white.png"},
-                {1, "RecognitionObject/num1_white.png"},
-                {2, "RecognitionObject/num2_white.png"},
-                {3, "RecognitionObject/num3_white.png"},
-                {4, "RecognitionObject/num4_white.png"},
-                {5, "RecognitionObject/num5_white.png"}
+                { 0, "Assets/1920x1080/num0_white.png" },
+                { 1, "Assets/1920x1080/num1_white.png" },
+                { 2, "Assets/1920x1080/num2_white.png" },
+                { 3, "Assets/1920x1080/num3_white.png" },
+                { 4, "Assets/1920x1080/num4_white.png" },
+                { 5, "Assets/1920x1080/num5_white.png" }
             }
             : new Dictionary<int, string>
             {
-                {1, "RecognitionObject/num1.png"},
-                {2, "RecognitionObject/num2.png"},
-                {3, "RecognitionObject/num3.png"},
-                {4, "RecognitionObject/num4.png"}
+                { 1, "Assets/1920x1080/num1.png" },
+                { 2, "Assets/1920x1080/num2.png" },
+                { 3, "Assets/1920x1080/num3.png" },
+                { 4, "Assets/1920x1080/num4.png" }
             };
 
         foreach (var kvp in icons)
@@ -1792,7 +1800,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task OpenReplenishResinUi()
     {
-        var ro = BuildTemplate("assets/icon/replenish_resin_button.png");
+        var ro = BuildTemplate("Assets/icon/replenish_resin_button.png");
         using var capture = CaptureToRectArea();
         var res = capture.Find(ro);
         if (res.IsExist())
@@ -1800,6 +1808,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             res.Click();
         }
     }
+
     private class AutoLeyLineConfigData
     {
         [JsonPropertyName("errorThreshold")]
