@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "须弥8-折胫谷-3",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 5902.11,
+      "y": -1008.25,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

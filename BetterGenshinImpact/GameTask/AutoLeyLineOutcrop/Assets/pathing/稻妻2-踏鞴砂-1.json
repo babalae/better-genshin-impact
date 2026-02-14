@@ -1,0 +1,39 @@
+{
+  "info": {
+    "name": "稻妻2-踏鞴砂-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -3016.79,
+      "y": -3623.7,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -3016.9,
+      "y": -3554.99,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -3007.64,
+      "y": -3515.28,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

@@ -496,6 +496,7 @@
                                        Margin="8,-2,-2,0"
                                        Background="Transparent"
                                        BorderBrush="{x:Null}"
+                                       Cursor="Hand"
                                        Command="{Binding CloseCommand}"
                                        Content="✕" />
                         </Grid>
@@ -697,6 +698,7 @@
                                                        BorderThickness="0"
                                                        Padding="8,0,0,0"
                                                        FontSize="30"
+                                                       Cursor="Hand"
                                                        Icon="{ui:SymbolIcon GlobeLocation24}"
                                                        Command="{Binding ToggleMapPointPickerCommand}" />
                                         </Border>
@@ -753,6 +755,7 @@
                                                       Margin="0,0,12,0"
                                                       Padding="12,0,6,0"
                                                       VerticalContentAlignment="Center"
+                                                      Cursor="Hand"
                                                       ItemsSource="{Binding MapPointApiProviderOptions}"
                                                       SelectedItem="{Binding SelectedMapPointApiProviderOption, Mode=TwoWay}"
                                                       DisplayMemberPath="DisplayName" />
@@ -770,6 +773,7 @@
                                                            Height="32"
                                                            Background="#FF2B2F37"
                                                            Foreground="White"
+                                                           Cursor="Hand"
                                                            Icon="{ui:SymbolIcon Dismiss24}"
                                                            Command="{Binding ToggleMapPointPickerCommand}" />
                                             </StackPanel>
@@ -795,6 +799,7 @@
                                                              Background="Transparent"
                                                              BorderThickness="0"
                                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                             Cursor="Hand"
                                                              PreviewMouseLeftButtonDown="MapLabelCategoriesListView_OnPreviewMouseLeftButtonDown">
                                                     <ui:ListView.ItemTemplate>
                                                         <DataTemplate>
@@ -847,6 +852,7 @@
                                                                             Padding="8,0"
                                                                             HorizontalContentAlignment="Stretch"
                                                                             VerticalContentAlignment="Center"
+                                                                            Cursor="Hand"
                                                                             Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                             CommandParameter="{Binding}">
                                                                         <DockPanel HorizontalAlignment="Stretch"
@@ -929,12 +935,13 @@
                                                     <Button DockPanel.Dock="Top"
                                                             Width="40"
                                                             Height="40"
-                                                            Margin="0,0,0,8"
+                                                            Margin="3,0,0,8"
                                                             Background="Transparent"
                                                             BorderThickness="0"
                                                             Padding="0"
                                                             HorizontalContentAlignment="Center"
                                                             VerticalContentAlignment="Center"
+                                                            Cursor="Hand"
                                                             ToolTip="重置选择"
                                                             Command="{Binding ResetSelectedMapLabelSelectionCommand}">
                                                         <Border Width="40"
@@ -968,26 +975,88 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Button Width="40"
-                                                    Height="40"
+                                                    Height="48"
                                                     Margin="0,0,0,8"
                                                     Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="0"
                                                     HorizontalContentAlignment="Center"
                                                     VerticalContentAlignment="Center"
+                                                    Cursor="Hand"
                                                     Command="{Binding DataContext.SelectMapLabelItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}">
-                                                <Border Width="40"
-                                                        Height="40"
-                                                        CornerRadius="20"
-                                                        Background="#C82C323C"
-                                                        BorderBrush="#403A424F"
-                                                        BorderThickness="1">
-                                                    <Image Width="30"
-                                                           Height="30"
-                                                           Stretch="Uniform"
-                                                           Source="{Binding IconImage}" />
-                                                </Border>
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center" />
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </Button.Style>
+                                                <Grid>
+                                                    <!-- 图标 -->
+                                                    <Border Width="40"
+                                                            Height="40"
+                                                            Background="Transparent"
+                                                            BorderThickness="1">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="BorderBrush" Value="#4DFFFFFF" />
+                                                                <Setter Property="CornerRadius" Value="20" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="#99FFFFFF" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <Image Width="40"
+                                                                   Height="40"
+                                                                   Stretch="Uniform"
+                                                                   Source="{Binding IconImage}">
+                                                                <Image.Clip>
+                                                                    <EllipseGeometry Center="20,20" RadiusX="20" RadiusY="20" />
+                                                                </Image.Clip>
+                                                            </Image>
+                                                        </Grid>
+                                                    </Border>
+
+                                                    <!-- 删除按钮（右上角红色圆） -->
+                                                    <Border Width="12"
+                                                            Height="12"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0,-1,-1,0"
+                                                            Background="#FF5E41"
+                                                            CornerRadius="6"
+                                                            BorderThickness="0">
+                                                        <Border.Effect>
+                                                            <DropShadowEffect Opacity="0.5" BlurRadius="2" ShadowDepth="0" Color="#FF000000" />
+                                                        </Border.Effect>
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="−"
+                                                                   FontSize="14"
+                                                                   FontWeight="ExtraBold"
+                                                                   Foreground="#FFFFFF"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Margin="0,-1,0,0" />
+                                                    </Border>
+                                                </Grid>
                                             </Button>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

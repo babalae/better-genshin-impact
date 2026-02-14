@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "稻妻3-八酝岛-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -2270.07,
+      "y": -4068.21,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

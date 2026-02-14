@@ -1,4 +1,4 @@
-<Application x:Class="BetterGenshinImpact.App"
+﻿<Application x:Class="BetterGenshinImpact.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
@@ -24,6 +24,7 @@
             <bgivc:NotNullConverter x:Key="NotNullConverter" />
             <bgivc:EnumToKVPConverter x:Key="EnumToKVPConverter" />
             <bgivc:CultureInfoNameToKVPConverter x:Key="CultureInfoNameToKVPConverter" />
+            <bgivc:StringToColorConverter x:Key="StringToColorConverter" />
             <bgivc:TrConverter x:Key="TrConverter" />
             <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />

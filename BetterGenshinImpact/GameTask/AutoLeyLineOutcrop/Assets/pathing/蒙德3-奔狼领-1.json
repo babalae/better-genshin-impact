@@ -1,0 +1,67 @@
+{
+  "info": {
+    "name": "蒙德3-奔狼领-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -385.84,
+      "y": 2297.22,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -362.72,
+      "y": 2302.47,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -354.51,
+      "y": 2304.34,
+      "type": "path",
+      "move_mode": "jump",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": -313.3,
+      "y": 2311.6,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": -306.76,
+      "y": 2313.17,
+      "type": "path",
+      "move_mode": "jump",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 6,
+      "x": -281.79,
+      "y": 2310.78,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

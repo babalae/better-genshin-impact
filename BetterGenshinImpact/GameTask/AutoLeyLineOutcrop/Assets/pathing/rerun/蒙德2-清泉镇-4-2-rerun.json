@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "蒙德2-清泉镇-4-2-rerun",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -578.83,
+      "y": 1853.39,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -536.44,
+      "y": 1887.14,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -422.21,
+      "y": 1922.12,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": -385.48,
+      "y": 1910.01,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": -376.12,
+      "y": 1909.88,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 6,
+      "x": -347.95,
+      "y": 1902.51,
+      "type": "target",
+      "move_mode": "fly",
+      "action": "combat_script",
+      "locked": false
+    },
+    {
+      "id": 7,
+      "x": -347.95,
+      "y": 1902.51,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "fight",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 8,
+      "x": -349.48,
+      "y": 1903.67,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

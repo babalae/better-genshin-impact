@@ -1,0 +1,35 @@
+{
+  "info": {
+    "authors": [],
+    "bgi_version": "0.45.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1758088156049,
+    "map_match_method": "",
+    "map_name": "Teyvat",
+    "name": "挪德卡莱3-月矩力试验设计局-3",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "dash",
+      "type": "path",
+      "x": 9463.578125,
+      "y": 3170.335205078125
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 2,
+      "move_mode": "dash",
+      "type": "target",
+      "x": 9461.056640625,
+      "y": 3200.0498046875
+    }
+  ]
+}

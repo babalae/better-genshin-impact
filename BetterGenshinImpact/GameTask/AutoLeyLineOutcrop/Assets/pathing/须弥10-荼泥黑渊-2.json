@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "须弥10-荼泥黑渊-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "地脉花北面有丘丘人游侠",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 6615.15,
+      "y": 724.94,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 6613.41,
+      "y": 784.42,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

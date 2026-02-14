@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "稻妻3-八酝岛-3",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -2221.03,
+      "y": -4006.9,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -2213.29,
+      "y": -4020.36,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": -2208.71,
+      "y": -4044.82,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": -2178.66,
+      "y": -4076.53,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "1200"
+    },
+    {
+      "id": 5,
+      "x": -2169.62,
+      "y": -4076.36,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

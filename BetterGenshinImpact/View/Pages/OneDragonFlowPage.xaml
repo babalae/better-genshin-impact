@@ -939,6 +939,340 @@
                         </StackPanel>
                     </ui:CardControl>
 
+                    <!--  自动地脉花  -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4,0,0,4">
+                        <TextBlock FontSize="14"
+                                   Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                   Text="自动地脉花" />
+                        <TextBlock Margin="4,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="11"
+                                   Text="（具体参数在 独立任务-自动地脉花 中配置）" />
+                    </StackPanel>
+
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf2f1;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="跳过准备流程"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="跳过部分准备流程（例如传送回七天神像）。"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,20,0"
+                                                 IsChecked="{Binding SelectedConfig.LeyLineOneDragonMode, Mode=TwoWay}" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                    </ui:CardControl>
+
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf2f6;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="树脂耗尽模式"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="按当前树脂与库存自动计算可刷次数，结束后自动停止。"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,20,0"
+                                                 IsChecked="{Binding SelectedConfig.LeyLineResinExhaustionMode, Mode=TwoWay}" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                    </ui:CardControl>
+
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf0b0;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="刷取次数取小值"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="与手动次数取最小值，避免超过树脂可用次数。"
+                                              TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                                 Grid.RowSpan="2"
+                                                 Grid.Column="1"
+                                                 Margin="0,0,20,0"
+                                                 IsChecked="{Binding SelectedConfig.LeyLineOpenModeCountMin, Mode=TwoWay}" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                    </ui:CardControl>
+
+                    <ui:CardControl Margin="0,0,0,12">
+                        <ui:CardControl.Icon>
+                            <ui:FontIcon Glyph="&#xf252;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardControl.Icon>
+                        <ui:CardControl.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="刷取次数"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="填 0 则使用独立任务配置。"
+                                              TextWrapping="Wrap" />
+                                <ui:NumberBox Grid.Row="0"
+                                              Grid.RowSpan="2"
+                                              Grid.Column="1"
+                                              Margin="0,0,20,0"
+                                              Width="120"
+                                              Value="{Binding SelectedConfig.LeyLineRunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              Minimum="0"
+                                              SmallChange="1"
+                                              LargeChange="5"
+                                              SpinButtonPlacementMode="Inline" />
+                            </Grid>
+                        </ui:CardControl.Header>
+                    </ui:CardControl>
+
+                    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+                        <ui:CardExpander.Icon>
+                            <ui:FontIcon Glyph="&#xf06c;" Style="{StaticResource FaFontIconStyle}" />
+                        </ui:CardExpander.Icon>
+                        <ui:CardExpander.Header>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              FontTypography="Body"
+                                              Text="运行日期配置"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="按星期设置类型与国家"
+                                              TextWrapping="Wrap" />
+                            </Grid>
+                        </ui:CardExpander.Header>
+                        <StackPanel>
+                            <Grid Margin="16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Row="0"
+                                              Grid.Column="0"
+                                              Grid.ColumnSpan="4"
+                                              FontTypography="Body"
+                                              Text="运行日期与地脉花设置"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="1"
+                                              Grid.Column="0"
+                                              Grid.ColumnSpan="4"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="仅在勾选的星期执行；类型/国家留空时使用独立任务默认设置。"
+                                              TextWrapping="Wrap" />
+
+                                <ui:TextBlock Grid.Row="2"
+                                              Grid.Column="2"
+                                              Margin="0,0,12,4"
+                                              FontTypography="Body"
+                                              Text="类型"
+                                              TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="2"
+                                              Grid.Column="3"
+                                              Margin="0,0,0,4"
+                                              FontTypography="Body"
+                                              Text="国家"
+                                              TextWrapping="Wrap" />
+
+                                <CheckBox Grid.Row="3"
+                                          Grid.Column="0"
+                                          Content="周一"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunMonday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="3"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineMondayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="3"
+                                          Grid.Column="3"
+                                          Margin="0,0,0,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineMondayCountry, Mode=TwoWay}" />
+
+                                <CheckBox Grid.Row="4"
+                                          Grid.Column="0"
+                                          Content="周二"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunTuesday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="4"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineTuesdayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="4"
+                                          Grid.Column="3"
+                                          Margin="0,0,0,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineTuesdayCountry, Mode=TwoWay}" />
+
+                                <CheckBox Grid.Row="5"
+                                          Grid.Column="0"
+                                          Content="周三"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunWednesday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="5"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineWednesdayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="5"
+                                          Grid.Column="3"
+                                          Margin="0,0,0,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineWednesdayCountry, Mode=TwoWay}" />
+
+                                <CheckBox Grid.Row="6"
+                                          Grid.Column="0"
+                                          Content="周四"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunThursday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="6"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineThursdayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="6"
+                                          Grid.Column="3"
+                                          Margin="0,0,0,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineThursdayCountry, Mode=TwoWay}" />
+
+                                <CheckBox Grid.Row="7"
+                                          Grid.Column="0"
+                                          Content="周五"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunFriday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="7"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineFridayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="7"
+                                          Grid.Column="3"
+                                          Margin="0,0,0,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineFridayCountry, Mode=TwoWay}" />
+
+                                <CheckBox Grid.Row="8"
+                                          Grid.Column="0"
+                                          Content="周六"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunSaturday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="8"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSaturdayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="8"
+                                          Grid.Column="3"
+                                          Margin="0,0,0,8"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSaturdayCountry, Mode=TwoWay}" />
+
+                                <CheckBox Grid.Row="9"
+                                          Grid.Column="0"
+                                          Content="周日"
+                                          Margin="0,0,12,0"
+                                          IsChecked="{Binding SelectedConfig.LeyLineRunSunday, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="9"
+                                          Grid.Column="2"
+                                          Margin="0,0,12,0"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSundayType, Mode=TwoWay}" />
+                                <ComboBox Grid.Row="9"
+                                          Grid.Column="3"
+                                          ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSundayCountry, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </ui:CardExpander>
+
                     <!--  领取奖励  -->
                     <TextBlock Margin="4,0,0,4"
                                FontSize="14"

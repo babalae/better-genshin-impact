@@ -34,9 +34,13 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         "浓缩树脂",
         "原粹树脂"
     ];
-
     // 使用原粹树脂刷取副本次数
     public int OriginalResinUseCount { get; set; } = 0;
+    // 使用原粹树脂(20)刷取副本次数
+    public int OriginalResin20UseCount { get; set; } = 0;
+
+    // 使用原粹树脂(40)刷取副本次数
+    public int OriginalResin40UseCount { get; set; } = 0;
 
     // 使用浓缩树脂刷取副本次数
     public int CondensedResinUseCount { get; set; } = 0;
@@ -73,6 +77,8 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         TransientResinUseCount = config.TransientResinUseCount;
         FragileResinUseCount = config.FragileResinUseCount;
         SpecifyResinUse = config.SpecifyResinUse;
+        OriginalResin20UseCount = config.OriginalResin20UseCount;
+        OriginalResin40UseCount = config.OriginalResin40UseCount;
     }
 
     public AutoDomainParam(int domainRoundNum = 0) : base(null, null)

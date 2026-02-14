@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "纳塔6-圣火竞技场-2",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 9110.86,
+      "y": -2222.48,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}
