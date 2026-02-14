@@ -21,6 +21,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
@@ -147,6 +148,7 @@ internal class GameTaskManager
         GameLoadingAssets.DestroyInstance();
         MapLazyAssets.DestroyInstance();
         AutoEatAssets.DestroyInstance();
+        AutoDomainAssets.DestroyInstance();
     }
 
     /// <summary>

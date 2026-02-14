@@ -68,6 +68,13 @@ public partial class AutoDomainConfig : ObservableObject
     // 使用原粹树脂刷取副本次数
     [ObservableProperty]
     private int _originalResinUseCount = 0;
+    // 使用原粹树脂(20)刷取副本次数
+    [ObservableProperty]
+    private int _originalResin20UseCount = 0;
+
+    // 使用原粹树脂(40)刷取副本次数
+    [ObservableProperty]
+    private int _originalResin40UseCount = 0;
     
     //使用浓缩树脂刷取副本次数
     [ObservableProperty]
