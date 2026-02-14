@@ -2393,7 +2393,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 订阅文件存储目录
     /// </summary>
-    public static readonly string SubscriptionsPath = Global.Absolute(@"User\subscriptions");
+    public static readonly string SubscriptionsPath = Global.Absolute(@"User\Subscriptions");
 
     /// <summary>
     /// 获取当前活跃仓库的文件夹名称
