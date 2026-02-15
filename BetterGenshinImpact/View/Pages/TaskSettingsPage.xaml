@@ -964,31 +964,29 @@
                                          IsChecked="{Binding Config.AutoFightConfig.GuardianAvatarHold,Mode=TwoWay}">
                             
                             <ui:ToggleSwitch.Style>
-                                <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
-                                    <Setter Property="Visibility" Value="Visible"/>
+                                <Style TargetType="ui:ToggleSwitch"
+                                    BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
+                                    <Setter Property="Visibility" Value="Visible" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Config.AutoFightConfig.GuardianAvatar}" Value="">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        <DataTrigger
+                                            Binding="{Binding Config.AutoFightConfig.GuardianAvatar}"
+                                            Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </ui:ToggleSwitch.Style>
                         </ui:ToggleSwitch>
-                 </Grid>
+                    </Grid>
                 </ui:CardExpander>
-                
-                <Separator Margin="-18,0"
-                           BorderThickness="0,1,0,0" />
-                
+                <!-- 战斗后拾取材料动作-->
                 <Grid Margin="16,10,52,0">
-
                     <ui:CardExpander Margin="0,0,0,12"
-                                     ContentPadding="0"
-                                     IsExpanded="False">
+                        ContentPadding="0"
+                        IsExpanded="True">
 
                         <ui:CardExpander.Header>
                             <Grid>
-
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -998,24 +996,22 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="自动拾取掉落物"
-                                              TextWrapping="Wrap" />
+                                    Grid.Column="0"
+                                    FontTypography="Body"
+                                    Text="战斗后拾取材料动作"
+                                    TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
-                                              TextWrapping="Wrap" />
-                                <ui:ToggleSwitch Grid.Row="0"
-                                                 Grid.RowSpan="2"
-                                                 Grid.Column="1"
-                                                 Margin="0,0,36,0"
-                                                 IsChecked="{Binding Config.AutoFightConfig.PickDropsAfterFightEnabled}" />
+                                    Grid.Column="0"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                    Text="战斗结束后进行的，便于拾取掉落物的动作"
+                                    TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardExpander.Header>
+
                         <StackPanel>
-                            <Grid Margin="16">
+
+                            <!-- ========== 聚集材料动作 ========== -->
+                            <Grid Margin="16,16,16,12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -1023,82 +1019,124 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+
                                 <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="自动拾取掉落物时长"
-                                              TextWrapping="Wrap" />
+                                    Grid.Column="0"
+                                    FontTypography="Body"
+                                    Text="聚集材料动作（推荐优先考虑）"
+                                    TextWrapping="Wrap" />
+                                <ui:TextBlock Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="90,0,5,0"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                    FontSize="10"
+                                    FontTypography="Body"
+                                    VerticalAlignment="Bottom"
+                                    Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
+                                    TextWrapping="Wrap" />
+
                                 <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="单位为秒。0表示不自动拾取掉落物。"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
+                                    Grid.Column="0"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                    Text="战斗结束后，如存在(万叶/琴)，则执行长E聚集材料动作"
+                                    TextWrapping="Wrap" />
+                                <ui:ToggleSwitch Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Margin="0,0,10,0"
+                                    IsChecked="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
+
+                                <ui:ToggleSwitch Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="2"
+                                    Margin="0,0,38,0"
+                                    IsEnabled="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
+                                    IsChecked="{Binding Config.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
+                                <ui:TextBlock Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="8"
+                                    Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                    Margin="0,0,38,26"
+                                    FontTypography="Body"
+                                    Text="二次拾取"
+                                    TextWrapping="Wrap" />
+                            </Grid>
+
+                            <Separator Margin="16,0,16,12"
+                                BorderThickness="0,1,0,0" />
+
+                            <!-- ========== 寻找掉落物光柱并靠近 ========== -->
+                            <ui:CardExpander Margin="16,0,16,16"
+                                ContentPadding="0"
+                                IsExpanded="True">
+
+                                <ui:CardExpander.Header>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            FontTypography="Body"
+                                            Text="寻找掉落物光柱并靠近"
+                                            TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                            Grid.Column="0"
+                                            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                            Text="战斗结束后寻找掉落物光柱并靠近（仅在无万叶或琴时考虑）"
+                                            TextWrapping="Wrap" />
+                                        <ui:ToggleSwitch Grid.Row="0"
+                                            Grid.RowSpan="2"
+                                            Grid.Column="1"
+                                            Margin="0,0,36,0"
+                                            IsChecked="{Binding Config.AutoFightConfig.PickDropsAfterFightEnabled}" />
+                                    </Grid>
+                                </ui:CardExpander.Header>
+
+                                <StackPanel>
+                                    <Grid Margin="16">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            FontTypography="Body"
+                                            Text="寻找掉落物光柱并靠近时长"
+                                            TextWrapping="Wrap" />
+                                        <ui:TextBlock Grid.Row="1"
+                                            Grid.Column="0"
+                                            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                            Text="单位为秒。0表示不寻找掉落物光柱并靠近。"
+                                            TextWrapping="Wrap" />
+                                        <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
                                             Grid.Column="1"
                                             Margin="0,0,36,0"
                                             MinWidth="120"
                                             Text="{Binding Config.AutoFightConfig.PickDropsAfterFightSeconds}" />
-                            </Grid>
+                                    </Grid>
+                                </StackPanel>
+                            </ui:CardExpander>
+
                         </StackPanel>
                     </ui:CardExpander>
                 </Grid>
-                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                <Grid Margin="16,16,16,13">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="聚集材料动作"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  Margin="90,0,5,0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  FontSize="10"
-                                  FontTypography="Body"
-                                  VerticalAlignment="Bottom"
-                                  Text="(二次拾取：琴首次拾取空,再次拾取。万叶即使刚使用过技能，也会强制再次拾取。)"
-                                  TextWrapping="Wrap" />
-                    
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="战斗结束后，如存在(万叶/琴)，则执行长E聚集材料动作"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,10,0"
-                                     IsChecked="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}" />
-                    
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="2"
-                                     Margin="0,0,38,0"
-                                     IsEnabled="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Mode=TwoWay}"
-                                     IsChecked="{Binding Config.AutoFightConfig.QinDoublePickUp, Mode=TwoWay}" />
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.RowSpan="2"
-                                  Grid.Column="2"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  FontSize="8"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Margin="0,0,38,26"
-                                  FontTypography="Body"
-                                  Text="二次拾取"
-                                  TextWrapping="Wrap" />
-                </Grid>
+
                 <Separator Margin="-18,0"
                            BorderThickness="0,1,0,0" />
                 
