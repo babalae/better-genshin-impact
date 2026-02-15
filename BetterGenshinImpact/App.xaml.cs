@@ -86,7 +86,13 @@ public partial class App : Application
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
-                services.AddLogging(c => c.AddSerilog());
+                services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
+                services.AddSingleton<ITranslationService, JsonTranslationService>();
+                services.AddLogging(logging =>
+                {
+                    logging.ClearProviders();
+                    logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
+                });
 
                 services.AddLocalization();
 

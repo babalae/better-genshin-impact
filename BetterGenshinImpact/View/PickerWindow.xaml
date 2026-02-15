@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:view="clr-namespace:BetterGenshinImpact.View"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
         ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
         ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         Title="选择捕获窗口"
@@ -11,6 +12,7 @@
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Auto"
         WindowStartupLocation="CenterScreen"
+        behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
         Loaded="Window_Loaded"
         PreviewKeyDown="FluentWindow_PreviewKeyDown">
 
