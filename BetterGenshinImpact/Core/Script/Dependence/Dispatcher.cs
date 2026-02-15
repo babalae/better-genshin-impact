@@ -19,6 +19,7 @@ using System.Dynamic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -338,5 +339,22 @@ public class Dispatcher
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
         await new AutoFightTask(param).Start(cancellationToken);  
+    }
+    
+    /// <summary>  
+    /// 运行自动地脉花任务
+    /// </summary>  
+    /// <param name="param">自动地脉花任务参数</param>  
+    /// <param name="customCt">自定义取消令牌</param>  
+    /// <returns></returns>  
+    public async Task RunAutoLeyLineOutcropTask(AutoLeyLineOutcropParam param, CancellationToken? customCt = null)  
+    {  
+        if (param == null)  
+        {  
+            throw new ArgumentNullException(nameof(param), "自动地脉花任务参数不能为空");  
+        }  
+  
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
     }
 }
