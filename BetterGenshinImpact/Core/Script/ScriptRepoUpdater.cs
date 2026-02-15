@@ -74,8 +74,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var folderName = GetRepoFolderName(url);
                 return Path.Combine(ReposPath, folderName);
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine($"[ScriptRepoUpdater] CenterRepoPath 解析失败，回退到默认路径: {ex.Message}");
                 return Path.Combine(ReposPath, CenterRepoFolderName);
             }
         }
@@ -379,7 +380,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 静默更新中央仓库（用于自动更新订阅脚本前同步最新仓库内容）
+    /// 静默更新中央仓库（用于自动更新订阅脚本前同步最新仓库内容）。
+    /// 注意：此方法设计为在 _repoWriteLock 持有期间调用，
+    /// 内部直接调用 UpdateCenterRepoByGitCore 而非带锁包装的 UpdateCenterRepoByGit，以避免死锁。
     /// </summary>
     private async Task UpdateCenterRepoSilently(ScriptConfig scriptConfig)
     {
@@ -2362,13 +2365,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 向当前仓库的已订阅路径中追加新路径
+    /// 向当前仓库的已订阅路径中追加新路径（自动去重）
     /// </summary>
     private static void AddSubscribedPathsForCurrentRepo(List<string> paths)
     {
         var existing = GetSubscribedPathsForCurrentRepo();
-        existing.AddRange(paths);
-        SetSubscribedPathsForCurrentRepo(existing);
+        var merged = existing.Union(paths).ToList();
+        SetSubscribedPathsForCurrentRepo(merged);
     }
 
     /// <summary>
@@ -2482,7 +2485,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     if (repoPathSets.Count > 1)
                     {
-                        // 分配到各自对应的仓库
+                        // 按仓库聚合后批量写入
+                        var repoSubscriptions = new Dictionary<string, List<string>>();
                         foreach (var path in oldPaths)
                         {
                             var targetRepo = repoFolderName; // 默认归入当前仓库
@@ -2495,10 +2499,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                                 }
                             }
 
-                            var filePath = GetSubscriptionFilePath(targetRepo);
-                            var existing = ReadSubscriptionFile(filePath);
-                            existing.Add(path);
-                            WriteSubscriptionFile(filePath, existing);
+                            if (!repoSubscriptions.ContainsKey(targetRepo))
+                                repoSubscriptions[targetRepo] = new List<string>();
+                            repoSubscriptions[targetRepo].Add(path);
+                        }
+
+                        foreach (var (repoName, paths) in repoSubscriptions)
+                        {
+                            WriteSubscriptionFile(GetSubscriptionFilePath(repoName), paths);
                         }
 
                         // 清空配置属性，框架自动保存
