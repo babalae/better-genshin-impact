@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.Core.Script;
@@ -72,6 +73,7 @@ public class EngineExtend
         
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
+        engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
         //鼠标回调
         engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
         // 添加C#的类型
