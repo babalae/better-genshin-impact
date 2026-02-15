@@ -183,36 +183,43 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 手动一键更新已订阅的脚本（不检查 AutoUpdateSubscribedScripts 配置开关）。
     /// 更新所有订阅脚本。
-    /// 注意：不包含外层 try-catch，异常会传播到调用方（UI 层），由 ScriptRepoWindow 中的 try-catch 处理并显示 Toast。
     /// </summary>
     public async Task ManualUpdateSubscribedScripts()
     {
-        var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-
-        var subscribedPaths = GetSubscribedPathsForCurrentRepo();
-        if (subscribedPaths.Count == 0)
-        {
-            _logger.LogInformation("没有已订阅的脚本");
-            UIDispatcherHelper.Invoke(() => Toast.Information("没有已订阅的脚本，请先在仓库中订阅脚本"));
-            return;
-        }
-
-        await _repoWriteLock.WaitAsync();
         try
         {
-            var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
-            _logger.LogInformation("一键更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
-            UIDispatcherHelper.Invoke(() =>
+            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+
+            var subscribedPaths = GetSubscribedPathsForCurrentRepo();
+            if (subscribedPaths.Count == 0)
             {
-                if (failCount == 0)
-                    Toast.Success($"已更新 {successCount} 个订阅脚本");
-                else
-                    Toast.Warning($"已更新 {successCount} 个订阅脚本，{failCount} 个失败");
-            });
+                _logger.LogInformation("没有已订阅的脚本");
+                UIDispatcherHelper.Invoke(() => Toast.Information("没有已订阅的脚本，请先在仓库中订阅脚本"));
+                return;
+            }
+
+            await _repoWriteLock.WaitAsync();
+            try
+            {
+                var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
+                _logger.LogInformation("一键更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
+                UIDispatcherHelper.Invoke(() =>
+                {
+                    if (failCount == 0)
+                        Toast.Success($"已更新 {successCount} 个订阅脚本");
+                    else
+                        Toast.Warning($"已更新 {successCount} 个订阅脚本，{failCount} 个失败");
+                });
+            }
+            finally
+            {
+                _repoWriteLock.Release();
+            }
         }
-        finally
+        catch (Exception ex)
         {
-            _repoWriteLock.Release();
+            _logger.LogWarning(ex, "一键更新订阅脚本失败");
+            UIDispatcherHelper.Invoke(() => Toast.Error($"更新订阅脚本失败，建议重置仓库后重试\n原因：{ex.Message}"));
         }
     }
 
