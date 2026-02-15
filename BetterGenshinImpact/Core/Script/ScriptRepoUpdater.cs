@@ -539,6 +539,23 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private static readonly object _cacheLock = new();
 
     /// <summary>
+    /// 从磁盘读取映射文件（不加锁，调用方负责加锁）
+    /// </summary>
+    private static Dictionary<string, string>? ReadFolderMappingFromDisk()
+    {
+        try
+        {
+            if (File.Exists(FolderMappingPath))
+            {
+                var json = File.ReadAllText(FolderMappingPath);
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    /// <summary>
     /// 加载 URL→文件夹名 映射（带内存缓存，线程安全）
     /// </summary>
     private static Dictionary<string, string> LoadFolderMapping()
@@ -548,17 +565,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (_folderMappingCache != null)
                 return new Dictionary<string, string>(_folderMappingCache);
 
-            try
-            {
-                if (File.Exists(FolderMappingPath))
-                {
-                    var json = File.ReadAllText(FolderMappingPath);
-                    _folderMappingCache = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
-                    return new Dictionary<string, string>(_folderMappingCache);
-                }
-            }
-            catch { }
-            _folderMappingCache = new();
+            _folderMappingCache = ReadFolderMappingFromDisk() ?? new();
             return new Dictionary<string, string>(_folderMappingCache);
         }
     }
@@ -573,24 +580,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (!Directory.Exists(ReposPath)) Directory.CreateDirectory(ReposPath);
             lock (_cacheLock)
             {
-                // 在锁内重新加载确保不丢失并发写入
-                Dictionary<string, string> mapping;
-                try
-                {
-                    if (File.Exists(FolderMappingPath))
-                    {
-                        var json = File.ReadAllText(FolderMappingPath);
-                        mapping = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new();
-                    }
-                    else
-                    {
-                        mapping = _folderMappingCache != null ? new Dictionary<string, string>(_folderMappingCache) : new();
-                    }
-                }
-                catch
-                {
-                    mapping = _folderMappingCache != null ? new Dictionary<string, string>(_folderMappingCache) : new();
-                }
+                var mapping = ReadFolderMappingFromDisk()
+                    ?? (_folderMappingCache != null ? new Dictionary<string, string>(_folderMappingCache) : new());
 
                 mapping[url.TrimEnd('/')] = folderName;
                 // 先写磁盘，成功后再更新缓存，确保一致性
@@ -630,17 +621,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             lock (_cacheLock)
             {
-                Dictionary<string, string>? mapping = null;
-                try
-                {
-                    if (File.Exists(FolderMappingPath))
-                    {
-                        var json = File.ReadAllText(FolderMappingPath);
-                        mapping = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
-                    }
-                }
-                catch { }
-
+                var mapping = ReadFolderMappingFromDisk();
                 if (mapping == null) return;
 
                 var trimmed = url.TrimEnd('/');
