@@ -290,15 +290,15 @@ public partial class ScriptRepoWindow
             UpdateProgressValue = 0;
             UpdateProgressText = "准备更新，请耐心等待...";
 
-            // 执行更新
-            var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
+            // 执行更新（Task.Run 避免 SynchronizationContext 将后续 IO 调度回 UI 线程）
+            var (_, updated) = await Task.Run(() => ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
                 {
-                    // 更新进度显示
+                    // 更新进度显示（WPF 绑定引擎会自动将跨线程 PropertyChanged 调度到 UI 线程）
                     double progressPercentage = totalSteps > 0 ? Math.Min(100, (double)steps / totalSteps * 100) : 0;
                     UpdateProgressValue = (int)progressPercentage;
                     UpdateProgressText = $"{path}";
-                });
+                }));
 
             // 更新结果提示
             if (updated)
@@ -545,7 +545,8 @@ public partial class ScriptRepoWindow
             UpdateProgressValue = 0;
             UpdateProgressText = "正在更新订阅脚本...";
 
-            await ScriptRepoUpdater.Instance.ManualUpdateSubscribedScripts();
+            // Task.Run 避免 SynchronizationContext 将 checkout/IO 调度回 UI 线程
+            await Task.Run(() => ScriptRepoUpdater.Instance.ManualUpdateSubscribedScripts());
         }
         catch (Exception ex)
         {
