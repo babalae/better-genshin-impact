@@ -44,6 +44,19 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     private readonly SemaphoreSlim _repoWriteLock = new(1, 1);
 
+    /// <summary>
+    /// 指示后台自动更新是否正在进行。
+    /// Dialog 可据此禁用手动操作按钮并显示进度提示。
+    /// </summary>
+    private volatile bool _isAutoUpdating;
+    public bool IsAutoUpdating => _isAutoUpdating;
+
+    /// <summary>
+    /// 后台自动更新状态变化事件（开始/结束），
+    /// 注意：可能在非 UI 线程触发，订阅方需自行 Dispatch。
+    /// </summary>
+    public event EventHandler? AutoUpdateStateChanged;
+
     // 仓储位置
     public static readonly string ReposPath = Global.Absolute("Repos");
 
@@ -158,6 +171,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 return;
             }
 
+            _isAutoUpdating = true;
+            AutoUpdateStateChanged?.Invoke(this, EventArgs.Empty);
+
             await _repoWriteLock.WaitAsync();
             try
             {
@@ -177,6 +193,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         catch (Exception e)
         {
             _logger.LogDebug(e, "自动更新订阅脚本失败");
+        }
+        finally
+        {
+            _isAutoUpdating = false;
+            AutoUpdateStateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 

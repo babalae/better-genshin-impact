@@ -87,9 +87,14 @@ public partial class ScriptRepoWindow
         DataContext = this;
         Config.PropertyChanged += OnConfigPropertyChanged;
         PropertyChanged += OnPropertyChanged;
+        ScriptRepoUpdater.Instance.AutoUpdateStateChanged += OnAutoUpdateStateChanged;
 
         // 设置 PasswordBox 的初始值
-        Loaded += (s, e) => GitTokenPasswordBox.Password = GitToken;
+        Loaded += (s, e) =>
+        {
+            GitTokenPasswordBox.Password = GitToken;
+            SyncAutoUpdateState();
+        };
 
         SourceInitialized += (s, e) =>
         {
@@ -147,6 +152,37 @@ public partial class ScriptRepoWindow
     {
         Config.PropertyChanged -= OnConfigPropertyChanged;
         PropertyChanged -= OnPropertyChanged;
+        ScriptRepoUpdater.Instance.AutoUpdateStateChanged -= OnAutoUpdateStateChanged;
+    }
+
+    /// <summary>
+    /// 后台自动更新状态变化回调（可能在非 UI 线程触发）
+    /// </summary>
+    private void OnAutoUpdateStateChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(SyncAutoUpdateState);
+    }
+
+    /// <summary>
+    /// 同步后台自动更新状态到 Dialog 的进度条和按钮
+    /// </summary>
+    private void SyncAutoUpdateState()
+    {
+        if (ScriptRepoUpdater.Instance.IsAutoUpdating)
+        {
+            IsUpdating = true;
+            UpdateProgressText = "后台正在自动更新订阅脚本...";
+            Toast.Information("后台正在自动更新订阅脚本，请等待完成");
+        }
+        else
+        {
+            // 仅当是由自动更新引起的 IsUpdating 时才重置
+            // （避免覆盖用户手动操作的进度状态）
+            if (UpdateProgressText == "后台正在自动更新订阅脚本...")
+            {
+                IsUpdating = false;
+            }
+        }
     }
 
     private void OnConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
