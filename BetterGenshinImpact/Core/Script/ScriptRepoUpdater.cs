@@ -2393,8 +2393,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json, ConfigService.JsonOptions) ?? new List<string>();
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[ScriptRepoUpdater] 读取订阅文件失败: {filePath}，订阅数据可能已损坏: {ex.Message}");
             return new List<string>();
         }
         finally
