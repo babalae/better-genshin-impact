@@ -76,7 +76,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ScriptRepoUpdater] CenterRepoPath 解析失败，回退到默认路径: {ex.Message}");
+                Trace.TraceWarning($"[ScriptRepoUpdater] CenterRepoPath 解析失败，回退到默认路径: {ex.Message}");
                 return Path.Combine(ReposPath, CenterRepoFolderName);
             }
         }
@@ -181,8 +181,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 手动一键更新已订阅的脚本（不检查 AutoUpdateSubscribedScripts 配置开关）
-    /// 更新所有订阅脚本
+    /// 手动一键更新已订阅的脚本（不检查 AutoUpdateSubscribedScripts 配置开关）。
+    /// 更新所有订阅脚本。
+    /// 注意：不包含外层 try-catch，异常会传播到调用方（UI 层），由 ScriptRepoWindow 中的 try-catch 处理并显示 Toast。
     /// </summary>
     public async Task ManualUpdateSubscribedScripts()
     {
@@ -551,7 +552,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ScriptRepoUpdater] 读取映射文件失败: {ex.Message}");
+        }
         return null;
     }
 
@@ -2409,6 +2413,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             var json = System.Text.Json.JsonSerializer.Serialize(paths, ConfigService.JsonOptions);
             File.WriteAllText(filePath, json);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ScriptRepoUpdater] 写入订阅文件失败: {filePath}: {ex.Message}");
+            throw; // 传播异常让调用方决定如何处理
         }
         finally
         {
