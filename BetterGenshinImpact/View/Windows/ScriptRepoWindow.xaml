@@ -307,7 +307,7 @@
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                               Text="{Binding UpdateProgressText}" />
                 <ProgressBar Grid.Row="1"
-                             IsIndeterminate="{Binding IsUpdating}"
+                             IsIndeterminate="{Binding IsProgressIndeterminate}"
                              Maximum="100"
                              Value="{Binding UpdateProgressValue}" />
             </Grid>

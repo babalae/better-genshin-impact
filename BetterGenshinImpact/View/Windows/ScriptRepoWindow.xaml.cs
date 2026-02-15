@@ -53,6 +53,7 @@ public partial class ScriptRepoWindow
 
     // 添加进度相关的可观察属性
     [ObservableProperty] private bool _isUpdating;
+    [ObservableProperty] private bool _isProgressIndeterminate;
     [ObservableProperty] private int _updateProgressValue;
     [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
     [ObservableProperty] private ScriptConfig _config = TaskContext.Instance().Config.ScriptConfig;
@@ -171,6 +172,7 @@ public partial class ScriptRepoWindow
         if (ScriptRepoUpdater.Instance.IsAutoUpdating)
         {
             IsUpdating = true;
+            IsProgressIndeterminate = true;
             UpdateProgressText = "后台正在自动更新订阅脚本...";
             Toast.Information("后台正在自动更新订阅脚本，请等待完成");
         }
@@ -181,6 +183,7 @@ public partial class ScriptRepoWindow
             if (UpdateProgressText == "后台正在自动更新订阅脚本...")
             {
                 IsUpdating = false;
+                IsProgressIndeterminate = false;
             }
         }
     }
@@ -287,6 +290,7 @@ public partial class ScriptRepoWindow
 
             // 设置进度显示
             IsUpdating = true;
+            IsProgressIndeterminate = true;
             UpdateProgressValue = 0;
             UpdateProgressText = "准备更新，请耐心等待...";
 
@@ -294,6 +298,8 @@ public partial class ScriptRepoWindow
             var (_, updated) = await Task.Run(() => ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
                 {
+                    // 收到实际进度后切换为确定模式
+                    IsProgressIndeterminate = false;
                     // 更新进度显示（WPF 绑定引擎会自动将跨线程 PropertyChanged 调度到 UI 线程）
                     double progressPercentage = totalSteps > 0 ? Math.Min(100, (double)steps / totalSteps * 100) : 0;
                     UpdateProgressValue = (int)progressPercentage;
@@ -318,6 +324,7 @@ public partial class ScriptRepoWindow
         {
             // 隐藏进度条
             IsUpdating = false;
+            IsProgressIndeterminate = false;
         }
     }
 
@@ -505,6 +512,7 @@ public partial class ScriptRepoWindow
             if (openFileDialog.ShowDialog() == true)
             {
                 IsUpdating = true;
+                IsProgressIndeterminate = false; // 导入有实际百分比进度
                 UpdateProgressValue = 0;
                 UpdateProgressText = "正在导入脚本仓库，请耐心等待...";
 
@@ -542,6 +550,7 @@ public partial class ScriptRepoWindow
         try
         {
             IsUpdating = true;
+            IsProgressIndeterminate = true;
             UpdateProgressValue = 0;
             UpdateProgressText = "正在更新订阅脚本...";
 
@@ -555,6 +564,7 @@ public partial class ScriptRepoWindow
         finally
         {
             IsUpdating = false;
+            IsProgressIndeterminate = false;
         }
     }
 
