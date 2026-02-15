@@ -160,7 +160,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             await _repoWriteLock.WaitAsync();
             try
             {
-                await AutoUpdateSubscribedScriptsCore(scriptConfig, subscribedPaths);
+                var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
+
+                if (successCount > 0)
+                {
+                    _logger.LogInformation("自动更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
+                    UIDispatcherHelper.Invoke(() => Toast.Success($"已自动更新 {successCount} 个订阅脚本"));
+                }
             }
             finally
             {
@@ -318,80 +324,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         return (successCount, failCount);
-    }
-
-    private async Task AutoUpdateSubscribedScriptsCore(ScriptConfig scriptConfig, List<string> subscribedPaths)
-    {
-        var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
-
-        if (successCount > 0)
-        {
-            _logger.LogInformation("自动更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
-            UIDispatcherHelper.Invoke(() => Toast.Success($"已自动更新 {successCount} 个订阅脚本"));
-        }
-    }
-
-    /// <summary>
-    /// 在 repo_updated.json 的 indexes 中查找有 hasUpdate 标记的已订阅路径
-    /// </summary>
-    private List<string> FindSubscribedPathsWithUpdates(JArray indexes, List<string> subscribedPaths)
-    {
-        var result = new List<string>();
-
-        foreach (var path in subscribedPaths)
-        {
-            if (HasUpdateForPath(indexes, path))
-            {
-                result.Add(path);
-            }
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// 递归检查指定路径在 indexes 中是否有 hasUpdate 标记
-    /// </summary>
-    private bool HasUpdateForPath(JArray nodes, string targetPath)
-    {
-        var pathParts = targetPath.Split('/');
-        return HasUpdateForPathRecursive(nodes, pathParts, 0);
-    }
-
-    private bool HasUpdateForPathRecursive(JArray nodes, string[] pathParts, int currentIndex)
-    {
-        foreach (var node in nodes.OfType<JObject>())
-        {
-            var name = node["name"]?.ToString();
-            if (name != pathParts[currentIndex]) continue;
-
-            if (currentIndex == pathParts.Length - 1)
-            {
-                // 到达目标节点，检查是否有更新标记
-                return IsTruthy(node["hasUpdate"]);
-            }
-
-            // 继续递归
-            if (node["children"] is JArray children)
-            {
-                return HasUpdateForPathRecursive(children, pathParts, currentIndex + 1);
-            }
-
-            return false;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// 重置指定路径的 hasUpdate 标记（递归重置子节点）
-    /// </summary>
-    private void ResetHasUpdateForPath(JObject jsonObj, string path)
-    {
-        if (jsonObj["indexes"] is not JArray indexes) return;
-
-        var pathParts = path.Split('/');
-        RepoWebBridge.ProcessPathRecursively(indexes, pathParts, 0);
     }
 
     /// <summary>
@@ -2437,14 +2369,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         var existing = GetSubscribedPathsForCurrentRepo();
         existing.AddRange(paths);
         SetSubscribedPathsForCurrentRepo(existing);
-    }
-
-    /// <summary>
-    /// 检查当前仓库是否有订阅路径
-    /// </summary>
-    private static bool HasSubscribedPathsForCurrentRepo()
-    {
-        return GetSubscribedPathsForCurrentRepo().Count > 0;
     }
 
     /// <summary>
