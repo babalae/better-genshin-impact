@@ -36,9 +36,7 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     public void SetDefault()
     {
         var config = TaskContext.Instance().Config.AutoLeyLineOutcropConfig;
-        Count = config.Count;
-        Country = config.Country;
-        LeyLineOutcropType = config.LeyLineOutcropType;
+        
         OpenModeCountMin= config.OpenModeCountMin;
         IsResinExhaustionMode= config.IsResinExhaustionMode;
         UseAdventurerHandbook= config.UseAdventurerHandbook;
@@ -55,9 +53,10 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
 
     public AutoLeyLineOutcropParam(int Count, string Country, string LeyLineOutcropType) : base(null, null)
     {
-        SetDefault();
         this.Count = Count;
         this.Country = Country;
         this.LeyLineOutcropType = LeyLineOutcropType;
+        
+        SetDefault();
     }
 }
