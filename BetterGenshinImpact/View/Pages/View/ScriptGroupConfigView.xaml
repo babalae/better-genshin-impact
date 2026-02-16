@@ -1361,7 +1361,66 @@
                         </ui:ToggleSwitch>
 
 
+<<<<<<< HEAD
+                            <ui:CardExpander.Header>
+                                <Grid>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="转圈寻找掉落物"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="战斗结束后转圈寻找掉落物光柱并尝试靠近（仅在没有万叶时使用）"
+                                                  TextWrapping="Wrap" />
+                                    <ui:ToggleSwitch Grid.Row="0"
+                                                     Grid.RowSpan="2"
+                                                     Grid.Column="1"
+                                                     Margin="0,0,36,0"
+                                                     IsChecked="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightEnabled}" />
+                                </Grid>
+                            </ui:CardExpander.Header>
+                            <StackPanel>
+                                <Grid Margin="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="转圈寻找掉落物时长"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="单位为秒。0表示不转圈寻找掉落物。"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBox Grid.Row="0"
+                                                Grid.RowSpan="2"
+                                                Grid.Column="1"
+                                                MinWidth="120"
+                                                Margin="0,0,36,0"
+                                                Text="{Binding PathingConfig.AutoFightConfig.PickDropsAfterFightSeconds}" />
+                                </Grid>
+                            </StackPanel>
+=======
                             </Grid>
+>>>>>>> 26931ccac7fc360ba8e79f82db28d063587c2e57
                         </ui:CardExpander>
 
                         <Grid Margin="16,10,52,0">
