@@ -178,13 +178,8 @@ public partial class ScriptRepoWindow
         }
         else
         {
-            // 仅当是由自动更新引起的 IsUpdating 时才重置
-            // （避免覆盖用户手动操作的进度状态）
-            if (UpdateProgressText == "后台正在自动更新订阅脚本...")
-            {
-                IsUpdating = false;
-                IsProgressIndeterminate = false;
-            }
+            IsUpdating = false;
+            IsProgressIndeterminate = false;
         }
     }
 

@@ -89,7 +89,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[ScriptRepoUpdater] CenterRepoPath 解析失败，回退到默认路径: {ex.Message}");
+                Debug.WriteLine($"[ScriptRepoUpdater] CenterRepoPath 解析失败，回退到默认路径: {ex.Message}");
                 return Path.Combine(ReposPath, CenterRepoFolderName);
             }
         }
@@ -2215,69 +2215,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         //     }
         // }
 
-        //顶层目录订阅时，不会删除其下，不在订阅中的文件夹
-        List<string> newPaths = new List<string>();
-        foreach (var path in paths)
-        {
-            //顶层节点，按库中的文件夹来
-            if (path == "pathing")
-            {
-                // 判断仓库类型：Git 仓库或文件式仓库
-                bool isGitRepo = IsGitRepository(repoPath);
-
-                if (isGitRepo)
-                {
-                    // 从Git仓库读取
-                    using var repo = new Repository(repoPath);
-                    var commit = repo.Head.Tip;
-                    if (commit == null)
-                    {
-                        throw new Exception("仓库HEAD未指向任何提交");
-                    }
-
-                    Tree repoTree = GetRepoSubdirectoryTree(repo);
-
-                    var pathingEntry = repoTree["pathing"];
-                    if (pathingEntry != null && pathingEntry.TargetType == TreeEntryTargetType.Tree)
-                    {
-                        var pathingTree = (Tree)pathingEntry.Target;
-                        foreach (var entry in pathingTree)
-                        {
-                            if (entry.TargetType == TreeEntryTargetType.Tree)
-                            {
-                                newPaths.Add("pathing/" + entry.Name);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Toast.Warning($"未知的脚本路径：{path}");
-                    }
-                }
-                else
-                {
-                    // 文件式仓库：从文件系统读取
-                    var pathingDir = Path.Combine(repoPath, "pathing");
-                    if (Directory.Exists(pathingDir))
-                    {
-                        // 获取该路径下的所有“仅第一层文件夹”
-                        string[] directories = Directory.GetDirectories(pathingDir, "*", SearchOption.TopDirectoryOnly);
-                        foreach (var dir in directories)
-                        {
-                            newPaths.Add("pathing/" + Path.GetFileName(dir));
-                        }
-                    }
-                    else
-                    {
-                        Toast.Warning($"未知的脚本路径：{path}");
-                    }
-                }
-            }
-            else
-            {
-                newPaths.Add(path);
-            }
-        }
+        //顶层目录订阅时，展开 "pathing" 等顶层路径为具体子目录
+        List<string> newPaths = ExpandTopLevelPaths(paths, repoPath);
 
         // 从 Git 仓库检出文件到用户文件夹
         foreach (var path in newPaths)
@@ -2378,7 +2317,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 向当前仓库的已订阅路径中追加新路径（自动去重）
+    /// 向当前仓库的已订阅路径中追加新路径（自动去重）。
+    /// 注意：内部的读-合并-写不是原子操作，调用方应持有 _repoWriteLock 以避免并发丢失更新。
     /// </summary>
     private static void AddSubscribedPathsForCurrentRepo(List<string> paths)
     {
