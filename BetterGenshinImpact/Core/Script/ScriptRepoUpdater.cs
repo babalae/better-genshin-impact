@@ -152,9 +152,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         try
         {
-            // 迁移旧 config.json 中的订阅路径到独立文件（仅首次）
-            MigrateSubscribedPathsFromConfig();
-
             var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
 
             // 检查是否启用自动更新
@@ -164,19 +161,22 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 return;
             }
 
-            var subscribedPaths = GetSubscribedPathsForCurrentRepo();
-            if (subscribedPaths.Count == 0)
-            {
-                _logger.LogDebug("没有已订阅的脚本，跳过自动更新");
-                return;
-            }
-
             _isAutoUpdating = true;
             AutoUpdateStateChanged?.Invoke(this, EventArgs.Empty);
 
             await _repoWriteLock.WaitAsync();
             try
             {
+                // 迁移旧 config.json 中的订阅路径到独立文件（仅首次，放在锁内避免并发写风险）
+                MigrateSubscribedPathsFromConfig();
+
+                var subscribedPaths = GetSubscribedPathsForCurrentRepo();
+                if (subscribedPaths.Count == 0)
+                {
+                    _logger.LogDebug("没有已订阅的脚本，跳过自动更新");
+                    return;
+                }
+
                 var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
 
                 if (successCount > 0)
@@ -357,54 +357,59 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 展开顶层路径（如 "pathing" -> "pathing/xxx", "pathing/yyy"）
+    /// 展开裸顶层路径为其子目录（如 "pathing" -> "pathing/xxx", "pathing/yyy"；"js" -> "js/aaa", "js/bbb"）。
+    /// 这样可以避免后续检出时 destPath 等于整个用户目录而误删所有用户脚本。
+    /// 非 PathMapper 顶层 key 或已包含子路径的条目原样保留。
     /// </summary>
     private List<string> ExpandTopLevelPaths(List<string> paths, string repoPath)
     {
+        var topLevelKeys = PathMapper.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var result = new List<string>();
+
         foreach (var path in paths)
         {
-            if (path == "pathing")
+            // 仅当路径恰好是一个裸顶层 key（如 "pathing"、"js"、"combat"）时才展开
+            if (!topLevelKeys.Contains(path))
             {
-                bool isGitRepo = IsGitRepository(repoPath);
-                if (isGitRepo)
+                result.Add(path);
+                continue;
+            }
+
+            bool isGitRepo = IsGitRepository(repoPath);
+            if (isGitRepo)
+            {
+                using var repo = new Repository(repoPath);
+                var commit = repo.Head.Tip;
+                if (commit != null)
                 {
-                    using var repo = new Repository(repoPath);
-                    var commit = repo.Head.Tip;
-                    if (commit != null)
+                    var repoTree = GetRepoSubdirectoryTree(repo);
+                    var entry = repoTree[path];
+                    if (entry?.TargetType == TreeEntryTargetType.Tree)
                     {
-                        var repoTree = GetRepoSubdirectoryTree(repo);
-                        var pathingEntry = repoTree["pathing"];
-                        if (pathingEntry?.TargetType == TreeEntryTargetType.Tree)
+                        var subTree = (Tree)entry.Target;
+                        foreach (var child in subTree)
                         {
-                            var pathingTree = (Tree)pathingEntry.Target;
-                            foreach (var entry in pathingTree)
+                            if (child.TargetType == TreeEntryTargetType.Tree)
                             {
-                                if (entry.TargetType == TreeEntryTargetType.Tree)
-                                {
-                                    result.Add("pathing/" + entry.Name);
-                                }
+                                result.Add(path + "/" + child.Name);
                             }
-                        }
-                    }
-                }
-                else
-                {
-                    var pathingDir = Path.Combine(repoPath, "pathing");
-                    if (Directory.Exists(pathingDir))
-                    {
-                        foreach (var dir in Directory.GetDirectories(pathingDir, "*", SearchOption.TopDirectoryOnly))
-                        {
-                            result.Add("pathing/" + Path.GetFileName(dir));
                         }
                     }
                 }
             }
             else
             {
-                result.Add(path);
+                var dir = Path.Combine(repoPath, path);
+                if (Directory.Exists(dir))
+                {
+                    foreach (var subDir in Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly))
+                    {
+                        result.Add(path + "/" + Path.GetFileName(subDir));
+                    }
+                }
             }
         }
+
         return result;
     }
 
