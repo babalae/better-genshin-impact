@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "纳塔4-溶水域-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 9038.74,
+      "y": -2429.33,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 8994.51,
+      "y": -2434.72,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 9014.0,
+      "y": -2408.83,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 4,
+      "x": 9028.36,
+      "y": -2404.43,
+      "type": "path",
+      "move_mode": "jump",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 9028.67,
+      "y": -2342.6,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

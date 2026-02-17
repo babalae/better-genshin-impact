@@ -1,6 +1,0 @@
-钟离 q,s(0.1),e(hold),wait(0.3),w(0.1),attack(0.05),dash
-芙芙 e,q,attack(0.05),dash
-娜维娅 q,attack(0.05),dash,click(middle),wait(0.3),keydown(e),wait(0.2),keyup(e),click
-班尼特 e,q
-娜维娅 attack(0.05),dash,click(middle),wait(0.3),keydown(e),wait(0.2),keyup(e),click,attack(0.05),dash,click(middle),wait(0.3),keydown(e),wait(0.2),keyup(e),click
-班尼特 e,attack(0.05),dash

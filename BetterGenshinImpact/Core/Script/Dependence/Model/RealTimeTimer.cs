@@ -1,4 +1,6 @@
-﻿using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
+﻿using System;
+using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Dependence.Model;
@@ -39,6 +41,17 @@ public class RealtimeTimer
         if (Name == "AutoPick")
         {
             Config = ScriptObjectConverter.ConvertTo<AutoPickExternalConfig>(config);
+        }
+        else if (Name == "AutoSkip")
+        {
+            if (config is AutoSkipConfig)
+            {
+                Config = config;
+            }
+            else 
+            {
+                throw new ArgumentException("AutoSkip的配置参数需要为AutoSkipConfig类型");
+            }
         }
     }
 }

@@ -1,4 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2)
-芙宁娜 e,wait(0.3),q
-雷电将军 e
-瑶瑶 e,wait(0.3),q,j,wait(0.8),j,wait(1),j,wait(1),j,wait(1),j,wait(1)

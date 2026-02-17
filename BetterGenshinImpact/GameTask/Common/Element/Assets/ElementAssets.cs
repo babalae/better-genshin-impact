@@ -15,12 +15,14 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject BtnWhiteCancel;
     public RecognitionObject BtnBlackConfirm;
     public RecognitionObject BtnBlackCancel;
+    public RecognitionObject BtnBackTeyvat;
     public RecognitionObject BtnOnlineYes;
     public RecognitionObject BtnOnlineNo;
     public Lazy<RecognitionObject> BtnExitDoor;
     public RecognitionObject InDomainRo;
 
     public RecognitionObject PaimonMenuRo;
+    public RecognitionObject InventoryRo;
     public RecognitionObject BlueTrackPoint;
 
     public RecognitionObject UiLeftTopCookIcon;
@@ -88,6 +90,11 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject LeylineDisorderIconRo;
 
+    public RecognitionObject EscDown;
+    public RecognitionObject EscWonderlandHome;
+    public RecognitionObject WonderlandEnter;
+    public RecognitionObject WonderlandClose;
+
     public RecognitionObject Index1;
     public RecognitionObject Index2;
     public RecognitionObject Index3;
@@ -147,6 +154,12 @@ public class ElementAssets : BaseAssets<ElementAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_black_cancel.png", systemInfo),
             Use3Channels = true
         }.InitTemplate();
+        BtnBackTeyvat = new RecognitionObject
+        {
+            Name = "BtnBackTeyvat",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_back_teyvat.png", systemInfo),
+        }.InitTemplate();
         BtnOnlineYes = new RecognitionObject
         {
             Name = "BtnOnlineYes",
@@ -187,6 +200,17 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "paimon_menu.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height / 4),
+            DrawOnWindow = false
+        }.InitTemplate();
+
+        // 背包图标（右上角）
+        // 原图裁剪坐标 1748, 30, 1784, 67 (约36x37)
+        InventoryRo = new RecognitionObject
+        {
+            Name = "Inventory",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "inventory.png", systemInfo),
+            RegionOfInterest = new Rect(CaptureRect.Width * 3 / 4, 0, CaptureRect.Width / 4, (int)(100 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
 
@@ -678,7 +702,31 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RegionOfInterest = new Rect(0, 0, (int)(200 * AssetScale), (int)(200 * AssetScale)),
             DrawOnWindow = false
         }.InitTemplate();
-
+        
+        EscDown = new RecognitionObject
+        {
+            Name = "EscDown",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_down.png", systemInfo),
+        }.InitTemplate();
+        EscWonderlandHome = new RecognitionObject
+        {
+            Name = "EscWonderlandHome",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_wonderland_home.png", systemInfo),
+        }.InitTemplate();
+        WonderlandEnter = new RecognitionObject
+        {
+            Name = "WonderlandEnter",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "wonderland_enter.png", systemInfo),
+        }.InitTemplate();
+        WonderlandClose = new RecognitionObject
+        {
+            Name = "WonderlandClose",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "wonderland_close.png", systemInfo),
+        }.InitTemplate();
 
         Rect partyRect = new Rect(CaptureRect.Width - (int)(65 * AssetScale), (int)(155 * AssetScale), (int)(35 * AssetScale), (int)(600 * AssetScale));
         // 1 2 3 4 按键

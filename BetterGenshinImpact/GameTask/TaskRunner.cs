@@ -13,6 +13,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.ViewModel;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -132,6 +133,19 @@ public class TaskRunner
 
         // 清空实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();
+        
+        // 隐藏地图遮罩
+        UIDispatcherHelper.Invoke(() =>
+        {
+            if (MaskWindow.InstanceNullable() != null)
+            {
+                if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
+                {
+                    vm.IsInBigMapUi = false;
+                }
+            }
+        });
+        VisionContext.Instance().DrawContent.ClearAll(); 
         
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();

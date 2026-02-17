@@ -71,6 +71,24 @@ public partial class StringUtils
         return chineseString;
     }
 
+    /// <summary>
+    /// 将全角数字转换为半角数字
+    /// </summary>
+    /// <param name="text">需要转换的文本</param>
+    /// <returns>转换后的文本，全角数字被替换为半角数字</returns>
+    public static string ConvertFullWidthNumToHalfWidth(string text)
+    {
+        StringBuilder sb = new StringBuilder(text.Length);
+        foreach (char c in text)
+        {
+            if (c >= 0xFF10 && c <= 0xFF19) // 全角数字 ０-９
+                sb.Append((char)(c - 0xFF10 + '0'));
+            else
+                sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
     public static double TryParseDouble(string text)
     {
         _ = double.TryParse(text, out double result);

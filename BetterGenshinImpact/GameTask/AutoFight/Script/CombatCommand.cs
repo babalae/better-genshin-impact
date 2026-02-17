@@ -14,6 +14,8 @@ public class CombatCommand
 
     public List<string>? Args { get; set; }
 
+    public List<int> ActivatingRound { get; set; }
+
     public CombatCommand(string name, string command)
     {
         Name = name.Trim();
@@ -62,6 +64,16 @@ public class CombatCommand
                 throw new ArgumentException($"{Method.Alias[0]}方法的入参必须是VirtualKeyCodes枚举中的值，当前入参 {Args[0]} 不合法");
             }
         }
+        else if (Method == Method.Scroll)
+        {
+            AssertUtils.IsTrue(Args.Count == 1, "scroll方法必须有一个入参，代表滚动格数。例：scroll(1) 或 scroll(-1)");
+            AssertUtils.IsTrue(int.TryParse(Args[0], out _), "滚动格数必须是整数");
+        }
+    }
+    
+    public override string ToString()
+    {
+        return $"<CombatCommand {Name}, {Method}({Args}) (rounds {ActivatingRound})>";
     }
 
     public void Execute(CombatScenes combatScenes, CombatCommand? lastCommand = null)
@@ -95,7 +107,8 @@ public class CombatCommand
                     && Method != Method.MoveBy
                     && Method != Method.KeyDown
                     && Method != Method.KeyUp
-                    && Method != Method.KeyPress)
+                    && Method != Method.KeyPress
+                    && Method != Method.Scroll)
                 {
                     avatar.Switch();
                 }
@@ -185,6 +198,10 @@ public class CombatCommand
             var s = double.Parse(Args![0]);
             avatar.Wait((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
+        else if (Method == Method.Ready)
+        {
+            avatar.Ready();
+        }
         else if (Method == Method.Aim)
         {
             throw new NotImplementedException();
@@ -263,6 +280,14 @@ public class CombatCommand
         else if (Method == Method.KeyPress)
         {
             avatar.KeyPress(Args![0]);
+        }
+        else if (Method == Method.Scroll)
+        {
+            avatar.Scroll(int.Parse(Args![0]));
+        }
+        else if (Method == Method.Round)
+        {
+            // 作为回合标记使用，不做任何操作
         }
         else
         {

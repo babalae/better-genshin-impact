@@ -648,7 +648,7 @@
         "nameEn": "charlotte",
         "type": "character",
         "name": "夏洛蒂",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "冰元素",
         "weapon": "法器",
@@ -1439,7 +1439,7 @@
         "nameEn": "kamisato_ayato",
         "type": "character",
         "name": "神里绫人",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "水元素",
         "weapon": "单手剑",
@@ -2720,7 +2720,7 @@
         "nameEn": "thoma",
         "type": "character",
         "name": "托马",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "火元素",
         "weapon": "长柄武器",
@@ -4215,6 +4215,83 @@
             {
                 "nameEn": "tagteam_triple_jump",
                 "name": "连势，三重腾跃！",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1416,
+        "nameEn": "ororon",
+        "type": "character",
+        "name": "欧洛伦",
+        "hp": 10,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "弓",
+        "skills": [
+            {
+                "nameEn": "spiritvessel_snapshot",
+                "name": "宿灵闪箭",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "nights_sling",
+                "name": "暝色缒索",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "dark_voices_echo",
+                "name": "黯声回响",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "nightshade_synesthesia",
+                "name": "夜翳的通感",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -6068,7 +6145,7 @@
         "nameEn": "collei",
         "type": "character",
         "name": "柯莱",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "草元素",
         "weapon": "弓",
@@ -7457,7 +7534,7 @@
         "nameEn": "hydro_tulpa",
         "type": "character",
         "name": "水形幻人",
-        "hp": 12,
+        "hp": 11,
         "energy": 3,
         "element": "水元素",
         "weapon": "其他武器",
@@ -7522,6 +7599,83 @@
             {
                 "nameEn": "branching_flow",
                 "name": "分流",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2207,
+        "nameEn": "consecrated_horned_crocodile",
+        "type": "character",
+        "name": "圣骸角鳄",
+        "hp": 11,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "fang_bite",
+                "name": "尖牙噬咬",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "sawtoothed_surge",
+                "name": "鳄齿锐波",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "reptilian_rage",
+                "name": "凶鳄狂浪",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "consecrated_senses",
+                "name": "圣骸感应",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -7842,7 +7996,7 @@
         "nameEn": "lord_of_eroded_primal_fire",
         "type": "character",
         "name": "蚀灭的源焰之主",
-        "hp": 12,
+        "hp": 11,
         "energy": 2,
         "element": "火元素",
         "weapon": "其他武器",
@@ -9214,6 +9368,77 @@
             {
                 "nameEn": "gluttonous_rex",
                 "name": "贪食之王",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 6605,
+        "nameEn": "skirk",
+        "type": "character",
+        "name": "丝柯克",
+        "hp": 10,
+        "energy": 0,
+        "element": "冰元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "havoc_sunder",
+                "name": "极恶技·断",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "havoc_warp",
+                "name": "极恶技·闪",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "havoc_extinction",
+                "name": "极恶技·尽",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "nameEn": "reason_beyond_reason",
+                "name": "理外之理",
                 "skillTag": [
                     "被动技能"
                 ],

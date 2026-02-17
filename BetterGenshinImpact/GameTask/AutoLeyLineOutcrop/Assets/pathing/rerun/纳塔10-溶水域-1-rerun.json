@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "纳塔10-溶水域-1-rerun",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 8291.35,
+      "y": -2922.46,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "teleport"
+    },
+    {
+      "id": 2,
+      "x": 8311.51,
+      "y": -2943.5,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "path"
+    },
+    {
+      "id": 3,
+      "x": 8360.95,
+      "y": -2994.78,
+      "action": "stop_flying",
+      "move_mode": "fly",
+      "action_params": "0.5",
+      "type": "path"
+    },
+    {
+      "id": 4,
+      "x": 8361.82,
+      "y": -2993.79,
+      "action": "",
+      "move_mode": "walk",
+      "action_params": "",
+      "type": "target"
+    }
+  ]
+}

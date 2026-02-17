@@ -111,7 +111,8 @@ public class GeniusInvokationControl
             TaskControl.TrySuspend();
             if (!SystemControl.IsGenshinImpactActiveByProcess())
             {
-                _logger.LogWarning("当前获取焦点的窗口不是原神，暂停");
+                var name = SystemControl.GetActiveByProcess();
+                _logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，暂停");
                 throw new RetryException("当前获取焦点的窗口不是原神");
             }
         }, TimeSpan.FromSeconds(1), 100);
@@ -713,13 +714,6 @@ public class GeniusInvokationControl
                     ClickGameWindowCenter(); // 复位
                     Sleep(500);
                 }
-            }
-
-            // 存在吞星之鲸的情况下，烧牌后等待加血动画
-            if (duel.Characters.Any(c => c is { Name: "吞星之鲸" }))
-            {
-                Debug.WriteLine("存在吞星之鲸的情况下，烧牌后等待动画");
-                Sleep(5000);
             }
         }
 

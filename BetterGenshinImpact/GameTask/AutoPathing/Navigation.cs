@@ -20,7 +20,7 @@ public class Navigation
     {
         if (!_isWarmUp)
         {
-            MapManager.GetMap(MapTypes.Teyvat, mapMatchMethod);
+            MapManager.GetMap(MapTypes.Teyvat, mapMatchMethod).WarmUp();
         }
 
         _isWarmUp = true;

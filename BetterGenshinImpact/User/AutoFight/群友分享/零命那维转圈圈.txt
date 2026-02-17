@@ -1,8 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2),q
-那维莱特 e
-枫原万叶 e,attack(0.1)
-菲谢尔 e
-那维莱特 charge(3)
-枫原万叶 q,e,attack(0.1)
-钟离 e(hold),wait(0.3)
-那维莱特 e,charge(3),q,charge(3),charge(3)

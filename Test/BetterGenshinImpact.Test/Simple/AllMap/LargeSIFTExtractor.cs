@@ -20,25 +20,25 @@ public class LargeSiftExtractor
 
     private readonly Feature2D _sift = SIFT.Create();
     
-    public static void Gen1024()
-    {
-        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.0";
-        var mainMap2048BlockMat = new Mat($@"{rootPath}\map_2048.png", ImreadModes.Color);
-        // 缩小 2048/1024 = 2
-        var targetFilePath = $@"{rootPath}\1024_map.png";
-        // opencv 缩小
-        var mainMap1024BlockMat =
-            mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 2, mainMap2048BlockMat.Height / 2));
-        // 转化为灰度图
-        mainMap1024BlockMat.SaveImage(targetFilePath);
-        Debug.WriteLine("done!");
-    }
+    // public static void Gen1024()
+    // {
+    //     var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4";
+    //     var mainMap2048BlockMat = new Mat($@"{rootPath}\map_2048.png", ImreadModes.Color);
+    //     // 缩小 2048/1024 = 2
+    //     var targetFilePath = $@"{rootPath}\1024_map.png";
+    //     // opencv 缩小
+    //     var mainMap1024BlockMat =
+    //         mainMap2048BlockMat.Resize(new Size(mainMap2048BlockMat.Width / 2, mainMap2048BlockMat.Height / 2));
+    //     // 转化为灰度图
+    //     mainMap1024BlockMat.SaveImage(targetFilePath);
+    //     Debug.WriteLine("done!");
+    // }
 
     public static void Gen256Sift()
     {
         Environment.SetEnvironmentVariable("OPENCV_IO_MAX_IMAGE_PIXELS", Math.Pow(2, 40).ToString("F0"));
 
-        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.0";
+        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4";
 
         // 缩小 2048/256 = 8
         var targetFilePath = $@"{rootPath}\Teyvat_0_256.png";
@@ -63,8 +63,8 @@ public class LargeSiftExtractor
     {
         Environment.SetEnvironmentVariable("OPENCV_IO_MAX_IMAGE_PIXELS", Math.Pow(2, 40).ToString("F0"));
         var extractor = new LargeSiftExtractor();
-        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.0\map_2048.png",
-            @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.0\");
+        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4\map_2048.png",
+            @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4\");
     }
 
     public void ExtractAndSaveSift(string imagePath, string outputPath)

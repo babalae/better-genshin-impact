@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "蒙德2-清泉镇-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -717.83,
+      "y": 1802.77,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

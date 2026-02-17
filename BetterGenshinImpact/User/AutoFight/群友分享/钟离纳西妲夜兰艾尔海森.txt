@@ -1,8 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2),q
-纳西妲 e(hold),q
-夜兰 e,e,wait(0.2),e,e,q
-艾尔海森 q,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,charge,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash
-钟离 s(0.2),e(hold),wait(0.3),w(0.2),q
-纳西妲 e(hold),q
-夜兰 e,e,wait(0.2),e,e,q
-艾尔海森 e,charge,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash,attack,wait(0.05),attack,wait(0.05),attack,wait(0.1),dash

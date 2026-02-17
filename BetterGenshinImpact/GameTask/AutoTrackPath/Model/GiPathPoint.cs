@@ -29,7 +29,8 @@ public class GiPathPoint
         var pt = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(point);
         return new GiPathPoint
         {
-            Pt = pt,
+            // pt will not be null
+            Pt = pt ?? new Point2f(0, 0),
             MatchPt = point,
             Index = index,
             Time = DateTime.Now

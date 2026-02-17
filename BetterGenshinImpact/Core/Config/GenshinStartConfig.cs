@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -44,4 +44,7 @@ public partial class GenshinStartConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _recordGameTimeEnabled = false;
+
+    [ObservableProperty]
+    private bool _startGameWithCmd = false;
 }

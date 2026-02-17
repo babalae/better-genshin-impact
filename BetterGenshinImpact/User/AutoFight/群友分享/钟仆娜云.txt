@@ -1,7 +1,0 @@
-仆人 e
-钟离 s(0.2),e(hold),wait(0.1),w(0.2),wait(0.2)
-娜维娅 e,q,e
-云堇 q,e
-仆人 charge(0.52),attack(2),dash,attack(2),dash,attack(2),e
-
-//双c配置，三岩保障云堇有足够充能，缺点是伤害较低

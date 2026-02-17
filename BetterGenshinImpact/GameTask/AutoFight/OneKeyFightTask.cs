@@ -167,9 +167,10 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             return new Task(() =>
             {
-                Logger.LogInformation("→ {Name}执行宏", activeAvatar.Name);
+                var round = 1;
                 while (!ct.IsCancellationRequested && IsEnabled())
                 {
+                    Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
                     if (IsHoldOnMode() && !_isKeyDown)
                     {
                         break;
@@ -178,8 +179,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                     // 通用化战斗策略
                     foreach (var command in combatCommands)
                     {
+                        if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
+                        {
+                            // 跳过强制首轮指令
+                            continue;
+                        }
                         command.Execute(activeAvatar);
                     }
+                    round++;
                 }
 
                 Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
@@ -194,7 +201,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
 
     public Dictionary<string, List<CombatCommand>> LoadAvatarMacros()
     {
-        var jsonPath = Global.Absolute("User/avatar_macro.json");
+        var jsonPath = GetAvatarMacroJsonPath();
         var json = File.ReadAllText(jsonPath);
         _lastUpdateTime = File.GetLastWriteTime(jsonPath);
         var avatarMacros = JsonSerializer.Deserialize<List<AvatarMacro>>(json, ConfigService.JsonOptions);
@@ -219,9 +226,19 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public bool IsAvatarMacrosEdited()
     {
         // 通过修改时间判断是否编辑过
-        var jsonPath = Global.Absolute("User/avatar_macro.json");
+        var jsonPath = GetAvatarMacroJsonPath();
         var lastWriteTime = File.GetLastWriteTime(jsonPath);
         return lastWriteTime > _lastUpdateTime;
+    }
+    
+    public static string GetAvatarMacroJsonPath()
+    {
+        var path = Global.Absolute("User/avatar_macro.json");
+        if (!File.Exists(path))
+        {
+            File.Copy(Global.Absolute("User/avatar_macro_default.json"), path);
+        }
+        return path;
     }
 
     public static bool IsEnabled()

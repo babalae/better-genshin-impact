@@ -128,28 +128,37 @@ public class Avatar
                 }
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
-                var pathExecutor = new PathExecutor(ct);
+                var cts = new CancellationTokenSource();
+                var pathExecutor = new PathExecutor(cts.Token);
+                
                 try
                 {
-                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).Wait(2000, ct);
-                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code;//改为跳飞
+                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).Wait(2000,cts.Token);
+                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code; // 改为跳飞
                     Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).Wait(15000, ct);
-                    AutoFightTask.FightWaypoint = null;//执行后清空，即每次战斗只执行一次，第二次直接去七天神像
+                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).Wait(15000,cts.Token);
+                    cts.Cancel();
+                    AutoFightTask.FightWaypoint = null;
                     Simulation.SendInput.Mouse.RightButtonUp();
+                }
+                catch (TaskCanceledException)
+                {
+                    Logger.LogError("游泳检测：回到战斗地点任务被取消");
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning(ex, "游泳检测：回到战斗地点异常");
+                    Logger.LogError(ex, "游泳检测：回到战斗地点异常");
+                }
+                finally
+                {
+                    Simulation.ReleaseAllKey();
                 }
                 
-                Simulation.ReleaseAllKey();
-                
-                using var ra2 = CaptureToRectArea();
-                if (!SwimmingConfirm(ra2))
+                using var bitmap2 = CaptureToRectArea();
+                if (!SwimmingConfirm(bitmap2))
                 {
                     Logger.LogInformation("游泳检测：游泳脱困成功");
-                    return;
+                   return;
                 }
                 
                 Logger.LogWarning("游泳检测：回到战斗地点失败");
@@ -245,10 +254,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                if (needLog && i > 0)
-                {
-                    Logger.LogInformation("成功切换角色:{Name}", Name);
-                }
+                // if (needLog && i > 0)
+                // {
+                //     Logger.LogInformation("成功切换角色:{Name}", Name);
+                // }
 
                 return true;
             }
@@ -258,6 +267,8 @@ public class Avatar
 
             Sleep(250, Ct);
         }
+        
+        Logger.LogWarning("切换角色失败:{Name}", Name);
 
         return false;
     }
@@ -463,8 +474,8 @@ public class Avatar
             var cd = AfterUseSkill(region);
             if (cd > 0)
             {
-                Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
-                    Math.Round(cd, 2));
+                // Logger.LogInformation(hold ? "{Name} 长按元素战技，cd:{Cd} 秒" : "{Name} 点按元素战技，cd:{Cd} 秒", Name,
+                //     Math.Round(cd, 2));
                 return;
             }
         }
@@ -619,6 +630,32 @@ public class Avatar
     public void Wait(int ms)
     {
         Sleep(ms); // 由于存在宏操作，等待不应被cts取消
+    }
+    
+    /// <summary>
+    /// 等待完成
+    /// </summary>
+    public void Ready()
+    {
+        Sleep(200, Ct);
+
+        for (int i = 0; i < 20; i++)
+        {
+            if (Ct is { IsCancellationRequested: true })
+            {
+                return;
+            }
+
+            using var region = CaptureToRectArea();
+            // 等待角色编号块出现
+            if (PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
+            {
+                region.Dispose();
+                return;
+            }
+
+            Sleep(150, Ct);
+        }
     }
 
     /// <summary>
@@ -855,6 +892,11 @@ public class Avatar
     public void MoveBy(int x, int y)
     {
         GlobalMethod.MoveMouseBy(x, y);
+    }
+
+    public void Scroll(int scrollAmountInClicks)
+    {
+        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
     }
 
     public void KeyDown(string key)

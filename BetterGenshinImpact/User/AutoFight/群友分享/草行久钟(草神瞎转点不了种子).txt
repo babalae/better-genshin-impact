@@ -1,5 +1,0 @@
-钟离 q,w(1),s(0),e(hold),wait(0.3),w(0.1)
-纳西妲 e(hold),wait(0.3),q
-行秋 e,q,e
-久岐忍 e,q
-纳西妲 attack(6)

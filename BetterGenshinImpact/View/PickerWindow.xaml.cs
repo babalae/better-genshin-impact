@@ -51,13 +51,16 @@ public partial class PickerWindow : FluentWindow
     {
         InitializeComponent();
         this.InitializeDpiAwareness();
-
-        // 应用当前主题
-        WindowHelper.TryApplySystemBackdrop(this);
-
+        
+        SourceInitialized += OnSourceInitialized;
         Loaded += OnLoaded;
         MouseLeftButtonDown += PickerWindow_MouseLeftButtonDown;
         _captureTest = captureTest;
+    }
+    
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        WindowHelper.TryApplySystemBackdrop(this);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

@@ -47,6 +47,9 @@
   "title": "BetterGI",
   "description": "更好的原神，免费且开源",
   "windowTitle": "BetterGI 安装程序",
+  "ignoreFolderPath": [
+    "${INSTALL_PATH}/User"
+  ],
   "userDataPath": [
     "${INSTALL_PATH}/User"
   ],

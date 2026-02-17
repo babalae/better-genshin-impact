@@ -186,6 +186,10 @@ public class PathExecutor
 
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
+                            if (CurWaypoints.Item1 > 0)
+                            {
+                                await Delay(1000, ct);
+                            }
                             await HandleTeleportWaypoint(waypoint);
                         }
                         else
@@ -649,7 +653,7 @@ public class PathExecutor
         bool changeBigMap = false;
         string adventurersGuildCountry =
             TaskContext.Instance().Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry;
-        if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry != "无")
+        if (!RunnerContext.Instance.isAutoFetchDispatch && adventurersGuildCountry != "无" && !string.IsNullOrEmpty(adventurersGuildCountry))
         {
             var ra1 = CaptureToRectArea();
             var textRect = new Rect(60, 20, 160, 260);
@@ -689,7 +693,7 @@ public class PathExecutor
         await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
-            .ConvertGenshinMapCoordinatesToImageCoordinates((float)tpX, (float)tpY);
+            .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
     }
@@ -1087,6 +1091,7 @@ public class PathExecutor
             || waypoint.Action == ActionEnum.Mining.Code
             || waypoint.Action == ActionEnum.Fishing.Code
             || waypoint.Action == ActionEnum.ExitAndRelogin.Code
+            || waypoint.Action == ActionEnum.EnterAndExitWonderland.Code
             || waypoint.Action == ActionEnum.SetTime.Code
             || waypoint.Action == ActionEnum.UseGadget.Code
             || waypoint.Action == ActionEnum.PickUpCollect.Code)
@@ -1345,6 +1350,7 @@ public class PathExecutor
                 if (disabledUiButtonRa.IsExist())
                 {
                     _autoSkipTrigger.OnCapture(new CaptureContent(ra));
+                    noDisabledUiButtonTimes = 0;
                 }
                 else
                 {

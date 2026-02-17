@@ -20,7 +20,7 @@ public static partial class Bv
     /// <returns></returns>
     public static async Task<bool> WaitUntilFound(RecognitionObject ro, CancellationToken ct, int retryTimes = 5, int delayMs = 1000)
     {
-        return await NewRetry.WaitForAction(() => TaskControl.CaptureToRectArea().Find(ro).IsExist(), ct, retryTimes);
+        return await NewRetry.WaitForAction(() => TaskControl.CaptureToRectArea().Find(ro).IsExist(), ct, retryTimes, delayMs);
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public static partial class Bv
             }
 
             return false;
-        }, ct, retryTimes);
+        }, ct, retryTimes, delayMs);
     }
 
 

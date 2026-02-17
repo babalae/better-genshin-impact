@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.View.Pages;
 

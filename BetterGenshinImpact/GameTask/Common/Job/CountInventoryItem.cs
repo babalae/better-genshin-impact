@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Helpers;
 using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -15,6 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Dependence;
 
 namespace BetterGenshinImpact.GameTask.Common.Job
 {
@@ -80,6 +82,26 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             return result;
         }
 
+        private async Task PreScrollToBottomForWeaponOre()
+        {
+            // 长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
+            GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
+            try
+            {
+                GlobalMethod.LeftButtonDown();
+                await TaskControl.Delay(2000, ct);
+            }
+            finally
+            {
+                GlobalMethod.LeftButtonUp();
+            }
+            var gridScroller = new GridScroller(GridParams.Templates[gridScreenName], logger, input, ct);
+            while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
+            {
+                await TaskControl.Delay(300, ct);
+            }
+        }
+
         private async Task<int> FindOne(InferenceSession session, Dictionary<string, float[]> prototypes)
         {
             GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
@@ -88,6 +110,13 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             int? count = null;
             try
             {
+                //如果是武器页的武器经验道具，直接翻页到最底部
+                if (gridScreenName == GridScreenName.Weapons && itemName!.StartsWith("精锻用"))
+                {
+                    await PreScrollToBottomForWeaponOre();
+                }
+                
+                //开始识别
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
@@ -100,7 +129,8 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                     string predName = result.Item1;
                     if (predName == this.itemName!)
                     {
-                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
                         if (int.TryParse(numStr, out int num))
                         {
                             count = num;
@@ -136,6 +166,12 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             try
             {
+                //如果包含武器页的武器经验道具，直接翻页到最底部
+                bool hasOre = itemNames!.Any(name => name.StartsWith("精锻用"));
+                if (gridScreenName == GridScreenName.Weapons && hasOre)
+                {
+                    await PreScrollToBottomForWeaponOre();
+                }
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
@@ -149,7 +185,8 @@ namespace BetterGenshinImpact.GameTask.Common.Job
                     if (this.itemNames!.Contains(predName) && !itemsCountDic!.ContainsKey(predName))
                     {
                         int count;
-                        string numStr = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string ocrText = itemRegion.SrcMat.GetGridItemIconText(OcrFactory.Paddle);
+                        string numStr = StringUtils.ConvertFullWidthNumToHalfWidth(ocrText);
                         if (int.TryParse(numStr, out int num))
                         {
                             count = num;

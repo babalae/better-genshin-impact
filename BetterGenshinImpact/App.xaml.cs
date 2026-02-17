@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,6 +23,8 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using LazyCache;
+using Microsoft.Extensions.Caching.Memory;
 using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,9 +34,14 @@ using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
+using Wpf.Ui.Violeta.Appearance;
 using Wpf.Ui.Violeta.Controls;
 using Quartz;
 using BetterGenshinImpact.Model.Gear.Triggers;
+
+// Wine 平台适配
+using BetterGenshinImpact.Platform.Wine;
+using BetterGenshinImpact.Service.Tavern;
 
 namespace BetterGenshinImpact;
 
@@ -84,7 +92,13 @@ public partial class App : Application
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
-                services.AddLogging(c => c.AddSerilog());
+                services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
+                services.AddSingleton<ITranslationService, JsonTranslationService>();
+                services.AddLogging(logging =>
+                {
+                    logging.ClearProviders();
+                    logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
+                });
 
                 services.AddLocalization();
 
@@ -161,6 +175,12 @@ public partial class App : Application
                 services.AddSingleton<HutaoNamedPipe>();
                 services.AddSingleton<BgiOnnxFactory>();
                 services.AddSingleton<OcrFactory>();
+                services.AddMemoryCache();
+                services.AddSingleton<IAppCache, CachingService>();
+                services.AddSingleton<MemoryFileCache>();
+                services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
+                services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
+                services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
                 services.AddSingleton<GearTaskStorageService>();
                 services.AddSingleton<GearTriggerStorageService>();
                 services.AddSingleton<ITriggerHistoryService, TriggerHistoryService>();
@@ -173,6 +193,8 @@ public partial class App : Application
 
                 // Configuration
                 //services.Configure<AppConfig>(context.Configuration.GetSection(nameof(AppConfig)));
+                
+                I18N.Culture = new CultureInfo("zh-Hans"); // #1846
             }
         )
         .Build();
@@ -214,6 +236,8 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Wine 平台适配
+        WinePlatformAddon.ApplyApplicationConfig();
         base.OnStartup(e);
 
         try

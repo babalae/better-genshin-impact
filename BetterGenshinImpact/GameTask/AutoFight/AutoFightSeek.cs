@@ -320,7 +320,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 if (retryCount == 0)
                 {
                     await Delay(delayTime,ct);
-                    Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
+                    // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
+                    Logger.LogInformation("打开编队界面检查战斗是否结束");
                     Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
                     await Delay(detectDelayTime, ct);
                     var ra3 = CaptureToRectArea();

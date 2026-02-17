@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using BetterGenshinImpact.View.Controls;
 
 namespace BetterGenshinImpact.Model;
 
@@ -17,6 +18,8 @@ public class SettingItem
     public string Label { get; set; } = string.Empty;
 
     public List<string>? Options { get; set; }
+
+    public Dictionary<string, List<string>>? CascadeOptions { get; set; }
 
     public object? Default { get; set; }
 
@@ -168,6 +171,35 @@ public class SettingItem
                         }
                     }
                     list.Add(wrapPanel);
+                    break;
+                }
+
+            case "cascade-select":
+                {
+                    if (CascadeOptions == null || CascadeOptions.Count == 0)
+                    {
+                        break;
+                    }
+
+                    var cascadeSelector = new CascadeSelector
+                    {
+                        CascadeOptions = CascadeOptions,
+                        DefaultValue = Default?.ToString(),
+                        Margin = new Thickness(0, 0, 0, 10)
+                    };
+
+                    if (Default != null)
+                    {
+                        if (context is IDictionary<string, object?> ctx)
+                        {
+                            ctx.TryAdd(Name, Default.ToString());
+                        }
+                    }
+
+                    BindingOperations.SetBinding(cascadeSelector, CascadeSelector.SelectedValueProperty, 
+                        new Binding(Name) { Source = context, Mode = BindingMode.TwoWay });
+
+                    list.Add(cascadeSelector);
                     break;
                 }
 

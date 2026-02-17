@@ -1,4 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2)
-行秋 e,q,e,wait(0.3)
-夜兰 e,e,wait(0.5),e,e,wait(1),q
-胡桃 e,wait(0.2),charge,j,wait(0.55),charge,j,wait(0.55),charge,j,wait(0.55),charge,j,wait(0.55),charge,j,wait(0.55),charge,j,wait(0.55)

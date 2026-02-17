@@ -1,5 +1,0 @@
-雷电将军 e
-芙宁娜 e,wait(0.2),q
-夜兰 e,e,wait(0.8),e,e,wait(1.5),q
-琴 e,q
-雷电将军 q,attack(6)

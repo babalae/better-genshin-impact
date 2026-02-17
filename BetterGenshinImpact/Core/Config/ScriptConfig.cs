@@ -47,4 +47,7 @@ public partial class ScriptConfig : ObservableObject
     
     // 仓库页面是否最大化
     [ObservableProperty] private WindowState _webviewState = WindowState.Normal;
+    
+    // 仓库新手教程是否已阅读
+    [ObservableProperty] private bool _guideStatus = false;
 }

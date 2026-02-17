@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
@@ -22,6 +23,11 @@ public class GlobalMethod
     public static async Task Sleep(int millisecondsTimeout)
     {
         await Task.Delay(millisecondsTimeout, CancellationContext.Instance.Cts.Token);
+    }
+    
+    public static string GetVersion()
+    {
+        return Global.Version;
     }
 
     #region 键盘操作

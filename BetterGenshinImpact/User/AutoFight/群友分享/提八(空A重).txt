@@ -1,8 +1,0 @@
-钟离 s(0.2),e(hold),wait(0.3),w(0.2)
-纳西妲 e(hold),wait(0.3),d(0.2),q
-八重神子 q,s(0.2),e,wait(0.5),e,wait(0.6),w(0.2),e
-提纳里 q,e,wait(0.2),charge,wait(0.1),charge,wait(0.1),charge,wait(0.1)
-钟离 s(0.2),e(hold),wait(0.3),w(0.2)
-纳西妲 e(hold),wait(0.3),d(0.1)
-八重神子 s(0.2),s(0.2),e,wait(0.5),e,wait(0.6),w(0.2),e
-提纳里 q,e,wait(0.2),charge,wait(0.1),charge,wait(0.1),charge,wait(0.1)

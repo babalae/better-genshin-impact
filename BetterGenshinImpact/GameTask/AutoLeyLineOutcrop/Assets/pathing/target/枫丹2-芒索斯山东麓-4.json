@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "枫丹2-芒索斯山东麓-4",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 5087.07,
+      "y": 4573.1,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

@@ -1,5 +1,0 @@
-仆人 e
-钟离 s(0.1),e(hold)
-班尼特 e,q
-枫原万叶 attack,dash,e,attack,q
-仆人 e,charge(0.52),attack(2),dash,attack(2),dash

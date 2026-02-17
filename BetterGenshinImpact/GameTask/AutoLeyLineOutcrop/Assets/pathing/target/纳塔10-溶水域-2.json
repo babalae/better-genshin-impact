@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "纳塔10-溶水域-2",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "附身水龙",
+    "map_name": "Teyvat",
+    "bgi_version": "0.45.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 8496.07,
+      "y": -3018.4,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}
