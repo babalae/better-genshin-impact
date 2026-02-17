@@ -100,7 +100,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 await RecheckResinAndContinue();
             }
         }
-        catch (NormalEndException e)
+        catch (Exception e) when (e is NormalEndException or TaskCanceledException)
         {
             Logger.LogInformation("任务结束：{Msg}", e.Message);
         }
@@ -122,7 +122,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "退出奖励界面失败");
+                _logger.LogDebug(ex, "地脉花结束后尝试退出奖励界面失败");
             }
 
             if (!_marksStatus)
