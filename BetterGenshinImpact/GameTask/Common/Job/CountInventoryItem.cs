@@ -82,6 +82,26 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             return result;
         }
 
+        private async Task PreScrollToBottomForWeaponOre()
+        {
+            // 长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
+            GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
+            try
+            {
+                GlobalMethod.LeftButtonDown();
+                await TaskControl.Delay(2000, ct);
+            }
+            finally
+            {
+                GlobalMethod.LeftButtonUp();
+            }
+            var gridScroller = new GridScroller(GridParams.Templates[gridScreenName], logger, input, ct);
+            while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
+            {
+                await TaskControl.Delay(300, ct);
+            }
+        }
+
         private async Task<int> FindOne(InferenceSession session, Dictionary<string, float[]> prototypes)
         {
             GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], logger, ct);
@@ -91,18 +111,9 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             try
             {
                 //如果是武器页的武器经验道具，直接翻页到最底部
-                if (this.gridScreenName! == GridScreenName.Weapons && this.itemName!.Contains("精锻用"))
+                if (gridScreenName == GridScreenName.Weapons && itemName!.StartsWith("精锻用"))
                 {
-                    //长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
-                    GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
-                    GlobalMethod.LeftButtonDown();  
-                    await TaskControl.Delay(2000, ct); 
-                    GlobalMethod.LeftButtonUp();
-                    var gridScroller = new GridScroller(GridParams.Templates[this.gridScreenName!], logger, Simulation.SendInput, ct);  
-                    while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))  
-                    {
-                        await TaskControl.Delay(300, ct); 
-                    }  
+                    await PreScrollToBottomForWeaponOre();
                 }
                 
                 //开始识别
@@ -156,19 +167,10 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             try
             {
                 //如果包含武器页的武器经验道具，直接翻页到最底部
-                bool hasOre = this.itemNames!.Any(name => name.StartsWith("精锻用"));
-                if (this.gridScreenName! == GridScreenName.Weapons && hasOre)
+                bool hasOre = itemNames!.Any(name => name.StartsWith("精锻用"));
+                if (gridScreenName == GridScreenName.Weapons && hasOre)
                 {
-                    //长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
-                    GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
-                    GlobalMethod.LeftButtonDown();  
-                    await TaskControl.Delay(2000, ct); 
-                    GlobalMethod.LeftButtonUp();
-                    var gridScroller = new GridScroller(GridParams.Templates[this.gridScreenName!], logger, Simulation.SendInput, ct);  
-                    while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))  
-                    {
-                        await TaskControl.Delay(300, ct); 
-                    }  
+                    await PreScrollToBottomForWeaponOre();
                 }
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
