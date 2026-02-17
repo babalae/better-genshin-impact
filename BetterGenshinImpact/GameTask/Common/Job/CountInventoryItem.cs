@@ -16,6 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Dependence;
 
 namespace BetterGenshinImpact.GameTask.Common.Job
 {
@@ -89,6 +90,22 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             int? count = null;
             try
             {
+                //如果是武器页的武器经验道具，直接翻页到最底部
+                if (this.gridScreenName! == GridScreenName.Weapons && this.itemName!.Contains("精锻用"))
+                {
+                    //长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
+                    GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
+                    GlobalMethod.LeftButtonDown();  
+                    await TaskControl.Delay(2000, ct); 
+                    GlobalMethod.LeftButtonUp();
+                    var gridScroller = new GridScroller(GridParams.Templates[this.gridScreenName!], logger, Simulation.SendInput, ct);  
+                    while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))  
+                    {
+                        await TaskControl.Delay(300, ct); 
+                    }  
+                }
+                
+                //开始识别
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
@@ -138,6 +155,21 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
             try
             {
+                //如果包含武器页的武器经验道具，直接翻页到最底部
+                bool hasOre = this.itemNames!.Any(name => name.StartsWith("精锻用"));
+                if (this.gridScreenName! == GridScreenName.Weapons && hasOre)
+                {
+                    //长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
+                    GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
+                    GlobalMethod.LeftButtonDown();  
+                    await TaskControl.Delay(2000, ct); 
+                    GlobalMethod.LeftButtonUp();
+                    var gridScroller = new GridScroller(GridParams.Templates[this.gridScreenName!], logger, Simulation.SendInput, ct);  
+                    while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))  
+                    {
+                        await TaskControl.Delay(300, ct); 
+                    }  
+                }
                 await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
