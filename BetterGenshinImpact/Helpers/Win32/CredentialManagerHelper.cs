@@ -25,10 +25,6 @@ public static class CredentialManagerHelper
             return null;
         }
 
-        Console.WriteLine($"UserName: {credential.UserName}");
-        Console.WriteLine($"Secret: {credential.Password}");
-        Console.WriteLine($"Comment: {credential.Comment}");
-
         return credential;
     }
 
@@ -42,7 +38,6 @@ public static class CredentialManagerHelper
         try
         {
             CredentialManager.DeleteCredential(applicationName);
-            Console.WriteLine("Credential deleted successfully.");
         }
         catch (Exception ex)
         {
