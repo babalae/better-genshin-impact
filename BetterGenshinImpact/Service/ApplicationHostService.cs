@@ -58,7 +58,7 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                 //无论如何，先跳到主页，否则在通过参数的任务在执行完之前，不会加载快捷键
                 _ = _navigationWindow.Navigate(typeof(HomePage));
                 
-                if (args[1].Contains("startOneDragon"))
+                if (args[1].Contains("startOneDragon", StringComparison.InvariantCultureIgnoreCase))
                 {
 
                     // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
