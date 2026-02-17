@@ -22,6 +22,9 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     private readonly ILogger<AddTriggerDialogViewModel> _logger;
 
     [ObservableProperty]
+    private string _dialogTitle = "新增触发器";
+
+    [ObservableProperty]
     private string _triggerName = string.Empty;
 
     [ObservableProperty]
@@ -112,6 +115,34 @@ public partial class AddTriggerDialogViewModel : ObservableObject
         LoadAvailableTaskDefinitions();
     }
 
+    public AddTriggerDialogViewModel(GearTaskStorageService storageService, ILogger<AddTriggerDialogViewModel> logger, GearTriggerViewModel existingTrigger)
+    {
+        _storageService = storageService;
+        _logger = logger;
+
+        DialogTitle = "编辑触发器";
+        IsTriggerTypeSelectionEnabled = false;
+
+        SelectedTriggerType = existingTrigger.TriggerType;
+        TriggerName = existingTrigger.Name;
+        IsEnabled = existingTrigger.IsEnabled;
+        SelectedTaskDefinitionName = existingTrigger.TaskDefinitionName;
+
+        CronExpression = existingTrigger.TriggerType == TriggerType.Timed
+            ? (existingTrigger.CronExpression ?? CronExpression)
+            : CronExpression;
+
+        SelectedHotkey = existingTrigger.TriggerType == TriggerType.Hotkey
+            ? existingTrigger.Hotkey
+            : null;
+
+        HotkeyType = existingTrigger.TriggerType == TriggerType.Hotkey
+            ? existingTrigger.HotkeyType
+            : HotKeyTypeEnum.KeyboardMonitor;
+
+        LoadAvailableTaskDefinitions();
+    }
+
     /// <summary>
     /// 生成默认触发器名称
     /// </summary>
@@ -145,7 +176,7 @@ public partial class AddTriggerDialogViewModel : ObservableObject
             _logger.LogInformation("已加载 {Count} 个可用的任务定义", AvailableTaskDefinitions.Count);
             
             // 如果有任务定义，默认选择第一个
-            if (AvailableTaskDefinitions.Count > 0)
+            if (AvailableTaskDefinitions.Count > 0 && string.IsNullOrWhiteSpace(SelectedTaskDefinitionName))
             {
                 SelectedTaskDefinitionName = AvailableTaskDefinitions[0];
             }

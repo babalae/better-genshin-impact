@@ -362,6 +362,11 @@
                                            Icon="{ui:SymbolIcon Add24}"
                                            Appearance="Primary"
                                            Margin="0,0,8,0" />
+                                <ui:Button Content="编辑选中项"
+                                           Command="{Binding EditTriggerCommand}"
+                                           Icon="{ui:SymbolIcon Edit24}"
+                                           Appearance="Secondary"
+                                           Margin="0,0,8,0" />
                                 <ui:Button Content="删除选中项"
                                            Command="{Binding DeleteTriggerCommand}"
                                            Icon="{ui:SymbolIcon Delete24}"
@@ -405,6 +410,11 @@
                                            Command="{Binding AddHotkeyTriggerCommand}"
                                            Icon="{ui:SymbolIcon Add24}"
                                            Appearance="Primary"
+                                           Margin="0,0,8,0" />
+                                <ui:Button Content="编辑选中项"
+                                           Command="{Binding EditTriggerCommand}"
+                                           Icon="{ui:SymbolIcon Edit24}"
+                                           Appearance="Secondary"
                                            Margin="0,0,8,0" />
                                 <ui:Button Content="删除选中项"
                                            Command="{Binding DeleteTriggerCommand}"

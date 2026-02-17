@@ -82,4 +82,18 @@ public partial class AddTriggerDialog
         var result = dialog.ShowDialog();
         return result == true ? dialog.ViewModel : null;
     }
+
+    public static AddTriggerDialogViewModel? ShowEditTriggerDialog(GearTriggerViewModel existingTrigger)
+    {
+        var storageService = App.GetRequiredService<GearTaskStorageService>();
+        var logger = App.GetRequiredService<ILogger<AddTriggerDialogViewModel>>();
+        var viewModel = new AddTriggerDialogViewModel(storageService, logger, existingTrigger);
+
+        var dialog = new AddTriggerDialog(viewModel)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        var result = dialog.ShowDialog();
+        return result == true ? dialog.ViewModel : null;
+    }
 }

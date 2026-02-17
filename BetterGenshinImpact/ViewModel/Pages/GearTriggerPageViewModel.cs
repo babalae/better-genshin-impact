@@ -27,6 +27,11 @@ public partial class GearTriggerPageViewModel : ViewModel
     [ObservableProperty]
     private GearTriggerViewModel? _selectedTrigger;
 
+    partial void OnSelectedTriggerChanged(GearTriggerViewModel? value)
+    {
+        EditTriggerCommand.NotifyCanExecuteChanged();
+    }
+
     [ObservableProperty]
     private GearTaskDefinitionViewModel? _selectedTaskDefinition;
     
@@ -225,6 +230,7 @@ public partial class GearTriggerPageViewModel : ViewModel
             var newTrigger = new GearTriggerViewModel(dialog.TriggerName, TriggerType.Hotkey)
             {
                 Hotkey = dialog.SelectedHotkey,
+                HotkeyType = dialog.HotkeyType,
                 TaskDefinitionName = dialog.SelectedTaskDefinitionName,
                 IsEnabled = true
             };
@@ -254,6 +260,47 @@ public partial class GearTriggerPageViewModel : ViewModel
         SelectedTrigger = null;
         
         // 保存数据
+        _ = SaveTriggersAsync();
+    }
+
+    private bool CanEditTrigger()
+    {
+        return SelectedTrigger != null;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditTrigger))]
+    private void EditTrigger()
+    {
+        if (SelectedTrigger is not { } selectedTrigger)
+        {
+            return;
+        }
+
+        var dialog = AddTriggerDialog.ShowEditTriggerDialog(selectedTrigger);
+        if (dialog == null)
+        {
+            return;
+        }
+
+        selectedTrigger.Name = dialog.TriggerName;
+        selectedTrigger.IsEnabled = dialog.IsEnabled;
+        selectedTrigger.TaskDefinitionName = dialog.SelectedTaskDefinitionName;
+
+        if (selectedTrigger.TriggerType == TriggerType.Timed)
+        {
+            selectedTrigger.CronExpression = dialog.CronExpression;
+            selectedTrigger.Hotkey = null;
+        }
+        else if (selectedTrigger.TriggerType == TriggerType.Hotkey)
+        {
+            selectedTrigger.Hotkey = dialog.SelectedHotkey;
+            selectedTrigger.HotkeyType = dialog.HotkeyType;
+            selectedTrigger.CronExpression = null;
+        }
+
+        selectedTrigger.ModifiedTime = DateTime.Now;
+        selectedTrigger.UpdateNextRunTime();
+
         _ = SaveTriggersAsync();
     }
 }

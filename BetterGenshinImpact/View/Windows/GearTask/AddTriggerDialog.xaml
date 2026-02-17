@@ -34,7 +34,7 @@
         </Grid.RowDefinitions>
 
         <!-- 标题栏 -->
-        <ui:TitleBar Grid.Row="0" Title="新增触发器">
+        <ui:TitleBar Grid.Row="0" Title="{Binding DialogTitle}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
