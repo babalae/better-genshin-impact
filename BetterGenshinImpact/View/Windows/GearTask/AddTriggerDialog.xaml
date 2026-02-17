@@ -19,6 +19,7 @@
                  ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner"
                  WindowStyle="SingleBorderWindow"
+                 WindowBackdropType="Auto"
                  mc:Ignorable="d">
 
     <ui:FluentWindow.Resources>
