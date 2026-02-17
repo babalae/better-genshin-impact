@@ -53,4 +53,7 @@ public partial class ScriptConfig : ObservableObject
 
     // 是否在启动时自动更新已订阅的脚本
     [ObservableProperty] private bool _autoUpdateSubscribedScripts = false;
+
+    // 命令行启动时是否先自动更新已订阅脚本再执行命令
+    [ObservableProperty] private bool _autoUpdateBeforeCommandLineRun = false;
 }

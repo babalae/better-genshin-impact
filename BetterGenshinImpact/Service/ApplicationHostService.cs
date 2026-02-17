@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui;
@@ -59,7 +60,11 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
 
                 // 命令行启动时，先等待自动更新订阅脚本完成，再运行配置组/一条龙
                 // （正常双击启动在 MainWindowViewModel.OnLoaded 中以 fire-and-forget 方式调用）
-                await Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+                var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+                if (scriptConfig.AutoUpdateBeforeCommandLineRun)
+                {
+                    await Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+                }
 
                 if (args[1].Contains("startOneDragon"))
                 {
