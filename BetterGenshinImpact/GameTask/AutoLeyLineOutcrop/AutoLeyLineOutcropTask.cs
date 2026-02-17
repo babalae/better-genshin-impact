@@ -106,7 +106,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "自动地脉花执行失败");
+            _logger.LogDebug(e, "自动地脉花执行失败");
+            _logger.LogError("自动地脉花执行失败:" + e.Message);
             if (_config.IsNotification)
             {
                 Notify.Event("AutoLeyLineOutcrop").Error($"任务失败: {e.Message}");
@@ -905,6 +906,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             await fightTask;
+        }
+        catch (Exception ex) when (ex is NormalEndException or TaskCanceledException)
+        {
         }
         catch (Exception ex)
         {

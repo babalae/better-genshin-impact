@@ -2381,7 +2381,7 @@
         <!-- 自动地脉花 -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Glyph="&#xf6c0;" Style="{StaticResource FaFontIconStyle}" />
+                <ui:FontIcon Glyph="&#xf7ff;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>
