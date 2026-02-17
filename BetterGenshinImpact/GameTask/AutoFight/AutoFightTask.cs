@@ -729,7 +729,7 @@ public class AutoFightTask : ISoloTask
 
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
         {
-            // 执行自动拾取掉落物的功能
+            // 执行扫描掉落物光柱并靠近的功能
             await new ScanPickTask().Start(ct);
         }
     }
