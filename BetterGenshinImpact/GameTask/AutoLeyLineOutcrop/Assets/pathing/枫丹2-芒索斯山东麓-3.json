@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "枫丹2-芒索斯山东麓-3",
+    "type": "collect",
+    "author": "平面镜",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 4984.75,
+      "y": 4462.97,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 5032.75,
+      "y": 4492.81,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 5043.36,
+      "y": 4479.99,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": "",
+      "locked": false
+    }
+  ]
+}

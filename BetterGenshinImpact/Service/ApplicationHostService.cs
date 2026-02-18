@@ -66,7 +66,7 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                     await Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
                 }
 
-                if (args[1].Contains("startOneDragon"))
+                if (args[1].Contains("startOneDragon", StringComparison.InvariantCultureIgnoreCase))
                 {
 
                     // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。

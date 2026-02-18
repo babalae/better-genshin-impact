@@ -77,7 +77,7 @@
                         Grid.Row="0"
                         Grid.RowSpan="2"
                         Grid.Column="1"
-                        Margin="0,0,36,0"
+                        Margin="0,0,8,0"
                         IsChecked="{Binding Config.AutoPickConfig.FastModeEnabled, Mode=TwoWay}" />
                 </Grid>-->
                 <Grid Margin="16">
@@ -103,7 +103,7 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Width="100"
-                              Margin="0,0,36,0"
+                              Margin="0,0,8,0"
                               ItemsSource="{Binding PickOcrEngineNames}"
                               SelectedItem="{Binding Config.AutoPickConfig.OcrEngine, Mode=TwoWay}" />
                 </Grid>
@@ -130,7 +130,7 @@
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 Orientation="Horizontal"
-                                Margin="0,0,36,0">
+                                Margin="0,0,8,0">
                         <ui:ToggleSwitch
                             Margin="0,0,12,0"
                             IsChecked="{Binding Config.AutoPickConfig.BlackListEnabled, Mode=TwoWay}" />
@@ -163,7 +163,7 @@
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 Orientation="Horizontal"
-                                Margin="0,0,36,0">
+                                Margin="0,0,8,0">
                         <ui:ToggleSwitch
                             Margin="0,0,12,0"
                             IsChecked="{Binding Config.AutoPickConfig.WhiteListEnabled, Mode=TwoWay}" />
@@ -195,7 +195,7 @@
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Width="80"
-                              Margin="0,0,36,0"
+                              Margin="0,0,8,0"
                               ItemsSource="{Binding PickButtonNames}"
                               SelectedItem="{Binding Config.AutoPickConfig.PickKey, Mode=TwoWay}" />
                 </Grid>
@@ -257,7 +257,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.RunBackgroundEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -291,7 +291,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="2"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.PictureInPictureEnabled, Mode=TwoWay}" />
                 </Grid>
                 <!--<Grid Margin="16">
@@ -316,7 +316,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Margin="0,0,36,0"
+                              Margin="0,0,8,0"
                               ItemsSource="{Binding SelectChatOptionTypeNames}"
                               SelectedItem="{Binding Config.AutoSkipConfig.SelectChatOptionType, Mode=TwoWay}" />
                 </Grid>-->
@@ -342,7 +342,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.QuicklySkipConversationsEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -367,7 +367,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.CustomPriorityOptionsEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16" x:Name="CustomPriorityOptionsGrid">
@@ -433,7 +433,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Margin="0,0,36,0"
+                              Margin="0,0,8,0"
                               ItemsSource="{Binding ClickChatOptionNames}"
                               SelectedItem="{Binding Config.AutoSkipConfig.ClickChatOption, Mode=TwoWay}" />
                 </Grid>
@@ -511,7 +511,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.SubmitGoodsEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -536,7 +536,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.ClosePopupPagedEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -561,7 +561,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.AutoGetDailyRewardsEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -594,7 +594,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="2"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.AutoReExploreEnabled, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
@@ -656,7 +656,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.AutoHangoutPressSkipEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -681,7 +681,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Margin="0,0,36,0"
+                              Margin="0,0,8,0"
                               ItemsSource="{Binding HangoutBranches, Mode=OneWay}"
                               SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}" />
                 </Grid>
@@ -825,7 +825,7 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
-                                Margin="0,0,36,0"
+                                Margin="0,0,8,0"
                                 Text="{Binding Config.AutoEatConfig.CheckInterval, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -850,7 +850,7 @@
                     <ui:TextBox Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      Text="{Binding Config.AutoEatConfig.EatInterval, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
@@ -912,7 +912,7 @@
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="90"
-                                Margin="0,0,36,0"
+                                Margin="0,0,8,0"
                                 Text="{Binding Config.QuickTeleportConfig.TeleportListClickDelay, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -938,7 +938,7 @@
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
                                 MinWidth="90"
-                                Margin="0,0,36,0"
+                                Margin="0,0,8,0"
                                 Text="{Binding Config.QuickTeleportConfig.WaitTeleportPanelDelay, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -969,7 +969,7 @@
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
-                                     Margin="0,0,36,0"
+                                     Margin="0,0,8,0"
                                      IsChecked="{Binding Config.QuickTeleportConfig.HotkeyTpEnabled, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>
@@ -1000,6 +1000,423 @@
             </ui:CardControl.Header>
             <ui:ToggleSwitch Margin="0,0,40,0" IsChecked="{Binding Config.MapMaskConfig.Enabled, Mode=TwoWay}" />
         </ui:CardControl>
+        
+        <!--  冷却提示  -->
+        <ui:CardExpander 
+            Margin="0,0,0,12"
+            Icon="{ui:SymbolIcon Timer24}"
+            ContentPadding="0">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="冷却提示"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        在头像旁显示角色元素战技剩余冷却时间
+                    </ui:TextBlock>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.SkillCdConfig.Enabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="角色 CD 配置"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap"
+                                  Text="填写此项，为指定的角色配置未识别到 CD 数字时的默认值。如玛薇卡开 E 会显示摩托车，识别不到CD。" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="10,0,24,0"
+                               Content="前往配置"
+                               Icon="{ui:SymbolIcon Settings24}"
+                               Command="{Binding EditSkillCdConfigCommand}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="使用战技时触发"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap"
+                                  Text="使用战技时也进行一次识别，否则仅在切人时触发" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.SkillCdConfig.TriggerOnSkillUse, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="冷却为0时隐藏"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap"
+                                  Text="开启后倒计时为0时会隐藏计时器" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.SkillCdConfig.HideWhenZero, Mode=TwoWay}" />
+                </Grid>
+                <ui:CardExpander Margin="16, 0, 16, 16"
+                                 ContentPadding="0">
+                    <ui:CardExpander.Header>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="计时器样式调节"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="调整计时器的横坐标、纵坐标、间隔、大小和颜色" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="横坐标"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="调整计时器在界面上的横坐标，范围：0-1920，默认值1520。" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.PX, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="纵坐标"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="调整计时器在界面上的纵坐标，范围：0-1080，默认值245。" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.PY, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="计时器间隔"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="调整计时器之间的间隔，范围：0-200，默认值91.2。" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.Gap, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="计时器大小"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          TextWrapping="Wrap"
+                                          Text="调整计时器大小，范围：0-10，默认值1。" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.Scale, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="CD ≥ 0.8s 时数字颜色"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="支持6位或8位 Hex 格式颜色"
+                                          TextWrapping="Wrap" />
+                            <!-- 颜色预览 -->
+                            <Border Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Width="24"
+                                     Height="24"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     BorderBrush="#40000000"
+                                     BorderThickness="1"
+                                     CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding Config.SkillCdConfig.TextNormalColor, Converter={StaticResource StringToColorConverter}}" />
+                                </Border.Background>
+                            </Border>
+                            <!-- 颜色输入框 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.TextNormalColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="CD ≥ 0.8s 时背景颜色"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="支持6位或8位 Hex 格式颜色"
+                                          TextWrapping="Wrap" />
+                            <!-- 颜色预览 -->
+                            <Border Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Width="24"
+                                     Height="24"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     BorderBrush="#40000000"
+                                     BorderThickness="1"
+                                     CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding Config.SkillCdConfig.BackgroundNormalColor, Converter={StaticResource StringToColorConverter}}" />
+                                </Border.Background>
+                            </Border>
+                            <!-- 颜色输入框 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.BackgroundNormalColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="CD &lt; 0.8s 时数字颜色"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="支持6位或8位 Hex 格式颜色"
+                                          TextWrapping="Wrap" />
+                            <!-- 颜色预览 -->
+                            <Border Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Width="24"
+                                     Height="24"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     BorderBrush="#40000000"
+                                     BorderThickness="1"
+                                     CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding Config.SkillCdConfig.TextReadyColor, Converter={StaticResource StringToColorConverter}}" />
+                                </Border.Background>
+                            </Border>
+                            <!-- 颜色输入框 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.TextReadyColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="CD &lt; 0.8s 时背景颜色"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="支持6位或8位 Hex 格式颜色"
+                                          TextWrapping="Wrap" />
+                            <!-- 颜色预览 -->
+                            <Border Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Width="24"
+                                     Height="24"
+                                     Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     BorderBrush="#40000000"
+                                     BorderThickness="1"
+                                     CornerRadius="4">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding Config.SkillCdConfig.BackgroundReadyColor, Converter={StaticResource StringToColorConverter}}" />
+                                </Border.Background>
+                            </Border>
+                            <!-- 颜色输入框 -->
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        MinWidth="120"
+                                        Margin="0,0,8,0"
+                                        Text="{Binding Config.SkillCdConfig.BackgroundReadyColor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
+            </StackPanel>
+        </ui:CardExpander>
 
         <!--  自动烹饪  -->
         <ui:CardControl Margin="0,0,0,12">
@@ -1087,7 +1504,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         MinWidth="90"
-                        Margin="0,0,36,0"
+                        Margin="0,0,8,0"
                         Text="{Binding Config.QuickTeleportConfig.TeleportListClickDelay, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -1116,7 +1533,7 @@
                         Grid.RowSpan="2"
                         Grid.Column="1"
                         MinWidth="90"
-                        Margin="0,0,36,0"
+                        Margin="0,0,8,0"
                         Text="{Binding Config.QuickTeleportConfig.WaitTeleportPanelDelay, Mode=TwoWay}" />
                 </Grid>
             </StackPanel>

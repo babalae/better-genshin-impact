@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "稻妻1-鸣神岛-3",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -4509.57,
+      "y": -2332.11,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}

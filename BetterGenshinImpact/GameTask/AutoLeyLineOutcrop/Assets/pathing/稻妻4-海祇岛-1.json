@@ -1,0 +1,30 @@
+{
+  "info": {
+    "name": "稻妻4-海祇岛-1",
+    "type": "collect",
+    "author": "秋云",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": -1058.01,
+      "y": -3948.66,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": -1120.06,
+      "y": -3962.66,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

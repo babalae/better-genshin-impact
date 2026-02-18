@@ -86,7 +86,24 @@ public partial class App : Application
                 }
 
                 Log.Logger = loggerConfiguration.CreateLogger();
-                services.AddLogging(c => c.AddSerilog());
+                services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
+                services.AddSingleton<ITranslationService, JsonTranslationService>();
+                
+                if ("zh-Hans".Equals(all.OtherConfig.UiCultureInfoName, StringComparison.OrdinalIgnoreCase))
+                {
+                    services.AddLogging(c => c.AddSerilog());
+                }
+                else
+                {
+                    services.AddLogging(logging =>
+                    {
+                        logging.ClearProviders();
+                        logging.SetMinimumLevel(LogLevel.Debug);
+                        logging.AddFilter("Microsoft", LogLevel.Warning);
+                        logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+                        logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
+                    });
+                }
 
                 services.AddLocalization();
 

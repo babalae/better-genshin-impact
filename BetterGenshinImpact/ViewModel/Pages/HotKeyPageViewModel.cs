@@ -316,6 +316,19 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         );
         timerDirectory.Children.Add(quickTeleportEnabledHotKeySettingModel);
+        
+        var skillCdEnabledHotKeySettingModel = new HotKeySettingModel(
+            "冷却提示开关",
+            nameof(Config.HotKeyConfig.SkillCdEnabledHotkey),
+            Config.HotKeyConfig.SkillCdEnabledHotkey,
+            Config.HotKeyConfig.SkillCdEnabledHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.SkillCdConfig.Enabled = !TaskContext.Instance().Config.SkillCdConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "冷却提示", ToChinese(TaskContext.Instance().Config.SkillCdConfig.Enabled));
+            }
+        );
+        timerDirectory.Children.Add(skillCdEnabledHotKeySettingModel);
 
         var quickTeleportTickHotKeySettingModel = new HotKeySettingModel(
             "手动触发快速传送触发快捷键（按住起效）",
@@ -326,6 +339,19 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             true
         );
         timerDirectory.Children.Add(quickTeleportTickHotKeySettingModel);
+
+        var mapMaskEnabledHotKeySettingModel = new HotKeySettingModel(
+            "地图遮罩开关",
+            nameof(Config.HotKeyConfig.MapMaskEnabledHotkey),
+            Config.HotKeyConfig.MapMaskEnabledHotkey,
+            Config.HotKeyConfig.MapMaskEnabledHotkeyType,
+            (_, _) =>
+            {
+                TaskContext.Instance().Config.MapMaskConfig.Enabled = !TaskContext.Instance().Config.MapMaskConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "地图遮罩", ToChinese(TaskContext.Instance().Config.MapMaskConfig.Enabled));
+            }
+        );
+        timerDirectory.Children.Add(mapMaskEnabledHotKeySettingModel);
 
         var turnAroundHotKeySettingModel = new HotKeySettingModel(
             "长按旋转视角 - 那维莱特转圈",

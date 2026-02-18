@@ -1,0 +1,149 @@
+{
+  "info": {
+    "name": "须弥5-阿如村-3-rerun",
+    "type": "collect",
+    "author": "寒烟",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "action": "",
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 4409.72,
+      "y": -1874.67,
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 4365.79,
+      "y": -1855.4,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 4365.79,
+      "y": -1855.4,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "combat_script",
+      "action_params": "j,wait(0.2),j"
+    },
+    {
+      "id": 4,
+      "x": 4368.56,
+      "y": -1824.02,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 5,
+      "x": 4358.81,
+      "y": -1790.16,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 6,
+      "x": 4295.9,
+      "y": -1842.23,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 7,
+      "x": 4263.28,
+      "y": -1895.46,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": "100"
+    },
+    {
+      "id": 8,
+      "x": 4234.8,
+      "y": -1912.06,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 9,
+      "x": 4257.86,
+      "y": -1903.31,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 10,
+      "x": 4205.16,
+      "y": -1921.99,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 11,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 12,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": "",
+      "locked": false
+    },
+    {
+      "id": 13,
+      "x": 4156.95,
+      "y": -1991.58,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "up_down_grab_leaf",
+      "action_params": ""
+    },
+    {
+      "id": 14,
+      "x": 4148.92,
+      "y": -2006.51,
+      "type": "path",
+      "move_mode": "dash",
+      "action": "",
+      "action_params": ""
+    },
+    {
+      "id": 15,
+      "x": 4144.29,
+      "y": -2014.19,
+      "type": "target",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}

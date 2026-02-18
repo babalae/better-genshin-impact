@@ -1,0 +1,19 @@
+{
+  "info": {
+    "name": "蒙德4-风龙废墟-1",
+    "type": "collect",
+    "author": "ddaodan",
+    "version": "1.1",
+    "description": "",
+    "bgi_version": "0.42.3"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 241.41,
+      "y": 2703.08,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}
