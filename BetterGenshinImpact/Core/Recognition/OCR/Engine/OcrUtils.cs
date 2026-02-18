@@ -211,12 +211,10 @@ public static class OcrUtils
     /// 未指定权重的标签默认为 1.0。
     /// </summary>
     public static float[] CreateWeights(
-        Dictionary<string, float> extraWeights, IReadOnlyList<string> labels)
+        Dictionary<string, float> extraWeights, IReadOnlyDictionary<string, int> labelDict, int labelCount)
     {
-        var result = new float[labels.Count + 2];
+        var result = new float[labelCount + 2];
         Array.Fill(result, 1.0f);
-        // 构建与 CreateLabelDict 一致的标签→索引映射
-        var labelDict = OcrUtils.CreateLabelDict(labels, out _);
         foreach (var (key, value) in extraWeights)
         {
             if (!labelDict.TryGetValue(key, out var index)) continue;

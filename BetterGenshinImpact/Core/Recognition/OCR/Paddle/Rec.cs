@@ -27,11 +27,23 @@ public class Rec : IDisposable
     private readonly bool _allowDuplicateChar;
 
     // 模糊匹配相关字段
+
+    /// <summary>标签长度集合（降序），用于从长到短贪心匹配目标字符串</summary>
     private readonly int[] _labelLengths;
+
+    /// <summary>标签字符串→索引字典，索引从1开始（0为CTC空白符）</summary>
     private readonly IReadOnlyDictionary<string, int> _labelDict;
+
+    /// <summary>按标签索引的权重数组，用于加权推理分数；为 null 时不加权</summary>
     private readonly float[]? _weights;
 
+    /// <summary>目标字符串→标签索引序列的 LRU 缓存，加速重复查询</summary>
     private readonly CacheHelper.LruCache<string, int[]> _targetCache = new(128);
+
+    /// <summary>
+    /// ONNX 推理输出的命名张量结构，替代匿名元组 (int[], float[])。
+    /// </summary>
+    private readonly record struct TensorResult(int Batch, int TimeSteps, int LabelCount, float[] Data);
 
     public Rec(
         BgiOnnxModel model,
@@ -49,7 +61,7 @@ public class Rec : IDisposable
         _labelDict = OcrUtils.CreateLabelDict(labels, out var labelLengths);
         _labelLengths = labelLengths;
         _weights = extraWeights is { Count: > 0 }
-            ? OcrUtils.CreateWeights(extraWeights, labels)
+            ? OcrUtils.CreateWeights(extraWeights, _labelDict, labels.Count)
             : null;
     }
 
@@ -84,30 +96,28 @@ public class Rec : IDisposable
 
         var resultTensors = RunInference(srcs);
 
-        return resultTensors.SelectMany(resultTensor =>
+        return resultTensors.SelectMany(tensor =>
         {
-            var resultArray = resultTensor.Item2;
-            var resultShape = resultTensor.Item1;
             GCHandle dataHandle = default;
             try
             {
-                dataHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
+                dataHandle = GCHandle.Alloc(tensor.Data, GCHandleType.Pinned);
                 var dataPtr = dataHandle.AddrOfPinnedObject();
-                var labelCount = resultShape[2];
-                var charCount = resultShape[1];
 
-                return Enumerable.Range(0, resultShape[0])
+                return Enumerable.Range(0, tensor.Batch)
                     .Select(i =>
                     {
                         StringBuilder sb = new();
                         var lastIndex = 0;
                         float score = 0;
-                        for (var n = 0; n < charCount; ++n)
+                        var maxIdx = new int[2];
+                        using var fullMat = Mat.FromPixelData(tensor.TimeSteps, tensor.LabelCount,
+                            MatType.CV_32FC1,
+                            dataPtr + i * tensor.TimeSteps * tensor.LabelCount * sizeof(float));
+                        for (var n = 0; n < tensor.TimeSteps; ++n)
                         {
-                            using var mat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1,
-                                dataPtr + (n + i * charCount) * labelCount * sizeof(float));
-                            var maxIdx = new int[2];
-                            mat.MinMaxIdx(out _, out var maxVal, [], maxIdx);
+                            using var row = fullMat.Row(n);
+                            row.MinMaxIdx(out _, out var maxVal, [], maxIdx);
 
                             if (maxIdx[1] > 0 && (_allowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
                             {
@@ -173,30 +183,23 @@ public class Rec : IDisposable
     /// <param name="resultTensors">RunInference 返回的 (shape, data) 张量数组</param>
     /// <param name="targetIndexes">目标字符串映射后的 label 索引序列</param>
     /// <returns>每张图像对应一个 (labelIndex, confidence) 数组，供 DP 匹配使用</returns>
-    private (int, float)[][] ProcessForMatch((int[], float[])[] resultTensors, int[] targetIndexes)
+    private (int, float)[][] ProcessForMatch(TensorResult[] resultTensors, int[] targetIndexes)
     {
         // 目标字符去重（排除 CTC 空白符 index=0）
         var targetSet = new HashSet<int>(targetIndexes);
         targetSet.Remove(0);
 
-        return resultTensors.Select(resultTensor =>
+        return resultTensors.Select(tensor =>
         {
-            var resultArray = resultTensor.Item2;
-            var resultShape = resultTensor.Item1;
-            // resultShape: [batch, timeSteps, labelCount]
-            var labelCount = resultShape[2];
-            var charCount = resultShape[1];
-            var dim = resultShape[0];
-
             var chars = new List<(int, float)>();
-            for (var n = 0; n < charCount * dim; n++)
+            for (var n = 0; n < tensor.TimeSteps * tensor.Batch; n++)
             {
                 // 直接按索引查找目标字符的置信度，而非对整行取 argmax
-                var rowOffset = n * labelCount;
+                var rowOffset = n * tensor.LabelCount;
                 foreach (var labelIdx in targetSet)
                 {
-                    if (labelIdx >= labelCount) continue;
-                    var raw = resultArray[rowOffset + labelIdx];
+                    if (labelIdx >= tensor.LabelCount) continue;
+                    var raw = tensor.Data[rowOffset + labelIdx];
                     var confidence = _weights is not null
                         ? raw * _weights[labelIdx]
                         : raw;
@@ -246,7 +249,7 @@ public class Rec : IDisposable
     /// <summary>
     /// 执行 ONNX 推理，返回每张图像的原始 (shape, data) 张量
     /// </summary>
-    private (int[], float[])[] RunInference(Mat[] srcs)
+    private TensorResult[] RunInference(Mat[] srcs)
     {
         var modelHeight = _config.Shape.Height;
         var maxWidth = (int)Math.Ceiling(srcs.Max(src =>
@@ -303,7 +306,8 @@ public class Rec : IDisposable
                             throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
                         var tensor = output.AsTensor<float>();
                         // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
-                        return (tensor.Dimensions.ToArray(), tensor.ToArray());
+                        var dims = tensor.Dimensions;
+                        return new TensorResult(dims[0], dims[1], dims[2], tensor.ToArray());
                     }
                 }).ToArray();
         }

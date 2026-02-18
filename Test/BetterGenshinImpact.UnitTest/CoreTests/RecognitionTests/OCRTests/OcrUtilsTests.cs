@@ -236,7 +236,8 @@ public class OcrUtilsTests
     public void CreateWeights_DefaultsToOne()
     {
         IReadOnlyList<string> labels = ["a", "b", "c"];
-        var weights = OcrUtils.CreateWeights(new Dictionary<string, float>(), labels);
+        var labelDict = OcrUtils.CreateLabelDict(labels, out _);
+        var weights = OcrUtils.CreateWeights(new Dictionary<string, float>(), labelDict, labels.Count);
 
         // labels.Count + 2 = 5
         Assert.Equal(5, weights.Length);
@@ -248,8 +249,9 @@ public class OcrUtilsTests
     {
         IReadOnlyList<string> labels = ["a", "b", "c"];
         var extra = new Dictionary<string, float> { { "b", 2.5f } };
+        var labelDict = OcrUtils.CreateLabelDict(labels, out _);
 
-        var weights = OcrUtils.CreateWeights(extra, labels);
+        var weights = OcrUtils.CreateWeights(extra, labelDict, labels.Count);
 
         // "b" 是 labels[1]，index=2
         Assert.Equal(1.0f, weights[1]); // "a"
@@ -262,8 +264,9 @@ public class OcrUtilsTests
     {
         IReadOnlyList<string> labels = ["a", "b"];
         var extra = new Dictionary<string, float> { { "z", 5.0f } };
+        var labelDict = OcrUtils.CreateLabelDict(labels, out _);
 
-        var weights = OcrUtils.CreateWeights(extra, labels);
+        var weights = OcrUtils.CreateWeights(extra, labelDict, labels.Count);
 
         Assert.All(weights, w => Assert.Equal(1.0f, w));
     }
@@ -274,8 +277,9 @@ public class OcrUtilsTests
         // 空格权重应写入 labels.Count + 1 位置，与 CreateLabelDict 一致
         IReadOnlyList<string> labels = ["a", " ", "b"];
         var extra = new Dictionary<string, float> { { " ", 3.0f } };
+        var labelDict = OcrUtils.CreateLabelDict(labels, out _);
 
-        var weights = OcrUtils.CreateWeights(extra, labels);
+        var weights = OcrUtils.CreateWeights(extra, labelDict, labels.Count);
 
         // labels.Count + 1 = 4，空格权重应在 weights[4]
         Assert.Equal(3.0f, weights[labels.Count + 1]);
