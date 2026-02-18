@@ -181,7 +181,7 @@ public static class OcrUtils
     }
 
     /// <summary>
-    /// 从标签列表构建字符串→索引字典，供 RecMatch 使用。
+    /// 从标签列表构建字符串→索引字典，供 Rec 模糊匹配使用。
     /// 索引从1开始（0为CTC空白符），空格字符为 labels.Count+1。
     /// </summary>
     /// <param name="labels">识别模型的标签列表</param>
@@ -224,6 +224,73 @@ public static class OcrUtils
             }
         }
         return result;
+    }
+
+    /// <summary>
+    /// 将目标字符串映射为标签索引序列。
+    /// 使用贪心从长到短匹配，无法映射的字符会被跳过。
+    /// </summary>
+    /// <param name="target">目标字符串</param>
+    /// <param name="labelDict">标签→索引字典（由 CreateLabelDict 生成）</param>
+    /// <param name="labelLengths">标签长度集合，降序排列（由 CreateLabelDict 生成）</param>
+    public static int[] MapStringToLabelIndices(
+        string target,
+        IReadOnlyDictionary<string, int> labelDict,
+        int[] labelLengths)
+    {
+        var chars = target.ToCharArray();
+        var targetIndices = new int[chars.Length];
+        Array.Fill(targetIndices, -1);
+        var index = 0;
+        while (index < chars.Length)
+        {
+            var found = false;
+            foreach (var labelLength in labelLengths)
+            {
+                if (index + labelLength > chars.Length) continue;
+                var subStr = new string(chars, index, labelLength);
+                if (!labelDict.TryGetValue(subStr, out var labelIndex)) continue;
+                targetIndices[index] = labelIndex;
+                index += labelLength;
+                found = true;
+                break;
+            }
+            if (!found) index++;
+        }
+
+        return targetIndices.Where(x => x != -1).ToArray();
+    }
+
+    /// <summary>
+    /// 动态规划最大子序列匹配。
+    /// 在 result 序列中找到 target 的最大置信度子序列匹配，返回归一化分数 (0~1)。
+    /// </summary>
+    /// <param name="result">OCR 输出的 (labelIndex, confidence) 序列</param>
+    /// <param name="target">目标标签索引序列</param>
+    /// <param name="availableCount">归一化分母（通常为 max(有效帧数, target长度)）</param>
+    public static double GetMaxScoreDP((int, float)[] result, int[] target, int availableCount)
+    {
+        if (target.Length == 0) return 0;
+
+        var dp = new double[target.Length + 1];
+        dp[0] = 0;
+        for (var j = 1; j <= target.Length; j++)
+            dp[j] = -255d; // 不可达
+
+        foreach (var (index, confidence) in result)
+        {
+            // 逆序更新，避免同一 result 元素被多次使用
+            for (var j = target.Length; j >= 1; j--)
+            {
+                if (index != target[j - 1]) continue;
+                if (!(dp[j - 1] > -200)) continue; // 前序不可达
+                var newSum = dp[j - 1] + confidence;
+                if (newSum > dp[j]) dp[j] = newSum;
+            }
+        }
+
+        if (dp[target.Length] <= -200) return 0; // 无法完整匹配
+        return dp[target.Length] / availableCount;
     }
 
     public static Mat Tensor2Mat(Tensor<float> tensor)

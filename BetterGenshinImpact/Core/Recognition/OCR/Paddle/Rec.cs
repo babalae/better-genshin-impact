@@ -7,26 +7,52 @@ using System.Text;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Helpers;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class Rec(
-    BgiOnnxModel model,
-    IReadOnlyList<string> labels,
-    OcrVersionConfig config,
-    BgiOnnxFactory bgiOnnxFactory,
-    bool allowDuplicateChar = false)
-    : IDisposable
+/// <summary>
+/// OCR 识别器，支持标准文字识别和基于动态规划的模糊匹配。
+/// 模糊匹配将目标字符串与模型原始输出序列做子序列匹配，返回 0~1 的置信度分数，
+/// 比先识别再字符串匹配更能容忍 OCR 噪声。
+/// </summary>
+public class Rec : IDisposable
 {
-    private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
+    private readonly InferenceSession _session;
+    private readonly IReadOnlyList<string> _labels;
+    private readonly OcrVersionConfig _config;
+    private readonly bool _allowDuplicateChar;
 
-    // 子类（RecMatch）需要访问这些字段
-    protected readonly IReadOnlyList<string> Labels = labels;
-    protected readonly OcrVersionConfig Config = config;
-    protected readonly bool AllowDuplicateChar = allowDuplicateChar;
+    // 模糊匹配相关字段
+    private readonly int[] _labelLengths;
+    private readonly IReadOnlyDictionary<string, int> _labelDict;
+    private readonly float[]? _weights;
+
+    private readonly CacheHelper.LruCache<string, int[]> _targetCache =
+        new CacheHelper.LruCacheBuilder<string, int[]>().Build();
+
+    public Rec(
+        BgiOnnxModel model,
+        IReadOnlyList<string> labels,
+        OcrVersionConfig config,
+        BgiOnnxFactory bgiOnnxFactory,
+        bool allowDuplicateChar = false,
+        Dictionary<string, float>? extraWeights = null)
+    {
+        _session = bgiOnnxFactory.CreateInferenceSession(model, true);
+        _labels = labels;
+        _config = config;
+        _allowDuplicateChar = allowDuplicateChar;
+
+        _labelDict = OcrUtils.CreateLabelDict(labels, out var labelLengths);
+        _labelLengths = labelLengths;
+        _weights = extraWeights is { Count: > 0 }
+            ? OcrUtils.CreateWeights(extraWeights, labels)
+            : null;
+    }
 
     public void Dispose()
     {
@@ -37,7 +63,6 @@ public class Rec(
         GC.SuppressFinalize(this);
     }
 
-
     ~Rec()
     {
         lock (_session)
@@ -47,32 +72,13 @@ public class Rec(
     }
 
     /// <summary>
-    ///     Run OCR recognition on multiple images in batches.
+    /// 对多张图像按批次执行 OCR 识别。
     /// </summary>
-    /// <param name="srcs">Array of images for OCR recognition.</param>
-    /// <param name="batchSize">Size of the batch to run OCR recognition on.</param>
-    /// <returns>Array of <see cref="OcrRecognizerResult" /> instances corresponding to OCR recognition results of the images.</returns>
     public OcrRecognizerResult[] Run(Mat[] srcs, int batchSize = 0)
-    {
-        if (srcs.Length == 0) return [];
-
-        var chooseBatchSize = batchSize != 0 ? batchSize : Math.Min(8, Environment.ProcessorCount);
-
-        return srcs
-            .Select((x, i) => (mat: x, i))
-            .OrderBy(x => x.mat.Width)
-            .Chunk(chooseBatchSize)
-            .Select(x => (result: RunMulti(x.Select(x1 => x1.mat).ToArray()), ids: x.Select(x1 => x1.i).ToArray()))
-            .SelectMany(x => x.result.Zip(x.ids, (result, i) => (result, i)))
-            .OrderBy(x => x.i)
-            .Select(x => x.result)
-            .ToArray();
-    }
+        => RunBatch(srcs, RunMulti, batchSize);
 
     public OcrRecognizerResult Run(Mat src)
-    {
-        return RunMulti([src]).Single();
-    }
+        => RunMulti([src]).Single();
 
     private OcrRecognizerResult[] RunMulti(Mat[] srcs)
     {
@@ -112,10 +118,10 @@ public class Rec(
                             var maxIdx = new int[2];
                             mat.MinMaxIdx(out _, out var maxVal, [], maxIdx);
 
-                            if (maxIdx[1] > 0 && (AllowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
+                            if (maxIdx[1] > 0 && (_allowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
                             {
                                 score += (float)maxVal;
-                                sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], labels));
+                                sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
                             }
 
                             lastIndex = maxIdx[1];
@@ -133,11 +139,126 @@ public class Rec(
     }
 
     /// <summary>
-    /// 执行 ONNX 推理，返回每张图像的原始 (shape, data) 张量，供子类使用
+    /// 将目标字符串转换为标签索引序列，利用 LRU 缓存加速重复查询。
+    /// 无法映射到标签的字符会被跳过。
     /// </summary>
-    protected (int[], float[])[] RunInference(Mat[] srcs)
+    public int[] GetTarget(string target)
     {
-        var modelHeight = Config.Shape.Height;
+        if (_targetCache.TryGet(target, out var cached) && cached is not null)
+            return cached;
+
+        var result = OcrUtils.MapStringToLabelIndices(target, _labelDict, _labelLengths);
+        _targetCache.Set(target, result);
+        return result;
+    }
+
+    /// <summary>
+    /// 对一批图像执行模糊匹配，返回与目标字符串的最大平均置信度 (0~1)。
+    /// </summary>
+    /// <param name="srcs">待匹配图像数组</param>
+    /// <param name="target">目标字符串</param>
+    /// <param name="batchSize">每批推理图像数，0表示自动</param>
+    public double RunMatch(Mat[] srcs, string target, int batchSize = 0)
+    {
+        if (srcs.Length == 0) return 0;
+        var targetIndexes = GetTarget(target);
+        if (targetIndexes.Length == 0) return 0;
+
+        var charLevelResults = RunBatch(srcs,
+            mats => ProcessToCharLevel(RunInference(mats)), batchSize);
+
+        return GetMaxScoreFlat(charLevelResults, targetIndexes);
+    }
+
+    /// <summary>
+    /// 将 ONNX 原始张量转换为字符级别的 (labelIndex, confidence) 数组。
+    /// 过滤 CTC 空白符（index=0），不做 CTC 重复折叠（保留所有帧）。
+    /// </summary>
+    private (int, float)[][] ProcessToCharLevel((int[], float[])[] resultTensors)
+    {
+        return resultTensors.Select(resultTensor =>
+        {
+            var resultArray = resultTensor.Item2;
+            var resultShape = resultTensor.Item1;
+            var labelCount = resultShape[2];
+            var charCount = resultShape[1];
+            var dim = resultShape[0];
+
+            GCHandle dataHandle = default;
+            try
+            {
+                dataHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
+                var dataPtr = dataHandle.AddrOfPinnedObject();
+                var chars = new (int, float)[charCount * dim];
+                for (var n = 0; n < charCount * dim; n++)
+                {
+                    using var row = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1,
+                        dataPtr + n * labelCount * sizeof(float));
+                    var maxIdx = new int[2];
+                    double maxVal;
+                    if (_weights is null)
+                    {
+                        row.MinMaxIdx(out _, out maxVal, [], maxIdx);
+                    }
+                    else
+                    {
+                        using var weightMat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1, _weights);
+                        using Mat weighted = row.Mul(weightMat);
+                        weighted.MinMaxIdx(out _, out maxVal, [], maxIdx);
+                    }
+                    chars[n] = (maxIdx[1], (float)maxVal);
+                }
+                // 过滤 CTC 空白符（index=0）
+                return chars.Where(t => t.Item1 != 0).ToArray();
+            }
+            finally
+            {
+                dataHandle.Free();
+            }
+        }).ToArray();
+    }
+
+    /// <summary>
+    /// 将多张图像的字符级别结果展平后，计算与 target 的最大匹配分数。
+    /// </summary>
+    private double GetMaxScoreFlat((int, float)[][] result, int[] target)
+    {
+        var flatResult = result.SelectMany(x => x).ToArray();
+        var availableCount = Math.Max(result.Count(item => item.Length != 0), target.Length);
+        return OcrUtils.GetMaxScoreDP(flatResult, target, availableCount);
+    }
+
+    /// <summary>
+    /// 通用批处理：按宽度排序、分批推理、恢复原始顺序
+    /// </summary>
+    private T[] RunBatch<T>(Mat[] srcs, Func<Mat[], T[]> process, int batchSize = 0)
+    {
+        if (srcs.Length == 0) return [];
+
+        var chooseBatchSize = batchSize != 0 ? batchSize : Math.Min(8, Environment.ProcessorCount);
+
+        return srcs
+            .Select((x, i) => (mat: x, i))
+            .OrderBy(x => x.mat.Width)
+            .Chunk(chooseBatchSize)
+            .Select(chunk =>
+            {
+                var mats = chunk.Select(x => x.mat).ToArray();
+                var result = process(mats);
+                return (result, ids: chunk.Select(x => x.i).ToArray());
+            })
+            .SelectMany(x => x.result.Zip(x.ids, (r, i) => (r, i)))
+            .OrderBy(x => x.i)
+            .Select(x => x.r)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 执行 ONNX 推理，返回每张图像的原始 (shape, data) 张量
+    /// </summary>
+    private (int[], float[])[] RunInference(Mat[] srcs)
+    {
+        var modelHeight = _config.Shape.Height;
         var maxWidth = (int)Math.Ceiling(srcs.Max(src =>
         {
             var size = src.Size();
@@ -202,5 +323,5 @@ public class Rec(
         }
     }
 
-    public string GetConfigName => config.Name;
+    public string GetConfigName => _config.Name;
 }
