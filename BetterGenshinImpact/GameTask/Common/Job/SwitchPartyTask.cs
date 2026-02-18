@@ -48,6 +48,12 @@ public class SwitchPartyTask
         using var ra = CaptureToRectArea();
         var partyViewBtn = ra.Find(ElementAssets.Instance.PartyBtnChooseView);
 
+        if (!partyViewBtn.IsExist())
+        {
+            Logger.LogWarning("未找到队伍选择按钮，无法判断当前队伍");
+            throw new PartySetupFailedException("未找到队伍选择按钮");
+        }
+
         // 检查当前队伍是否已是目标
         if (IsCurrentTeamMatch(ra, partyViewBtn, partyName, useOcrMatch))
         {
