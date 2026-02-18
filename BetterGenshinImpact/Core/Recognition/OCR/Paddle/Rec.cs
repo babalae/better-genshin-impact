@@ -157,59 +157,54 @@ public class Rec : IDisposable
         if (targetIndexes.Length == 0) return 0;
 
         var charLevelResults = RunBatch(srcs,
-            mats => ProcessToCharLevel(RunInference(mats)), batchSize);
+            mats => ProcessForMatch(RunInference(mats), targetIndexes), batchSize);
 
         return GetMaxScoreFlat(charLevelResults, targetIndexes);
     }
 
     /// <summary>
-    /// 将 ONNX 原始张量转换为字符级别的 (labelIndex, confidence) 数组。
-    /// 过滤 CTC 空白符（index=0），不做 CTC 重复折叠（保留所有帧）。
+    /// 从 ONNX 原始输出张量中提取目标字符在每个时间步的置信度。
+    /// <para>
+    /// 与 RunMulti（标准 OCR）不同，此方法不做 argmax（MinMaxIdx），
+    /// 而是按目标字符的 label 索引直接查找对应位置的原始置信度。
+    /// 这样即使目标字符不是某个时间步的最高置信度候选，DP 仍然能拿到其实际分数进行匹配。
+    /// </para>
     /// </summary>
-    private (int, float)[][] ProcessToCharLevel((int[], float[])[] resultTensors)
+    /// <param name="resultTensors">RunInference 返回的 (shape, data) 张量数组</param>
+    /// <param name="targetIndexes">目标字符串映射后的 label 索引序列</param>
+    /// <returns>每张图像对应一个 (labelIndex, confidence) 数组，供 DP 匹配使用</returns>
+    private (int, float)[][] ProcessForMatch((int[], float[])[] resultTensors, int[] targetIndexes)
     {
+        // 目标字符去重（排除 CTC 空白符 index=0）
+        var targetSet = new HashSet<int>(targetIndexes);
+        targetSet.Remove(0);
+
         return resultTensors.Select(resultTensor =>
         {
             var resultArray = resultTensor.Item2;
             var resultShape = resultTensor.Item1;
+            // resultShape: [batch, timeSteps, labelCount]
             var labelCount = resultShape[2];
             var charCount = resultShape[1];
             var dim = resultShape[0];
 
-            GCHandle dataHandle = default;
-            try
+            var chars = new List<(int, float)>();
+            for (var n = 0; n < charCount * dim; n++)
             {
-                dataHandle = GCHandle.Alloc(resultArray, GCHandleType.Pinned);
-                var dataPtr = dataHandle.AddrOfPinnedObject();
-                var chars = new (int, float)[charCount * dim];
-                for (var n = 0; n < charCount * dim; n++)
+                // 直接按索引查找目标字符的置信度，而非对整行取 argmax
+                var rowOffset = n * labelCount;
+                foreach (var labelIdx in targetSet)
                 {
-                    using var row = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1,
-                        dataPtr + n * labelCount * sizeof(float));
-                    var maxIdx = new int[2];
-                    double maxVal;
-                    if (_weights is null)
-                    {
-                        row.MinMaxIdx(out _, out maxVal, [], maxIdx);
-                    }
-                    else
-                    {
-                        if (_weights.Length != labelCount)
-                            throw new InvalidOperationException(
-                                $"权重数组长度 ({_weights.Length}) 与模型输出维度 ({labelCount}) 不匹配，请检查 OCR 模型与标签列表是否一致");
-                        using var weightMat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1, _weights);
-                        using Mat weighted = row.Mul(weightMat);
-                        weighted.MinMaxIdx(out _, out maxVal, [], maxIdx);
-                    }
-                    chars[n] = (maxIdx[1], (float)maxVal);
+                    if (labelIdx >= labelCount) continue;
+                    var raw = resultArray[rowOffset + labelIdx];
+                    var confidence = _weights is not null
+                        ? raw * _weights[labelIdx]
+                        : raw;
+                    if (confidence > 0)
+                        chars.Add((labelIdx, confidence));
                 }
-                // 过滤 CTC 空白符（index=0）
-                return chars.Where(t => t.Item1 != 0).ToArray();
             }
-            finally
-            {
-                if (dataHandle.IsAllocated) dataHandle.Free();
-            }
+            return chars.ToArray();
         }).ToArray();
     }
 
