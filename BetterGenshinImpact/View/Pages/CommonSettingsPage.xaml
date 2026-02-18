@@ -21,8 +21,8 @@
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
                       Text="软件设置" />
-        
-                <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Globe24}">
+
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Globe24}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -434,19 +434,19 @@
                             Width="200"
                             Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            Minimum="0"
-                            Maximum="1"
-                            TickFrequency="0.1"
                             IsSnapToTickEnabled="True"
+                            Maximum="1"
+                            Minimum="0"
+                            TickFrequency="0.1"
                             Value="{Binding Config.MaskWindowConfig.TextOpacity, Mode=TwoWay}" />
                     <TextBlock Grid.Row="0"
                                Grid.Column="2"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Left"
+                               MinWidth="40"
                                Margin="0,0,36,0"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center"
                                FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                FontSize="14"
-                               MinWidth="40"
                                Text="{Binding Config.MaskWindowConfig.TextOpacity, StringFormat=F2}" />
                 </Grid>
 
@@ -1004,7 +1004,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        
+
         <!--  新增手动导入本地脚本仓库功能  -->
         <!--<ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Folder24}">
             <ui:CardControl.Header>
@@ -1034,14 +1034,13 @@
                                Command="{Binding ImportLocalScriptsRepoZipCommand}"
                                Content="导入" />
                 </Grid>
-        
+
             </ui:CardControl.Header>
         </ui:CardControl>-->
 
 
         <!--  其他设置  -->
-        <ui:CardExpander Margin="0,0,0,12"
-                         ContentPadding="0">
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf141;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
@@ -1179,10 +1178,10 @@
                               Grid.Column="1"
                               MinWidth="100"
                               Margin="0,0,36,0"
+                              DisplayMemberPath="Item2"
                               ItemsSource="{Binding ServerTimeZones}"
                               SelectedValue="{Binding Config.OtherConfig.ServerTimeZoneOffset}"
-                              SelectedValuePath="Item1"
-                              DisplayMemberPath="Item2" />
+                              SelectedValuePath="Item1" />
                 </Grid>
                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"
@@ -1715,7 +1714,57 @@
                                 </b:Interaction.Triggers>
                             </ComboBox>
                         </Grid>
-
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="允许连续重复字符"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="关闭CTC重复字符折叠，允许OCR结果中出现连续重复字符。"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,36,0"
+                                             IsChecked="{Binding Config.OtherConfig.OcrConfig.AllowDuplicateChar, Mode=TwoWay}" />
+                        </Grid>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="OCR模糊匹配阈值"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="【0~1】分数 ≥ 阈值视为匹配成功，默认值为 0.5。"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBox Grid.Row="0"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="0,0,36,0"
+                                        Text="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, Mode=TwoWay}" />
+                        </Grid>
 
                     </StackPanel>
                 </ui:CardExpander>
