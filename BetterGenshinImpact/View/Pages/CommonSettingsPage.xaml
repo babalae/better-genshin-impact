@@ -1793,7 +1793,7 @@
                                     IsSnapToTickEnabled="True"
                                     Maximum="1"
                                     Minimum="0"
-                                    TickFrequency="0.1"
+                                    TickFrequency="0.01"
                                     Value="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, Mode=TwoWay}" />
                             <TextBlock Grid.Row="0"
                                        Grid.RowSpan="2"
