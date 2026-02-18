@@ -33,5 +33,6 @@ github_actions_cache/
 .trae
 .claude
 CLAUDE.md
+AGENTS.md
 
 __pycache__/
