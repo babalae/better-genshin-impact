@@ -16,9 +16,9 @@ public static class OcrUtils
     ///     预处理速度比unsafe快5倍以上,且吃的资源还少
     /// </summary>
     /// <param name="inputImage">输入图像，若不是灰度图会转换</param>
-    /// <param name="tensorMemoryOwnser">tensor的Memory，用完需要释放</param>
+    /// <param name="tensorMemoryOwner">tensor的Memory，用完需要释放</param>
     /// <returns></returns>
-    public static Tensor<float> ToTensorYapDnn(Mat inputImage, out IMemoryOwner<float> tensorMemoryOwnser)
+    public static Tensor<float> ToTensorYapDnn(Mat inputImage, out IMemoryOwner<float> tensorMemoryOwner)
     {
         using var rt = new ResourcesTracker();
         Mat dst;
@@ -40,10 +40,10 @@ public static class OcrUtils
         // 使用向量运算代替循环
         var blob = rt.T(CvDnn.BlobFromImage(padded, 1.0 / 255.0, default, default, false, false));
         var nCols = padded.Cols * padded.Rows;
-        tensorMemoryOwnser = MemoryPool<float>.Shared.Rent(nCols);
+        tensorMemoryOwner = MemoryPool<float>.Shared.Rent(nCols);
         // 内存复制，如果直接传指针构建的话速度还不如多复制一份
-        blob.AsSpan<float>().CopyTo(tensorMemoryOwnser.Memory.Span);
-        return new DenseTensor<float>(tensorMemoryOwnser.Memory[..nCols], [1, 1, 32, 384]);
+        blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
+        return new DenseTensor<float>(tensorMemoryOwner.Memory[..nCols], [1, 1, 32, 384]);
     }
 
     /// <summary>
@@ -270,7 +270,7 @@ public static class OcrUtils
     /// <param name="result">OCR 输出的 (labelIndex, confidence) 序列</param>
     /// <param name="target">目标标签索引序列</param>
     /// <param name="availableCount">归一化分母（通常为 target.Length，得到每个目标字符的平均置信度）</param>
-    public static double GetMaxScoreDP((int, float)[] result, int[] target, int availableCount)
+    public static double GetMaxScoreDp((int, float)[] result, int[] target, int availableCount)
     {
         if (target.Length == 0 || availableCount <= 0) return 0;
 

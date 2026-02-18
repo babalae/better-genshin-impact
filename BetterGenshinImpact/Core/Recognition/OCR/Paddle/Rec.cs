@@ -212,10 +212,10 @@ public class Rec : IDisposable
     /// 将多张图像的字符级别结果展平后，计算与 target 的最大匹配分数。
     /// 分母使用 target.Length，得到的是每个目标字符的平均置信度 (0~1)。
     /// </summary>
-    private double GetMaxScoreFlat((int, float)[][] result, int[] target)
+    private static double GetMaxScoreFlat((int, float)[][] result, int[] target)
     {
         var flatResult = result.SelectMany(x => x).ToArray();
-        return OcrUtils.GetMaxScoreDP(flatResult, target, target.Length);
+        return OcrUtils.GetMaxScoreDp(flatResult, target, target.Length);
     }
 
     /// <summary>

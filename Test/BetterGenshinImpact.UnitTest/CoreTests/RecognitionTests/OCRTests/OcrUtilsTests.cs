@@ -131,7 +131,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(1, 1.0f), (2, 1.0f), (3, 1.0f)];
         int[] target = [1, 2, 3];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, target.Length);
+        var score = OcrUtils.GetMaxScoreDp(result, target, target.Length);
 
         Assert.Equal(1.0, score);
     }
@@ -143,7 +143,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(4, 1.0f), (5, 1.0f)];
         int[] target = [1, 2];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, target.Length);
+        var score = OcrUtils.GetMaxScoreDp(result, target, target.Length);
 
         Assert.Equal(0, score);
     }
@@ -154,7 +154,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(1, 1.0f)];
         int[] target = [];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, 1);
+        var score = OcrUtils.GetMaxScoreDp(result, target, 1);
 
         Assert.Equal(0, score);
     }
@@ -166,7 +166,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(1, 1.0f), (2, 1.0f)];
         int[] target = [1, 2, 3];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, target.Length);
+        var score = OcrUtils.GetMaxScoreDp(result, target, target.Length);
 
         Assert.Equal(0, score);
     }
@@ -178,7 +178,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(9, 0.5f), (1, 0.8f), (9, 0.3f), (2, 0.9f), (3, 0.7f)];
         int[] target = [1, 2, 3];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, target.Length);
+        var score = OcrUtils.GetMaxScoreDp(result, target, target.Length);
 
         // (0.8 + 0.9 + 0.7) / 3 = 0.8
         Assert.Equal(0.8, score, 0.01);
@@ -191,7 +191,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(1, 0.3f), (1, 0.9f)];
         int[] target = [1];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, 1);
+        var score = OcrUtils.GetMaxScoreDp(result, target, 1);
 
         Assert.Equal(0.9, score, 0.01);
     }
@@ -203,7 +203,7 @@ public class OcrUtilsTests
         (int, float)[] result = [(1, 1.0f), (2, 1.0f)];
         int[] target = [1, 2];
 
-        var score = OcrUtils.GetMaxScoreDP(result, target, 4);
+        var score = OcrUtils.GetMaxScoreDp(result, target, 4);
 
         // (1.0 + 1.0) / 4 = 0.5
         Assert.Equal(0.5, score, 0.01);
@@ -223,7 +223,7 @@ public class OcrUtilsTests
         int[] target = [1, 2];
 
         // 使用 target.Length 作为分母：(0.9 + 0.85) / 2 = 0.875
-        var score = OcrUtils.GetMaxScoreDP(result, target, target.Length);
+        var score = OcrUtils.GetMaxScoreDp(result, target, target.Length);
 
         Assert.Equal(0.875, score, 0.01);
     }
