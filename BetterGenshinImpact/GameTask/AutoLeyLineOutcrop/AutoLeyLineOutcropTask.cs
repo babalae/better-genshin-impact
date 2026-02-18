@@ -816,6 +816,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw new Exception("开启地脉花失败，已达最大重试次数");
         }
 
+        await Delay(500, _ct);
         _logger.LogDebug("检测地脉花交互状态，重试次数: {Retries}/{MaxRetries}", retries + 1, maxRetries);
         using var capture = CaptureToRectArea();
         var result1 = FindSafe(capture, _ocrRo2!);
