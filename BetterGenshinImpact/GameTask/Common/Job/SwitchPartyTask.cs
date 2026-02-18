@@ -105,10 +105,15 @@ public class SwitchPartyTask
                 }
 
                 // 判断是否已遍历所有队伍
-                Region lowest = nameList
+                var lowest = nameList
                     .Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale)
                     .OrderBy(r => r.Y)
-                    .Last();
+                    .LastOrDefault();
+                if (lowest == null)
+                {
+                    Logger.LogInformation("未找到符合坐标范围的队伍名称，跳过翻页判断");
+                    continue;
+                }
                 lowest.DrawSelf("底部的队伍");
 
                 if (lowest.Y < 777 * _assetScale) // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
@@ -258,17 +263,15 @@ public class SwitchPartyTask
             throw new PartySetupFailedException("未能打开队伍选择页面");
 
         Region? partyDeleteBtn = null;
-        using (var ocrRa = CaptureToRectArea())
+        var success = await NewRetry.WaitForAction(() =>
         {
-            var success = await NewRetry.WaitForAction(() =>
-            {
-                partyDeleteBtn = ocrRa.Find(ElementAssets.Instance.PartyBtnDelete);
-                return partyDeleteBtn.IsExist();
-            }, ct, 5);
+            using var ocrRa = CaptureToRectArea();
+            partyDeleteBtn = ocrRa.Find(ElementAssets.Instance.PartyBtnDelete);
+            return partyDeleteBtn.IsExist();
+        }, ct, 5);
 
-            if (!success || partyDeleteBtn == null)
-                throw new PartySetupFailedException("未能打开队伍配置界面");
-        }
+        if (!success || partyDeleteBtn == null)
+            throw new PartySetupFailedException("未能打开队伍配置界面");
 
         return partyDeleteBtn;
     }
@@ -290,8 +293,10 @@ public class SwitchPartyTask
     /// <summary>
     /// 清理 OCR 识别结果中的干扰字符
     /// </summary>
-    private static string CleanOcrText(string text)
+    private static string CleanOcrText(string? text)
     {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
         var cleaned = text.Replace("\"", "").Replace("\r\n", "").Replace("\r", "");
         var newLineIndex = cleaned.IndexOf('\n');
         if (newLineIndex != -1)
