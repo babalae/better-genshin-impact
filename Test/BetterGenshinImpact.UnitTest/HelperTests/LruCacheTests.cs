@@ -71,17 +71,4 @@ public class LruCacheTests
         cache.Clear();
         Assert.Equal(0, cache.Count);
     }
-
-    [Fact]
-    public void BuilderTest()
-    {
-        var cache = new CacheHelper.LruCacheBuilder<string, string>()
-            .Capacity(2)
-            .ExpireAfter(TimeSpan.FromMilliseconds(300))
-            .Build();
-        cache.Set("a", "1");
-        Assert.True(cache.TryGet("a", out var v) && v == "1");
-        Thread.Sleep(500);
-        Assert.False(cache.TryGet("a", out _));
-    }
 }

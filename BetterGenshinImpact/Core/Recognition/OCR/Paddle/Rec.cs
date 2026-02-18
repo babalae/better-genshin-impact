@@ -31,8 +31,7 @@ public class Rec : IDisposable
     private readonly IReadOnlyDictionary<string, int> _labelDict;
     private readonly float[]? _weights;
 
-    private readonly CacheHelper.LruCache<string, int[]> _targetCache =
-        new CacheHelper.LruCacheBuilder<string, int[]>().Build();
+    private readonly CacheHelper.LruCache<string, int[]> _targetCache = new(128);
 
     public Rec(
         BgiOnnxModel model,

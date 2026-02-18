@@ -5,38 +5,22 @@ namespace BetterGenshinImpact.Helpers;
 
 public abstract class CacheHelper
 {
-    public class LruCache<TKey, TValue> where TKey : class where TValue : class
+    public class LruCache<TKey, TValue> where TKey : notnull where TValue : class
     {
         private readonly int _capacity;
         private readonly TimeSpan? _expireAfter;
-        private readonly bool _weakValue;
-        private readonly Dictionary<TKey, LinkedListNode<CacheItem>> _cacheMap;
-        private readonly LinkedList<CacheItem> _lruList;
+        private readonly Dictionary<TKey, LinkedListNode<(TKey Key, TValue Value, DateTime ExpireAt)>> _cacheMap;
+        private readonly LinkedList<(TKey Key, TValue Value, DateTime ExpireAt)> _lruList;
         private readonly object _lock = new();
 
-        private class CacheItem
-        {
-            public required TKey Key;
-            public object? ValueRef;
-            public DateTime ExpireAt;
-            public TValue? StrongValue => ValueRef as TValue ??
-                                          ((ValueRef as WeakReference<TValue>)?.TryGetTarget(out var t) == true
-                                              ? t
-                                              : null);
-        }
-
-        public LruCache(int capacity, TimeSpan? expireAfter = null, bool weakValue = false)
+        public LruCache(int capacity, TimeSpan? expireAfter = null)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacity);
             _capacity = capacity;
             _expireAfter = expireAfter;
-            _weakValue = weakValue;
-            _cacheMap = new Dictionary<TKey, LinkedListNode<CacheItem>>();
+            _cacheMap = new Dictionary<TKey, LinkedListNode<(TKey, TValue, DateTime)>>();
             _lruList = [];
         }
-
-        private object WrapValue(TValue value) => _weakValue ? new WeakReference<TValue>(value) : value;
-        private bool IsExpired(CacheItem item) => _expireAfter.HasValue && DateTime.UtcNow > item.ExpireAt;
 
         public bool TryGet(TKey key, out TValue? value)
         {
@@ -44,8 +28,7 @@ public abstract class CacheHelper
             {
                 if (_cacheMap.TryGetValue(key, out var node))
                 {
-                    var item = node.Value;
-                    if (IsExpired(item) || (_weakValue && item.StrongValue == null))
+                    if (_expireAfter.HasValue && DateTime.UtcNow > node.Value.ExpireAt)
                     {
                         _lruList.Remove(node);
                         _cacheMap.Remove(key);
@@ -54,7 +37,7 @@ public abstract class CacheHelper
                     }
                     _lruList.Remove(node);
                     _lruList.AddFirst(node);
-                    value = item.StrongValue!;
+                    value = node.Value.Value;
                     return true;
                 }
                 value = null;
@@ -66,12 +49,11 @@ public abstract class CacheHelper
         {
             lock (_lock)
             {
+                var expireAt = _expireAfter.HasValue ? DateTime.UtcNow.Add(_expireAfter.Value) : default;
+
                 if (_cacheMap.TryGetValue(key, out var node))
                 {
-                    node.Value.ValueRef = WrapValue(value);
-                    node.Value.ExpireAt = _expireAfter.HasValue
-                        ? DateTime.UtcNow.Add(_expireAfter.Value)
-                        : DateTime.MaxValue;
+                    node.Value = (key, value, expireAt);
                     _lruList.Remove(node);
                     _lruList.AddFirst(node);
                 }
@@ -86,13 +68,7 @@ public abstract class CacheHelper
                             _lruList.RemoveLast();
                         }
                     }
-                    var item = new CacheItem
-                    {
-                        Key = key,
-                        ValueRef = WrapValue(value),
-                        ExpireAt = _expireAfter.HasValue ? DateTime.UtcNow.Add(_expireAfter.Value) : DateTime.MaxValue
-                    };
-                    var newNode = new LinkedListNode<CacheItem>(item);
+                    var newNode = new LinkedListNode<(TKey, TValue, DateTime)>((key, value, expireAt));
                     _lruList.AddFirst(newNode);
                     _cacheMap[key] = newNode;
                 }
@@ -123,17 +99,5 @@ public abstract class CacheHelper
                 _lruList.Clear();
             }
         }
-    }
-
-    public class LruCacheBuilder<TKey, TValue> where TKey : class where TValue : class
-    {
-        private int _capacity = 128;
-        private TimeSpan? _expireAfter;
-        private bool _weakValue;
-
-        public LruCacheBuilder<TKey, TValue> Capacity(int capacity) { _capacity = capacity; return this; }
-        public LruCacheBuilder<TKey, TValue> ExpireAfter(TimeSpan expire) { _expireAfter = expire; return this; }
-        public LruCacheBuilder<TKey, TValue> WeakValue() { _weakValue = true; return this; }
-        public LruCache<TKey, TValue> Build() => new(_capacity, _expireAfter, _weakValue);
     }
 }
