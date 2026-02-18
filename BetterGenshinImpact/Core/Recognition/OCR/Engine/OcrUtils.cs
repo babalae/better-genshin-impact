@@ -180,6 +180,52 @@ public static class OcrUtils
         };
     }
 
+    /// <summary>
+    /// 从标签列表构建字符串→索引字典，供 RecMatch 使用。
+    /// 索引从1开始（0为CTC空白符），空格字符为 labels.Count+1。
+    /// </summary>
+    /// <param name="labels">识别模型的标签列表</param>
+    /// <param name="labelLengths">各标签的字符长度集合（降序排列，用于从长到短贪心匹配）</param>
+    public static IReadOnlyDictionary<string, int> CreateLabelDict(
+        IReadOnlyList<string> labels, out int[] labelLengths)
+    {
+        var dict = new Dictionary<string, int>();
+        var lengths = new HashSet<int>();
+        for (var i = 0; i < labels.Count; i++)
+        {
+            var len = labels[i].Length;
+            if (len > 0) lengths.Add(len);
+            dict[labels[i]] = i + 1;
+        }
+        // 空格字符对应索引 labels.Count + 1
+        dict[" "] = labels.Count + 1;
+        lengths.Add(1);
+        // 降序：先尝试更长的标签
+        labelLengths = lengths.OrderByDescending(x => x).ToArray();
+        return dict;
+    }
+
+    /// <summary>
+    /// 根据额外权重字典，创建与标签列表等长的权重数组（用于加权推理分数）。
+    /// 未指定权重的标签默认为 1.0。
+    /// </summary>
+    public static float[] CreateWeights(
+        Dictionary<string, float> extraWeights, IReadOnlyList<string> labels)
+    {
+        var result = new float[labels.Count + 2];
+        Array.Fill(result, 1.0f);
+        var labelList = labels.ToList();
+        foreach (var (key, value) in extraWeights)
+        {
+            var index = labelList.IndexOf(key) + 1;
+            if (index > 0 && index < result.Length)
+            {
+                result[index] = value;
+            }
+        }
+        return result;
+    }
+
     public static Mat Tensor2Mat(Tensor<float> tensor)
     {
         var dimensions = tensor.Dimensions;
