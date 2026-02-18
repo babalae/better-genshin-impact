@@ -17,12 +17,16 @@ public class Rec(
     BgiOnnxModel model,
     IReadOnlyList<string> labels,
     OcrVersionConfig config,
-    BgiOnnxFactory bgiOnnxFactory)
+    BgiOnnxFactory bgiOnnxFactory,
+    bool allowDuplicateChar = false)
     : IDisposable
 {
     private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
 
-    // _labels = File.ReadAllLines(labelFilePath);
+    // 子类（RecMatch）需要访问这些字段
+    protected readonly IReadOnlyList<string> Labels = labels;
+    protected readonly OcrVersionConfig Config = config;
+    protected readonly bool AllowDuplicateChar = allowDuplicateChar;
 
     public void Dispose()
     {
@@ -81,73 +85,7 @@ public class Rec(
                 throw new ArgumentException($"src[{i}] size should not be 0, wrong input picture provided?");
         }
 
-        var modelHeight = config.Shape.Height;
-        var maxWidth = (int)Math.Ceiling(srcs.Max(src =>
-        {
-            var size = src.Size();
-            return 1.0 * size.Width / size.Height * modelHeight;
-        }));
-        List<IMemoryOwner<float>> owners = [];
-        (int[], float[])[] resultTensors;
-        try
-        {
-            resultTensors = srcs
-                // .AsParallel()
-                .Select(src =>
-                {
-                    Mat? channel3 = default;
-                    try
-                    {
-                        channel3 = src.Channels() switch
-                        {
-                            4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
-                            1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
-                            3 => src,
-                            var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
-                        };
-                        var result = OcrUtils.ResizeNormImg(channel3, new OcrShape(3, maxWidth, modelHeight),
-                            out var owner);
-                        lock (owners)
-                        {
-                            owners.Add(owner);
-                        }
-
-                        return result;
-                    }
-                    finally
-                    {
-                        // Only dispose Mats created in this scope
-                        if (channel3 != null && !ReferenceEquals(channel3, src))
-                        {
-                            channel3.Dispose();
-                        }
-                    }
-                })
-                .Select(inputTensor =>
-                    {
-                        lock (_session)
-                        {
-                            // 多线程推理会出现问题，加锁解决。
-                            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
-                                NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
-                            ]);
-                            var output = results[0];
-                            if (output.ElementType is not TensorElementType.Float)
-                                throw new Exception($"Unexpected output tensor type: {output.ElementType}");
-
-                            if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
-                                throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-                            var tensor = output.AsTensor<float>();
-                            // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
-                            return (tensor.Dimensions.ToArray(), tensor.ToArray());
-                        }
-                    }
-                ).ToArray();
-        }
-        finally
-        {
-            owners.ForEach(x => { x.Dispose(); });
-        }
+        var resultTensors = RunInference(srcs);
 
         return resultTensors.SelectMany(resultTensor =>
         {
@@ -174,7 +112,7 @@ public class Rec(
                             var maxIdx = new int[2];
                             mat.MinMaxIdx(out _, out var maxVal, [], maxIdx);
 
-                            if (maxIdx[1] > 0 && !(n > 0 && maxIdx[1] == lastIndex))
+                            if (maxIdx[1] > 0 && (AllowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
                             {
                                 score += (float)maxVal;
                                 sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], labels));
@@ -192,6 +130,76 @@ public class Rec(
                 dataHandle.Free();
             }
         }).ToArray();
+    }
+
+    /// <summary>
+    /// 执行 ONNX 推理，返回每张图像的原始 (shape, data) 张量，供子类使用
+    /// </summary>
+    protected (int[], float[])[] RunInference(Mat[] srcs)
+    {
+        var modelHeight = Config.Shape.Height;
+        var maxWidth = (int)Math.Ceiling(srcs.Max(src =>
+        {
+            var size = src.Size();
+            return 1.0 * size.Width / size.Height * modelHeight;
+        }));
+        List<IMemoryOwner<float>> owners = [];
+        try
+        {
+            return srcs
+                // .AsParallel()
+                .Select(src =>
+                {
+                    Mat? channel3 = default;
+                    try
+                    {
+                        channel3 = src.Channels() switch
+                        {
+                            4 => src.CvtColor(ColorConversionCodes.BGRA2BGR),
+                            1 => src.CvtColor(ColorConversionCodes.GRAY2BGR),
+                            3 => src,
+                            var x => throw new Exception($"Unexpect src channel: {x}, allow: (1/3/4)")
+                        };
+                        var result = OcrUtils.ResizeNormImg(channel3, new OcrShape(3, maxWidth, modelHeight),
+                            out var owner);
+                        lock (owners)
+                        {
+                            owners.Add(owner);
+                        }
+                        return result;
+                    }
+                    finally
+                    {
+                        if (channel3 != null && !ReferenceEquals(channel3, src))
+                        {
+                            channel3.Dispose();
+                        }
+                    }
+                })
+                .Select(inputTensor =>
+                {
+                    lock (_session)
+                    {
+                        // 多线程推理会出现问题，加锁解决。
+                        using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
+                            NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
+                        ]);
+                        var output = results[0];
+                        if (output.ElementType is not TensorElementType.Float)
+                            throw new Exception($"Unexpected output tensor type: {output.ElementType}");
+
+                        if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
+                            throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
+                        var tensor = output.AsTensor<float>();
+                        // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
+                        return (tensor.Dimensions.ToArray(), tensor.ToArray());
+                    }
+                }).ToArray();
+        }
+        finally
+        {
+            owners.ForEach(x => { x.Dispose(); });
+        }
     }
 
     public string GetConfigName => config.Name;
