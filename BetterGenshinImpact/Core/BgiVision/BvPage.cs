@@ -123,7 +123,7 @@ public class BvPage
 
     /// <summary>
     /// 使用模糊匹配判断截图中是否包含目标文字。
-    /// 优先使用 DP 模糊匹配，引擎不支持时自动回退到普通 OCR + 字符串比较。
+    /// 通过 <see cref="OcrFactory.PaddleMatch"/> 自动选择最佳实现（DP 模糊匹配或普通 OCR + 字符串比较）。
     /// </summary>
     /// <param name="target">目标字符串</param>
     /// <param name="rect">感兴趣区域，default 表示全屏</param>
@@ -135,10 +135,24 @@ public class BvPage
         var actualThreshold = threshold
                               ?? TaskContext.Instance().Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold;
 
-        using var screen = TaskControl.CaptureToRectArea();
-        using var roi = rect == default ? screen : screen.DeriveCrop(rect);
-        var score = matchService.OcrMatch(roi.SrcMat, target);
-        return score >= actualThreshold;
+        var screen = TaskControl.CaptureToRectArea();
+        try
+        {
+            var roi = rect == default ? null : screen.DeriveCrop(rect);
+            try
+            {
+                var score = matchService.OcrMatch((roi ?? screen).SrcMat, target);
+                return score >= actualThreshold;
+            }
+            finally
+            {
+                roi?.Dispose();
+            }
+        }
+        finally
+        {
+            screen.Dispose();
+        }
     }
 
     /// <summary>
@@ -153,7 +167,7 @@ public class BvPage
     public async Task<bool> WaitForOcrMatch(string target, Rect rect = default, double? threshold = null, int? timeout = null)
     {
         var actualTimeout = timeout ?? DefaultTimeout;
-        var retryCount = actualTimeout / DefaultRetryInterval;
+        var retryCount = DefaultRetryInterval > 0 ? actualTimeout / DefaultRetryInterval : 1;
 
         return await NewRetry.WaitForAction(() => OcrMatch(target, rect, threshold),
             _cancellationToken, retryCount, DefaultRetryInterval);

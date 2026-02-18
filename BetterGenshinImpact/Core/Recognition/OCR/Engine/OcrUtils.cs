@@ -193,6 +193,7 @@ public static class OcrUtils
         var lengths = new HashSet<int>();
         for (var i = 0; i < labels.Count; i++)
         {
+            if (labels[i] == " ") continue;
             var len = labels[i].Length;
             if (len > 0) lengths.Add(len);
             dict[labels[i]] = i + 1;
@@ -270,7 +271,7 @@ public static class OcrUtils
     /// <param name="availableCount">归一化分母（通常为 max(有效帧数, target长度)）</param>
     public static double GetMaxScoreDP((int, float)[] result, int[] target, int availableCount)
     {
-        if (target.Length == 0) return 0;
+        if (target.Length == 0 || availableCount <= 0) return 0;
 
         var dp = new double[target.Length + 1];
         dp[0] = 0;

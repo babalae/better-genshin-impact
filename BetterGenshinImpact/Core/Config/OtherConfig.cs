@@ -118,6 +118,14 @@ public partial class OtherConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private double _ocrMatchDefaultThreshold = 0.5;
+
+        partial void OnOcrMatchDefaultThresholdChanged(double value)
+        {
+            if (value is < 0 or > 1)
+            {
+                OcrMatchDefaultThreshold = Math.Clamp(value, 0, 1);
+            }
+        }
     }
     
     //public partial class OtherConfig : ObservableObject

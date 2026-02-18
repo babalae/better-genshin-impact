@@ -61,8 +61,8 @@ public class OcrMatchFallbackService : IOcrMatchService
     {
         if (string.IsNullOrEmpty(target)) return 1.0;
         if (string.IsNullOrEmpty(text)) return 0.0;
-        if (text.Contains(target)) return 1.0;
-        if (target.Contains(text)) return (double)text.Length / target.Length;
+        if (text.Contains(target, StringComparison.OrdinalIgnoreCase)) return 1.0;
+        if (target.Contains(text, StringComparison.OrdinalIgnoreCase)) return (double)text.Length / target.Length;
 
         var distance = LevenshteinDistance(text, target);
         var maxLen = Math.Max(text.Length, target.Length);

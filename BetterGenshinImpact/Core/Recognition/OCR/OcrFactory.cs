@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
@@ -31,7 +32,9 @@ public class OcrFactory : IDisposable
             var service = factory.PaddleOcr;
             if (service is IOcrMatchService matchService)
                 return matchService;
-            return factory._paddleOcrMatchFallback ??= new OcrMatchFallbackService(service);
+            var fallback = new OcrMatchFallbackService(service);
+            return Interlocked.CompareExchange(ref factory._paddleOcrMatchFallback, fallback, null)
+                   ?? fallback;
         }
     }
 

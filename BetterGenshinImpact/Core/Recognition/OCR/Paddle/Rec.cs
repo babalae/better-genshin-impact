@@ -63,14 +63,6 @@ public class Rec : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    ~Rec()
-    {
-        lock (_session)
-        {
-            _session.Dispose();
-        }
-    }
-
     /// <summary>
     /// 对多张图像按批次执行 OCR 识别。
     /// </summary>
@@ -127,7 +119,8 @@ public class Rec : IDisposable
                             lastIndex = maxIdx[1];
                         }
 
-                        return new OcrRecognizerResult(sb.ToString(), score / sb.Length);
+                        var text = sb.ToString();
+                        return new OcrRecognizerResult(text, text.Length > 0 ? score / text.Length : 0);
                     })
                     .ToArray();
             }
@@ -202,6 +195,9 @@ public class Rec : IDisposable
                     }
                     else
                     {
+                        if (_weights.Length != labelCount)
+                            throw new InvalidOperationException(
+                                $"权重数组长度 ({_weights.Length}) 与模型输出维度 ({labelCount}) 不匹配，请检查 OCR 模型与标签列表是否一致");
                         using var weightMat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1, _weights);
                         using Mat weighted = row.Mul(weightMat);
                         weighted.MinMaxIdx(out _, out maxVal, [], maxIdx);
