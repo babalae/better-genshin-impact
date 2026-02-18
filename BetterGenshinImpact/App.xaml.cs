@@ -84,7 +84,8 @@ public partial class App : Application
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
+                    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
+                    .MinimumLevel.Override("Quartz", LogEventLevel.Information);
                 if (all.MaskWindowConfig.MaskEnabled)
                 {
                     loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
@@ -107,6 +108,7 @@ public partial class App : Application
                         logging.SetMinimumLevel(LogLevel.Debug);
                         logging.AddFilter("Microsoft", LogLevel.Warning);
                         logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+                        logging.AddFilter("Quartz", LogLevel.Information);
                         logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
                     });
                 }

@@ -354,7 +354,7 @@ public partial class GearTaskListPageViewModel : ViewModel
             if (jsSelectionWindow.DialogResult && jsSelectionWindow.ViewModel.SelectedScript != null)
             {
                 var selectedScript = jsSelectionWindow.ViewModel.SelectedScript;
-                newTask = new GearTaskViewModel(selectedScript.Manifest.Name)
+                newTask = new GearTaskViewModel(string.IsNullOrWhiteSpace(selectedScript.Name) ? selectedScript.FolderName : selectedScript.Name)
                 {
                     TaskType = "Javascript",
                     Path = @$"{{jsUserFolder}}\{selectedScript.FolderName}\"

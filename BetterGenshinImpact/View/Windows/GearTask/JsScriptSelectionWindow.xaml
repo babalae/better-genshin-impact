@@ -108,7 +108,7 @@
                                             </Grid.RowDefinitions>
 
                                             <TextBlock Grid.Row="0"
-                                                       Text="{Binding Manifest.Name}"
+                                                       Text="{Binding Name}"
                                                        FontWeight="SemiBold"
                                                        TextWrapping="NoWrap"
                                                        MaxWidth="260"
