@@ -1731,7 +1731,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="关闭CTC重复字符折叠，允许OCR结果中出现连续重复字符。"
+                                          Text="关闭CTC重复字符折叠，允许OCR结果中出现连续重复字符。修改后需重新加载OCR引擎才能生效。"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -1747,6 +1747,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
@@ -1758,12 +1759,27 @@
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                           Text="【0~1】分数 ≥ 阈值视为匹配成功，默认值为 0.5。"
                                           TextWrapping="Wrap" />
-                            <ui:TextBox Grid.Row="0"
-                                        Grid.RowSpan="2"
-                                        Grid.Column="1"
-                                        MinWidth="90"
-                                        Margin="0,0,36,0"
-                                        Text="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, Mode=TwoWay}" />
+                            <Slider Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Width="200"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center"
+                                    IsSnapToTickEnabled="True"
+                                    Maximum="1"
+                                    Minimum="0"
+                                    TickFrequency="0.1"
+                                    Value="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="0"
+                                       Grid.RowSpan="2"
+                                       Grid.Column="2"
+                                       MinWidth="40"
+                                       Margin="0,0,36,0"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Center"
+                                       FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                       FontSize="14"
+                                       Text="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, StringFormat=F2}" />
                         </Grid>
 
                     </StackPanel>

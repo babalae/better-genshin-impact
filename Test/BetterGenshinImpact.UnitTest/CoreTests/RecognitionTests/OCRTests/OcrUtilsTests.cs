@@ -209,6 +209,25 @@ public class OcrUtilsTests
         Assert.Equal(0.5, score, 0.01);
     }
 
+    [Fact]
+    public void GetMaxScoreDP_ManyFrames_TargetLengthDenominator_ScoresHigh()
+    {
+        // 模拟多个文字区域的字符帧合并后做匹配，分母应为 target.Length
+        // 即使有很多噪声帧，只要 target 完整匹配，分数仍应很高
+        (int, float)[] result = [
+            (9, 0.5f), (8, 0.6f), (7, 0.4f),  // 噪声区域1
+            (1, 0.9f), (2, 0.85f),              // 匹配目标 [1,2]
+            (6, 0.7f), (5, 0.3f), (4, 0.5f),   // 噪声区域2
+            (9, 0.2f), (8, 0.4f)                // 噪声区域3
+        ];
+        int[] target = [1, 2];
+
+        // 使用 target.Length 作为分母：(0.9 + 0.85) / 2 = 0.875
+        var score = OcrUtils.GetMaxScoreDP(result, target, target.Length);
+
+        Assert.Equal(0.875, score, 0.01);
+    }
+
     #endregion
 
     #region CreateWeights

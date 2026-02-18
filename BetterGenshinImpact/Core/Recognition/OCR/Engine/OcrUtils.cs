@@ -268,7 +268,7 @@ public static class OcrUtils
     /// </summary>
     /// <param name="result">OCR 输出的 (labelIndex, confidence) 序列</param>
     /// <param name="target">目标标签索引序列</param>
-    /// <param name="availableCount">归一化分母（通常为 max(有效帧数, target长度)）</param>
+    /// <param name="availableCount">归一化分母（通常为 target.Length，得到每个目标字符的平均置信度）</param>
     public static double GetMaxScoreDP((int, float)[] result, int[] target, int availableCount)
     {
         if (target.Length == 0 || availableCount <= 0) return 0;
