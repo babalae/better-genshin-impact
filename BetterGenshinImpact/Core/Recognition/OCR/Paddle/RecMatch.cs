@@ -138,7 +138,7 @@ public class RecMatch : Rec
                     else
                     {
                         using var weightMat = Mat.FromPixelData(1, labelCount, MatType.CV_32FC1, _weights);
-                        using Mat weighted = (Mat)row.Mul(weightMat);
+                        using Mat weighted = row.Mul(weightMat);
                         weighted.MinMaxIdx(out _, out maxVal, [], maxIdx);
                     }
                     chars[n] = (maxIdx[1], (float)maxVal);
