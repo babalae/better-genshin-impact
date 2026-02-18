@@ -15,7 +15,7 @@ using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class PaddleOcrService : IOcrService, IDisposable
+public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
 {
     /// <summary>
     ///     Usage:
@@ -337,6 +337,52 @@ public class PaddleOcrService : IOcrService, IDisposable
             Math.Clamp(rect.Top, 0, size.Height),
             Math.Clamp(rect.Right, 0, size.Width),
             Math.Clamp(rect.Bottom, 0, size.Height));
+    }
+
+    /// <summary>
+    /// 使用检测器定位文字区域后，对每个区域进行 DP 模糊匹配，返回最高置信度 (0~1)。
+    /// </summary>
+    public double OcrMatch(Mat mat, string target)
+    {
+        var startTime = Stopwatch.GetTimestamp();
+
+        using var src = mat.Channels() == 4 ? mat.CvtColor(ColorConversionCodes.BGRA2BGR) : null;
+        var bgr = src ?? mat;
+
+        var rects = _localDetModel.Run(bgr);
+        Mat[] mats = rects.Select(rect =>
+        {
+            var roi = bgr[GetCropedRect(rect.BoundingRect(), bgr.Size())];
+            return roi;
+        }).ToArray();
+
+        try
+        {
+            var score = _localRecModel.RunMatch(mats, target);
+            var time = Stopwatch.GetElapsedTime(startTime);
+            Debug.WriteLine($"PaddleOcrMatch 耗时 {time.TotalMilliseconds}ms 目标: {target} 分数: {score:F4}");
+            return score;
+        }
+        finally
+        {
+            foreach (var m in mats) m.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 不使用检测器，直接对整张图像进行 DP 模糊匹配，返回置信度 (0~1)。
+    /// </summary>
+    public double OcrMatchDirect(Mat mat, string target)
+    {
+        var startTime = Stopwatch.GetTimestamp();
+
+        using var src = mat.Channels() == 4 ? mat.CvtColor(ColorConversionCodes.BGRA2BGR) : null;
+        var bgr = src ?? mat;
+
+        var score = _localRecModel.RunMatch([bgr], target);
+        var time = Stopwatch.GetElapsedTime(startTime);
+        Debug.WriteLine($"PaddleOcrMatchDirect 耗时 {time.TotalMilliseconds}ms 目标: {target} 分数: {score:F4}");
+        return score;
     }
 
     public void Dispose()

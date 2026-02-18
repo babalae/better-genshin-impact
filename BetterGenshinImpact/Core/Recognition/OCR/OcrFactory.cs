@@ -18,7 +18,25 @@ public class OcrFactory : IDisposable
     public static IOcrService Paddle => App.ServiceProvider.GetRequiredService<OcrFactory>().PaddleOcr;
     private IOcrService PaddleOcr => _paddleOcrService ??= Create(OcrEngineTypes.Paddle);
 
+    /// <summary>
+    /// 获取支持模糊匹配的 OCR 服务。
+    /// 若引擎原生支持 IOcrMatchService 则直接返回，否则回退到普通 OCR + 字符串相似度。
+    /// 访问此属性会触发 Paddle 引擎的懒加载。
+    /// </summary>
+    public static IOcrMatchService PaddleMatch
+    {
+        get
+        {
+            var factory = App.ServiceProvider.GetRequiredService<OcrFactory>();
+            var service = factory.PaddleOcr;
+            if (service is IOcrMatchService matchService)
+                return matchService;
+            return factory._paddleOcrMatchFallback ??= new OcrMatchFallbackService(service);
+        }
+    }
+
     private IOcrService? _paddleOcrService;
+    private IOcrMatchService? _paddleOcrMatchFallback;
     private readonly ILogger<BgiOnnxFactory> _logger;
     private readonly OtherConfig.Ocr _config;
 
@@ -121,6 +139,7 @@ public class OcrFactory : IDisposable
 
     public Task Unload()
     {
+        _paddleOcrMatchFallback = null;
         if (_paddleOcrService is not IDisposable disposable)
         {
             _paddleOcrService = null;

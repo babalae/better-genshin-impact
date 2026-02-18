@@ -112,6 +112,12 @@ public partial class OtherConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private bool _allowDuplicateChar;
+
+        /// <summary>
+        ///     OcrMatch 模糊匹配的默认阈值 (0~1)，分数 ≥ 阈值视为匹配成功
+        /// </summary>
+        [ObservableProperty]
+        private double _ocrMatchDefaultThreshold = 0.5;
     }
     
     //public partial class OtherConfig : ObservableObject
