@@ -233,9 +233,18 @@ public class SwitchPartyTask
             var threshold = TaskContext.Instance().Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold;
             Region? bestMatch = null;
             double bestScore = 0;
+            var imgW = page.SrcMat.Width;
+            var imgH = page.SrcMat.Height;
             foreach (var region in textRegions)
             {
-                using var cropped = page.DeriveCrop(region.X, region.Y, region.Width, region.Height);
+                var cx = Math.Max(0, region.X);
+                var cy = Math.Max(0, region.Y);
+                var cw = Math.Min(region.Width, imgW - cx);
+                var ch = Math.Min(region.Height, imgH - cy);
+                if (cw <= 0 || ch <= 0)
+                    continue;
+
+                using var cropped = page.DeriveCrop(cx, cy, cw, ch);
                 var score = matchService.OcrMatchDirect(cropped.SrcMat, partyName);
                 if (score >= threshold && score > bestScore)
                 {
