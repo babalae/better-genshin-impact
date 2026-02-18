@@ -125,7 +125,7 @@ public class Rec : IDisposable
             }
             finally
             {
-                dataHandle.Free();
+                if (dataHandle.IsAllocated) dataHandle.Free();
             }
         }).ToArray();
     }
@@ -208,7 +208,7 @@ public class Rec : IDisposable
             }
             finally
             {
-                dataHandle.Free();
+                if (dataHandle.IsAllocated) dataHandle.Free();
             }
         }).ToArray();
     }
