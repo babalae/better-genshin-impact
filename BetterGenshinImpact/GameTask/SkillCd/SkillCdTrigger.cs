@@ -66,6 +66,8 @@ public class SkillCdTrigger : ITaskTrigger
 
     private int _lastSwitchFromSlot = -1;
     private DateTime _lastSwitchTime = DateTime.MinValue;
+    private DateTime _lastPressIndexTime = DateTime.MinValue; // 换人按键时间
+
 
     private volatile bool _isSyncingTeam = false;
 
@@ -106,6 +108,7 @@ public class SkillCdTrigger : ITaskTrigger
         _lastActiveIndex = -1;
         _lastSwitchFromSlot = -1;
         _lastSwitchTime = DateTime.MinValue;
+        _lastPressIndexTime = DateTime.MinValue;
         _lastSyncTime = DateTime.MinValue;
 
         if (!IsEnabled)
@@ -201,7 +204,13 @@ public class SkillCdTrigger : ITaskTrigger
             Task.Run(async () =>
             {
                 // 确保画面加载完成，提高识别成功率
-                await Task.Delay(500); 
+                await Task.Delay(500);
+                var delaySinceLastPressIndex = (DateTime.Now - _lastPressIndexTime).TotalSeconds;
+                if (delaySinceLastPressIndex < 1.1)
+                {
+                    // 刚按过换人键，人物头像还在读秒，此时yolo识别可能会失败
+                    await Task.Delay(TimeSpan.FromSeconds(1.1 - delaySinceLastPressIndex));
+                }
                     
                 CombatScenes? scenes = null;
                 try 
@@ -316,6 +325,7 @@ public class SkillCdTrigger : ITaskTrigger
             bool isDown = (keyState & 0x8000) != 0;
             if (isDown && !_prevKeys[i]) pressedIndex = i;
             _prevKeys[i] = isDown;
+            _lastPressIndexTime = DateTime.Now;
         }
 
         if (_lastImage != null)
