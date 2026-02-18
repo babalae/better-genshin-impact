@@ -268,5 +268,20 @@ public class OcrUtilsTests
         Assert.All(weights, w => Assert.Equal(1.0f, w));
     }
 
+    [Fact]
+    public void CreateWeights_SpaceKey_MapsToCorrectIndex()
+    {
+        // 空格权重应写入 labels.Count + 1 位置，与 CreateLabelDict 一致
+        IReadOnlyList<string> labels = ["a", " ", "b"];
+        var extra = new Dictionary<string, float> { { " ", 3.0f } };
+
+        var weights = OcrUtils.CreateWeights(extra, labels);
+
+        // labels.Count + 1 = 4，空格权重应在 weights[4]
+        Assert.Equal(3.0f, weights[labels.Count + 1]);
+        // labels 中 " " 的位置 index=2（即 weights[2]）不应被错误写入
+        Assert.Equal(1.0f, weights[2]);
+    }
+
     #endregion
 }

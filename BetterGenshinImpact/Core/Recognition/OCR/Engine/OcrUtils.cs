@@ -215,11 +215,12 @@ public static class OcrUtils
     {
         var result = new float[labels.Count + 2];
         Array.Fill(result, 1.0f);
-        var labelList = labels.ToList();
+        // 构建与 CreateLabelDict 一致的标签→索引映射
+        var labelDict = OcrUtils.CreateLabelDict(labels, out _);
         foreach (var (key, value) in extraWeights)
         {
-            var index = labelList.IndexOf(key) + 1;
-            if (index > 0 && index < result.Length)
+            if (!labelDict.TryGetValue(key, out var index)) continue;
+            if (index >= 0 && index < result.Length)
             {
                 result[index] = value;
             }
