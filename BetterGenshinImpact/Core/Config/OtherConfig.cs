@@ -114,10 +114,16 @@ public partial class OtherConfig : ObservableObject
         private bool _allowDuplicateChar;
 
         /// <summary>
+        ///     切换队伍时使用 OcrMatch 模糊匹配代替正则表达式匹配
+        /// </summary>
+        [ObservableProperty]
+        private bool _useOcrMatchForPartySwitch = true;
+
+        /// <summary>
         ///     OcrMatch 模糊匹配的默认阈值 (0~1)，分数 ≥ 阈值视为匹配成功
         /// </summary>
         [ObservableProperty]
-        private double _ocrMatchDefaultThreshold = 0.5;
+        private double _ocrMatchDefaultThreshold = 0.8;
 
         partial void OnOcrMatchDefaultThresholdChanged(double value)
         {
