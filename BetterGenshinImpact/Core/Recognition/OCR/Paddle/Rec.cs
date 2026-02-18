@@ -25,6 +25,7 @@ public class Rec : IDisposable
     private readonly IReadOnlyList<string> _labels;
     private readonly OcrVersionConfig _config;
     private readonly bool _allowDuplicateChar;
+    private readonly float _threshold;
 
     // 模糊匹配相关字段
 
@@ -51,12 +52,14 @@ public class Rec : IDisposable
         OcrVersionConfig config,
         BgiOnnxFactory bgiOnnxFactory,
         bool allowDuplicateChar = false,
-        Dictionary<string, float>? extraWeights = null)
+        Dictionary<string, float>? extraWeights = null,
+        float threshold = 0.5f)
     {
         _session = bgiOnnxFactory.CreateInferenceSession(model, true);
         _labels = labels;
         _config = config;
         _allowDuplicateChar = allowDuplicateChar;
+        _threshold = threshold;
 
         _labelDict = OcrUtils.CreateLabelDict(labels, out var labelLengths);
         _labelLengths = labelLengths;
@@ -119,7 +122,7 @@ public class Rec : IDisposable
                             using var row = fullMat.Row(n);
                             row.MinMaxIdx(out _, out var maxVal, [], maxIdx);
 
-                            if (maxIdx[1] > 0 && (_allowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
+                            if (maxIdx[1] > 0 && maxVal >= _threshold && (_allowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
                             {
                                 score += (float)maxVal;
                                 sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
@@ -203,7 +206,7 @@ public class Rec : IDisposable
                     var confidence = _weights is not null
                         ? raw * _weights[labelIdx]
                         : raw;
-                    if (confidence > 0)
+                    if (confidence > _threshold)
                         chars.Add((labelIdx, confidence));
                 }
             }

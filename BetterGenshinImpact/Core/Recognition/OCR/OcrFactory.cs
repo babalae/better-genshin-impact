@@ -109,6 +109,7 @@ public class OcrFactory : IDisposable
     private PaddleOcrService CreatePaddleOcrInstance()
     {
         var allowDuplicateChar = _config.AllowDuplicateChar;
+        var threshold = (float)_config.PaddleOcrThreshold;
         var factory = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>();
         return _config.PaddleOcrModelConfig switch
         {
@@ -116,24 +117,24 @@ public class OcrFactory : IDisposable
                 new PaddleOcrService(factory,
                     PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(GetCultureInfo()) ??
                     PaddleOcrService.PaddleOcrModelType.V4,
-                    allowDuplicateChar),
+                    allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V5Auto =>
                 new PaddleOcrService(factory,
                     PaddleOcrService.PaddleOcrModelType.FromCultureInfo(GetCultureInfo()) ??
                     PaddleOcrService.PaddleOcrModelType.V5,
-                    allowDuplicateChar),
+                    allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V5 =>
-                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5, allowDuplicateChar),
+                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5, allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V4 =>
-                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V4, allowDuplicateChar),
+                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V4, allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V4En =>
-                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V4En, allowDuplicateChar),
+                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V4En, allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V5Korean =>
-                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5Korean, allowDuplicateChar),
+                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5Korean, allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V5Latin =>
-                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5Latin, allowDuplicateChar),
+                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5Latin, allowDuplicateChar, threshold),
             PaddleOcrModelConfig.V5Eslav =>
-                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5Eslav, allowDuplicateChar),
+                new PaddleOcrService(factory, PaddleOcrService.PaddleOcrModelType.V5Eslav, allowDuplicateChar, threshold),
             _ => throw new ArgumentOutOfRangeException(nameof(_config.PaddleOcrModelConfig),
                 _config.PaddleOcrModelConfig, "不支持的 Paddle OCR 模型配置")
         };

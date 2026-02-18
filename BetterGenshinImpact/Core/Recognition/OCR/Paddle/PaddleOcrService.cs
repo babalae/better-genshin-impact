@@ -103,11 +103,11 @@ public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
                 TestImagePath);
         }
 
-        public (Det, Rec) Build(BgiOnnxFactory onnxFactory, bool allowDuplicateChar = false)
+        public (Det, Rec) Build(BgiOnnxFactory onnxFactory, bool allowDuplicateChar = false, float threshold = 0.5f)
         {
             return (
                 new Det(DetectionModel, DetectionVersion, onnxFactory),
-                new Rec(RecognitionModel, RecLabel(), RecognitionVersion, onnxFactory, allowDuplicateChar));
+                new Rec(RecognitionModel, RecLabel(), RecognitionVersion, onnxFactory, allowDuplicateChar, threshold: threshold));
         }
 
         public static readonly PaddleOcrModelType V4 = Create(
@@ -240,9 +240,9 @@ public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
     }
 
     public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType,
-        bool allowDuplicateChar = false)
+        bool allowDuplicateChar = false, float threshold = 0.5f)
     {
-        var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory, allowDuplicateChar);
+        var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory, allowDuplicateChar, threshold);
         _localDetModel = modelsDet;
         _localRecModel = modelsRec;
 

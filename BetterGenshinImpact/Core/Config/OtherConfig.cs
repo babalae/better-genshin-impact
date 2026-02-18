@@ -127,9 +127,23 @@ public partial class OtherConfig : ObservableObject
 
         partial void OnOcrMatchDefaultThresholdChanged(double value)
         {
-            if (value is < 0 or > 1)
+            if (value is <= 0 or > 1)
             {
-                OcrMatchDefaultThreshold = Math.Clamp(value, 0, 1);
+                OcrMatchDefaultThreshold = Math.Clamp(value, 0.01, 1);
+            }
+        }
+
+        /// <summary>
+        ///     PaddleOCR 识别置信度阈值 (0~1)，低于此阈值的字符将被过滤
+        /// </summary>
+        [ObservableProperty]
+        private double _paddleOcrThreshold = 0.5;
+
+        partial void OnPaddleOcrThresholdChanged(double value)
+        {
+            if (value is < 0 or >= 1)
+            {
+                PaddleOcrThreshold = Math.Clamp(value, 0, 0.99);
             }
         }
     }

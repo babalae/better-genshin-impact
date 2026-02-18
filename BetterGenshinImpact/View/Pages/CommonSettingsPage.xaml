@@ -1792,7 +1792,7 @@
                                     VerticalAlignment="Center"
                                     IsSnapToTickEnabled="True"
                                     Maximum="1"
-                                    Minimum="0"
+                                    Minimum="0.01"
                                     TickFrequency="0.01"
                                     Value="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, Mode=TwoWay}" />
                             <TextBlock Grid.Row="0"
@@ -1805,6 +1805,49 @@
                                        FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
                                        FontSize="14"
                                        Text="{Binding Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold, StringFormat=F2}" />
+                        </Grid>
+
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="PaddleOCR 识别置信度阈值"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="【0~1】低于此阈值的字符将被过滤，默认值为 0.5。修改后需重载OCR。"
+                                          TextWrapping="Wrap" />
+                            <Slider Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    Width="200"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center"
+                                    IsSnapToTickEnabled="True"
+                                    Maximum="0.99"
+                                    Minimum="0"
+                                    TickFrequency="0.01"
+                                    Value="{Binding Config.OtherConfig.OcrConfig.PaddleOcrThreshold, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="0"
+                                       Grid.RowSpan="2"
+                                       Grid.Column="2"
+                                       MinWidth="40"
+                                       Margin="0,0,36,0"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Center"
+                                       FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                       FontSize="14"
+                                       Text="{Binding Config.OtherConfig.OcrConfig.PaddleOcrThreshold, StringFormat=F2}" />
                         </Grid>
 
                     </StackPanel>

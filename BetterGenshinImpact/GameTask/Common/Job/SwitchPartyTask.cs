@@ -196,7 +196,7 @@ public class SwitchPartyTask
             var threshold = TaskContext.Instance().Config.OtherConfig.OcrConfig.OcrMatchDefaultThreshold;
             using var region = ra.DeriveCrop(roi);
             var score = matchService.OcrMatch(region.SrcMat, partyName);
-            Logger.LogInformation("切换队伍，当前队伍 OcrMatch 分数: {Score:F4}，阈值: {Threshold}", score, threshold);
+            Logger.LogInformation("切换队伍，当前队伍 OcrMatch 分数: {Score:F4}，判断阈值: {Threshold}", score, threshold);
             if (score >= threshold)
             {
                 Logger.LogInformation("当前队伍即为目标队伍（匹配分数: {Score:F4}），无需切换", score);
