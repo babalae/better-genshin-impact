@@ -339,6 +339,14 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 var result = cells.ToList();
                 foreach (var cell in cells.Where(c => c.IsPhantom))
                 {
+                    // 幻影格子由插值生成，低分辨率下可能坐标越界，直接丢弃
+                    if (cell.Rect.X < 0 || cell.Rect.Y < 0 ||
+                        cell.Rect.X + cell.Rect.Width > mat.Cols ||
+                        cell.Rect.Y + cell.Rect.Height > mat.Rows)
+                    {
+                        result.Remove(cell);
+                        continue;
+                    }
                     using Mat cellMat = mat.SubMat(cell.Rect);
                     using Mat bottom = cellMat.GetGridBottom();
                     if (!IsCorrectBottomColor(bottom))

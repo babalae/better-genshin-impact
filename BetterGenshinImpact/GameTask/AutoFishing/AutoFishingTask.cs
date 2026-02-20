@@ -391,6 +391,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                           clickWhiteConfirmButtonWaitEndTime < timeProvider.GetLocalNow()) &&
                          Bv.ClickWhiteConfirmButton(imageRegion))
                 {
+                    // 截取鱼饵图标区域（正方形，宽高均取 6.5% 的屏幕宽度）
+                    // 最后一个参数有意用 Width 而非 Height，目的是保持正方形裁剪
+                    // 经验算在 16:9 常见分辨率（720p/1080p/1440p）下 Y+H 不会超出图像高度，暂不加钳位
                     using Mat subMat = imageRegion.SrcMat.SubMat(new Rect((int)(0.824 * imageRegion.Width), (int)(0.669 * imageRegion.Height), (int)(0.065 * imageRegion.Width), (int)(0.065 * imageRegion.Width)));
                     using Mat resized = subMat.Resize(new Size(125, 125));
                     (string predName, _) = GridIconsAccuracyTestTask.Infer(resized, this.session, this.prototypes);

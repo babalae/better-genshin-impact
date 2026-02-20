@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui;
@@ -43,8 +45,6 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
     /// </summary>
     private async Task HandleActivationAsync()
     {
-        await Task.CompletedTask;
-
         if (!Application.Current.Windows.OfType<MainWindow>().Any())
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
@@ -54,11 +54,19 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
 
             if (args.Length > 1)
             {
-                
+
                 //无论如何，先跳到主页，否则在通过参数的任务在执行完之前，不会加载快捷键
                 _ = _navigationWindow.Navigate(typeof(HomePage));
-                
-                if (args[1].Contains("startOneDragon"))
+
+                // 命令行启动时，先等待自动更新订阅脚本完成，再运行配置组/一条龙
+                // （正常双击启动在 MainWindowViewModel.OnLoaded 中以 fire-and-forget 方式调用）
+                var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+                if (scriptConfig.AutoUpdateBeforeCommandLineRun)
+                {
+                    await Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+                }
+
+                if (args[1].Contains("startOneDragon", StringComparison.InvariantCultureIgnoreCase))
                 {
 
                     // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。

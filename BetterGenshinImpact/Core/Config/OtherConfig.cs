@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -106,6 +106,46 @@ public partial class OtherConfig : ObservableObject
         /// </summary>
         [ObservableProperty]
         private PaddleOcrModelConfig _paddleOcrModelConfig = PaddleOcrModelConfig.V4Auto;
+
+        /// <summary>
+        ///     允许OCR结果中出现连续重复字符（关闭CTC重复字符折叠）
+        /// </summary>
+        [ObservableProperty]
+        private bool _allowDuplicateChar;
+
+        /// <summary>
+        ///     切换队伍时使用 OcrMatch 模糊匹配代替正则表达式匹配
+        /// </summary>
+        [ObservableProperty]
+        private bool _useOcrMatchForPartySwitch = true;
+
+        /// <summary>
+        ///     OcrMatch 模糊匹配的默认阈值 (0~1)，分数 ≥ 阈值视为匹配成功
+        /// </summary>
+        [ObservableProperty]
+        private double _ocrMatchDefaultThreshold = 0.8;
+
+        partial void OnOcrMatchDefaultThresholdChanged(double value)
+        {
+            if (value is <= 0 or > 1)
+            {
+                OcrMatchDefaultThreshold = Math.Clamp(value, 0.01, 1);
+            }
+        }
+
+        /// <summary>
+        ///     PaddleOCR 识别置信度阈值 (0~1)，低于此阈值的字符将被过滤
+        /// </summary>
+        [ObservableProperty]
+        private double _paddleOcrThreshold = 0.5;
+
+        partial void OnPaddleOcrThresholdChanged(double value)
+        {
+            if (value is < 0 or >= 1)
+            {
+                PaddleOcrThreshold = Math.Clamp(value, 0, 0.99);
+            }
+        }
     }
     
     //public partial class OtherConfig : ObservableObject

@@ -1000,12 +1000,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动拾取掉落物"
+                                              Text="扫描掉落物光柱"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="战斗结束后尽可能拾取周围掉落物（与万叶配合更佳）"
+                                              Text="战斗结束后旋转视角寻找掉落物光柱并靠近（仅在无万叶时备用）"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -1027,12 +1027,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动拾取掉落物时长"
+                                              Text="扫描掉落物光柱时长"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="单位为秒。0表示不自动拾取掉落物。"
+                                              Text="单位为秒。0表示不扫描掉落物光柱。"
                                               TextWrapping="Wrap" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.RowSpan="2"
@@ -2381,7 +2381,7 @@
         <!-- 自动地脉花 -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
-                <ui:FontIcon Glyph="&#xf6c0;" Style="{StaticResource FaFontIconStyle}" />
+                <ui:FontIcon Glyph="&#xf7ff;" Style="{StaticResource FaFontIconStyle}" />
             </ui:CardExpander.Icon>
             <ui:CardExpander.Header>
                 <Grid>

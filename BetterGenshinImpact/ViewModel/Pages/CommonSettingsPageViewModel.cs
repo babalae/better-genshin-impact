@@ -7,6 +7,9 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using Windows.System;
@@ -20,6 +23,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -34,6 +38,7 @@ using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Win32;
+using Newtonsoft.Json;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -77,7 +82,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
-        new string[] { "zh-Hans", "zh-Hant", "en", "fr" }
+        new string[] { "zh-Hans", "zh-Hant", "en"}
             .ToFrozenDictionary(
                 c => c,
                 c =>
@@ -88,6 +93,94 @@ public partial class CommonSettingsPageViewModel : ViewModel
                     return stringLocalizer["简体中文"].ToString();
                 }
             );
+
+    [RelayCommand]
+    private async Task OnUpdateUiLanguageAsync()
+    {
+        var cultureName = Config.OtherConfig.UiCultureInfoName ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            throw new InvalidOperationException("当前UI语言为空，无法更新语言文件。");
+        }
+
+        if (cultureName == "zh-Hans")
+        {
+            await ThemedMessageBox.InformationAsync("zh-Hans 无语言文件，无需更新。");
+            return;
+        }
+
+        var urls = new[]
+        {
+            $"https://raw.githubusercontent.com/babalae/bettergi-i18n/refs/heads/main/i18n/{cultureName}.json",
+            $"https://cnb.cool/bettergi/bettergi-i18n/-/git/raw/main/i18n/{cultureName}.json"
+        };
+
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
+        byte[]? bytes = null;
+        Exception? lastError = null;
+        var allNotFound = true;
+        foreach (var url in urls)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.UserAgent.ParseAdd("BetterGenshinImpact");
+                using var response = await httpClient.SendAsync(request);
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    lastError = new HttpRequestException("Language file not found.", null, response.StatusCode);
+                    continue;
+                }
+
+                allNotFound = false;
+                response.EnsureSuccessStatusCode();
+                bytes = await response.Content.ReadAsByteArrayAsync();
+
+                var json = Encoding.UTF8.GetString(bytes);
+                _ = JsonConvert.DeserializeObject<Dictionary<string, string>>(json)
+                    ?? throw new JsonException("翻译文件不是有效的 JSON 字典。");
+                break;
+            }
+            catch (Exception e)
+            {
+                lastError = e;
+                allNotFound = false;
+            }
+        }
+
+        if (bytes == null)
+        {
+            if (allNotFound)
+            {
+                await ThemedMessageBox.WarningAsync($"语言文件不存在：{cultureName}.json");
+                return;
+            }
+
+            throw new Exception($"下载语言文件失败：{cultureName}.json", lastError);
+        }
+
+        var dir = Global.Absolute(@"User\I18n");
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, $"{cultureName}.json");
+        var tmp = $"{path}.{Guid.NewGuid():N}.tmp";
+        await File.WriteAllBytesAsync(tmp, bytes);
+
+        if (File.Exists(path))
+        {
+            File.Replace(tmp, path, null);
+        }
+        else
+        {
+            File.Move(tmp, path);
+        }
+
+        var translator = App.GetService<ITranslationService>() ?? throw new NullReferenceException();
+        translator.Reload();
+    }
 
     public string SelectedCountry
     {
@@ -275,36 +368,27 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void ImportLocalScriptsRepoZip()
+    private async Task ImportLocalScriptsRepoZip()
     {
         Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
 
         var dialog = new OpenFileDialog
         {
+            Title = "选择脚本仓库压缩包",
             Filter = "Zip Files (*.zip)|*.zip",
             Multiselect = false
         };
 
         if (dialog.ShowDialog() == true)
         {
-            var zipPath = dialog.FileName;
-            // 删除旧文件夹
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
+            try
             {
-                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPathOld);
-            }
-
-            ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
-
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
-            {
-                DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
+                await ScriptRepoUpdater.Instance.ImportLocalRepoZip(dialog.FileName);
                 ThemedMessageBox.Information("脚本仓库离线包导入成功！");
             }
-            else
+            catch (Exception ex)
             {
-                ThemedMessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
-                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
+                ThemedMessageBox.Error($"脚本仓库离线包导入失败：{ex.Message}");
             }
         }
     }

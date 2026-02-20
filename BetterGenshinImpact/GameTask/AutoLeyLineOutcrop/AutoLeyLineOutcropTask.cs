@@ -101,13 +101,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 await RecheckResinAndContinue();
             }
         }
-        catch (NormalEndException e)
+        catch (Exception e) when (e is NormalEndException or TaskCanceledException)
         {
             Logger.LogInformation("任务结束：{Msg}", e.Message);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "自动地脉花执行失败");
+            _logger.LogDebug(e, "自动地脉花执行失败");
+            _logger.LogError("自动地脉花执行失败:" + e.Message);
             if (_taskParam.IsNotification)
             {
                 Notify.Event("AutoLeyLineOutcrop").Error($"任务失败: {e.Message}");
@@ -123,7 +124,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "退出奖励界面失败");
+                _logger.LogDebug(ex, "地脉花结束后尝试退出奖励界面失败");
             }
 
             if (!_marksStatus)
@@ -816,6 +817,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw new Exception("开启地脉花失败，已达最大重试次数");
         }
 
+        await Delay(500, _ct);
         _logger.LogDebug("检测地脉花交互状态，重试次数: {Retries}/{MaxRetries}", retries + 1, maxRetries);
         using var capture = CaptureToRectArea();
         var result1 = FindSafe(capture, _ocrRo2!);
@@ -869,7 +871,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return capture.Find(ro);
         }
 
-        var clamped = ClampRect(roi, capture.Width, capture.Height);
+        var clamped = roi.ClampTo(capture.Width, capture.Height);
         if (clamped.Width <= 0 || clamped.Height <= 0)
         {
             return new Region();
@@ -885,16 +887,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return capture.Find(cloned);
     }
 
-    private static Rect ClampRect(Rect roi, int maxWidth, int maxHeight)
-    {
-        // Clamp ROI to avoid OpenCV exceptions when the rectangle is out of bounds.
-        var x = Math.Clamp(roi.X, 0, Math.Max(0, maxWidth - 1));
-        var y = Math.Clamp(roi.Y, 0, Math.Max(0, maxHeight - 1));
-        var w = Math.Clamp(roi.Width, 0, Math.Max(0, maxWidth - x));
-        var h = Math.Clamp(roi.Height, 0, Math.Max(0, maxHeight - y));
-        return new Rect(x, y, w, h);
-    }
-
     private async Task<bool> AutoFight(int timeoutSeconds)
     {
         var fightCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
@@ -906,6 +898,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             await fightTask;
+        }
+        catch (Exception ex) when (ex is NormalEndException or TaskCanceledException)
+        {
         }
         catch (Exception ex)
         {

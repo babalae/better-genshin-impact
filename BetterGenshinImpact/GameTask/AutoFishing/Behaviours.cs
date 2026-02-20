@@ -857,8 +857,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 int hExtra = _cur.Height, vExtra = _cur.Height / 4;
-                blackboard.fishBoxRect = new Rect(_cur.X - hExtra, _cur.Y - vExtra,
-                     (topMat.Width / 2 - _cur.X) * 2 + hExtra * 2, _cur.Height + vExtra * 2);
+                {
+                    int rx = _cur.X - hExtra;
+                    int ry = _cur.Y - vExtra;
+                    int rw = (topMat.Width / 2 - _cur.X) * 2 + hExtra * 2;
+                    int rh = _cur.Height + vExtra * 2;
+                    blackboard.fishBoxRect = new Rect(rx, ry, rw, rh).ClampTo(imageRegion.SrcMat);
+                }
                 using var boxRa = imageRegion.Derive(blackboard.fishBoxRect);
                 boxRa.DrawSelf("FishBox", System.Drawing.Pens.LightPink);
                 logger.LogInformation("  识别到钓鱼框");

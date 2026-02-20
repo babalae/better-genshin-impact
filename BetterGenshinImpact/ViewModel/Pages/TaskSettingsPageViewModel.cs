@@ -436,7 +436,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnGoToAutoLeyLineOutcropUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://example.com/leyline.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/leyline.html"));
     }
 
 

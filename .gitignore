@@ -28,10 +28,11 @@ github_actions_cache/
 
 *.zip
 
-# Rider
+# IDE & AI tools
 .idea
 .trae
 .claude
 CLAUDE.md
+AGENTS.md
 
 __pycache__/
