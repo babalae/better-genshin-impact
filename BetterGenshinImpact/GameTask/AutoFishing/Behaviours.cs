@@ -862,12 +862,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     int ry = _cur.Y - vExtra;
                     int rw = (topMat.Width / 2 - _cur.X) * 2 + hExtra * 2;
                     int rh = _cur.Height + vExtra * 2;
-                    // 钳位到图像边界，防止低分辨率下坐标越界导致 OpenCV ROI 断言失败
-                    rx = Math.Max(0, rx);
-                    ry = Math.Max(0, ry);
-                    rw = Math.Min(rw, imageRegion.SrcMat.Cols - rx);
-                    rh = Math.Min(rh, imageRegion.SrcMat.Rows - ry);
-                    blackboard.fishBoxRect = new Rect(rx, ry, rw, rh);
+                    blackboard.fishBoxRect = new Rect(rx, ry, rw, rh).ClampTo(imageRegion.SrcMat);
                 }
                 using var boxRa = imageRegion.Derive(blackboard.fishBoxRect);
                 boxRa.DrawSelf("FishBox", System.Drawing.Pens.LightPink);

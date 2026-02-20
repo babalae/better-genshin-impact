@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
@@ -244,9 +245,10 @@ public class GetGridIconsTask : ISoloTask
         double width = 60;
         double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
         // 低分辨率下 237 * scale 的偏移量可能大于 itemRegion 中心位置，导致 X 为负，加保护
-        int iconX = Math.Max(0, (int)(itemRegion.Width / 2 - 237 * scale - width / 2));
-        int iconY = Math.Max(0, (int)(itemRegion.Height / 2 - height / 2));
-        Rect iconRect = new Rect(iconX, iconY, (int)width, (int)height);
+        Rect iconRect = new Rect(
+            (int)(itemRegion.Width / 2 - 237 * scale - width / 2),
+            (int)(itemRegion.Height / 2 - height / 2),
+            (int)width, (int)height).ClampTo(itemRegion.SrcMat);
         using Mat crop = itemRegion.SrcMat.SubMat(iconRect);
         return crop.Resize(new Size(125, 125));
     }
