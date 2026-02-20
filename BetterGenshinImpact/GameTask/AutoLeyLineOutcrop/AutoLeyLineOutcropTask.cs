@@ -37,7 +37,6 @@ namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 public class AutoLeyLineOutcropTask : ISoloTask
 {
     private readonly ILogger<AutoLeyLineOutcropTask> _logger = App.GetLogger<AutoLeyLineOutcropTask>();
-    private readonly AutoLeyLineOutcropConfig _config;
     private readonly AutoLeyLineOutcropParam _taskParam; 
     private readonly bool _oneDragonMode;
     private TpTask _tpTask = null!;

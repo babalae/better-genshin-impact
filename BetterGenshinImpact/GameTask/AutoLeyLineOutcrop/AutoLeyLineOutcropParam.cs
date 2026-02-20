@@ -32,7 +32,6 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     //通过BGI通知系统发送详细通知
     public bool IsNotification { get; set; }
     
-    
     public void SetDefault()
     {
         var config = TaskContext.Instance().Config.AutoLeyLineOutcropConfig;
@@ -51,14 +50,13 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         UseFragileResin= config.UseFragileResin;
         UseTransientResin= config.UseTransientResin;
         IsNotification= config.IsNotification;
+        Count = config.Count;
+        Country = config.Country;
+        LeyLineOutcropType = config.LeyLineOutcropType;
     }
 
-    public AutoLeyLineOutcropParam(int Count, string Country, string LeyLineOutcropType) : base(null, null)
+    public AutoLeyLineOutcropParam() : base(null, null)
     {
-        this.Count = Count;
-        this.Country = Country;
-        this.LeyLineOutcropType = LeyLineOutcropType;
-        
         SetDefault();
     }
 }

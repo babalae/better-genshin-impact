@@ -554,7 +554,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private async Task OnSwitchAutoLeyLineOutcrop()
     {
         SwitchAutoLeyLineOutcropEnabled = true;
-        AutoLeyLineOutcropParam autoLeyLineOutcropParam = new AutoLeyLineOutcropParam(Config.AutoLeyLineOutcropConfig.Count, Config.AutoLeyLineOutcropConfig.Country, Config.AutoLeyLineOutcropConfig.LeyLineOutcropType);
+        AutoLeyLineOutcropParam autoLeyLineOutcropParam = new AutoLeyLineOutcropParam();
         autoLeyLineOutcropParam.SetAutoLeyLineOutcropConfig(Config.AutoLeyLineOutcropConfig);
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoLeyLineOutcropTask(autoLeyLineOutcropParam));
