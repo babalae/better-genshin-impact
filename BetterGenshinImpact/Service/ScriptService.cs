@@ -419,8 +419,8 @@ public partial class ScriptService : IScriptService
             });
         
 
-        // 还原定时器
-        TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
+        // 触发器已在 TaskRunner.End() 中恢复，这里不再重复恢复，
+        // 避免与 Tick 持锁路径竞争导致 RunMulti 收口阶段阻塞。
         
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
         {
