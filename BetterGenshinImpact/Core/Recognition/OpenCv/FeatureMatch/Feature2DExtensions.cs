@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
 
@@ -24,7 +25,7 @@ public static class Feature2DExtensions
     public static void SaveFeatures(this Feature2D feature2D, string trainImagePath, string trainKeyPointsPath, string trainDescriptorsPath)
     {
         Mat trainDescriptors = new();
-        var img = Cv2.ImRead(trainImagePath, ImreadModes.Grayscale);
+        var img = Bv.ImRead(trainImagePath, ImreadModes.Grayscale);
 
         feature2D.DetectAndCompute(img, null, out var trainKeyPoints, trainDescriptors);
 
