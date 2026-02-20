@@ -149,6 +149,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     public async Task AutoUpdateSubscribedScripts()
     {
+        // 迁移旧 config.json 中的订阅路径到独立文件
+        MigrateSubscribedPathsFromConfig();
+
         try
         {
             var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
@@ -166,9 +169,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             await _repoWriteLock.WaitAsync();
             try
             {
-                // 迁移旧 config.json 中的订阅路径到独立文件（仅首次，放在锁内避免并发写风险）
-                MigrateSubscribedPathsFromConfig();
-
                 var subscribedPaths = GetSubscribedPathsForCurrentRepo();
                 if (subscribedPaths.Count == 0)
                 {
