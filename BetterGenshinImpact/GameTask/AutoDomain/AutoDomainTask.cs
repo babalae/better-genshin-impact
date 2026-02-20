@@ -457,7 +457,7 @@ public class AutoDomainTask : ISoloTask
         // 点击单人挑战确认并等待队伍界面--使用图像模版匹配的方法，也可以使用文字OCR的方法识别“单人挑战”直到消失
         await NewRetry.WaitForElementAppear(
             ElementAssets.Instance.PartyBtnChooseView,
-            async void () =>
+            () =>
             {
                 using var ra = CaptureToRectArea();
                 var ra2 = ra.Find(fightAssets.ConfirmRa);
