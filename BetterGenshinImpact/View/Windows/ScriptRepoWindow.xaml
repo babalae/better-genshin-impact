@@ -185,13 +185,15 @@
                                            Command="{Binding UpdateRepoCommand}"
                                            Content="更新仓库"
                                            Icon="{ui:SymbolIcon CloudSync24}"
-                                           HorizontalAlignment="Stretch" />
+                                           HorizontalAlignment="Stretch"
+                                           IsEnabled="{Binding IsUpdating, Converter={StaticResource InverseBooleanConverter}}" />
                                 <ui:Button Grid.Column="1"
                                            Margin="4,0,0,0"
                                            Command="{Binding ResetRepoCommand}"
                                            Content="重置仓库"
                                            Icon="{ui:SymbolIcon ArrowReset24}"
-                                           HorizontalAlignment="Stretch" />
+                                           HorizontalAlignment="Stretch"
+                                           IsEnabled="{Binding IsUpdating, Converter={StaticResource InverseBooleanConverter}}" />
                             </Grid>
 
 
@@ -307,17 +309,32 @@
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                               Text="{Binding UpdateProgressText}" />
                 <ProgressBar Grid.Row="1"
+                             IsIndeterminate="{Binding IsProgressIndeterminate}"
                              Maximum="100"
                              Value="{Binding UpdateProgressValue}" />
             </Grid>
 
             <!-- 公共按钮区域 -->
             <Grid Grid.Row="2" Margin="0,4,0,0">
-                <ui:Button Appearance="Primary"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+
+                <ui:Button Grid.Column="0"
+                           Margin="0,0,4,0"
+                           Appearance="Primary"
                            Command="{Binding OpenLocalScriptRepoCommand}"
                            Content="打开仓库"
                            Icon="{ui:SymbolIcon BookStar24}"
-                           HorizontalAlignment="Center"
+                           HorizontalAlignment="Stretch"
+                           IsEnabled="{Binding IsUpdating, Converter={StaticResource InverseBooleanConverter}}" />
+                <ui:Button Grid.Column="1"
+                           Margin="4,0,0,0"
+                           Command="{Binding UpdateSubscribedScriptsCommand}"
+                           Content="一键更新订阅"
+                           Icon="{ui:SymbolIcon ArrowDownload24}"
+                           HorizontalAlignment="Stretch"
                            IsEnabled="{Binding IsUpdating, Converter={StaticResource InverseBooleanConverter}}" />
             </Grid>
         </Grid>
