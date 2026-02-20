@@ -59,4 +59,12 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     {
         SetDefault();
     }
+    
+    public AutoLeyLineOutcropParam(int count, string country, string leyLineOutcropType) : base(null, null)
+    {
+        SetDefault();
+        this.Count = count;
+        this.Country = country;
+        this.LeyLineOutcropType = leyLineOutcropType;
+    }
 }
