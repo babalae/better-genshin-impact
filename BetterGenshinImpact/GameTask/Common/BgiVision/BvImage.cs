@@ -1,7 +1,9 @@
-﻿using System.Threading;
+﻿using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 
@@ -10,6 +12,12 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// </summary>
 public static partial class Bv
 {
+    
+    public static Mat ImRead(string fileName, ImreadModes flags = ImreadModes.Color)
+    {
+        return Mat.FromStream(File.OpenRead(fileName), flags);
+    }
+    
     /// <summary>
     /// 等待图像被找到
     /// </summary>

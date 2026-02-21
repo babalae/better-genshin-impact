@@ -69,7 +69,12 @@ public class ImageRegion : Region
     /// <returns></returns>
     public ImageRegion DeriveCrop(int x, int y, int w, int h)
     {
-        return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(x, y));
+        var rect = new Rect(x, y, w, h).ClampTo(SrcMat);
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rect), $"DeriveCrop 裁剪区域无效: ({x},{y},{w},{h})，图像大小: {SrcMat.Cols}x{SrcMat.Rows}");
+        }
+        return new ImageRegion(new Mat(SrcMat, rect), rect.X, rect.Y, this, new TranslationConverter(rect.X, rect.Y));
     }
 
     public ImageRegion DeriveCrop(double dx, double dy, double dw, double dh)
@@ -78,7 +83,12 @@ public class ImageRegion : Region
         var y = (int)Math.Round(dy);
         var w = (int)Math.Round(dw);
         var h = (int)Math.Round(dh);
-        return new ImageRegion(new Mat(SrcMat, new Rect(x, y, w, h)), x, y, this, new TranslationConverter(x, y));
+        var rect = new Rect(x, y, w, h).ClampTo(SrcMat);
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rect), $"DeriveCrop 裁剪区域无效: ({x},{y},{w},{h})，图像大小: {SrcMat.Cols}x{SrcMat.Rows}");
+        }
+        return new ImageRegion(new Mat(SrcMat, rect), rect.X, rect.Y, this, new TranslationConverter(rect.X, rect.Y));
     }
 
     public ImageRegion DeriveCrop(Rect rect)

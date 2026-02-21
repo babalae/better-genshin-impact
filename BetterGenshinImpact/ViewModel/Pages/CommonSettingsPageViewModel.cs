@@ -368,36 +368,27 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void ImportLocalScriptsRepoZip()
+    private async Task ImportLocalScriptsRepoZip()
     {
         Directory.CreateDirectory(ScriptRepoUpdater.ReposPath);
 
         var dialog = new OpenFileDialog
         {
+            Title = "选择脚本仓库压缩包",
             Filter = "Zip Files (*.zip)|*.zip",
             Multiselect = false
         };
 
         if (dialog.ShowDialog() == true)
         {
-            var zipPath = dialog.FileName;
-            // 删除旧文件夹
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
+            try
             {
-                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPathOld);
-            }
-
-            ZipFile.ExtractToDirectory(zipPath, ScriptRepoUpdater.ReposPath, true);
-
-            if (Directory.Exists(ScriptRepoUpdater.CenterRepoPathOld))
-            {
-                DirectoryHelper.CopyDirectory(ScriptRepoUpdater.CenterRepoPathOld, ScriptRepoUpdater.CenterRepoPath);
+                await ScriptRepoUpdater.Instance.ImportLocalRepoZip(dialog.FileName);
                 ThemedMessageBox.Information("脚本仓库离线包导入成功！");
             }
-            else
+            catch (Exception ex)
             {
-                ThemedMessageBox.Error("脚本仓库离线包导入失败，不正确的脚本仓库离线包内容！");
-                DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.ReposPath);
+                ThemedMessageBox.Error($"脚本仓库离线包导入失败：{ex.Message}");
             }
         }
     }

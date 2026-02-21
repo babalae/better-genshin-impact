@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.Core.Recognition.OpenCv.TemplateMatch;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -33,12 +34,12 @@ public class BaseMapLayerByTemplateMatch
         SpeedTimer speedTimer = new($"加载 {LayerId} 地图图片");
         var colorMapFileName = LayerId + "_color" + ".webp";
         var colorMapPath = Path.Combine(layerDir, colorMapFileName);
-        var coarseColorMap = Cv2.ImRead(colorMapPath)?? throw new Exception($"彩色分层地图 {LayerId} 读取失败");
+        var coarseColorMap = Bv.ImRead(colorMapPath)?? throw new Exception($"彩色分层地图 {LayerId} 读取失败");
         speedTimer.Record("精确匹配用彩图");
         CoarseColorMatcher = new FastSqDiffMatcher(coarseColorMap, new Size(52, 52));
         var grayMapFileName = LayerId + "_gray" + (IsOverSize ? ".png" : ".webp");
         var grayMapPath = Path.Combine(layerDir, grayMapFileName);
-        FineGrayMap = Cv2.ImRead(grayMapPath, ImreadModes.Grayscale)?? throw new Exception($"灰度分层地图 {LayerId} 读取失败");
+        FineGrayMap = Bv.ImRead(grayMapPath, ImreadModes.Grayscale)?? throw new Exception($"灰度分层地图 {LayerId} 读取失败");
         speedTimer.Record("粗匹配用灰度图");
         speedTimer.DebugPrint();
     }

@@ -53,6 +53,7 @@ public partial class ScriptRepoWindow
 
     // 添加进度相关的可观察属性
     [ObservableProperty] private bool _isUpdating;
+    [ObservableProperty] private bool _isProgressIndeterminate;
     [ObservableProperty] private int _updateProgressValue;
     [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
     [ObservableProperty] private ScriptConfig _config = TaskContext.Instance().Config.ScriptConfig;
@@ -87,9 +88,14 @@ public partial class ScriptRepoWindow
         DataContext = this;
         Config.PropertyChanged += OnConfigPropertyChanged;
         PropertyChanged += OnPropertyChanged;
+        ScriptRepoUpdater.Instance.AutoUpdateStateChanged += OnAutoUpdateStateChanged;
 
         // 设置 PasswordBox 的初始值
-        Loaded += (s, e) => GitTokenPasswordBox.Password = GitToken;
+        Loaded += (s, e) =>
+        {
+            GitTokenPasswordBox.Password = GitToken;
+            SyncAutoUpdateState();
+        };
 
         SourceInitialized += (s, e) =>
         {
@@ -147,6 +153,34 @@ public partial class ScriptRepoWindow
     {
         Config.PropertyChanged -= OnConfigPropertyChanged;
         PropertyChanged -= OnPropertyChanged;
+        ScriptRepoUpdater.Instance.AutoUpdateStateChanged -= OnAutoUpdateStateChanged;
+    }
+
+    /// <summary>
+    /// 后台自动更新状态变化回调（可能在非 UI 线程触发）
+    /// </summary>
+    private void OnAutoUpdateStateChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(SyncAutoUpdateState);
+    }
+
+    /// <summary>
+    /// 同步后台自动更新状态到 Dialog 的进度条和按钮
+    /// </summary>
+    private void SyncAutoUpdateState()
+    {
+        if (ScriptRepoUpdater.Instance.IsAutoUpdating)
+        {
+            IsUpdating = true;
+            IsProgressIndeterminate = true;
+            UpdateProgressText = "后台正在自动更新订阅脚本...";
+            Toast.Information("后台正在自动更新订阅脚本，请等待完成");
+        }
+        else
+        {
+            IsUpdating = false;
+            IsProgressIndeterminate = false;
+        }
     }
 
     private void OnConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -170,13 +204,10 @@ public partial class ScriptRepoWindow
 
     private void InitializeRepoChannels()
     {
-        _repoChannels = new ObservableCollection<RepoChannel>
-        {
-            new("CNB", "https://cnb.cool/bettergi/bettergi-scripts-list"),
-            new("GitCode", "https://gitcode.com/huiyadanli/bettergi-scripts-list"),
-            new("GitHub", "https://github.com/babalae/bettergi-scripts-list"),
-            new("自定义", "https://example.com/custom-repo")
-        };
+        _repoChannels = new ObservableCollection<RepoChannel>(
+            ScriptRepoUpdater.RepoChannels.Select(kv => new RepoChannel(kv.Key, kv.Value))
+        );
+        _repoChannels.Add(new RepoChannel("自定义", "https://example.com/custom-repo"));
 
         // 根据配置中保存的渠道名称恢复选择
         if (string.IsNullOrEmpty(Config.SelectedChannelName))
@@ -254,18 +285,21 @@ public partial class ScriptRepoWindow
 
             // 设置进度显示
             IsUpdating = true;
+            IsProgressIndeterminate = true;
             UpdateProgressValue = 0;
             UpdateProgressText = "准备更新，请耐心等待...";
 
-            // 执行更新
-            var (_, updated) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
+            // 执行更新（Task.Run 避免 SynchronizationContext 将后续 IO 调度回 UI 线程）
+            var (_, updated) = await Task.Run(() => ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl,
                 (path, steps, totalSteps) =>
                 {
-                    // 更新进度显示
+                    // 收到实际进度后切换为确定模式
+                    IsProgressIndeterminate = false;
+                    // 更新进度显示（WPF 绑定引擎会自动将跨线程 PropertyChanged 调度到 UI 线程）
                     double progressPercentage = totalSteps > 0 ? Math.Min(100, (double)steps / totalSteps * 100) : 0;
                     UpdateProgressValue = (int)progressPercentage;
                     UpdateProgressText = $"{path}";
-                });
+                }));
 
             // 更新结果提示
             if (updated)
@@ -285,6 +319,7 @@ public partial class ScriptRepoWindow
         {
             // 隐藏进度条
             IsUpdating = false;
+            IsProgressIndeterminate = false;
         }
     }
 
@@ -382,15 +417,8 @@ public partial class ScriptRepoWindow
         {
             try
             {
-                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-                {
-                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                    Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
-                }
-                else
-                {
-                    Toast.Information("脚本仓库不存在，无需重置");
-                }
+                await ScriptRepoUpdater.Instance.ResetCurrentRepoAsync();
+                Toast.Success("脚本仓库已重置，请重新更新脚本仓库。");
             }
             catch (Exception ex)
             {
@@ -479,10 +507,19 @@ public partial class ScriptRepoWindow
             if (openFileDialog.ShowDialog() == true)
             {
                 IsUpdating = true;
+                IsProgressIndeterminate = false; // 导入有实际百分比进度
                 UpdateProgressValue = 0;
                 UpdateProgressText = "正在导入脚本仓库，请耐心等待...";
 
-                await ImportZipFile(openFileDialog.FileName);
+                await ScriptRepoUpdater.Instance.ImportLocalRepoZip(openFileDialog.FileName, (progress, text) =>
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        UpdateProgressValue = progress;
+                        UpdateProgressText = text;
+                    });
+                });
+
                 Toast.Success("脚本仓库导入成功！");
             }
         }
@@ -496,93 +533,34 @@ public partial class ScriptRepoWindow
         }
     }
 
-    private async Task ImportZipFile(string zipFilePath)
+    [RelayCommand]
+    private async Task UpdateSubscribedScripts()
     {
-        await Task.Run(() =>
+        if (IsUpdating)
         {
-            var tempPath = ScriptRepoUpdater.ReposTempPath;
-            try
-            {
-                // 阶段1: 准备工作 (0-10%)
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 0;
-                    UpdateProgressText = "正在准备导入环境...";
-                });
+            Toast.Warning("请等待当前操作完成后再进行更新。");
+            return;
+        }
 
-                var tempUnzipDir = Path.Combine(tempPath, "importZipFile");
-
-                // 先删除临时目录
-                DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
-
-                // 创建目标目录
-                Directory.CreateDirectory(tempUnzipDir);
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 10;
-                    UpdateProgressText = "准备完成，开始解压文件...";
-                });
-
-                // 阶段2: 解压zip文件 (10-50%)
-                ZipFile.ExtractToDirectory(zipFilePath, tempUnzipDir, true);
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 50;
-                    UpdateProgressText = "文件解压完成，正在验证仓库结构...";
-                });
-
-                // 阶段3: 查找并验证 repo.json (50-60%)
-                var repoJsonPath = Directory.GetFiles(tempUnzipDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                if (repoJsonPath == null)
-                {
-                    throw new FileNotFoundException("未找到 repo.json 文件，导入失败。");
-                }
-
-                var repoDir = Path.GetDirectoryName(repoJsonPath)!;
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 60;
-                    UpdateProgressText = "仓库结构验证通过，正在清理旧数据...";
-                });
-
-                // 阶段4: 删除旧的目标目录 (60-70%)
-                if (Directory.Exists(ScriptRepoUpdater.CenterRepoPath))
-                {
-                    DirectoryHelper.DeleteReadOnlyDirectory(ScriptRepoUpdater.CenterRepoPath);
-                }
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 70;
-                    UpdateProgressText = "旧数据清理完成，正在复制新仓库...";
-                });
-
-                // 阶段5: 复制新目录 (70-95%)
-                DirectoryHelper.CopyDirectory(repoDir, ScriptRepoUpdater.CenterRepoPath);
-
-                Dispatcher.Invoke(() =>
-                {
-                    UpdateProgressValue = 95;
-                    UpdateProgressText = "仓库复制完成，正在清理临时文件...";
-                });
-            }
-            finally
-            {
-                // 阶段6: 清理临时文件 (95-100%)
-                DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
-            }
-
-        });
-
-        // 最终完成
-        Dispatcher.Invoke(() =>
+        try
         {
-            UpdateProgressValue = 100;
-            UpdateProgressText = "导入完成";
-        });
+            IsUpdating = true;
+            IsProgressIndeterminate = true;
+            UpdateProgressValue = 0;
+            UpdateProgressText = "正在更新订阅脚本...";
+
+            // Task.Run 避免 SynchronizationContext 将 checkout/IO 调度回 UI 线程
+            await Task.Run(() => ScriptRepoUpdater.Instance.ManualUpdateSubscribedScripts());
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"更新订阅脚本失败: {ex.Message}");
+        }
+        finally
+        {
+            IsUpdating = false;
+            IsProgressIndeterminate = false;
+        }
     }
 
     /// <summary>

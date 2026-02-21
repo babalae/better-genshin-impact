@@ -1,5 +1,6 @@
 ﻿using OpenCvSharp;
 using System;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask.Common.Map;
 
@@ -119,7 +120,7 @@ public class CharacterOrientation
 
     public static int GameAngle2(string path)
     {
-        var mat = Cv2.ImRead(path);
+        var mat = Bv.ImRead(path);
         return Compute(mat);
     }
 }

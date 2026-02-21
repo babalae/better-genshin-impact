@@ -870,7 +870,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return capture.Find(ro);
         }
 
-        var clamped = ClampRect(roi, capture.Width, capture.Height);
+        var clamped = roi.ClampTo(capture.Width, capture.Height);
         if (clamped.Width <= 0 || clamped.Height <= 0)
         {
             return new Region();
@@ -884,16 +884,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var cloned = ro.Clone();
         cloned.RegionOfInterest = clamped;
         return capture.Find(cloned);
-    }
-
-    private static Rect ClampRect(Rect roi, int maxWidth, int maxHeight)
-    {
-        // Clamp ROI to avoid OpenCV exceptions when the rectangle is out of bounds.
-        var x = Math.Clamp(roi.X, 0, Math.Max(0, maxWidth - 1));
-        var y = Math.Clamp(roi.Y, 0, Math.Max(0, maxHeight - 1));
-        var w = Math.Clamp(roi.Width, 0, Math.Max(0, maxWidth - x));
-        var h = Math.Clamp(roi.Height, 0, Math.Max(0, maxHeight - y));
-        return new Rect(x, y, w, h);
     }
 
     private async Task<bool> AutoFight(int timeoutSeconds)

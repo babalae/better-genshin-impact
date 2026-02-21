@@ -998,11 +998,10 @@ public class GeniusInvokationControl
 
     public void AppendCharacterStatus(Character character, Mat greyMat, int hp = -2)
     {
-        // 截取出战角色区域扩展
-        using var characterMat = new Mat(greyMat, new Rect(character.Area.X,
-            character.Area.Y,
-            character.Area.Width + 40,
-            character.Area.Height + 10));
+        // 截取出战角色区域扩展，钳位到图像边界防止越界
+        var charRect = new Rect(character.Area.X, character.Area.Y,
+            character.Area.Width + 40, character.Area.Height + 10).ClampTo(greyMat);
+        using var characterMat = new Mat(greyMat, charRect);
         // 识别角色异常状态
         var pCharacterStatusFreeze = MatchTemplateHelper.MatchTemplate(characterMat, _assets.CharacterStatusFreezeMat,
             TemplateMatchModes.CCoeffNormed);
@@ -1144,9 +1143,13 @@ public class GeniusInvokationControl
             }
             else
             {
-                hpMat = new Mat(imageRegion.SrcMat, new Rect(cardRect.X + _config.CharacterCardExtendHpRect.X,
+                // 出战角色 HP 区域向上偏移，钳位到图像边界防止越界
+                var activeHpRect = new Rect(
+                    cardRect.X + _config.CharacterCardExtendHpRect.X,
                     cardRect.Y + _config.CharacterCardExtendHpRect.Y - _config.ActiveCharacterCardSpace,
-                    _config.CharacterCardExtendHpRect.Width, _config.CharacterCardExtendHpRect.Height));
+                    _config.CharacterCardExtendHpRect.Width,
+                    _config.CharacterCardExtendHpRect.Height).ClampTo(imageRegion.SrcMat);
+                hpMat = new Mat(imageRegion.SrcMat, activeHpRect);
                 text = OcrFactory.Paddle.Ocr(hpMat);
                 //Cv2.ImWrite($"log\\hp_active_{i}.jpg", hpMat);
                 Debug.WriteLine($"角色{i}出战HP位置识别结果{text}");

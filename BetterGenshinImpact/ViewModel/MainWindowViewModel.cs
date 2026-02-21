@@ -300,6 +300,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
 
+        // 自动更新已订阅的脚本 会先更新仓库
+        // 使用 Task.Run 确保整个流程在线程池执行，避免 WPF SynchronizationContext
+        // 将 await 后续调度回 UI 线程导致大量 IO/Git 操作阻塞界面
+        _ = Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+
         // 清理临时目录
         TempManager.CleanUp();
     }
