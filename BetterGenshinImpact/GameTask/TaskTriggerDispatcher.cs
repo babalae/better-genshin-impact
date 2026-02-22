@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
@@ -259,14 +259,11 @@ namespace BetterGenshinImpact.GameTask
                         Debug.WriteLine("游戏窗口不在前台, 不再进行截屏");
                     }
 
-                    if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+                    var pName = SystemControl.GetActiveProcessName();
+                    if (pName != "Idle" && pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
                     {
-                        var pName = SystemControl.GetActiveProcessName();
-                        if (pName != "Idle" && pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
-                        {
-                            // Debug.WriteLine(pName + "：hide mask window");
-                            maskWindow.Invoke(() => { maskWindow.HideSelf(); });
-                        }
+                        // Debug.WriteLine(pName + "：hide mask window");
+                        maskWindow.Invoke(() => { maskWindow.HideSelf(); });
                     }
 
                     _prevGameActive = active;
@@ -302,23 +299,20 @@ namespace BetterGenshinImpact.GameTask
                 else
                 {
                     PictureInPictureService.Hide(resetManual: true);
-                    if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
+                    // if (!_prevGameActive)
+                    // {
+                    maskWindow.Invoke(() =>
                     {
-                        // if (!_prevGameActive)
-                        // {
-                        maskWindow.Invoke(() =>
+                        if (maskWindow.IsExist())
                         {
-                            if (maskWindow.IsExist())
+                            maskWindow.Show();
+                            if (!_prevGameActive)
                             {
-                                maskWindow.Show();
-                                if (!_prevGameActive)
-                                {
-                                    maskWindow.BringToTop();
-                                }
+                                maskWindow.BringToTop();
                             }
-                        });
-                        // }
-                    }
+                        }
+                    });
+                    // }
 
                     _prevGameActive = active;
                     // // 移动游戏窗口的时候同步遮罩窗口的位置,此时不进行捕获

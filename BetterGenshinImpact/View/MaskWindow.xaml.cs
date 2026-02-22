@@ -43,7 +43,6 @@ public partial class MaskWindow : Window
     private static readonly Typeface _typeface;
     private static readonly Typeface _fgiTypeface;
 
-    private nint _hWnd;
     private MaskWindowViewModel? _viewModel;
 
     private IRichTextBox? _richTextBox;
@@ -104,14 +103,7 @@ public partial class MaskWindow : Window
 
     public void RefreshPosition()
     {
-        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
-        {
-            RefreshPositionForSubform();
-        }
-        else
-        {
-            RefreshPositionForNormal();
-        }
+        RefreshPositionForNormal();
     }
 
     public void RefreshPositionForNormal()
@@ -128,13 +120,6 @@ public partial class MaskWindow : Window
             Height = currentRect.Height / dpiScale;
             BringToTop();
         });
-    }
-
-    public void RefreshPositionForSubform()
-    {
-        nint targetHWnd = TaskContext.Instance().GameHandle;
-        _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, targetRect.Width, targetRect.Height, User32.SetWindowPosFlags.SWP_SHOWWINDOW);
     }
 
     public MaskWindow()
@@ -203,17 +188,6 @@ public partial class MaskWindow : Window
         }
 
         UpdateClickThroughState();
-
-        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
-        {
-            _hWnd = new WindowInteropHelper(this).Handle;
-            nint targetHWnd = TaskContext.Instance().GameHandle;
-
-            if (User32.GetParent(_hWnd) != targetHWnd)
-            {
-                _ = User32.SetParent(_hWnd, targetHWnd);
-            }
-        }
 
         RefreshPosition();
         PrintSystemInfo();
