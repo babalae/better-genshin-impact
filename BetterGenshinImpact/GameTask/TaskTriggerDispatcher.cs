@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -265,7 +264,7 @@ namespace BetterGenshinImpact.GameTask
                         var pName = SystemControl.GetActiveProcessName();
                         var shouldHideMask = pName != "Idle" && pName != "BetterGI" &&
                                              pName != "YuanShen" && pName != "GenshinImpact" &&
-                                             pName != "Genshin Impact Cloud Game";
+                                             pName != "Genshin Impact Cloud Game" && pName != "Genshin Impact Cloud";
 
                         // 检查自定义进程名
                         if (shouldHideMask)

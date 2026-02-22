@@ -86,7 +86,7 @@ public class SystemControl
     public static bool IsGenshinImpactActiveByProcess()
     {
         var name = GetActiveProcessName();
-        if (name is "YuanShen" or "yuanshen" or "GenshinImpact" or "Genshin Impact Cloud Game")
+        if (name is "YuanShen" or "GenshinImpact" or "Genshin Impact Cloud Game" or "Genshin Impact Cloud")
             return true;
 
         try
@@ -345,7 +345,7 @@ public class SystemControl
     {
         try
         {
-            var processNames = new List<string> { "YuanShen", "GenshinImpact", "Genshin Impact Cloud Game" };
+            var processNames = new List<string> { "YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud" };
             try
             {
                 var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
