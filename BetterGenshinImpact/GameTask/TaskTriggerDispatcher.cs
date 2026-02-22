@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -262,7 +263,28 @@ namespace BetterGenshinImpact.GameTask
                     if (!TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
                     {
                         var pName = SystemControl.GetActiveProcessName();
-                        if (pName != "Idle" && pName != "BetterGI" && pName != "YuanShen" && pName != "GenshinImpact" && pName != "Genshin Impact Cloud Game")
+                        var shouldHideMask = pName != "Idle" && pName != "BetterGI" &&
+                                             pName != "YuanShen" && pName != "GenshinImpact" &&
+                                             pName != "Genshin Impact Cloud Game";
+
+                        // 检查自定义进程名
+                        if (shouldHideMask)
+                        {
+                            try
+                            {
+                                var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+                                if (!string.IsNullOrEmpty(installPath))
+                                {
+                                    var customName = Path.GetFileNameWithoutExtension(installPath);
+                                    if (!string.IsNullOrEmpty(customName) &&
+                                        string.Equals(pName, customName, StringComparison.OrdinalIgnoreCase))
+                                        shouldHideMask = false;
+                                }
+                            }
+                            catch { /* ignore */ }
+                        }
+
+                        if (shouldHideMask)
                         {
                             // Debug.WriteLine(pName + "：hide mask window");
                             maskWindow.Invoke(() => { maskWindow.HideSelf(); });

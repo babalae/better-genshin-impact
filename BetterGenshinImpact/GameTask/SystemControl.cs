@@ -1,5 +1,6 @@
 using BetterGenshinImpact.View.Windows;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,7 +14,23 @@ public class SystemControl
 {
     public static nint FindGenshinImpactHandle()
     {
-        return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud");
+        var handle = FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud");
+        if (handle != 0) return handle;
+
+        // 从安装路径推导进程名，支持私服等自定义可执行文件名
+        try
+        {
+            var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+            if (!string.IsNullOrEmpty(installPath))
+            {
+                var customName = Path.GetFileNameWithoutExtension(installPath);
+                if (!string.IsNullOrEmpty(customName))
+                    return FindHandleByProcessName(customName);
+            }
+        }
+        catch { /* ignore */ }
+
+        return 0;
     }
 
     public static async Task<nint> StartFromLocalAsync(string path)
@@ -69,7 +86,23 @@ public class SystemControl
     public static bool IsGenshinImpactActiveByProcess()
     {
         var name = GetActiveProcessName();
-        return name is "YuanShen" or "yuanshen" or "GenshinImpact" or "Genshin Impact Cloud Game";
+        if (name is "YuanShen" or "yuanshen" or "GenshinImpact" or "Genshin Impact Cloud Game")
+            return true;
+
+        try
+        {
+            var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+            if (!string.IsNullOrEmpty(installPath))
+            {
+                var customName = Path.GetFileNameWithoutExtension(installPath);
+                if (!string.IsNullOrEmpty(customName) &&
+                    string.Equals(name, customName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { /* ignore */ }
+
+        return false;
     }
     
     public static string GetActiveByProcess()
@@ -312,11 +345,20 @@ public class SystemControl
     {
         try
         {
-            // 尝试通过进程名称查找原神进程
-            var processes = Process.GetProcessesByName("YuanShen")
-                .Concat(Process.GetProcessesByName("GenshinImpact"))
-                .Concat(Process.GetProcessesByName("Genshin Impact Cloud Game"))
-                .ToArray();
+            var processNames = new List<string> { "YuanShen", "GenshinImpact", "Genshin Impact Cloud Game" };
+            try
+            {
+                var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+                if (!string.IsNullOrEmpty(installPath))
+                {
+                    var customName = Path.GetFileNameWithoutExtension(installPath);
+                    if (!string.IsNullOrEmpty(customName) && !processNames.Contains(customName))
+                        processNames.Add(customName);
+                }
+            }
+            catch { /* ignore */ }
+
+            var processes = processNames.SelectMany(Process.GetProcessesByName).ToArray();
 
             if (processes.Length > 0)
             {

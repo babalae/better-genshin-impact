@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -167,11 +168,28 @@ public partial class PickerWindow : FluentWindow
 
     private static bool IsGenshinWindow(CapturableWindow window)
     {
-        return window is
-        { Name: "原神", ProcessName: "YuanShen" } or
-        { Name: "云·原神", ProcessName: "Genshin Impact Cloud Game" } or
-        { Name: "Genshin Impact", ProcessName: "GenshinImpact" } or
-        { Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud" };
+        if (window is
+            { Name: "原神", ProcessName: "YuanShen" } or
+            { Name: "云·原神", ProcessName: "Genshin Impact Cloud Game" } or
+            { Name: "Genshin Impact", ProcessName: "GenshinImpact" } or
+            { Name: "Genshin Impact · Cloud", ProcessName: "Genshin Impact Cloud" })
+            return true;
+
+        // 从安装路径推导进程名，支持私服等自定义可执行文件名
+        try
+        {
+            var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+            if (!string.IsNullOrEmpty(installPath))
+            {
+                var customName = Path.GetFileNameWithoutExtension(installPath);
+                if (!string.IsNullOrEmpty(customName) &&
+                    string.Equals(window.ProcessName, customName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { /* ignore */ }
+
+        return false;
     }
 
     private static bool AskIsThisGenshinImpact(CapturableWindow window)
