@@ -82,7 +82,6 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             PlaceholderText = "每行一条记录",
             Text = exactText
         };
@@ -94,7 +93,6 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             PlaceholderText = "每行一条记录",
             Text = fuzzyText
         };
@@ -136,8 +134,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
         if (p.DialogResult == true)
         {
-            File.WriteAllText(Global.Absolute(exactPath), exactTextBox.Text);
-            File.WriteAllText(Global.Absolute(fuzzyPath), fuzzyTextBox.Text);
+            Global.WriteAllText(exactPath, exactTextBox.Text);
+            Global.WriteAllText(fuzzyPath, fuzzyTextBox.Text);
             GameTaskManager.RefreshTriggerConfigs();
         }
     }
