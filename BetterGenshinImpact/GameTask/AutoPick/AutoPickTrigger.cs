@@ -444,6 +444,11 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             return true;
         }
+        
+        if (text.Contains("月谕圣牌"))
+        {
+            return true;
+        }
 
         return false;
     }
