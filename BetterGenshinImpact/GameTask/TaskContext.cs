@@ -5,6 +5,8 @@ using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using BetterGenshinImpact.Core.Script.Group;
 
@@ -74,5 +76,35 @@ namespace BetterGenshinImpact.GameTask
         /// 注意 IsInitialized = false 时，这个值就会被设置
         /// </summary>
         public DateTime LinkedStartGenshinTime { get; set; } = DateTime.MinValue;
+
+        public List<string> GetGenshinGameProcessNameList()
+        {
+            if (IsInitialized)
+            {
+                return [SystemInfo.GameProcessName];
+            }
+            else
+            {
+                List<string> list = ["YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud"];
+                try
+                {
+                    var installPath = Config.GenshinStartConfig.InstallPath;
+                    if (!string.IsNullOrEmpty(installPath))
+                    {
+                        var customName = Path.GetFileNameWithoutExtension(installPath);
+                        if (!string.IsNullOrEmpty(customName) && !list.Contains(customName))
+                        {
+                            list.Insert(0, customName); // 将用户自定义的进程名放在列表前面，优先匹配
+                        }
+                    }
+                }
+                catch
+                {
+                    /* ignore */
+                }
+
+                return list;
+            }
+        }
     }
 }

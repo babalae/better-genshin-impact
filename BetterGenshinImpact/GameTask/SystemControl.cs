@@ -13,7 +13,8 @@ public class SystemControl
 {
     public static nint FindGenshinImpactHandle()
     {
-        return FindHandleByProcessName("YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud");
+        var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+        return FindHandleByProcessName(processNames.ToArray());
     }
 
     public static async Task<nint> StartFromLocalAsync(string path)
@@ -69,7 +70,13 @@ public class SystemControl
     public static bool IsGenshinImpactActiveByProcess()
     {
         var name = GetActiveProcessName();
-        return name is "YuanShen" or "yuanshen" or "GenshinImpact" or "Genshin Impact Cloud Game";
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+        return processNames.Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
     }
     
     public static string GetActiveByProcess()
@@ -312,10 +319,11 @@ public class SystemControl
     {
         try
         {
-            // 尝试通过进程名称查找原神进程
-            var processes = Process.GetProcessesByName("YuanShen")
-                .Concat(Process.GetProcessesByName("GenshinImpact"))
-                .Concat(Process.GetProcessesByName("Genshin Impact Cloud Game"))
+            var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
+            var processes = processNames
+                .SelectMany(Process.GetProcessesByName)
+                .GroupBy(p => p.Id)
+                .Select(g => g.First())
                 .ToArray();
 
             if (processes.Length > 0)
