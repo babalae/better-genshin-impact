@@ -78,6 +78,12 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
 
+        public double MiniMapOverlayLeftRatio => 67d / 1920d;
+
+        public double MiniMapOverlayTopRatio => 21d / 1080d;
+
+        public double MiniMapOverlaySizeRatio => 200d / 1080d;
+
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
 
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =

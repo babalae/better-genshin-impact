@@ -1,7 +1,8 @@
 using System;
-using System.Windows;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Layer;
@@ -9,6 +10,8 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
+using Rect = System.Windows.Rect;
 
 namespace BetterGenshinImpact.GameTask.MapMask;
 
@@ -23,7 +26,7 @@ public class MapMaskTrigger : ITaskTrigger
     public bool IsEnabled { get; set; }
     public int Priority => 1; // 低优先级
     public bool IsExclusive => false;
-    
+
     public GameUiCategory SupportedGameUiCategory => GameUiCategory.BigMap;
 
     private readonly MapMaskConfig _config = TaskContext.Instance().Config.MapMaskConfig;
@@ -40,11 +43,13 @@ public class MapMaskTrigger : ITaskTrigger
     private OpenCvSharp.Rect _prevRect = default;
 
     private const int RectDebounceThreshold = 3;
+    
+    private readonly NavigationInstance _navigationInstance = new();
 
     public void Init()
     {
         IsEnabled = _config.Enabled;
-        
+
         // 关闭时隐藏UI
         if (!IsEnabled)
         {
@@ -108,8 +113,8 @@ public class MapMaskTrigger : ITaskTrigger
                             _prevRect = default;
                             return;
                         }
-                        
-                        
+
+
                         // if (_prevRect != default)
                         // {
                         //     var dx = Math.Abs(rect256.X - _prevRect.X);
@@ -130,6 +135,27 @@ public class MapMaskTrigger : ITaskTrigger
             }
             else
             {
+                if ((_config.MiniMapMaskEnabled || _config.PathAutoRecordEnabled) && Bv.IsInMainUi(region))
+                {
+                    // 主界面上展示小地图
+                    if (_config.MiniMapMaskEnabled)
+                    {
+                        var miniPoint = _navigationInstance.GetPositionStable(region, nameof(MapTypes.Teyvat), TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
+                        if (miniPoint != default)
+                        {
+                            UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(miniPoint.X, miniPoint.Y,  300, 300); });
+                        }
+
+                        // 自动记录路径
+                        if (_config.PathAutoRecordEnabled)
+                        {
+                            // ...
+                        }
+                    }
+                    
+
+                }
+
                 _prevRect = default;
             }
         }
