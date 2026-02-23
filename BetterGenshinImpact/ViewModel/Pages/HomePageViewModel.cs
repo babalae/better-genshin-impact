@@ -383,7 +383,7 @@ public partial class HomePageViewModel : ViewModel
             // 弹出选择文件夹对话框
             var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
             {
-                Filter = "原神|YuanShen.exe|原神国际服|GenshinImpact.exe|所有文件|*.*"
+                Filter = "原神|YuanShen.exe;GenshinImpact.exe|可执行文件|*.exe|所有文件|*.*"
             };
             if (dialog.ShowDialog() == true)
             {
