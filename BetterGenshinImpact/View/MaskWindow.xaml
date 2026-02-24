@@ -87,6 +87,7 @@
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
                 <controls:MiniMapPointsCanvas x:Name="MiniMapPointsCanvasControl"
+                                              Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               PointsSource="{Binding MapPoints}"
                                               LabelsSource="{Binding MapPointLabels}"
                                               IsHitTestVisible="False">
