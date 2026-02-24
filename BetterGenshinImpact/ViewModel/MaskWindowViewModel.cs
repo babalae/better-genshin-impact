@@ -9,26 +9,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using LazyCache;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using PresentMonFps;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BetterGenshinImpact.Model.MaskMap;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
@@ -78,11 +70,11 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
 
-        public double MiniMapOverlayLeftRatio => 67d / 1920d;
+        public double MiniMapOverlayLeftRatio => 50d / 1920d;
 
-        public double MiniMapOverlayTopRatio => 21d / 1080d;
+        public double MiniMapOverlayTopRatio =>14d / 1080d;
 
-        public double MiniMapOverlaySizeRatio => 200d / 1080d;
+        public double MiniMapOverlaySizeRatio => 212d / 1080d;
 
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
 

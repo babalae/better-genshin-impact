@@ -43,7 +43,7 @@ public class MapMaskTrigger : ITaskTrigger
     private OpenCvSharp.Rect _prevRect = default;
 
     private const int RectDebounceThreshold = 3;
-    
+
     private readonly NavigationInstance _navigationInstance = new();
 
     public void Init()
@@ -143,7 +143,8 @@ public class MapMaskTrigger : ITaskTrigger
                         var miniPoint = _navigationInstance.GetPositionStable(region, nameof(MapTypes.Teyvat), TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
                         if (miniPoint != default)
                         {
-                            const double viewportSize = 300;
+                            // 展示窗口是 212 
+                            const double viewportSize = 353;
                             UIDispatcherHelper.Invoke(() =>
                             {
                                 MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(
@@ -153,6 +154,10 @@ public class MapMaskTrigger : ITaskTrigger
                                     viewportSize);
                             });
                         }
+                        else
+                        {
+                            UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0); });
+                        }
 
                         // 自动记录路径
                         if (_config.PathAutoRecordEnabled)
@@ -160,8 +165,6 @@ public class MapMaskTrigger : ITaskTrigger
                             // ...
                         }
                     }
-                    
-
                 }
 
                 _prevRect = default;
