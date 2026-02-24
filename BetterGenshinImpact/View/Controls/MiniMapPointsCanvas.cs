@@ -15,6 +15,20 @@ namespace BetterGenshinImpact.View.Controls;
 
 public sealed class MiniMapPointsCanvas : FrameworkElement
 {
+    public static readonly DependencyProperty PointsSourceProperty =
+        DependencyProperty.Register(
+            nameof(PointsSource),
+            typeof(ObservableCollection<MaskMapPoint>),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(null, OnPointsSourceChanged));
+
+    public static readonly DependencyProperty LabelsSourceProperty =
+        DependencyProperty.Register(
+            nameof(LabelsSource),
+            typeof(IEnumerable<MaskMapPointLabel>),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(null, OnLabelsSourceChanged));
+
     private readonly VisualCollection _children;
     private readonly DrawingVisual _drawingVisual;
     private readonly Dictionary<string, Brush> _colorBrushCache;
@@ -24,6 +38,18 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     private List<MaskMapPoint> _allPoints = new();
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
     private Rect _viewportRect = Rect.Empty;
+
+    public ObservableCollection<MaskMapPoint>? PointsSource
+    {
+        get => (ObservableCollection<MaskMapPoint>?)GetValue(PointsSourceProperty);
+        set => SetValue(PointsSourceProperty, value);
+    }
+
+    public IEnumerable<MaskMapPointLabel>? LabelsSource
+    {
+        get => (IEnumerable<MaskMapPointLabel>?)GetValue(LabelsSourceProperty);
+        set => SetValue(LabelsSourceProperty, value);
+    }
 
     public MiniMapPointsCanvas()
     {
@@ -35,6 +61,18 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         IsHitTestVisible = false;
 
         MapIconImageCache.ImageUpdated += PointImageCacheManagerOnImageUpdated;
+    }
+
+    private static void OnPointsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var canvas = (MiniMapPointsCanvas)d;
+        canvas.UpdatePoints(e.NewValue as ObservableCollection<MaskMapPoint>);
+    }
+
+    private static void OnLabelsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var canvas = (MiniMapPointsCanvas)d;
+        canvas.UpdateLabels(e.NewValue as IEnumerable<MaskMapPointLabel>);
     }
 
     protected override void OnVisualParentChanged(DependencyObject oldParent)
@@ -252,7 +290,7 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
             (byte)random.Next(80, 256));
     }
 
-    public void UpdatePoints(ObservableCollection<MaskMapPoint> points)
+    public void UpdatePoints(ObservableCollection<MaskMapPoint>? points)
     {
         if (_points != null)
         {
@@ -283,7 +321,7 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         Refresh();
     }
 
-    public void UpdateLabels(IEnumerable<MaskMapPointLabel> labels)
+    public void UpdateLabels(IEnumerable<MaskMapPointLabel>? labels)
     {
         if (labels != null)
         {
@@ -316,4 +354,3 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         RenderPoints();
     }
 }
-

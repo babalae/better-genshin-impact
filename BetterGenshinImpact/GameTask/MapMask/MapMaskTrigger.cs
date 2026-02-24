@@ -27,7 +27,7 @@ public class MapMaskTrigger : ITaskTrigger
     public int Priority => 1; // 低优先级
     public bool IsExclusive => false;
 
-    public GameUiCategory SupportedGameUiCategory => GameUiCategory.BigMap;
+    public GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 
     private readonly MapMaskConfig _config = TaskContext.Instance().Config.MapMaskConfig;
     private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
@@ -143,7 +143,15 @@ public class MapMaskTrigger : ITaskTrigger
                         var miniPoint = _navigationInstance.GetPositionStable(region, nameof(MapTypes.Teyvat), TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
                         if (miniPoint != default)
                         {
-                            UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(miniPoint.X, miniPoint.Y,  300, 300); });
+                            const double viewportSize = 300;
+                            UIDispatcherHelper.Invoke(() =>
+                            {
+                                MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(
+                                    miniPoint.X - viewportSize / 2.0,
+                                    miniPoint.Y - viewportSize / 2.0,
+                                    viewportSize,
+                                    viewportSize);
+                            });
                         }
 
                         // 自动记录路径

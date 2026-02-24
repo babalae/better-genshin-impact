@@ -87,7 +87,8 @@
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
                 <controls:MiniMapPointsCanvas x:Name="MiniMapPointsCanvasControl"
-                                              Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
+                                              PointsSource="{Binding MapPoints}"
+                                              LabelsSource="{Binding MapPointLabels}"
                                               IsHitTestVisible="False">
                     <Canvas.Left>
                         <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
@@ -457,6 +458,8 @@
                                    x:Name="PointsCanvasControl"
                                    Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                   PointsSource="{Binding MapPoints}"
+                                   LabelsSource="{Binding MapPointLabels}"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
                                    PointHoverCommand="{Binding PointHoverCommand}" />

@@ -25,9 +25,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Model.MaskMap;
-using CommunityToolkit.Mvvm.Messaging;
-using CommunityToolkit.Mvvm.Messaging.Messages;
-using CvPoint2f = OpenCvSharp.Point2f;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.View.Windows;
 using Vanara.PInvoke;
@@ -55,7 +52,6 @@ public partial class MaskWindow : Window
     private MaskWindowConfig? _maskWindowConfig;
     private MapLabelSearchWindow? _mapLabelSearchWindow;
     private CancellationTokenSource? _mapLabelCategorySelectCts;
-    private CvPoint2f? _miniMapLastPosition;
 
     static MaskWindow()
     {
@@ -195,37 +191,8 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
-        if (_viewModel != null)
-        {
-            PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-            PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-            MiniMapPointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-            MiniMapPointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-        }
 
         PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
-
-        WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
-        {
-            if (msg.PropertyName != "SendCurrentPosition")
-            {
-                return;
-            }
-
-            if (msg.NewValue is not CvPoint2f pos)
-            {
-                return;
-            }
-
-            if (pos.X <= 0 || pos.Y <= 0)
-            {
-                return;
-            }
-
-            _miniMapLastPosition = pos;
-            const double viewportSize = 512;
-            MiniMapPointsCanvasControl.UpdateViewport(pos.X - viewportSize / 2.0, pos.Y - viewportSize / 2.0, viewportSize, viewportSize);
-        });
     }
 
     private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
@@ -242,8 +209,6 @@ public partial class MaskWindow : Window
         PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
         IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
         StateChanged -= MaskWindowOnStateChanged;
-
-        WeakReferenceMessenger.Default.Unregister<PropertyChangedMessage<object>>(this);
 
         if (_maskWindowConfig != null)
         {
@@ -288,29 +253,6 @@ public partial class MaskWindow : Window
             }
         }
 
-        if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_viewModel != null)
-                {
-                    PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-                    MiniMapPointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-                }
-            });
-        }
-
-        if (e.PropertyName == nameof(MaskWindowViewModel.MapPoints))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_viewModel != null)
-                {
-                    PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-                    MiniMapPointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-                }
-            });
-        }
     }
 
     private void UpdateClickThroughState()
