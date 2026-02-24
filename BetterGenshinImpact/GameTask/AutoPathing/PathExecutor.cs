@@ -186,10 +186,6 @@ public class PathExecutor
 
                         if (waypoint.Type == WaypointType.Teleport.Code)
                         {
-                            if (CurWaypoints.Item1 > 0)
-                            {
-                                await Delay(1000, ct);
-                            }
                             await HandleTeleportWaypoint(waypoint);
                         }
                         else
