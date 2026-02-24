@@ -16,6 +16,15 @@ public partial class DomainSelector : UserControl
     {
         InitializeComponent();
         Countries = MapLazyAssets.Instance.CountryToDomains.Keys.Reverse().ToList();
+        Unloaded += OnUnloaded;
+    }
+
+    /// <summary>
+    /// 控件卸载时清理事件处理器，防止内存泄漏
+    /// </summary>
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        RemoveWindowMouseWheelHandler();
     }
 
     public List<string> Countries
@@ -115,6 +124,14 @@ public partial class DomainSelector : UserControl
     /// Popup 关闭时移除全局滚轮事件拦截
     /// </summary>
     private void MainPopup_Closed(object sender, EventArgs e)
+    {
+        RemoveWindowMouseWheelHandler();
+    }
+
+    /// <summary>
+    /// 移除窗口级滚轮事件处理器
+    /// </summary>
+    private void RemoveWindowMouseWheelHandler()
     {
         var window = Window.GetWindow(this);
         if (window != null)
