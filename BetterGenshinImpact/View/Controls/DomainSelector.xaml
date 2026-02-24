@@ -72,7 +72,8 @@
                               ItemsSource="{Binding Countries, ElementName=Root}"
                               SelectedItem="{Binding SelectedCountry, ElementName=Root, Mode=TwoWay}"
                               BorderThickness="0"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
@@ -90,7 +91,8 @@
                               SelectedValuePath="Item2.Name"
                               BorderThickness="0"
                               SelectionChanged="DomainListView_SelectionChanged"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Margin="8,4">

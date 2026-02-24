@@ -281,19 +281,53 @@ public partial class CascadeSelector : UserControl
     }
 
     /// <summary>
-    /// Popup 打开时捕获鼠标
+    /// Popup 打开时添加全局滚轮事件拦截
     /// </summary>
     private void MainPopup_Opened(object sender, EventArgs e)
     {
-        Mouse.Capture(PopupBorder, CaptureMode.SubTree);
+        var window = Window.GetWindow(this);
+        if (window != null)
+        {
+            window.PreviewMouseWheel += Window_PreviewMouseWheel;
+        }
     }
 
     /// <summary>
-    /// Popup 关闭时释放鼠标捕获
+    /// Popup 关闭时移除全局滚轮事件拦截
     /// </summary>
     private void MainPopup_Closed(object sender, EventArgs e)
     {
-        Mouse.Capture(null);
+        var window = Window.GetWindow(this);
+        if (window != null)
+        {
+            window.PreviewMouseWheel -= Window_PreviewMouseWheel;
+        }
+    }
+
+    /// <summary>
+    /// 全局滚轮事件处理，当 Popup 打开时拦截所有滚轮事件
+    /// </summary>
+    private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (MainPopup.IsOpen)
+        {
+            e.Handled = true;
+            
+            var scrollViewer1 = FindScrollViewer(FirstLevelListView);
+            var scrollViewer2 = FindScrollViewer(SecondLevelListView);
+            
+            if (scrollViewer1 != null && scrollViewer1.IsMouseOver)
+            {
+                scrollViewer1.ScrollToVerticalOffset(scrollViewer1.VerticalOffset - e.Delta / 2.0);
+                return;
+            }
+            
+            if (scrollViewer2 != null && scrollViewer2.IsMouseOver)
+            {
+                scrollViewer2.ScrollToVerticalOffset(scrollViewer2.VerticalOffset - e.Delta / 2.0);
+                return;
+            }
+        }
     }
 
     /// <summary>
@@ -308,13 +342,13 @@ public partial class CascadeSelector : UserControl
         
         if (scrollViewer1 != null && scrollViewer1.IsMouseOver)
         {
-            scrollViewer1.ScrollToVerticalOffset(scrollViewer1.VerticalOffset - e.Delta / 3.0);
+            scrollViewer1.ScrollToVerticalOffset(scrollViewer1.VerticalOffset - e.Delta / 2.0);
             return;
         }
         
         if (scrollViewer2 != null && scrollViewer2.IsMouseOver)
         {
-            scrollViewer2.ScrollToVerticalOffset(scrollViewer2.VerticalOffset - e.Delta / 3.0);
+            scrollViewer2.ScrollToVerticalOffset(scrollViewer2.VerticalOffset - e.Delta / 2.0);
             return;
         }
     }

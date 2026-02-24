@@ -73,7 +73,8 @@
                               ItemsSource="{Binding FirstLevelOptions, ElementName=Root}"
                               BorderThickness="0"
                               SelectionChanged="FirstLevelListView_SelectionChanged"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
@@ -89,7 +90,8 @@
                               ItemsSource="{Binding SecondLevelOptions, ElementName=Root}"
                               BorderThickness="0"
                               SelectionChanged="SecondLevelListView_SelectionChanged"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
