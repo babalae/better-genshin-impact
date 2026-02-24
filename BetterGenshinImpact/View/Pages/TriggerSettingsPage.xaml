@@ -975,16 +975,20 @@
             </StackPanel>
         </ui:CardExpander>
 
-        <ui:CardControl Margin="0,0,0,12">
-            <ui:CardControl.Icon>
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
                 <ui:FontIcon Glyph="&#xf279;" Style="{StaticResource FaFontIconStyle}" />
-            </ui:CardControl.Icon>
-            <ui:CardControl.Header>
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
@@ -996,10 +1000,41 @@
                                   TextWrapping="Wrap">
                         在遮罩窗口中显示大地图位置与标点信息
                     </ui:TextBlock>
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.MapMaskConfig.Enabled, Mode=TwoWay}" />
                 </Grid>
-            </ui:CardControl.Header>
-            <ui:ToggleSwitch Margin="0,0,40,0" IsChecked="{Binding Config.MapMaskConfig.Enabled, Mode=TwoWay}" />
-        </ui:CardControl>
+            </ui:CardExpander.Header>
+            <StackPanel IsEnabled="{Binding Config.MapMaskConfig.Enabled}">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="启用小地图遮罩"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在小地图上显示点位"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
         
         <!--  冷却提示  -->
         <ui:CardExpander 
