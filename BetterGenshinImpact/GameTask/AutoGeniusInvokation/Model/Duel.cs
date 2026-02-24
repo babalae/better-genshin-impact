@@ -346,7 +346,7 @@ public class Duel
             }
 
             // 2. 判断使用技能
-            actionUseDiceSum += actionCommand.GetAllDiceUseCount();
+            actionUseDiceSum += Math.Max(actionCommand.GetAllDiceUseCount() + actionCommand.DiceDelta, 0);
             if (actionUseDiceSum > CurrentDiceCount)
             {
                 break;

@@ -27,11 +27,11 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             {
                 if (string.IsNullOrEmpty(Character.Skills[TargetIndex].Name))
                 {
-                    return $"【{Character.Name}】使用【技能{TargetIndex}】";
+                    return $"【{Character.Name}】使用【技能{TargetIndex}】{(DiceDelta != 0 ? $"(骰子{(DiceDelta > 0 ? "增加" : "减少")}{Math.Abs(DiceDelta)})" : "")}";
                 }
                 else
                 {
-                    return $"【{Character.Name}】使用【{Character.Skills[TargetIndex].Name}】";
+                    return $"【{Character.Name}】使用【{Character.Skills[TargetIndex].Name}】{(DiceDelta != 0 ? $"(骰子{(DiceDelta > 0 ? "增加" : "减少")}{Math.Abs(DiceDelta)})" : "")}";
                 }
             }
             else if (Action == ActionEnum.SwitchLater)
