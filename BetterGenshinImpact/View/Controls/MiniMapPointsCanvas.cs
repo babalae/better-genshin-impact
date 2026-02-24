@@ -155,7 +155,7 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     private void RenderPoints()
     {
         using var dc = _drawingVisual.RenderOpen();
-        if (_allPoints.Count == 0 || _viewportRect.IsEmpty)
+        if (_allPoints.Count == 0 || _viewportRect.IsEmpty || _viewportRect.Width == 0)
         {
             return;
         }
