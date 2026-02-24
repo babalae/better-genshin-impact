@@ -116,6 +116,7 @@ public partial class DomainSelector : UserControl
         var window = Window.GetWindow(this);
         if (window != null)
         {
+            window.PreviewMouseWheel -= Window_PreviewMouseWheel;
             window.PreviewMouseWheel += Window_PreviewMouseWheel;
         }
     }
