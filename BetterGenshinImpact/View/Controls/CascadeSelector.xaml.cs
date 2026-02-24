@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace BetterGenshinImpact.View.Controls;
@@ -276,5 +278,70 @@ public partial class CascadeSelector : UserControl
                 MainToggle.IsChecked = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Popup 打开时捕获鼠标
+    /// </summary>
+    private void MainPopup_Opened(object sender, EventArgs e)
+    {
+        Mouse.Capture(PopupBorder, CaptureMode.SubTree);
+    }
+
+    /// <summary>
+    /// Popup 关闭时释放鼠标捕获
+    /// </summary>
+    private void MainPopup_Closed(object sender, EventArgs e)
+    {
+        Mouse.Capture(null);
+    }
+
+    /// <summary>
+    /// 处理 Popup 内的鼠标滚轮事件，防止滚动穿透到外部页面
+    /// </summary>
+    private void PopupBorder_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        e.Handled = true;
+        
+        var scrollViewer1 = FindScrollViewer(FirstLevelListView);
+        var scrollViewer2 = FindScrollViewer(SecondLevelListView);
+        
+        if (scrollViewer1 != null && scrollViewer1.IsMouseOver)
+        {
+            scrollViewer1.ScrollToVerticalOffset(scrollViewer1.VerticalOffset - e.Delta / 3.0);
+            return;
+        }
+        
+        if (scrollViewer2 != null && scrollViewer2.IsMouseOver)
+        {
+            scrollViewer2.ScrollToVerticalOffset(scrollViewer2.VerticalOffset - e.Delta / 3.0);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// 在视觉树中查找 ScrollViewer
+    /// </summary>
+    private ScrollViewer? FindScrollViewer(DependencyObject parent)
+    {
+        if (parent == null) return null;
+        
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            
+            if (child is ScrollViewer scrollViewer)
+            {
+                return scrollViewer;
+            }
+            
+            var result = FindScrollViewer(child);
+            if (result != null)
+            {
+                return result;
+            }
+        }
+        
+        return null;
     }
 }
