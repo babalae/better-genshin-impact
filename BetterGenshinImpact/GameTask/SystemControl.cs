@@ -320,18 +320,11 @@ public class SystemControl
         try
         {
             var processNames = TaskContext.Instance().GetGenshinGameProcessNameList();
-            var allProcesses = processNames
+            var processes = processNames
                 .SelectMany(Process.GetProcessesByName)
-                .ToList();
-            var processMap = allProcesses
                 .GroupBy(p => p.Id)
-                .ToDictionary(g => g.Key, g => g.First());
-            // 释放重复的 Process 包装对象
-            foreach (var p in allProcesses.Where(p => !ReferenceEquals(p, processMap[p.Id])))
-            {
-                p.Dispose();
-            }
-            var processes = processMap.Values.ToArray();
+                .Select(g => g.First())
+                .ToArray();
 
             if (processes.Length > 0)
             {
