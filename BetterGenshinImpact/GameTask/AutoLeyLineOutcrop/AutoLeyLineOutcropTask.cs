@@ -37,7 +37,7 @@ namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 public class AutoLeyLineOutcropTask : ISoloTask
 {
     private readonly ILogger<AutoLeyLineOutcropTask> _logger = App.GetLogger<AutoLeyLineOutcropTask>();
-    private readonly AutoLeyLineOutcropConfig _config;
+    private readonly AutoLeyLineOutcropParam _taskParam; 
     private readonly bool _oneDragonMode;
     private TpTask _tpTask = null!;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
@@ -73,9 +73,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     public string Name => "自动地脉花";
 
-    public AutoLeyLineOutcropTask(AutoLeyLineOutcropConfig config, bool oneDragonMode = false)
+    public AutoLeyLineOutcropTask(AutoLeyLineOutcropParam taskParam, bool oneDragonMode = false)
     {
-        _config = config;
+        _taskParam = taskParam;
         _oneDragonMode = oneDragonMode;
     }
 
@@ -95,7 +95,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await PrepareForLeyLineRun();
             await RunLeyLineChallenges();
 
-            if (_config.IsResinExhaustionMode)
+            if (_taskParam.IsResinExhaustionMode)
             {
                 await RecheckResinAndContinue();
             }
@@ -108,7 +108,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             _logger.LogDebug(e, "自动地脉花执行失败");
             _logger.LogError("自动地脉花执行失败:" + e.Message);
-            if (_config.IsNotification)
+            if (_taskParam.IsNotification)
             {
                 Notify.Event("AutoLeyLineOutcrop").Error($"任务失败: {e.Message}");
             }
@@ -144,29 +144,29 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void ValidateSettings()
     {
-        if (string.IsNullOrWhiteSpace(_config.LeyLineOutcropType))
+        if (string.IsNullOrWhiteSpace(_taskParam.LeyLineOutcropType))
         {
             throw new Exception("地脉花类型未选择");
         }
 
-        if (_config.LeyLineOutcropType != "启示之花" && _config.LeyLineOutcropType != "藏金之花")
+        if (_taskParam.LeyLineOutcropType != "启示之花" && _taskParam.LeyLineOutcropType != "藏金之花")
         {
             throw new Exception("地脉花类型无效，请重新选择");
         }
 
-        if (string.IsNullOrWhiteSpace(_config.Country))
+        if (string.IsNullOrWhiteSpace(_taskParam.Country))
         {
             throw new Exception("国家未配置");
         }
 
-        if (!string.IsNullOrWhiteSpace(_config.FriendshipTeam) && string.IsNullOrWhiteSpace(_config.Team))
+        if (!string.IsNullOrWhiteSpace(_taskParam.FriendshipTeam) && string.IsNullOrWhiteSpace(_taskParam.Team))
         {
             throw new Exception("配置好感队时必须配置战斗队伍");
         }
 
-        if (_config.Count < 1)
+        if (_taskParam.Count < 1)
         {
-            _config.Count = 1;
+            _taskParam.Count = 1;
         }
     }
 
@@ -242,9 +242,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<int> HandleResinExhaustionMode()
     {
-        if (!_config.IsResinExhaustionMode)
+        if (!_taskParam.IsResinExhaustionMode)
         {
-            return _config.Count;
+            return _taskParam.Count;
         }
 
         var result = await CalCountByResin();
@@ -253,16 +253,16 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return 0;
         }
 
-        if (_config.OpenModeCountMin)
+        if (_taskParam.OpenModeCountMin)
         {
-            _config.Count = Math.Min(result.Count, _config.Count);
+            _taskParam.Count = Math.Min(result.Count, _taskParam.Count);
         }
         else
         {
-            _config.Count = result.Count;
+            _taskParam.Count = result.Count;
         }
 
-        if (_config.IsNotification)
+        if (_taskParam.IsNotification)
         {
             var text =
                 "树脂耗尽模式统计结果:\n" +
@@ -274,7 +274,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             Notify.Event("AutoLeyLineOutcrop").Send(text);
         }
 
-        return _config.Count;
+        return _taskParam.Count;
     }
 
     private async Task PrepareForLeyLineRun()
@@ -286,13 +286,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await _tpTask.TpToStatueOfTheSeven();
         }
 
-        if (!string.IsNullOrWhiteSpace(_config.Team))
+        if (!string.IsNullOrWhiteSpace(_taskParam.Team))
         {
             _switchPartyTask ??= new SwitchPartyTask();
-            await _switchPartyTask.Start(_config.Team, _ct);
+            await _switchPartyTask.Start(_taskParam.Team, _ct);
         }
 
-        if (_config.UseAdventurerHandbook)
+        if (_taskParam.UseAdventurerHandbook)
         {
             // The config flag means "do NOT use handbook"; close custom marks for manual navigation.
             await CloseCustomMarks();
@@ -303,17 +303,17 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task RunLeyLineChallenges()
     {
-        while (_currentRunTimes < _config.Count)
+        while (_currentRunTimes < _taskParam.Count)
         {
-            if (!_config.UseAdventurerHandbook)
+            if (!_taskParam.UseAdventurerHandbook)
             {
                 // Handbook flow: open the book and track a ley line target.
-                await FindLeyLineOutcropByBook(_config.Country, _config.LeyLineOutcropType);
+                await FindLeyLineOutcropByBook(_taskParam.Country, _taskParam.LeyLineOutcropType);
             }
             else
             {
                 // Manual flow: detect the ley line on the big map.
-                await FindLeyLineOutcrop(_config.Country, _config.LeyLineOutcropType);
+                await FindLeyLineOutcrop(_taskParam.Country, _taskParam.LeyLineOutcropType);
             }
 
             var foundStrategy = await ExecuteMatchingStrategy();
@@ -332,7 +332,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw new Exception("地脉花策略配置缺失");
         }
 
-        if (!_configData.LeyLinePositions.TryGetValue(_config.Country, out var positions))
+        if (!_configData.LeyLinePositions.TryGetValue(_taskParam.Country, out var positions))
         {
             return false;
         }
@@ -379,13 +379,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await ExecutePath(optimal);
             _currentRunTimes++;
 
-            if (_currentRunTimes >= _config.Count)
+            if (_currentRunTimes >= _taskParam.Count)
             {
                 return;
             }
 
             var currentNode = targetNode;
-            while (currentNode.Next.Count > 0 && _currentRunTimes < _config.Count)
+            while (currentNode.Next.Count > 0 && _currentRunTimes < _taskParam.Count)
             {
                 if (currentNode.Next.Count == 1)
                 {
@@ -415,7 +415,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
                     await _returnMainUiTask.Start(_ct);
                     await _tpTask.OpenBigMapUi();
-                    var found = await LocateLeyLineOutcrop(_config.LeyLineOutcropType);
+                    var found = await LocateLeyLineOutcrop(_taskParam.LeyLineOutcropType);
                     await _returnMainUiTask.Start(_ct);
 
                     if (!found)
@@ -635,7 +635,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         var lastRoute = path.Routes.Last();
         var targetRoute = lastRoute.Replace("Assets/pathing/", "Assets/pathing/target/").Replace("-rerun", "");
-        await ProcessLeyLineOutcrop(_config.Timeout, targetRoute);
+        await ProcessLeyLineOutcrop(_taskParam.Timeout, targetRoute);
 
         var rewardSuccess = await AttemptReward();
         if (!rewardSuccess)
@@ -762,7 +762,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         await EnsureExitRewardPage();
-        if (_config.UseAdventurerHandbook)
+        if (_taskParam.UseAdventurerHandbook)
         {
             _logger.LogWarning("寻找地脉花失败：当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
             throw new Exception("寻找地脉花失败：未在地图上识别到地脉花图标。当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
@@ -801,7 +801,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private void HandleNoStrategyFound()
     {
         _logger.LogError("未找到对应的地脉花策略");
-        if (_config.IsNotification)
+        if (_taskParam.IsNotification)
         {
             Notify.Event("AutoLeyLineOutcrop").Error("未找到对应的地脉花策略");
         }
@@ -1186,7 +1186,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task SwitchToFriendshipTeamIfNeeded()
     {
-        if (string.IsNullOrWhiteSpace(_config.FriendshipTeam))
+        if (string.IsNullOrWhiteSpace(_taskParam.FriendshipTeam))
         {
             return;
         }
@@ -1195,7 +1195,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             _switchPartyTask ??= new SwitchPartyTask();
-            await _switchPartyTask.Start(_config.FriendshipTeam, _ct);
+            await _switchPartyTask.Start(_taskParam.FriendshipTeam, _ct);
         }
         catch (Exception ex)
         {
@@ -1205,14 +1205,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task SwitchBackToCombatTeam()
     {
-        if (string.IsNullOrWhiteSpace(_config.Team))
+        if (string.IsNullOrWhiteSpace(_taskParam.Team))
         {
             return;
         }
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         _switchPartyTask ??= new SwitchPartyTask();
-        await _switchPartyTask.Start(_config.Team, _ct);
+        await _switchPartyTask.Start(_taskParam.Team, _ct);
     }
 
     private async Task<bool> AttemptReward(int retryCount = 0)
@@ -1251,7 +1251,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         resinChoice.Value.Click();
         await Delay(1000, _ct);
 
-        if (!string.IsNullOrWhiteSpace(_config.FriendshipTeam))
+        if (!string.IsNullOrWhiteSpace(_taskParam.FriendshipTeam))
         {
             await SwitchBackToCombatTeam();
         }
@@ -1333,12 +1333,12 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 return sortedButtons[0];
             }
 
-            if (hasTransient && _config.UseTransientResin && sortedButtons.Count >= 1)
+            if (hasTransient && _taskParam.UseTransientResin && sortedButtons.Count >= 1)
             {
                 return sortedButtons[0];
             }
 
-            if (hasFragile && _config.UseFragileResin && sortedButtons.Count >= 1)
+            if (hasFragile && _taskParam.UseFragileResin && sortedButtons.Count >= 1)
             {
                 return sortedButtons[0];
             }
@@ -1361,7 +1361,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return sortedButtons[1];
         }
 
-        if (hasTransient && _config.UseTransientResin && sortedButtons.Count >= 2)
+        if (hasTransient && _taskParam.UseTransientResin && sortedButtons.Count >= 2)
         {
             return sortedButtons[1];
         }
@@ -1376,7 +1376,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return sortedButtons.FirstOrDefault();
         }
 
-        if (hasFragile && _config.UseFragileResin && sortedButtons.Count >= 2)
+        if (hasFragile && _taskParam.UseFragileResin && sortedButtons.Count >= 2)
         {
             return sortedButtons[1];
         }
@@ -1590,9 +1590,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task RecheckResinAndContinue()
     {
         _recheckCount++;
-        if (_config.OpenModeCountMin)
+        if (_taskParam.OpenModeCountMin)
         {
-            if (_currentRunTimes >= _config.Count)
+            if (_currentRunTimes >= _taskParam.Count)
             {
                 return;
             }
@@ -1615,7 +1615,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         _currentRunTimes = 0;
-        _config.Count = result.Count;
+        _taskParam.Count = result.Count;
         await RunLeyLineChallenges();
         await RecheckResinAndContinue();
     }
@@ -1632,8 +1632,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         var condensedTimes = counts.CondensedResinCount;
-        var transientTimes = _config.UseTransientResin ? counts.TransientResinCount : 0;
-        var fragileTimes = _config.UseFragileResin ? counts.FragileResinCount : 0;
+        var transientTimes = _taskParam.UseTransientResin ? counts.TransientResinCount : 0;
+        var fragileTimes = _taskParam.UseFragileResin ? counts.FragileResinCount : 0;
 
         return new ResinCountResult
         {
@@ -1659,7 +1659,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             CondensedResinCount = await CountCondensedResin()
         };
 
-        if (_config.UseTransientResin || _config.UseFragileResin)
+        if (_taskParam.UseTransientResin || _taskParam.UseFragileResin)
         {
             await OpenReplenishResinUi();
             await Delay(1500, _ct);

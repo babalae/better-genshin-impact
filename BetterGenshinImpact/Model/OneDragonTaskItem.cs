@@ -171,7 +171,10 @@ public partial class OneDragonTaskItem : ObservableObject
                         {
                             taskConfig.Count = config.LeyLineRunCount;
                         }
-                        await new AutoLeyLineOutcropTask(taskConfig, config.LeyLineOneDragonMode)
+
+                        AutoLeyLineOutcropParam param = new AutoLeyLineOutcropParam();
+                        param.SetAutoLeyLineOutcropConfig(taskConfig);
+                        await new AutoLeyLineOutcropTask(param, config.LeyLineOneDragonMode)
                             .Start(CancellationContext.Instance.Cts.Token);
                     }
                     finally
