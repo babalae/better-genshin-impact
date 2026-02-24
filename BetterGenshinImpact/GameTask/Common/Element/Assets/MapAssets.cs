@@ -14,6 +14,9 @@ namespace BetterGenshinImpact.GameTask.Common.Element.Assets;
 public class MapAssets : BaseAssets<MapAssets>
 {
     public Rect MimiMapRect { get; }
+    
+    public static Rect MimiMapRect1080P =  new Rect(62, 19,212,212);
+
 
     public MapAssets()
     {

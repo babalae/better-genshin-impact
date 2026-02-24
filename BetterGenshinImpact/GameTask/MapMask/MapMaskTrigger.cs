@@ -144,7 +144,7 @@ public class MapMaskTrigger : ITaskTrigger
                         if (miniPoint != default)
                         {
                             // 展示窗口是 212 
-                            const double viewportSize = 353;
+                            double viewportSize = MapAssets.MimiMapRect1080P.Width / 3.0 * 10;
                             UIDispatcherHelper.Invoke(() =>
                             {
                                 MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(

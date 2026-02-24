@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Model.MaskMap;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
@@ -70,11 +71,11 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
 
-        public double MiniMapOverlayLeftRatio => 50d / 1920d;
+        public double MiniMapOverlayLeftRatio => MapAssets.MimiMapRect1080P.X / 1920d;
 
-        public double MiniMapOverlayTopRatio =>14d / 1080d;
+        public double MiniMapOverlayTopRatio => MapAssets.MimiMapRect1080P.Y / 1080d;
 
-        public double MiniMapOverlaySizeRatio => 212d / 1080d;
+        public double MiniMapOverlaySizeRatio => MapAssets.MimiMapRect1080P.Width / 1080d;
 
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
 
