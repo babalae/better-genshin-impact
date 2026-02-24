@@ -98,6 +98,10 @@ public class ScriptParser
                             int delta = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(actionParts[3], ""));
                             actionCommand.DiceDelta = -delta;
                         }
+                        else
+                        {
+                            MyAssert(false, $"策略中的行动命令解析错误：骰子增减参数格式不正确（应为 骰子增加N 或 骰子减少N ），实际：{actionParts[3]}");
+                        }
                     }
                     duel.ActionCommandQueue.Add(actionCommand);
                 }
