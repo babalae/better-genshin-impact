@@ -135,10 +135,10 @@ public class MapMaskTrigger : ITaskTrigger
             }
             else
             {
-                if ((_config.MiniMapMaskEnabled || _config.PathAutoRecordEnabled) && Bv.IsInMainUi(region))
+                // 主界面上展示小地图
+                if (_config.MiniMapMaskEnabled)
                 {
-                    // 主界面上展示小地图
-                    if (_config.MiniMapMaskEnabled)
+                    if (Bv.IsInMainUi(region))
                     {
                         var miniPoint = _navigationInstance.GetPositionStable(region, nameof(MapTypes.Teyvat), TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
                         if (miniPoint != default)
@@ -164,6 +164,10 @@ public class MapMaskTrigger : ITaskTrigger
                         {
                             // ...
                         }
+                    }
+                    else
+                    {
+                        UIDispatcherHelper.Invoke(() => { MaskWindow.Instance().MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0); });
                     }
                 }
 
