@@ -565,6 +565,71 @@ public class GeniusInvokationControl
     }
 
     /// <summary>
+    /// 月之五伊涅芙会导致手牌不可调和，根据传入的手牌数量，从左往右尝试
+    /// </summary>
+    private bool ActionPhaseElementalTuningAlternatives(int currentCardCount)
+    {
+        var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var info = TaskContext.Instance().SystemInfo;
+        var m = Simulation.SendInput.Mouse;
+
+        var startY = rect.Y + rect.Height - 50;
+        var endX = rect.X + rect.Width - 50;
+        var endY = rect.Y + rect.Height / 2d;
+
+        // 手牌数量对应的起点（中心）和间距
+        var table = new Dictionary<int, (double startX, double spacing)>
+        {
+            {10, (570.0,    120.0)},
+            {9,  (570.0,    130.0)},
+            {8,  (600.0,    145.0)},
+            {7,  (630.0,    160.0)},
+            {6,  (620.0,    200.0)},
+            {5,  (720.0,    200.0)},
+            {4,  (820.0,    200.0)},
+            {3,  (920.0,    200.0)},
+            {2,  (1020.0,   200.0)},
+            {1,  (1120.0,   200.0)}
+        };
+
+        if (!table.ContainsKey(currentCardCount))
+        {
+            _logger.LogWarning("未找到手牌数量对应的起始位置配置: {Count}", currentCardCount);
+            return false;
+        }
+
+        var (startX, spacing) = table[currentCardCount];
+
+        // 从左往右尝试
+        for (int idx = 0; idx < currentCardCount; idx++)
+        {
+            var x = rect.X + startX * info.AssetScale + idx * spacing * info.AssetScale;
+
+            ClickExtension.Click(x, startY);
+            Sleep(500);
+
+            m.LeftButtonDown();
+            Sleep(100);
+            m = ClickExtension.Move(endX, endY);
+            Sleep(100);
+            m.LeftButtonUp();
+
+            // 等待动画并确认
+            Sleep(1200);
+            if (ActionPhaseElementalTuningConfirm())
+            {
+                return true;
+            }
+
+            _logger.LogWarning("烧牌位置尝试失败，手牌数:{Count}，位置索引:{Idx}", currentCardCount, idx);
+            ClickGameWindowCenter(); // 复位
+            Sleep(1000);
+        }
+
+        return false;
+    }
+
+    /// <summary>
     ///  烧牌确认（元素调和按钮）
     /// </summary>
     public bool ActionPhaseElementalTuningConfirm()
@@ -692,16 +757,13 @@ public class GeniusInvokationControl
             for (var i = 0; i < needSpecifyElementDiceCount; i++)
             {
                 _logger.LogInformation("- 烧第{Count}张牌", i + 1);
-                ActionPhaseElementalTuning(duel.CurrentCardCount);
-                Sleep(1200);
-                var res = ActionPhaseElementalTuningConfirm();
-                if (res == false)
+
+                // 尝试对当前手牌从左往右依次进行烧牌
+                var tuned = ActionPhaseElementalTuningAlternatives(duel.CurrentCardCount);
+                if (!tuned)
                 {
-                    _logger.LogWarning("烧牌失败，重试");
-                    i--;
-                    ClickGameWindowCenter(); // 复位
-                    Sleep(1000);
-                    continue;
+                    _logger.LogWarning("所有手牌尝试烧牌均失败，取消释放技能");
+                    return false;
                 }
 
                 Sleep(1000); // 烧牌动画
