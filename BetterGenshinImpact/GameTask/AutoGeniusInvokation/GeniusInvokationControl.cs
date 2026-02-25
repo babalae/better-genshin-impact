@@ -600,6 +600,10 @@ public class GeniusInvokationControl
 
         var (startX, spacing) = table[currentCardCount];
 
+        // 先点中间位置，确保牌是展开状态
+        ClickExtension.Click(rect.X + rect.Width / 2d, rect.Y + rect.Height - 50);
+        Sleep(1500);
+
         // 从左往右尝试
         for (int idx = 0; idx < currentCardCount; idx++)
         {
