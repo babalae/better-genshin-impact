@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -31,6 +32,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.View;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
@@ -70,6 +72,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private const int MaxRecheckCount = 3;
     private const int MaxConsecutiveFailures = 5;
+    private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
+    private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
+    private const int OcrOverlayRenderLeadMs = 300;
+    private static readonly System.Drawing.Pen OcrOverlayPen = new(System.Drawing.Color.Lime, 2);
+    private bool _overlayDisplayTemporarilyEnabled;
+    private bool _overlayDisplayOriginalValue;
+    private DateTime _lastMaskBringTopTime = DateTime.MinValue;
 
     public string Name => "自动地脉花";
 
@@ -86,6 +95,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             Initialize();
+            EnsureMaskOverlayVisible();
             var runTimesValue = await HandleResinExhaustionMode();
             if (runTimesValue <= 0)
             {
@@ -119,16 +129,24 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             try
             {
-                await EnsureExitRewardPage();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "地脉花结束后尝试退出奖励界面失败");
-            }
+                try
+                {
+                    await EnsureExitRewardPage();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "地脉花结束后尝试退出奖励界面失败");
+                }
 
-            if (!_marksStatus)
+                if (!_marksStatus)
+                {
+                    await OpenCustomMarks();
+                }
+            }
+            finally
             {
-                await OpenCustomMarks();
+                ClearOcrOverlayKeys();
+                RestoreMaskOverlayVisible();
             }
         }
     }
@@ -144,6 +162,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void ValidateSettings()
     {
+        _taskParam.FightConfig ??= new AutoLeyLineOutcropFightConfig();
+
         if (string.IsNullOrWhiteSpace(_taskParam.LeyLineOutcropType))
         {
             throw new Exception("地脉花类型未选择");
@@ -167,6 +187,20 @@ public class AutoLeyLineOutcropTask : ISoloTask
         if (_taskParam.Count < 1)
         {
             _taskParam.Count = 1;
+        }
+
+        if (string.IsNullOrWhiteSpace(_taskParam.FightConfig.StrategyName) && _taskParam.Timeout > 0)
+        {
+            _taskParam.FightConfig.Timeout = _taskParam.Timeout;
+        }
+
+        if (_taskParam.FightConfig.Timeout <= 0)
+        {
+            _taskParam.FightConfig.Timeout = _taskParam.Timeout > 0 ? _taskParam.Timeout : 120;
+        }
+        else
+        {
+            _taskParam.Timeout = _taskParam.FightConfig.Timeout;
         }
     }
 
@@ -635,7 +669,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         var lastRoute = path.Routes.Last();
         var targetRoute = lastRoute.Replace("Assets/pathing/", "Assets/pathing/target/").Replace("-rerun", "");
-        await ProcessLeyLineOutcrop(_taskParam.Timeout, targetRoute);
+        await ProcessLeyLineOutcrop(_taskParam.FightConfig.Timeout, targetRoute);
 
         var rewardSuccess = await AttemptReward();
         if (!rewardSuccess)
@@ -819,18 +853,24 @@ public class AutoLeyLineOutcropTask : ISoloTask
         await Delay(500, _ct);
         _logger.LogDebug("检测地脉花交互状态，重试次数: {Retries}/{MaxRetries}", retries + 1, maxRetries);
         using var capture = CaptureToRectArea();
+        using var ocrOverlayScope = DrawOcrOverlayScope(capture, OcrFlowOverlayKey, _ocrRo2!.RegionOfInterest, _ocrRo3!.RegionOfInterest);
+        await WaitOcrOverlayRenderTick();
+        string result1Text;
+        string result2Text;
         var result1 = FindSafe(capture, _ocrRo2!);
         var result2 = FindSafe(capture, _ocrRo3!);
-        _logger.LogDebug("OCR结果: result1='{Text1}', result2='{Text2}'", result1.Text, result2.Text);
+        result1Text = result1.Text;
+        result2Text = result2.Text;
+        _logger.LogDebug("OCR结果: result1='{Text1}', result2='{Text2}'", result1Text, result2Text);
 
-        if (result2.Text.Contains("之花", StringComparison.Ordinal))
+        if (result2Text.Contains("之花", StringComparison.Ordinal))
         {
             _logger.LogDebug("识别到地脉之花入口");
             await SwitchToFriendshipTeamIfNeeded();
             return true;
         }
 
-        if (result2.Text.Contains("溢口", StringComparison.Ordinal))
+        if (result2Text.Contains("溢口", StringComparison.Ordinal))
         {
             _logger.LogDebug("识别到溢口提示，尝试交互");
             Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
@@ -838,7 +878,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
             await Delay(500, _ct);
         }
-        else if (!ContainsFightText(result1.Text))
+        else if (!ContainsFightText(result1Text))
         {
             _logger.LogDebug("未识别到战斗提示，执行路径: {Path}", targetPath);
             await RunPathingFile(targetPath);
@@ -889,6 +929,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<bool> AutoFight(int timeoutSeconds)
     {
         var fightCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
+        using var autoFightConfigScope = UseLeyLineAutoFightConfigScope();
         // Ley line uses OCR-based finish detection; disable auto-fight finish detect.
         var fightTask = StartAutoFightWithoutFinishDetect(fightCts.Token);
         var fightResult = await RecognizeTextInRegion(timeoutSeconds * 1000);
@@ -915,7 +956,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private Task StartAutoFightWithoutFinishDetect(CancellationToken ct)
     {
-        var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+        var autoFightConfig = BuildLeyLineAutoFightConfig();
         var strategyPath = BuildAutoFightStrategyPath(autoFightConfig);
         var taskParam = new AutoFightParam(strategyPath, autoFightConfig)
         {
@@ -925,7 +966,37 @@ public class AutoLeyLineOutcropTask : ISoloTask
         // Avoid false finish signals for ley line fights.
         taskParam.FinishDetectConfig.FastCheckEnabled = false;
         taskParam.FinishDetectConfig.RotateFindEnemyEnabled = false;
+        taskParam.PickDropsAfterFightEnabled = false;
+        taskParam.KazuhaPickupEnabled = false;
+        taskParam.QinDoublePickUp = false;
+        taskParam.OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite";
         return new AutoFightTask(taskParam).Start(ct);
+    }
+
+    private IDisposable UseLeyLineAutoFightConfigScope()
+    {
+        var allConfig = TaskContext.Instance().Config;
+        var original = allConfig.AutoFightConfig;
+        allConfig.AutoFightConfig = BuildLeyLineAutoFightConfig();
+        return new AutoFightConfigScope(allConfig, original);
+    }
+
+    private AutoFightConfig BuildLeyLineAutoFightConfig()
+    {
+        var globalAutoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+        var fightConfig = _taskParam.FightConfig;
+        if (string.IsNullOrWhiteSpace(fightConfig.StrategyName))
+        {
+            fightConfig.CopyFromAutoFightConfig(globalAutoFightConfig);
+        }
+
+        if (fightConfig.Timeout <= 0)
+        {
+            fightConfig.Timeout = _taskParam.Timeout > 0 ? _taskParam.Timeout : Math.Max(globalAutoFightConfig.Timeout, 1);
+        }
+
+        _taskParam.Timeout = fightConfig.Timeout;
+        return fightConfig.ToAutoFightConfig();
     }
 
     private static string BuildAutoFightStrategyPath(AutoFightConfig config)
@@ -954,8 +1025,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
         while ((DateTime.UtcNow - start).TotalMilliseconds < timeoutMs)
         {
             using var capture = CaptureToRectArea();
+            using var ocrOverlayScope = DrawOcrOverlayScope(capture, OcrFightOverlayKey, _ocrRo1!.RegionOfInterest, _ocrRo2!.RegionOfInterest);
+            await WaitOcrOverlayRenderTick();
+            string text;
+            bool foundText;
             var result = capture.Find(_ocrRo1!);
-            var text = result.Text;
+            text = result.Text;
+            foundText = RecognizeFightText(capture);
 
             if (successKeywords.Any(text.Contains))
             {
@@ -969,7 +1045,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 return false;
             }
 
-            var foundText = RecognizeFightText(capture);
             if (!foundText)
             {
                 noTextCount++;
@@ -1278,6 +1353,110 @@ public class AutoLeyLineOutcropTask : ISoloTask
         return false;
     }
 
+    private IDisposable DrawOcrOverlayScope(ImageRegion capture, string key, params Rect[] rois)
+    {
+        var drawList = new List<RectDrawable>(rois.Length);
+        foreach (var roi in rois)
+        {
+            var clamped = roi.ClampTo(capture.Width, capture.Height);
+            if (clamped.Width <= 0 || clamped.Height <= 0)
+            {
+                continue;
+            }
+
+            drawList.Add(capture.ToRectDrawable(clamped, key, OcrOverlayPen));
+        }
+
+        var drawContent = VisionContext.Instance().DrawContent;
+        drawContent.PutOrRemoveRectList(key, drawList.Count > 0 ? drawList : null);
+        RefreshMaskWindowForOverlay();
+        return new OcrOverlayScope(drawContent, key);
+    }
+
+    private void ClearOcrOverlayKeys()
+    {
+        var drawContent = VisionContext.Instance().DrawContent;
+        drawContent.RemoveRect(OcrFlowOverlayKey);
+        drawContent.RemoveRect(OcrFightOverlayKey);
+        drawContent.PutOrRemoveTextList(OcrFlowOverlayKey, null);
+        drawContent.PutOrRemoveTextList(OcrFightOverlayKey, null);
+    }
+
+    private async Task WaitOcrOverlayRenderTick()
+    {
+        await Task.Yield();
+        await Task.Delay(OcrOverlayRenderLeadMs, _ct);
+    }
+
+    private void EnsureMaskOverlayVisible()
+    {
+        var config = TaskContext.Instance().Config.MaskWindowConfig;
+        _overlayDisplayOriginalValue = config.DisplayRecognitionResultsOnMask;
+        if (!config.DisplayRecognitionResultsOnMask)
+        {
+            config.DisplayRecognitionResultsOnMask = true;
+            _overlayDisplayTemporarilyEnabled = true;
+        }
+
+        var maskWindow = MaskWindow.InstanceNullable();
+        if (maskWindow != null)
+        {
+            maskWindow.Invoke(() =>
+            {
+                maskWindow.Topmost = true;
+                if (!maskWindow.IsVisible)
+                {
+                    maskWindow.Show();
+                }
+
+                maskWindow.BringToTop();
+            });
+        }
+    }
+
+    private void RestoreMaskOverlayVisible()
+    {
+        if (!_overlayDisplayTemporarilyEnabled)
+        {
+            return;
+        }
+
+        TaskContext.Instance().Config.MaskWindowConfig.DisplayRecognitionResultsOnMask = _overlayDisplayOriginalValue;
+        _overlayDisplayTemporarilyEnabled = false;
+    }
+
+    private void RefreshMaskWindowForOverlay()
+    {
+        var maskWindow = MaskWindow.InstanceNullable();
+        if (maskWindow == null)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var shouldBringTop = now - _lastMaskBringTopTime > TimeSpan.FromSeconds(1);
+        if (shouldBringTop)
+        {
+            _lastMaskBringTopTime = now;
+        }
+
+        maskWindow.Invoke(() =>
+        {
+            maskWindow.Topmost = true;
+            if (!maskWindow.IsVisible)
+            {
+                maskWindow.Show();
+            }
+
+            if (shouldBringTop)
+            {
+                maskWindow.BringToTop();
+            }
+
+            maskWindow.Refresh();
+        });
+    }
+
     private async Task<bool> CheckOriginalResinEmpty()
     {
         using var capture = CaptureToRectArea();
@@ -1497,12 +1676,22 @@ public class AutoLeyLineOutcropTask : ISoloTask
         await Delay(1000, _ct);
 
         await FindAndClickCountry(country);
-        await FindAndCancelTrackingInBook();
+        var trackButton = await FindAndCancelTrackingInBook();
 
         for (var retry = 0; retry < 3; retry++)
         {
             await Delay(1000, _ct);
-            GameCaptureRegion.GameRegion1080PPosClick(1500, 850);
+            if (trackButton != null)
+            {
+                trackButton.Click();
+                _logger.LogDebug("通过 OCR 结果点击追踪按钮，text={Text}", trackButton.Text);
+            }
+            else
+            {
+                GameCaptureRegion.GameRegion1080PPosClick(1500, 850);
+                _logger.LogDebug("未识别到追踪按钮，回退固定坐标点击");
+            }
+
             await Delay(2500, _ct);
 
             if (await CheckBigMapOpened())
@@ -1514,7 +1703,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 await _returnMainUiTask.Start(_ct);
                 await FindAndClickCountry(country);
-                await FindAndCancelTrackingInBook();
+                trackButton = await FindAndCancelTrackingInBook();
             }
             else
             {
@@ -1554,13 +1743,29 @@ public class AutoLeyLineOutcropTask : ISoloTask
         target.Click();
     }
 
-    private async Task FindAndCancelTrackingInBook()
+    private static bool IsTrackButtonText(string text)
+    {
+        return (text.Contains("追踪", StringComparison.Ordinal) || text.Contains("追蹤", StringComparison.Ordinal))
+               && !text.Contains("停止", StringComparison.Ordinal);
+    }
+
+    private async Task<Region?> FindAndCancelTrackingInBook()
     {
         using var capture = CaptureToRectArea();
         var list = capture.FindMulti(_ocrRoThis);
+        var track = list.FirstOrDefault(r => IsTrackButtonText(r.Text));
         var stop = list.FirstOrDefault(r => r.Text.Contains("停止", StringComparison.Ordinal));
-        stop?.Click();
-        await Delay(1000, _ct);
+        if (stop != null)
+        {
+            stop.Click();
+            await Delay(1000, _ct);
+
+            using var refreshCapture = CaptureToRectArea();
+            var refreshList = refreshCapture.FindMulti(_ocrRoThis);
+            track = refreshList.FirstOrDefault(r => IsTrackButtonText(r.Text));
+        }
+
+        return track;
     }
 
     private async Task CancelTrackingInMap()
@@ -1938,6 +2143,39 @@ public class AutoLeyLineOutcropTask : ISoloTask
         public int CondensedResinTimes { get; set; }
         public int TransientResinTimes { get; set; }
         public int FragileResinTimes { get; set; }
+    }
+
+    private sealed class OcrOverlayScope(DrawContent drawContent, string key) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            drawContent.RemoveRect(key);
+            drawContent.PutOrRemoveTextList(key, null);
+        }
+    }
+
+    private sealed class AutoFightConfigScope(AllConfig allConfig, AutoFightConfig originalConfig) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            allConfig.AutoFightConfig = originalConfig;
+        }
     }
 
     private readonly struct UseButton

@@ -23,6 +23,8 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     public string Team { get; set; }
     //战斗超时时间
     public int Timeout { get; set; }
+    //地脉花独立战斗配置
+    public AutoLeyLineOutcropFightConfig FightConfig { get; set; } = new();
     //是否前往合成台合成浓缩树脂
     public bool IsGoToSynthesizer { get; set; }
     //是否使用脆弱树脂
@@ -46,6 +48,7 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         FriendshipTeam= config.FriendshipTeam;
         Team= config.Team;
         Timeout= config.Timeout;
+        FightConfig = config.FightConfig ?? new AutoLeyLineOutcropFightConfig();
         IsGoToSynthesizer=config.IsGoToSynthesizer;
         UseFragileResin= config.UseFragileResin;
         UseTransientResin= config.UseTransientResin;
