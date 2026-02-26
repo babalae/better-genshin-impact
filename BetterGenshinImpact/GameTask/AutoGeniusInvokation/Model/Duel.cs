@@ -203,7 +203,7 @@ public class Duel
                         }
 
                         // 2. 判断使用技能
-                        if (actionCommand.GetAllDiceUseCount() > CurrentDiceCount)
+                        if (actionCommand.GetAllDiceUseCount() + actionCommand.DiceDelta > CurrentDiceCount)// 判断条件加上 DiceDelta 骰子变化
                         {
                             _logger.LogInformation("骰子不足以进行下一步：{Action}", actionCommand);
                             break;
@@ -213,7 +213,9 @@ public class Duel
                             bool useSkillRes = actionCommand.UseSkill(this);
                             if (useSkillRes)
                             {
-                                CurrentDiceCount -= actionCommand.GetAllDiceUseCount();
+                                int realCost = actionCommand.GetAllDiceUseCount() + actionCommand.DiceDelta;
+                                realCost = Math.Max(realCost, 0);
+                                CurrentDiceCount -= realCost;
                                 alreadyExecutedActionIndex.Add(i);
                                 alreadyExecutedActionCommand.Add(actionCommand);
                                 _logger.LogInformation("→指令执行完成：{Action}", actionCommand);
@@ -344,7 +346,7 @@ public class Duel
             }
 
             // 2. 判断使用技能
-            actionUseDiceSum += actionCommand.GetAllDiceUseCount();
+            actionUseDiceSum += Math.Max(actionCommand.GetAllDiceUseCount() + actionCommand.DiceDelta, 0);
             if (actionUseDiceSum > CurrentDiceCount)
             {
                 break;

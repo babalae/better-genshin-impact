@@ -60,7 +60,7 @@ public class ScriptParser
                     MyAssert(duel.Characters[3] != null, "角色未定义");
 
                     string[] actionParts = line.Split(" ", StringSplitOptions.RemoveEmptyEntries);
-                    MyAssert(actionParts.Length == 3, "策略中的行动命令解析错误");
+                    MyAssert(actionParts.Length >= 3 && actionParts.Length <= 4, "策略中的行动命令解析错误");
                     MyAssert(actionParts[1] == "使用", "策略中的行动命令解析错误");
 
                     var actionCommand = new ActionCommand();
@@ -83,6 +83,26 @@ public class ScriptParser
                     int skillNum = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(actionParts[2], ""));
                     MyAssert(skillNum < 5, "策略中的行动命令解析错误：技能编号错误");
                     actionCommand.TargetIndex = skillNum;
+                    
+                    // 解析骰子增减
+                    actionCommand.DiceDelta = 0;
+                    if (actionParts.Length >= 4)
+                    {
+                        if (actionParts[3].StartsWith("骰子增加"))
+                        {
+                            int delta = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(actionParts[3], ""));
+                            actionCommand.DiceDelta = delta;
+                        }
+                        else if (actionParts[3].StartsWith("骰子减少"))
+                        {
+                            int delta = int.Parse(RegexHelper.ExcludeNumberRegex().Replace(actionParts[3], ""));
+                            actionCommand.DiceDelta = -delta;
+                        }
+                        else
+                        {
+                            MyAssert(false, $"策略中的行动命令解析错误：骰子增减参数格式不正确（应为 骰子增加N 或 骰子减少N ），实际：{actionParts[3]}");
+                        }
+                    }
                     duel.ActionCommandQueue.Add(actionCommand);
                 }
                 else
