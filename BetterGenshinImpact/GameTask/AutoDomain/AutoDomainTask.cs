@@ -95,7 +95,7 @@ public class AutoDomainTask : ISoloTask
         this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
         this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
         this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
-        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全开");
+        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全部开放");
         this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, "限时开放");
     }
 
@@ -382,7 +382,7 @@ public class AutoDomainTask : ISoloTask
         using var limitedFullyStringRa = CaptureToRectArea();
         var limitedFullyStringRaocrList =
             limitedFullyStringRa.FindMulti(RecognitionObject.Ocr(0, 0, limitedFullyStringRa.Width * 0.5,
-                limitedFullyStringRa.Height));
+                limitedFullyStringRa.Height * 0.5));
         var limitedFullyStringRaocrListdone = limitedFullyStringRaocrList.LastOrDefault(t =>
             Regex.IsMatch(t.Text, this.limitedFullyString) || Regex.IsMatch(t.Text, this.limitedFullyAllString));
         // 检测是否为限时全开秘境
