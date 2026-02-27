@@ -17,6 +17,11 @@ public class Simulation
         return new PostMessageSimulator(hWnd);
     }
 
+    public static PostMessageSimulatorController PostMessageController(IntPtr hWnd)
+    {
+        return new PostMessageSimulatorController(hWnd);
+    }
+    
     public static void ReleaseAllKey()
     {
         foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))

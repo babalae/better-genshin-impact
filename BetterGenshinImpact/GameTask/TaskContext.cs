@@ -38,6 +38,7 @@ namespace BetterGenshinImpact.GameTask
         {
             GameHandle = hWnd;
             PostMessageSimulator = Simulation.PostMessage(GameHandle);
+            PostMessageSimulatorController = Simulation.PostMessageController(GameHandle);
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
@@ -49,6 +50,7 @@ namespace BetterGenshinImpact.GameTask
         public IntPtr GameHandle { get; set; }
 
         public PostMessageSimulator PostMessageSimulator { get; private set; }
+        public PostMessageSimulatorController PostMessageSimulatorController { get; private set; }
 
         //public IntPtr MaskWindowHandle { get; set; }
 
