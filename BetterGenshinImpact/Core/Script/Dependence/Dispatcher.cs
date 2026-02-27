@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -111,6 +112,7 @@ public class Dispatcher
     /// - AutoWood: 启动自动伐木任务
     /// - AutoFight: 启动自动战斗任务
     /// - AutoDomain: 启动自动秘境任务
+    /// - AutoStygianOnslaught: 启动自动幽境危战任务
     /// </param>
     /// <param name="customCt">自定义取消令牌，允许从JS控制任务取消</param>
     /// <exception cref="ArgumentNullException"></exception>
@@ -188,6 +190,16 @@ public class Dispatcher
                 }
 
                 await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
+                return null;
+
+            case "AutoStygianOnslaught":
+                // 同样使用战斗策略来获取脚本路径
+                if (taskSettingsPageViewModel.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var stygianPath))
+                {
+                    return null;
+                }
+
+                await new AutoStygianOnslaughtTask(TaskContext.Instance().Config.AutoStygianOnslaughtConfig, stygianPath).Start(cancellationToken);
                 return null;
 
             case "AutoFishing":
@@ -356,5 +368,27 @@ public class Dispatcher
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
         await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
+    }
+
+    /// <summary>
+    /// 运行自动幽境危战任务
+    /// </summary>
+    /// <param name="param">幽境危战任务配置</param>
+    /// <param name="path">战斗脚本文件路径，由控制器获取</param>
+    /// <param name="customCt">自定义取消令牌</param>
+    /// <returns></returns>
+    public async Task RunAutoStygianOnslaughtTask(AutoStygianOnslaughtConfig param, string path, CancellationToken? customCt = null)
+    {
+        if (param == null)
+        {
+            throw new ArgumentNullException(nameof(param), "幽境危战任务参数不能为空");
+        }
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new ArgumentException("战斗脚本路径不能为空", nameof(path));
+        }
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        await new AutoStygianOnslaughtTask(param, path).Start(cancellationToken);
     }
 }
