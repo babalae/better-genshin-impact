@@ -2049,5 +2049,19 @@
     "nameEn": "Illuga",
     "skillCD": 15,
     "weapon": "10"
+  },
+  {
+    "alias": [
+      "法尔伽",
+      "Varka",
+      "团长",
+      "法尔加"
+    ],
+    "burstCD": 16,
+    "id": "10000128",
+    "name": "法尔伽",
+    "nameEn": "Varka",
+    "skillCD": 16,
+    "weapon": "10"
   }
 ]
