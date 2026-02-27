@@ -1001,7 +1001,7 @@
         "nameEn": "escoffier",
         "type": "character",
         "name": "爱可菲",
-        "hp": 11,
+        "hp": 10,
         "energy": 2,
         "element": "冰元素",
         "weapon": "长柄武器",
@@ -1066,6 +1066,154 @@
             {
                 "nameEn": "constant_offthecuff_cookery",
                 "name": "时时刻刻的即兴料理",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1116,
+        "nameEn": "skirk",
+        "type": "character",
+        "name": "丝柯克",
+        "hp": 10,
+        "energy": 0,
+        "element": "冰元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "havoc_sunder",
+                "name": "极恶技·断",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "havoc_warp",
+                "name": "极恶技·闪",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "havoc_ruin",
+                "name": "极恶技·灭",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "reason_beyond_reason",
+                "name": "理外之理",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1117,
+        "nameEn": "mika",
+        "type": "character",
+        "name": "米卡",
+        "hp": 10,
+        "energy": 2,
+        "element": "冰元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "spear_of_favonius_arrows_passage",
+                "name": "西风枪术·镝传",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "starfrost_swirl",
+                "name": "星霜的流旋",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "skyfeather_song",
+                "name": "苍翎的颂愿",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1101,
+                        "nameEn": "cryo",
+                        "type": "冰元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "suppressive_barrage",
+                "name": "速射牵制",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -1646,7 +1794,7 @@
         "nameEn": "yelan",
         "type": "character",
         "name": "夜兰",
-        "hp": 10,
+        "hp": 11,
         "energy": 3,
         "element": "水元素",
         "weapon": "弓",
@@ -4292,6 +4440,83 @@
             {
                 "nameEn": "nightshade_synesthesia",
                 "name": "夜翳的通感",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1417,
+        "nameEn": "ineffa",
+        "type": "character",
+        "name": "伊涅芙",
+        "hp": 10,
+        "energy": 2,
+        "element": "雷元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "cyclonic_duster",
+                "name": "除尘旋刃",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "cleaning_mode_carrier_frequency",
+                "name": "涤净模式·稳态载频",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "supreme_instruction_cyclonic_exterminator",
+                "name": "至高律令·全域扫灭",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_assemblage_hub",
+                "name": "月兆祝赐·象拟中继",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -7388,7 +7613,7 @@
         "nameEn": "alldevouring_narwhal",
         "type": "character",
         "name": "吞星之鲸",
-        "hp": 5,
+        "hp": 6,
         "energy": 2,
         "element": "水元素",
         "weapon": "其他武器",
@@ -7534,7 +7759,7 @@
         "nameEn": "hydro_tulpa",
         "type": "character",
         "name": "水形幻人",
-        "hp": 11,
+        "hp": 10,
         "energy": 3,
         "element": "水元素",
         "weapon": "其他武器",
@@ -7688,7 +7913,7 @@
         "nameEn": "fatui_pyro_agent",
         "type": "character",
         "name": "愚人众·火之债务处理人",
-        "hp": 9,
+        "hp": 11,
         "energy": 2,
         "element": "火元素",
         "weapon": "其他武器",
@@ -8061,6 +8286,83 @@
             {
                 "nameEn": "resentment",
                 "name": "忿恨",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2306,
+        "nameEn": "goldflame_qucusaur_tyrant",
+        "type": "character",
+        "name": "金焰绒翼龙暴君",
+        "hp": 11,
+        "energy": 2,
+        "element": "火元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "wingcleave",
+                "name": "翼斩",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "rising_scorchwind",
+                "name": "升腾炽风",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "goldflame_detonation",
+                "name": "金焰爆轰",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1103,
+                        "nameEn": "pyro",
+                        "type": "火元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ancient_bloodline",
+                "name": "古老者的血脉",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -8772,7 +9074,7 @@
         "nameEn": "stonehide_lawachurl",
         "type": "character",
         "name": "丘丘岩盔王",
-        "hp": 8,
+        "hp": 10,
         "energy": 2,
         "element": "岩元素",
         "weapon": "其他武器",
@@ -9072,7 +9374,7 @@
         "nameEn": "jadeplume_terrorshroom",
         "type": "character",
         "name": "翠翎恐蕈",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "草元素",
         "weapon": "其他武器",
@@ -9368,77 +9670,6 @@
             {
                 "nameEn": "gluttonous_rex",
                 "name": "贪食之王",
-                "skillTag": [
-                    "被动技能"
-                ],
-                "cost": []
-            }
-        ]
-    },
-    {
-        "id": 6605,
-        "nameEn": "skirk",
-        "type": "character",
-        "name": "丝柯克",
-        "hp": 10,
-        "energy": 0,
-        "element": "冰元素",
-        "weapon": "单手剑",
-        "skills": [
-            {
-                "nameEn": "havoc_sunder",
-                "name": "极恶技·断",
-                "skillTag": [
-                    "普通攻击"
-                ],
-                "cost": [
-                    {
-                        "id": 1101,
-                        "nameEn": "cryo",
-                        "type": "冰元素",
-                        "count": 1
-                    },
-                    {
-                        "id": 1109,
-                        "nameEn": "unaligned_element",
-                        "type": "无色元素",
-                        "count": 2
-                    }
-                ]
-            },
-            {
-                "nameEn": "havoc_warp",
-                "name": "极恶技·闪",
-                "skillTag": [
-                    "元素战技"
-                ],
-                "cost": [
-                    {
-                        "id": 1101,
-                        "nameEn": "cryo",
-                        "type": "冰元素",
-                        "count": 2
-                    }
-                ]
-            },
-            {
-                "nameEn": "havoc_extinction",
-                "name": "极恶技·尽",
-                "skillTag": [
-                    "元素爆发"
-                ],
-                "cost": [
-                    {
-                        "id": 1101,
-                        "nameEn": "cryo",
-                        "type": "冰元素",
-                        "count": 1
-                    }
-                ]
-            },
-            {
-                "nameEn": "reason_beyond_reason",
-                "name": "理外之理",
                 "skillTag": [
                     "被动技能"
                 ],

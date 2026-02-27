@@ -190,11 +190,6 @@ public partial class MaskWindow : Window
 
         RefreshPosition();
         PrintSystemInfo();
-        if (_viewModel != null)
-        {
-            PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-            PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-        }
 
         PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
     }
@@ -257,27 +252,6 @@ public partial class MaskWindow : Window
             }
         }
 
-        if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_viewModel != null)
-                {
-                    PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-                }
-            });
-        }
-
-        if (e.PropertyName == nameof(MaskWindowViewModel.MapPoints))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_viewModel != null)
-                {
-                    PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-                }
-            });
-        }
     }
 
     private void UpdateClickThroughState()

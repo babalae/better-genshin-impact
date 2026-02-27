@@ -38,12 +38,16 @@
             </ToggleButton.Template>
         </ToggleButton>
 
-        <Popup IsOpen="{Binding IsChecked, ElementName=MainToggle, Mode=TwoWay}"
+        <Popup x:Name="MainPopup"
+               IsOpen="{Binding IsChecked, ElementName=MainToggle, Mode=TwoWay}"
                PlacementTarget="{Binding ElementName=MainToggle}"
                StaysOpen="False"
                AllowsTransparency="True"
-               PopupAnimation="Slide">
-            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+               PopupAnimation="Slide"
+               Opened="MainPopup_Opened"
+               Closed="MainPopup_Closed">
+            <Border x:Name="PopupBorder"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
@@ -51,7 +55,8 @@
                     Padding="4"
                     MinHeight="200"
                     MaxHeight="400"
-                    Width="350">
+                    Width="350"
+                    PreviewMouseWheel="PopupBorder_PreviewMouseWheel">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="Black" Opacity="0.2"/>
                 </Border.Effect>
@@ -63,10 +68,12 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Countries -->
-                    <ui:ListView ItemsSource="{Binding Countries, ElementName=Root}"
+                    <ui:ListView x:Name="CountriesListView"
+                              ItemsSource="{Binding Countries, ElementName=Root}"
                               SelectedItem="{Binding SelectedCountry, ElementName=Root, Mode=TwoWay}"
                               BorderThickness="0"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
@@ -78,13 +85,14 @@
                     <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource SurfaceStrokeColorDefaultBrush}" Margin="2,0"/>
 
                     <!-- Domains -->
-                    <ui:ListView Grid.Column="2"
+                    <ui:ListView Grid.Column="2" x:Name="DomainsListView"
                               ItemsSource="{Binding FilteredDomains, ElementName=Root}"
                               SelectedValue="{Binding SelectedDomain, ElementName=Root, Mode=TwoWay}"
                               SelectedValuePath="Item2.Name"
                               BorderThickness="0"
                               SelectionChanged="DomainListView_SelectionChanged"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Margin="8,4">

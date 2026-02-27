@@ -86,6 +86,37 @@
                     Grid.Column="0"
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
+                <controls:MiniMapPointsCanvas x:Name="MiniMapPointsCanvasControl"
+                                              Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              PointsSource="{Binding MapPoints}"
+                                              LabelsSource="{Binding MapPointLabels}"
+                                              IsHitTestVisible="False">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="MiniMapOverlayLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="MiniMapOverlayTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <controls:MiniMapPointsCanvas.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="MiniMapOverlaySizeRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </controls:MiniMapPointsCanvas.Width>
+                    <controls:MiniMapPointsCanvas.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="MiniMapOverlaySizeRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </controls:MiniMapPointsCanvas.Height>
+                </controls:MiniMapPointsCanvas>
+
                 <overlay:AdjustableOverlayItem x:Name="StatusWrapper"
                                                Padding="4,2"
                                                Background="#00000000"
@@ -428,6 +459,8 @@
                                    x:Name="PointsCanvasControl"
                                    Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                   PointsSource="{Binding MapPoints}"
+                                   LabelsSource="{Binding MapPointLabels}"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
                                    PointHoverCommand="{Binding PointHoverCommand}" />
