@@ -422,8 +422,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         SwitchAutoStygianOnslaughtEnabled = true;
+        AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
+        param.SetAutoStygianOnslaughtConfig(Config.AutoStygianOnslaughtConfig);
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoStygianOnslaughtTask(Config.AutoStygianOnslaughtConfig, path));
+            .RunSoloTaskAsync(new AutoStygianOnslaughtTask(param, path));
         SwitchAutoStygianOnslaughtEnabled = false;
     }
 

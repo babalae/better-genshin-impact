@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -356,5 +357,23 @@ public class Dispatcher
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
         await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
+    }
+    
+        
+    /// <summary>  
+    /// 运行自动幽境危战任务
+    /// </summary>  
+    /// <param name="param">自动幽境危战任务参数</param>  
+    /// <param name="customCt">自定义取消令牌</param>  
+    /// <returns></returns>  
+    public async Task RunAutoStygianOnslaughtTask(AutoStygianOnslaughtParam param, CancellationToken? customCt = null)  
+    {  
+        if (param == null)  
+        {  
+            throw new ArgumentNullException(nameof(param), "自动幽境危战任务参数不能为空");  
+        }  
+  
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        await new AutoStygianOnslaughtTask(param).Start(cancellationToken);  
     }
 }

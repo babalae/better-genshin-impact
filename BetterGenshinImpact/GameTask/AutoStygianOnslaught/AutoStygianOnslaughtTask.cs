@@ -79,12 +79,21 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     /// </summary>
     protected override ILogger Logger => TaskControl.Logger;
 
-    private readonly AutoStygianOnslaughtConfig _taskParam;
+    private readonly AutoStygianOnslaughtParam _taskParam;
     private readonly CombatScriptBag _combatScriptBag;
     private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
     private LowerHeadThenWalkToTask? _lowerHeadThenWalkToTask;
+    public AutoStygianOnslaughtTask(AutoStygianOnslaughtParam taskParam)
+    {
+        AutoFightAssets.DestroyInstance();
+        _taskParam = taskParam;
+        _combatScriptBag = CombatScriptParser.ReadAndParse(taskParam.CombatScriptBagPath);
+        _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
-    public AutoStygianOnslaughtTask(AutoStygianOnslaughtConfig taskParam, string path)
+        // 注册所有状态处理器
+        RegisterAllStateHandlers();
+    }
+    public AutoStygianOnslaughtTask(AutoStygianOnslaughtParam taskParam, string path)
     {
         AutoFightAssets.DestroyInstance();
         _taskParam = taskParam;
