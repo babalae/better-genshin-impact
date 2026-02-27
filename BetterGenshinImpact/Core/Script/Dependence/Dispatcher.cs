@@ -193,7 +193,6 @@ public class Dispatcher
                 return null;
 
             case "AutoStygianOnslaught":
-                // 同样使用战斗策略来获取脚本路径
                 if (taskSettingsPageViewModel.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var stygianPath))
                 {
                     return null;
