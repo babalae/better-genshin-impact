@@ -13,16 +13,19 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
+using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -33,6 +36,8 @@ using Wpf.Ui;
 using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Appearance;
 using Wpf.Ui.Violeta.Controls;
+using Quartz;
+using BetterGenshinImpact.Model.Gear.Triggers;
 
 // Wine 平台适配
 using BetterGenshinImpact.Platform.Wine;
@@ -68,9 +73,10 @@ public partial class App : Application
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
                 var loggerConfiguration = new LoggerConfiguration()
+                    .Enrich.FromLogContext() // Enable LogContext
                     .WriteTo.File(logFile,
                         outputTemplate:
-                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
+                        "[{Timestamp:HH:mm:ss.fff}] [{Level:u3}] [{CorrelationId}] {SourceContext}{NewLine}{Message}{NewLine}{Exception}{NewLine}",
                         rollingInterval: RollingInterval.Day,
                         retainedFileCountLimit: 31,
                         retainedFileTimeLimit: TimeSpan.FromDays(21))
@@ -78,7 +84,8 @@ public partial class App : Application
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
+                    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning)
+                    .MinimumLevel.Override("Quartz", LogEventLevel.Information);
                 if (all.MaskWindowConfig.MaskEnabled)
                 {
                     loggerConfiguration.WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
@@ -101,6 +108,7 @@ public partial class App : Application
                         logging.SetMinimumLevel(LogLevel.Debug);
                         logging.AddFilter("Microsoft", LogLevel.Warning);
                         logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+                        logging.AddFilter("Quartz", LogLevel.Information);
                         logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
                     });
                 }
@@ -121,6 +129,21 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
+                
+                // Quartz.NET 调度器配置
+                services.AddQuartz(q =>
+                {
+                    q.UseSimpleTypeLoader();
+                    q.UseInMemoryStore();
+                    q.UseDefaultThreadPool(tp =>
+                    {
+                        tp.MaxConcurrency = 1;
+                    });
+                });
+                services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+                services.AddSingleton<QuartzSchedulerService>();
+                services.AddHostedService(sp => sp.GetRequiredService<QuartzSchedulerService>());
+                services.AddGearTaskServices();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();
@@ -138,6 +161,12 @@ public partial class App : Application
                 services.AddSingleton<PathingConfigViewModel>();
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
+                services.AddView<SchedulerPage, SchedulerViewModel>();
+                services.AddView<GearTaskListPage, GearTaskListPageViewModel>();
+                services.AddView<GearTriggerPage, GearTriggerPageViewModel>();
+                services.AddTransient<TaskDefinitionEditWindow>();
+                services.AddTransient<TaskDefinitionEditWindowViewModel>();
+
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
@@ -165,6 +194,12 @@ public partial class App : Application
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
                 services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
+                services.AddSingleton<GearTaskStorageService>();
+                services.AddSingleton<GearTriggerStorageService>();
+                services.AddSingleton<ITriggerHistoryService, TriggerHistoryService>();
+                services.AddSingleton<LogReaderService>();
+
+
                 
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();
@@ -192,6 +227,11 @@ public partial class App : Application
     public static T? GetService<T>() where T : class
     {
         return _host.Services.GetService(typeof(T)) as T;
+    }
+    
+    public static T GetRequiredService<T>() where T : class
+    {
+        return _host.Services.GetRequiredService<T>();
     }
 
     /// <summary>
