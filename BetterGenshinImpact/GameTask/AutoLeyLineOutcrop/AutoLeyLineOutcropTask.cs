@@ -326,7 +326,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await _switchPartyTask.Start(_taskParam.Team, _ct);
         }
 
-        if (_taskParam.UseAdventurerHandbook)
+        if (!_taskParam.UseAdventurerHandbook)
         {
             // The config flag means "do NOT use handbook"; close custom marks for manual navigation.
             await CloseCustomMarks();
@@ -339,7 +339,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         while (_currentRunTimes < _taskParam.Count)
         {
-            if (!_taskParam.UseAdventurerHandbook)
+            if (_taskParam.UseAdventurerHandbook)
             {
                 // Handbook flow: open the book and track a ley line target.
                 await FindLeyLineOutcropByBook(_taskParam.Country, _taskParam.LeyLineOutcropType);
@@ -796,7 +796,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         await EnsureExitRewardPage();
-        if (_taskParam.UseAdventurerHandbook)
+        if (!_taskParam.UseAdventurerHandbook)
         {
             _logger.LogWarning("寻找地脉花失败：当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
             throw new Exception("寻找地脉花失败：未在地图上识别到地脉花图标。当前已勾选“不使用冒险之证寻路”，可尝试关闭该选项后重试！");
