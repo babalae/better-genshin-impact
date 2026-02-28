@@ -45,6 +45,8 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
     [ObservableProperty] private bool _guardianAvatarHold = false;
     [ObservableProperty] private bool _burstEnabled = false;
     [ObservableProperty] private bool _swimmingEnabled = false;
+    [ObservableProperty] private bool _kazuhaPickupEnabled = true;
+    [ObservableProperty] private bool _qinDoublePickUp = false;
     [ObservableProperty] private int _timeout = 120;
 
     public void CopyFromAutoFightConfig(AutoFightConfig source)
@@ -58,6 +60,8 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         GuardianAvatarHold = source.GuardianAvatarHold;
         BurstEnabled = source.BurstEnabled;
         SwimmingEnabled = source.SwimmingEnabled;
+        KazuhaPickupEnabled = source.KazuhaPickupEnabled;
+        QinDoublePickUp = source.QinDoublePickUp;
         Timeout = source.Timeout;
 
         FinishDetectConfig.BattleEndProgressBarColor = source.FinishDetectConfig.BattleEndProgressBarColor;
