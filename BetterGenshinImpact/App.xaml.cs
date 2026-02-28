@@ -85,6 +85,10 @@ public partial class App : Application
                         "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
                 }
 
+                var httpLogServerService = new HttpLogServerService(configService);
+                services.AddSingleton(httpLogServerService);
+                loggerConfiguration.WriteTo.Sink(httpLogServerService);
+
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
                 services.AddSingleton<ITranslationService, JsonTranslationService>();
