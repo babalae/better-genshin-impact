@@ -6,9 +6,13 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoPick.Assets;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -76,6 +80,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
     private static readonly System.Drawing.Pen OcrOverlayPen = new(System.Drawing.Color.Lime, 2);
+    private static readonly object PickLock = new();
     private bool _overlayDisplayTemporarilyEnabled;
     private bool _overlayDisplayOriginalValue;
     private DateTime _lastMaskBringTopTime = DateTime.MinValue;
@@ -668,8 +673,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         var lastRoute = path.Routes.Last();
-        var targetRoute = lastRoute.Replace("Assets/pathing/", "Assets/pathing/target/").Replace("-rerun", "");
-        await ProcessLeyLineOutcrop(_taskParam.FightConfig.Timeout, targetRoute);
+        var targetRoute = BuildTargetRoute(lastRoute);
+        var rerunRoute = BuildRerunRoute(lastRoute);
+        var fromTeleportStart = "teleport".Equals(path.StartNode.Type, StringComparison.OrdinalIgnoreCase);
+        await ProcessLeyLineOutcrop(_taskParam.FightConfig.Timeout, targetRoute, rerunRoute, fromTeleportStart);
 
         var rewardSuccess = await AttemptReward();
         if (!rewardSuccess)
@@ -678,6 +685,35 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         _consecutiveFailureCount = 0;
+    }
+
+    private static string BuildTargetRoute(string routePath)
+    {
+        return routePath
+            .Replace("assets/pathing/", "assets/pathing/target/", StringComparison.OrdinalIgnoreCase)
+            .Replace("-rerun", "", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildRerunRoute(string routePath)
+    {
+        var rerunRoute = routePath
+            .Replace("assets/pathing/target/", "assets/pathing/rerun/", StringComparison.OrdinalIgnoreCase)
+            .Replace("assets/pathing/", "assets/pathing/rerun/", StringComparison.OrdinalIgnoreCase);
+
+        if (!rerunRoute.Contains("-rerun", StringComparison.OrdinalIgnoreCase))
+        {
+            rerunRoute = rerunRoute.Replace(".json", "-rerun.json", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return rerunRoute;
+    }
+
+    private bool PathingFileExists(string routePath)
+    {
+        var workDir = Global.Absolute(@"GameTask\AutoLeyLineOutcrop");
+        var localPath = routePath.Replace("/", Path.DirectorySeparatorChar.ToString());
+        var fullPath = Path.Combine(workDir, localPath);
+        return File.Exists(fullPath);
     }
 
     private async Task RunPathingFile(string routePath)
@@ -841,7 +877,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
     }
 
-    private async Task<bool> ProcessLeyLineOutcrop(int timeoutSeconds, string targetPath, int retries = 0)
+    private async Task<bool> ProcessLeyLineOutcrop(int timeoutSeconds, string targetPath, string rerunPath, bool fromTeleportStart, int retries = 0)
     {
         const int maxRetries = 3;
         if (retries >= maxRetries)
@@ -880,9 +916,20 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
         else if (!ContainsFightText(result1Text))
         {
-            _logger.LogDebug("未识别到战斗提示，执行路径: {Path}", targetPath);
-            await RunPathingFile(targetPath);
-            return await ProcessLeyLineOutcrop(timeoutSeconds, targetPath, retries + 1);
+            var recoverPath = retries == 0
+                ? targetPath
+                : fromTeleportStart
+                    ? targetPath
+                    : rerunPath;
+            if (!PathingFileExists(recoverPath))
+            {
+                _logger.LogWarning("纠偏路径不存在，回退target路径: {Path}", recoverPath);
+                recoverPath = targetPath;
+            }
+
+            _logger.LogDebug("未识别到战斗提示，执行纠偏路径: {Path}", recoverPath);
+            await RunPathingFile(recoverPath);
+            return await ProcessLeyLineOutcrop(timeoutSeconds, targetPath, rerunPath, fromTeleportStart, retries + 1);
         }
 
         var fightResult = await AutoFight(timeoutSeconds);
@@ -891,15 +938,146 @@ public class AutoLeyLineOutcropTask : ISoloTask
             await EnsureExitRewardPage();
             if (await ProcessResurrect())
             {
-                return await ProcessLeyLineOutcrop(timeoutSeconds, targetPath, retries + 1);
+                return await ProcessLeyLineOutcrop(timeoutSeconds, targetPath, rerunPath, fromTeleportStart, retries + 1);
             }
 
             throw new Exception("战斗失败");
         }
 
+        await TryCollectDropsAfterFight();
         await SwitchToFriendshipTeamIfNeeded();
         await AutoNavigateToReward();
         return true;
+    }
+
+    private async Task TryCollectDropsAfterFight()
+    {
+        if (!_taskParam.FightConfig.KazuhaPickupEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var combatScenes = await RunnerContext.Instance.GetCombatScenes(_ct);
+            if (combatScenes == null)
+            {
+                _logger.LogWarning("战后聚集拾取：队伍识别失败，跳过");
+                return;
+            }
+
+            var kazuha = combatScenes.SelectAvatar("枫原万叶");
+            if (kazuha != null)
+            {
+                await TryKazuhaCollect(kazuha);
+                return;
+            }
+
+            var qin = combatScenes.SelectAvatar("琴");
+            if (qin != null)
+            {
+                await TryQinCollect(combatScenes, qin);
+                return;
+            }
+
+            _logger.LogDebug("战后聚集拾取：当前队伍无万叶/琴，跳过");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "战后聚集拾取异常");
+        }
+        finally
+        {
+            Simulation.ReleaseAllKey();
+        }
+    }
+
+    private async Task TryKazuhaCollect(Avatar kazuha)
+    {
+        _logger.LogInformation("战后聚集拾取：开始使用枫原万叶执行长E拾取");
+        await Delay(200, _ct);
+        if (!kazuha.TrySwitch(10))
+        {
+            _logger.LogWarning("战后聚集拾取：切换到万叶失败，跳过");
+            return;
+        }
+
+        _logger.LogInformation("战后聚集拾取：万叶已切换，等待元素战技CD");
+        await kazuha.WaitSkillCd(_ct);
+        kazuha.UseSkill(true);
+        await Delay(50, _ct);
+        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        await Delay(1500, _ct);
+        kazuha.AfterUseSkill();
+        _logger.LogInformation("战后聚集拾取：万叶长E聚集动作执行完成");
+    }
+
+    private async Task TryQinCollect(CombatScenes combatScenes, Avatar qin)
+    {
+        _logger.LogInformation("战后聚集拾取：使用琴-长E拾取掉落物");
+        var find = _taskParam.FightConfig.QinDoublePickUp;
+        await Delay(150, _ct);
+        if (qin.TrySwitch(10))
+        {
+            var actionsToUse = PickUpCollectHandler.PickUpActions
+                .Where(action => action.StartsWith("琴-长E ", StringComparison.OrdinalIgnoreCase))
+                .Select(action => action.Replace("琴-长E", "琴", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            foreach (var actionStr in actionsToUse)
+            {
+                var pickUpAction = CombatScriptParser.ParseContext(actionStr);
+                for (var i = 0; i < 2; i++)
+                {
+                    await qin.WaitSkillCd(_ct);
+                    foreach (var command in pickUpAction.CombatCommands)
+                    {
+                        command.Execute(combatScenes);
+                        Task.Run(() =>
+                        {
+                            if (Monitor.TryEnter(PickLock))
+                            {
+                                try
+                                {
+                                    if (find)
+                                    {
+                                        using var imagePick = CaptureToRectArea();
+                                        if (imagePick.Find(AutoPickAssets.Instance.PickRo).IsExist())
+                                        {
+                                            find = false;
+                                        }
+                                    }
+                                }
+                                finally
+                                {
+                                    Monitor.Exit(PickLock);
+                                }
+                            }
+                        });
+                    }
+
+                    if (!find)
+                    {
+                        break;
+                    }
+
+                    if (i == 0)
+                    {
+                        _logger.LogInformation("战后聚集拾取：尝试再次执行琴-长E拾取");
+                        qin.AfterUseSkill();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                Simulation.ReleaseAllKey();
+            }
+        }
+        else
+        {
+            _logger.LogWarning("战后聚集拾取：切换到琴失败，跳过");
+        }
     }
 
     private Region FindSafe(ImageRegion capture, RecognitionObject ro)
@@ -1370,7 +1548,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var drawContent = VisionContext.Instance().DrawContent;
         drawContent.PutOrRemoveRectList(key, drawList.Count > 0 ? drawList : null);
         RefreshMaskWindowForOverlay();
-        return new OcrOverlayScope(drawContent, key);
+        return new OcrOverlayScope(drawContent, key, RefreshMaskWindowForOverlay);
     }
 
     private void ClearOcrOverlayKeys()
@@ -1380,6 +1558,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         drawContent.RemoveRect(OcrFightOverlayKey);
         drawContent.PutOrRemoveTextList(OcrFlowOverlayKey, null);
         drawContent.PutOrRemoveTextList(OcrFightOverlayKey, null);
+        RefreshMaskWindowForOverlay();
     }
 
     private async Task WaitOcrOverlayRenderTick()
@@ -2145,7 +2324,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         public int FragileResinTimes { get; set; }
     }
 
-    private sealed class OcrOverlayScope(DrawContent drawContent, string key) : IDisposable
+    private sealed class OcrOverlayScope(DrawContent drawContent, string key, Action refreshAction) : IDisposable
     {
         private bool _disposed;
 
@@ -2159,6 +2338,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             _disposed = true;
             drawContent.RemoveRect(key);
             drawContent.PutOrRemoveTextList(key, null);
+            refreshAction();
         }
     }
 
