@@ -98,6 +98,8 @@ jobs:
         run: |
           $version = '${{ needs.validate.outputs.version }}'
           (Get-Content BetterGenshinImpact/BetterGenshinImpact.csproj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content BetterGenshinImpact/BetterGenshinImpact.csproj
+      - name: 更新dotnet依赖
+        run: dotnet restore
       - name: 自动提交更改
         if: github.repository_owner == 'babalae'
         uses: stefanzweifel/git-auto-commit-action@v5
