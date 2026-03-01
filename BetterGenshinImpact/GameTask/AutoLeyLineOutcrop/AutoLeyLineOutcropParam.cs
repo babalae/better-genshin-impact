@@ -44,7 +44,8 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     {
         OpenModeCountMin= config.OpenModeCountMin;
         IsResinExhaustionMode= config.IsResinExhaustionMode;
-        UseAdventurerHandbook= config.UseAdventurerHandbook;
+        //最小修正歧义
+        UseAdventurerHandbook= !config.UseAdventurerHandbook;
         FriendshipTeam= config.FriendshipTeam;
         Team= config.Team;
         Timeout= config.Timeout;
