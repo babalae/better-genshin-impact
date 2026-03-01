@@ -1,0 +1,37 @@
+﻿<UserControl x:Class="GamepadController.Controls.IceXboxLBRB"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:cov ="clr-namespace:GamepadController.Converters"
+             xmlns:local="clr-namespace:GamepadController.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="42" d:DesignWidth="202">
+    <UserControl.Resources>
+        <cov:XboxKeyStateConverter x:Key="_XboxKeyStateConverter"/>
+
+        <SolidColorBrush x:Key="TransparentBrush" Color="Transparent"/>
+    </UserControl.Resources>
+    <Grid>
+        <Viewbox HorizontalAlignment="Left">
+            <Path Data="m3,42c1.609,-0.99 25.332,-16.696 49,-23c24.139,-6.43 48.233,-3.475 50,-6c3.5,-5 -14,-11 -14,-11c0,0 -43,0 -60,14c-17,14 -28.25,28 -25,26z" Stroke="White" StrokeThickness="1">
+                <Path.Fill>
+                    <MultiBinding Converter="{StaticResource _XboxKeyStateConverter}">
+                        <Binding Path="LBKeyState" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                        <Binding Source="{StaticResource TransparentBrush}"/>
+                    </MultiBinding>
+                </Path.Fill>
+            </Path>
+        </Viewbox>
+        <Viewbox HorizontalAlignment="Right">
+            <Path Data="m103.44125,42c-1.63351,-0.99 -25.71796,-16.696 -49.74657,-23c-24.50678,-6.43 -48.96788,-3.475 -50.7618,-6c-3.55333,-5 14.2133,-11 14.2133,-11c0,0 43.65515,0 60.91416,14c17.25901,14 28.68042,28 25.3809,26z" Stroke="White" StrokeThickness="1">
+                <Path.Fill>
+                    <MultiBinding Converter="{StaticResource _XboxKeyStateConverter}">
+                        <Binding Path="RBKeyState" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                        <Binding Source="{StaticResource TransparentBrush}"/>
+                    </MultiBinding>
+                </Path.Fill>
+            </Path>
+        </Viewbox>
+    </Grid>
+</UserControl>
