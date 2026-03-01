@@ -418,7 +418,14 @@ public class AutoFightTask : ISoloTask
                             fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
                         }
                         #endregion
-                        
+
+                        #region check动作触发战斗结束检测
+                        if (command.Method == Method.Check)
+                        {
+                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                        }
+                        #endregion
+
                         command.Execute(combatScenes, lastCommand);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
