@@ -188,7 +188,19 @@ public class PathExecutor
                         {
                             if (CurWaypoints.Item1 > 0)
                             {
-                                await Delay(1000, ct);
+                                var prevWaypoints = waypointsList[CurWaypoints.Item1 - 1];
+                                var prevWaypoint = prevWaypoints[prevWaypoints.Count - 1];
+                                if (prevWaypoint.Type == WaypointType.Teleport.Code
+                                    || prevWaypoint.Action == ActionEnum.Fight.Code
+                                    || prevWaypoint.Action == ActionEnum.NahidaCollect.Code
+                                    || prevWaypoint.Action == ActionEnum.PickAround.Code)
+                                {
+                                    // No delay
+                                }
+                                else
+                                {
+                                    await Delay(1000, ct);
+                                }
                             }
                             await HandleTeleportWaypoint(waypoint);
                         }
