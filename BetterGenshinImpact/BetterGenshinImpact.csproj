@@ -15,18 +15,7 @@
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
-
-	<ItemGroup>
-	<Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-		<HintPath>..\packages\SharpDX.4.2.0\lib\net45\SharpDX.dll</HintPath>
-	</Reference>
-	<Reference Include="SharpDX.DirectInput, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-		<HintPath>..\packages\SharpDX.DirectInput.4.2.0\lib\net45\SharpDX.DirectInput.dll</HintPath>
-	</Reference>
-	<Reference Include="SharpDX.XInput, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
-		<HintPath>..\packages\SharpDX.XInput.4.2.0\lib\net45\SharpDX.XInput.dll</HintPath>
-	</Reference>
-	</ItemGroup>
+	
 <!--	<ItemGroup>
 		<None Remove="Assets\Images\*.jpg" />
 		<None Remove="Assets\Images\*" />
