@@ -202,6 +202,10 @@ public class CombatCommand
         {
             avatar.Ready();
         }
+        else if (Method == Method.Check)
+        {
+            // check动作在AutoFightTask主循环中处理，此处不做任何操作
+        }
         else if (Method == Method.Aim)
         {
             throw new NotImplementedException();
