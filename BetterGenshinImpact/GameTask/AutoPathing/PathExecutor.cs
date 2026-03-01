@@ -637,6 +637,12 @@ public class PathExecutor
     /// <returns>是否可以领取派遣奖励</returns>
     private async Task<bool> TryGetExpeditionRewardsDispatch(TpTask? tpTask = null)
     {
+        // 检查配置组设置：是否禁用自动领取派遣奖励
+        if (PartyConfig?.DisableAutoFetchDispatch == true)
+        {
+            return false;
+        }
+
         if (tpTask == null)
         {
             tpTask = new TpTask(ct);
