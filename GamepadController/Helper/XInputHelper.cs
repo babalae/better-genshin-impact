@@ -5,6 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Nefarius.ViGEm.Client;
+using Nefarius.ViGEm.Client.Targets;
+using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 namespace GamepadController.Helper
 {
@@ -14,6 +17,13 @@ namespace GamepadController.Helper
     /// </summary>
     public class XInputHelper
     {
+        private IXbox360Controller Xbox360Controller;
+        
+        public XInputHelper()
+        {
+            var viGEmClient = new ViGEmClient();
+            Xbox360Controller = viGEmClient.CreateXbox360Controller();
+        }
         /// <summary>
         /// 是否连接控制器
         /// </summary>
@@ -123,6 +133,7 @@ namespace GamepadController.Helper
                 }
             }
             Console.WriteLine($"ConnectGamepad connect {isGetJoystick}");
+            Xbox360Controller.Connect();
             return isGetJoystick;
         }
 
@@ -141,6 +152,7 @@ namespace GamepadController.Helper
             {
                 isGetJoystick = false;
             }
+            Xbox360Controller.Disconnect();
         }
 
         /// <summary>
@@ -170,7 +182,21 @@ namespace GamepadController.Helper
                 ////var vVibration = vGetCapabilities.Vibration;
                 ////var vSetVibration = controller.SetVibration(vGetCapabilities.Vibration);
                 #endregion
-
+                Xbox360Controller.SetButtonState(Xbox360Button.X, true);
+                System.Threading.Thread.Sleep(500);
+                Xbox360Controller.SetButtonState(Xbox360Button.X, false);
+                
+                Xbox360Controller.SetButtonState(Xbox360Button.Y, true);
+                System.Threading.Thread.Sleep(500);
+                Xbox360Controller.SetButtonState(Xbox360Button.Y, false);
+                
+                Xbox360Controller.SetButtonState(Xbox360Button.A, true);
+                System.Threading.Thread.Sleep(500);
+                Xbox360Controller.SetButtonState(Xbox360Button.A, false);
+                
+                Xbox360Controller.SetButtonState(Xbox360Button.B, true);
+                System.Threading.Thread.Sleep(500);
+                Xbox360Controller.SetButtonState(Xbox360Button.B, false);
                 // 获取状态
                 var vGetState = controller.GetState();
                 // 按钮
@@ -186,6 +212,7 @@ namespace GamepadController.Helper
                 {
                     LeftTriggerData = vLeftTrigger;
                     LeftTriggerChange?.Invoke(LeftTriggerData);
+
                 }
                 // RT 按键 0-255
                 var vRightTrigger = vGetState.Gamepad.RightTrigger;

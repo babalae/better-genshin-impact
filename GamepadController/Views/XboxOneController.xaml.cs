@@ -65,6 +65,7 @@ namespace GamepadController.Views
         private void XInputHelper_ButtonsChange(SharpDX.XInput.GamepadButtonFlags obj)
         {
             var vObjSplit = obj.ToString()?.Replace(" ", "")?.Split(',');
+            Console.WriteLine(obj.ToString());
             this.Dispatcher.Invoke(new Action(() =>
             {
                 IceXboxkeyABXY.XKeyState = vObjSplit.Contains($"{SharpDX.XInput.GamepadButtonFlags.X}");
