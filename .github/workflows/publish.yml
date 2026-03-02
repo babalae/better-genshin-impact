@@ -98,10 +98,6 @@ jobs:
         run: |
           $version = '${{ needs.validate.outputs.version }}'
           (Get-Content BetterGenshinImpact/BetterGenshinImpact.csproj) -replace '<Version>.*</Version>', "<Version>$version</Version>" | Set-Content BetterGenshinImpact/BetterGenshinImpact.csproj
-      - name: 更新dotnet依赖
-        run: |
-           dotnet nuget locals all -c
-           dotnet restore
       - name: 自动提交更改
         if: github.repository_owner == 'babalae'
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -116,6 +112,8 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/BetterGenshinImpact.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+      - name: Restore NuGet packages
+        run: dotnet restore
       - name: 🛠️ Build application
         run: dotnet publish BetterGenshinImpact/BetterGenshinImpact.csproj -c Release -p:PublishProfile=FolderProfile -p:Version=${{ needs.validate.outputs.version }}
         continue-on-error: true
