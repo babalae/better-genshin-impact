@@ -107,7 +107,7 @@ public class LimitedFile(string rootPath)
         }
         catch (Exception ex)
         {
-            TaskControl.Logger.LogError("Exists 异常: {Message}", ex.Message);
+            TaskControl.Logger.LogError("IsExists 异常: {Message}", ex.Message);
             return false;
         }
     }
