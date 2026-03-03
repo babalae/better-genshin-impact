@@ -87,7 +87,7 @@ public class AutoPathingScript
     /// <summary>
     /// 读取 AutoPathing 目录下指定文件夹的内容（非递归方式）
     /// </summary>
-    /// <param name="subPath">相对于 User\AutoPathing 的子目录路径，默认为空（根目录）</param>
+    /// <param name="subPath">相对于 User\AutoPathing 的子目录路径，默认为相对根目录</param>
     /// <returns>文件夹内所有文件和文件夹的相对路径数组，出错时返回空数组</returns>
     public string[] ReadPathSync(string subPath = "./") => AutoPathingFile.ReadPathSync(subPath);
 
