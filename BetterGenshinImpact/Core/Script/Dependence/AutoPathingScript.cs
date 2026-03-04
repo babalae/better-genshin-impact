@@ -12,11 +12,13 @@ public class AutoPathingScript
 {
     private object? _config = null;
     private string _rootPath;
+    private readonly LimitedFile _autoPathingFile;
 
     public AutoPathingScript(string rootPath, object? config)
     {
         _config = config;
         _rootPath = rootPath;
+        _autoPathingFile = new LimitedFile(Global.Absolute(@"User\AutoPathing"));
     }
 
     public async Task Run(string json)
@@ -94,5 +96,5 @@ public class AutoPathingScript
     /// <summary>
     /// LimitedFile 实例，用于操作 AutoPathing 目录
     /// </summary>
-    private LimitedFile AutoPathingFile => new LimitedFile(Global.Absolute(@"User\AutoPathing"));
+    private LimitedFile AutoPathingFile => _autoPathingFile;
 }
