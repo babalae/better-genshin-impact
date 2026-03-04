@@ -108,7 +108,6 @@
 		<ProjectReference Include="..\Fischless.GameCapture\Fischless.GameCapture.csproj" />
 		<ProjectReference Include="..\Fischless.HotkeyCapture\Fischless.HotkeyCapture.csproj" />
 		<ProjectReference Include="..\Fischless.WindowsInput\Fischless.WindowsInput.csproj" />
-		<ProjectReference Include="..\GamepadController\GamepadController.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -38,8 +38,6 @@ using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service.Tavern;
 
-// xbox手柄控制器
-using GamepadController.Views;
 
 namespace BetterGenshinImpact;
 
@@ -134,7 +132,6 @@ public partial class App : Application
                 services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
                 services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
-                services.AddView<GameMainWindow, GameMainWindowViewModel>();
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();

@@ -24,6 +24,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using Vanara.Extensions.Reflection;
 using Vanara.PInvoke;
 using Region = BetterGenshinImpact.GameTask.Model.Area.Region;
 
@@ -226,7 +227,14 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
                 else
                 {
-                    _postMessageSimulator?.KeyPressBackground(User32.VK.VK_SPACE);
+                    if (IsControllerMode)
+                    {
+                        _postMessageSimulatorController?.ButtonBPress();
+                    }
+                    else
+                    {
+                        _postMessageSimulator?.KeyPressBackground(User32.VK.VK_SPACE);
+                    }
                 }
             }
 

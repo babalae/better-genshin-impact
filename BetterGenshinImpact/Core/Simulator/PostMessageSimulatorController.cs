@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using GamepadController.Simulator;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Simulator;
@@ -20,11 +22,63 @@ public class PostMessageSimulatorController
     public static readonly uint WM_RBUTTONUP = 0x205;
 
     private readonly IntPtr _hWnd;
+    private readonly AutoSkipConfig _config;
+    private ControllerSimulator ControllerSimulator;
 
-    public PostMessageSimulatorController(IntPtr hWnd)
+    public PostMessageSimulatorController(IntPtr hWnd, AutoSkipConfig config)
     {
         _hWnd = hWnd;
+        _config = config;
+        if (_config.AutoSkipControllerEnabled)
+        {
+            ControllerSimulator = new ControllerSimulator();
+        }
     }
+
+    public PostMessageSimulatorController ButtonXPress()
+    {
+        if (!_config.AutoSkipControllerEnabled)
+        {
+            return this;
+        }
+
+        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonX, 100);
+        return this;
+    }
+
+    public PostMessageSimulatorController ButtonYPress()
+    {
+        if (!_config.AutoSkipControllerEnabled)
+        {
+            return this;
+        }
+
+        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonY, 100);
+        return this;
+    }
+
+    public PostMessageSimulatorController ButtonAPress()
+    {
+        if (!_config.AutoSkipControllerEnabled)
+        {
+            return this;
+        }
+
+        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonA, 100);
+        return this;
+    }
+
+    public PostMessageSimulatorController ButtonBPress()
+    {
+        if (!_config.AutoSkipControllerEnabled)
+        {
+            return this;
+        }
+
+        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonB, 100);
+        return this;
+    }
+
 
     /// <summary>
     ///     指定位置并按下左键
