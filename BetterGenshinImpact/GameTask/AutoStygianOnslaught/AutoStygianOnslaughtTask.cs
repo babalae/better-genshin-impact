@@ -252,14 +252,14 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         return ra.Find(ElementAssets.Instance.BtnWhiteCancel).IsExist() &&
                ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.35, ra.Height * 0.7, ra.Width * 0.3, ra.Height * 0.2))
-                   .Any(o => o.Text.Contains("返回"));
+                 .Any(o => o.Text.Contains("返回"));
     }
 
     private bool DetectBattleResultLose(ImageRegion ra)
     {
         return ra.Find(ElementAssets.Instance.BtnWhiteConfirm).IsExist() &&
                ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.2, ra.Height * 0.3, ra.Width * 0.6, ra.Height * 0.3))
-                   .Any(o => o.Text.Contains("挑战失败") || o.Text.Contains("重新挑战"));
+                 .Any(o => o.Text.Contains("挑战失败") || o.Text.Contains("重新挑战"));
     }
 
     // ========== 第三优先级：OCR 检测 ==========
@@ -275,13 +275,6 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         var ocrResult = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.2, ra.Height * 0.2, ra.Width * 0.6, ra.Height * 0.6));
         var found = ocrResult.Any(t => t.Text.Contains("地脉之花"));
-
-        // 调试日志
-        var texts = ocrResult.Any()
-            ? string.Join(", ", ocrResult.Select(o => $"'{o.Text}'"))
-            : "（无结果）";
-        Logger.LogInformation($"DetectLeylineFlowerPrompt: OCR结果=[{texts}], 地脉之花={found}");
-
         return found;
     }
 
@@ -293,29 +286,14 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         var hasPreview = ocrResult.Any(o => o.Text.Contains("角色预览"));
         var hasStart = ocrResult.Any(o => o.Text.Contains("开始挑战"));
         var found = hasPreview && hasStart;
-        
-        // 调试日志
-        var texts = ocrResult.Any()
-            ? string.Join(", ", ocrResult.Select(o => $"'{o.Text}'"))
-            : "（无结果）";
-        Logger.LogInformation($"DetectBossSelect: 右侧OCR结果=[{texts}], 角色预览={hasPreview}, 开始挑战={hasStart}");
-        
         return found;
     }
 
     private bool DetectDifficultySelect(ImageRegion ra)
     {
         // "单人挑战" 在右下角
-        var ocrResult = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.5, ra.Height * 0.7, ra.Width * 0.5, ra.Height * 0.3));
-        var found = ocrResult.Any(o => o.Text.Contains("单人挑战"));
-        
-        // 调试日志
-        var texts = ocrResult.Any()
-            ? string.Join(", ", ocrResult.Select(o => $"'{o.Text}'"))
-            : "（无结果）";
-        Logger.LogInformation($"DetectDifficultySelect: 右下角OCR结果=[{texts}], 包含单人挑战={found}");
-        
-        return found;
+        return ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.5, ra.Height * 0.7, ra.Width * 0.5, ra.Height * 0.3))
+                 .Any(o => o.Text.Contains("单人挑战"));
     }
 
     private bool DetectDomainEntrance(ImageRegion ra)
@@ -323,16 +301,8 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         // 秘境入口特征：屏幕右侧有"幽境危战"四个字
         // 坐标：左上角(1223, 510), 右下角(1376, 566)
         // 宽度=153, 高度=56
-        var ocrResult = ra.FindMulti(RecognitionObject.Ocr(1223, 510, 153, 56));
-        var found = ocrResult.Any(o => o.Text.Contains("幽境危战"));
-        
-        // 始终输出日志，帮助调试
-        var texts = ocrResult.Any() 
-            ? string.Join(", ", ocrResult.Select(o => $"'{o.Text}'"))
-            : "（无结果）";
-        Logger.LogInformation($"DetectDomainEntrance: 区域(1223,510,153,56) OCR结果=[{texts}], 包含幽境危战={found}");
-        
-        return found;
+        return ra.FindMulti(RecognitionObject.Ocr(1223, 510, 153, 56))
+                 .Any(o => o.Text.Contains("幽境危战"));
     }
 
     private bool DetectEventMenu(ImageRegion ra)
@@ -340,13 +310,13 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         // 活动一览位置：左上角(125, 142), 右下角(238, 170)
         // OCR 参数：(x, y, width, height)
         return ra.FindMulti(RecognitionObject.Ocr(125, 142, 238 - 125, 170 - 142))
-                   .Any(o => o.Text.Contains("活动一览"));
+                 .Any(o => o.Text.Contains("活动一览"));
     }
 
     private bool DetectStygianOnslaughtPage(ImageRegion ra)
     {
         return ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.55, ra.Height * 0.3, ra.Width * 0.4, ra.Height * 0.6))
-                   .Any(o => o.Text.Contains("前往挑战"));
+                 .Any(o => o.Text.Contains("前往挑战"));
     }
 
     #endregion
