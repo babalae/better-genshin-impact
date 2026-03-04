@@ -116,7 +116,8 @@ public class TaskControl
             }
             else
             {
-                Logger.LogInformation("当前获取焦点的窗口不是原神，尝试恢复窗口");
+                var name = SystemControl.GetActiveByProcess();
+                Logger.LogInformation("当前获取焦点的窗口为: {Name}，不是原神，尝试恢复窗口", name);
                 SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
             }
 
