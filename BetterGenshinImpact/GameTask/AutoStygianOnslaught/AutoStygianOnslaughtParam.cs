@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
@@ -47,6 +48,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
         TransientResinUseCount = config.TransientResinUseCount;
         FragileResinUseCount = config.FragileResinUseCount;
         FightTeamName = config.FightTeamName;
+        SetCombatStrategyPath();
     }
     public AutoStygianOnslaughtParam() : base(null, null)
     {
@@ -55,11 +57,31 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null, null)
     {
         SetDefault();
-        CombatScriptBagPath = combatScriptBagPath;
+        SetCombatStrategyPath(combatScriptBagPath);
     }
     public void SetResinPriorityList(params string[] priorities)
     {
         ResinPriorityList.Clear();
         ResinPriorityList.AddRange(priorities);
+    }
+    
+    
+    /// <summary>  
+    /// 设置战斗策略路径
+    /// </summary>  
+    /// <param name="strategyName">策略名称</param>  
+    public string SetCombatStrategyPath(string? strategyName = null)
+    {
+        if (string.IsNullOrEmpty(strategyName))
+        {
+            strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
+        }
+
+        if ("根据队伍自动选择".Equals(strategyName))
+        {
+            return Global.Absolute(@"User\AutoFight\");
+        }
+
+        return Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
     }
 }
