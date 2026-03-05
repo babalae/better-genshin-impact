@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Model;
@@ -72,7 +73,12 @@ internal class QuickTeleportTrigger : ITaskTrigger
         {
             // 2. 判断是否有传送按钮
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
+            
+            // 3. 判断是否有尘歌壶退出按钮，有的话点击退出，直接返回
+            using var ra = content.CaptureRectArea.DeriveCrop(_assets.ClickBlackConfirmButtonRo.RegionOfInterest);
+            var hasClickBlackConfirmButton = Bv.ClickBlackConfirmButton(ra);
 
+            if (hasClickBlackConfirmButton) return;
             if (!hasTeleportButton)
             {
                 // 存在地图关闭按钮，说明未选中传送点，直接返回
@@ -89,7 +95,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                     return;
                 }
 
-                // 3. 循环判断选项列表是否有传送点
+                // 4. 循环判断选项列表是否有传送点
                 var hasMapChooseIcon = CheckMapChooseIcon(content);
                 if (hasMapChooseIcon)
                 {
@@ -115,7 +121,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
         });
         return hasTeleportButton;
     }
-
+    
     /// <summary>
     /// 全匹配一遍并进行文字识别
     /// 60ms ~200ms
