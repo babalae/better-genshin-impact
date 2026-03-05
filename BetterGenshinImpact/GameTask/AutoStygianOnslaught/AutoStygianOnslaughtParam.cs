@@ -6,7 +6,7 @@ namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
 {
-    public string StrategyName { get; set; }
+   
     public int BossNum { get; set; }
     // 结束后是否自动分解圣遗物
     public bool AutoArtifactSalvage { get; set; }
@@ -38,7 +38,6 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     }
     public void SetAutoStygianOnslaughtConfig(AutoStygianOnslaughtConfig config)
     {
-        StrategyName = config.StrategyName;
         BossNum = config.BossNum;
         AutoArtifactSalvage = config.AutoArtifactSalvage;
         SpecifyResinUse = config.SpecifyResinUse;
@@ -48,7 +47,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
         TransientResinUseCount = config.TransientResinUseCount;
         FragileResinUseCount = config.FragileResinUseCount;
         FightTeamName = config.FightTeamName;
-        SetCombatStrategyPath();
+        SetCombatStrategyPath(config.StrategyName);
     }
     public AutoStygianOnslaughtParam() : base(null, null)
     {
