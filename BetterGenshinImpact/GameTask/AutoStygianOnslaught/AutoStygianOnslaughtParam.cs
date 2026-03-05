@@ -69,7 +69,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     /// 设置战斗策略路径
     /// </summary>  
     /// <param name="strategyName">策略名称</param>  
-    public string SetCombatStrategyPath(string? strategyName = null)
+    public void SetCombatStrategyPath(string? strategyName = null)
     {
         if (string.IsNullOrEmpty(strategyName))
         {
@@ -78,9 +78,10 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
 
         if ("根据队伍自动选择".Equals(strategyName))
         {
-            return Global.Absolute(@"User\AutoFight\");
+            CombatScriptBagPath= Global.Absolute(@"User\AutoFight\");
+            return;
         }
 
-        return Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        CombatScriptBagPath= Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
     }
 }
