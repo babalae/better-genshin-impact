@@ -41,7 +41,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
         BossNum = config.BossNum;
         AutoArtifactSalvage = config.AutoArtifactSalvage;
         SpecifyResinUse = config.SpecifyResinUse;
-        ResinPriorityList = config.ResinPriorityList;
+        ResinPriorityList = config.ResinPriorityList == null ? new List<string> { "浓缩树脂", "原粹树脂" }: new List<string>(config.ResinPriorityList);
         OriginalResinUseCount = config.OriginalResinUseCount;
         CondensedResinUseCount = config.CondensedResinUseCount;
         TransientResinUseCount = config.TransientResinUseCount;
@@ -76,7 +76,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
             strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
         }
 
-        if ("根据队伍自动选择".Equals(strategyName))
+        if (string.IsNullOrWhiteSpace(strategyName) ||"根据队伍自动选择".Equals(strategyName))
         {
             CombatScriptBagPath= Global.Absolute(@"User\AutoFight\");
             return;
