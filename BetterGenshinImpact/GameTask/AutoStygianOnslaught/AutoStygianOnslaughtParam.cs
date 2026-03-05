@@ -15,7 +15,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public bool SpecifyResinUse{ get; set; }
     
     // 自定义使用树脂优先级
-    public List<string> ResinPriorityList{ get; set; }
+    public List<string> ResinPriorityList{ get; set; }=["浓缩树脂","原粹树脂"];
     // 使用原粹树脂刷取副本次数
     public int OriginalResinUseCount { get; set; }
     
