@@ -56,7 +56,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null, null)
     {
         SetDefault();
-        SetCombatStrategyPath(combatScriptBagPath);
+        CombatScriptBagPath=combatScriptBagPath;
     }
     public void SetResinPriorityList(params string[] priorities)
     {
