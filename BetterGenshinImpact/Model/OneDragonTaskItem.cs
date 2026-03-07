@@ -127,7 +127,9 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
-                    await new AutoStygianOnslaughtTask(TaskContext.Instance().Config.AutoStygianOnslaughtConfig, path).Start(CancellationContext.Instance.Cts.Token);
+                    AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
+                    param.SetAutoStygianOnslaughtConfig(TaskContext.Instance().Config.AutoStygianOnslaughtConfig);
+                    await new AutoStygianOnslaughtTask(param, path).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "领取每日奖励":
