@@ -796,6 +796,8 @@ public partial class OneDragonFlowViewModel : ViewModel
             
             // 刷新任务列表
             LoadDisplayTaskListFromConfig();
+            SelectedTask = null!;
+            InputScriptGroupName = string.Empty;
             
             // 保存配置
             SaveConfig();
