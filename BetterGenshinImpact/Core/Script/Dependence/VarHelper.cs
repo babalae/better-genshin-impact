@@ -28,12 +28,11 @@ public class VarHelper
     };
 
     /// <summary>
-    /// 允许的程序集白名单（程序集匹配，允许该程序集下的所有类型）
+    /// 允许的命名空间白名单（命名空间匹配，允许该命名空间下的所有类型）
     /// </summary>
-    private static readonly HashSet<string> AssemblyWhitelist = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> NamespaceWhitelist = new(StringComparer.OrdinalIgnoreCase)
     {
         "OpenCvSharp",
-        "OpenCvSharp.Extensions",
     };
 
     /// <summary>
@@ -88,7 +87,7 @@ public class VarHelper
     }
 
     /// <summary>
-    /// 检查类型是否在白名单中（全量匹配 或 程序集匹配）
+    /// 检查类型是否在白名单中（全量匹配 或 命名空间匹配）
     /// </summary>
     private bool IsTypeAllowed(string typeName)
     {
@@ -98,9 +97,9 @@ public class VarHelper
             return true;
         }
 
-        // 2. 程序集匹配：检查类型所属程序集是否在白名单中
+        // 2. 命名空间匹配：检查类型所属命名空间是否在白名单中
         var namespacePrefix = typeName.Split('.')[0];
-        if (AssemblyWhitelist.Contains(namespacePrefix))
+        if (NamespaceWhitelist.Contains(namespacePrefix))
         {
             return true;
         }
