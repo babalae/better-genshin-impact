@@ -336,7 +336,7 @@ public static partial class Bv
     {
         using var ra = captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
         using var ra1 = captureRa.Find(AutoSkipAssets.Instance.ControllerDisabledUiButtonRo);
-        Logger.LogWarning($"ControllerDisabledUiButtonRo check result: {ra.IsExist()}");
+        // Logger.LogWarning($"IsInTalkUi check result: {ra.IsExist()} {ra1.IsExist()} size:{captureRa.Width}x{captureRa.Height}");
         return ra.IsExist();
     }
 
