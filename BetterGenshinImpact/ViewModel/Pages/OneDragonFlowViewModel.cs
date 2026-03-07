@@ -741,7 +741,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void DeleteConfig()
+    private async Task DeleteConfig()
     {
         if (SelectedConfig == null)
         {
@@ -749,7 +749,14 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
-        var result = System.Windows.MessageBox.Show($"确定要删除配置「{SelectedConfig.Name}」吗？", "删除配置", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        var displayName = SelectedConfig.Name.Length > 14 
+            ? $"{SelectedConfig.Name[..4]}...{SelectedConfig.Name[^4..]}" 
+            : SelectedConfig.Name;
+        var result = await ThemedMessageBox.ShowAsync(
+            $"确定要删除配置「{displayName}」吗？", 
+            "删除配置", 
+            System.Windows.MessageBoxButton.YesNo, 
+            ThemedMessageBox.MessageBoxIcon.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
