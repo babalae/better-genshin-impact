@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,29 @@ public class VarHelper
 {
     private readonly HostFunctions _hostFunctions = new();
     private readonly ILogger<VarHelper> _logger = App.GetLogger<VarHelper>();
+
+    /// <summary>
+    /// 允许创建的类型白名单（全量匹配，精确匹配完整类型名称）
+    /// </summary>
+    private static readonly HashSet<string> TypeWhitelist = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // 基本类型
+        "System.Int32",
+        "System.Double",
+        "System.String",
+        "System.Boolean",
+        "System.Single",
+        "System.Int64",
+    };
+
+    /// <summary>
+    /// 允许的程序集白名单（程序集匹配，允许该程序集下的所有类型）
+    /// </summary>
+    private static readonly HashSet<string> AssemblyWhitelist = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "OpenCvSharp",
+        "OpenCvSharp.Extensions",
+    };
 
     /// <summary>
     /// 创建指定类型的变量占位符，用于接收out参数
@@ -29,9 +53,18 @@ public class VarHelper
     /// </summary>
     /// <param name="typeName">类型名称（如 "OpenCvSharp.Size", "OpenCvSharp.Point[]"）</param>
     /// <returns>变量占位符对象，支持value、out、ref属性</returns>
-    /// <exception cref="ArgumentException">类型名称无法解析时抛出</exception>
+    /// <exception cref="ArgumentException">类型名称无法解析或不在白名单中时抛出</exception>
     public object NewVar(string typeName)
     {
+        // 获取基础类型名称（去除数组标记）
+        var baseTypeName = GetBaseTypeName(typeName);
+        
+        // 检查白名单：全量匹配 或 程序集匹配
+        if (!IsTypeAllowed(baseTypeName))
+        {
+            throw new ArgumentException($"类型 '{typeName}' 不在允许的白名单中");
+        }
+
         var type = ResolveType(typeName);
         if (type == null)
         {
@@ -44,6 +77,35 @@ public class VarHelper
         var method = typeof(HostFunctions).GetMethod("newVar");
         var genericMethod = method!.MakeGenericMethod(type);
         return genericMethod.Invoke(_hostFunctions, new object?[] { null })!;
+    }
+
+    /// <summary>
+    /// 获取基础类型名称（去除数组标记）
+    /// </summary>
+    private static string GetBaseTypeName(string typeName)
+    {
+        return typeName.Replace("[]", "").Trim();
+    }
+
+    /// <summary>
+    /// 检查类型是否在白名单中（全量匹配 或 程序集匹配）
+    /// </summary>
+    private bool IsTypeAllowed(string typeName)
+    {
+        // 1. 全量匹配：精确匹配完整类型名称
+        if (TypeWhitelist.Contains(typeName))
+        {
+            return true;
+        }
+
+        // 2. 程序集匹配：检查类型所属程序集是否在白名单中
+        var namespacePrefix = typeName.Split('.')[0];
+        if (AssemblyWhitelist.Contains(namespacePrefix))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -74,42 +136,4 @@ public class VarHelper
         
         return null;
     }
-
-    /// <summary>
-    /// 从占位符中获取值
-    /// </summary>
-    /// <param name="placeholder">变量占位符</param>
-    /// <returns>占位符中存储的值</returns>
-    public object? GetValue(object placeholder)
-    {
-        if (placeholder == null)
-        {
-            _logger.LogWarning("占位符为null");
-            return null;
-        }
-
-        try
-        {
-            var type = placeholder.GetType();
-            var valueProperty = type.GetProperty("Value");
-            if (valueProperty != null)
-            {
-                var value = valueProperty.GetValue(placeholder);
-                _logger.LogDebug("获取占位符值: {Value}", value);
-                return value;
-            }
-            
-            _logger.LogWarning("占位符类型 {Type} 没有Value属性", type.Name);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("获取占位符值失败: {Message}", ex.Message);
-            return null;
-        }
-    }
-
-
 }
-
-
