@@ -104,6 +104,12 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private AutoEatConfig _autoEatConfig = new();
 
+    /// <summary>
+    /// 关闭地图追踪过程中的自动领取派遣奖励
+    /// </summary>
+    [ObservableProperty]
+    private bool _disableAutoFetchDispatch = false;  // 默认关闭
+
     //在连续执行时是否隐藏
     [ObservableProperty]
     private bool _hideOnRepeat = false;
