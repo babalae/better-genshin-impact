@@ -825,7 +825,13 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
     private async Task FindAndInteractLeylineFlowerLoop()
     {
-        await _lowerHeadThenWalkToTask!.Start(_ct);
+        // 先看看当前身边是否有F，有的话，直接F
+        using var ra1 = CaptureToRectArea();
+        var text = Bv.FindFKeyText(ra1);
+        if (!string.IsNullOrEmpty(text) && text.Contains("激活"))
+        {
+            await _lowerHeadThenWalkToTask!.Start(_ct);
+        }
 
         await NewRetry.WaitForAction(() =>
         {
