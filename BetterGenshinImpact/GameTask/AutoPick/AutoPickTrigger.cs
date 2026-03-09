@@ -25,7 +25,6 @@ namespace BetterGenshinImpact.GameTask.AutoPick;
 public partial class AutoPickTrigger : ITaskTrigger
 {
     private readonly ILogger<AutoPickTrigger> _logger = App.GetLogger<AutoPickTrigger>();
-    private readonly ITextInference _pickTextInference = TextInferenceFactory.Pick;
 
     public string Name => "自动拾取";
     public bool IsEnabled { get; set; }
@@ -276,7 +275,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
         {
             var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
-            text = _pickTextInference.Inference(textMat);
+            text = TextInferenceFactory.Pick.Value.Inference(textMat);
         }
         else
         {
