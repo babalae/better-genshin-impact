@@ -87,6 +87,7 @@ public class EngineExtend
         engine.AddHostType("BvLocator", typeof(BvLocator));
         engine.AddHostType("BvImage", typeof(BvImage));
 
+        engine.AddHostObject("host", new CustomHostFunctions());
 
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
