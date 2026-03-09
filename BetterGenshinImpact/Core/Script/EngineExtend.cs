@@ -38,7 +38,6 @@ public class EngineExtend
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
         engine.AddHostObject("http", new Http()); // 限制文件访问
         engine.AddHostObject("notification", new Notification());
-        
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
@@ -85,7 +84,7 @@ public class EngineExtend
         engine.AddHostType("BvLocator", typeof(BvLocator));
         engine.AddHostType("BvImage", typeof(BvImage));
 
-        engine.AddHostObject("host", new HostFunctions());
+        engine.AddHostObject("host", new CustomHostFunctions());
 
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
