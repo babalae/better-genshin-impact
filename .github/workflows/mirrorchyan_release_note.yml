@@ -7,6 +7,7 @@ on:
 
 jobs:
   mirrorchyan_release_note:
+    if: github.repository_owner == 'babalae'
     runs-on: macos-latest
 
     steps:
