@@ -58,12 +58,13 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                 //无论如何，先跳到主页，否则在通过参数的任务在执行完之前，不会加载快捷键
                 _ = _navigationWindow.Navigate(typeof(HomePage));
 
-                // 命令行启动时，先等待自动更新订阅脚本完成，再运行配置组/一条龙
-                // （正常双击启动在 MainWindowViewModel.OnLoaded 中以 fire-and-forget 方式调用）
+                // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
+                // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
                 var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
                 if (scriptConfig.AutoUpdateBeforeCommandLineRun)
                 {
-                    await Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+                    ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
+                        Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
                 }
 
                 if (args[1].Contains("startOneDragon", StringComparison.InvariantCultureIgnoreCase))
@@ -85,7 +86,8 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
                         var scheduler = App.GetService<ScriptControlViewModel>();
                         scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
                     }
-                }else if (args[1].Trim().Equals("--TaskProgress", StringComparison.InvariantCultureIgnoreCase))
+                }
+                else if (args[1].Trim().Equals("--TaskProgress", StringComparison.InvariantCultureIgnoreCase))
                 {
 
                     // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。

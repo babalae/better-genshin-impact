@@ -621,5 +621,13 @@ public partial class ScriptService : IScriptService
                 });
             }
         }
+
+        // 等待命令行启动时并行执行的自动更新完成（如果有）
+        var pendingUpdate = ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask;
+        if (pendingUpdate != null)
+        {
+            await pendingUpdate;
+            ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask = null;
+        }
     }
 }
