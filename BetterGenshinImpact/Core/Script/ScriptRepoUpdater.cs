@@ -283,10 +283,21 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // 展开所有订阅路径，直接全部更新
         var expandedPaths = ExpandTopLevelPaths(subscribedPaths, repoPath);
 
+        // 过滤掉仓库中已不存在的路径（幽灵订阅），避免删除用户文件后检出空内容
+        var validPaths = FilterExistingPaths(expandedPaths, repoPath);
+        if (validPaths.Count < expandedPaths.Count)
+        {
+            // 从订阅文件中移除不存在的路径
+            var invalidPaths = expandedPaths.Except(validPaths).ToHashSet();
+            var currentSubscribed = GetSubscribedPathsForCurrentRepo();
+            var cleaned = currentSubscribed.Where(p => !invalidPaths.Contains(p)).ToList();
+            SetSubscribedPathsForCurrentRepo(cleaned);
+        }
+
         int successCount = 0;
         int failCount = 0;
 
-        foreach (var path in expandedPaths)
+        foreach (var path in validPaths)
         {
             try
             {
@@ -410,6 +421,43 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 过滤掉仓库中已不存在的路径，防止幽灵订阅导致误删用户文件。
+    /// </summary>
+    private List<string> FilterExistingPaths(List<string> paths, string repoPath)
+    {
+        bool isGitRepo = IsGitRepository(repoPath);
+
+        if (isGitRepo)
+        {
+            using var repo = new Repository(repoPath);
+            if (repo.Head.Tip == null) return paths;
+            var repoTree = GetRepoSubdirectoryTree(repo);
+
+            return paths.Where(path =>
+            {
+                var parts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                var currentTree = repoTree;
+                foreach (var part in parts)
+                {
+                    var entry = currentTree[part];
+                    if (entry == null) return false;
+                    if (entry.TargetType == TreeEntryTargetType.Tree)
+                        currentTree = (Tree)entry.Target;
+                }
+                return true;
+            }).ToList();
+        }
+        else
+        {
+            return paths.Where(path =>
+            {
+                var fullPath = Path.Combine(repoPath, path);
+                return Directory.Exists(fullPath) || File.Exists(fullPath);
+            }).ToList();
+        }
     }
 
     /// <summary>
@@ -2424,7 +2472,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     .Where(d => !Path.GetFileName(d).Equals("Temp", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
-                if (repoDirs.Count > 1)
+                // 如果当前仓库目录尚未被 clone（只有旧目录名存在），跳过多仓库匹配，
+                // 直接走单仓库路径，避免把订阅路径写入旧目录名的文件中
+                var currentRepoDirExists = repoDirs.Any(d =>
+                    Path.GetFileName(d).Equals(repoFolderName, StringComparison.OrdinalIgnoreCase));
+
+                if (repoDirs.Count > 1 && currentRepoDirExists)
                 {
                     var repoPathSets = new Dictionary<string, HashSet<string>>();
                     foreach (var repoDir in repoDirs)
