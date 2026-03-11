@@ -2462,91 +2462,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (oldPaths.Count == 0)
                 return;
 
-            // 默认归入当前仓库
-            var repoFolderName = GetCurrentRepoFolderName();
-
-            // 如果存在多个仓库，尝试按 repo.json 分配路径
-            if (Directory.Exists(ReposPath))
-            {
-                var repoDirs = Directory.GetDirectories(ReposPath)
-                    .Where(d => !Path.GetFileName(d).Equals("Temp", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                // 如果当前仓库目录尚未被 clone（只有旧目录名存在），跳过多仓库匹配，
-                // 直接走单仓库路径，避免把订阅路径写入旧目录名的文件中
-                var currentRepoDirExists = repoDirs.Any(d =>
-                    Path.GetFileName(d).Equals(repoFolderName, StringComparison.OrdinalIgnoreCase));
-
-                if (repoDirs.Count > 1 && currentRepoDirExists)
-                {
-                    var repoPathSets = new Dictionary<string, HashSet<string>>();
-                    foreach (var repoDir in repoDirs)
-                    {
-                        var repoJsonFile = Directory.GetFiles(repoDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                        if (string.IsNullOrEmpty(repoJsonFile)) continue;
-                        try
-                        {
-                            var json = File.ReadAllText(repoJsonFile);
-                            var jsonObj = JObject.Parse(json);
-                            if (jsonObj["indexes"] is JArray indexes)
-                            {
-                                var pathSet = new HashSet<string>();
-                                CollectAllPathsFromIndexes(indexes, "", pathSet);
-                                repoPathSets[Path.GetFileName(repoDir)] = pathSet;
-                            }
-                        }
-                        catch { /* ignore */ }
-                    }
-
-                    if (repoPathSets.Count > 1)
-                    {
-                        // 按仓库聚合后批量写入
-                        // 优先将路径归入当前活跃仓库，只有当前仓库不包含该路径时才考虑其他仓库
-                        var currentRepoPathSet = repoPathSets.GetValueOrDefault(repoFolderName);
-                        var repoSubscriptions = new Dictionary<string, List<string>>();
-                        foreach (var path in oldPaths)
-                        {
-                            var targetRepo = repoFolderName; // 默认归入当前仓库
-
-                            // 当前仓库包含此路径，直接归入
-                            if (currentRepoPathSet != null && currentRepoPathSet.Contains(path))
-                            {
-                                // targetRepo 已是当前仓库
-                            }
-                            else
-                            {
-                                // 当前仓库不包含，尝试匹配其他仓库
-                                foreach (var (repoName, pathSet) in repoPathSets)
-                                {
-                                    if (repoName == repoFolderName) continue;
-                                    if (pathSet.Contains(path))
-                                    {
-                                        targetRepo = repoName;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (!repoSubscriptions.ContainsKey(targetRepo))
-                                repoSubscriptions[targetRepo] = new List<string>();
-                            repoSubscriptions[targetRepo].Add(path);
-                        }
-
-                        foreach (var (repoName, paths) in repoSubscriptions)
-                        {
-                            WriteSubscriptionFile(GetSubscriptionFilePath(repoName), paths);
-                        }
-
-                        // 清空配置属性，框架自动保存
-                        scriptConfig.SubscribedScriptPaths = new List<string>();
-                        _logger.LogInformation("已完成订阅路径迁移到独立文件（多仓库分配）");
-                        return;
-                    }
-                }
-            }
-
-            // 单仓库：直接写入
-            WriteSubscriptionFile(GetSubscriptionFilePath(repoFolderName), new List<string>(oldPaths));
+            // 全部归入当前仓库，幽灵路径由后续 UpdateAllSubscribedScriptsCore 统一清理
+            WriteSubscriptionFile(GetSubscriptionFilePath(GetCurrentRepoFolderName()), new List<string>(oldPaths));
 
             // 清空配置属性，框架自动保存
             scriptConfig.SubscribedScriptPaths = new List<string>();
@@ -2555,30 +2472,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "从 config.json 迁移订阅路径到独立文件失败");
-        }
-    }
-
-    /// <summary>
-    /// 递归收集 indexes 中所有路径（用于迁移时匹配）
-    /// </summary>
-    private static void CollectAllPathsFromIndexes(JArray nodes, string currentPath, HashSet<string> result)
-    {
-        foreach (var node in nodes)
-        {
-            if (node is JObject nodeObj)
-            {
-                var name = nodeObj["name"]?.ToString();
-                if (!string.IsNullOrEmpty(name))
-                {
-                    var fullPath = string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
-                    result.Add(fullPath);
-
-                    if (nodeObj["children"] is JArray children)
-                    {
-                        CollectAllPathsFromIndexes(children, fullPath, result);
-                    }
-                }
-            }
         }
     }
 
