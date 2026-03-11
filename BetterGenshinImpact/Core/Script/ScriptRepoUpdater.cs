@@ -2448,16 +2448,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     if (repoPathSets.Count > 1)
                     {
                         // 按仓库聚合后批量写入
+                        // 优先将路径归入当前活跃仓库，只有当前仓库不包含该路径时才考虑其他仓库
+                        var currentRepoPathSet = repoPathSets.GetValueOrDefault(repoFolderName);
                         var repoSubscriptions = new Dictionary<string, List<string>>();
                         foreach (var path in oldPaths)
                         {
                             var targetRepo = repoFolderName; // 默认归入当前仓库
-                            foreach (var (repoName, pathSet) in repoPathSets)
+
+                            // 当前仓库包含此路径，直接归入
+                            if (currentRepoPathSet != null && currentRepoPathSet.Contains(path))
                             {
-                                if (pathSet.Contains(path))
+                                // targetRepo 已是当前仓库
+                            }
+                            else
+                            {
+                                // 当前仓库不包含，尝试匹配其他仓库
+                                foreach (var (repoName, pathSet) in repoPathSets)
                                 {
-                                    targetRepo = repoName;
-                                    break;
+                                    if (repoName == repoFolderName) continue;
+                                    if (pathSet.Contains(path))
+                                    {
+                                        targetRepo = repoName;
+                                        break;
+                                    }
                                 }
                             }
 
