@@ -2465,7 +2465,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 return;
 
             // 全部归入当前仓库，幽灵路径由后续 UpdateAllSubscribedScriptsCore 统一清理
-            WriteSubscriptionFile(GetSubscriptionFilePath(GetCurrentRepoFolderName()), new List<string>(oldPaths));
+            WriteSubscriptionFile(GetSubscriptionFilePath(GetCurrentRepoFolderName()), [.. oldPaths]);
 
             // 清空配置属性，框架自动保存
             scriptConfig.SubscribedScriptPaths = new List<string>();
