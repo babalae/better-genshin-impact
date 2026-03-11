@@ -545,15 +545,16 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         _autoRun = false;
         //
-        var args = Environment.GetCommandLineArgs();
-        if (args.Length > 1 && args[1].Contains("startOneDragon"))
+        var cmdOptions = CommandLineOptions.Instance;
+        if (cmdOptions.Action == CommandLineAction.StartOneDragon)
         {
             // 通过命令行参数启动一条龙。
-            if (args.Length > 2)
+            if (cmdOptions.OneDragonConfigName != null)
             {
                 // 从命令行参数中提取一条龙配置名称。
-                _logger.LogInformation($"参数指定的一条龙配置：{args[2]}");
-                var argsOneDragonConfig = ConfigList.FirstOrDefault(x => x.Name == args[2], null);
+                _logger.LogInformation($"参数指定的一条龙配置：{cmdOptions.OneDragonConfigName}");
+                var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
+                    string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
                 if (argsOneDragonConfig != null)
                 {
                     // 设定配置，配置下拉框会选定。

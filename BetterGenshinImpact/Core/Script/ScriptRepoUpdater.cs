@@ -56,6 +56,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     public event EventHandler? AutoUpdateStateChanged;
 
+    /// <summary>
+    /// 命令行启动时并行执行的自动更新 Task。
+    /// StartGameTask 结束后会 await 此 Task，确保更新完成后再执行任务。
+    /// </summary>
+    public Task? CommandLineAutoUpdateTask { get; set; }
+
     // 仓储位置
     public static readonly string ReposPath = Global.Absolute("Repos");
 
