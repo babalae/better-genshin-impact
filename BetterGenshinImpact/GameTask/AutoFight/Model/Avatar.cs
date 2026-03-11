@@ -638,7 +638,7 @@ public class Avatar
     /// </summary>
     public void Ready()
     {
-        Sleep(200, Ct);
+        Sleep(10, Ct);
 
         for (int i = 0; i < 20; i++)
         {
