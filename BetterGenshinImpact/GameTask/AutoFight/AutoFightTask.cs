@@ -419,13 +419,6 @@ public class AutoFightTask : ISoloTask
                         }
                         #endregion
 
-                        #region check动作触发战斗结束检测
-                        if (command.Method == Method.Check)
-                        {
-                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
-                        }
-                        #endregion
-
                         command.Execute(combatScenes, lastCommand);
                         //统计战斗人次
                         if (i == combatCommands.Count - 1 || command.Name != combatCommands[i + 1].Name)
@@ -434,6 +427,13 @@ public class AutoFightTask : ISoloTask
                         }
 
                         lastFightName = command.Name;
+
+                        #region check动作触发战斗结束检测
+                        if (command.Method == Method.Check)
+                        {
+                            fightEndFlag = await CheckFightFinish(delayTime, detectDelayTime);
+                        }
+                        #endregion
                         if (!fightEndFlag && _taskParam is { FightFinishDetectEnabled: true })
                         {
                             //处于最后一个位置，或者当前执行人和下一个人名字不一样的情况，满足一定条件(开启快速检查，并且检查时间大于0或人名存在配置)检查战斗
