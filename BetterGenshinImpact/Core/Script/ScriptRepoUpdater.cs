@@ -280,18 +280,20 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             return (0, 0);
         }
 
-        // 展开所有订阅路径，直接全部更新
+        // 展开所有订阅路径
         var expandedPaths = ExpandTopLevelPaths(subscribedPaths, repoPath);
 
         // 过滤掉仓库中已不存在的路径（幽灵订阅），避免删除用户文件后检出空内容
         var validPaths = FilterExistingPaths(expandedPaths, repoPath);
+
+        // 清理订阅文件中的幽灵项：直接对原始订阅路径做过滤
         if (validPaths.Count < expandedPaths.Count)
         {
-            // 从订阅文件中移除不存在的路径
-            var invalidPaths = expandedPaths.Except(validPaths).ToHashSet();
-            var currentSubscribed = GetSubscribedPathsForCurrentRepo();
-            var cleaned = currentSubscribed.Where(p => !invalidPaths.Contains(p)).ToList();
-            SetSubscribedPathsForCurrentRepo(cleaned);
+            var cleaned = FilterExistingPaths(subscribedPaths, repoPath);
+            if (cleaned.Count < subscribedPaths.Count)
+            {
+                SetSubscribedPathsForCurrentRepo(cleaned);
+            }
         }
 
         int successCount = 0;
