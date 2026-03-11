@@ -286,13 +286,26 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             return (0, 0);
         }
 
-        // 展开所有订阅路径，直接全部更新
+        // 展开所有订阅路径
         var expandedPaths = ExpandTopLevelPaths(subscribedPaths, repoPath);
+
+        // 过滤掉仓库中已不存在的路径（幽灵订阅），避免删除用户文件后检出空内容
+        var validPaths = FilterExistingPaths(expandedPaths, repoPath);
+
+        // 清理订阅文件中的幽灵项：直接对原始订阅路径做过滤
+        if (validPaths.Count < expandedPaths.Count)
+        {
+            var cleaned = FilterExistingPaths(subscribedPaths, repoPath);
+            if (cleaned.Count < subscribedPaths.Count)
+            {
+                SetSubscribedPathsForCurrentRepo(cleaned);
+            }
+        }
 
         int successCount = 0;
         int failCount = 0;
 
-        foreach (var path in expandedPaths)
+        foreach (var path in validPaths)
         {
             try
             {
@@ -416,6 +429,43 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 过滤掉仓库中已不存在的路径，防止幽灵订阅导致误删用户文件。
+    /// </summary>
+    private List<string> FilterExistingPaths(List<string> paths, string repoPath)
+    {
+        bool isGitRepo = IsGitRepository(repoPath);
+
+        if (isGitRepo)
+        {
+            using var repo = new Repository(repoPath);
+            if (repo.Head.Tip == null) return paths;
+            var repoTree = GetRepoSubdirectoryTree(repo);
+
+            return paths.Where(path =>
+            {
+                var parts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                var currentTree = repoTree;
+                foreach (var part in parts)
+                {
+                    var entry = currentTree[part];
+                    if (entry == null) return false;
+                    if (entry.TargetType == TreeEntryTargetType.Tree)
+                        currentTree = (Tree)entry.Target;
+                }
+                return true;
+            }).ToList();
+        }
+        else
+        {
+            return paths.Where(path =>
+            {
+                var fullPath = Path.Combine(repoPath, path);
+                return Directory.Exists(fullPath) || File.Exists(fullPath);
+            }).ToList();
+        }
     }
 
     /// <summary>
@@ -2420,73 +2470,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (oldPaths.Count == 0)
                 return;
 
-            // 默认归入当前仓库
-            var repoFolderName = GetCurrentRepoFolderName();
-
-            // 如果存在多个仓库，尝试按 repo.json 分配路径
-            if (Directory.Exists(ReposPath))
-            {
-                var repoDirs = Directory.GetDirectories(ReposPath)
-                    .Where(d => !Path.GetFileName(d).Equals("Temp", StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                if (repoDirs.Count > 1)
-                {
-                    var repoPathSets = new Dictionary<string, HashSet<string>>();
-                    foreach (var repoDir in repoDirs)
-                    {
-                        var repoJsonFile = Directory.GetFiles(repoDir, "repo.json", SearchOption.AllDirectories).FirstOrDefault();
-                        if (string.IsNullOrEmpty(repoJsonFile)) continue;
-                        try
-                        {
-                            var json = File.ReadAllText(repoJsonFile);
-                            var jsonObj = JObject.Parse(json);
-                            if (jsonObj["indexes"] is JArray indexes)
-                            {
-                                var pathSet = new HashSet<string>();
-                                CollectAllPathsFromIndexes(indexes, "", pathSet);
-                                repoPathSets[Path.GetFileName(repoDir)] = pathSet;
-                            }
-                        }
-                        catch { /* ignore */ }
-                    }
-
-                    if (repoPathSets.Count > 1)
-                    {
-                        // 按仓库聚合后批量写入
-                        var repoSubscriptions = new Dictionary<string, List<string>>();
-                        foreach (var path in oldPaths)
-                        {
-                            var targetRepo = repoFolderName; // 默认归入当前仓库
-                            foreach (var (repoName, pathSet) in repoPathSets)
-                            {
-                                if (pathSet.Contains(path))
-                                {
-                                    targetRepo = repoName;
-                                    break;
-                                }
-                            }
-
-                            if (!repoSubscriptions.ContainsKey(targetRepo))
-                                repoSubscriptions[targetRepo] = new List<string>();
-                            repoSubscriptions[targetRepo].Add(path);
-                        }
-
-                        foreach (var (repoName, paths) in repoSubscriptions)
-                        {
-                            WriteSubscriptionFile(GetSubscriptionFilePath(repoName), paths);
-                        }
-
-                        // 清空配置属性，框架自动保存
-                        scriptConfig.SubscribedScriptPaths = new List<string>();
-                        _logger.LogInformation("已完成订阅路径迁移到独立文件（多仓库分配）");
-                        return;
-                    }
-                }
-            }
-
-            // 单仓库：直接写入
-            WriteSubscriptionFile(GetSubscriptionFilePath(repoFolderName), new List<string>(oldPaths));
+            // 全部归入当前仓库，幽灵路径由后续 UpdateAllSubscribedScriptsCore 统一清理
+            WriteSubscriptionFile(GetSubscriptionFilePath(GetCurrentRepoFolderName()), [.. oldPaths]);
 
             // 清空配置属性，框架自动保存
             scriptConfig.SubscribedScriptPaths = new List<string>();
@@ -2495,30 +2480,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "从 config.json 迁移订阅路径到独立文件失败");
-        }
-    }
-
-    /// <summary>
-    /// 递归收集 indexes 中所有路径（用于迁移时匹配）
-    /// </summary>
-    private static void CollectAllPathsFromIndexes(JArray nodes, string currentPath, HashSet<string> result)
-    {
-        foreach (var node in nodes)
-        {
-            if (node is JObject nodeObj)
-            {
-                var name = nodeObj["name"]?.ToString();
-                if (!string.IsNullOrEmpty(name))
-                {
-                    var fullPath = string.IsNullOrEmpty(currentPath) ? name : $"{currentPath}/{name}";
-                    result.Add(fullPath);
-
-                    if (nodeObj["children"] is JArray children)
-                    {
-                        CollectAllPathsFromIndexes(children, fullPath, result);
-                    }
-                }
-            }
         }
     }
 
