@@ -1,0 +1,29 @@
+name: Repo Bot
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+      - labeled
+
+jobs:
+  repo-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Repo Bot
+        uses: ddaodan/bettergi-github-bot@028ebdeda1fd95263429f0bba37be08402752170
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO_BOT_AI_API_KEY: ${{ secrets.REPO_BOT_AI_API_KEY }}
+          REPO_BOT_AI_BASE_URL: ${{ vars.REPO_BOT_AI_BASE_URL }}
+        with:
+          config-path: .github/repo-bot.yml
+          config-overrides-json: ${{ vars.REPO_BOT_CONFIG_OVERRIDES_JSON }}

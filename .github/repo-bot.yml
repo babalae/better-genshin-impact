@@ -1,0 +1,161 @@
+runtime:
+  languageMode: auto
+  dryRun: false
+
+providers:
+  openAiCompatible:
+    enabled: true
+    baseUrl: https://api.openai.com/v1
+    model: gpt-5-mini
+    apiStyle: responses
+    timeoutMs: 30000
+
+issues:
+  validation:
+    enabled: true
+    fallbackTemplateKey: normal
+    commentAnchor: issue-bot:validation
+    templates:
+      - key: bug
+        detect:
+          markers:
+            - bug
+        requiredSections:
+          - id: environment
+            aliases:
+              - 系统环境
+              - System Environment
+          - id: version
+            aliases:
+              - BetterGI 版本号
+              - BetterGI Version
+          - id: description
+            aliases:
+              - 问题描述
+              - Description of the issue
+          - id: steps
+            aliases:
+              - 复现步骤
+              - Reproduction steps
+        labels:
+          whenValid:
+            - bug
+          whenInvalid:
+            - needs-template-fix
+      - key: feature
+        detect:
+          markers:
+            - feature
+        requiredSections:
+          - id: request
+            aliases:
+              - 功能请求
+              - Feature Request
+          - id: scenario
+            aliases:
+              - 使用场景
+              - Use Case
+        labels:
+          whenValid:
+            - enhancement
+          whenInvalid:
+            - needs-template-fix
+      - key: suggestion
+        detect:
+          markers:
+            - suggestion
+        requiredSections:
+          - id: suggestion
+            aliases:
+              - 建议内容
+              - Suggestion
+          - id: benefit
+            aliases:
+              - 预期收益
+              - Expected Benefit
+        labels:
+          whenValid:
+            - enhancement
+          whenInvalid:
+            - needs-template-fix
+      - key: question
+        detect:
+          markers:
+            - question
+        requiredSections:
+          - id: question
+            aliases:
+              - 问题描述
+              - Problem Description
+          - id: tried
+            aliases:
+              - 已尝试内容
+              - What I Tried
+        labels:
+          whenValid:
+            - question
+          whenInvalid:
+            - needs-template-fix
+      - key: normal
+        detect:
+          markers:
+            - normal
+        requiredSections:
+          - id: description
+            aliases:
+              - 描述
+              - Description
+        labels:
+          whenValid: []
+          whenInvalid:
+            - needs-template-fix
+    duplicateDetection:
+      enabled: true
+      bypassLabels:
+        - no-auto-duplicate
+      duplicateLabel: duplicate
+      searchResultLimit: 50
+      candidateLimit: 20
+      aiReviewMaxCandidates: 3
+      thresholds:
+        exact: 0.995
+        highConfidence: 0.93
+        reviewMin: 0.82
+  labeling:
+    enabled: true
+    autoCreateMissing: true
+    managed:
+      - bug
+      - enhancement
+      - question
+      - needs-template-fix
+      - duplicate
+    definitions:
+      bug:
+        color: d73a4a
+        description: Something is not working.
+      enhancement:
+        color: a2eeef
+        description: New feature or request.
+      question:
+        color: d876e3
+        description: Further information is requested.
+      needs-template-fix:
+        color: fbca04
+        description: Issue template content is incomplete.
+      duplicate:
+        color: cfd3d7
+        description: This issue already exists.
+    keywordRules: []
+  aiHelp:
+    enabled: true
+    triggerLabels: []
+    commentAnchor: issue-bot:ai
+
+pullRequests:
+  review:
+    enabled: false
+  labeling:
+    enabled: false
+  summary:
+    enabled: false
