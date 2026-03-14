@@ -151,6 +151,21 @@ issues:
     enabled: true
     triggerLabels: []
     commentAnchor: issue-bot:ai
+    projectContext:
+      enabled: true
+      includeRepositoryMetadata: true
+      includeReadme: true
+      readmeMaxChars: 3000
+      profile:
+        name: BetterGI
+        aliases:
+          - BGI
+          - Better Genshin Impact
+        summary: BetterGI is a desktop automation assistant for Genshin Impact.
+        techStack:
+          - C#
+          - WPF
+          - .NET
 
 pullRequests:
   review:
