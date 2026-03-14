@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Repo Bot
-        uses: ddaodan/bettergi-github-bot@b814f14a1b1a9989b53ba6429787e2fb96b420ac
+        uses: ddaodan/bettergi-github-bot@c1ed9a96a2f8c80cfbac406cea99ec148d99833e
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPO_BOT_AI_API_KEY: ${{ secrets.REPO_BOT_AI_API_KEY }}
