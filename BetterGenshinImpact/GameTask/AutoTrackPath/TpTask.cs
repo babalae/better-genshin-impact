@@ -496,7 +496,7 @@ public class TpTask
         {
             mapCenterPoint = GetPositionFromBigMap(mapName); // 初始中心
         }
-        catch (Exception)
+        catch (MapPositionNotRecognizedException)
         {
             Logger.LogDebug("初始中心点识别失败，开启自救策略");
             // 判断当前缩放是否离最佳识别缩放(4.4)较远，如果是，则先调整到最佳视角尝试
@@ -511,7 +511,7 @@ public class TpTask
                     mapCenterPoint = GetPositionFromBigMap(mapName);
                     Logger.LogDebug("调整缩放后识别恢复成功");
                 }
-                catch (Exception)
+                catch (MapPositionNotRecognizedException)
                 {
                     Logger.LogDebug("缩放后依然失败，尝试强制跃迁...");
                     await ForceJumpToTargetArea(x, y, mapName); 
@@ -522,7 +522,7 @@ public class TpTask
                         mapCenterPoint = GetPositionFromBigMap(mapName);
                         Logger.LogDebug("强制切换区域后识别恢复成功");
                     }
-                    catch (Exception ex)
+                    catch (MapPositionNotRecognizedException ex)
                     {
                         throw new Exception("所有脱困策略均失效，无法获取初始点", ex);
                     }
@@ -535,11 +535,11 @@ public class TpTask
                 await Delay(300, ct);
                 
                 try
-                    {
-                        mapCenterPoint = GetPositionFromBigMap(mapName);
-                        Logger.LogDebug("强制切换区域后识别恢复成功");
-                    }
-                catch (Exception ex)
+                {
+                    mapCenterPoint = GetPositionFromBigMap(mapName);
+                    Logger.LogDebug("强制切换区域后识别恢复成功");
+                }
+                catch (MapPositionNotRecognizedException ex)
                 {
                     throw new Exception("初始识别失败且切换区域后依然无效", ex);
                 }
@@ -619,13 +619,13 @@ public class TpTask
                 if (jumpDistance > Math.Max(200, expectedMoveLen * 2))
                 {
                     Logger.LogDebug("坐标异常跳跃({dist:0.0})，判定为误识别", jumpDistance);
-                    throw new Exception("中心点识别坐标异常跳跃");
+                    throw new MapPositionNotRecognizedException("中心点识别坐标异常跳跃");
                 }
 
                 mapCenterPoint = newCenterPoint;
                 exceptionTimes = 0;
             }
-            catch (Exception)
+            catch (MapPositionNotRecognizedException)
             {
                 exceptionTimes++;
                 if (exceptionTimes > 5) 
@@ -848,7 +848,7 @@ public class TpTask
             var p = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapPosition(ra.CacheGreyMat);
             if (p.IsEmpty())
             {
-                throw new InvalidOperationException("识别大地图位置失败");
+                throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
             }
 
             Debug.WriteLine("识别大地图在全地图位置：" + p);
@@ -1133,4 +1133,9 @@ public class TpTask
         // 1~6 的缩放等级
         return (-5 * s) + 6;
     }
+}
+
+public class MapPositionNotRecognizedException : Exception
+{
+    public MapPositionNotRecognizedException(string message) : base(message) { }
 }
