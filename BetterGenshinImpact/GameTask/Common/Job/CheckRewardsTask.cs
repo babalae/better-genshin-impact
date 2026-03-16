@@ -78,6 +78,8 @@ public class CheckRewardsTask
                 Logger.LogWarning("检查每日奖励结果：{Msg}，请手动检查！", "未领取");
                 Notify.Event(NotificationEvent.DailyReward).Error("检查到每日奖励未领取，请手动查看！");
             }
+            await Delay(200, ct);
+            await new ReturnMainUiTask().Start(ct);
         }
         catch (Exception e)
         {
