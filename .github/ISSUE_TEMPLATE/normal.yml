@@ -1,0 +1,12 @@
+name: Feel free to express / 自由描述
+description: 记录你想反馈的内容 / Share general feedback
+title: "[feedback] "
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 描述
+      description: Description
+      placeholder: 请描述你想反馈的内容
+    validations:
+      required: true

@@ -20,6 +20,8 @@ issues:
         detect:
           markers:
             - bug
+          titlePrefixes:
+            - "[bug]"
         requiredSections:
           - id: environment
             aliases:
@@ -46,6 +48,8 @@ issues:
         detect:
           markers:
             - feature
+          titlePrefixes:
+            - "[feature]"
         requiredSections:
           - id: request
             aliases:
@@ -64,6 +68,8 @@ issues:
         detect:
           markers:
             - suggestion
+          titlePrefixes:
+            - "[suggestion]"
         requiredSections:
           - id: suggestion
             aliases:
@@ -82,6 +88,8 @@ issues:
         detect:
           markers:
             - question
+          titlePrefixes:
+            - "[question]"
         requiredSections:
           - id: question
             aliases:
@@ -100,6 +108,9 @@ issues:
         detect:
           markers:
             - normal
+          titlePrefixes:
+            - "[feedback]"
+            - "[normal]"
         requiredSections:
           - id: description
             aliases:
