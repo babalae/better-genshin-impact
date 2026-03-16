@@ -133,7 +133,7 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="解决部分GPU推理性能和报错问题 默认关闭" />
+                                      Text="解决部分GPU推理性能和报错问题 默认开启" />
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
