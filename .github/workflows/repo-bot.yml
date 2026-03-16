@@ -40,7 +40,7 @@ jobs:
           private-key: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
 
       - name: Run Repo Bot
-        uses: ddaodan/bettergi-github-bot@86c5098a043b96db75927212dfd1947f3787b95f
+        uses: ddaodan/bettergi-github-bot@d2ae6e65d01a68469669751ca40d79858b58c4e2
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPO_BOT_GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
