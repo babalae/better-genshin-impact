@@ -182,6 +182,16 @@ issues:
           - C#
           - WPF
           - .NET
+  commands:
+    enabled: true
+    mentions:
+      - "@bot"
+    access: collaborators
+    fix:
+      enabled: true
+      commentAnchor: issue-bot:fix
+    refresh:
+      enabled: true
 
 pullRequests:
   review:

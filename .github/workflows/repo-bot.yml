@@ -7,6 +7,10 @@ on:
       - edited
       - reopened
       - labeled
+  issue_comment:
+    types:
+      - created
+      - edited
 
 jobs:
   repo-bot:
@@ -40,7 +44,7 @@ jobs:
           private-key: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
 
       - name: Run Repo Bot
-        uses: ddaodan/bettergi-github-bot@c3b79af06a4f8b621c2be99b57e0e7f55fa12c16
+        uses: ddaodan/bettergi-github-bot@e2551e771ffbd24de38b18af8371720cdc8bae0e
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPO_BOT_GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
