@@ -186,6 +186,7 @@ issues:
     enabled: true
     mentions:
       - "@bot"
+      - "@bettergi-repo-bot"
     access: collaborators
     fix:
       enabled: true
