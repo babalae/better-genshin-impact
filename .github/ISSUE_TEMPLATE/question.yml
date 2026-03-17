@@ -1,0 +1,22 @@
+name: I have a question / 我有疑问
+description: 提交你的问题，我们会尽量帮助你解决 / Ask a question
+title: "[question] "
+labels:
+  - 问题咨询
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题描述
+      description: Problem Description
+      placeholder: 请清楚描述你的问题
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: 已尝试内容
+      description: Screenshots / logs / what you already tried
+      placeholder: 可附上截图、日志，以及你已经尝试过的排查过程
+    validations:
+      required: true

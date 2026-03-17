@@ -1,0 +1,227 @@
+runtime:
+  languageMode: auto
+  dryRun: false
+
+providers:
+  openAiCompatible:
+    enabled: true
+    baseUrl: https://api.openai.com/v1
+    model: gpt-5.4
+    apiStyle: responses
+    timeoutMs: 30000
+
+issues:
+  validation:
+    enabled: true
+    fallbackTemplateKey: normal
+    commentAnchor: issue-bot:validation
+    templates:
+      - key: bug
+        detect:
+          markers:
+            - bug
+          titlePrefixes:
+            - "[bug]"
+        requiredSections:
+          - id: environment
+            aliases:
+              - 系统环境
+              - System Environment
+          - id: version
+            aliases:
+              - BetterGI 版本号
+              - BetterGI Version
+          - id: description
+            aliases:
+              - 问题描述
+              - Description of the issue
+          - id: steps
+            aliases:
+              - 复现步骤
+              - Reproduction steps
+        labels:
+          whenValid:
+            - BUG
+          whenInvalid:
+            - 需要更多信息
+      - key: feature
+        detect:
+          markers:
+            - feature
+          titlePrefixes:
+            - "[feature]"
+        requiredSections:
+          - id: request
+            aliases:
+              - 功能请求
+              - Feature Request
+          - id: scenario
+            aliases:
+              - 使用场景
+              - Use Case
+        labels:
+          whenValid:
+            - 功能建议
+          whenInvalid:
+            - 需要更多信息
+      - key: suggestion
+        detect:
+          markers:
+            - suggestion
+          titlePrefixes:
+            - "[suggestion]"
+        requiredSections:
+          - id: suggestion
+            aliases:
+              - 建议内容
+              - Suggestion
+          - id: benefit
+            aliases:
+              - 预期收益
+              - Expected Benefit
+        labels:
+          whenValid:
+            - 功能建议
+          whenInvalid:
+            - 需要更多信息
+      - key: question
+        detect:
+          markers:
+            - question
+          titlePrefixes:
+            - "[question]"
+        requiredSections:
+          - id: question
+            aliases:
+              - 问题描述
+              - Problem Description
+          - id: tried
+            aliases:
+              - 已尝试内容
+              - What I Tried
+        labels:
+          whenValid:
+            - 问题咨询
+          whenInvalid:
+            - 需要更多信息
+      - key: normal
+        detect:
+          markers:
+            - normal
+          titlePrefixes:
+            - "[feedback]"
+            - "[normal]"
+        requiredSections:
+          - id: description
+            aliases:
+              - 描述
+              - Description
+        labels:
+          whenValid: []
+          whenInvalid:
+            - 需要更多信息
+    duplicateDetection:
+      enabled: true
+      bypassLabels:
+        - 跳过重复检测
+      duplicateLabel: 重复
+      searchResultLimit: 50
+      candidateLimit: 20
+      aiReviewMaxCandidates: 3
+      thresholds:
+        exact: 0.995
+        highConfidence: 0.93
+        reviewMin: 0.82
+      similarityComment:
+        enabled: true
+        commentAnchor: issue-bot:similar-issues
+        minScore: 0.3
+        maxCandidates: 3
+  labeling:
+    enabled: true
+    autoCreateMissing: true
+    managed:
+      - BUG
+      - 功能建议
+      - 问题咨询
+      - 需要更多信息
+      - 重复
+    definitions:
+      BUG:
+        color: d73a4a
+        description: 程序存在缺陷或异常行为。
+      功能建议:
+        color: a2eeef
+        description: 新功能建议或现有功能改进。
+      问题咨询:
+        color: d876e3
+        description: 使用问题、求助或咨询。
+      需要更多信息:
+        color: fbca04
+        description: 当前 Issue 缺少必要信息。
+      重复:
+        color: cfd3d7
+        description: 已存在相同或高度相似的问题。
+    keywordRules: []
+    aiClassification:
+      enabled: true
+      maxLabels: 3
+      minConfidence: 0.65
+      include: []
+      exclude:
+        - BUG
+        - 功能请求
+        - 重复
+        - 不会修复
+        - 使用问题
+        - 需要帮助
+        - 已完成
+        - 未解决
+        - 待确认
+        - P0
+        - P1
+        - 需要文档
+        - 优化点
+        - 急急急
+      prompt: 优先给 BetterGI Issue 选择能反映具体功能模块、子系统或使用场景的标签，例如一条龙、调度器、脚本、设置项、地图追踪；避免只选择宽泛的流程或状态标签。
+      sourceRepository:
+        owner: babalae
+        repo: better-genshin-impact
+  aiHelp:
+    enabled: true
+    triggerLabels: []
+    commentAnchor: issue-bot:ai
+    projectContext:
+      enabled: true
+      includeRepositoryMetadata: true
+      includeReadme: true
+      readmeMaxChars: 3000
+      profile:
+        name: BetterGI
+        aliases:
+          - BGI
+          - Better Genshin Impact
+        summary: BetterGI is a desktop automation assistant for Genshin Impact.
+        techStack:
+          - C#
+          - WPF
+          - .NET
+  commands:
+    enabled: true
+    mentions:
+      - "@bot"
+      - "@bettergi-repo-bot"
+    access: collaborators
+    fix:
+      enabled: true
+      commentAnchor: issue-bot:fix
+    refresh:
+      enabled: true
+
+pullRequests:
+  review:
+    enabled: false
+  labeling:
+    enabled: false
+  summary:
+    enabled: false

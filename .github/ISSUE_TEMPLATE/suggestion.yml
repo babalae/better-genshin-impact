@@ -1,0 +1,22 @@
+name: I have suggestions / 我有建议
+description: 分享对项目的改进建议 / Share an improvement suggestion
+title: "[suggestion] "
+labels:
+  - 功能建议
+body:
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 建议内容
+      description: Suggestion
+      placeholder: 请描述你的建议内容
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: 预期收益
+      description: Expected Benefit
+      placeholder: 这个建议会给用户或项目带来什么帮助？
+    validations:
+      required: true
