@@ -496,10 +496,54 @@ public class TpTask
         {
             mapCenterPoint = GetPositionFromBigMap(mapName); // 初始中心
         }
-        catch (Exception e)
+        catch (MapPositionNotRecognizedException)
         {
-            ++exceptionTimes;
-            mapCenterPoint = new Point2f(0f, 0f); // 其他恰当的初始值?
+            Logger.LogDebug("初始中心点识别失败，开启自救策略");
+            // 判断当前缩放是否离最佳识别缩放(4.4)较远，如果是，则先调整到最佳视角尝试
+            if (_tpConfig.MapZoomEnabled && Math.Abs(currentZoomLevel - DisplayTpPointZoomLevel) > 0.3)
+            {
+                await AdjustMapZoomLevel(currentZoomLevel, DisplayTpPointZoomLevel);
+                currentZoomLevel = DisplayTpPointZoomLevel;
+                await Delay(300, ct);
+
+                try
+                {
+                    mapCenterPoint = GetPositionFromBigMap(mapName);
+                    Logger.LogDebug("调整缩放后识别恢复成功");
+                }
+                catch (MapPositionNotRecognizedException)
+                {
+                    Logger.LogDebug("缩放后依然失败，尝试强制跃迁...");
+                    await ForceJumpToTargetArea(x, y, mapName); 
+                    await Delay(300, ct);
+                    
+                    try
+                    {
+                        mapCenterPoint = GetPositionFromBigMap(mapName);
+                        Logger.LogDebug("强制切换区域后识别恢复成功");
+                    }
+                    catch (MapPositionNotRecognizedException ex)
+                    {
+                        throw new Exception("所有脱困策略均失效，无法获取初始点", ex);
+                    }
+                }
+            }
+            else
+            {
+                Logger.LogDebug("缩放已在最佳区间附近，直接尝试强制跃迁...");
+                await ForceJumpToTargetArea(x, y, mapName); 
+                await Delay(300, ct);
+                
+                try
+                {
+                    mapCenterPoint = GetPositionFromBigMap(mapName);
+                    Logger.LogDebug("强制切换区域后识别恢复成功");
+                }
+                catch (MapPositionNotRecognizedException ex)
+                {
+                    throw new Exception("初始识别失败且切换区域后依然无效", ex);
+                }
+            }
         }
 
         var (xOffset, yOffset) = (x - mapCenterPoint.X, y - mapCenterPoint.Y);
@@ -556,21 +600,41 @@ public class TpTask
             int moveSteps = Math.Max((int)moveMouseLength / 10, 3); // 每次移动的步数最小为 3，避免除 0 错误
 
             await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
+
+            // 推算理论上的移动后坐标 (惯性预测)
+            Point2f predictedPoint = mapCenterPoint + new Point2f(
+                (float)(moveMouseX * currentZoomLevel / _tpConfig.MapScaleFactor),
+                (float)(moveMouseY * currentZoomLevel / _tpConfig.MapScaleFactor));
+
             try
             {
-                exceptionTimes = 0;
-                mapCenterPoint = GetPositionFromBigMap(mapName); // 随循环更新的地图中心
-            }
-            catch (Exception)
-            {
-                if (++exceptionTimes > 2)
+                var newCenterPoint = GetPositionFromBigMap(mapName); // 随循环更新的地图中心
+                
+                // 计算识别坐标与预测坐标的偏差
+                double jumpDistance = Math.Sqrt(Math.Pow(newCenterPoint.X - predictedPoint.X, 2) + Math.Pow(newCenterPoint.Y - predictedPoint.Y, 2));
+                double expectedMoveLen = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY) * currentZoomLevel / _tpConfig.MapScaleFactor;
+                
+                // 如果实际识别坐标产生超出物理可能的远距离跳跃 (比如原本只移动了50单位，但是坐标跳跃了300单位以上)
+                // 则判定为低特征区域产生的误识别（假阳性），抛出异常进入下面的盲走抓取逻辑
+                if (jumpDistance > Math.Max(200, expectedMoveLen * 2))
                 {
-                    throw new Exception("多次中心点识别失败，重新传送");
+                    Logger.LogDebug("坐标异常跳跃({dist:0.0})，判定为误识别", jumpDistance);
+                    throw new MapPositionNotRecognizedException("中心点识别坐标异常跳跃");
                 }
 
-                Logger.LogWarning("中心点识别失败，预测移动的距离");
-                mapCenterPoint += new Point2f((float)(moveMouseX * currentZoomLevel / _tpConfig.MapScaleFactor),
-                    (float)(moveMouseY * currentZoomLevel / _tpConfig.MapScaleFactor));
+                mapCenterPoint = newCenterPoint;
+                exceptionTimes = 0;
+            }
+            catch (MapPositionNotRecognizedException)
+            {
+                exceptionTimes++;
+                if (exceptionTimes > 5) 
+                {
+                    throw new Exception("多次中心点识别失败或异常，惯性推算失效，重新传送");
+                }
+
+                Logger.LogDebug("进入盲走推算 (跳过次数: {times})", exceptionTimes);
+                mapCenterPoint = predictedPoint;
             }
 
             (xOffset, yOffset) = (x - mapCenterPoint.X, y - mapCenterPoint.Y);
@@ -784,7 +848,7 @@ public class TpTask
             var p = MapManager.GetMap(mapName, _mapMatchingMethod).GetBigMapPosition(ra.CacheGreyMat);
             if (p.IsEmpty())
             {
-                throw new InvalidOperationException("识别大地图位置失败");
+                throw new MapPositionNotRecognizedException("大地图特征点匹配识别位置失败");
             }
 
             Debug.WriteLine("识别大地图在全地图位置：" + p);
@@ -800,6 +864,36 @@ public class TpTask
         else
         {
             throw new InvalidOperationException("当前不在地图界面");
+        }
+    }
+
+    /// <summary>
+    /// 当无法获取当前位置时，直接根据目标坐标强制计算并跃迁到对应区域的地图
+    /// </summary>
+    private async Task ForceJumpToTargetArea(double x, double y, string mapName)
+    {
+        if (mapName == MapTypes.Teyvat.ToString())
+        {
+            string targetCountry = "当前位置";
+            double minDistance = double.MaxValue;
+            foreach (var (country, position) in MapLazyAssets.Instance.CountryPositions)
+            {
+                var distance = Math.Sqrt(Math.Pow(position[0] - x, 2) + Math.Pow(position[1] - y, 2));
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    targetCountry = country;
+                }
+            }
+
+            if (targetCountry != "当前位置")
+            {
+                await SwitchArea(targetCountry);
+            }
+        }
+        else
+        {
+            await SwitchArea(MapTypesExtensions.ParseFromName(mapName).GetDescription());
         }
     }
 
@@ -1039,4 +1133,9 @@ public class TpTask
         // 1~6 的缩放等级
         return (-5 * s) + 6;
     }
+}
+
+public class MapPositionNotRecognizedException : Exception
+{
+    public MapPositionNotRecognizedException(string message) : base(message) { }
 }

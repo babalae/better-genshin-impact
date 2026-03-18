@@ -2,7 +2,7 @@ name: I have feature requesting / 我有功能需求
 description: 提出新的功能想法 / Share a feature request
 title: "[feature] "
 labels:
-  - enhancement
+  - 功能建议
 body:
   - type: textarea
     id: request

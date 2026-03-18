@@ -2,7 +2,7 @@ name: I have suggestions / 我有建议
 description: 分享对项目的改进建议 / Share an improvement suggestion
 title: "[suggestion] "
 labels:
-  - enhancement
+  - 功能建议
 body:
   - type: textarea
     id: suggestion

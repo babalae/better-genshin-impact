@@ -239,7 +239,7 @@ public class Avatar
     /// <param name="tryTimes"></param>
     /// <param name="needLog"></param>
     /// <returns></returns>
-    public bool TrySwitch(int tryTimes = 4, bool needLog = true)
+    public bool TrySwitch(int tryTimes = 4)
     {
         var context = new AvatarActiveCheckContext();
         for (var i = 0; i < tryTimes; i++)
@@ -255,12 +255,15 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
-                // if (needLog && i > 0)
-                // {
-                //     Logger.LogInformation("成功切换角色:{Name}", Name);
-                // }
-
                 return true;
+            }
+            else
+            {
+                if (i == tryTimes - 1)
+                {
+                    Logger.LogWarning("切换角色失败，最后一次尝试，当前角色编号:{CurrentIndex}，期望角色编号:{ExpectedIndex}", CombatScenes.GetActiveAvatarIndex(region, context), Index);
+                    region.SrcMat.SaveImage($"log/{Name}_切换失败.png");
+                }
             }
 
 
@@ -638,7 +641,7 @@ public class Avatar
     /// </summary>
     public void Ready()
     {
-        Sleep(200, Ct);
+        Sleep(10, Ct);
 
         for (int i = 0; i < 20; i++)
         {

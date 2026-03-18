@@ -108,7 +108,8 @@ public class CombatCommand
                     && Method != Method.KeyDown
                     && Method != Method.KeyUp
                     && Method != Method.KeyPress
-                    && Method != Method.Scroll)
+                    && Method != Method.Scroll
+                    && Method != Method.Ready)
                 {
                     avatar.Switch();
                 }

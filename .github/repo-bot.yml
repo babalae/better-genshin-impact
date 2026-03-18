@@ -6,7 +6,7 @@ providers:
   openAiCompatible:
     enabled: true
     baseUrl: https://api.openai.com/v1
-    model: gpt-5.4
+    model: gpt-5.2-codex
     apiStyle: responses
     timeoutMs: 30000
 
@@ -41,9 +41,9 @@ issues:
               - Reproduction steps
         labels:
           whenValid:
-            - bug
+            - BUG
           whenInvalid:
-            - needs-template-fix
+            - 需要更多信息
       - key: feature
         detect:
           markers:
@@ -61,9 +61,9 @@ issues:
               - Use Case
         labels:
           whenValid:
-            - enhancement
+            - 功能建议
           whenInvalid:
-            - needs-template-fix
+            - 需要更多信息
       - key: suggestion
         detect:
           markers:
@@ -81,9 +81,9 @@ issues:
               - Expected Benefit
         labels:
           whenValid:
-            - enhancement
+            - 功能建议
           whenInvalid:
-            - needs-template-fix
+            - 需要更多信息
       - key: question
         detect:
           markers:
@@ -101,9 +101,9 @@ issues:
               - What I Tried
         labels:
           whenValid:
-            - question
+            - 问题咨询
           whenInvalid:
-            - needs-template-fix
+            - 需要更多信息
       - key: normal
         detect:
           markers:
@@ -119,12 +119,12 @@ issues:
         labels:
           whenValid: []
           whenInvalid:
-            - needs-template-fix
+            - 需要更多信息
     duplicateDetection:
       enabled: true
       bypassLabels:
-        - no-auto-duplicate
-      duplicateLabel: duplicate
+        - 跳过重复检测
+      duplicateLabel: 重复
       searchResultLimit: 50
       candidateLimit: 20
       aiReviewMaxCandidates: 3
@@ -141,28 +141,52 @@ issues:
     enabled: true
     autoCreateMissing: true
     managed:
-      - bug
-      - enhancement
-      - question
-      - needs-template-fix
-      - duplicate
+      - BUG
+      - 功能建议
+      - 问题咨询
+      - 需要更多信息
+      - 重复
     definitions:
-      bug:
+      BUG:
         color: d73a4a
-        description: Something is not working.
-      enhancement:
+        description: 程序存在缺陷或异常行为。
+      功能建议:
         color: a2eeef
-        description: New feature or request.
-      question:
+        description: 新功能建议或现有功能改进。
+      问题咨询:
         color: d876e3
-        description: Further information is requested.
-      needs-template-fix:
+        description: 使用问题、求助或咨询。
+      需要更多信息:
         color: fbca04
-        description: Issue template content is incomplete.
-      duplicate:
+        description: 当前 Issue 缺少必要信息。
+      重复:
         color: cfd3d7
-        description: This issue already exists.
+        description: 已存在相同或高度相似的问题。
     keywordRules: []
+    aiClassification:
+      enabled: true
+      maxLabels: 3
+      minConfidence: 0.65
+      include: []
+      exclude:
+        - BUG
+        - 功能请求
+        - 重复
+        - 不会修复
+        - 使用问题
+        - 需要帮助
+        - 已完成
+        - 未解决
+        - 待确认
+        - P0
+        - P1
+        - 需要文档
+        - 优化点
+        - 急急急
+      prompt: 优先给 BetterGI Issue 选择能反映具体功能模块、子系统或使用场景的标签，例如一条龙、调度器、脚本、设置项、地图追踪；避免只选择宽泛的流程或状态标签。
+      sourceRepository:
+        owner: babalae
+        repo: better-genshin-impact
   aiHelp:
     enabled: true
     triggerLabels: []

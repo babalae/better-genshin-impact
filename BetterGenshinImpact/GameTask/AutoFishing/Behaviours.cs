@@ -151,7 +151,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             // 寻找鱼饵
             var boxAndBaits = FindBait(imageRegion);
-            ;
+            
             foreach ((Rect box, string? predName) in boxAndBaits)
             {
                 if (predName == blackboard.selectedBait.GetDescription())
@@ -201,6 +201,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
+                blackboard.Sleep(200);
                 return BehaviourStatus.Running;
             }
         }

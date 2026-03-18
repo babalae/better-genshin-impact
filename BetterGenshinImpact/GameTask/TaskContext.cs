@@ -94,7 +94,8 @@ namespace BetterGenshinImpact.GameTask
                         var customName = Path.GetFileNameWithoutExtension(installPath);
                         if (!string.IsNullOrEmpty(customName) && !list.Contains(customName))
                         {
-                            list.Insert(0, customName); // 将用户自定义的进程名放在列表前面，优先匹配
+                            // list.Insert(0, customName); // 将用户自定义的进程名放在列表前面，优先匹配
+                            list.Add(customName);
                         }
                     }
                 }
