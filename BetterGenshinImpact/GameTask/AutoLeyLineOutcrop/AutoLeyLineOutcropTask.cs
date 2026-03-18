@@ -1019,6 +1019,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
             _logger.LogInformation("领取奖励后开始扫描掉落物光柱，时长 {Seconds} 秒", scanSeconds);
             await new ScanPickTask().Start(_ct);
         }
+        catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "领取奖励后扫描掉落物光柱异常");
