@@ -993,6 +993,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
     }
 
+    /// <summary>
+    /// 在地脉花奖励领取完成后，短时间扫描周围掉落物光柱并尝试靠近拾取。
+    /// </summary>
     private async Task TryScanDropsAfterReward()
     {
         if (!_taskParam.ScanDropsAfterRewardEnabled)
@@ -1000,7 +1003,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return;
         }
 
-        var scanSeconds = Math.Max(0, _taskParam.ScanDropsAfterRewardSeconds);
+        const int maxScanSeconds = 60;
+        var scanSeconds = Math.Clamp(_taskParam.ScanDropsAfterRewardSeconds, 0, maxScanSeconds);
         if (scanSeconds <= 0)
         {
             return;

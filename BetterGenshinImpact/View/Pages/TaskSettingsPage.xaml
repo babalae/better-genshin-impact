@@ -2661,6 +2661,7 @@
                                   SmallChange="1"
                                   LargeChange="5"
                                   ValidationMode="InvalidInputOverwritten"
+                                  IsEnabled="{Binding Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled, Mode=TwoWay}"
                                   Value="{Binding Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardSeconds, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
