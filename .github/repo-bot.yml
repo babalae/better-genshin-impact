@@ -11,6 +11,8 @@ providers:
     timeoutMs: 30000
 
 issues:
+  autoProcessing:
+    skipCreatedBefore: auto
   validation:
     enabled: true
     fallbackTemplateKey: normal
