@@ -684,6 +684,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw new Exception("无法领取奖励");
         }
 
+        await TryScanDropsAfterReward();
         _consecutiveFailureCount = 0;
     }
 
@@ -988,6 +989,39 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
         finally
         {
+            Simulation.ReleaseAllKey();
+        }
+    }
+
+    private async Task TryScanDropsAfterReward()
+    {
+        if (!_taskParam.ScanDropsAfterRewardEnabled)
+        {
+            return;
+        }
+
+        var scanSeconds = Math.Max(0, _taskParam.ScanDropsAfterRewardSeconds);
+        if (scanSeconds <= 0)
+        {
+            return;
+        }
+
+        var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+        var originalSeconds = autoFightConfig.PickDropsAfterFightSeconds;
+
+        try
+        {
+            autoFightConfig.PickDropsAfterFightSeconds = scanSeconds;
+            _logger.LogInformation("领取奖励后开始扫描掉落物光柱，时长 {Seconds} 秒", scanSeconds);
+            await new ScanPickTask().Start(_ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "领取奖励后扫描掉落物光柱异常");
+        }
+        finally
+        {
+            autoFightConfig.PickDropsAfterFightSeconds = originalSeconds;
             Simulation.ReleaseAllKey();
         }
     }

@@ -52,6 +52,12 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     private bool _isGoToSynthesizer = false;
 
     [ObservableProperty]
+    private bool _scanDropsAfterRewardEnabled = true;
+
+    [ObservableProperty]
+    private int _scanDropsAfterRewardSeconds = 12;
+
+    [ObservableProperty]
     private AutoLeyLineOutcropFightConfig _fightConfig = new();
 
     partial void OnFightConfigChanged(AutoLeyLineOutcropFightConfig value)
