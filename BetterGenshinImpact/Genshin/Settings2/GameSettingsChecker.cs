@@ -39,7 +39,7 @@ public class GameSettingsChecker
 
             if (settings.MiniMapConfig != 1)
             {
-                TaskControl.Logger.LogWarning("检测到游戏小地图锁定配置不是【锁定方向】！，无法正常使用地图追踪功能。请在原神 游戏设置——其他——小地图锁定 中调整为【锁定方向】！");
+                TaskControl.Logger.LogWarning("检测到游戏小地图锁定配置不是【锁定方向】，无法正常使用地图追踪功能。请在原神 游戏设置——其他——小地图锁定 中调整为【锁定方向】！");
             }
 
             if (inputSettings.MouseSenseIndex != 2
