@@ -235,6 +235,13 @@ namespace BetterGenshinImpact.GameTask
                     maskWindow.Invoke(maskWindow.HideSelf);
                     return;
                 }
+                
+                // 如果是最小化状态，直接不进行截图
+                if (SystemControl.IsGenshinImpactMinimized())
+                {
+                    PictureInPictureService.Hide();
+                    return;
+                }
 
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;

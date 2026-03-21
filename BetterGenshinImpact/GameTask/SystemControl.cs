@@ -90,6 +90,11 @@ public class SystemControl
         return hWnd == TaskContext.Instance().GameHandle;
     }
 
+    public static bool IsGenshinImpactMinimized()
+    {
+        return User32.IsIconic(TaskContext.Instance().GameHandle);
+    }
+
     public static nint GetForegroundWindowHandle()
     {
         return (nint)User32.GetForegroundWindow();
