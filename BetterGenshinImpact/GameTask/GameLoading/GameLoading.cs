@@ -150,7 +150,7 @@ public class GameLoadingTrigger : ITaskTrigger
             }
             else
             {
-                TaskControl.Logger.LogWarning("没有检测到 Starward 协议注册，请查看帮助文档！");
+                // TaskControl.Logger.LogWarning("没有检测到 Starward 协议注册，请查看帮助文档！");
                 return false;
             }
         }
