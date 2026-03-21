@@ -591,7 +591,7 @@ internal class GoToSereniteaPotTask
             await Delay(1000, ct);
         }
 
-        var quitOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanByeString, ct);
+        var quitOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanByeString, ct, skipTimes: 20);
         if (quitOption != TalkOptionRes.FoundAndClick)
         {
             if (!Bv.IsInMainUi(CaptureToRectArea()))
