@@ -2625,13 +2625,13 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="在地脉花领奖完成后，短时间扫描周围掉落物光柱并靠近拾取；不依赖万叶或琴。"
+                                  Text="在地脉花领奖完成后，短时间扫描周围掉落物光柱并靠近拾取；不依赖万叶或琴。部分点位或特定配队下可能因移动范围较大而卡住，请按需开启。"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled, Mode=TwoWay}" />
+                                     IsChecked="{Binding ScanDropsAfterRewardEnabledUi, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -2661,7 +2661,7 @@
                                   SmallChange="1"
                                   LargeChange="5"
                                   ValidationMode="InvalidInputOverwritten"
-                                  IsEnabled="{Binding Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled, Mode=TwoWay}"
+                                  IsEnabled="{Binding ScanDropsAfterRewardEnabledUi}"
                                   Value="{Binding Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardSeconds, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">

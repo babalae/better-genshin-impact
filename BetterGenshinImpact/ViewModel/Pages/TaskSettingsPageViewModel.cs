@@ -150,6 +150,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoLeyLineOutcropButtonText = "启动";
 
     [ObservableProperty]
+    private bool _scanDropsAfterRewardEnabledUi;
+
+    [ObservableProperty]
     private FrozenDictionary<Enum, string> _fishingTimePolicyDict = Enum.GetValues(typeof(FishingTimePolicy))
         .Cast<FishingTimePolicy>()
         .ToFrozenDictionary(
@@ -160,6 +163,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 .Description ?? e.ToString());
 
     private bool saveScreenshotOnKeyTick;
+    private bool _suppressScanDropsAfterRewardPrompt;
     public bool SaveScreenshotOnKeyTick
     {
         get => Config.CommonConfig.ScreenshotEnabled && saveScreenshotOnKeyTick;
@@ -208,6 +212,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
         NormalizeLeyLineOutcropType();
+        _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
         //_strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
 
@@ -216,6 +221,49 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _domainNameList = ["", .. MapLazyAssets.Instance.DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+    }
+
+    partial void OnScanDropsAfterRewardEnabledUiChanged(bool value)
+    {
+        if (_suppressScanDropsAfterRewardPrompt)
+        {
+            return;
+        }
+
+        if (!value)
+        {
+            Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled = false;
+            return;
+        }
+
+        _ = ConfirmScanDropsAfterRewardRiskAsync();
+    }
+
+    private async Task ConfirmScanDropsAfterRewardRiskAsync()
+    {
+        var messageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "风险提示",
+            Content = "开启“领取奖励后扫描掉落物光柱”后，角色会在领奖完成后主动移动拾取。部分地脉花点位或特定配队下，可能因为移动范围较大而卡住。\n\n如果你愿意接受这个风险，请继续开启；否则将保持关闭。",
+            PrimaryButtonText = "接受风险并开启",
+            CloseButtonText = "不接受，保持关闭",
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        var result = await messageBox.ShowDialogAsync();
+        var accepted = result == Wpf.Ui.Controls.MessageBoxResult.Primary;
+
+        _suppressScanDropsAfterRewardPrompt = true;
+        try
+        {
+            ScanDropsAfterRewardEnabledUi = accepted;
+            Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled = accepted;
+        }
+        finally
+        {
+            _suppressScanDropsAfterRewardPrompt = false;
+        }
     }
 
     private void NormalizeLeyLineOutcropType()
