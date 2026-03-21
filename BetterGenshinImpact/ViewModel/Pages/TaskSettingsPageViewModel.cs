@@ -164,6 +164,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     private bool saveScreenshotOnKeyTick;
     private bool _suppressScanDropsAfterRewardPrompt;
+    private int _scanDropsAfterRewardPromptVersion;
     public bool SaveScreenshotOnKeyTick
     {
         get => Config.CommonConfig.ScreenshotEnabled && saveScreenshotOnKeyTick;
@@ -232,14 +233,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         if (!value)
         {
+            Interlocked.Increment(ref _scanDropsAfterRewardPromptVersion);
             Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled = false;
             return;
         }
 
-        _ = ConfirmScanDropsAfterRewardRiskAsync();
+        var version = Interlocked.Increment(ref _scanDropsAfterRewardPromptVersion);
+        _ = ConfirmScanDropsAfterRewardRiskAsync(version);
     }
 
-    private async Task ConfirmScanDropsAfterRewardRiskAsync()
+    private async Task ConfirmScanDropsAfterRewardRiskAsync(int version)
     {
         var messageBox = new Wpf.Ui.Controls.MessageBox
         {
@@ -253,6 +256,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         var result = await messageBox.ShowDialogAsync();
         var accepted = result == Wpf.Ui.Controls.MessageBoxResult.Primary;
+
+        if (version != _scanDropsAfterRewardPromptVersion)
+        {
+            return;
+        }
 
         _suppressScanDropsAfterRewardPrompt = true;
         try
