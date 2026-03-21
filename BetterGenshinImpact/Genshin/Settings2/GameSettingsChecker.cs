@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Genshin.Settings;
 using Microsoft.Extensions.Logging;
@@ -35,6 +35,11 @@ public class GameSettingsChecker
             if (settings.GammaValue != "2.200000047683716")
             {
                 TaskControl.Logger.LogError("检测到游戏亮度非默认值，将会影响功能正常使用，请在原神 游戏设置——图像——亮度 中恢复默认亮度！");
+            }
+
+            if (settings.MiniMapConfig != 1)
+            {
+                TaskControl.Logger.LogWarning("检测到游戏小地图锁定配置不是【锁定方向】！，无法正常使用地图追踪功能。请在原神 游戏设置——其他——小地图锁定 中调整为【锁定方向】！");
             }
 
             if (inputSettings.MouseSenseIndex != 2
