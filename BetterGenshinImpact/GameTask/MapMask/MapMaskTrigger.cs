@@ -87,14 +87,25 @@ public class MapMaskTrigger : ITaskTrigger
         // 关闭时隐藏UI
         if (!IsEnabled)
         {
+            var pendingBigMapCompute = Interlocked.Exchange(ref _pendingBigMapCompute, null);
+            pendingBigMapCompute?.Dispose();
+            var pendingMiniMapCompute = Interlocked.Exchange(ref _pendingMiniMapCompute, null);
+            pendingMiniMapCompute?.Dispose();
+
+            Interlocked.Exchange(ref _pendingUiUpdate, null);
+
             UIDispatcherHelper.BeginInvoke(() =>
             {
                 if (MaskWindow.InstanceNullable() != null)
                 {
-                    if (MaskWindow.Instance().DataContext is MaskWindowViewModel vm)
+                    var window = MaskWindow.Instance();
+                    if (window.DataContext is MaskWindowViewModel vm)
                     {
                         vm.IsInBigMapUi = false;
                     }
+
+                    window.PointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+                    window.MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0);
                 }
             });
         }
@@ -396,6 +407,19 @@ public class MapMaskTrigger : ITaskTrigger
         if (update != null)
         {
             var window = MaskWindow.Instance();
+            if (!_config.Enabled)
+            {
+                if (window.DataContext is MaskWindowViewModel vmWhenDisabled)
+                {
+                    vmWhenDisabled.IsInBigMapUi = false;
+                }
+
+                window.PointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+                window.MiniMapPointsCanvasControl.UpdateViewport(0, 0, 0, 0);
+                Interlocked.Exchange(ref _uiApplyScheduled, 0);
+                return;
+            }
+
             if (update.IsInBigMapUi is { } isInBigMapUi && window.DataContext is MaskWindowViewModel vm)
             {
                 vm.IsInBigMapUi = isInBigMapUi;
