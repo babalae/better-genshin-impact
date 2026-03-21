@@ -684,6 +684,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw new Exception("无法领取奖励");
         }
 
+        await TryScanDropsAfterReward();
         _consecutiveFailureCount = 0;
     }
 
@@ -988,6 +989,47 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
         finally
         {
+            Simulation.ReleaseAllKey();
+        }
+    }
+
+    /// <summary>
+    /// 在地脉花奖励领取完成后，短时间扫描周围掉落物光柱并尝试靠近拾取。
+    /// </summary>
+    private async Task TryScanDropsAfterReward()
+    {
+        if (!_taskParam.ScanDropsAfterRewardEnabled)
+        {
+            return;
+        }
+
+        const int maxScanSeconds = 60;
+        var scanSeconds = Math.Clamp(_taskParam.ScanDropsAfterRewardSeconds, 0, maxScanSeconds);
+        if (scanSeconds <= 0)
+        {
+            return;
+        }
+
+        var autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+        var originalSeconds = autoFightConfig.PickDropsAfterFightSeconds;
+
+        try
+        {
+            autoFightConfig.PickDropsAfterFightSeconds = scanSeconds;
+            _logger.LogInformation("领取奖励后开始扫描掉落物光柱，时长 {Seconds} 秒", scanSeconds);
+            await new ScanPickTask().Start(_ct);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "领取奖励后扫描掉落物光柱异常");
+        }
+        finally
+        {
+            autoFightConfig.PickDropsAfterFightSeconds = originalSeconds;
             Simulation.ReleaseAllKey();
         }
     }

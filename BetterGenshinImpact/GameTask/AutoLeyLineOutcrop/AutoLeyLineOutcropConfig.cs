@@ -51,6 +51,18 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     [ObservableProperty]
     private bool _isGoToSynthesizer = false;
 
+    /// <summary>
+    /// 是否在领取地脉花奖励后扫描周围掉落物光柱。
+    /// </summary>
+    [ObservableProperty]
+    private bool _scanDropsAfterRewardEnabled = true;
+
+    /// <summary>
+    /// 领取奖励后扫描掉落物的最长时长，单位为秒。
+    /// </summary>
+    [ObservableProperty]
+    private int _scanDropsAfterRewardSeconds = 12;
+
     [ObservableProperty]
     private AutoLeyLineOutcropFightConfig _fightConfig = new();
 

@@ -33,6 +33,15 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     public bool UseTransientResin { get; set; }
     //通过BGI通知系统发送详细通知
     public bool IsNotification { get; set; }
+    /// <summary>
+    /// 是否在领取奖励后扫描掉落物光柱。
+    /// </summary>
+    public bool ScanDropsAfterRewardEnabled { get; set; }
+
+    /// <summary>
+    /// 领取奖励后扫描掉落物光柱的最长时长，单位为秒。
+    /// </summary>
+    public int ScanDropsAfterRewardSeconds { get; set; }
     
     public void SetDefault()
     {
@@ -53,6 +62,8 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         UseFragileResin= config.UseFragileResin;
         UseTransientResin= config.UseTransientResin;
         IsNotification= config.IsNotification;
+        ScanDropsAfterRewardEnabled = config.ScanDropsAfterRewardEnabled;
+        ScanDropsAfterRewardSeconds = config.ScanDropsAfterRewardSeconds;
         Count = config.Count;
         Country = config.Country;
         LeyLineOutcropType = config.LeyLineOutcropType;

@@ -2620,6 +2620,62 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="领取奖励后扫描掉落物光柱"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在地脉花领奖完成后，短时间扫描周围掉落物光柱并靠近拾取；不依赖万叶或琴。部分点位或特定配队下可能因移动范围较大而卡住，请按需开启。"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding ScanDropsAfterRewardEnabledUi, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="领奖后扫描时长（秒）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="控制领奖后扫描掉落物光柱的最长时长。设为 0 表示不扫描。"
+                                  TextWrapping="Wrap" />
+                    <ui:NumberBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Margin="0,0,36,0"
+                                  Minimum="0"
+                                  Maximum="60"
+                                  SmallChange="1"
+                                  LargeChange="5"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  IsEnabled="{Binding ScanDropsAfterRewardEnabledUi}"
+                                  Value="{Binding Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardSeconds, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="树脂耗尽模式"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
