@@ -22,6 +22,7 @@ using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
@@ -173,6 +174,8 @@ public partial class AllConfig : ObservableObject
     ///     自动地脉花配置
     /// </summary>
     public AutoLeyLineOutcropConfig AutoLeyLineOutcropConfig { get; set; } = new();
+
+    public AutoCookConfig AutoCookConfig { get; set; } = new();
     
     /// <summary>
     ///   地图遮罩
@@ -273,6 +276,7 @@ public partial class AllConfig : ObservableObject
         AutoRedeemCodeConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoLeyLineOutcropConfig.PropertyChanged += OnAnyPropertyChanged;
+        AutoCookConfig.PropertyChanged += OnAnyPropertyChanged;
         MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
         TpConfig.PropertyChanged += OnAnyPropertyChanged;

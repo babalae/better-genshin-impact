@@ -15,7 +15,6 @@ namespace BetterGenshinImpact.GameTask.AutoCook;
 public class AutoCookTask : ISoloTask
 {
     private readonly ILogger<AutoCookTask> _logger = App.GetLogger<AutoCookTask>();
-    private const int CheckIntervalMs = 10;
     private const int UiCheckIntervalMs = 400;
     private const int PeakMinCount = 600; // 最小仙跳墙 700 多
     private const int PeakTolerance = 20;
@@ -28,6 +27,7 @@ public class AutoCookTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
+        var checkIntervalMs = Math.Max(1, TaskContext.Instance().Config.AutoCookConfig.CheckIntervalMs);
         _logger.LogInformation("自动烹饪任务启动");
         var lastUiCheckTime = DateTime.MinValue;
         var inCookUi = false;
@@ -82,7 +82,7 @@ public class AutoCookTask : ISoloTask
                 }
             }
 
-            await Delay(CheckIntervalMs, ct);
+            await Delay(checkIntervalMs, ct);
         }
     }
 
