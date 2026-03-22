@@ -35,6 +35,7 @@ public class GameLoadingTrigger : ITaskTrigger
     public bool IsBackgroundRunning => true;
 
     private readonly GameLoadingAssets _assets;
+    private readonly ElementAssets _elementAssets;
 
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
     private static ILogger<GameLoadingTrigger> _logger = App.GetLogger<GameLoadingTrigger>();
@@ -61,6 +62,7 @@ public class GameLoadingTrigger : ITaskTrigger
     {
         GameLoadingAssets.DestroyInstance();
         _assets = GameLoadingAssets.Instance;
+        _elementAssets = ElementAssets.Instance;
     }
 
     public void InnerSetEnabled(bool enabled)
@@ -247,12 +249,20 @@ public class GameLoadingTrigger : ITaskTrigger
             InnerSetEnabled(false);
             return;
         }
+        
         // 成功进入游戏判断    
         if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
             // _logger.LogInformation("当前在游戏主界面");
             InnerSetEnabled(false);
             return;
+        }
+        
+        // 适龄提示窗口自动关闭
+        var agePopup = content.CaptureRectArea.Find(_elementAssets.BtnWhiteConfirm);
+        if (!agePopup.IsEmpty())
+        {
+            agePopup.Click();
         }
 
         // B服判断
