@@ -166,7 +166,7 @@ issues:
         description: 已存在相同或高度相似的问题。
     keywordRules: []
     aiClassification:
-      enabled: true
+      enabled: false
       maxLabels: 3
       minConfidence: 0.65
       include: []
