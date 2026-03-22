@@ -587,9 +587,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         int finishTaskcount = 1;
         int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
         _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
-
-        await ScriptService.StartGameTask();
-
+        
         ReadScriptGroup();
         foreach (var task in ScriptGroupsdefault)
         {
