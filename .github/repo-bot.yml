@@ -158,15 +158,15 @@ issues:
       问题咨询:
         color: d876e3
         description: 使用问题、求助或咨询。
-      需要更多信息:
-        color: fbca04
-        description: 当前 Issue 缺少必要信息。
+      # 需要更多信息:
+      #   color: fbca04
+      #   description: 当前 Issue 缺少必要信息。
       重复:
         color: cfd3d7
         description: 已存在相同或高度相似的问题。
     keywordRules: []
     aiClassification:
-      enabled: true
+      enabled: false
       maxLabels: 3
       minConfidence: 0.65
       include: []
