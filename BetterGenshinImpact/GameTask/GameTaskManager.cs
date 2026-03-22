@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -47,7 +47,6 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("QuickTeleport", new QuickTeleport.QuickTeleportTrigger());
         TriggerDictionary.TryAdd("AutoSkip", new AutoSkip.AutoSkipTrigger());
         TriggerDictionary.TryAdd("AutoFish", new AutoFishing.AutoFishingTrigger());
-        TriggerDictionary.TryAdd("AutoCook", new AutoCook.AutoCookTrigger());
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
@@ -123,7 +122,6 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoFish")?.Init();
             TriggerDictionary.GetValueOrDefault("QuickTeleport")?.Init();
             // TriggerDictionary.GetValueOrDefault("GameLoading")?.Init();
-            TriggerDictionary.GetValueOrDefault("AutoCook")?.Init();
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
