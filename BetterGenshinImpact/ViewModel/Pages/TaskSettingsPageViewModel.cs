@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
@@ -116,6 +117,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     [ObservableProperty]
     private string _switchAutoAlbumButtonText = "启动";
+
+    [ObservableProperty]
+    private bool _switchAutoCookEnabled;
+
+    [ObservableProperty]
+    private string _switchAutoCookButtonText = "启动";
 
     [ObservableProperty]
     private List<string> _domainNameList;
@@ -321,6 +328,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         SwitchAutoFightEnabled = false;
         SwitchAutoMusicGameEnabled = false;
         SwitchAutoAlbumEnabled = false;
+        SwitchAutoCookEnabled = false;
         SwitchAutoFishingEnabled = false;
         SwitchAutoLeyLineOutcropEnabled = false;
         SwitchArtifactSalvageEnabled = false;
@@ -596,6 +604,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
         SwitchAutoAlbumEnabled = false;
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchAutoCook()
+    {
+        SwitchAutoCookEnabled = true;
+        await new TaskRunner()
+            .RunSoloTaskAsync(new AutoCookTask());
+        SwitchAutoCookEnabled = false;
     }
 
     [RelayCommand]

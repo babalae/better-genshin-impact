@@ -163,6 +163,13 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _autoFishingGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
+    // 自动烹饪开始/停止
+    [ObservableProperty]
+    private string _autoCookGameHotkey = "";
+
+    [ObservableProperty]
+    private string _autoCookGameHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
+
     // 自动寻路
     [ObservableProperty]
     private string _autoTrackPathHotkey = "";
