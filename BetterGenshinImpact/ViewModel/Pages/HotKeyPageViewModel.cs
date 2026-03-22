@@ -443,6 +443,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoFishingGameHotkeyType,
             (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoFishingCommand); }
         ));
+        soloTaskDirectory.Children.Add(new HotKeySettingModel(
+            "启动/停止自动烹饪",
+            nameof(Config.HotKeyConfig.AutoCookGameHotkey),
+            Config.HotKeyConfig.AutoCookGameHotkey,
+            Config.HotKeyConfig.AutoCookGameHotkeyType,
+            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoCookCommand); }
+        ));
 
         macroDirectory.Children.Add(new HotKeySettingModel(
             "快捷点击原神内确认按钮",
