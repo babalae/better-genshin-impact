@@ -1,0 +1,9 @@
+爱可菲 e,attack(0.2),q
+芙宁娜  e,attack(0.2),q
+莫娜 e,attack(0.4),q
+丝柯克 e,attack,attack,keypress(Q),attack,attack,dash,attack,attack,dash,attack,attack,attack,attack,attack,dash,attack,attack,dash,attack,attack,charge(0.2),attack,attack,dash,attack,attack,dash,attack,attack,attack,attack,attack,dash,attack,attack,dash,attack,attack,charge(0.2),attack,attack,dash,attack,attack,dash,attack,attack,attack,attack,attack,dash,attack,attack,dash,attack,attack,dash,attack,attack,attack
+
+// 脚本可以循环
+// 如果辅助充能不够，就改一下attack(0.2)的时间，改到满足充能即可
+// 参考手法：2aq 2as 2as 5as 2as 2az 2as 2as 5as 2as 2az 2as 2as 3a
+// 实际手法：2aq 2as 2as 5as 2as 2az 2as 2as 5as 2as 2az 2as 2as 5as 2as 2as 3a
