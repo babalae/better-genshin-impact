@@ -1,5 +1,7 @@
 ﻿// ReSharper disable InconsistentNaming
 using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Helpers;
@@ -86,6 +88,26 @@ public static class OsVersionHelper
         if (!IsWindowsXP_OrGreater)
         {
             throw new PlatformNotSupportedException("Only supported on Windows XP or newer.");
+        }
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmIsCompositionEnabled(out bool pfEnabled);
+
+    /// <summary>
+    /// 检查桌面窗口合成（DWM）是否已启用。
+    /// 当 DWM 合成被禁用时，Mica/Acrylic 等依赖 DWM 的特效无法使用。
+    /// </summary>
+    public static bool IsDwmCompositionEnabled()
+    {
+        try
+        {
+            return DwmIsCompositionEnabled(out var enabled) == 0 && enabled;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"DwmIsCompositionEnabled P/Invoke failed: {ex}");
+            return false;
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -318,7 +319,16 @@ public partial class App : Application
     {
         try
         {
-            HandleException(e.Exception);
+            // DWM 合成被禁用时（如远程桌面等场景），WindowChrome 会抛出 COMException(0x80263001)
+            // 此时仅记录日志，不弹出崩溃对话框，避免应用程序退出
+            if (e.Exception is COMException comEx && comEx.HResult == unchecked((int)0x80263001))
+            {
+                GetLogger<App>().LogWarning(comEx, "DWM composition is disabled (0x80263001), WindowChrome effects are unavailable");
+            }
+            else
+            {
+                HandleException(e.Exception);
+            }
         }
         catch (Exception ex)
         {
