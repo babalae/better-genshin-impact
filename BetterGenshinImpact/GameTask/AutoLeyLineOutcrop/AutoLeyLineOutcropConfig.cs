@@ -55,7 +55,7 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     /// 是否在领取地脉花奖励后扫描周围掉落物光柱。
     /// </summary>
     [ObservableProperty]
-    private bool _scanDropsAfterRewardEnabled = true;
+    private bool _scanDropsAfterRewardEnabled = false;
 
     /// <summary>
     /// 领取奖励后扫描掉落物的最长时长，单位为秒。
