@@ -327,8 +327,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         if (!string.IsNullOrWhiteSpace(_taskParam.Team))
         {
-            _switchPartyTask ??= new SwitchPartyTask();
-            await _switchPartyTask.Start(_taskParam.Team, _ct);
+            await TrySwitchPartyAndSync(_taskParam.Team);
         }
 
         if (_taskParam.UseAdventurerHandbook)
@@ -727,7 +726,15 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         var task = PathingTask.BuildFromFilePath(fullPath) ?? throw new Exception("路径文件解析失败");
         var executor = new PathExecutor(_ct);
+        executor.PartyConfig = BuildLeyLinePathingPartyConfig();
         await executor.Pathing(task);
+    }
+
+    private static PathingPartyConfig BuildLeyLinePathingPartyConfig()
+    {
+        var partyConfig = PathingPartyConfig.BuildDefault();
+        partyConfig.SkipPartySwitch = true;
+        return partyConfig;
     }
 
     private async Task<NodeData> LoadNodeData()
@@ -1489,8 +1496,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         try
         {
-            _switchPartyTask ??= new SwitchPartyTask();
-            await _switchPartyTask.Start(_taskParam.FriendshipTeam, _ct);
+            await TrySwitchPartyAndSync(_taskParam.FriendshipTeam);
         }
         catch (Exception ex)
         {
@@ -1506,8 +1512,24 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        await TrySwitchPartyAndSync(_taskParam.Team);
+    }
+
+    private async Task<bool> TrySwitchPartyAndSync(string partyName)
+    {
+        if (string.IsNullOrWhiteSpace(partyName))
+        {
+            return false;
+        }
+
         _switchPartyTask ??= new SwitchPartyTask();
-        await _switchPartyTask.Start(_taskParam.Team, _ct);
+        var success = await _switchPartyTask.Start(partyName, _ct);
+        if (success)
+        {
+            RunnerContext.Instance.PartyName = partyName;
+        }
+
+        return success;
     }
 
     private async Task<bool> AttemptReward(int retryCount = 0)
