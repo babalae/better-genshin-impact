@@ -488,7 +488,7 @@ public class LimitedFile(string rootPath)
         return true;
     }
 	
-	    /// <summary>
+	/// <summary>
     /// 重命名文件或文件夹（相对于根目录）
     /// </summary>
     /// <param name="oldPath">原路径</param>
