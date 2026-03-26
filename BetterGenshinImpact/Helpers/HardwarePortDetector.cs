@@ -10,6 +10,8 @@ namespace BetterGenshinImpact.Helpers;
 public static class HardwarePortDetector
 {
     private static readonly Regex ComPortRegex = new(@"\(COM(?<port>\d+)\)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex ManualComPortRegex = new(@"^(?:\\\\\.\\)?(?:COM)?\s*(?<port>\d+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex VidPidRegex = new(@"VID_(?<vid>[0-9A-F]{4})&PID_(?<pid>[0-9A-F]{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly string[] FerrumKeywords =
     [
@@ -18,11 +20,16 @@ public static class HardwarePortDetector
         "km box",
         "ch340",
         "ch341",
+        "ch343",
         "cp210",
         "silicon labs",
         "usb serial",
+        "usb-enhanced-serial",
         "serial device",
-        "uart"
+        "uart",
+        "com0com",
+        "virtual serial port pair",
+        "reserved interface"
     ];
 
     private static readonly string[] MakcuKeywords =
@@ -32,11 +39,32 @@ public static class HardwarePortDetector
         "km box",
         "ch340",
         "ch341",
+        "ch343",
         "cp210",
         "silicon labs",
         "usb serial",
+        "usb-enhanced-serial",
         "serial device",
-        "uart"
+        "uart",
+        "vid_1a86"
+    ];
+
+    private static readonly string[] MakxdKeywords =
+    [
+        "makxd",
+        "makcu",
+        "kmbox",
+        "km box",
+        "ch340",
+        "ch341",
+        "ch343",
+        "cp210",
+        "silicon labs",
+        "usb serial",
+        "usb-enhanced-serial",
+        "serial device",
+        "uart",
+        "vid_1a86"
     ];
 
     private static readonly string[] CommonKeywords =
@@ -75,6 +103,55 @@ public static class HardwarePortDetector
         return scoredCandidates[0].Candidate.Port;
     }
 
+    public static string ResolveVidPid(string portName)
+    {
+        var normalizedPortName = NormalizePortName(portName);
+        if (string.IsNullOrWhiteSpace(normalizedPortName))
+        {
+            return "Unknown";
+        }
+
+        var candidate = GetCandidates()
+            .FirstOrDefault(x => string.Equals(x.Port, normalizedPortName, StringComparison.OrdinalIgnoreCase));
+
+        if (candidate == null)
+        {
+            return "Unknown";
+        }
+
+        var match = VidPidRegex.Match(candidate.SearchText);
+        return match.Success
+            ? $"VID_{match.Groups["vid"].Value.ToUpperInvariant()}&PID_{match.Groups["pid"].Value.ToUpperInvariant()}"
+            : "Unknown";
+    }
+
+    public static string GetBaudRateText(string vendor)
+    {
+        if (string.Equals(vendor, HardwareInputConfigValues.Makcu, StringComparison.OrdinalIgnoreCase))
+        {
+            return "115200 / 4000000";
+        }
+
+        return "115200";
+    }
+
+    public static string NormalizePortName(string? portName)
+    {
+        if (string.IsNullOrWhiteSpace(portName))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = portName.Trim();
+        var match = ManualComPortRegex.Match(trimmed);
+        if (match.Success && int.TryParse(match.Groups["port"].Value, out var portNumber) && portNumber > 0)
+        {
+            return $"COM{portNumber}";
+        }
+
+        return trimmed.Replace(" ", string.Empty).ToUpperInvariant();
+    }
+
     private static int ScoreCandidate(ComPortCandidate candidate, string vendor)
     {
         var score = 0;
@@ -92,6 +169,12 @@ public static class HardwarePortDetector
         else if (string.Equals(vendor, HardwareInputConfigValues.Makcu, StringComparison.OrdinalIgnoreCase))
         {
             score += ScoreByKeywords(text, MakcuKeywords);
+            score -= ScoreByNegativeKeywords(text, ["ferrum", "com0com", "virtual serial port pair", "reserved interface"]);
+        }
+        else if (string.Equals(vendor, HardwareInputConfigValues.Makxd, StringComparison.OrdinalIgnoreCase))
+        {
+            score += ScoreByKeywords(text, MakxdKeywords);
+            score -= ScoreByNegativeKeywords(text, ["ferrum", "com0com", "virtual serial port pair", "reserved interface"]);
         }
         else
         {
@@ -116,6 +199,27 @@ public static class HardwarePortDetector
                 >= 7 => 30,
                 >= 4 => 15,
                 _ => 5
+            };
+        }
+
+        return score;
+    }
+
+    private static int ScoreByNegativeKeywords(string text, IReadOnlyList<string> keywords)
+    {
+        var score = 0;
+        foreach (var keyword in keywords)
+        {
+            if (!text.Contains(keyword))
+            {
+                continue;
+            }
+
+            score += keyword.Length switch
+            {
+                >= 10 => 40,
+                >= 6 => 25,
+                _ => 10
             };
         }
 
