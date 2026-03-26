@@ -20,6 +20,287 @@
                       FontTypography="BodyStrong"
                       Text="辅助操控设置" />
 
+        <!--  输入来源 / 硬体 COM 埠  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Keyboard24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="输入来源与硬体 COM 埠"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="可分别设定键盘与鼠标走虚拟信号或硬体，硬体模式下支援 Makcu / Ferrum 并可自动侦测 COM 埠"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,24,0"
+                               Command="{Binding RefreshHardwarePortsCommand}"
+                               Content="重新侦测" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="键盘输出模式"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="虚拟信号会沿用现有注入方式；硬体模式会使用下方所选装置与 COM 埠"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="180"
+                              Margin="0,0,36,0"
+                              DisplayMemberPath="Value"
+                              ItemsSource="{Binding InputModeOptions}"
+                              SelectedValue="{Binding Config.HardwareInputConfig.KeyboardOutputMode, Mode=TwoWay}"
+                              SelectedValuePath="Key" />
+                </Grid>
+                <StackPanel Margin="16,0,16,8"
+                            IsEnabled="{Binding Config.HardwareInputConfig.IsKeyboardHardware}">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="键盘硬体品牌"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="Keyboard hardware vendor"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Width="180"
+                                  Margin="0,0,36,0"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding HardwareVendorOptions}"
+                                  SelectedValue="{Binding Config.HardwareInputConfig.KeyboardHardwareVendor, Mode=TwoWay}"
+                                  SelectedValuePath="Key" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="自动侦测 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="取消后可手动填写 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,12,0"
+                                         IsChecked="{Binding Config.HardwareInputConfig.KeyboardAutoDetectComPort, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="2"
+                                      Margin="0,0,36,0"
+                                      VerticalAlignment="Center"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.KeyboardDetectedComPort, StringFormat=自动侦测结果：{0}}" />
+                    </Grid>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="手动 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="例如 COM3"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="140"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.KeyboardComPort, Mode=TwoWay}"
+                                    IsEnabled="{Binding Config.HardwareInputConfig.KeyboardAutoDetectComPort, Converter={StaticResource InverseBooleanConverter}}" />
+                    </Grid>
+                </StackPanel>
+
+                <Separator Margin="16,0" />
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="鼠标输出模式"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="可与键盘分别选择不同来源"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="180"
+                              Margin="0,0,36,0"
+                              DisplayMemberPath="Value"
+                              ItemsSource="{Binding InputModeOptions}"
+                              SelectedValue="{Binding Config.HardwareInputConfig.MouseOutputMode, Mode=TwoWay}"
+                              SelectedValuePath="Key" />
+                </Grid>
+                <StackPanel Margin="16,0,16,8"
+                            IsEnabled="{Binding Config.HardwareInputConfig.IsMouseHardware}">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="鼠标硬体品牌"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="Mouse hardware vendor"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Width="180"
+                                  Margin="0,0,36,0"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding HardwareVendorOptions}"
+                                  SelectedValue="{Binding Config.HardwareInputConfig.MouseHardwareVendor, Mode=TwoWay}"
+                                  SelectedValuePath="Key" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="自动侦测 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="取消后可手动填写 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,12,0"
+                                         IsChecked="{Binding Config.HardwareInputConfig.MouseAutoDetectComPort, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="2"
+                                      Margin="0,0,36,0"
+                                      VerticalAlignment="Center"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.MouseDetectedComPort, StringFormat=自动侦测结果：{0}}" />
+                    </Grid>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="手动 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="例如 COM4"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="140"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.MouseComPort, Mode=TwoWay}"
+                                    IsEnabled="{Binding Config.HardwareInputConfig.MouseAutoDetectComPort, Converter={StaticResource InverseBooleanConverter}}" />
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </ui:CardExpander>
+
         <!--  一键战斗宏  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"

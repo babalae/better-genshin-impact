@@ -27,6 +27,7 @@ node_modules/
 github_actions_cache/
 
 *.zip
+HardwareAPI/
 
 # IDE & AI tools
 .idea
