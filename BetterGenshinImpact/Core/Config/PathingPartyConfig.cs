@@ -21,6 +21,9 @@ public partial class PathingPartyConfig : ObservableObject
     // 切换到队伍的名称
     [ObservableProperty]
     private string _partyName = string.Empty;
+
+    [JsonIgnore]
+    public bool SkipPartySwitch { get; set; }
     
     // 切换队伍前是否前往须弥七天神像
     [ObservableProperty]

@@ -487,4 +487,51 @@ public class LimitedFile(string rootPath)
         
         return true;
     }
+	
+	/// <summary>
+    /// 重命名文件或文件夹（相对于根目录）
+    /// </summary>
+    /// <param name="oldPath">原路径</param>
+    /// <param name="newPath">新路径</param>
+    /// <returns>是否重命名成功</returns>
+    public bool RenamePathSync(string oldPath, string newPath)
+    {
+        try
+        {
+            // 标准化路径
+            oldPath = NormalizePath(oldPath);
+            newPath = NormalizePath(newPath);
+
+            // 检查原路径是否存在
+            if (!File.Exists(oldPath) && !Directory.Exists(oldPath))
+            {
+                TaskControl.Logger.LogError("RenamePathSync 异常: 原路径不存在 {Path}", oldPath);
+                return false;
+            }
+
+            //验证扩展名合法性
+            if (File.Exists(oldPath) && !IsValid(newPath))
+            {
+                TaskControl.Logger.LogError("RenamePathSync 异常: 新文件路径不合法 {Path}", newPath);
+                return false;
+            }
+
+            // 确保目标目录存在
+            string? directoryPath = Path.GetDirectoryName(newPath);
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            // 执行重命名
+            Directory.Move(oldPath, newPath);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError("RenamePathSync 异常: {Message}", ex.Message);
+            return false;
+        }
+    }
 }
