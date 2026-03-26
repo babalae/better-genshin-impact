@@ -28,7 +28,9 @@ public class AutoCookTask : ISoloTask
     public async Task Start(CancellationToken ct)
     {
         var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        var checkIntervalMs = Math.Max(1, TaskContext.Instance().Config.AutoCookConfig.CheckIntervalMs);
+        var autoCookConfig = TaskContext.Instance().Config.AutoCookConfig;
+        var checkIntervalMs = Math.Max(1, autoCookConfig.CheckIntervalMs);
+        var stopTaskWhenRecoverButtonDetected = autoCookConfig.StopTaskWhenRecoverButtonDetected;
         var peakMinCount = (int)(PeakMinCount * assetScale);
         var triggerDropCount = (int)(TriggerDropCount * assetScale);
         var cookColorRect = ScaleRect(CookColorRect1080P, assetScale);
@@ -59,6 +61,16 @@ public class AutoCookTask : ISoloTask
                 }
                 else
                 {
+                    if (stopTaskWhenRecoverButtonDetected)
+                    {
+                        var e = captureRegion.Find(ElementAssets.Instance.BtnWhiteRecover);
+                        if (e.IsExist())
+                        {
+                            _logger.LogInformation("自动烹饪：{Text}", "检测到自动烹饪按钮，结束任务");
+                            return;
+                        }
+                    }
+
                     if (Bv.ClickWhiteConfirmButton(captureRegion))
                     {
                         ResetPeakState(ref peakColorCount, ref peakCandidate, ref peakCandidateStableFrames);

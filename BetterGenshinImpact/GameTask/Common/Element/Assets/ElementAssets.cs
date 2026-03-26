@@ -13,6 +13,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
+    public RecognitionObject BtnWhiteRecover;
     public RecognitionObject BtnBlackConfirm;
     public RecognitionObject BtnBlackCancel;
     public RecognitionObject BtnBackTeyvat;
@@ -139,6 +140,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_cancel.png", systemInfo),
             Use3Channels = true
+        }.InitTemplate();
+        BtnWhiteRecover = new RecognitionObject
+        {
+            Name = "BtnWhiteRecover",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_recover.png", systemInfo),
+            Use3Channels = true,
+            RegionOfInterest = new Rect((int)(580 * AssetScale), (int)(950 * AssetScale), (int)(90 * AssetScale), (int)(95 * AssetScale)),
+            // Threshold = 0.95
         }.InitTemplate();
         BtnBlackConfirm = new RecognitionObject
         {
