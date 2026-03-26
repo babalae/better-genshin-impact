@@ -89,6 +89,19 @@ internal static class MakxdMakApiBackend
             }
         }
 
+        public string? BaudRateText
+        {
+            get
+            {
+                lock (_syncRoot)
+                {
+                    return _serialPort?.IsOpen == true
+                        ? _serialPort.BaudRate.ToString(CultureInfo.InvariantCulture)
+                        : null;
+                }
+            }
+        }
+
         public void Dispose()
         {
             lock (_syncRoot)
@@ -224,16 +237,18 @@ internal static class MakxdMakApiBackend
         }
     }
 
-    private sealed class MakxdMakKeyboardBackend(MakxdMakConnection connection) : IHardwareKeyboardBackend
+    private sealed class MakxdMakKeyboardBackend(MakxdMakConnection connection) : IHardwareKeyboardBackend, IHardwareConnectionInfoProvider
     {
+        public string? BaudRateText => connection.BaudRateText;
         public bool EnsureConnected() => connection.EnsureConnected();
         public void KeyDown(int hidCode) => connection.KeyDown(hidCode);
         public void KeyUp(int hidCode) => connection.KeyUp(hidCode);
         public void KeyPress(int hidCode) => connection.KeyPress(hidCode);
     }
 
-    private sealed class MakxdMakMouseBackend(MakxdMakConnection connection) : IHardwareMouseBackend
+    private sealed class MakxdMakMouseBackend(MakxdMakConnection connection) : IHardwareMouseBackend, IHardwareConnectionInfoProvider
     {
+        public string? BaudRateText => connection.BaudRateText;
         public bool EnsureConnected() => connection.EnsureConnected();
         public void MouseMoveBy(int dx, int dy) => connection.MouseMoveBy(dx, dy);
         public void MouseMoveTo(int x, int y) => connection.MouseMoveTo(x, y);

@@ -41,6 +41,50 @@ internal sealed class HardwareInputRouter
         return GetMouseBackend(config);
     }
 
+    public string? GetKeyboardConnectedBaudRateText()
+    {
+        var config = GetHardwareConfig();
+        if (config == null || !config.IsKeyboardHardware || config.IsKeyboardFerrumNetworkApi)
+        {
+            return null;
+        }
+
+        var cacheKey = BuildKeyboardCacheKey(config);
+        if (cacheKey == null)
+        {
+            return null;
+        }
+
+        lock (_syncRoot)
+        {
+            return _keyboardBackends.TryGetValue(cacheKey, out var backend) && backend is IHardwareConnectionInfoProvider infoProvider
+                ? infoProvider.BaudRateText
+                : null;
+        }
+    }
+
+    public string? GetMouseConnectedBaudRateText()
+    {
+        var config = GetHardwareConfig();
+        if (config == null || !config.IsMouseHardware || config.IsMouseFerrumNetworkApi)
+        {
+            return null;
+        }
+
+        var cacheKey = BuildMouseCacheKey(config);
+        if (cacheKey == null)
+        {
+            return null;
+        }
+
+        lock (_syncRoot)
+        {
+            return _mouseBackends.TryGetValue(cacheKey, out var backend) && backend is IHardwareConnectionInfoProvider infoProvider
+                ? infoProvider.BaudRateText
+                : null;
+        }
+    }
+
     private IHardwareKeyboardBackend? GetKeyboardBackend(HardwareInputConfig config)
     {
         var cacheKey = BuildKeyboardCacheKey(config);

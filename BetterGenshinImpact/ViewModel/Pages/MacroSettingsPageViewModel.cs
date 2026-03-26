@@ -26,6 +26,8 @@ public partial class MacroSettingsPageViewModel : ViewModel
     private readonly DispatcherTimer _monitorTimer;
     private readonly (HardwareInputMonitorItemViewModel Item, int HidCode)[] _keyboardMonitorBindings;
     private readonly (HardwareInputMonitorItemViewModel Item, HardwareMouseButton Button)[] _mouseMonitorBindings;
+    private string _lastKeyboardConnectedBaudRate = string.Empty;
+    private string _lastMouseConnectedBaudRate = string.Empty;
 
     [ObservableProperty]
     private string[] _quickFightMacroHotkeyMode = [OneKeyFightTask.HoldOnMode, OneKeyFightTask.TickMode];
@@ -149,6 +151,8 @@ public partial class MacroSettingsPageViewModel : ViewModel
         {
             keyboard.TextEntry(character).Sleep(30);
         }
+
+        Config.HardwareInputConfig.RefreshDetectedPorts();
     }
 
     [RelayCommand]
@@ -167,6 +171,7 @@ public partial class MacroSettingsPageViewModel : ViewModel
         }
 
         backend.MouseMoveBy(100, 100);
+        Config.HardwareInputConfig.RefreshDetectedPorts();
     }
 
     [RelayCommand]
@@ -185,6 +190,23 @@ public partial class MacroSettingsPageViewModel : ViewModel
     {
         RefreshKeyboardMonitor();
         RefreshMouseMonitor();
+        RefreshHardwareConnectionInfo();
+    }
+
+    private void RefreshHardwareConnectionInfo()
+    {
+        var keyboardConnectedBaudRate = HardwareInputRouter.Instance.GetKeyboardConnectedBaudRateText() ?? string.Empty;
+        var mouseConnectedBaudRate = HardwareInputRouter.Instance.GetMouseConnectedBaudRateText() ?? string.Empty;
+
+        if (string.Equals(_lastKeyboardConnectedBaudRate, keyboardConnectedBaudRate, StringComparison.Ordinal)
+            && string.Equals(_lastMouseConnectedBaudRate, mouseConnectedBaudRate, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastKeyboardConnectedBaudRate = keyboardConnectedBaudRate;
+        _lastMouseConnectedBaudRate = mouseConnectedBaudRate;
+        Config.HardwareInputConfig.RefreshDetectedPorts();
     }
 
     private void RefreshKeyboardMonitor()

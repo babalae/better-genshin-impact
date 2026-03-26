@@ -63,3 +63,8 @@ internal interface IHardwareApiConnection : IDisposable
 {
     bool EnsureConnected();
 }
+
+internal interface IHardwareConnectionInfoProvider
+{
+    string? BaudRateText { get; }
+}

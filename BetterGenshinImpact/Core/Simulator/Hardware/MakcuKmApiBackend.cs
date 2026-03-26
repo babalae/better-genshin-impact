@@ -88,6 +88,19 @@ internal static class MakcuKmApiBackend
             }
         }
 
+        public string? BaudRateText
+        {
+            get
+            {
+                lock (_syncRoot)
+                {
+                    return _serialPort?.IsOpen == true
+                        ? _serialPort.BaudRate.ToString(CultureInfo.InvariantCulture)
+                        : null;
+                }
+            }
+        }
+
         public void Dispose()
         {
             lock (_syncRoot)
@@ -330,8 +343,9 @@ internal static class MakcuKmApiBackend
         }
     }
 
-    private sealed class MakcuKmMouseBackend(MakcuKmConnection connection) : IHardwareMouseBackend, IHardwareMouseStateBackend
+    private sealed class MakcuKmMouseBackend(MakcuKmConnection connection) : IHardwareMouseBackend, IHardwareMouseStateBackend, IHardwareConnectionInfoProvider
     {
+        public string? BaudRateText => connection.BaudRateText;
         public bool EnsureConnected() => connection.EnsureConnected();
         public void MouseMoveBy(int dx, int dy) => connection.MouseMoveBy(dx, dy);
         public void MouseMoveTo(int x, int y) => connection.MouseMoveTo(x, y);

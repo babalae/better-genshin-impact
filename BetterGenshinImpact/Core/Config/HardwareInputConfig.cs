@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Core.Simulator.Hardware;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Text.Json.Serialization;
@@ -123,10 +124,14 @@ public partial class HardwareInputConfig : ObservableObject
     public string MouseHardwareVidPid => HardwarePortDetector.ResolveVidPid(MouseEffectiveComPort);
 
     [JsonIgnore]
-    public string KeyboardHardwareBaudRate => IsKeyboardFerrumNetworkApi ? "UDP" : HardwarePortDetector.GetBaudRateText(KeyboardHardwareVendor);
+    public string KeyboardHardwareBaudRate => IsKeyboardFerrumNetworkApi
+        ? "UDP"
+        : HardwareInputRouter.Instance.GetKeyboardConnectedBaudRateText() ?? HardwarePortDetector.GetBaudRateText(KeyboardHardwareVendor);
 
     [JsonIgnore]
-    public string MouseHardwareBaudRate => IsMouseFerrumNetworkApi ? "UDP" : HardwarePortDetector.GetBaudRateText(MouseHardwareVendor);
+    public string MouseHardwareBaudRate => IsMouseFerrumNetworkApi
+        ? "UDP"
+        : HardwareInputRouter.Instance.GetMouseConnectedBaudRateText() ?? HardwarePortDetector.GetBaudRateText(MouseHardwareVendor);
 
     [JsonIgnore]
     public string KeyboardFerrumCredentialLabel => IsKeyboardFerrumDhzApi ? "Ferrum 密钥" : "Ferrum UUID";

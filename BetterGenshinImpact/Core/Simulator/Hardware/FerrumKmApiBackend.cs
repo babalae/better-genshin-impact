@@ -88,6 +88,19 @@ internal static class FerrumKmApiBackend
             }
         }
 
+        public string? BaudRateText
+        {
+            get
+            {
+                lock (_syncRoot)
+                {
+                    return _serialPort?.IsOpen == true
+                        ? _serialPort.BaudRate.ToString(CultureInfo.InvariantCulture)
+                        : null;
+                }
+            }
+        }
+
         public void Dispose()
         {
             lock (_syncRoot)
@@ -326,8 +339,9 @@ internal static class FerrumKmApiBackend
         }
     }
 
-    private sealed class FerrumKmKeyboardBackend(FerrumKmConnection connection) : IHardwareKeyboardBackend, IHardwareKeyboardStateBackend
+    private sealed class FerrumKmKeyboardBackend(FerrumKmConnection connection) : IHardwareKeyboardBackend, IHardwareKeyboardStateBackend, IHardwareConnectionInfoProvider
     {
+        public string? BaudRateText => connection.BaudRateText;
         public bool EnsureConnected() => connection.EnsureConnected();
         public void KeyDown(int hidCode) => connection.KeyDown(hidCode);
         public void KeyUp(int hidCode) => connection.KeyUp(hidCode);
@@ -335,8 +349,9 @@ internal static class FerrumKmApiBackend
         public bool TryGetKeyState(int hidCode, out HardwareInputState state) => connection.TryReadKeyState(hidCode, out state);
     }
 
-    private sealed class FerrumKmMouseBackend(FerrumKmConnection connection) : IHardwareMouseBackend, IHardwareMouseStateBackend
+    private sealed class FerrumKmMouseBackend(FerrumKmConnection connection) : IHardwareMouseBackend, IHardwareMouseStateBackend, IHardwareConnectionInfoProvider
     {
+        public string? BaudRateText => connection.BaudRateText;
         public bool EnsureConnected() => connection.EnsureConnected();
         public void MouseMoveBy(int dx, int dy) => connection.MouseMoveBy(dx, dy);
         public void MouseMoveTo(int x, int y) => connection.MouseMoveTo(x, y);
