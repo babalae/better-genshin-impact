@@ -70,15 +70,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
         if (content.CurrentGameUiCategory == GameUiCategory.BigMap
             || Bv.IsInBigMapUi(content.CaptureRectArea))
         {
-            
-            if (Bv.ClickBlackConfirmButton(content.CaptureRectArea))
-            {
-                return;
-            }
-            
             // 2. 判断是否有传送按钮
             var hasTeleportButton = CheckTeleportButton(content.CaptureRectArea);
-
 
             if (!hasTeleportButton)
             {
