@@ -1,5 +1,7 @@
 using BetterGenshinImpact.Core.Simulator.Hardware;
+using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Globalization;
 using System.Windows.Media;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -25,7 +27,7 @@ public sealed partial class HardwareInputMonitorItemViewModel(string label) : Ob
     private int _stateCode;
 
     [ObservableProperty]
-    private string _stateText = "未触发";
+    private string _stateText = Tr("未触发");
 
     [ObservableProperty]
     private Brush _stateBackground = NoneBackground;
@@ -36,34 +38,36 @@ public sealed partial class HardwareInputMonitorItemViewModel(string label) : Ob
     [ObservableProperty]
     private Brush _stateForeground = NoneForeground;
 
+    public string StateCodeText => string.Format(CultureInfo.CurrentCulture, Tr("状态 {0}"), StateCode);
+
     internal void ApplyState(HardwareInputState state)
     {
         switch (state)
         {
             case HardwareInputState.Physical:
                 StateCode = 1;
-                StateText = "物理";
+                StateText = Tr("物理");
                 StateBackground = PhysicalBackground;
                 StateBorder = PhysicalBorder;
                 StateForeground = PhysicalForeground;
                 break;
             case HardwareInputState.Hardware:
                 StateCode = 2;
-                StateText = "硬体";
+                StateText = Tr("硬体");
                 StateBackground = HardwareBackground;
                 StateBorder = HardwareBorder;
                 StateForeground = HardwareForeground;
                 break;
             case HardwareInputState.Both:
                 StateCode = 3;
-                StateText = "同时";
+                StateText = Tr("同时");
                 StateBackground = BothBackground;
                 StateBorder = BothBorder;
                 StateForeground = BothForeground;
                 break;
             default:
                 StateCode = 0;
-                StateText = "未触发";
+                StateText = Tr("未触发");
                 StateBackground = NoneBackground;
                 StateBorder = NoneBorder;
                 StateForeground = NoneForeground;
@@ -71,10 +75,21 @@ public sealed partial class HardwareInputMonitorItemViewModel(string label) : Ob
         }
     }
 
+    partial void OnStateCodeChanged(int value)
+    {
+        OnPropertyChanged(nameof(StateCodeText));
+    }
+
     private static Brush CreateBrush(byte r, byte g, byte b, byte a = 0xFF)
     {
         var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
         brush.Freeze();
         return brush;
+    }
+
+    private static string Tr(string text)
+    {
+        var translator = App.GetService<ITranslationService>();
+        return translator?.Translate(text, TranslationSourceInfo.From(MissingTextSource.UiDynamicBinding)) ?? text;
     }
 }

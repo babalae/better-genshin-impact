@@ -1,5 +1,6 @@
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Simulator.Hardware;
+using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Text.Json.Serialization;
@@ -134,19 +135,19 @@ public partial class HardwareInputConfig : ObservableObject
         : HardwareInputRouter.Instance.GetMouseConnectedBaudRateText() ?? HardwarePortDetector.GetBaudRateText(MouseHardwareVendor);
 
     [JsonIgnore]
-    public string KeyboardFerrumCredentialLabel => IsKeyboardFerrumDhzApi ? "Ferrum 密钥" : "Ferrum UUID";
+    public string KeyboardFerrumCredentialLabel => IsKeyboardFerrumDhzApi ? Tr("Ferrum 密钥") : "Ferrum UUID";
 
     [JsonIgnore]
-    public string KeyboardFerrumCredentialHint => IsKeyboardFerrumDhzApi ? "DHZ 使用的加密密钥" : "NET 使用的设备 UUID";
+    public string KeyboardFerrumCredentialHint => IsKeyboardFerrumDhzApi ? Tr("DHZ 使用的加密密钥") : Tr("NET 使用的设备 UUID");
 
     [JsonIgnore]
     public string KeyboardFerrumCredentialDisplayName => IsKeyboardFerrumDhzApi ? "Key" : "UUID";
 
     [JsonIgnore]
-    public string MouseFerrumCredentialLabel => IsMouseFerrumDhzApi ? "Ferrum 密钥" : "Ferrum UUID";
+    public string MouseFerrumCredentialLabel => IsMouseFerrumDhzApi ? Tr("Ferrum 密钥") : "Ferrum UUID";
 
     [JsonIgnore]
-    public string MouseFerrumCredentialHint => IsMouseFerrumDhzApi ? "DHZ 使用的加密密钥" : "NET 使用的设备 UUID";
+    public string MouseFerrumCredentialHint => IsMouseFerrumDhzApi ? Tr("DHZ 使用的加密密钥") : Tr("NET 使用的设备 UUID");
 
     [JsonIgnore]
     public string MouseFerrumCredentialDisplayName => IsMouseFerrumDhzApi ? "Key" : "UUID";
@@ -315,5 +316,11 @@ public partial class HardwareInputConfig : ObservableObject
         OnPropertyChanged(nameof(MouseHardwareVidPid));
         OnPropertyChanged(nameof(MouseHardwareInfo));
         OnPropertyChanged(nameof(MouseHardwareTestInfo));
+    }
+
+    private static string Tr(string text)
+    {
+        var translator = App.GetService<ITranslationService>();
+        return translator?.Translate(text, TranslationSourceInfo.From(MissingTextSource.UiDynamicBinding)) ?? text;
     }
 }

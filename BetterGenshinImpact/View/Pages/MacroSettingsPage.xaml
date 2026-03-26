@@ -360,7 +360,7 @@
                                                           Text="{Binding StateText}" />
                                             <ui:TextBlock Margin="0,2,0,0"
                                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                          Text="{Binding StateCode, StringFormat=状态 {0}}" />
+                                                          Text="{Binding StateCodeText}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -678,7 +678,7 @@
                                                           Text="{Binding StateText}" />
                                             <ui:TextBlock Margin="0,2,0,0"
                                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                          Text="{Binding StateCode, StringFormat=状态 {0}}" />
+                                                          Text="{Binding StateCodeText}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
