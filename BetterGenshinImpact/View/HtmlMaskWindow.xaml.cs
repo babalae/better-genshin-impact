@@ -64,7 +64,11 @@ public partial class HtmlMaskWindow : Window
             var window = new HtmlMaskWindow(url, id, webView2DataPath);
             string wid = window.MaskId;
             _windows[wid] = window;
-            window.Closed += (_, _) => _windows.TryRemove(wid, out _);
+            window.Closed += (_, _) =>
+            {
+                _windows.TryRemove(wid, out _);
+                window.DisposeWebView();
+            };
             window.Show();
             return wid;
         });
@@ -258,5 +262,17 @@ public partial class HtmlMaskWindow : Window
         var style = (int)GetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE);
         User32.SetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE,
             (IntPtr)(style | (int)User32.WindowStylesEx.WS_EX_TRANSPARENT));
+    }
+
+    /// <summary>
+    /// 释放 WebView2 资源，停止媒体播放
+    /// </summary>
+    private void DisposeWebView()
+    {
+        try
+        {
+            WebView.Dispose();
+        }
+        catch { }
     }
 }
