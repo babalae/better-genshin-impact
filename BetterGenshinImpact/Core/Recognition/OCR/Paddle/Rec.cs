@@ -101,41 +101,45 @@ public class Rec : IDisposable
 
         return resultTensors.SelectMany(tensor =>
         {
-            return Enumerable.Range(0, tensor.Batch)
-                .Select(i =>
-                {
-                    StringBuilder sb = new();
-                    var lastIndex = 0;
-                    float score = 0;
-                    var batchOffset = i * tensor.TimeSteps * tensor.LabelCount;
-                    for (var n = 0; n < tensor.TimeSteps; ++n)
+            GCHandle dataHandle = default;
+            try
+            {
+                dataHandle = GCHandle.Alloc(tensor.Data, GCHandleType.Pinned);
+                var dataPtr = dataHandle.AddrOfPinnedObject();
+
+                return Enumerable.Range(0, tensor.Batch)
+                    .Select(i =>
                     {
-                        var rowOffset = batchOffset + n * tensor.LabelCount;
-                        var maxVal = float.MinValue;
-                        var maxIndex = 0;
-                        for (var c = 0; c < tensor.LabelCount; c++)
+                        StringBuilder sb = new();
+                        var lastIndex = 0;
+                        float score = 0;
+                        var maxIdx = new int[2];
+                        using var fullMat = Mat.FromPixelData(tensor.TimeSteps, tensor.LabelCount,
+                            MatType.CV_32FC1,
+                            dataPtr + i * tensor.TimeSteps * tensor.LabelCount * sizeof(float));
+                        for (var n = 0; n < tensor.TimeSteps; ++n)
                         {
-                            var value = tensor.Data[rowOffset + c];
-                            if (value > maxVal)
+                            using var row = fullMat.Row(n);
+                            row.MinMaxIdx(out _, out var maxVal, [], maxIdx);
+
+                            if (maxIdx[1] > 0 && maxVal >= _threshold && (_allowDuplicateChar || !(n > 0 && maxIdx[1] == lastIndex)))
                             {
-                                maxVal = value;
-                                maxIndex = c;
+                                score += (float)maxVal;
+                                sb.Append(OcrUtils.GetLabelByIndex(maxIdx[1], _labels));
                             }
+
+                            lastIndex = maxIdx[1];
                         }
 
-                        if (maxIndex > 0 && maxVal >= _threshold && (_allowDuplicateChar || !(n > 0 && maxIndex == lastIndex)))
-                        {
-                            score += maxVal;
-                            sb.Append(OcrUtils.GetLabelByIndex(maxIndex, _labels));
-                        }
-
-                        lastIndex = maxIndex;
-                    }
-
-                    var text = sb.ToString();
-                    return new OcrRecognizerResult(text, text.Length > 0 ? score / text.Length : 0);
-                })
-                .ToArray();
+                        var text = sb.ToString();
+                        return new OcrRecognizerResult(text, text.Length > 0 ? score / text.Length : 0);
+                    })
+                    .ToArray();
+            }
+            finally
+            {
+                if (dataHandle.IsAllocated) dataHandle.Free();
+            }
         }).ToArray();
     }
 
