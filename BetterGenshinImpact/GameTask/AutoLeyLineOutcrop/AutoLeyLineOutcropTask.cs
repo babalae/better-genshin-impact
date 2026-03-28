@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -67,6 +68,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private RecognitionObject? _paimonMenuRo;
     private RecognitionObject? _boxIconRo;
     private RecognitionObject? _mapSettingButtonRo;
+    private RecognitionObject? _handbookTrackActionRo;
     private RecognitionObject? _ocrRo1;
     private RecognitionObject? _ocrRo2;
     private RecognitionObject? _ocrRo3;
@@ -79,6 +81,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
+    private static readonly Rect HandbookTrackActionButtonRoi = new(ScaleTo1080(1120), ScaleTo1080(680), ScaleTo1080(700), ScaleTo1080(320));
     private static readonly System.Drawing.Pen OcrOverlayPen = new(System.Drawing.Color.Lime, 2);
     private static readonly object PickLock = new();
     private bool _overlayDisplayTemporarilyEnabled;
@@ -232,6 +235,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         _paimonMenuRo = BuildTemplate("Assets/icon/paimon_menu.png", new Rect(0, 0, ScaleTo1080(640), ScaleTo1080(216)));
         _boxIconRo = BuildTemplate("Assets/icon/box.png");
         _mapSettingButtonRo = BuildTemplate("Assets/icon/map_setting_button.bmp");
+        _handbookTrackActionRo = BuildTemplate("Assets/icon/handbook_track_action_left.png", HandbookTrackActionButtonRoi, 0.72);
 
         _ocrRo1 = RecognitionObject.Ocr(ScaleTo1080(800), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(100));
         _ocrRo2 = RecognitionObject.Ocr(ScaleTo1080(0), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(300));
@@ -1550,23 +1554,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return await AttemptReward(retryCount + 1);
         }
 
-        var isOriginalResinEmpty = await CheckOriginalResinEmpty();
-        var sortedButtons = FindAndSortUseButtons();
-        if (sortedButtons.Count == 0)
+        if (!await TryUseRewardResin())
         {
             await EnsureExitRewardPage();
             return false;
         }
-
-        var resinChoice = await AnalyzeResinOptions(sortedButtons, isOriginalResinEmpty);
-        if (resinChoice == null)
-        {
-            await EnsureExitRewardPage();
-            return false;
-        }
-
-        resinChoice.Value.Click();
-        await Delay(1000, _ct);
 
         if (!string.IsNullOrWhiteSpace(_taskParam.FriendshipTeam))
         {
@@ -1700,110 +1692,179 @@ public class AutoLeyLineOutcropTask : ISoloTask
         });
     }
 
-    private async Task<bool> CheckOriginalResinEmpty()
+    private async Task<bool> TryUseRewardResin()
     {
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        foreach (var res in list)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            if (res.Text.Contains("补充", StringComparison.Ordinal))
+            if (await TryUseRewardResinOnce())
             {
-                return true;
+                await Delay(1000, _ct);
+                if (!await VerifyRewardPage())
+                {
+                    return true;
+                }
+
+                _logger.LogDebug("树脂点击后奖励页面仍存在，第{Attempt}次后准备重试", attempt + 1);
             }
+            else
+            {
+                _logger.LogDebug("奖励页面未成功选择树脂，第{Attempt}次后准备重试", attempt + 1);
+            }
+
+            await Delay(300, _ct);
         }
 
         return false;
     }
 
-    private List<UseButton> FindAndSortUseButtons()
+    private async Task<bool> TryUseRewardResinOnce()
     {
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        var buttons = new List<UseButton>();
+        await ActivateRewardPrompt();
 
-        foreach (var res in list)
+        var promptRegions = CaptureRewardPromptRegions();
+        if (promptRegions.Count == 0)
         {
-            var text = res.Text.Trim();
-            if (text == "使用")
+            _logger.LogDebug("奖励页面未识别到树脂弹窗内容");
+            return false;
+        }
+
+        var isOriginalResinEmpty = promptRegions.Any(r => r.Text.Contains("补充", StringComparison.Ordinal));
+        var hasDoubleReward = promptRegions.Any(r => r.Text.Contains("双倍", StringComparison.Ordinal) || r.Text.Contains("2倍产出", StringComparison.Ordinal) || r.Text.Contains("2倍", StringComparison.Ordinal));
+        var hasOriginal20 = !isOriginalResinEmpty && promptRegions.Any(r => r.Text.Contains("20", StringComparison.Ordinal) && r.Text.Contains("原粹", StringComparison.Ordinal));
+        var hasOriginal40 = !isOriginalResinEmpty && promptRegions.Any(r => r.Text.Contains("40", StringComparison.Ordinal) && r.Text.Contains("原粹", StringComparison.Ordinal));
+        var hasCondensed = promptRegions.Any(r => r.Text.Contains("浓缩", StringComparison.Ordinal));
+        var hasTransient = promptRegions.Any(r => r.Text.Contains("须臾", StringComparison.Ordinal));
+        var hasFragile = promptRegions.Any(r => r.Text.Contains("脆弱", StringComparison.Ordinal));
+
+        // 双倍奖励下优先切到 40 树脂，避免误用 20 树脂。
+        if (hasDoubleReward && hasOriginal20 && !hasOriginal40)
+        {
+            if (await TrySwitch20To40Resin())
             {
-                var centerX = res.X + res.Width / 2;
-                var centerY = res.Y + res.Height / 2;
-                buttons.Add(new UseButton(centerX, centerY, res.Y));
+                await Delay(300, _ct);
+                promptRegions = CaptureRewardPromptRegions();
+                if (promptRegions.Count == 0)
+                {
+                    return false;
+                }
+
+                isOriginalResinEmpty = promptRegions.Any(r => r.Text.Contains("补充", StringComparison.Ordinal));
+                hasDoubleReward = promptRegions.Any(r => r.Text.Contains("双倍", StringComparison.Ordinal) || r.Text.Contains("2倍产出", StringComparison.Ordinal) || r.Text.Contains("2倍", StringComparison.Ordinal));
+                hasOriginal20 = !isOriginalResinEmpty && promptRegions.Any(r => r.Text.Contains("20", StringComparison.Ordinal) && r.Text.Contains("原粹", StringComparison.Ordinal));
+                hasOriginal40 = !isOriginalResinEmpty && promptRegions.Any(r => r.Text.Contains("40", StringComparison.Ordinal) && r.Text.Contains("原粹", StringComparison.Ordinal));
+                hasCondensed = promptRegions.Any(r => r.Text.Contains("浓缩", StringComparison.Ordinal));
+                hasTransient = promptRegions.Any(r => r.Text.Contains("须臾", StringComparison.Ordinal));
+                hasFragile = promptRegions.Any(r => r.Text.Contains("脆弱", StringComparison.Ordinal));
             }
         }
 
-        return buttons.OrderBy(b => b.SortKey).ToList();
-    }
-
-    private async Task<UseButton?> AnalyzeResinOptions(List<UseButton> sortedButtons, bool isOriginalResinEmpty)
-    {
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        var texts = list.Select(r => new { r.Text, r.Y }).ToList();
-
-        var hasDoubleReward = texts.Any(t => t.Text.Contains("双倍", StringComparison.Ordinal) || t.Text.Contains("2倍产出", StringComparison.Ordinal) || t.Text.Contains("2倍", StringComparison.Ordinal));
-        var hasOriginal20 = !isOriginalResinEmpty && texts.Any(t => t.Text.Contains("20", StringComparison.Ordinal) && t.Text.Contains("原粹", StringComparison.Ordinal));
-        var hasOriginal40 = !isOriginalResinEmpty && texts.Any(t => t.Text.Contains("40", StringComparison.Ordinal) && t.Text.Contains("原粹", StringComparison.Ordinal));
-        var hasCondensed = texts.Any(t => t.Text.Contains("浓缩", StringComparison.Ordinal));
-        var hasTransient = texts.Any(t => t.Text.Contains("须臾", StringComparison.Ordinal));
-        var hasFragile = texts.Any(t => t.Text.Contains("脆弱", StringComparison.Ordinal));
-
-        if (isOriginalResinEmpty)
-        {
-            if (hasCondensed && sortedButtons.Count >= 1)
-            {
-                return sortedButtons[0];
-            }
-
-            if (hasTransient && _taskParam.UseTransientResin && sortedButtons.Count >= 1)
-            {
-                return sortedButtons[0];
-            }
-
-            if (hasFragile && _taskParam.UseFragileResin && sortedButtons.Count >= 1)
-            {
-                return sortedButtons[0];
-            }
-
-            return null;
-        }
-
+        var candidates = new List<string>();
         if (hasDoubleReward && (hasOriginal20 || hasOriginal40))
         {
-            if (hasOriginal20 && !hasOriginal40)
+            candidates.Add("原粹树脂");
+        }
+        else if (isOriginalResinEmpty)
+        {
+            if (hasCondensed)
             {
-                await TrySwitch20To40Resin();
+                candidates.Add("浓缩树脂");
             }
 
-            return sortedButtons.FirstOrDefault();
-        }
-
-        if (hasCondensed && sortedButtons.Count >= 2)
-        {
-            return sortedButtons[1];
-        }
-
-        if (hasTransient && _taskParam.UseTransientResin && sortedButtons.Count >= 2)
-        {
-            return sortedButtons[1];
-        }
-
-        if (hasOriginal20 || hasOriginal40)
-        {
-            if (hasOriginal20 && !hasOriginal40)
+            if (hasTransient && _taskParam.UseTransientResin)
             {
-                await TrySwitch20To40Resin();
+                candidates.Add("须臾树脂");
             }
 
-            return sortedButtons.FirstOrDefault();
+            if (hasFragile && _taskParam.UseFragileResin)
+            {
+                candidates.Add("脆弱树脂");
+            }
         }
-
-        if (hasFragile && _taskParam.UseFragileResin && sortedButtons.Count >= 2)
+        else
         {
-            return sortedButtons[1];
+            if (hasCondensed)
+            {
+                candidates.Add("浓缩树脂");
+            }
+
+            if (hasTransient && _taskParam.UseTransientResin)
+            {
+                candidates.Add("须臾树脂");
+            }
+
+            if (hasOriginal20 || hasOriginal40)
+            {
+                candidates.Add("原粹树脂");
+            }
+
+            if (hasFragile && _taskParam.UseFragileResin)
+            {
+                candidates.Add("脆弱树脂");
+            }
         }
 
-        return sortedButtons.FirstOrDefault();
+        foreach (var resinName in candidates.Distinct(StringComparer.Ordinal))
+        {
+            if (await TryPressRewardResin(promptRegions, resinName))
+            {
+                return true;
+            }
+        }
+
+        _logger.LogDebug("奖励页面树脂识别结果未匹配成功，ocr={Texts}", string.Join(" | ", promptRegions.Select(r => r.Text)));
+        return false;
+    }
+
+    private async Task ActivateRewardPrompt()
+    {
+        var titleRegion = CaptureRewardPromptTitleRegion();
+        if (titleRegion == null)
+        {
+            _logger.LogDebug("奖励页面未识别到可点击的标题区域");
+            return;
+        }
+
+        // 对齐自动秘境的处理，先点一次标题区域激活弹窗，再点树脂使用按钮。
+        Simulation.SendInput.Mouse.LeftButtonUp();
+        await Delay(60, _ct);
+        titleRegion.Click();
+        _logger.LogDebug("奖励页面已点击标题激活弹窗：text={Text}, x={X}, y={Y}", titleRegion.Text, titleRegion.X, titleRegion.Y);
+        await Delay(800, _ct);
+    }
+
+    private Region? CaptureRewardPromptTitleRegion()
+    {
+        using var capture = CaptureToRectArea();
+        var titleRegions = capture.FindMulti(RecognitionObject.Ocr(capture.Width * 0.25, capture.Height * 0.15, capture.Width * 0.5, capture.Height * 0.25));
+        return titleRegions.FirstOrDefault(r => IsRewardPromptTitleText(r.Text));
+    }
+
+    private static bool IsRewardPromptTitleText(string text)
+    {
+        return text.Contains("激活地脉之花", StringComparison.Ordinal)
+               || text.Contains("选择激活方式", StringComparison.Ordinal)
+               || text.Contains("地脉之花", StringComparison.Ordinal);
+    }
+
+    private List<Region> CaptureRewardPromptRegions()
+    {
+        using var capture = CaptureToRectArea();
+        return capture.FindMulti(RecognitionObject.Ocr(capture.Width * 0.25, capture.Height * 0.2, capture.Width * 0.5, capture.Height * 0.6));
+    }
+
+    private async Task<bool> TryPressRewardResin(List<Region> promptRegions, string resinName)
+    {
+        // 某些链路会残留左键按下状态，先显式抬起一次再点使用按钮。
+        Simulation.SendInput.Mouse.LeftButtonUp();
+        await Delay(60, _ct);
+
+        var (success, _) = AutoDomainTask.PressUseResin(promptRegions, resinName);
+        if (success)
+        {
+            _logger.LogDebug("奖励页面已尝试使用树脂：{ResinName}", resinName);
+        }
+
+        return success;
     }
 
     private async Task<bool> TrySwitch20To40Resin()
@@ -1892,6 +1953,35 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task FindLeyLineOutcropByBook(string country, string type)
     {
+        await OpenLeyLineOutcropCountryInHandbook(country, type);
+
+        for (var retry = 0; retry < 3; retry++)
+        {
+            if (await TryOpenBigMapFromHandbook())
+            {
+                break;
+            }
+
+            if (retry < 2)
+            {
+                _logger.LogDebug("通过冒险之证打开大地图失败，重新打开冒险之证，第{Retry}次", retry + 1);
+                await OpenLeyLineOutcropCountryInHandbook(country, type);
+            }
+            else
+            {
+                throw new Exception("大地图打开失败");
+            }
+        }
+
+        var center = _tpTask.GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
+        _leyLineX = center.X;
+        _leyLineY = center.Y;
+
+        await CancelTrackingInMap();
+    }
+
+    private async Task OpenLeyLineOutcropCountryInHandbook(string country, string type)
+    {
         await _returnMainUiTask.Start(_ct);
         await Delay(1000, _ct);
 
@@ -1919,46 +2009,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         await Delay(1000, _ct);
 
         await FindAndClickCountry(country);
-        var trackButton = await FindAndCancelTrackingInBook();
-
-        for (var retry = 0; retry < 3; retry++)
-        {
-            await Delay(1000, _ct);
-            if (trackButton != null)
-            {
-                trackButton.Click();
-                _logger.LogDebug("通过 OCR 结果点击追踪按钮，text={Text}", trackButton.Text);
-            }
-            else
-            {
-                GameCaptureRegion.GameRegion1080PPosClick(1500, 850);
-                _logger.LogDebug("未识别到追踪按钮，回退固定坐标点击");
-            }
-
-            await Delay(2500, _ct);
-
-            if (await CheckBigMapOpened())
-            {
-                break;
-            }
-
-            if (retry < 2)
-            {
-                await _returnMainUiTask.Start(_ct);
-                await FindAndClickCountry(country);
-                trackButton = await FindAndCancelTrackingInBook();
-            }
-            else
-            {
-                throw new Exception("大地图打开失败");
-            }
-        }
-
-        var center = _tpTask.GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
-        _leyLineX = center.X;
-        _leyLineY = center.Y;
-
-        await CancelTrackingInMap();
     }
 
     private async Task<bool> CheckBigMapOpened()
@@ -1986,29 +2036,46 @@ public class AutoLeyLineOutcropTask : ISoloTask
         target.Click();
     }
 
-    private static bool IsTrackButtonText(string text)
+    private async Task<bool> TryOpenBigMapFromHandbook()
     {
-        return (text.Contains("追踪", StringComparison.Ordinal) || text.Contains("追蹤", StringComparison.Ordinal))
-               && !text.Contains("停止", StringComparison.Ordinal);
-    }
-
-    private async Task<Region?> FindAndCancelTrackingInBook()
-    {
-        using var capture = CaptureToRectArea();
-        var list = capture.FindMulti(_ocrRoThis);
-        var track = list.FirstOrDefault(r => IsTrackButtonText(r.Text));
-        var stop = list.FirstOrDefault(r => r.Text.Contains("停止", StringComparison.Ordinal));
-        if (stop != null)
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            stop.Click();
-            await Delay(1000, _ct);
+            var button = FindHandbookTrackActionButtonByIcon();
+            if (button == null)
+            {
+                break;
+            }
 
-            using var refreshCapture = CaptureToRectArea();
-            var refreshList = refreshCapture.FindMulti(_ocrRoThis);
-            track = refreshList.FirstOrDefault(r => IsTrackButtonText(r.Text));
+            button.Click();
+            _logger.LogDebug("通过图标识别点击冒险之证底部操作按钮，第{Attempt}次", attempt + 1);
+            await Delay(1500, _ct);
+            if (await CheckBigMapOpened())
+            {
+                return true;
+            }
         }
 
-        return track;
+        GameCaptureRegion.GameRegion1080PPosClick(1500, 850);
+        _logger.LogDebug("图标未命中或点击后未打开大地图，回退固定坐标点击");
+        await Delay(2500, _ct);
+        return await CheckBigMapOpened();
+    }
+
+    private Region? FindHandbookTrackActionButtonByIcon()
+    {
+        if (_handbookTrackActionRo == null)
+        {
+            return null;
+        }
+
+        using var capture = CaptureToRectArea();
+        var button = capture.Find(_handbookTrackActionRo);
+        if (!button.IsExist())
+        {
+            return null;
+        }
+
+        return button;
     }
 
     private async Task CancelTrackingInMap()
@@ -2422,22 +2489,4 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
     }
 
-    private readonly struct UseButton
-    {
-        public int X { get; }
-        public int Y { get; }
-        public int SortKey { get; }
-
-        public UseButton(int x, int y, int sortKey)
-        {
-            X = x;
-            Y = y;
-            SortKey = sortKey;
-        }
-
-        public void Click()
-        {
-            GameCaptureRegion.GameRegion1080PPosClick(X, Y);
-        }
-    }
 }
