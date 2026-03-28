@@ -1737,7 +1737,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var hasFragile = promptRegions.Any(r => r.Text.Contains("脆弱", StringComparison.Ordinal));
 
         // 双倍奖励下优先切到 40 树脂，避免误用 20 树脂。
-        if ((hasDoubleReward || hasOriginal20 || hasOriginal40) && hasOriginal20 && !hasOriginal40)
+        if (hasDoubleReward && hasOriginal20 && !hasOriginal40)
         {
             if (await TrySwitch20To40Resin())
             {
@@ -1953,6 +1953,35 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task FindLeyLineOutcropByBook(string country, string type)
     {
+        await OpenLeyLineOutcropCountryInHandbook(country, type);
+
+        for (var retry = 0; retry < 3; retry++)
+        {
+            if (await TryOpenBigMapFromHandbook())
+            {
+                break;
+            }
+
+            if (retry < 2)
+            {
+                _logger.LogDebug("通过冒险之证打开大地图失败，重新打开冒险之证，第{Retry}次", retry + 1);
+                await OpenLeyLineOutcropCountryInHandbook(country, type);
+            }
+            else
+            {
+                throw new Exception("大地图打开失败");
+            }
+        }
+
+        var center = _tpTask.GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
+        _leyLineX = center.X;
+        _leyLineY = center.Y;
+
+        await CancelTrackingInMap();
+    }
+
+    private async Task OpenLeyLineOutcropCountryInHandbook(string country, string type)
+    {
         await _returnMainUiTask.Start(_ct);
         await Delay(1000, _ct);
 
@@ -1980,30 +2009,6 @@ public class AutoLeyLineOutcropTask : ISoloTask
         await Delay(1000, _ct);
 
         await FindAndClickCountry(country);
-
-        for (var retry = 0; retry < 3; retry++)
-        {
-            if (await TryOpenBigMapFromHandbook())
-            {
-                break;
-            }
-
-            if (retry < 2)
-            {
-                await _returnMainUiTask.Start(_ct);
-                await FindAndClickCountry(country);
-            }
-            else
-            {
-                throw new Exception("大地图打开失败");
-            }
-        }
-
-        var center = _tpTask.GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
-        _leyLineX = center.X;
-        _leyLineY = center.Y;
-
-        await CancelTrackingInMap();
     }
 
     private async Task<bool> CheckBigMapOpened()
