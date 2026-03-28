@@ -1719,9 +1719,12 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<bool> TryUseRewardResinOnce()
     {
+        await ActivateRewardPrompt();
+
         var promptRegions = CaptureRewardPromptRegions();
         if (promptRegions.Count == 0)
         {
+            _logger.LogDebug("奖励页面未识别到树脂弹窗内容");
             return false;
         }
 
@@ -1810,6 +1813,37 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         _logger.LogDebug("奖励页面树脂识别结果未匹配成功，ocr={Texts}", string.Join(" | ", promptRegions.Select(r => r.Text)));
         return false;
+    }
+
+    private async Task ActivateRewardPrompt()
+    {
+        var titleRegion = CaptureRewardPromptTitleRegion();
+        if (titleRegion == null)
+        {
+            _logger.LogDebug("奖励页面未识别到可点击的标题区域");
+            return;
+        }
+
+        // 对齐自动秘境的处理，先点一次标题区域激活弹窗，再点树脂使用按钮。
+        Simulation.SendInput.Mouse.LeftButtonUp();
+        await Delay(60, _ct);
+        titleRegion.Click();
+        _logger.LogDebug("奖励页面已点击标题激活弹窗：text={Text}, x={X}, y={Y}", titleRegion.Text, titleRegion.X, titleRegion.Y);
+        await Delay(800, _ct);
+    }
+
+    private Region? CaptureRewardPromptTitleRegion()
+    {
+        using var capture = CaptureToRectArea();
+        var titleRegions = capture.FindMulti(RecognitionObject.Ocr(capture.Width * 0.25, capture.Height * 0.15, capture.Width * 0.5, capture.Height * 0.25));
+        return titleRegions.FirstOrDefault(r => IsRewardPromptTitleText(r.Text));
+    }
+
+    private static bool IsRewardPromptTitleText(string text)
+    {
+        return text.Contains("激活地脉之花", StringComparison.Ordinal)
+               || text.Contains("选择激活方式", StringComparison.Ordinal)
+               || text.Contains("地脉之花", StringComparison.Ordinal);
     }
 
     private List<Region> CaptureRewardPromptRegions()
