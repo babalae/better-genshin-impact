@@ -87,7 +87,7 @@ public class HtmlMask : IDisposable
         catch (Exception ex)
         {
             TaskControl.Logger.LogError(ex, "打开HTML遮罩失败: {Url}", url);
-            return null!;
+            throw;
         }
     }
 
@@ -218,7 +218,8 @@ public class HtmlMask : IDisposable
         if (string.IsNullOrWhiteSpace(json)) return null;
         try
         {
-            return JsonDocument.Parse(json).RootElement;
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.Clone();
         }
         catch
         {

@@ -8,7 +8,9 @@ using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 
 namespace BetterGenshinImpact.View;
@@ -181,53 +183,61 @@ public partial class HtmlMaskWindow : Window
 
     private async void InitializeAsync(string url)
     {
-        await WebView.EnsureCoreWebView2Async(
-            await CoreWebView2Environment.CreateAsync(null, _webView2DataPath));
-
-        WebView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
-        WebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;
-        WebView.CoreWebView2.Settings.IsScriptEnabled = true;
-        WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
-
-        // 监听HTML发来的消息，解析 url + data
-        WebView.CoreWebView2.WebMessageReceived += (_, e) =>
+        try
         {
-            try
-            {
-                string raw = e.TryGetWebMessageAsString();
-                string url = "";
-                string data = raw;
+            await WebView.EnsureCoreWebView2Async(
+                await CoreWebView2Environment.CreateAsync(null, _webView2DataPath));
 
+            WebView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
+            WebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;
+            WebView.CoreWebView2.Settings.IsScriptEnabled = true;
+            WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
+
+            // 监听HTML发来的消息，解析 url + data
+            WebView.CoreWebView2.WebMessageReceived += (_, e) =>
+            {
                 try
                 {
-                    using var doc = JsonDocument.Parse(raw);
-                    var root = doc.RootElement;
-                    if (root.TryGetProperty("url", out var ep))
+                    string raw = e.TryGetWebMessageAsString();
+                    string url = "";
+                    string data = raw;
+
+                    try
                     {
-                        url = ep.GetString() ?? "";
-                        data = root.TryGetProperty("data", out var d) ? d.GetRawText() : "{}";
+                        using var doc = JsonDocument.Parse(raw);
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("url", out var ep))
+                        {
+                            url = ep.GetString() ?? "";
+                            data = root.TryGetProperty("data", out var d) ? d.GetRawText() : "{}";
+                        }
                     }
+                    catch { }
+
+                    HtmlMask.SendFromHtml(_id, url, data);
                 }
                 catch { }
+            };
 
-                HtmlMask.SendFromHtml(_id, url, data);
-            }
-            catch { }
-        };
-
-        // 页面加载完成后推送队列中待发送的消息
-        WebView.CoreWebView2.NavigationCompleted += (_, _) =>
-        {
-            _navigationCompleted = true;
-            HtmlMask.FlushPendingMessages(_id, json =>
+            // 页面加载完成后推送队列中待发送的消息
+            WebView.CoreWebView2.NavigationCompleted += (_, _) =>
             {
-                WebView.CoreWebView2.PostWebMessageAsString(json);
-            });
-        };
+                _navigationCompleted = true;
+                HtmlMask.FlushPendingMessages(_id, json =>
+                {
+                    WebView.CoreWebView2.PostWebMessageAsString(json);
+                });
+            };
 
-        if (!string.IsNullOrEmpty(url))
+            if (!string.IsNullOrEmpty(url))
+            {
+                WebView.Source = new Uri(url);
+            }
+        }
+        catch (Exception e)
         {
-            WebView.Source = new Uri(url);
+            TaskControl.Logger.LogError($"WebView2 初始化失败: {e.Message}");
+            Dispatcher.Invoke(() => Close());
         }
     }
 
