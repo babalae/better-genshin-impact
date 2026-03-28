@@ -16,7 +16,7 @@ using Size = OpenCvSharp.Size;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
+public class PaddleOcrService : IOcrService, IDisposable
 {
     /// <summary>
     ///     Usage:
@@ -104,11 +104,11 @@ public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
                 TestImagePath);
         }
 
-        public (Det, Rec) Build(BgiOnnxFactory onnxFactory, bool allowDuplicateChar = false, float threshold = 0.5f)
+        public (Det, Rec) Build(BgiOnnxFactory onnxFactory)
         {
             return (
                 new Det(DetectionModel, DetectionVersion, onnxFactory),
-                new Rec(RecognitionModel, RecLabel(), RecognitionVersion, onnxFactory, allowDuplicateChar, threshold: threshold));
+                new Rec(RecognitionModel, RecLabel(), RecognitionVersion, onnxFactory));
         }
 
         public static readonly PaddleOcrModelType V4 = Create(
@@ -240,10 +240,9 @@ public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
         }
     }
 
-    public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType,
-        bool allowDuplicateChar = false, float threshold = 0.5f)
+    public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType)
     {
-        var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory, allowDuplicateChar, threshold);
+        var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory);
         _localDetModel = modelsDet;
         _localRecModel = modelsRec;
 
@@ -269,8 +268,13 @@ public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
     /// </summary>
     public OcrResult OcrResult(Mat mat)
     {
-        using var converted = ConvertBgrIfNeeded(mat);
-        return _OcrResult(converted ?? mat);
+        if (mat.Channels() == 4)
+        {
+            using var mat3 = mat.CvtColor(ColorConversionCodes.BGRA2BGR);
+            return _OcrResult(mat3);
+        }
+
+        return _OcrResult(mat);
     }
 
     /// <summary>
@@ -333,61 +337,6 @@ public class PaddleOcrService : IOcrService, IOcrMatchService, IDisposable
             Math.Clamp(rect.Top, 0, size.Height),
             Math.Clamp(rect.Right, 0, size.Width),
             Math.Clamp(rect.Bottom, 0, size.Height));
-    }
-
-    /// <summary>
-    /// 若输入为 BGRA 则转换为 BGR，否则返回 null。
-    /// 调用方需在使用后 Dispose 返回的 Mat（若非 null）。
-    /// </summary>
-    private static Mat? ConvertBgrIfNeeded(Mat mat)
-    {
-        return mat.Channels() == 4 ? mat.CvtColor(ColorConversionCodes.BGRA2BGR) : null;
-    }
-
-    /// <summary>
-    /// 使用检测器定位文字区域后，对每个区域进行 DP 模糊匹配，返回最高置信度 (0~1)。
-    /// </summary>
-    public double OcrMatch(Mat mat, string target)
-    {
-        var startTime = Stopwatch.GetTimestamp();
-
-        using var src = ConvertBgrIfNeeded(mat);
-        var bgr = src ?? mat;
-
-        var rects = _localDetModel.Run(bgr);
-        Mat[] mats = rects.Select(rect =>
-        {
-            var roi = bgr[GetCropedRect(rect.BoundingRect(), bgr.Size())];
-            return roi;
-        }).ToArray();
-
-        try
-        {
-            var score = _localRecModel.RunMatch(mats, target);
-            var time = Stopwatch.GetElapsedTime(startTime);
-            Debug.WriteLine($"PaddleOcrMatch 耗时 {time.TotalMilliseconds}ms 目标: {target} 分数: {score:F4}");
-            return score;
-        }
-        finally
-        {
-            foreach (var m in mats) m.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// 不使用检测器，直接对整张图像进行 DP 模糊匹配，返回置信度 (0~1)。
-    /// </summary>
-    public double OcrMatchDirect(Mat mat, string target)
-    {
-        var startTime = Stopwatch.GetTimestamp();
-
-        using var src = ConvertBgrIfNeeded(mat);
-        var bgr = src ?? mat;
-
-        var score = _localRecModel.RunMatch([bgr], target);
-        var time = Stopwatch.GetElapsedTime(startTime);
-        Debug.WriteLine($"PaddleOcrMatchDirect 耗时 {time.TotalMilliseconds}ms 目标: {target} 分数: {score:F4}");
-        return score;
     }
 
     public void Dispose()
