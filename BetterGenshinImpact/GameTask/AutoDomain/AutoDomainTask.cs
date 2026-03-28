@@ -208,8 +208,6 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
                 break;
             }
-
-            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
         }
     }
 
@@ -1204,6 +1202,8 @@ public class AutoDomainTask : ISoloTask
             // 如果没有选择树脂的提示，说明只有原粹树脂
             // 继续向下执行
         }
+        
+        Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
 
         Sleep(1000, _ct);
 
