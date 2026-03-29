@@ -120,7 +120,7 @@ public class TpTask
                 MoveMode = MoveModeEnum.Walk.Code
             };
             var waypointForTrack = new WaypointForTrack(waypoint, nameof(MapTypes.Teyvat), _mapMatchingMethod);
-            await new PathExecutor(ct).MoveTo(waypointForTrack);
+            await new PathExecutor(ct).MovementController.MoveTo(waypointForTrack);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
 

@@ -7,11 +7,12 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 public class ActionFactory
 {
-    private static readonly ConcurrentDictionary<string, IActionHandler> _handlers = new();
+    private static readonly ConcurrentDictionary<string, IActionHandler> _afterHandlers = new();
+    private static readonly ConcurrentDictionary<string, IActionHandler> _beforeHandlers = new();
 
     public static IActionHandler GetAfterHandler(string handlerType)
     {
-        return _handlers.GetOrAdd(handlerType, (key) =>
+        return _afterHandlers.GetOrAdd(handlerType, (key) =>
         {
             return key switch
             {
@@ -32,20 +33,20 @@ public class ActionFactory
                 "set_time" => new SetTimeHandler(),
                 "use_gadget" => new UseGadgetHandler(),
                 "pick_up_collect" => new PickUpCollectHandler(),
-                _ => throw new ArgumentException("未知的后置 action 类型")
+                _ => null
             };
         });
     }
 
     public static IActionHandler GetBeforeHandler(string handlerType)
     {
-        return _handlers.GetOrAdd(handlerType, (key) =>
+        return _beforeHandlers.GetOrAdd(handlerType, (key) =>
         {
             return key switch
             {
                 "up_down_grab_leaf" => new UpDownGrabLeafHandler(),
                 "stop_flying" => new StopFlyingHandler(),
-                _ => throw new ArgumentException("未知的前置 action 类型")
+                _ => null
             };
         });
     }
