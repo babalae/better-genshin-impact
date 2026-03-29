@@ -158,6 +158,19 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             }
         }
 
+        // DWM 合成被禁用时（如远程桌面等场景），Mica/Acrylic 不可用，回退到纯色主题
+        if (!OsVersionHelper.IsDwmCompositionEnabled())
+        {
+            if (themeType == ThemeType.DarkMica || themeType == ThemeType.DarkAcrylic)
+            {
+                themeType = ThemeType.DarkNone;
+            }
+            else if (themeType == ThemeType.LightMica || themeType == ThemeType.LightAcrylic)
+            {
+                themeType = ThemeType.LightNone;
+            }
+        }
+
         // 如果主题类型被修正，更新配置并保存
         if (themeType != originalThemeType)
         {
