@@ -1,10 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Windows.System;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -304,5 +306,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             Toast.Error(res.Message);
 
         IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task OnOpenNotificationEventDocument()
+    {
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/dev/webhook.html#%E4%BA%8B%E4%BB%B6%E5%88%97%E8%A1%A8"));
     }
 }
