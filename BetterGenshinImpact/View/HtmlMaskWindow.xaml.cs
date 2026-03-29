@@ -54,19 +54,19 @@ public partial class HtmlMaskWindow : Window
     /// </summary>
     public static string Show(string url, string? id, string workDir)
     {
-        // 指定ID时先关闭已有窗口
-        if (id != null && _windows.TryGetValue(id, out var existing))
-        {
-            existing.Dispatcher.Invoke(() => existing.Close());
-        }
-
-        if (_windows.Count >= MaxWindows)
-        {
-            throw new InvalidOperationException($"最多同时打开 {MaxWindows} 个HTML遮罩窗口");
-        }
-
         return Application.Current.Dispatcher.Invoke(() =>
         {
+            // 指定ID时先关闭已有窗口
+            if (id != null && _windows.TryGetValue(id, out var existing))
+            {
+                existing.Close();
+            }
+
+            if (_windows.Count >= MaxWindows)
+            {
+                throw new InvalidOperationException($"最多同时打开 {MaxWindows} 个HTML遮罩窗口");
+            }
+
             var window = new HtmlMaskWindow(url, id, workDir);
             string wid = window.MaskId;
             _windows[wid] = window;
@@ -146,9 +146,7 @@ public partial class HtmlMaskWindow : Window
     /// </summary>
     public static string[] GetWindowIds()
     {
-        var keys = new string[_windows.Count];
-        _windows.Keys.CopyTo(keys, 0);
-        return keys;
+        return _windows.Keys.ToArray();
     }
 
     /// <summary>
@@ -252,7 +250,7 @@ public partial class HtmlMaskWindow : Window
                 try
                 {
                     string raw = e.TryGetWebMessageAsString();
-                    string url = "";
+                    string messageUrl = "";
                     string data = raw;
                     string? requestId = null;
 
@@ -262,7 +260,7 @@ public partial class HtmlMaskWindow : Window
                         var root = doc.RootElement;
                         if (root.TryGetProperty("url", out var ep))
                         {
-                            url = ep.GetString() ?? "";
+                            messageUrl = ep.GetString() ?? "";
                             data = root.TryGetProperty("data", out var d) ? d.GetRawText() : "{}";
                         }
                         if (root.TryGetProperty("requestId", out var rid))
@@ -272,12 +270,16 @@ public partial class HtmlMaskWindow : Window
                     }
                     catch { }
 
-                    HtmlMask.SendFromHtml(_id, url, data, requestId);
+                    HtmlMask.SendFromHtml(_id, messageUrl, data, requestId);
                 }
                 catch { }
             };
 
             // 页面加载完成后推送队列中待发送的消息
+            WebView.CoreWebView2.NavigationStarting += (_, _) =>
+            {
+                _navigationCompleted = false;
+            };
             WebView.CoreWebView2.NavigationCompleted += (_, _) =>
             {
                 _navigationCompleted = true;
@@ -336,7 +338,7 @@ public partial class HtmlMaskWindow : Window
             if (allowedUrls.Length > 0 && allowedUrls.Any(allowedUrl =>
             {
                 var pattern = "^" + Regex.Escape(allowedUrl).Replace("\\*", ".*") + "$";
-                return Regex.IsMatch(e.Request.Uri, pattern);
+                return Regex.IsMatch(e.Request.Uri, pattern, RegexOptions.IgnoreCase);
             })) return;
 
             // 阻止请求
@@ -356,6 +358,8 @@ public partial class HtmlMaskWindow : Window
             if (gameHandle == IntPtr.Zero) return;
 
             var currentRect = SystemControl.GetCaptureRect(gameHandle);
+            if (currentRect.Width <= 0 || currentRect.Height <= 0) return;
+
             Dispatcher.Invoke(() =>
             {
                 Left = currentRect.Left;

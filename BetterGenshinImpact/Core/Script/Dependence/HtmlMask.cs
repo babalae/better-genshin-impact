@@ -52,8 +52,14 @@ public class HtmlMask : IDisposable
     /// </summary>
     private static readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _jsPendingRequests = new();
 
+    /// <summary>
+    /// requestId到windowId的映射，用于窗口关闭时取消对应的pending请求
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, string> _requestWindowMap = new();
+
     private readonly string _workDir;
     private readonly List<string> _openedWindows = [];
+    private readonly object _openedWindowsLock = new();
     private bool _disposed;
 
     public HtmlMask(string workDir)
@@ -90,7 +96,7 @@ public class HtmlMask : IDisposable
 
             _toHtmlQueues[windowId] = new ConcurrentQueue<Message>();
             _fromHtmlQueues[windowId] = new ConcurrentQueue<Message>();
-            _openedWindows.Add(windowId);
+            lock (_openedWindowsLock) { _openedWindows.Add(windowId); }
 
             return windowId;
         }
@@ -106,7 +112,7 @@ public class HtmlMask : IDisposable
     /// </summary>
     public bool Close(string id)
     {
-        _openedWindows.Remove(id);
+        lock (_openedWindowsLock) { _openedWindows.Remove(id); }
         CleanupQueues(id);
         return HtmlMaskWindow.Close(id);
     }
@@ -116,12 +122,17 @@ public class HtmlMask : IDisposable
     /// </summary>
     public void CloseAll()
     {
-        foreach (var windowId in _openedWindows)
+        List<string> windows;
+        lock (_openedWindowsLock)
+        {
+            windows = [.. _openedWindows];
+            _openedWindows.Clear();
+        }
+        foreach (var windowId in windows)
         {
             CleanupQueues(windowId);
             HtmlMaskWindow.Close(windowId);
         }
-        _openedWindows.Clear();
     }
 
     /// <summary>
@@ -167,6 +178,7 @@ public class HtmlMask : IDisposable
         var requestId = Guid.NewGuid().ToString("N");
         var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _jsPendingRequests[requestId] = tcs;
+        _requestWindowMap[requestId] = windowId;
 
         try
         {
@@ -195,9 +207,14 @@ public class HtmlMask : IDisposable
 
             return await tcs.Task;
         }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
         finally
         {
             _jsPendingRequests.TryRemove(requestId, out _);
+            _requestWindowMap.TryRemove(requestId, out _);
         }
     }
 
@@ -216,6 +233,9 @@ public class HtmlMask : IDisposable
         {
             if (queue.TryDequeue(out var message))
                 return JsonSerializer.Serialize(message, _jsonOptions);
+
+            if (!HtmlMaskWindow.Exists(windowId))
+                return null;
 
             if (timeoutMs > 0 && sw.ElapsedMilliseconds > timeoutMs)
                 return null;
@@ -280,7 +300,7 @@ public class HtmlMask : IDisposable
         if (requestId != null && _jsPendingRequests.TryRemove(requestId, out var tcs))
         {
             var parsed = ParseData(data);
-            tcs.SetResult(parsed != null ? parsed.Value.GetRawText() : "null");
+            tcs.TrySetResult(parsed != null ? parsed.Value.GetRawText() : "null");
             return;
         }
 
@@ -315,6 +335,15 @@ public class HtmlMask : IDisposable
     {
         _toHtmlQueues.TryRemove(windowId, out _);
         _fromHtmlQueues.TryRemove(windowId, out _);
+
+        // 取消该窗口关联的待响应请求
+        foreach (var kvp in _requestWindowMap)
+        {
+            if (kvp.Value == windowId && _jsPendingRequests.TryRemove(kvp.Key, out var tcs))
+            {
+                tcs.TrySetCanceled();
+            }
+        }
     }
 
     #endregion
