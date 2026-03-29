@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Interop;
 using Vanara.PInvoke;
@@ -24,7 +26,9 @@ public partial class HtmlMaskWindow : Window
     private const int MaxWindows = 5;
 
     private readonly string _id;
+    private readonly string _workDir;
     private readonly string _webView2DataPath;
+    private readonly string _pageUrl;
     private bool _navigationCompleted;
 
     /// <summary>
@@ -32,10 +36,12 @@ public partial class HtmlMaskWindow : Window
     /// </summary>
     public string MaskId => _id;
 
-    private HtmlMaskWindow(string url, string? id, string webView2DataPath)
+    private HtmlMaskWindow(string url, string? id, string workDir)
     {
         _id = id ?? Guid.NewGuid().ToString("N");
-        _webView2DataPath = webView2DataPath;
+        _workDir = workDir;
+        _webView2DataPath = Path.Combine(workDir, "WebView2Data");
+        _pageUrl = url;
         InitializeComponent();
         Loaded += OnLoaded;
         InitializeAsync(url);
@@ -59,11 +65,9 @@ public partial class HtmlMaskWindow : Window
             throw new InvalidOperationException($"最多同时打开 {MaxWindows} 个HTML遮罩窗口");
         }
 
-        string webView2DataPath = Path.Combine(workDir, "WebView2Data");
-
         return Application.Current.Dispatcher.Invoke(() =>
         {
-            var window = new HtmlMaskWindow(url, id, webView2DataPath);
+            var window = new HtmlMaskWindow(url, id, workDir);
             string wid = window.MaskId;
             _windows[wid] = window;
             window.Closed += (_, _) =>
@@ -193,6 +197,10 @@ public partial class HtmlMaskWindow : Window
             WebView.CoreWebView2.Settings.IsScriptEnabled = true;
             WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
 
+            // 拦截网络请求，仅允许注册过的域名
+            WebView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            WebView.CoreWebView2.WebResourceRequested += OnWebResourceRequested;
+
             // 注入 helper JS，提供 window.htmlMask.request / onMessage API
             await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
                 window.htmlMask = {
@@ -289,6 +297,52 @@ public partial class HtmlMaskWindow : Window
             TaskControl.Logger.LogError($"WebView2 初始化失败: {e.Message}");
             Dispatcher.Invoke(() => Close());
         }
+    }
+
+    /// <summary>
+    /// 拦截网络请求，仅允许 file://、data:// 和注册过的域名
+    /// </summary>
+    private void OnWebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        try
+        {
+            var uri = new Uri(e.Request.Uri);
+
+            // 允许数据URI
+            if (uri.Scheme == "data") return;
+
+            // 本地文件：必须在脚本目录内
+            if (uri.Scheme == "file")
+            {
+                var localPath = Uri.UnescapeDataString(uri.AbsolutePath);
+                var fullDir = Path.GetFullPath(_workDir);
+                var fullFile = Path.GetFullPath(localPath);
+                if (fullFile.StartsWith(fullDir, StringComparison.OrdinalIgnoreCase)) return;
+                e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
+                return;
+            }
+
+            // 允许页面自身的初始导航及同源请求
+            if (string.Equals(uri.AbsoluteUri, _pageUrl, StringComparison.OrdinalIgnoreCase)) return;
+            try
+            {
+                var pageUri = new Uri(_pageUrl);
+                if (string.Equals(uri.Host, pageUri.Host, StringComparison.OrdinalIgnoreCase)) return;
+            }
+            catch { }
+
+            // 检查是否匹配 manifest 中注册的允许URL
+            var allowedUrls = TaskContext.Instance().CurrentScriptProject?.Project?.Manifest.HttpAllowedUrls ?? [];
+            if (allowedUrls.Length > 0 && allowedUrls.Any(allowedUrl =>
+            {
+                var pattern = "^" + Regex.Escape(allowedUrl).Replace("\\*", ".*") + "$";
+                return Regex.IsMatch(e.Request.Uri, pattern);
+            })) return;
+
+            // 阻止请求
+            e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
+        }
+        catch { }
     }
 
     /// <summary>

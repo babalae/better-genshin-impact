@@ -143,10 +143,8 @@ public class HtmlMask : IDisposable
     /// </summary>
     public void Send(string windowId, string url, string jsonData)
     {
-        if (!_toHtmlQueues.TryGetValue(windowId, out var queue))
-        {
-            _toHtmlQueues[windowId] = queue = new ConcurrentQueue<Message>();
-        }
+        if (!HtmlMaskWindow.Exists(windowId) || !_toHtmlQueues.TryGetValue(windowId, out var queue))
+            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
 
         queue.Enqueue(new Message
         {
@@ -167,15 +165,13 @@ public class HtmlMask : IDisposable
     public async Task<string?> Request(string windowId, string url, string jsonData, int timeoutMs = 0)
     {
         var requestId = Guid.NewGuid().ToString("N");
-        var tcs = new TaskCompletionSource<string>();
+        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _jsPendingRequests[requestId] = tcs;
 
         try
         {
-            if (!_toHtmlQueues.TryGetValue(windowId, out var queue))
-            {
-                _toHtmlQueues[windowId] = queue = new ConcurrentQueue<Message>();
-            }
+            if (!HtmlMaskWindow.Exists(windowId) || !_toHtmlQueues.TryGetValue(windowId, out var queue))
+                throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
 
             queue.Enqueue(new Message
             {
@@ -189,7 +185,11 @@ public class HtmlMask : IDisposable
             if (timeoutMs > 0)
             {
                 using var cts = new System.Threading.CancellationTokenSource(timeoutMs);
-                cts.Token.Register(() => tcs.TrySetResult(null!));
+                await using var registration = cts.Token.Register(() =>
+                {
+                    if (_jsPendingRequests.TryRemove(requestId, out var pending))
+                        pending.TrySetResult(null!);
+                });
                 return await tcs.Task;
             }
 
