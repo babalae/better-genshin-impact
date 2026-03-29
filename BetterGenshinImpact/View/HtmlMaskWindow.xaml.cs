@@ -11,7 +11,6 @@ using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 
@@ -344,7 +343,10 @@ public partial class HtmlMaskWindow : Window
             // 阻止请求
             e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogWarning(ex, "HTML遮罩资源请求拦截异常");
+        }
     }
 
     /// <summary>
@@ -368,7 +370,10 @@ public partial class HtmlMaskWindow : Window
                 Height = currentRect.Height;
             });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogDebug(ex, "HTML遮罩窗口位置更新失败");
+        }
     }
 
     /// <summary>

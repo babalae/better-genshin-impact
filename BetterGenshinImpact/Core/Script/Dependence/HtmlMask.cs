@@ -234,7 +234,7 @@ public class HtmlMask : IDisposable
             if (queue.TryDequeue(out var message))
                 return JsonSerializer.Serialize(message, _jsonOptions);
 
-            if (!HtmlMaskWindow.Exists(windowId))
+            if (_disposed || !_fromHtmlQueues.ContainsKey(windowId) || !HtmlMaskWindow.Exists(windowId))
                 return null;
 
             if (timeoutMs > 0 && sw.ElapsedMilliseconds > timeoutMs)
