@@ -202,6 +202,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
 
+    /// <summary>
+    /// 鍵鼠輸入來源與硬體 COM 埠設定
+    /// </summary>
+    public HardwareInputConfig HardwareInputConfig { get; set; } = new();
+
     public RecordConfig RecordConfig { get; set; } = new();
 
     /// <summary>
@@ -267,6 +272,7 @@ public partial class AllConfig : ObservableObject
         AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
         QuickTeleportConfig.PropertyChanged += OnAnyPropertyChanged;
         MacroConfig.PropertyChanged += OnAnyPropertyChanged;
+        HardwareInputConfig.PropertyChanged += OnAnyPropertyChanged;
         HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;

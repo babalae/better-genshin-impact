@@ -1,16 +1,26 @@
-﻿using Fischless.WindowsInput;
-using System;
+using BetterGenshinImpact.Core.Simulator.Hardware;
 using BetterGenshinImpact.GameTask.Common;
+using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
+using System;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Simulator;
 
 public class Simulation
 {
-    public static InputSimulator SendInput { get; } = new();
+    public static InputSimulator SendInput { get; }
 
     public static MouseEventSimulator MouseEvent { get; } = new();
+
+    static Simulation()
+    {
+        var keyboard = new RoutingKeyboardSimulator();
+        var mouse = new RoutingMouseSimulator();
+        SendInput = new InputSimulator(keyboard, mouse, new WindowsInputDeviceStateAdaptor());
+        keyboard.Initialize(SendInput);
+        mouse.Initialize(SendInput);
+    }
 
     public static PostMessageSimulator PostMessage(IntPtr hWnd)
     {
@@ -22,7 +32,7 @@ public class Simulation
         foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
         {
             // 检查键是否被按下
-            if (IsKeyDown(key)) // 强制转换 VK 枚举为 int
+            if (IsKeyDown(key))
             {
                 TaskControl.Logger.LogDebug($"解除{key}的按下状态.");
                 SendInput.Keyboard.KeyUp(key);
@@ -32,10 +42,7 @@ public class Simulation
 
     public static bool IsKeyDown(User32.VK key)
     {
-        // 获取按键状态
         var state = User32.GetAsyncKeyState((int)key);
-
-        // 检查高位是否为 1（表示按键被按下）
         return (state & 0x8000) != 0;
     }
 }

@@ -20,6 +20,676 @@
                       FontTypography="BodyStrong"
                       Text="辅助操控设置" />
 
+        <!--  输入来源 / 硬体 COM 埠  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Keyboard24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="输入来源"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="分别配置键盘与滑鼠的虚拟 / 硬体输出，键盘支援 Makxd / Ferrum，滑鼠支援 Makcu / Makxd / Ferrum；后台窗口消息类功能仍会标记为虚拟输入"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,24,0"
+                               Command="{Binding RefreshHardwarePortsCommand}"
+                               Content="重新侦测" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel Margin="16,12,16,12">
+                <ui:CardExpander Margin="0,0,0,12"
+                                 ContentPadding="0"
+                                 Icon="{ui:SymbolIcon Keyboard24}">
+                    <ui:CardExpander.Header>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="键盘"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="配置键盘输出模式、硬体品牌与监听面板"
+                                          TextWrapping="Wrap" />
+                            <ComboBox Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Width="180"
+                                      Margin="0,0,12,0"
+                                      DisplayMemberPath="Value"
+                                      ItemsSource="{Binding InputModeOptions}"
+                                      SelectedValue="{Binding Config.HardwareInputConfig.KeyboardOutputMode, Mode=TwoWay}"
+                                      SelectedValuePath="Key" />
+                            <ui:Button Grid.Row="0"
+                                       Grid.RowSpan="2"
+                                       Grid.Column="2"
+                                       Margin="0,0,36,0"
+                                       Command="{Binding KeyboardInputTestCommand}"
+                                       Content="输入测试" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel Margin="16,0,16,12"
+                                IsEnabled="{Binding Config.HardwareInputConfig.IsKeyboardHardware}">
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsKeyboardFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="键盘硬体品牌"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="Keyboard hardware vendor"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Width="180"
+                                  Margin="0,0,36,0"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding KeyboardHardwareVendorOptions}"
+                                  SelectedValue="{Binding Config.HardwareInputConfig.KeyboardHardwareVendor, Mode=TwoWay}"
+                                  SelectedValuePath="Key" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsKeyboardFerrumSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Ferrum 协议"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="可在 KM / DHZ / NET 之间切换"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Width="180"
+                                  Margin="0,0,36,0"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding FerrumApiOptions}"
+                                  SelectedValue="{Binding Config.HardwareInputConfig.KeyboardFerrumApi, Mode=TwoWay}"
+                                  SelectedValuePath="Key" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="自动侦测 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="取消后可手动填写 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,12,0"
+                                         IsChecked="{Binding Config.HardwareInputConfig.KeyboardAutoDetectComPort, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="2"
+                                      Margin="0,0,36,0"
+                                      VerticalAlignment="Center"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.KeyboardDetectedComPort, StringFormat=自动侦测结果：{0}}" />
+                    </Grid>
+                    <Grid Visibility="{Binding Config.HardwareInputConfig.IsKeyboardFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="手动 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="例如 COM3"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="140"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.KeyboardComPort, Mode=TwoWay}"
+                                    IsEnabled="{Binding Config.HardwareInputConfig.KeyboardAutoDetectComPort, Converter={StaticResource InverseBooleanConverter}}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsKeyboardFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Ferrum IP" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="NET / DHZ 使用 UDP 目标 IP"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="180"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.KeyboardFerrumNetIp, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsKeyboardFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Ferrum Port" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="NET / DHZ 使用的目标端口"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="180"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.KeyboardFerrumNetPort, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsKeyboardFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="{Binding Config.HardwareInputConfig.KeyboardFerrumCredentialLabel}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.KeyboardFerrumCredentialHint}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="260"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.KeyboardFerrumNetUuid, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="装置信息"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.KeyboardHardwareTestInfo}"
+                                      TextWrapping="Wrap" />
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="键盘监听面板"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Margin="0,2,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding KeyboardMonitorHint}"
+                                      TextWrapping="Wrap" />
+                        <ItemsControl Grid.Row="2"
+                                      Grid.Column="0"
+                                      Margin="0,8,0,0"
+                                      ItemsSource="{Binding KeyboardMonitorItems}"
+                                      Visibility="{Binding IsKeyboardMonitorSupported, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,8,8"
+                                            Padding="12,8"
+                                            Background="{Binding StateBackground}"
+                                            BorderBrush="{Binding StateBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                        <StackPanel>
+                                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                                          Text="{Binding Label}" />
+                                            <ui:TextBlock Margin="0,2,0,0"
+                                                          FontTypography="BodyStrong"
+                                                          Foreground="{Binding StateForeground}"
+                                                          Text="{Binding StateText}" />
+                                            <ui:TextBlock Margin="0,2,0,0"
+                                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                          Text="{Binding StateCodeText}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
+
+                <Separator Margin="0,0,0,12" />
+
+                <ui:CardExpander ContentPadding="0"
+                                 Icon="{ui:SymbolIcon Cursor24}">
+                    <ui:CardExpander.Header>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="滑鼠"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="配置滑鼠输出模式、硬体品牌与监听面板"
+                                          TextWrapping="Wrap" />
+                            <ComboBox Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Width="180"
+                                      Margin="0,0,12,0"
+                                      DisplayMemberPath="Value"
+                                      ItemsSource="{Binding InputModeOptions}"
+                                      SelectedValue="{Binding Config.HardwareInputConfig.MouseOutputMode, Mode=TwoWay}"
+                                      SelectedValuePath="Key" />
+                            <ui:Button Grid.Row="0"
+                                       Grid.RowSpan="2"
+                                       Grid.Column="2"
+                                       Margin="0,0,36,0"
+                                       Command="{Binding MouseMoveTestCommand}"
+                                       Content="移动测试" />
+                        </Grid>
+                    </ui:CardExpander.Header>
+                    <StackPanel Margin="16,0,16,12"
+                                IsEnabled="{Binding Config.HardwareInputConfig.IsMouseHardware}">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="鼠标硬体品牌"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="Mouse hardware vendor"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Width="180"
+                                  Margin="0,0,36,0"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding MouseHardwareVendorOptions}"
+                                  SelectedValue="{Binding Config.HardwareInputConfig.MouseHardwareVendor, Mode=TwoWay}"
+                                  SelectedValuePath="Key" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsMouseFerrumSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Ferrum 协议"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="可在 KM / DHZ / NET 之间切换"
+                                      TextWrapping="Wrap" />
+                        <ComboBox Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Width="180"
+                                  Margin="0,0,36,0"
+                                  DisplayMemberPath="Value"
+                                  ItemsSource="{Binding FerrumApiOptions}"
+                                  SelectedValue="{Binding Config.HardwareInputConfig.MouseFerrumApi, Mode=TwoWay}"
+                                  SelectedValuePath="Key" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsMouseFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="自动侦测 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="取消后可手动填写 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:ToggleSwitch Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Grid.Column="1"
+                                         Margin="0,0,12,0"
+                                         IsChecked="{Binding Config.HardwareInputConfig.MouseAutoDetectComPort, Mode=TwoWay}" />
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="2"
+                                      Margin="0,0,36,0"
+                                      VerticalAlignment="Center"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.MouseDetectedComPort, StringFormat=自动侦测结果：{0}}" />
+                    </Grid>
+                    <Grid Visibility="{Binding Config.HardwareInputConfig.IsMouseFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="手动 COM 埠"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="例如 COM4"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="140"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.MouseComPort, Mode=TwoWay}"
+                                    IsEnabled="{Binding Config.HardwareInputConfig.MouseAutoDetectComPort, Converter={StaticResource InverseBooleanConverter}}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsMouseFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Ferrum IP" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="NET / DHZ 使用 UDP 目标 IP"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="180"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.MouseFerrumNetIp, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsMouseFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="Ferrum Port" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="NET / DHZ 使用的目标端口"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="180"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.MouseFerrumNetPort, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid Margin="0,0,0,8"
+                          Visibility="{Binding Config.HardwareInputConfig.IsMouseFerrumNetworkApi, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="{Binding Config.HardwareInputConfig.MouseFerrumCredentialLabel}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.MouseFerrumCredentialHint}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="260"
+                                    Margin="0,0,36,0"
+                                    Text="{Binding Config.HardwareInputConfig.MouseFerrumNetUuid, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="装置信息"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Config.HardwareInputConfig.MouseHardwareTestInfo}"
+                                      TextWrapping="Wrap" />
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="0"
+                                      FontTypography="Body"
+                                      Text="鼠标监听面板"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Margin="0,2,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding MouseMonitorHint}"
+                                      TextWrapping="Wrap" />
+                        <ItemsControl Grid.Row="2"
+                                      Grid.Column="0"
+                                      Margin="0,8,0,0"
+                                      ItemsSource="{Binding MouseMonitorItems}"
+                                      Visibility="{Binding IsMouseMonitorSupported, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,8,8"
+                                            Padding="12,8"
+                                            Background="{Binding StateBackground}"
+                                            BorderBrush="{Binding StateBorder}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                        <StackPanel>
+                                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"
+                                                          Text="{Binding Label}" />
+                                            <ui:TextBlock Margin="0,2,0,0"
+                                                          FontTypography="BodyStrong"
+                                                          Foreground="{Binding StateForeground}"
+                                                          Text="{Binding StateText}" />
+                                            <ui:TextBlock Margin="0,2,0,0"
+                                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                          Text="{Binding StateCodeText}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                    </StackPanel>
+                </ui:CardExpander>
+            </StackPanel>
+        </ui:CardExpander>
+
         <!--  一键战斗宏  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
