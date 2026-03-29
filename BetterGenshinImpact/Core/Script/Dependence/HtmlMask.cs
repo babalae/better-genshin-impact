@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.View;
@@ -30,6 +32,9 @@ public class HtmlMask : IDisposable
     {
         public string Url { get; set; } = "";
         public JsonElement? Data { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? RequestId { get; set; }
     }
 
     /// <summary>
@@ -41,6 +46,11 @@ public class HtmlMask : IDisposable
     /// HTML到脚本的消息队列
     /// </summary>
     private static readonly ConcurrentDictionary<string, ConcurrentQueue<Message>> _fromHtmlQueues = new();
+
+    /// <summary>
+    /// JS到HTML请求的等待句柄，用于request-response匹配
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _jsPendingRequests = new();
 
     private readonly string _workDir;
     private readonly List<string> _openedWindows = [];
@@ -129,11 +139,8 @@ public class HtmlMask : IDisposable
     #region 消息通信
 
     /// <summary>
-    /// 发送消息到HTML
+    /// 发送消息到HTML（单向推送）
     /// </summary>
-    /// <param name="windowId">目标窗口ID</param>
-    /// <param name="url">接口路径，如 /data/update</param>
-    /// <param name="jsonData">JSON数据</param>
     public void Send(string windowId, string url, string jsonData)
     {
         if (!_toHtmlQueues.TryGetValue(windowId, out var queue))
@@ -147,12 +154,78 @@ public class HtmlMask : IDisposable
             Data = ParseData(jsonData)
         });
 
-        // 通知WebView2推送
         HtmlMaskWindow.NotifyFlush(windowId);
     }
 
     /// <summary>
-    /// 轮询来自HTML的消息
+    /// 发送请求到HTML并等待响应
+    /// </summary>
+    /// <param name="windowId">目标窗口ID</param>
+    /// <param name="url">接口路径</param>
+    /// <param name="jsonData">JSON数据</param>
+    /// <param name="timeoutMs">超时毫秒，0表示无限等待</param>
+    public async Task<string?> Request(string windowId, string url, string jsonData, int timeoutMs = 0)
+    {
+        var requestId = Guid.NewGuid().ToString("N");
+        var tcs = new TaskCompletionSource<string>();
+        _jsPendingRequests[requestId] = tcs;
+
+        try
+        {
+            if (!_toHtmlQueues.TryGetValue(windowId, out var queue))
+            {
+                _toHtmlQueues[windowId] = queue = new ConcurrentQueue<Message>();
+            }
+
+            queue.Enqueue(new Message
+            {
+                Url = url,
+                Data = ParseData(jsonData),
+                RequestId = requestId
+            });
+
+            HtmlMaskWindow.NotifyFlush(windowId);
+
+            if (timeoutMs > 0)
+            {
+                using var cts = new System.Threading.CancellationTokenSource(timeoutMs);
+                cts.Token.Register(() => tcs.TrySetResult(null!));
+                return await tcs.Task;
+            }
+
+            return await tcs.Task;
+        }
+        finally
+        {
+            _jsPendingRequests.TryRemove(requestId, out _);
+        }
+    }
+
+    /// <summary>
+    /// 等待接收来自HTML的一条消息
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    /// <param name="timeoutMs">超时毫秒，0表示无限等待</param>
+    public async Task<string?> Receive(string windowId, int timeoutMs = 0)
+    {
+        if (!_fromHtmlQueues.TryGetValue(windowId, out var queue))
+            return null;
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
+        {
+            if (queue.TryDequeue(out var message))
+                return JsonSerializer.Serialize(message, _jsonOptions);
+
+            if (timeoutMs > 0 && sw.ElapsedMilliseconds > timeoutMs)
+                return null;
+
+            await Task.Delay(50);
+        }
+    }
+
+    /// <summary>
+    /// 轮询来自HTML的消息（非阻塞）
     /// </summary>
     public string? Poll(string windowId)
     {
@@ -199,16 +272,26 @@ public class HtmlMask : IDisposable
     }
 
     /// <summary>
-    /// HTML端发来的消息入队
+    /// HTML端发来的消息入队，如果是JS请求的响应则直接resolve
     /// </summary>
-    internal static void SendFromHtml(string windowId, string url, string data)
+    internal static void SendFromHtml(string windowId, string url, string data, string? requestId = null)
     {
+        // 匹配JS端pending的request
+        if (requestId != null && _jsPendingRequests.TryRemove(requestId, out var tcs))
+        {
+            var parsed = ParseData(data);
+            tcs.SetResult(parsed != null ? parsed.Value.GetRawText() : "null");
+            return;
+        }
+
+        // 普通消息入队
         if (_fromHtmlQueues.TryGetValue(windowId, out var queue))
         {
             queue.Enqueue(new Message
             {
                 Url = url,
-                Data = ParseData(data)
+                Data = ParseData(data),
+                RequestId = requestId
             });
         }
     }

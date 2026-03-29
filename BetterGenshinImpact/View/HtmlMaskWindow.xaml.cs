@@ -193,7 +193,52 @@ public partial class HtmlMaskWindow : Window
             WebView.CoreWebView2.Settings.IsScriptEnabled = true;
             WebView.CoreWebView2.Settings.IsWebMessageEnabled = true;
 
-            // 监听HTML发来的消息，解析 url + data
+            // 注入 helper JS，提供 window.htmlMask.request / onMessage API
+            await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
+                window.htmlMask = {
+                    _callbacks: {},
+                    _seq: 0,
+                    request: function(url, data) {
+                        return new Promise(function(resolve, reject) {
+                            var id = '__req_' + (++window.htmlMask._seq);
+                            window.htmlMask._callbacks[id] = { resolve: resolve, reject: reject };
+                            window.chrome.webview.postMessage(JSON.stringify({
+                                url: url,
+                                data: data || {},
+                                requestId: id
+                            }));
+                        });
+                    },
+                    onMessage: null,
+                    _dispatch: function(raw) {
+                        try {
+                            var msg = JSON.parse(raw);
+                            if (msg.requestId && window.htmlMask._callbacks[msg.requestId]) {
+                                window.htmlMask._callbacks[msg.requestId].resolve(msg);
+                                delete window.htmlMask._callbacks[msg.requestId];
+                            } else if (window.htmlMask.onMessage) {
+                                var result = window.htmlMask.onMessage(msg);
+                                if (msg.requestId && result !== undefined) {
+                                    Promise.resolve(result).then(function(data) {
+                                        window.chrome.webview.postMessage(JSON.stringify({
+                                            requestId: msg.requestId,
+                                            url: '/__response__',
+                                            data: data
+                                        }));
+                                    });
+                                }
+                            }
+                        } catch(e) {
+                            if (window.htmlMask.onMessage) window.htmlMask.onMessage(raw);
+                        }
+                    }
+                };
+                window.chrome.webview.addEventListener('message', function(e) {
+                    window.htmlMask._dispatch(e.data);
+                });
+            ");
+
+            // 监听HTML发来的消息，解析 url + data + requestId
             WebView.CoreWebView2.WebMessageReceived += (_, e) =>
             {
                 try
@@ -201,6 +246,7 @@ public partial class HtmlMaskWindow : Window
                     string raw = e.TryGetWebMessageAsString();
                     string url = "";
                     string data = raw;
+                    string? requestId = null;
 
                     try
                     {
@@ -211,10 +257,14 @@ public partial class HtmlMaskWindow : Window
                             url = ep.GetString() ?? "";
                             data = root.TryGetProperty("data", out var d) ? d.GetRawText() : "{}";
                         }
+                        if (root.TryGetProperty("requestId", out var rid))
+                        {
+                            requestId = rid.GetString();
+                        }
                     }
                     catch { }
 
-                    HtmlMask.SendFromHtml(_id, url, data);
+                    HtmlMask.SendFromHtml(_id, url, data, requestId);
                 }
                 catch { }
             };
