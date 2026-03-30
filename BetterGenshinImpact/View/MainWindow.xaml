@@ -58,7 +58,7 @@
                            IsPaneToggleVisible="True"
                            IsTopSeparatorVisible="False"
                            IsFooterSeparatorVisible="False"
-                           OpenPaneLength="160">
+                           OpenPaneLength="230">
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="启动"
                                        NavigationCacheMode="Enabled"

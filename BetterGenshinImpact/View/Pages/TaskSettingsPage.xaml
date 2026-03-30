@@ -2,6 +2,7 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
@@ -15,6 +16,7 @@
       d:DataContext="{d:DesignInstance Type=pages:TaskSettingsPageViewModel}"
       d:DesignHeight="1300"
       d:DesignWidth="750"
+      behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       FontFamily="{StaticResource TextThemeFontFamily}"
@@ -128,6 +130,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoFightViewModel.StrategyList}"
                               SelectedItem="{Binding Config.AutoGeniusInvokationConfig.StrategyName, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
                                 <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
@@ -447,6 +454,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
                                 <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
@@ -868,7 +880,13 @@
                                   VerticalContentAlignment="Center"
                                   Margin="10,0,10,0"
                                   ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.AvatarIndexList}}"
-                                  SelectedItem="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}" />
+                                  SelectedItem="{Binding Config.AutoFightConfig.GuardianAvatar, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="2"
@@ -1235,6 +1253,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoFightConfig.StrategyName, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
                                 <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
@@ -1448,6 +1471,11 @@
                               Margin="0,0,10,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
                               SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1696,6 +1724,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoStygianOnslaughtConfig.StrategyName, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
                                 <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
@@ -1732,6 +1765,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.BossNumList}}"
                               SelectedItem="{Binding Config.AutoStygianOnslaughtConfig.BossNum, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
 
                 </Grid>
@@ -1915,6 +1953,11 @@
                               Margin="0,0,10,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
                               SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -2155,8 +2198,13 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding FishingTimePolicyDict}"
                               SelectedValuePath="Key"
-                              DisplayMemberPath="Value"
-                              SelectedItem="{Binding Config.AutoFishingConfig.FishingTimePolicy, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoFishingConfig.FishingTimePolicy, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Value, Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -2290,7 +2338,13 @@
                               Width="150"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.LeyLineOutcropType, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.LeyLineOutcropType, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -2318,7 +2372,13 @@
                               Width="120"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.Country, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.Country, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -2361,6 +2421,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.StrategyName, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
                                 <b:InvokeCommandAction Command="{Binding StrategyDropDownOpenedCommand}"
@@ -2936,7 +3001,13 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoMusicLevelList}"
                               SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
-                              SelectedIndex="0" />
+                              SelectedIndex="0">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -3202,6 +3273,11 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.ArtifactSalvageStarList}}"
                               SelectedItem="{Binding Config.AutoArtifactSalvageConfig.MaxArtifactStar, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </Grid>
                 <Grid Margin="16" Cursor="">
@@ -3257,8 +3333,13 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding RecognitionFailurePolicyDict}"
                               SelectedValuePath="Key"
-                              DisplayMemberPath="Value"
-                              SelectedItem="{Binding Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Value, Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
@@ -3402,8 +3483,12 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding GridNameDict}"
                               SelectedValuePath="Key"
-                              DisplayMemberPath="Value"
                               SelectedItem="{Binding Config.GetGridIconsConfig.GridName, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Value, Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </Grid>
                 <Grid Margin="16">

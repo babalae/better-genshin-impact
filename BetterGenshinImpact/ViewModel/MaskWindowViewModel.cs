@@ -67,6 +67,8 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private ObservableCollection<MaskMapPointLabel> _mapPointLabels = [];
 
+        [ObservableProperty] private HashSet<string> _collectedPointIds = [];
+
         [ObservableProperty] private bool _isMapPointsLoading;
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
@@ -82,7 +84,8 @@ namespace BetterGenshinImpact.ViewModel
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
         [
             new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
-            new(MapPointApiProvider.KongyingTavern, "空荧酒馆")
+            new(MapPointApiProvider.KongyingTavern, "空荧酒馆"),
+            new(MapPointApiProvider.HoYoLab, "HoYoLab (pt-BR)")
         ];
 
         [ObservableProperty] private MapPointApiProviderOption? _selectedMapPointApiProviderOption;
@@ -112,12 +115,31 @@ namespace BetterGenshinImpact.ViewModel
         {
             if (Config != null)
             {
-                StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
-                StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
-                StatusList.Add(new StatusItem("\ue5c8 邀约", Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
-                StatusList.Add(new StatusItem("\uf578 钓鱼", Config.AutoFishingConfig));
-                StatusList.Add(new StatusItem("\uf3c5 传送", Config.QuickTeleportConfig));
+                StatusList.Clear();
+                StatusList.Add(new StatusItem(BuildStatusLabel("\uf256", "拾取"), Config.AutoPickConfig));
+                StatusList.Add(new StatusItem(BuildStatusLabel("\uf075", "剧情"), Config.AutoSkipConfig));
+                StatusList.Add(new StatusItem(BuildStatusLabel("\ue5c8", "邀约"), Config.AutoSkipConfig, "AutoHangoutEventEnabled"));
+                StatusList.Add(new StatusItem(BuildStatusLabel("\uf578", "钓鱼"), Config.AutoFishingConfig));
+                StatusList.Add(new StatusItem(BuildStatusLabel("\uf3c5", "传送"), Config.QuickTeleportConfig));
             }
+        }
+
+        private static string BuildStatusLabel(string icon, string text)
+        {
+            var translated = text;
+            try
+            {
+                var translator = App.GetService<ITranslationService>();
+                if (translator != null)
+                {
+                    translated = translator.Translate(text);
+                }
+            }
+            catch
+            {
+            }
+
+            return $"{icon} {translated}";
         }
 
         [RelayCommand]
@@ -126,6 +148,16 @@ namespace BetterGenshinImpact.ViewModel
             RefreshSettings();
             InitializeStatusList();
             InitFps();
+            LoadCollectedPoints();
+        }
+
+        private void LoadCollectedPoints()
+        {
+            var service = App.GetService<ICollectedPointsService>();
+            if (service != null)
+            {
+                CollectedPointIds = new HashSet<string>(service.CollectedIds);
+            }
         }
 
         [RelayCommand]
@@ -656,10 +688,19 @@ namespace BetterGenshinImpact.ViewModel
         [RelayCommand]
         private Task OnPointRightClick(MaskMapPoint? point)
         {
-            if (point != null)
+            if (point == null)
             {
-                // 自定义右键逻辑
+                return Task.CompletedTask;
             }
+
+            var service = App.GetService<ICollectedPointsService>();
+            if (service == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            service.Toggle(point.Id);
+            CollectedPointIds = new HashSet<string>(service.CollectedIds);
 
             return Task.CompletedTask;
         }

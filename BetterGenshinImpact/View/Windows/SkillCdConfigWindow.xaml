@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
         xmlns:skillCd="clr-namespace:BetterGenshinImpact.GameTask.SkillCd"
         mc:Ignorable="d"
         Title="角色CD配置"
@@ -11,7 +12,8 @@
         Width="450"
         WindowStartupLocation="CenterOwner"
         WindowBackdropType="Auto"
-        ExtendsContentIntoTitleBar="True">
+        ExtendsContentIntoTitleBar="True"
+        behavior:AutoTranslateInterceptor.EnableAutoTranslate="True">
 
     <ui:FluentWindow.Resources>
         <Style TargetType="ui:TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">

@@ -4,9 +4,11 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              mc:Ignorable="d" 
              d:DesignHeight="60" d:DesignWidth="300"
-             Name="Root">
+             Name="Root"
+             behavior:AutoTranslateInterceptor.EnableAutoTranslate="True">
     <Grid>
         <ToggleButton x:Name="MainToggle"
                       HorizontalAlignment="Stretch"
@@ -76,7 +78,7 @@
                               ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" Margin="8,4"/>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" Margin="8,4"/>
                             </DataTemplate>
                         </ui:ListView.ItemTemplate>
                     </ui:ListView>
@@ -96,7 +98,11 @@
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Margin="8,4">
-                                    <Run Text="{Binding Item1, Mode=OneWay}"/>
+                                    <Run Text="{Binding Item2.Name, Mode=OneWay, Converter={StaticResource TrConverter}}"/>
+                                    <Run Text=" | "/>
+                                    <Run Text="{Binding Item2.Rewards[0], Mode=OneWay, Converter={StaticResource TrConverter}}"/>
+                                    <Run Text=" "/>
+                                    <Run Text="{Binding Item2.Rewards[1], Mode=OneWay, Converter={StaticResource TrConverter}}"/>
                                 </TextBlock>
                             </DataTemplate>
                         </ui:ListView.ItemTemplate>

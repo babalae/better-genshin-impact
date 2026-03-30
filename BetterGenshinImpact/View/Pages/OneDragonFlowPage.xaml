@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:dd="urn:gong-wpf-dragdrop"
@@ -14,6 +15,7 @@
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
              d:DesignHeight="1000"
              d:DesignWidth="800"
+             behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              FontFamily="{StaticResource TextThemeFontFamily}"
@@ -115,7 +117,7 @@
                                             <TextBlock Grid.Column="2"
                                                        VerticalAlignment="Center"
                                                        IsHitTestVisible="False"
-                                                       Text="{Binding Name}" Width="100"/>
+                                                       Text="{Binding Name, Converter={StaticResource TrConverter}}" Width="100"/>
                                             
                                             
                                             <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
@@ -234,9 +236,13 @@
                           MinWidth="200"
                           Height="34"
                           Margin="10,0,10,0"
-                          DisplayMemberPath="Name"
                           ItemsSource="{Binding ConfigList}"
                           SelectedItem="{Binding SelectedConfig, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="SelectionChanged">
                             <b:InvokeCommandAction Command="{Binding ConfigDropDownChangedCommand}"
@@ -309,7 +315,13 @@
                                           HorizontalContentAlignment="Center"
                                           HorizontalAlignment="Left"
                                           SelectedItem="{Binding SelectedConfig.CraftingBenchCountry, Mode=TwoWay}"
-                                          ItemsSource="{Binding CraftingBenchCountry}" />
+                                          ItemsSource="{Binding CraftingBenchCountry}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="2"
@@ -1168,12 +1180,24 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineMondayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineMondayType, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="3"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineMondayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineMondayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
 
                                 <CheckBox Grid.Row="4"
                                           Grid.Column="0"
@@ -1184,12 +1208,24 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineTuesdayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineTuesdayType, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="4"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineTuesdayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineTuesdayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
 
                                 <CheckBox Grid.Row="5"
                                           Grid.Column="0"
@@ -1200,12 +1236,24 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineWednesdayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineWednesdayType, Mode=TwoWay}">
+                                    <Combo  Box.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="5"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineWednesdayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineWednesdayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
 
                                 <CheckBox Grid.Row="6"
                                           Grid.Column="0"
@@ -1216,12 +1264,24 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineThursdayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineThursdayType, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="6"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineThursdayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineThursdayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
 
                                 <CheckBox Grid.Row="7"
                                           Grid.Column="0"
@@ -1232,12 +1292,24 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineFridayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineFridayType, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="7"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineFridayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineFridayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
 
                                 <CheckBox Grid.Row="8"
                                           Grid.Column="0"
@@ -1248,12 +1320,24 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineSaturdayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSaturdayType, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="8"
                                           Grid.Column="3"
                                           Margin="0,0,0,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineSaturdayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSaturdayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
 
                                 <CheckBox Grid.Row="9"
                                           Grid.Column="0"
@@ -1264,11 +1348,23 @@
                                           Grid.Column="2"
                                           Margin="0,0,12,0"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineSundayType, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSundayType, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Row="9"
                                           Grid.Column="3"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropCountryList}}"
-                                          SelectedItem="{Binding SelectedConfig.LeyLineSundayCountry, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.LeyLineSundayCountry, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
@@ -1303,7 +1399,13 @@
                         <ComboBox MinWidth="100"
                                   Margin="0,0,28,0"
                                   SelectedItem="{Binding SelectedConfig.AdventurersGuildCountry, Mode=TwoWay}"
-                                  ItemsSource="{Binding AdventurersGuildCountry}" />
+                                  ItemsSource="{Binding AdventurersGuildCountry}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </ui:CardControl>
                     <ui:CardControl Margin="0,0,0,12">
                         <ui:CardControl.Icon>
@@ -1374,7 +1476,13 @@
                             <ComboBox MinWidth="90"
                                       Margin="0,0,10,0"
                                       SelectedItem="{Binding SelectedConfig.SereniteaPotTpType, Mode=TwoWay}"
-                                      ItemsSource="{Binding SereniteaPotTpTypes}" />
+                                      ItemsSource="{Binding SereniteaPotTpTypes}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <ToggleButton                                         
                                 Margin="0,0,28,0"
                                 VerticalAlignment="Center"
@@ -1444,7 +1552,13 @@
                                                           MinWidth="150"
                                                           Margin="5,5,5,5"
                                                           ItemsSource="{x:Static local:OneDragonFlowPage.SereniteaPotSchedule}"
-                                                          x:Name="SereniteaPotComboBox" />
+                                                          x:Name="SereniteaPotComboBox">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                                 
                                                 <Separator Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"  Margin="5,3,5,3" BorderThickness="0,1,0,0" />
                                                 

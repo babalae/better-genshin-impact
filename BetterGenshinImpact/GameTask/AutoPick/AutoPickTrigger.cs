@@ -519,8 +519,38 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 如果有变化，使用处理后的字符；否则使用原字符串的Span
         ReadOnlySpan<char> span = hasChanges ? chars.Slice(0, writeIndex) : text.AsSpan();
+        if (span.IsEmpty)
+        {
+            return string.Empty;
+        }
+
         int start = 0;
         int end = span.Length - 1;
+
+        bool hasCjk = false;
+        for (int i = 0; i < span.Length; i++)
+        {
+            if (span[i] >= 0x4E00 && span[i] <= 0x9FFF)
+            {
+                hasCjk = true;
+                break;
+            }
+        }
+
+        if (!hasCjk)
+        {
+            while (start <= end && !char.IsLetterOrDigit(span[start]))
+            {
+                start++;
+            }
+
+            while (end >= start && !char.IsLetterOrDigit(span[end]))
+            {
+                end--;
+            }
+
+            return start > end ? string.Empty : span.Slice(start, end - start + 1).ToString();
+        }
 
         // 1. 从左边开始，删除非「字符和中文的字符
         while (start <= end)

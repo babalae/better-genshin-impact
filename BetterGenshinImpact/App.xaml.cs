@@ -88,22 +88,21 @@ public partial class App : Application
                 services.AddSingleton<IMissingTranslationReporter, SupabaseMissingTranslationReporter>();
                 services.AddSingleton<ITranslationService, JsonTranslationService>();
 
-                services.AddLogging(c => c.AddSerilog());
-                // if ("zh-Hans".Equals(all.OtherConfig.UiCultureInfoName, StringComparison.OrdinalIgnoreCase))
-                // {
-                //     services.AddLogging(c => c.AddSerilog());
-                // }
-                // else
-                // {
-                //     services.AddLogging(logging =>
-                //     {
-                //         logging.ClearProviders();
-                //         logging.SetMinimumLevel(LogLevel.Debug);
-                //         logging.AddFilter("Microsoft", LogLevel.Warning);
-                //         logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
-                //         logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
-                //     });
-                // }
+                if ("zh-Hans".Equals(all.OtherConfig.UiCultureInfoName, StringComparison.OrdinalIgnoreCase))
+                {
+                    services.AddLogging(c => c.AddSerilog());
+                }
+                else
+                {
+                    services.AddLogging(logging =>
+                    {
+                        logging.ClearProviders();
+                        logging.SetMinimumLevel(LogLevel.Debug);
+                        logging.AddFilter("Microsoft", LogLevel.Warning);
+                        logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+                        logging.Services.AddSingleton<ILoggerProvider, TranslatingSerilogLoggerProvider>();
+                    });
+                }
 
                 services.AddLocalization();
 
@@ -163,8 +162,10 @@ public partial class App : Application
                 services.AddSingleton<IAppCache, CachingService>();
                 services.AddSingleton<MemoryFileCache>();
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
+                services.AddSingleton<IHoYoLabMapApiService, HoYoLabMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
                 services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
+                services.AddSingleton<ICollectedPointsService, CollectedPointsService>();
 
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<IServerTimeProvider, ServerTimeProvider>();

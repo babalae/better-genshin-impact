@@ -461,6 +461,7 @@
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                    PointsSource="{Binding MapPoints}"
                                    LabelsSource="{Binding MapPointLabels}"
+                                   CollectedPointIds="{Binding CollectedPointIds}"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
                                    PointHoverCommand="{Binding PointHoverCommand}" />

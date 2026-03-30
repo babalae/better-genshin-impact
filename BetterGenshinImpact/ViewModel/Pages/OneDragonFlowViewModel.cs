@@ -40,6 +40,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class OneDragonFlowViewModel : ViewModel
 {
     private readonly ILogger<OneDragonFlowViewModel> _logger = App.GetLogger<OneDragonFlowViewModel>();
+    private readonly ITranslationService? _translationService = App.GetService<ITranslationService>();
 
     public static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
 
@@ -92,6 +93,19 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     private readonly string _basePath = AppDomain.CurrentDomain.BaseDirectory;
+
+    private string TranslateUi(string text)
+    {
+        try
+        {
+            var service = _translationService ?? App.GetService<ITranslationService>();
+            return service?.Translate(text) ?? text;
+        }
+        catch
+        {
+            return text;
+        }
+    }
     
     private void ReadScriptGroup()
     {
@@ -227,7 +241,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
             var checkBox = new CheckBox
             {
-                Content = scriptGroup.Name,
+                Content = TranslateUi(scriptGroup.Name),
                 Tag = scriptGroup,
                 IsChecked = false // 初始状态下都未选中
             };
@@ -236,14 +250,14 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-        Title = "选择增加的配置组（可多选）",
+        Title = TranslateUi("选择增加的配置组（可多选）"),
         Content = new ScrollViewer
         {
             Content = stackPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         },
-        CloseButtonText = "关闭",
-        PrimaryButtonText = "确认",
+        CloseButtonText = TranslateUi("关闭"),
+        PrimaryButtonText = TranslateUi("确认"),
         Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
         WindowStartupLocation = WindowStartupLocation.CenterOwner,
         SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
@@ -266,7 +280,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                     else
                     {
-                        Toast.Error("配置组加载失败");
+                        Toast.Error(TranslateUi("配置组加载失败"));
                     }
                 }
             }

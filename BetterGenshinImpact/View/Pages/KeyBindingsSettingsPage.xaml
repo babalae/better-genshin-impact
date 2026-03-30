@@ -4,6 +4,7 @@
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:kb="clr-namespace:BetterGenshinImpact.View.Controls.KeyBindings"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:model="clr-namespace:BetterGenshinImpact.Model"
@@ -12,6 +13,7 @@
              d:DataContext="{d:DesignInstance Type=pages:KeyBindingsSettingsPageViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="600"
+             behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              FontFamily="{StaticResource TextThemeFontFamily}"
@@ -56,7 +58,7 @@
                             <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="动作">
                                 <ui:GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ui:TreeRowExpander Content="{Binding ActionName}" />
+                                        <ui:TreeRowExpander Content="{Binding ActionName, Converter={StaticResource TrConverter}}" />
                                     </DataTemplate>
                                 </ui:GridViewColumn.CellTemplate>
                             </ui:GridViewColumn>

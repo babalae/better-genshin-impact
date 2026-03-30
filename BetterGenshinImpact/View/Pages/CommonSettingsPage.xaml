@@ -2,6 +2,7 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,6 +12,7 @@
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
       d:DesignHeight="2000"
       d:DesignWidth="600"
+      behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       FontFamily="{StaticResource TextThemeFontFamily}"
@@ -979,7 +981,13 @@
                               MinWidth="120"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding CountryList}"
-                              SelectedItem="{Binding SelectedCountry}" />
+                              SelectedItem="{Binding SelectedCountry}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
 
                 <!--  指定区域  -->
@@ -1006,7 +1014,13 @@
                               MinWidth="120"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding Areas}"
-                              SelectedItem="{Binding SelectedArea}" />
+                              SelectedItem="{Binding SelectedArea}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
 
                 <Grid Margin="16">
@@ -1181,7 +1195,13 @@
                               MinWidth="100"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AdventurersGuildCountry}"
-                              SelectedItem="{Binding Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.OtherConfig.AutoFetchDispatchAdventurersGuildCountry, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <!--<ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
@@ -1214,8 +1234,13 @@
                               Margin="0,0,36,0"
                               ItemsSource="{Binding ServerTimeZones}"
                               SelectedValue="{Binding Config.OtherConfig.ServerTimeZoneOffset}"
-                              SelectedValuePath="Item1"
-                              DisplayMemberPath="Item2" />
+                              SelectedValuePath="Item1">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Item2, Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <ui:CardExpander Margin="0,0,0,12"
                                  ContentPadding="0"

@@ -31,6 +31,7 @@ public class PointsCanvas : FrameworkElement
     private ObservableCollection<MaskMapPoint>? _points;
     private List<MaskMapPoint> _allPoints = new();
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
+    private HashSet<string> _collectedIds = new();
     private Rect _viewportRect = Rect.Empty;
 
     public event EventHandler? ViewportChanged;
@@ -71,6 +72,19 @@ public class PointsCanvas : FrameworkElement
             typeof(ICommand),
             typeof(PointsCanvas),
             new PropertyMetadata(null));
+
+    public static readonly DependencyProperty CollectedPointIdsProperty =
+        DependencyProperty.Register(
+            nameof(CollectedPointIds),
+            typeof(HashSet<string>),
+            typeof(PointsCanvas),
+            new PropertyMetadata(null, OnCollectedPointIdsChanged));
+
+    public HashSet<string>? CollectedPointIds
+    {
+        get => (HashSet<string>?)GetValue(CollectedPointIdsProperty);
+        set => SetValue(CollectedPointIdsProperty, value);
+    }
 
     /// <summary>
     /// 点击命令
@@ -123,6 +137,13 @@ public class PointsCanvas : FrameworkElement
     {
         var canvas = (PointsCanvas)d;
         canvas.UpdateLabels(e.NewValue as IEnumerable<MaskMapPointLabel>);
+    }
+
+    private static void OnCollectedPointIdsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var canvas = (PointsCanvas)d;
+        canvas._collectedIds = e.NewValue as HashSet<string> ?? new HashSet<string>();
+        canvas.Refresh();
     }
 
     public PointsCanvas()
@@ -272,6 +293,13 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     private void DrawPoint(DrawingContext dc, MaskMapPoint point, double centerX, double centerY, double width, double height)
     {
+        bool isCollected = _collectedIds.Contains(point.Id);
+
+        if (isCollected)
+        {
+            dc.PushOpacity(0.3);
+        }
+
         double radius = width / 2.0;
         double strokeThickness = 2.0;
 
@@ -334,6 +362,30 @@ public class PointsCanvas : FrameworkElement
             brush.Freeze();
 
             dc.DrawEllipse(brush, null, new Point(centerX, centerY), width / 2.0, height / 2.0);
+        }
+
+        if (isCollected)
+        {
+            dc.Pop(); // PushOpacity
+
+            // Draw checkmark
+            var checkBrush = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50));
+            checkBrush.Freeze();
+            var checkPen = new Pen(checkBrush, 2.5);
+            checkPen.Freeze();
+
+            var checkSize = radius * 0.6;
+            var cx = circleCenter.X;
+            var cy = circleCenter.Y;
+            var checkGeometry = new StreamGeometry();
+            using (var ctx = checkGeometry.Open())
+            {
+                ctx.BeginFigure(new Point(cx - checkSize, cy), false, false);
+                ctx.LineTo(new Point(cx - checkSize * 0.3, cy + checkSize * 0.7), true, false);
+                ctx.LineTo(new Point(cx + checkSize, cy - checkSize * 0.5), true, false);
+            }
+            checkGeometry.Freeze();
+            dc.DrawGeometry(null, checkPen, checkGeometry);
         }
     }
 

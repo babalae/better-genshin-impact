@@ -2,6 +2,7 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
@@ -10,6 +11,7 @@
       d:DataContext="{d:DesignInstance Type=pages:MacroSettingsPageViewModel}"
       d:DesignHeight="950"
       d:DesignWidth="800"
+      behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
       ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
       ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       FontFamily="{StaticResource TextThemeFontFamily}"
@@ -77,7 +79,13 @@
                               Width="180"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding QuickFightMacroHotkeyMode}"
-                              SelectedItem="{Binding Config.MacroConfig.CombatMacroHotkeyMode, Mode=TwoWay}" />
+                              SelectedItem="{Binding Config.MacroConfig.CombatMacroHotkeyMode, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

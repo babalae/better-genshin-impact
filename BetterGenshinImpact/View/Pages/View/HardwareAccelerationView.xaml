@@ -5,6 +5,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
              Width="800"
              d:DataContext="{d:DesignInstance Type=pages:HardwareAccelerationViewModel}"
              d:DesignHeight="600"
