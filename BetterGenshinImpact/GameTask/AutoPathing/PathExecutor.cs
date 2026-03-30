@@ -42,26 +42,51 @@ using BetterGenshinImpact.GameTask.AutoPathing.Strategy;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
+/// <summary>
+/// 路径执行器 / Path executor.
+/// 负责自动寻路宏观逻辑调度，整合坐标推算、脱困、异常处理与战斗等子模块。
+/// </summary>
 public class PathExecutor
 {
     internal readonly CameraRotateTask _rotateTask;
     internal readonly TrapEscaper _trapEscaper;
     internal readonly PathingAnomalyResolver _anomalyResolver;
+    
+    /// <summary>
+    /// 获取成功战斗的次数 / Gets the count of successful fights.
+    /// </summary>
     public int SuccessFight { get; private set; } = 0;
+    
+    /// <summary>
+    /// 增加成功战斗次数 / Increments the successful fight count.
+    /// </summary>
     public void IncrementSuccessFight() => SuccessFight++;
-    //路径追踪完全走完所有路径结束的标识
+    
+    /// <summary>
+    /// 获取路径追踪是否完全走完所有路径结束的标识 / Gets whether the path tracking successfully reached the end of all paths.
+    /// </summary>
     public bool SuccessEnd { get; private set; } = false;
+    
     internal PathingPartyManager _partyManager;
     internal readonly PathingNavigator _navigator;
+    
+    /// <summary>
+    /// 获取移动控制器 / Gets the movement controller.
+    /// </summary>
     public PathingMovementController MovementController { get; }
+    
     internal CancellationToken ct;
     internal PathExecutorSuspend pathExecutorSuspend;
     internal readonly PathingHealthController _healthController;
 
+    /// <summary>
+    /// 构造路径执行器 / Initializes the path executor.
+    /// </summary>
+    /// <param name="ct">取消令牌 / Cancellation token.</param>
     public PathExecutor(CancellationToken ct)
     {
-        _trapEscaper = new(ct);
-        _rotateTask = new(ct);
+        _trapEscaper = new TrapEscaper(ct);
+        _rotateTask = new CameraRotateTask(ct);
         this.ct = ct;
         pathExecutorSuspend = new PathExecutorSuspend(this);
         _healthController = PathingHealthControllerFactory.Create(ct, SwitchAvatar);
@@ -83,47 +108,53 @@ public class PathExecutor
             () => PartyConfig);
     }
 
+    /// <summary>
+    /// 获取或设置队伍配置 / Gets or sets the party configuration.
+    /// </summary>
     public PathingPartyConfig PartyConfig
     {
         get => _partyManager.PartyConfig;
-        set => _partyManager.PartyConfig = value;
+        set => _partyManager.PartyConfig = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     /// <summary>
-    /// 判断是否中止地图追踪的条件
+    /// 判断是否中止地图追踪的条件委托 / Judgment condition to terminate map tracking.
     /// </summary>
     public Func<ImageRegion, bool>? EndAction { get; set; }
 
     internal CombatScenes? _combatScenes => _partyManager.CombatScenes;
-    // private readonly Dictionary<string, string> _actionAvatarIndexMap = new();
 
     internal const int RetryTimes = 2;
-    //记录当前相关点位数组
+    
+    /// <summary>
+    /// 获取或设置当前相关点位数组 / Gets or sets the current waypoint array.
+    /// </summary>
     public (int, List<WaypointForTrack>) CurWaypoints
     {
         get => _navigator.CurWaypoints;
         set => _navigator.CurWaypoints = value;
     }
 
-    //记录当前点位
+    /// <summary>
+    /// 获取或设置当前点位 / Gets or sets the current waypoint.
+    /// </summary>
     public (int, WaypointForTrack) CurWaypoint
     {
         get => _navigator.CurWaypoint;
         set => _navigator.CurWaypoint = value;
     }
 
-    // 最近一次获取派遣奖励的时间
     internal DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
 
-
-    //当到达恢复点位
-    
-
-    
-
+    /// <summary>
+    /// 执行寻路任务 / Executes the pathing task.
+    /// </summary>
+    /// <param name="task">寻路任务对象 / Pathing task object.</param>
+    /// <returns>异步任务 / Asynchronous task.</returns>
     public async Task Pathing(PathingTask task)
     {
-        // SuspendableDictionary;
+        ArgumentNullException.ThrowIfNull(task);
+
         const string sdKey = "PathExecutor";
         var sd = RunnerContext.Instance.SuspendableDictionary;
         sd.Remove(sdKey);
@@ -131,12 +162,11 @@ public class PathExecutor
         RunnerContext.Instance.SuspendableDictionary.TryAdd(sdKey, pathExecutorSuspend);
         try
         {
-            if (!task.Positions.Any())
+            if (task.Positions == null || !task.Positions.Any())
             {
                 Logger.LogWarning("没有路径点，寻路结束");
                 return;
             }
-
 
             // 切换队伍
             if (!await _partyManager.SwitchPartyBefore(task))
@@ -202,7 +232,6 @@ public class PathExecutor
                         Logger.LogWarning(handledExc.Message);
                         break;
                     }
-                    
                     catch (TaskCanceledException)
                     {
                         if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
@@ -233,7 +262,6 @@ public class PathExecutor
                         Simulation.SendInput.Mouse.RightButtonUp();
                     }
                 }
-
             }
         }
         finally
@@ -244,14 +272,18 @@ public class PathExecutor
         }
     }
 
+    /// <summary>
+    /// 判断是否是目标点位 / Checks if the waypoint is a target point.
+    /// </summary>
     internal bool IsTargetPoint(WaypointForTrack waypoint)
     {
+        ArgumentNullException.ThrowIfNull(waypoint);
+
         // 方位点不需要接近
         if (waypoint.Type == WaypointType.Orientation.Code || waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
         {
             return false;
         }
-
 
         var action = ActionEnum.GetEnumByCode(waypoint.Action);
         if (action is not null && action.UseWaypointTypeEnum != ActionUseWaypointTypeEnum.Custom)
@@ -264,6 +296,9 @@ public class PathExecutor
         return waypoint.Type == WaypointType.Target.Code;
     }
 
+    /// <summary>
+    /// 初始化寻路 / Initializes pathing.
+    /// </summary>
     private void InitializePathing(PathingTask task)
     {
         LogScreenResolution();
@@ -271,6 +306,9 @@ public class PathExecutor
             "UpdateCurrentPathing", new object(), task));
     }
 
+    /// <summary>
+    /// 记录并校验屏幕分辨率 / Logs and validates screen resolution.
+    /// </summary>
     private void LogScreenResolution()
     {
         var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
@@ -289,10 +327,15 @@ public class PathExecutor
         }
     }
 
+    /// <summary>
+    /// 转换路径点为可追踪点并根据传送点分区 / Converts path positions to trackable waypoints and splits by teleports.
+    /// </summary>
     private List<List<WaypointForTrack>> ConvertWaypointsForTrack(List<Waypoint> positions, PathingTask task)
     {
         var result = new List<List<WaypointForTrack>>();
         var tempList = new List<WaypointForTrack>();
+
+        if (positions == null) return result;
 
         foreach (var p in positions)
         {
@@ -320,10 +363,9 @@ public class PathExecutor
         return result;
     }
 
-    
-
-    
-
+    /// <summary>
+    /// 使用元素战技 / Uses elemental skill.
+    /// </summary>
     private async Task UseElementalSkill()
     {
         if (string.IsNullOrEmpty(PartyConfig.GuardianAvatarIndex))
@@ -360,13 +402,17 @@ public class PathExecutor
         }
     }
 
-    
-
+    /// <summary>
+    /// 切换角色 / Switches avatar.
+    /// </summary>
     private async Task<Avatar?> SwitchAvatar(string index, bool needSkill = false)
     {
         return await _partyManager.SwitchAvatar(index, needSkill);
     }
     
+    /// <summary>
+    /// 根据时间插值计算点位坐标 / Interpolates position coordinates by time.
+    /// </summary>
     public static Point2f InterpolatePointByTime(
         Point2f startPoint,
         Point2f endPoint,
@@ -377,12 +423,18 @@ public class PathExecutor
         return PathingNavigator.InterpolatePointByTime(startPoint, endPoint, startTime, midTime, endTime);
     }
 
+    /// <summary>
+    /// 获取或设置位置解析挂起标识 / Gets or sets the position resolution suspend flag.
+    /// </summary>
     public bool GetPositionAndTimeSuspendFlag
     {
         get => _navigator.GetPositionAndTimeSuspendFlag;
         set => _navigator.GetPositionAndTimeSuspendFlag = value;
     }
 
+    /// <summary>
+    /// 等待直到旋转到目标视口 / Waits until rotated to the target orientation.
+    /// </summary>
     internal async Task WaitUntilRotatedTo(int targetOrientation, int maxDiff)
     {
         if (await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff))
@@ -393,15 +445,17 @@ public class PathExecutor
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, maxDiff);
     }
 
-    /**
-     * 处理各种异常场景
-     * 需要保证耗时不能太高
-     */
+    /// <summary>
+    /// 处理各类异常场景 / Resolves various anomaly scenarios.
+    /// </summary>
     private async Task ResolveAnomalies(ImageRegion? imageRegion = null)
     {
         await _anomalyResolver.ResolveAnomalies(imageRegion);
     }
 
+    /// <summary>
+    /// 结束条件判断 / End judgment condition.
+    /// </summary>
     private bool EndJudgment(ImageRegion ra)
     {
         if (EndAction != null && EndAction(ra))

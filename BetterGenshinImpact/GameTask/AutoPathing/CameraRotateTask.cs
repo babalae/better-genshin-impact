@@ -9,65 +9,93 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class CameraRotateTask(CancellationToken ct)
+/// <summary>
+/// Handles camera rotation mechanics with dynamic P-control and sub-pixel precision accumulation.
+/// 处理相机旋转机制的类，采用动态P控制和亚像素精度累加。
+/// </summary>
+public class CameraRotateTask
 {
-    private readonly double _dpi = TaskContext.Instance().DpiScale;
+    private readonly CancellationToken _ct;
+    private readonly double _dpi;
     
-    // 亚像素累加器：用以存储计算过程中的小数部分累加（消除极小角度下的精度丢失）
-    private double _fractionalMoveX = 0;
+    // Sub-pixel accumulator to store fractional remainders 亚像素累加器
+    private double _fractionalMoveX = 0.0;
 
     /// <summary>
-    /// 向目标角度旋转，采用带缓动与亚像素精度的平滑处理
+    /// Initializes a new instance of the CameraRotateTask.
+    /// 初始化 CameraRotateTask 的新实例。
     /// </summary>
+    /// <param name="ct">The cancellation token. 取消令牌。</param>
+    public CameraRotateTask(CancellationToken ct)
+    {
+        _ct = ct;
+        _dpi = TaskContext.Instance()?.DpiScale ?? 1.0;
+    }
+
+    /// <summary>
+    /// Rotates the camera towards the target orientation using smooth damping and sub-pixel accuracy.
+    /// 向目标角度旋转，采用带缓动与亚像素精度的平滑处理。
+    /// </summary>
+    /// <param name="targetOrientation">The desired target azimuth angle in degrees. 期望的目标方位角（度）。</param>
+    /// <param name="imageRegion">The visual surface capture region. 视觉表面捕获区域。</param>
+    /// <returns>The calculated minimal angular difference. 计算得到的最小角度差。</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageRegion"/> is null. 当 <paramref name="imageRegion"/> 为 null 时抛出。</exception>
     public float RotateToApproach(float targetOrientation, ImageRegion imageRegion)
     {
+        ArgumentNullException.ThrowIfNull(imageRegion);
+        
+        if (imageRegion.SrcMat == null || imageRegion.SrcMat.IsDisposed)
+        {
+            return 360f;
+        }
+
         var cao = CameraOrientation.Compute(imageRegion.SrcMat);
         
         if (float.IsNaN(cao))
         {
-            Logger.LogWarning("无法识别当前相机朝向，跳过此帧");
+            Logger?.LogWarning("无法识别当前相机朝向，跳过此帧");
             return 360f; 
         }
 
-        var diff = (cao - targetOrientation + 180) % 360 - 180;
-        diff += diff < -180 ? 360 : 0;
+        var diff = (cao - targetOrientation + 180f) % 360f - 180f;
+        if (diff < -180f)
+        {
+            diff += 360f;
+        }
         
         if (Math.Abs(diff) < 0.5f)
         {
-            _fractionalMoveX = 0; // 达到极小容差时，清空残差池并停止计算
+            _fractionalMoveX = 0.0; 
             return diff;
         }
 
-        // 重新回归连续P控制，抹平阶跃的同时保持与原版(1、2、3、4倍)一致的基础物理量级
-        // 原版通过 if-else 做到的最大4倍，这里用 1.0 + (\diff\ / 60) 平滑实现（最大约4倍）
         double controlRatio = 1.0 + (Math.Abs(diff) / 60.0);
-
-        // 【致命修正】：原版本的推力是自带“-”号的，用于反向闭环修正。
-        // 上个版本重构时漏掉了这个最为关键的“-”，导致推力同向，程序一直在“背道而驰”，
-        // 从而引起疯狂转圈、高速越过目标点导致超出误差而失败！
         double actualSpeed = -controlRatio * diff * _dpi;
 
-        // 亚像素累加机制（保留精度）
         _fractionalMoveX += actualSpeed;
         int moveX = (int)Math.Truncate(_fractionalMoveX);
         _fractionalMoveX -= moveX;
 
-        // 死区逃逸
+        // Escape deadzone 死区逃逸
         if (moveX == 0 && Math.Abs(diff) > 1.0f)
         {
             moveX = -Math.Sign(diff);
         }
 
-        // 物理防撕裂：根据实际情况拉伸裁剪至400
         moveX = Math.Clamp(moveX, -400, 400);
 
-        Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+        Simulation.SendInput?.Mouse?.MoveMouseBy(moveX, 0);
         return diff;
     }
 
     /// <summary>
-    /// 转动视角到目标角度，具备死锁自愈和动态帧回调能力
+    /// Asynchronously drives the viewpoint to the target angle, featuring deadlock recovery and frame polling.
+    /// 异步转动视角到目标角度，具备死锁自愈和动态帧回调能力。
     /// </summary>
+    /// <param name="targetOrientation">The desired target angle. 期望的目标角度。</param>
+    /// <param name="maxDiff">Maximum acceptable angular tolerance. 最大可接受的角度容差。</param>
+    /// <param name="maxTryTimes">Maximum frame iterations before giving up. 放弃前的最大帧迭代尝试次数。</param>
+    /// <returns>True if successfully reached within tolerance, false otherwise. 若在此容差内成功到达目标返回 true，否则返回 false。</returns>
     public async Task<bool> WaitUntilRotatedTo(int targetOrientation, int maxDiff, int maxTryTimes = 50)
     {
         bool isSuccessful = false;
@@ -75,48 +103,46 @@ public class CameraRotateTask(CancellationToken ct)
         int stuckFrames = 0;
         float lastDiff = 360f;
 
-        while (!ct.IsCancellationRequested)
+        while (!_ct.IsCancellationRequested)
         {
             var screen = CaptureToRectArea();
+            if (screen == null) break;
+
             float diff = RotateToApproach(targetOrientation, screen);
             
-            if (Math.Abs(diff) <= maxDiff && Math.Abs(diff) != 360f)
+            if (Math.Abs(diff) <= maxDiff && Math.Abs(diff) < 360f)
             {
                 isSuccessful = true;
                 break;
             }
 
-            // 放宽停滞侦测到 0.05 容差，防止正常防卡抖动被误判为停滞
-            if (Math.Abs(diff - lastDiff) < 0.05f && Math.Abs(diff) != 360f)
+            if (Math.Abs(diff - lastDiff) < 0.05f && Math.Abs(diff) < 360f)
             {
                 stuckFrames++;
                 if (stuckFrames > 8)
                 {
-                    Logger.LogWarning("视角处于停滞状态（连续 8 帧角度几无变化），强制脱离防止无限干等！");
+                    Logger?.LogWarning("视角处于停滞状态（连续 8 帧角度几无变化），强制脱离防止无限干等！");
                     break;
                 }
             }
             else
             {
-                stuckFrames = 0; // 一旦有实质性转动，重置计数
+                stuckFrames = 0; 
             }
 
             lastDiff = diff;
 
             if (count > maxTryTimes)
             {
-                Logger.LogWarning("视角转动到目标角度因尝试次数耗尽而停止！");
+                Logger?.LogWarning("视角转动到目标角度因尝试次数耗尽而停止！");
                 break;
             }
 
-            // 彻底回归稳定的 50ms。极速 30ms 虽然刷新快，但 Windows 底层消息队列 + 游戏内引擎延迟
-            // 极可能导致输入指令堆叠 (Input Buffer 迟滞溢出)，在达到目标后释放，从而引起无法挽回的超调震荡。
-            await Delay(50, ct);
+            await Delay(50, _ct).ConfigureAwait(false);
             count++;
         }
         
-        // 任务结束后永远保证环境净空
-        _fractionalMoveX = 0;
+        _fractionalMoveX = 0.0;
         return isSuccessful;
     }
 }

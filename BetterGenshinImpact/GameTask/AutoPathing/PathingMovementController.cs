@@ -20,7 +20,8 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 /// <summary>
-/// 控制角色在游戏内的寻路和移动逻辑。
+/// 寻路移动控制器 / Pathing movement controller.
+/// 控制角色在游戏内的寻路和移动逻辑 / Controls pathfinding and movement logic for the character in-game.
 /// </summary>
 public class PathingMovementController
 {
@@ -42,20 +43,8 @@ public class PathingMovementController
     private int _inTrap = 0;
 
     /// <summary>
-    /// 初始化 <see cref="PathingMovementController"/> 类的新实例。
+    /// 初始化寻路移动控制器 / Initializes a new instance of the pathing movement controller.
     /// </summary>
-    /// <param name="ct">取消令牌。</param>
-    /// <param name="navigator">寻路导航器。</param>
-    /// <param name="rotateTask">视角旋转任务。</param>
-    /// <param name="trapEscaper">防卡死脱离器。</param>
-    /// <param name="pathExecutorSuspend">路径执行器暂停控制。</param>
-    /// <param name="captureAction">图像捕获委托。</param>
-    /// <param name="endJudgmentAction">结束条件判断委托。</param>
-    /// <param name="resolveAnomaliesAction">异常状态解决委托。</param>
-    /// <param name="waitUntilRotatedToAction">等待视角旋转完成委托。</param>
-    /// <param name="switchAvatarAction">切换角色委托。</param>
-    /// <param name="useElementalSkillAction">使用元素战技委托。</param>
-    /// <param name="partyConfigGetter">队伍配置获取委托。</param>
     public PathingMovementController(
         CancellationToken ct,
         PathingNavigator navigator,
@@ -71,33 +60,33 @@ public class PathingMovementController
         Func<PathingPartyConfig> partyConfigGetter)
     {
         _ct = ct;
-        _navigator = navigator;
-        _rotateTask = rotateTask;
-        _trapEscaper = trapEscaper;
-        _pathExecutorSuspend = pathExecutorSuspend;
-        _captureAction = captureAction;
-        _endJudgmentAction = endJudgmentAction;
-        _resolveAnomaliesAction = resolveAnomaliesAction;
-        _waitUntilRotatedToAction = waitUntilRotatedToAction;
-        _switchAvatarAction = switchAvatarAction;
-        _useElementalSkillAction = useElementalSkillAction;
-        _partyConfigGetter = partyConfigGetter;
+        _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
+        _rotateTask = rotateTask ?? throw new ArgumentNullException(nameof(rotateTask));
+        _trapEscaper = trapEscaper ?? throw new ArgumentNullException(nameof(trapEscaper));
+        _pathExecutorSuspend = pathExecutorSuspend ?? throw new ArgumentNullException(nameof(pathExecutorSuspend));
+        _captureAction = captureAction ?? throw new ArgumentNullException(nameof(captureAction));
+        _endJudgmentAction = endJudgmentAction ?? throw new ArgumentNullException(nameof(endJudgmentAction));
+        _resolveAnomaliesAction = resolveAnomaliesAction ?? throw new ArgumentNullException(nameof(resolveAnomaliesAction));
+        _waitUntilRotatedToAction = waitUntilRotatedToAction ?? throw new ArgumentNullException(nameof(waitUntilRotatedToAction));
+        _switchAvatarAction = switchAvatarAction ?? throw new ArgumentNullException(nameof(switchAvatarAction));
+        _useElementalSkillAction = useElementalSkillAction ?? throw new ArgumentNullException(nameof(useElementalSkillAction));
+        _partyConfigGetter = partyConfigGetter ?? throw new ArgumentNullException(nameof(partyConfigGetter));
     }
 
     /// <summary>
-    /// 重置移动开始时间，用于超时判定。
+    /// 重置移动开始时间 / Resets move start time.
     /// </summary>
-    /// <param name="time">新的开始时间。</param>
+    /// <param name="time">时间 / Time.</param>
     public void ResetMoveToStartTime(DateTime time)
     {
         _moveToStartTime = time;
     }
 
     /// <summary>
-    /// 将视角朝向指定的路径点。
+    /// 面向目标路径点 / Faces towards the target waypoint.
     /// </summary>
-    /// <param name="waypoint">目标路径点。</param>
-    /// <returns>到达目的地返回 true，否则返回 false。</returns>
+    /// <param name="waypoint">目标路径点 / Target waypoint.</param>
+    /// <returns>异步任务结果 / Asynchronous task result.</returns>
     public async Task<bool> FaceTo(WaypointForTrack waypoint)
     {
         var screen = _captureAction();
@@ -113,12 +102,13 @@ public class PathingMovementController
     }
 
     /// <summary>
-    /// 移动至指定的路径点。
+    /// 移动至指定的路径点 / Moves to the specified waypoint.
     /// </summary>
-    /// <param name="waypoint">目标路径点。</param>
-    /// <returns>到达目的地返回 true，否则返回 false。</returns>
+    /// <param name="waypoint">目标路径点 / Target waypoint.</param>
+    /// <returns>异步任务结果 / Asynchronous task result.</returns>
     public async Task<bool> MoveTo(WaypointForTrack waypoint)
     {
+        ArgumentNullException.ThrowIfNull(waypoint);
         var partyConfig = _partyConfigGetter();
         await _switchAvatarAction(partyConfig.MainAvatarIndex);
 
@@ -434,6 +424,19 @@ public class PathingMovementController
             }
             else
             {
+                if (lastValidPosition.HasValue)
+                {
+                    var prevDistance = Navigation.GetDistance(waypoint, lastValidPosition.Value);
+                    var currentDistance = Navigation.GetDistance(waypoint, position);
+
+                    // 防绕圈/防越过机制：如果距离较近，且发生明显的距离反增（超过容差0.3f）
+                    if (prevDistance < 6.0f && currentDistance > prevDistance + 0.3f)
+                    {
+                        Logger.LogDebug("检测到距离不减反增(可能由于步长过大越过目标点或绕圈)，提前终止精确接近: {Prev} -> {Cur}", prevDistance, currentDistance);
+                        break;
+                    }
+                }
+
                 lostRetryCount = 0;
                 lastValidPosition = position;
             }
@@ -446,9 +449,12 @@ public class PathingMovementController
             }
 
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await _waitUntilRotatedToAction(targetOrientation, 2);
+            // 极近距离下，稍微放宽对准角度容差以防止准星高频抖动进入轨道路线
+            await _waitUntilRotatedToAction(targetOrientation, distance < 3.5f ? 5 : 2);
+            
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            await Delay(pulseForwardMs, _ct);
+            // 距离越近，点按时长减半（例如把 60ms 切成 30ms），极大降低飞跑越过目标的概率
+            await Delay(distance < 3.5f ? pulseForwardMs / 2 : pulseForwardMs, _ct);
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             await Delay(20, _ct);
         }

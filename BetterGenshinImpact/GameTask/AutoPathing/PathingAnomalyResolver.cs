@@ -15,8 +15,8 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 /// <summary>
-/// 自动寻路异常解析器。
-/// 负责在自动寻路过程中处理突发界面弹窗、强制剧情及其他阻断性交互。
+/// A domain-specific anomaly resolver that identifies and resolves sudden interruptions during auto-pathing.
+/// 自动寻路异常解析器。负责在自动寻路过程中处理突发界面弹窗、强制剧情及其他阻断性交互。
 /// </summary>
 public class PathingAnomalyResolver
 {
@@ -27,35 +27,36 @@ public class PathingAnomalyResolver
     
     private AutoSkipTrigger? _autoSkipTrigger;
 
-    // 常量定义，替换原有的魔法数字
     private const int UiCloseDelayMilliseconds = 1000;
     private const int AutoSkipPollingIntervalMilliseconds = 210;
     private const int MaxContinuousMissingUiTokens = 10;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="PathingAnomalyResolver"/> class.
     /// 初始化 <see cref="PathingAnomalyResolver"/> 的新实例。
     /// </summary>
-    /// <param name="ct">用于控制异步任务取消的令牌。</param>
-    /// <param name="captureAction">用于获取当前游戏画面区域的委托方法。</param>
-    /// <param name="isAutoSkipEnabled">用于判断当前是否启用了自动跳过剧情功能的委托方法。</param>
+    /// <param name="ct">The cancellation token. 用于控制异步任务取消的令牌。</param>
+    /// <param name="captureAction">A delegate to retrieve current viewport region. 用于获取当前游戏画面区域的委托方法。</param>
+    /// <param name="isAutoSkipEnabled">A delegate determining if auto-skip is permitted. 用于判断当前是否启用了自动跳过剧情功能的委托方法。</param>
+    /// <exception cref="ArgumentNullException">Thrown when delegates are null. 当委托为 null 时抛出异常。</exception>
     public PathingAnomalyResolver(CancellationToken ct, Func<ImageRegion> captureAction, Func<bool> isAutoSkipEnabled)
     {
         _ct = ct;
-        _captureAction = captureAction;
-        _isAutoSkipEnabled = isAutoSkipEnabled;
+        _captureAction = captureAction ?? throw new ArgumentNullException(nameof(captureAction));
+        _isAutoSkipEnabled = isAutoSkipEnabled ?? throw new ArgumentNullException(nameof(isAutoSkipEnabled));
     }
 
     /// <summary>
+    /// Analyzes the visual buffer to mitigate out-of-band obstructions (e.g. forced dialogues, UI overwriting).
     /// 解析并处理当前画面中的异常状态（如意外打开的菜单、烹饪界面或剧情过场）。
     /// </summary>
-    /// <param name="imageRegion">需要解析的图像区域。如果为 null，则将调用注入的捕获委托获取。</param>
-    /// <returns>表示异步操作的任务对象。</returns>
+    /// <param name="imageRegion">The visual state to inspect. Needs to be recaptured if null. 需要解析的图像区域。如果为 null 则动态获取。</param>
+    /// <returns>An awaitable <see cref="Task"/> representing completion. 表示异步操作的任务对象。</returns>
     public async Task ResolveAnomalies(ImageRegion? imageRegion = null)
     {
         imageRegion ??= _captureAction();
+        if (imageRegion == null) return;
 
-        // 优化图像匹配性能：使用短路逻辑 (Short-Circuit) 替代全量匹配，一旦识别到目标界面即停止查找后续界面
-        // 避免不必要的图像运算资源浪费。
         bool hasBlockingUi = 
             imageRegion.Find(AutoSkipAssets.Instance.CookRo).IsExist() ||
             imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo).IsExist() ||
@@ -66,27 +67,29 @@ public class PathingAnomalyResolver
         {
             if (!Bv.IsInBigMapUi(imageRegion))
             {
-                Logger.LogInformation("检测到其他界面，使用ESC关闭界面");
-                Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
-                await Delay(UiCloseDelayMilliseconds, _ct);
+                Logger?.LogInformation("检测到其他界面，使用ESC关闭界面");
+                Simulation.SendInput?.Keyboard?.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
+                await Delay(UiCloseDelayMilliseconds, _ct).ConfigureAwait(false);
             }
         }
 
-        await _blessingOfTheWelkinMoonTask.Start(_ct);
+        await _blessingOfTheWelkinMoonTask.Start(_ct).ConfigureAwait(false);
 
         if (_isAutoSkipEnabled())
         {
-            await AutoSkip();
+            await AutoSkip().ConfigureAwait(false);
         }
     }
 
     /// <summary>
+    /// Sequentially exhausts story dialogues by polling until spatial context unlocks.
     /// 执行剧情自动跳过逻辑，并持续监控画面直到底部UI按钮消失达到阈值。
     /// </summary>
-    /// <returns>表示异步操作的任务。</returns>
     private async Task AutoSkip()
     {
         var captureRegion = _captureAction();
+        if (captureRegion == null) return;
+
         var disabledUiButtonRegion = captureRegion.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
         
         if (!disabledUiButtonRegion.IsExist())
@@ -94,7 +97,7 @@ public class PathingAnomalyResolver
             return;
         }
 
-        Logger.LogWarning("进入剧情，自动点击剧情直到结束");
+        Logger?.LogWarning("进入剧情，自动点击剧情直到结束");
 
         if (_autoSkipTrigger == null)
         {
@@ -110,27 +113,29 @@ public class PathingAnomalyResolver
 
         int missingUiTokenCount = 0;
         
-        while (true)
+        while (!_ct.IsCancellationRequested)
         {
             captureRegion = _captureAction();
+            if (captureRegion == null) break;
+
             disabledUiButtonRegion = captureRegion.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
             
             if (disabledUiButtonRegion.IsExist())
             {
                 _autoSkipTrigger.OnCapture(new CaptureContent(captureRegion));
-                missingUiTokenCount = 0; // 重置丢失计数
+                missingUiTokenCount = 0; 
             }
             else
             {
                 missingUiTokenCount++;
                 if (missingUiTokenCount > MaxContinuousMissingUiTokens)
                 {
-                    Logger.LogInformation("自动剧情结束");
+                    Logger?.LogInformation("自动剧情结束");
                     break;
                 }
             }
 
-            await Delay(AutoSkipPollingIntervalMilliseconds, _ct);
+            await Delay(AutoSkipPollingIntervalMilliseconds, _ct).ConfigureAwait(false);
         }
     }
 }

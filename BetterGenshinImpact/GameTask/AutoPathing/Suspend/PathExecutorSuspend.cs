@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
@@ -6,13 +6,16 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 
-//暂停逻辑相关实现,这里主要用来记录，用来恢复相应操作
-public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
+/// <summary>
+/// 路径执行器暂停机制实现 / Path executor suspend logic implementation.
+/// </summary>
+public class PathExecutorSuspend : ISuspendable
 {
     private const int ResumeRecoveryWindowMinSeconds = 30;
     private const int ResumeRecoveryWindowMaxSeconds = 300;
     private const double ResumeRecoveryWindowScale = 0.5;
 
+    private readonly PathExecutor _pathExecutor;
     private bool _isSuspended;
 
     private bool _resuming = false;
@@ -22,18 +25,32 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
     private bool _resumeRetryConsumed;
     private int _lastRecoveryWindowSeconds;
 
-    //记录当前相关点位数组
+    /// <summary>
+    /// 记录当前相关点位数组 / Records the current related waypoint array.
+    /// </summary>
     private (int, List<WaypointForTrack>) _waypoints;
 
-    //记录当前点位
+    /// <summary>
+    /// 记录当前点位 / Records the current waypoint.
+    /// </summary>
     private (int, WaypointForTrack) _waypoint;
 
+    /// <inheritdoc/>
     public bool IsSuspended => _isSuspended;
 
+    /// <summary>
+    /// 构造函数 / Constructor.
+    /// </summary>
+    public PathExecutorSuspend(PathExecutor pathExecutor)
+    {
+        _pathExecutor = pathExecutor ?? throw new ArgumentNullException(nameof(pathExecutor));
+    }
+
+    /// <inheritdoc/>
     public void Suspend()
     {
-        _waypoints = pathExecutor.CurWaypoints;
-        _waypoint = pathExecutor.CurWaypoint;
+        _waypoints = _pathExecutor.CurWaypoints;
+        _waypoint = _pathExecutor.CurWaypoint;
         _suspendTimeUtc = DateTime.UtcNow;
         _isSuspended = true;
         _resuming = false;
@@ -41,11 +58,13 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         _lastSuspendDuration = TimeSpan.Zero;
         _lastRecoveryWindowSeconds = 0;
         _resumeRetryConsumed = false;
-        //暂停时记录，获取点位的暂停标志
-        pathExecutor.GetPositionAndTimeSuspendFlag = true;
+        // 暂停时记录，获取点位的暂停标志
+        _pathExecutor.GetPositionAndTimeSuspendFlag = true;
     }
 
-    //路径过远时，检查地图追踪点位经过暂停（当前点位和后一个点位算经过暂停），并重置状态
+    /// <summary>
+    /// 验证路线并补偿 / Checks and resets suspend point.
+    /// </summary>
     public bool CheckAndResetSuspendPoint()
     {
         if (_isSuspended || !_resuming)
@@ -61,13 +80,16 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
             return false;
         }
 
-        if (pathExecutor.CurWaypoints == default || pathExecutor.CurWaypoint == default)
+        if (_pathExecutor.CurWaypoints.Item2 == null || _pathExecutor.CurWaypoint.Item2 == null)
         {
             Reset();
             return false;
         }
 
-        if (pathExecutor.CurWaypoints == _waypoints && (pathExecutor.CurWaypoint == _waypoint || (pathExecutor.CurWaypoint.Item1 - 1) == _waypoint.Item1))
+        bool isSameWaypointsArray = _pathExecutor.CurWaypoints.Item2 == _waypoints.Item2;
+        bool isTargetPoint = _pathExecutor.CurWaypoint.Item2 == _waypoint.Item2 || (_pathExecutor.CurWaypoint.Item1 - 1) == _waypoint.Item1;
+
+        if (isSameWaypointsArray && isTargetPoint)
         {
             _resumeRetryConsumed = true;
             Logger.LogWarning("命中暂停恢复补偿重试条件，触发一次免计数重试");
@@ -79,6 +101,7 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         return false;
     }
 
+    /// <inheritdoc/>
     public void Resume()
     {
         if (!_isSuspended)
@@ -107,7 +130,7 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
             _lastRecoveryWindowSeconds);
 
         //暂定恢复时，重置移动时的时间，防止因暂停而导致超时
-        pathExecutor.MovementController.ResetMoveToStartTime(now);
+        _pathExecutor.MovementController.ResetMoveToStartTime(now);
         _isSuspended = false;
         _resuming = true;
         _resumeRetryConsumed = false;
@@ -115,6 +138,7 @@ public class PathExecutorSuspend(PathExecutor pathExecutor) : ISuspendable
         _suspendTimeUtc = DateTime.MinValue;
     }
 
+    /// <inheritdoc/>
     public void Reset()
     {
         _resuming = false;
