@@ -97,13 +97,27 @@
                               ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Margin="8,4">
-                                    <Run Text="{Binding Item2.Name, Mode=OneWay, Converter={StaticResource TrConverter}}"/>
-                                    <Run Text=" | "/>
-                                    <Run Text="{Binding Item2.Rewards[0], Mode=OneWay, Converter={StaticResource TrConverter}}"/>
-                                    <Run Text=" "/>
-                                    <Run Text="{Binding Item2.Rewards[1], Mode=OneWay, Converter={StaticResource TrConverter}}"/>
-                                </TextBlock>
+                                <StackPanel Orientation="Horizontal" Margin="8,4">
+                                    <TextBlock>
+                                        <Run Text="{Binding Item2.Name, Mode=OneWay, Converter={StaticResource TrConverter}}" />
+                                        <Run Text=" | " />
+                                    </TextBlock>
+                        
+                                    <ItemsControl ItemsSource="{Binding Item2.Rewards}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                        
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Margin="0,0,4,0"
+                                                           Text="{Binding Mode=OneWay, Converter={StaticResource TrConverter}}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </DataTemplate>
                         </ui:ListView.ItemTemplate>
                     </ui:ListView>

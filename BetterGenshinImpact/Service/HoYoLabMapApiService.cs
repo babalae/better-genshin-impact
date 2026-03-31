@@ -18,6 +18,8 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
     private const string TreeEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v2/map/label/tree";
     private const string ListEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v3/map/point/list";
     private const string InfoEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v1/map/point/info";
+    
+    // The API does not support "pt-br". Using "pt-pt" as it is fully understandable for both regions.
     private const string DefaultLang = "pt-pt";
 
     public HoYoLabMapApiService()
@@ -34,6 +36,16 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         return request;
     }
 
+    private static T DeserializeRequired<T>(string json)
+    {
+        var result = JsonConvert.DeserializeObject<T>(json);
+        if (result == null)
+        {
+            throw new JsonException($"Failed to deserialize {typeof(T).Name}. The API returned an empty or invalid JSON.");
+        }
+        return result;
+    }
+
     public async Task<ApiResponse<LabelTreeData>> GetLabelTreeAsync(LabelTreeRequest request, CancellationToken ct = default)
     {
         var url = $"{TreeEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={DefaultLang}";
@@ -41,7 +53,7 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         using var resp = await _httpClient.SendAsync(httpRequest, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
-        return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json)!;
+        return DeserializeRequired<ApiResponse<LabelTreeData>>(json);
     }
 
     public async Task<ApiResponse<PointInfoData>> GetPointInfoAsync(PointInfoRequest request, CancellationToken ct = default)
@@ -52,7 +64,7 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         using var resp = await _httpClient.SendAsync(httpRequest, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
-        return JsonConvert.DeserializeObject<ApiResponse<PointInfoData>>(json)!;
+        return DeserializeRequired<ApiResponse<PointInfoData>>(json);
     }
 
     public async Task<ApiResponse<PointListData>> GetPointListAsync(PointListRequest request, CancellationToken ct = default)
@@ -65,6 +77,6 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         using var resp = await _httpClient.SendAsync(httpRequest, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
-        return JsonConvert.DeserializeObject<ApiResponse<PointListData>>(json)!;
+        return DeserializeRequired<ApiResponse<PointListData>>(json);
     }
 }

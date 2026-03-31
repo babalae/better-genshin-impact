@@ -686,23 +686,22 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private Task OnPointRightClick(MaskMapPoint? point)
+        private async Task OnPointRightClick(MaskMapPoint? point)
         {
             if (point == null)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             var service = App.GetService<ICollectedPointsService>();
             if (service == null)
             {
-                return Task.CompletedTask;
+                return;
             }
 
-            service.Toggle(point.Id);
-            CollectedPointIds = new HashSet<string>(service.CollectedIds);
+            await Task.Run(() => service.Toggle(point.Id));
 
-            return Task.CompletedTask;
+            CollectedPointIds = new HashSet<string>(service.CollectedIds);
         }
 
         [RelayCommand]

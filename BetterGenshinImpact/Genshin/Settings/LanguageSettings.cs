@@ -34,7 +34,7 @@ public enum TextLanguage
     French,
     German,
     Spanish,
-    Portugese,
+    Portuguese,
     Russian,
     Japanese,
     Korean,

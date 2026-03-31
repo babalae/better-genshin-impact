@@ -240,7 +240,7 @@
                           SelectedItem="{Binding SelectedConfig, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                            <TextBlock Text="{Binding Name}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                     <b:Interaction.Triggers>
@@ -1237,7 +1237,7 @@
                                           Margin="0,0,12,8"
                                           ItemsSource="{Binding Source={x:Static pages:TaskSettingsPageViewModel.LeyLineOutcropTypeList}}"
                                           SelectedItem="{Binding SelectedConfig.LeyLineWednesdayType, Mode=TwoWay}">
-                                    <Combo  Box.ItemTemplate>
+                                    <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>

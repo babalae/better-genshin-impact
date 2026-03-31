@@ -100,7 +100,7 @@
                                     <DataTemplate>
                                         <hotKey:HotKeyTextBox Padding="16,6,16,6"
                                                               VerticalAlignment="Center"
-                                                              HotKeyTypeName="{Binding HotKeyTypeName, Converter={StaticResource TrConverter}, Mode=OneWay}"
+                                                              HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
                                                               Hotkey="{Binding HotKey}"
                                                               Style="{StaticResource DefaultTextBoxStyle}"
                                                               TextAlignment="Center"
