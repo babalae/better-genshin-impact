@@ -104,7 +104,7 @@ public static class Feature2DExtensions
         var pTrain = pointsTrain.ToPoint2d();
         var outMask = new Mat();
         // If the original matching result is null, Skip the filtering step
-        if (pQuery.Count > 0 && pTrain.Count > 0)
+        if (pQuery.Count >= 4 && pTrain.Count >= 4)
         {
             var hMat = Cv2.FindHomography(pQuery, pTrain, HomographyMethods.Ransac, mask: outMask);
             speedTimer.Record("FindHomography");
@@ -169,6 +169,9 @@ public static class Feature2DExtensions
 
         speedTimer.Record("GetGoodMatchPoints");
 
+        if (srcPts.Length < 4 || dstPts.Length < 4)
+            return new Point2f();
+
         // 使用RANSAC找到变换矩阵
         var mask = new Mat();
         var hMat = Cv2.FindHomography(srcPts.ToList().ToPoint2d(), dstPts.ToList().ToPoint2d(), HomographyMethods.Ransac, 3.0, mask);
@@ -224,6 +227,9 @@ public static class Feature2DExtensions
         var dstPts = goodMatches.Select(m => trainKeyPoints[m.TrainIdx].Pt).ToArray();
 
         speedTimer.Record("GetGoodMatchPoints");
+
+        if (srcPts.Length < 4 || dstPts.Length < 4)
+            return [];
 
         // 使用RANSAC找到变换矩阵
         var mask = new Mat();

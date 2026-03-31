@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +12,8 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 /// <summary>
-/// 挖矿并拾取
+/// 处理挖矿及伴随拾取动作的执行逻辑 / Handles the execution logic for mining and subsequent pick-up.
+/// 包含多种角色的特有破矿连招宏 / Contains dynamic macro arrays for character-specific mining movesets.
 /// </summary>
 public class MiningHandler : IActionHandler
 {
@@ -40,35 +41,31 @@ public class MiningHandler : IActionHandler
         "凝光 attack(4.0)",
         "钟离 e(hold,wait)"
     ];
-    
 
     private readonly ScanPickTask _scanPickTask = new();
 
+    /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
+        Logger.LogInformation("执行动作: 【执行挖矿】 / Executing action: [Mining]");
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
-            Logger.LogError("队伍识别未初始化成功！");
+            Logger.LogError("队伍识别未初始化成功，无法进行队伍挖矿调度！/ Party recognition uninitialized.");
             return;
         }
 
-        // 挖矿
-        Mining(combatScenes);
+        ExecuteMiningMoveset(combatScenes);
 
-
-        if (waypointForTrack is { ActionParams: not null }
-            && waypointForTrack.ActionParams.Contains("disablePickupAround",
-                StringComparison.InvariantCultureIgnoreCase))
+        bool pickupDisabled = waypointForTrack?.ActionParams?.Contains("disablePickupAround", StringComparison.OrdinalIgnoreCase) == true;
+        if (!pickupDisabled)
         {
             await Delay(1000, ct);
-
-            // 拾取
             await _scanPickTask.Start(ct);
         }
     }
 
-    private void Mining(CombatScenes combatScenes)
+    private void ExecuteMiningMoveset(CombatScenes combatScenes)
     {
         try
         {
@@ -81,20 +78,27 @@ public class MiningHandler : IActionHandler
                     var avatar = combatScenes.SelectAvatar(command.Name);
                     if (avatar != null)
                     {
+                        Logger.LogDebug("选用 {AvatarName} 进行挖矿作业", avatar.Name);
                         command.Execute(combatScenes);
                         foundAvatar = true;
                     }
                 }
+                
                 if (foundAvatar)
                 {
                     break;
                 }
             }
+            
+            if (!foundAvatar)
+            {
+                Logger.LogWarning("当前队伍中没有包含内置的挖矿角色阵列，将跳过破矿连招！ / No supported mining avatars found in party.");
+            }
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
-            Debug.WriteLine(e.StackTrace);
+            Logger.LogError(e, "挖矿宏指令执行期间发生非预期异常 / Exception occurred during mining execution.");
         }
     }
 }
+
