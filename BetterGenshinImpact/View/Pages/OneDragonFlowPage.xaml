@@ -318,7 +318,7 @@
                                           ItemsSource="{Binding CraftingBenchCountry}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1183,7 +1183,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineMondayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1194,7 +1194,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineMondayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1211,7 +1211,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineTuesdayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1222,7 +1222,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineTuesdayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1239,7 +1239,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineWednesdayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1250,7 +1250,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineWednesdayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1267,7 +1267,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineThursdayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1278,7 +1278,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineThursdayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1295,7 +1295,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineFridayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1306,7 +1306,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineFridayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1323,7 +1323,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineSaturdayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1334,7 +1334,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineSaturdayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1351,7 +1351,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineSundayType, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1361,7 +1361,7 @@
                                           SelectedItem="{Binding SelectedConfig.LeyLineSundayCountry, Mode=TwoWay}">
                                     <ComboBox.ItemTemplate>
                                             <DataTemplate>
-                                                <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                                <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                             </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -1402,7 +1402,7 @@
                                   ItemsSource="{Binding AdventurersGuildCountry}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                    <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
@@ -1479,7 +1479,7 @@
                                       ItemsSource="{Binding SereniteaPotTpTypes}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                        <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
@@ -1555,7 +1555,7 @@
                                                           x:Name="SereniteaPotComboBox">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Name, Converter={StaticResource TrConverter}}" />
+                                            <TextBlock Text="{Binding Converter={StaticResource TrConverter}}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>

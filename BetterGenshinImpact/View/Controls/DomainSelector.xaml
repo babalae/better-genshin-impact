@@ -7,8 +7,7 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              mc:Ignorable="d" 
              d:DesignHeight="60" d:DesignWidth="300"
-             Name="Root"
-             behavior:AutoTranslateInterceptor.EnableAutoTranslate="True">
+             Name="Root">
     <Grid>
         <ToggleButton x:Name="MainToggle"
                       HorizontalAlignment="Stretch"
