@@ -319,28 +319,38 @@ public partial class HtmlMaskWindow : Window
                 var fullDir = Path.GetFullPath(_workDir);
                 var fullFile = Path.GetFullPath(localPath);
                 if (fullFile.StartsWith(fullDir, StringComparison.OrdinalIgnoreCase)) return;
+                TaskControl.Logger.LogWarning("拦截HTML遮罩越级文件访问: {Uri}", e.Request.Uri);
                 e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
                 return;
             }
 
-            // 允许页面自身的初始导航及同源请求
+            // 仅允许页面自身的初始导航
             if (string.Equals(uri.AbsoluteUri, _pageUrl, StringComparison.OrdinalIgnoreCase)) return;
-            try
-            {
-                var pageUri = new Uri(_pageUrl);
-                if (string.Equals(uri.Host, pageUri.Host, StringComparison.OrdinalIgnoreCase)) return;
-            }
-            catch { }
 
-            // 检查是否匹配 manifest 中注册的允许URL
-            var allowedUrls = TaskContext.Instance().CurrentScriptProject?.Project?.Manifest.HttpAllowedUrls ?? [];
-            if (allowedUrls.Length > 0 && allowedUrls.Any(allowedUrl =>
+            // HTTP/HTTPS 请求：与 JS 脚本使用完全一致的权限校验
+            var currentProject = TaskContext.Instance().CurrentScriptProject;
+            if (currentProject?.AllowJsHTTP != true)
+            {
+                TaskControl.Logger.LogWarning("未启用JS HTTP权限，拦截HTML遮罩网络请求: {Uri}", e.Request.Uri);
+                e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
+                return;
+            }
+
+            var allowedUrls = currentProject?.Project?.Manifest.HttpAllowedUrls ?? [];
+            if (allowedUrls.Length == 0)
+            {
+                TaskControl.Logger.LogWarning("未配置 http_allowed_urls，拦截HTML遮罩网络请求: {Uri}", e.Request.Uri);
+                e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
+                return;
+            }
+
+            if (allowedUrls.Any(allowedUrl =>
             {
                 var pattern = "^" + Regex.Escape(allowedUrl).Replace("\\*", ".*") + "$";
                 return Regex.IsMatch(e.Request.Uri, pattern, RegexOptions.IgnoreCase);
             })) return;
 
-            // 阻止请求
+            TaskControl.Logger.LogWarning("URL不在允许列表中，拦截HTML遮罩网络请求: {Uri}", e.Request.Uri);
             e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(null, 403, "Blocked", "");
         }
         catch (Exception ex)
