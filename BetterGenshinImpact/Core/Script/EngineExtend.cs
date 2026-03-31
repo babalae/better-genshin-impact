@@ -107,6 +107,11 @@ public class EngineExtend
         // HTML 遮罩
         engine.AddHostObject("htmlMask", new HtmlMask(workDir));
 
+        // 自动为当前 JS 环境注册生命周期管理与暂停状态读取
+        var jsSuspendHook = new JsScriptSuspendHook();
+        GameTask.RunnerContext.Instance.SuspendableDictionary["DefaultJsEnvironment"] = jsSuspendHook;
+        engine.AddHostObject("suspendState", jsSuspendHook);
+
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html
         // https://github.com/microsoft/ClearScript/blob/master/ClearScriptTest/V8ModuleTest.cs
