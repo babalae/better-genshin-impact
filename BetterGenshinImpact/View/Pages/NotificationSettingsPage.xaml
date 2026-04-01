@@ -114,8 +114,19 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="需要通知的事件"
-                                  TextWrapping="Wrap" />
+                                  TextWrapping="Wrap">
+                        <ui:TextBlock.Inlines>
+                            <Run Text="需要通知的事件" />
+                            <ui:HyperlinkButton Margin="4,0,0,0"
+                                                Padding="0"
+                                                Command="{Binding OpenNotificationEventDocumentCommand}"
+                                                Cursor="Hand">
+                                <ui:HyperlinkButton.Content>
+                                    <TextBlock FontSize="11" Text="打开文档" />
+                                </ui:HyperlinkButton.Content>
+                            </ui:HyperlinkButton>
+                        </ui:TextBlock.Inlines>
+                    </ui:TextBlock>
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
