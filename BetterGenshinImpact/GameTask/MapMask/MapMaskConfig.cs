@@ -10,6 +10,10 @@ namespace BetterGenshinImpact.GameTask.MapMask;
 [Serializable]
 public partial class MapMaskConfig : ObservableObject
 {
+    public const string HoYoLabLanguageEnUs = "en-us";
+    public const string HoYoLabLanguagePtPt = "pt-pt";
+    public const string HoYoLabLanguageEsEs = "es-es";
+
     /// <summary>
     /// 是否启用
     /// </summary>
@@ -30,10 +34,18 @@ public partial class MapMaskConfig : ObservableObject
 
     private MapPointApiProvider _mapPointApiProvider = MapPointApiProvider.MihoyoMap;
 
+    private string _hoYoLabLanguage = HoYoLabLanguageEnUs;
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public MapPointApiProvider MapPointApiProvider
     {
         get => _mapPointApiProvider;
         set => SetProperty(ref _mapPointApiProvider, value);
+    }
+
+    public string HoYoLabLanguage
+    {
+        get => _hoYoLabLanguage;
+        set => SetProperty(ref _hoYoLabLanguage, value);
     }
 }

@@ -164,6 +164,7 @@ public partial class App : Application
                 services.AddSingleton<MemoryFileCache>();
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
+                services.AddSingleton<IHoYoLabMapApiService, HoYoLabMapApiService>();
                 services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
 
                 services.AddSingleton(TimeProvider.System);
