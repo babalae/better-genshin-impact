@@ -43,7 +43,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Strategy;
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 /// <summary>
-/// 路径执行器 / Path executor.
+/// Path executor.
 /// 负责自动寻路宏观逻辑调度，整合坐标推算、脱困、异常处理与战斗等子模块。
 /// </summary>
 public class PathExecutor
@@ -53,17 +53,20 @@ public class PathExecutor
     internal readonly PathingAnomalyResolver _anomalyResolver;
     
     /// <summary>
-    /// 获取成功战斗的次数 / Gets the count of successful fights.
+    /// Gets the count of successful fights.
+    /// 获取成功战斗的次数。
     /// </summary>
     public int SuccessFight { get; private set; } = 0;
     
     /// <summary>
-    /// 增加成功战斗次数 / Increments the successful fight count.
+    /// Increments the successful fight count.
+    /// 增加成功战斗次数。
     /// </summary>
     public void IncrementSuccessFight() => SuccessFight++;
     
     /// <summary>
-    /// 获取路径追踪是否完全走完所有路径结束的标识 / Gets whether the path tracking successfully reached the end of all paths.
+    /// Gets whether the path tracking successfully reached the end of all paths.
+    /// 获取路径追踪是否完全走完所有路径结束的标识。
     /// </summary>
     public bool SuccessEnd { get; private set; } = false;
     
@@ -71,7 +74,8 @@ public class PathExecutor
     internal readonly PathingNavigator _navigator;
     
     /// <summary>
-    /// 获取移动控制器 / Gets the movement controller.
+    /// Gets the movement controller.
+    /// 获取移动控制器。
     /// </summary>
     public PathingMovementController MovementController { get; }
     
@@ -80,9 +84,10 @@ public class PathExecutor
     internal readonly PathingHealthController _healthController;
 
     /// <summary>
-    /// 构造路径执行器 / Initializes the path executor.
+    /// Initializes the path executor.
+    /// 构造路径执行器。
     /// </summary>
-    /// <param name="ct">取消令牌 / Cancellation token.</param>
+    /// <param name="ct">Cancellation token. 取消令牌。</param>
     public PathExecutor(CancellationToken ct)
     {
         _trapEscaper = new TrapEscaper(ct);
@@ -109,7 +114,8 @@ public class PathExecutor
     }
 
     /// <summary>
-    /// 获取或设置队伍配置 / Gets or sets the party configuration.
+    /// Gets or sets the party configuration.
+    /// 获取或设置队伍配置。
     /// </summary>
     public PathingPartyConfig PartyConfig
     {
@@ -118,7 +124,8 @@ public class PathExecutor
     }
 
     /// <summary>
-    /// 判断是否中止地图追踪的条件委托 / Judgment condition to terminate map tracking.
+    /// Judgment condition to terminate map tracking.
+    /// 判断是否中止地图追踪的条件委托。
     /// </summary>
     public Func<ImageRegion, bool>? EndAction { get; set; }
 
@@ -127,7 +134,8 @@ public class PathExecutor
     internal const int RetryTimes = 2;
     
     /// <summary>
-    /// 获取或设置当前相关点位数组 / Gets or sets the current waypoint array.
+    /// Gets or sets the current waypoint array.
+    /// 获取或设置当前相关点位数组。
     /// </summary>
     public (int, List<WaypointForTrack>) CurWaypoints
     {
@@ -136,7 +144,8 @@ public class PathExecutor
     }
 
     /// <summary>
-    /// 获取或设置当前点位 / Gets or sets the current waypoint.
+    /// Gets or sets the current waypoint.
+    /// 获取或设置当前点位。
     /// </summary>
     public (int, WaypointForTrack) CurWaypoint
     {
@@ -147,10 +156,11 @@ public class PathExecutor
     internal DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
 
     /// <summary>
-    /// 执行寻路任务 / Executes the pathing task.
+    /// Executes the pathing task.
+    /// 执行寻路任务。
     /// </summary>
-    /// <param name="task">寻路任务对象 / Pathing task object.</param>
-    /// <returns>异步任务 / Asynchronous task.</returns>
+    /// <param name="task">Pathing task object. 寻路任务对象。</param>
+    /// <returns>Asynchronous task. 异步任务。</returns>
     public async Task Pathing(PathingTask task)
     {
         ArgumentNullException.ThrowIfNull(task);
@@ -339,11 +349,13 @@ public class PathExecutor
 
         foreach (var p in positions)
         {
+            if (p == null) continue;
+
             var wft = new WaypointForTrack(p, task.Info.MapName, task.Info.MapMatchMethod)
             {
                 Misidentification = p.PointExtParams.Misidentification,
                 MonsterTag = p.PointExtParams.MonsterTag,
-                EnableMonsterLootSplit = p.PointExtParams.EnableMonsterLootSplit
+                EnableMonsterLootSplit = p.PointExtParams != null && p.PointExtParams.EnableMonsterLootSplit
             };
 
             if (wft.Type == WaypointType.Teleport.Code && tempList.Count > 0)
@@ -411,8 +423,15 @@ public class PathExecutor
     }
     
     /// <summary>
-    /// 根据时间插值计算点位坐标 / Interpolates position coordinates by time.
+    /// Interpolates position coordinates by time.
+    /// 根据时间插值计算点位坐标。
     /// </summary>
+    /// <param name="startPoint">Start point. 起始点位。</param>
+    /// <param name="endPoint">End point. 结束点位。</param>
+    /// <param name="startTime">Start time. 起始时间。</param>
+    /// <param name="midTime">Mid time. 中间时间。</param>
+    /// <param name="endTime">End time. 结束时间。</param>
+    /// <returns>The interpolated current point. 插值计算后的当前点位。</returns>
     public static Point2f InterpolatePointByTime(
         Point2f startPoint,
         Point2f endPoint,
@@ -424,7 +443,8 @@ public class PathExecutor
     }
 
     /// <summary>
-    /// 获取或设置位置解析挂起标识 / Gets or sets the position resolution suspend flag.
+    /// Gets or sets the position resolution suspend flag.
+    /// 获取或设置位置解析挂起标识。
     /// </summary>
     public bool GetPositionAndTimeSuspendFlag
     {

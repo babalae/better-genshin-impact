@@ -5,9 +5,12 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
+using BetterGenshinImpact.GameTask.AutoPathing.Strategy.Movement;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -41,6 +44,8 @@ public class PathingMovementController
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
     private DateTime _useGadgetLastUseTime = DateTime.MinValue;
     private int _inTrap = 0;
+    
+    private readonly System.Collections.Generic.List<IMoveModeHandler> _moveModeHandlers;
 
     /// <summary>
     /// 初始化寻路移动控制器 / Initializes a new instance of the pathing movement controller.
@@ -71,6 +76,16 @@ public class PathingMovementController
         _switchAvatarAction = switchAvatarAction ?? throw new ArgumentNullException(nameof(switchAvatarAction));
         _useElementalSkillAction = useElementalSkillAction ?? throw new ArgumentNullException(nameof(useElementalSkillAction));
         _partyConfigGetter = partyConfigGetter ?? throw new ArgumentNullException(nameof(partyConfigGetter));
+        
+        _moveModeHandlers = new System.Collections.Generic.List<IMoveModeHandler>()
+        {
+            new FlyMoveModeHandler(),
+            new JumpMoveModeHandler(),
+            new DashMoveModeHandler(),
+            new RunMoveModeHandler(),
+            new ClimbMoveModeHandler(),
+            new DefaultMoveModeHandler()
+        };
     }
 
     /// <summary>
@@ -89,7 +104,7 @@ public class PathingMovementController
     /// <returns>异步任务结果 / Asynchronous task result.</returns>
     public async Task<bool> FaceTo(WaypointForTrack waypoint)
     {
-        var screen = _captureAction();
+        using var screen = _captureAction();
         if (_endJudgmentAction(screen)) return true;
 
         var position = await _navigator.GetPosition(screen, waypoint);
@@ -112,11 +127,17 @@ public class PathingMovementController
         var partyConfig = _partyConfigGetter();
         await _switchAvatarAction(partyConfig.MainAvatarIndex);
 
-        var screen = _captureAction();
-        var (position, additionalTimeInMs) = await _navigator.GetPositionAndTime(screen, waypoint);
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _waitUntilRotatedToAction(targetOrientation, 5);
+        Point2f position;
+        int additionalTimeInMs;
+        using (var screen = _captureAction())
+        {
+            var result = await _navigator.GetPositionAndTime(screen, waypoint);
+            position = result.Item1;
+            additionalTimeInMs = result.Item2;
+            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+            await _waitUntilRotatedToAction(targetOrientation, 5);
+        }
         _moveToStartTime = DateTime.UtcNow;
 
         var lastPositionRecord = DateTime.UtcNow;
@@ -124,18 +145,32 @@ public class PathingMovementController
         var prevPositions = new Queue<Point2f>(8);
         var fastModeColdTime = DateTime.MinValue;
         
-        // 惯性导航/航迹推算 (Dead Reckoning) 状态跟踪
         var lastValidPosition = position;
         var lastValidTime = DateTime.UtcNow;
         var currentVelocity = new Point2f(0f, 0f);
 
         int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
 
+        var moveContext = new PathingMovementContext
+        {
+            CancellationToken = _ct,
+            PartyConfigGetter = () => partyConfig,
+            UseElementalSkillAction = _useElementalSkillAction,
+            GetElementalSkillLastUseTime = () => _elementalSkillLastUseTime,
+            SetElementalSkillLastUseTime = t => _elementalSkillLastUseTime = t,
+            GetUseGadgetLastUseTime = () => _useGadgetLastUseTime,
+            SetUseGadgetLastUseTime = t => _useGadgetLastUseTime = t,
+            FastMode = fastMode,
+            FastModeColdTime = fastModeColdTime
+        };
+
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         
-        while (!_ct.IsCancellationRequested)
+        try
         {
-            if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+            while (!_ct.IsCancellationRequested)
+            {
+                if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
             {
                 Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             }
@@ -148,13 +183,16 @@ public class PathingMovementController
                 throw new RetryException("路径点执行超时，放弃整条路径");
             }
 
-            screen = _captureAction();
+            using var screen = _captureAction();
             if (_endJudgmentAction(screen))
             {
                 return true;
             }
 
-            (position, additionalTimeInMs) = await _navigator.GetPositionAndTime(screen, waypoint);
+            var (newPosition, newTime) = await _navigator.GetPositionAndTime(screen, waypoint);
+            position = newPosition;
+            additionalTimeInMs = newTime;
+                
             if (additionalTimeInMs > 0)
             {
                 if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
@@ -268,7 +306,7 @@ public class PathingMovementController
                 }
             }
 
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
             if (num > 20)
             {
@@ -280,75 +318,38 @@ public class PathingMovementController
                 }
             }
 
-            if (waypoint.MoveMode == MoveModeEnum.Fly.Code)
-            {
-                var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
-                if (!isFlying)
-                {
-                    Debug.WriteLine("未进入飞行状态，按下空格");
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
-                    await Delay(200, _ct);
-                }
+            moveContext.Screen = screen;
+            moveContext.Num = num;
+            moveContext.Distance = distance;
 
-                await Delay(100, _ct);
-                continue;
-            }
-
-            if (waypoint.MoveMode == MoveModeEnum.Jump.Code)
+            bool breakLoop = false;
+            foreach (var handler in _moveModeHandlers)
             {
-                Simulation.SendInput.SimulateAction(GIActions.Jump);
-                await Delay(200, _ct);
-                continue;
-            }
-
-            if (waypoint.MoveMode == MoveModeEnum.Run.Code)
-            {
-                var targetFastMode = distance > 20;
-                if (targetFastMode != fastMode)
+                if (handler.CanHandle(waypoint.MoveMode))
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, targetFastMode ? KeyType.KeyDown : KeyType.KeyUp);
-                    fastMode = targetFastMode;
-                }
-            }
-            else if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
-            {
-                if (distance > 20 && (DateTime.UtcNow - fastModeColdTime).TotalMilliseconds > 1000)
-                {
-                    fastModeColdTime = DateTime.UtcNow;
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
-                }
-            }
-            else if (waypoint.MoveMode != MoveModeEnum.Climb.Code)
-            {
-                if (distance > 10 && !string.IsNullOrEmpty(partyConfig.GuardianAvatarIndex) &&
-                    double.TryParse(partyConfig.GuardianElementalSkillSecondInterval, out var s))
-                {
-                    if (s < 1)
+                    var handlerResult = await handler.ExecuteAsync(waypoint, moveContext);
+                    if (handlerResult == MoveModeResult.Continue)
                     {
-                        Logger.LogWarning("元素战技冷却时间设置太短，不执行！");
+                        breakLoop = true;
+                        break;
+                    }
+                    if (handlerResult == MoveModeResult.ReturnFalse)
+                    {
                         return false;
                     }
 
-                    var ms = s * 1000;
-                    if ((DateTime.UtcNow - _elementalSkillLastUseTime).TotalMilliseconds > ms)
-                    {
-                        if (num <= 5 && (!string.IsNullOrEmpty(partyConfig.MainAvatarIndex) &&
-                                         partyConfig.GuardianAvatarIndex != partyConfig.MainAvatarIndex))
-                        {
-                            await Delay(800, _ct);
-                        }
-
-                        await _useElementalSkillAction();
-                        _elementalSkillLastUseTime = DateTime.UtcNow;
-                    }
-                }
-
-                if (distance > 20 && partyConfig.AutoRunEnabled && (DateTime.UtcNow - fastModeColdTime).TotalMilliseconds > 2500)
-                {
-                    fastModeColdTime = DateTime.UtcNow;
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                    // For Pass, break out of handler chain and continue to the next part of movement
+                    break;
                 }
             }
+
+            if (breakLoop)
+            {
+                continue;
+            }
+
+            fastModeColdTime = moveContext.FastModeColdTime;
+            fastMode = moveContext.FastMode;
 
             if (partyConfig.UseGadgetIntervalMs > 0 && (DateTime.UtcNow - _useGadgetLastUseTime).TotalMilliseconds > partyConfig.UseGadgetIntervalMs)
             {
@@ -357,9 +358,13 @@ public class PathingMovementController
             }
 
             await Delay(100, _ct);
+            }
+        }
+        finally
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         return false;
     }
 
@@ -390,7 +395,7 @@ public class PathingMovementController
                 break;
             }
 
-            var screen = _captureAction();
+            using var screen = _captureAction();
             if (_endJudgmentAction(screen))
             {
                 return true;

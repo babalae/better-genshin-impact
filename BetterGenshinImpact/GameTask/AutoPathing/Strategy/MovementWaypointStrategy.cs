@@ -97,12 +97,14 @@ public class MovementWaypointStrategy : IWaypointStrategy
         {
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Delay(300, executor.ct);
-            var screen = CaptureToRectArea();
-            if (screen?.SrcMat != null && !screen.SrcMat.IsDisposed)
+            using (var screen = CaptureToRectArea())
             {
-                var position = await executor._navigator.GetPosition(screen, waypoint);
-                var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-                await executor.WaitUntilRotatedTo(targetOrientation, 10);
+                if (screen?.SrcMat != null && !screen.SrcMat.IsDisposed)
+                {
+                    var position = await executor._navigator.GetPosition(screen, waypoint);
+                    var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+                    await executor.WaitUntilRotatedTo(targetOrientation, 10);
+                }
             }
 
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
