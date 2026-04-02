@@ -1143,9 +1143,29 @@ public class TpTask
             }
             catch (TpPointNotActivate e)
             {
-                // throw; // 不抛出异常，继续重试
-                Logger.LogWarning(e.Message + "  重试");
+                // 传送点未激活或不存在 按ESC回到大地图界面
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(GetTeleportOperationDelay(300), ct);
+
+                if (_tpConfig.MapZoomEnabled && i < 2)
+                {
+                    double currentZoom = GetBigMapZoomLevel(CaptureToRectArea());
+                    if (currentZoom < 4.0)
+                    {
+                        Logger.LogInformation("传送点点击偏差：尝试扩大视野以增加特征点...");
+                        await AdjustMapZoomLevel(currentZoom, Math.Min(6.0, currentZoom + 1.5));
+                    }
+                    else
+                    {
+                        Logger.LogInformation("传送点点击偏差：尝试稍微移动地图以引入新特征...");
+                        await MouseMoveMap(60, 60, 4);
+                    }
+                    await Delay(GetTeleportOperationDelay(500), ct);
+                }
+                else
+                {
+                    Logger.LogWarning(e.Message + "  重试");
+                }
             }
             catch (Exception e) when (IsTaskStopException(e))
             {
@@ -2015,6 +2035,14 @@ public class TpTask
 
                 if (rect == default)
                 {
+                    // 识别失败时，轻微拖动一下地图露出新特征，再试一次
+                    GameCaptureRegion.GameRegionMove((r, _) => (r.Width / 2d, r.Height / 2d));
+                    Simulation.SendInput.Mouse.LeftButtonDown();
+                    Sleep(50);
+                    GameCaptureRegion.GameRegionMoveBy((_, scale) => (50 * scale, 50 * scale));
+                    Sleep(50);
+                    Simulation.SendInput.Mouse.LeftButtonUp();
+                    Sleep(500);
                     throw new RetryException("识别大地图位置失败");
                 }
             }

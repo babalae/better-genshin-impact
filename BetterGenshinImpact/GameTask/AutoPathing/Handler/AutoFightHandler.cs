@@ -74,7 +74,7 @@ public class AutoFightHandler : IActionHandler
         {
             taskParams.KazuhaPickupEnabled = false;
             taskParams.PickDropsAfterFightEnabled = false;
-            _logger.LogInformation("当前点位非精英/传奇，已关闭战斗关联的拾取配置 / Non-elite/legendary point, combat pickup disabled");
+            _logger.LogInformation("当前点位非精英/传奇，已关闭战斗关联的拾取配置");
         }
     }
 
