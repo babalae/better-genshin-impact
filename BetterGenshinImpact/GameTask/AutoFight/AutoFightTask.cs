@@ -346,7 +346,7 @@ public class AutoFightTask : ISoloTask
                         
                         #region 初始寻敌处理
                         
-                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
+                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck && _taskParam.RotaryFactor > 0)
                         {
                             await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,true,_taskParam.RotaryFactor);
                         }
@@ -861,7 +861,7 @@ public class AutoFightTask : ISoloTask
             return true;
         }
 
-        if (_finishDetectConfig.RotateFindEnemyEnabled && _finishDetectConfig.RotaryFactor > 0)
+        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.RotaryFactor > 0)
         {
             bool? result = null;
             try

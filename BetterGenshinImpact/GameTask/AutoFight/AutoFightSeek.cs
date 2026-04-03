@@ -268,7 +268,15 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             }
             catch (Exception)
             {
+                // 清理资源
+                image?.Dispose();
+                mask?.Dispose();
+                labels?.Dispose();
+                stats?.Dispose();
+                centroids?.Dispose();
+                
                 // 异常处理由上层调用者负责
+                throw;
             }
 
             return false;
@@ -277,6 +285,12 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false,int rotaryFactor = 6)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
+            
+            // 防御性检查：确保 rotaryFactor 在有效范围内
+            if (!RotaryFactorMapping.ContainsKey(rotaryFactor))
+            {
+                rotaryFactor = 6;
+            }
             
             var adjustedX = RotaryFactorMapping[rotaryFactor];
             var adjustedDivisor = rotaryFactor<=12 ? 2 : 1.3;
