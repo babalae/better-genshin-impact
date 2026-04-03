@@ -274,7 +274,7 @@
   "须臾树脂刷取次数：": "Transient Resin runs:",
   "脆弱树脂刷取次数：": "Fragile Resin runs:",
   "旋转寻找敌人位置": "Rotate to find enemy positions",
-  "旋转速度(建议单次360°左右)：": "Rotation speed (recommend ~360° per sweep):",
+  "旋转速度(0表示只检查血条不旋转，建议单次360°左右)：": "Rotation speed (0 means only check blood bar without rotation, recommend ~360° per sweep):",
   "(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)": "(Recommended with ~1s \"Faster battle-end detection\") Before opening the party screen to detect battle end, check for enemies first to decide whether to approach or rotate to find them. (Pre-Q check: check if battle has ended before casting Q. Face enemy: find enemies when combat starts; try to face enemies during combat.)",
   "Q前检测": "Pre-Q check",
   "尝试面敌": "Try to face enemies",
