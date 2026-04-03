@@ -890,7 +890,7 @@ public class AutoFightTask : ISoloTask
             return true;
         }
 
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
+        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.RotaryFactor > 0)
         {
             Task.Run(() =>
             {
