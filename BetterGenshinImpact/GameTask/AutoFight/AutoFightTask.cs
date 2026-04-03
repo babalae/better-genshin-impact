@@ -348,7 +348,8 @@ public class AutoFightTask : ISoloTask
                         
                         if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck && _taskParam.RotaryFactor > 0)
                         {
-                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,true,_taskParam.RotaryFactor);
+                            var clampedRotaryFactor = _taskParam.RotaryFactor is >= 1 and <= 13 ? _taskParam.RotaryFactor : 6;
+                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, clampedRotaryFactor);
                         }
                         
                         #endregion
@@ -866,12 +867,12 @@ public class AutoFightTask : ISoloTask
             bool? result = null;
             try
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct, false, _taskParam.RotaryFactor);
+                var clampedRotaryFactor = _taskParam.RotaryFactor is >= 1 and <= 13 ? _taskParam.RotaryFactor : 6;
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct, false, clampedRotaryFactor);
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                result = false;
             }
             
             AutoFightSeek.RotationCount = (result == null) ? 
