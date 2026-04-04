@@ -92,12 +92,13 @@ public class MiningHandler : IActionHandler
             
             if (!foundAvatar)
             {
-                Logger.LogWarning("当前队伍中没有包含内置的挖矿角色阵列，将跳过破矿连招！ / No supported mining avatars found in party.");
+                Logger.LogWarning("当前队伍中没有包含内置的挖矿角色阵列，将跳过破矿连招！");
             }
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "挖矿宏指令执行期间发生非预期异常 / Exception occurred during mining execution.");
+            Logger.LogError(e, "挖矿宏指令执行期间发生非预期异常 ");
+            throw; // 记录异常后重新抛出以由上层处理
         }
     }
 }

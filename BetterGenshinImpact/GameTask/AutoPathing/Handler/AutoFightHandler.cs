@@ -11,8 +11,12 @@ using Microsoft.Extensions.Logging;
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 /// <summary>
-/// 负责处理自动战斗动作的执行逻辑 / Handles the execution logic for automatic combat actions.
+/// 负责处理自动战斗（AutoFight）动作的执行逻辑。
 /// </summary>
+/// <remarks>
+/// 主要用于在自动寻路（AutoPathing）过程中，到达特定触发点时执行战斗任务，
+/// 支持根据队伍配置、怪物类型（普通、精英、传奇）以及掉落物（Loot）拾取策略进行动态干预。
+/// </remarks>
 public class AutoFightHandler : IActionHandler
 {
     private readonly ILogger<AutoFightHandler> _logger = App.GetLogger<AutoFightHandler>();
@@ -26,6 +30,13 @@ public class AutoFightHandler : IActionHandler
         await StartFightAsync(ct, config, waypointForTrack);
     }
 
+    /// <summary>
+    /// 开始执行自动战斗任务的核心流程。
+    /// </summary>
+    /// <param name="ct">异步操作取消令牌（CancellationToken）。</param>
+    /// <param name="config">当前队伍的战斗策略配置对象，通常应为 <see cref="PathingPartyConfig"/> 类型。</param>
+    /// <param name="waypointForTrack">触发战斗的追踪航点（Waypoint）信息，包含怪物标签（MonsterTag）及掉落物配置。</param>
+    /// <returns>代表战斗任务执行过程的 <see cref="Task"/>。</returns>
     private async Task StartFightAsync(CancellationToken ct, object? config = null, WaypointForTrack? waypointForTrack = null)
     {
         TaskControl.Logger.LogInformation("执行自动战斗任务");
@@ -57,6 +68,14 @@ public class AutoFightHandler : IActionHandler
         await fightSoloTask.Start(ct);
     }
 
+    /// <summary>
+    /// 处理怪物掉落物拾取配置，根据航点怪物类型（MonsterTag/精英/传奇等）动态调整战斗拾取参数。
+    /// </summary>
+    /// <param name="waypointForTrack">当前追踪的航点信息。</param>
+    /// <param name="taskParams">需应用规则的自动战斗参数配置 <see cref="AutoFightParam"/>。</param>
+    /// <remarks>
+    /// 若处于非精英怪点且启用了相关策略，则可安全关闭万叶聚怪拾取及战后统一拾取。
+    /// </remarks>
     private void ProcessMonsterLootConfiguration(WaypointForTrack? waypointForTrack, AutoFightParam taskParams)
     {
         if (waypointForTrack?.EnableMonsterLootSplit != true)
@@ -78,11 +97,23 @@ public class AutoFightHandler : IActionHandler
         }
     }
 
+    /// <summary>
+    /// 根据自动战斗预设配置实例化执行期参数。
+    /// </summary>
+    /// <param name="config">选定的自动战斗配置对象 <see cref="AutoFightConfig"/>。</param>
+    /// <returns>实例化完毕并包含策略路径的 <see cref="AutoFightParam"/> 参数对象。</returns>
     private AutoFightParam CreateFightParam(AutoFightConfig? config)
     {
         return new AutoFightParam(GetStrategyPath(config), config);
     }
 
+    /// <summary>
+    /// 获取当前生效战斗策略（Strategy）文本文档在磁盘上的绝对路径。
+    /// </summary>
+    /// <param name="config">提供所选策略名 <see cref="AutoFightConfig.StrategyName"/> 的配置对象。</param>
+    /// <returns>指向策略目录或策略文件的完整绝对路径（User/AutoFight/...）。</returns>
+    /// <exception cref="ArgumentNullException">当传入的 <paramref name="config"/> 为 <c>null</c> 时引发。</exception>
+    /// <exception cref="FileNotFoundException">当对应的策略路径（文件或目录）不存在时引发。</exception>
     private string GetStrategyPath(AutoFightConfig? config)
     {
         ArgumentNullException.ThrowIfNull(config);

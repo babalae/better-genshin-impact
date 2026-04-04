@@ -208,7 +208,8 @@ public class PathRecorder : Singleton<PathRecorder>
             }
             catch (Exception ex)
             {
-               TaskControl.Logger?.LogError($"执行WebView前端脚本失败: {ex.Message}");
+                // UI 线程中的非致命异常，记录日志后继续，以防直接导致应用程序崩溃
+                TaskControl.Logger?.LogError($"执行WebView前端脚本失败: {ex.Message}");
             }
         });
     }

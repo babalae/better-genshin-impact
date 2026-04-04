@@ -223,7 +223,8 @@ public class TeleportWaypointStrategy : IWaypointStrategy
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "派遣奖励检测过程中出现异常");
+            // 图像识别环节发生异常，直接返回未检测到派遣奖励
+            Logger.LogWarning(ex, "派遣奖励检测过程中出现异常，默认回退状态为 false");
             return false;
         }
     }

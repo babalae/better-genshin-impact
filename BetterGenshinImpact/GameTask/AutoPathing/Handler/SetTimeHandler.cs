@@ -20,18 +20,29 @@ public class SetTimeHandler : IActionHandler
             return;
         }
 
-        string[] timeParts = waypointForTrack.ActionParams.Split(':');
-        if (timeParts.Length < 2)
+        string actionParams = waypointForTrack.ActionParams;
+        int firstColon = actionParams.IndexOf(':');
+        if (firstColon < 0) return;
+
+        int secondColon = actionParams.IndexOf(':', firstColon + 1);
+        
+        string hourStr = actionParams.Substring(0, firstColon);
+        string minuteStr = secondColon < 0 
+            ? actionParams.Substring(firstColon + 1) 
+            : actionParams.Substring(firstColon + 1, secondColon - firstColon - 1);
+
+        if (!int.TryParse(hourStr, out int hour) || !int.TryParse(minuteStr, out int minute))
         {
             return;
         }
 
-        if (!int.TryParse(timeParts[0], out int hour) || !int.TryParse(timeParts[1], out int minute))
+        bool skipAnimation = true;
+        if (secondColon >= 0)
         {
-            return;
+            string skipStr = actionParams.Substring(secondColon + 1);
+            skipAnimation = bool.TryParse(skipStr, out bool skip) && skip;
         }
 
-        bool skipAnimation = timeParts.Length < 3 || (bool.TryParse(timeParts[2], out var skip) && skip);
         await _setTimeTask.DoOnce(hour, minute, ct, skipAnimation);
     }
 }

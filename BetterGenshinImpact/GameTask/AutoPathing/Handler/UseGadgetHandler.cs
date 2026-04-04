@@ -24,7 +24,7 @@ public class UseGadgetHandler : IActionHandler
     /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行动作: 【使用小道具】 / Executing action: [Use Gadget]");
+        Logger.LogInformation("执行动作: 【使用小道具】");
         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
 
         var actionParams = waypointForTrack?.ActionParams ?? string.Empty;
@@ -47,12 +47,12 @@ public class UseGadgetHandler : IActionHandler
 
         if (cd > 100)
         {
-            Logger.LogWarning("小道具CD读取值异常: {Cd}秒。可能为识别错误，将强制跳过等待 / Gadget CD anomaly read. Skipping wait.", cd);
+            Logger.LogWarning("小道具CD读取值异常: {Cd}秒。可能为识别错误，将强制跳过等待", cd);
             Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
         }
         else if (cd > 0)
         {
-            Logger.LogInformation("小道具正在冷却中，需等待：{Cd}秒 / Gadget in CD, waiting...", cd);
+            Logger.LogInformation("小道具正在冷却中，需等待：{Cd}秒", cd);
             
             var waitTimeMs = cd > maxWaitSeconds 
                 ? (int)(maxWaitSeconds * 1000) 
@@ -60,7 +60,7 @@ public class UseGadgetHandler : IActionHandler
 
             if (cd > maxWaitSeconds)
             {
-                Logger.LogDebug("CD 超过最大允许时限，截断等待时长为: {Max}秒 / Truncating wait to max: {Max}s", maxWaitSeconds);
+                Logger.LogDebug("CD 超过最大允许时限，截断等待时长为: {Max}秒", maxWaitSeconds);
             }
 
             await Delay(waitTimeMs, ct);
