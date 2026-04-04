@@ -25,15 +25,26 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
     {
         private readonly CancellationToken _ct;
         private readonly Func<ImageRegion?, Task> _resolveAnomaliesAction;
-
+        
+        private readonly object _preStateLock = new();
         private Point2f _prePosition;
-        private DateTime _preTime;
+        
+        private int _isPositionAndTimeSuspended = 0;
 
         /// <summary>
         /// Indicates whether execution logic was suspended. Handles temporal disconnects.
         /// 指示执行逻辑是否已挂起。用于处理时间性连接断开现象。
         /// </summary>
-        public bool GetPositionAndTimeSuspendFlag { get; set; } = false;
+        public bool IsPositionAndTimeSuspended
+        {
+            get => Interlocked.CompareExchange(ref _isPositionAndTimeSuspended, 0, 0) != 0;
+            set => Interlocked.Exchange(ref _isPositionAndTimeSuspended, value ? 1 : 0);
+        }
+
+        public bool CheckAndClearPositionAndTimeSuspended()
+        {
+            return Interlocked.Exchange(ref _isPositionAndTimeSuspended, 0) != 0;
+        }
         
         /// <summary>
         /// Gets or sets the current tracked sequence of waypoints.
@@ -60,9 +71,17 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         /// Initializes a new instance of the PathingNavigator.
         /// 初始化 PathingNavigator 类的新实例。
         /// </summary>
-        /// <param name="ct">Asynchronous cancellation token. 异步取消令牌。</param>
-        /// <param name="resolveAnomaliesAction">External delegate treating immediate popup obstructions. 用于处理立刻弹出的阻断的外部处置委托。</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="resolveAnomaliesAction"/> is null. 当 <paramref name="resolveAnomaliesAction"/> 为 null 时抛出。</exception>
+        /// <param name="ct">
+        /// Asynchronous cancellation token. 
+        /// 异步取消令牌。</param>
+        /// <param name="resolveAnomaliesAction">
+        /// External delegate treating immediate popup obstructions. 
+        /// 用于处理立刻弹出的阻断的外部处置委托。
+        /// </param>
+        /// <exception cref="ArgumentNullException"> 
+        /// Thrown when <paramref name="resolveAnomaliesAction"/> is null. 
+        /// 当 <paramref name="resolveAnomaliesAction"/> 为 null 时抛出。
+        /// </exception>
         public PathingNavigator(CancellationToken ct, Func<ImageRegion?, Task> resolveAnomaliesAction)
         {
             _ct = ct;
@@ -90,11 +109,10 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
 
         /// <summary>
         /// Instigates brute-force traversal skipping all interim operations until recovered cache index is met.
-        /// 暴力激活寻路，直到捕获重定位缓存索引前，跳过路途中所有中间操作。
+        /// 暴力激活寻路，直到到达重定位缓存索引前，跳过路途中所有中间费时间的操作。
         /// </summary>
         public void StartSkipOtherOperations()
         {
-            Logger?.LogWarning("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作");
             SkipOtherOperations = true;
             _recordWaypoints = CurWaypoints;
             _recordWaypoint = CurWaypoint;
@@ -128,21 +146,34 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         /// Wraps <see cref="GetPositionAndTime"/> to strictly deduce current game coordinates.
         /// 将包裹的函数化简为仅返回当前游戏坐标。
         /// </summary>
-        /// <param name="imageRegion">The underlying tracked screen buffer. 追踪底层屏幕的缓冲区空间。</param>
-        /// <param name="waypoint">Target localization node details. 目的地位置局部细节节点。</param>
-        /// <returns>Decoded vector point mapping. 解码还原的点位坐标。</returns>
+        /// <param name="imageRegion">
+        /// The underlying tracked screen buffer. 
+        /// 追踪底层屏幕的缓冲区空间。
+        /// </param>
+        /// <param name="waypoint">Target localization node details. 
+        /// 目的地位置局部细节节点。</param>
+        /// <returns>Decoded vector point mapping. 
+        /// 解码还原的点位坐标。</returns>
         public async Task<Point2f> GetPosition(ImageRegion imageRegion, WaypointForTrack waypoint)
         {
             return (await GetPositionAndTime(imageRegion, waypoint).ConfigureAwait(false)).point;
         }
 
+        private const double PathTooFarDistanceThreshold = 500.0;
+
         /// <summary>
         /// Determines exact location incorporating potential anomaly detection and map-reopening routines.
         /// 集成异常检测和地图重定位程序的精确游戏坐标解析组合体。
         /// </summary>
-        /// <param name="imageRegion">Screen capture context bounding map zones. 截图捕捉包含地图的边缘上下文场景。</param>
-        /// <param name="waypoint">The tracking node to compare delta logic against. 供增量比较追踪逻辑所需的节点。</param>
-        /// <returns>Coordinate and lag times metadata tuple. 附带耗时元数据的坐标返回值。</returns>
+        /// <param name="imageRegion">Screen capture context bounding map zones. 
+        /// 截图捕捉包含地图的边缘上下文场景。</param>
+        /// <param name="waypoint">
+        /// The tracking node to compare delta logic against. 
+        /// 供增量比较追踪逻辑所需的节点。</param>
+        /// <returns>
+        /// Coordinate and lag times metadata tuple. 
+        /// 附带耗时元数据的坐标返回值。
+        /// </returns>
         /// <exception cref="ArgumentNullException">Thrown when parameter <paramref name="imageRegion"/> or <paramref name="waypoint"/> is null. 当传递的参数为 null 时抛出错误。</exception>
         public async Task<(Point2f point, int additionalTimeInMs)> GetPositionAndTime(ImageRegion imageRegion, WaypointForTrack waypoint)
         {
@@ -163,28 +194,27 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
 
             var distance = Navigation.GetDistance(waypoint, position);
             
-            if (position.X == 0f && position.Y == 0f && GetPositionAndTimeSuspendFlag)
-            {
-                GetPositionAndTimeSuspendFlag = false;
-                throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
-            }
+            bool hasSuspendFlag = CheckAndClearPositionAndTimeSuspended();
 
-            if (GetPositionAndTimeSuspendFlag && !(position.X == 0f && position.Y == 0f))
+            if (position.X == 0f && position.Y == 0f && hasSuspendFlag)
             {
-                GetPositionAndTimeSuspendFlag = false;
+                throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
             }
 
             bool unrecognized = waypoint.Misidentification?.Type?.Contains("unrecognized") ?? false;
             bool pathTooFar = waypoint.Misidentification?.Type?.Contains("pathTooFar") ?? false;
 
-            if ((position.X == 0f && position.Y == 0f && unrecognized) || (distance > 500.0 && pathTooFar))
+            if ((position.X == 0f && position.Y == 0f && unrecognized) || (distance > PathTooFarDistanceThreshold && pathTooFar))
             {
                 if (waypoint.Misidentification?.HandlingMode == "previousDetectedPoint")
                 {
-                    if (_prePosition != default)
+                    lock (_preStateLock) 
                     {
-                        position = _prePosition;
-                        Logger?.LogInformation("未识别到具体路径，取上次点位");
+                        if (_prePosition != default)
+                        {
+                            position = _prePosition;
+                            Logger?.LogDebug("未识别到具体路径，取上次点位");
+                        }
                     }
                 }
                 else if (waypoint.Misidentification?.HandlingMode == "mapRecognition")
@@ -202,54 +232,26 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                     }
                     catch (Exception ex)
                     {
-                        // 识别失败记录日志后继续，依预设逻辑使用原始或默认坐标位进行后续处理而不干预整个导航流程
-                        Logger?.LogWarning(ex, $"地图中心点识别失败！暂无补救措施，按原有流程继续。异常: {ex.Message}");
+                        Logger?.LogWarning(ex, $"地图中心点识别失败！异常: {ex.Message}");
+                        throw new RetryNoCountException("地图识别异常，重试路线！");
                     }
 
                     Simulation.SendInput?.Keyboard?.KeyPress(User32.VK.VK_ESCAPE);
                     await WaitForCloseMap(10, 200).ConfigureAwait(false);
                     DateTime end = DateTime.UtcNow;
                     time = (int)(end - start).TotalMilliseconds;
-                    Logger?.LogInformation($"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
+                    Logger?.LogDebug($"未识别到具体路径，打开地图计算中心点({position.X},{position.Y})");
                 }
             }
             else
             {
-                _prePosition = position;
-                _preTime = DateTime.UtcNow;
+                lock (_preStateLock) 
+                {
+                    _prePosition = position;
+                }
             }
 
             return (position, time);
-        }
-
-        /// <summary>
-        /// Calculates linearly interpolated cartesian points based purely on intermediate elapsed duration ratios.
-        /// 基于纯粹的经过耗时比率在两点直线向量中间进行平面差值线性演算。
-        /// </summary>
-        /// <param name="startPoint">Origin position vector. 原点矢量位置。</param>
-        /// <param name="endPoint">Target objective coordinate. 标靶定位终结坐标。</param>
-        /// <param name="startTime">Genesis point snapshot timestamp. 本源起始事件记录戳。</param>
-        /// <param name="midTime">Current mid-execution temporal snapshot. 当前运算中位节点时钟戳。</param>
-        /// <param name="endTime">Theoretical conclusion timing mark. 预估收束末期结束时间。</param>
-        /// <returns>Interpolated synthesized dynamic location. 线性合成推导的即时坐标向量。</returns>
-        public static Point2f InterpolatePointByTime(
-            Point2f startPoint,
-            Point2f endPoint,
-            DateTime startTime,
-            DateTime midTime,
-            DateTime endTime)
-        {
-            double totalMillis = (endTime - startTime).TotalMilliseconds;
-            double midMillis = (midTime - startTime).TotalMilliseconds;
-
-            if (totalMillis <= 0.0) return startPoint;
-            if (midMillis <= 0.0) return startPoint;
-
-            float t = Math.Clamp((float)(midMillis / totalMillis), 0f, 1f);
-            float x = startPoint.X + (endPoint.X - startPoint.X) * t;
-            float y = startPoint.Y + (endPoint.Y - startPoint.Y) * t;
-
-            return new Point2f(x, y);
         }
     }
 }

@@ -278,7 +278,7 @@ public class PathExecutor
         {
             // 任务结束时清理暂停/恢复的临时状态，避免影响下一次路径执行。
             pathExecutorSuspend.Reset();
-            GetPositionAndTimeSuspendFlag = false;
+            IsPositionAndTimeSuspended = false;
         }
     }
 
@@ -427,29 +427,14 @@ public class PathExecutor
     /// 根据时间插值计算点位坐标。
     /// </summary>
     /// <param name="startPoint">Start point. 起始点位。</param>
-    /// <param name="endPoint">End point. 结束点位。</param>
-    /// <param name="startTime">Start time. 起始时间。</param>
-    /// <param name="midTime">Mid time. 中间时间。</param>
-    /// <param name="endTime">End time. 结束时间。</param>
-    /// <returns>The interpolated current point. 插值计算后的当前点位。</returns>
-    public static Point2f InterpolatePointByTime(
-        Point2f startPoint,
-        Point2f endPoint,
-        DateTime startTime,
-        DateTime midTime,
-        DateTime endTime)
-    {
-        return PathingNavigator.InterpolatePointByTime(startPoint, endPoint, startTime, midTime, endTime);
-    }
-
     /// <summary>
     /// Gets or sets the position resolution suspend flag.
     /// 获取或设置位置解析挂起标识。
     /// </summary>
-    public bool GetPositionAndTimeSuspendFlag
+    public bool IsPositionAndTimeSuspended
     {
-        get => _navigator.GetPositionAndTimeSuspendFlag;
-        set => _navigator.GetPositionAndTimeSuspendFlag = value;
+        get => _navigator.IsPositionAndTimeSuspended;
+        set => _navigator.IsPositionAndTimeSuspended = value;
     }
 
     /// <summary>

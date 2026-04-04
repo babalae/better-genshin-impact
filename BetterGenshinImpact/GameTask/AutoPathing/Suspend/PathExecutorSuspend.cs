@@ -59,7 +59,7 @@ public class PathExecutorSuspend : ISuspendable
         _lastRecoveryWindowSeconds = 0;
         _resumeRetryConsumed = false;
         // 暂停时记录，获取点位的暂停标志
-        _pathExecutor.GetPositionAndTimeSuspendFlag = true;
+        _pathExecutor.IsPositionAndTimeSuspended = true;
     }
 
     /// <summary>
