@@ -72,7 +72,7 @@ BetterGI · A Better Genshin Impact experience, powered by computer vision techn
 
 ## Screenshots
 
-![0 39 1](https://github.com/user-attachments/assets/8fb0bfd9-e0db-4289-800f-1bc2efb221aa)
+![0 39 1](https://github.com/user-attachments/assets/a65aafe9-d8d7-4ffb-8cdc-9939c2fb3bdf)
 
 ## Download
 
