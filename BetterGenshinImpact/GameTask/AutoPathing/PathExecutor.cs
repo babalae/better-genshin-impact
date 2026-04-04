@@ -220,7 +220,7 @@ public class PathExecutor
                             var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
                             if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
                             {
-                                throw new BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception.RetryException("神像回血完成后重试路线");
+                                throw new RetryException("神像回血完成后重试路线");
                             }
 
                             var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
@@ -240,7 +240,7 @@ public class PathExecutor
                     catch (HandledException handledExc)
                     {
                         Logger.LogWarning(handledExc.Message);
-                        break;
+                        return;
                     }
                     catch (TaskCanceledException)
                     {
@@ -250,13 +250,17 @@ public class PathExecutor
                         }
                         else
                         {
-                            break;
+                            return;
                         }
                     }
                     catch (RetryException retryException)
                     {
                         _navigator.StartSkipOtherOperations();
                         Logger.LogWarning(retryException.Message);
+                        if (i == RetryTimes - 1)
+                        {
+                            return;
+                        }
                     }
                     catch (RetryNoCountException retryException)
                     {

@@ -85,32 +85,12 @@ public class TeleportWaypointStrategy : IWaypointStrategy
             var prevWaypoints = waypointsList[executor.CurWaypoints.Item1 - 1];
             if (prevWaypoints.Count > 0)
             {
-                var prevWaypoint = prevWaypoints[prevWaypoints.Count - 1];
-                if (!ShouldSkipPreTeleportDelay(prevWaypoint))
-                {
-                    await Delay(PreTeleportDelayMs, executor.ct);
-                }
+                await Delay(PreTeleportDelayMs, executor.ct);
             }
         }
 
         await HandleTeleportWaypoint(executor, waypoint);
         return false;
-    }
-
-    /// <summary>
-    /// Evaluates previous topological node to determine if kinematic suspension (delay) can be safely bypassed.
-    /// 评估前一个拓扑节点，以绝对规则判断是否可以安全跳过运动学阻滞（传送前延迟）。
-    /// </summary>
-    /// <param name="prevWaypoint">The preceding waypoint data structure. 前置路点数据结构。</param>
-    /// <returns>True if the transition is mechanically stable without delay. 若状态机构切换物理稳定无需延迟，则返回 true。</returns>
-    private static bool ShouldSkipPreTeleportDelay(WaypointForTrack prevWaypoint)
-    {
-        if (prevWaypoint == null) return false;
-
-        return prevWaypoint.Type == WaypointType.Teleport.Code
-            || prevWaypoint.Action == ActionEnum.Fight.Code
-            || prevWaypoint.Action == ActionEnum.NahidaCollect.Code
-            || prevWaypoint.Action == ActionEnum.PickAround.Code;
     }
 
     /// <summary>

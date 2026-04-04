@@ -105,7 +105,7 @@ public class CameraRotateTask
 
         while (!_ct.IsCancellationRequested)
         {
-            var screen = CaptureToRectArea();
+            using var screen = CaptureToRectArea();
             if (screen == null) break;
 
             float diff = RotateToApproach(targetOrientation, screen);
