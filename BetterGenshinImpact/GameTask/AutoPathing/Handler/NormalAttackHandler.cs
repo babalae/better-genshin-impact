@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// 触发普通攻击的动作处理器 (已废弃) / Handler for triggering normal attack action (Obsolete).
 /// 此硬编码操作已不推荐使用，将被配置化战斗指令集替代。
 /// </summary>
-[Obsolete("该动作类型已被移除或降级，使用配置化战斗替代 / Obsolete: Use configured combat scripts instead")]
+[Obsolete("该动作类型已被移除或降级，使用配置化战斗替代")]
 public class NormalAttackHandler : IActionHandler
 {
     /// <inheritdoc/>

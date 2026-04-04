@@ -77,8 +77,9 @@ public class PickUpCollectHandler : IActionHandler
                     }
                     catch (Exception e)
                     {
+                        // 转换别名失败时，记录原因并回退到原始命令，不中断流程
                         commandsList.Add(command);
-                        Console.WriteLine(e);
+                        Logger.LogWarning(e.Message);
                     }
                 }
             }
@@ -206,8 +207,8 @@ public class PickUpCollectHandler : IActionHandler
         }
         catch (Exception ex)
         {
-            // 处理异常
-            Console.WriteLine($"PickUpCollectHandler 异常: {ex.Message}");
+            Logger.LogError(ex, $"PickUpCollectHandler 执行拾取技能时发生异常: {ex.Message}");
+            throw; // 保证异常不被静默吞弃，交由外部处理
         }
     }
     

@@ -202,7 +202,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogInformation($"地图中心点识别失败！异常: {ex.Message}");
+                        // 识别失败记录日志后继续，依预设逻辑使用原始或默认坐标位进行后续处理而不干预整个导航流程
+                        Logger?.LogWarning(ex, $"地图中心点识别失败！暂无补救措施，按原有流程继续。异常: {ex.Message}");
                     }
 
                     Simulation.SendInput?.Keyboard?.KeyPress(User32.VK.VK_ESCAPE);

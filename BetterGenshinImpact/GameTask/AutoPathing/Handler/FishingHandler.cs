@@ -19,7 +19,7 @@ public class FishingHandler : IActionHandler
     /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行动作: 【自动钓鱼】 / Executing action: [Auto Fishing]");
+        Logger.LogInformation("执行动作: 【自动钓鱼】");
         
         var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
         if (taskSettingsPageViewModel == null)

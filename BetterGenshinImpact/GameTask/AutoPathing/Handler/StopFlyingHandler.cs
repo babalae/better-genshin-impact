@@ -35,8 +35,11 @@ public class StopFlyingHandler : IActionHandler
         for (; i < maxAttempts; i++)
         {
             ct.ThrowIfCancellationRequested();
-            var screen = CaptureToRectArea();
-            var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
+            bool isFlying;
+            using (var screen = CaptureToRectArea())
+            {
+                isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
+            }
             
             if (!isFlying)
             {
@@ -47,11 +50,11 @@ public class StopFlyingHandler : IActionHandler
 
         if (i == maxAttempts)
         {
-            Logger.LogWarning("动作：下落攻击未能在预计时间内完全落地(超时) / Plunge action timed out without landing.");
+            Logger.LogWarning("动作：下落攻击未能在预计时间内完全落地(超时)");
         }
         else
         {
-            Logger.LogInformation("动作：下落攻击正常结束，已落地 / Plunge array completed normally.");
+            Logger.LogInformation("动作：下落攻击正常结束，已落地");
         }
     }
 }
