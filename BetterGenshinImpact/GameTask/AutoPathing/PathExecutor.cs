@@ -105,7 +105,7 @@ public partial class PathExecutor
             _trapEscaper,
             pathExecutorSuspend,
             () => CaptureToRectArea(),
-            img => EndAction?.Invoke(img) ?? false,
+            EndJudgment,
             ResolveAnomalies,
             WaitUntilRotatedTo,
             index => SwitchAvatar(index),
@@ -273,8 +273,8 @@ public partial class PathExecutor
                     finally
                     {
                         // 不管咋样，松开所有按键
-                        Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
-                        Simulation.SendInput.Mouse.RightButtonUp();
+                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                     }
                 }
             }
