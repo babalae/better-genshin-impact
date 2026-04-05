@@ -49,16 +49,10 @@ public partial class SkillCdConfig : ObservableObject
     /// 纵坐标
     /// </summary>
     [ObservableProperty]
-    private double _pY = 259.0;
+    private double _pY = 245.0;
 
     partial void OnPYChanged(double value)
     {
-        if (Math.Abs(value - 245.0) < 0.01)
-        {
-            PY = 259.0;
-            return;
-        }
-
         if (value < 0.0) PY = 0.0;
         else if (value > 1080.0) PY = 1080.0;
     }

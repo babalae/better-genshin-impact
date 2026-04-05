@@ -627,7 +627,7 @@ public class SkillCdTrigger : ITaskTrigger
         int grassDewOffsetY = _cachedGrassDewOffsetY;
 
         double userPX = Math.Round(config.PX, 1);
-        double userPY = Math.Round(config.PY, 1) + grassDewOffsetY;
+        double userPY = Math.Round(config.PY, 1) + (grassDewOffsetY == 0 ? 14 : 0);
         double userGap = Math.Round(config.Gap, 1);
 
         double basePx = userPX * factor;
