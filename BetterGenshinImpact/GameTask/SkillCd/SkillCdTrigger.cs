@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Drawable;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
@@ -70,6 +71,9 @@ public class SkillCdTrigger : ITaskTrigger
 
 
     private volatile bool _isSyncingTeam = false;
+    private int _cachedGrassDewOffsetY;
+    private DateTime _lastGrassDewCheckTime = DateTime.MinValue;
+    private const double GrassDewCheckIntervalSeconds = 3.0;
 
     private DateTime _lastSyncTime = DateTime.MinValue;
 
@@ -113,7 +117,8 @@ public class SkillCdTrigger : ITaskTrigger
 
         if (!IsEnabled)
         {
-            VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+            var overlay = SkillCdOverlayWindow.InstanceNullable();
+            overlay?.UpdateTexts(null);
         }
     }
 
@@ -124,7 +129,8 @@ public class SkillCdTrigger : ITaskTrigger
     {
         if (!IsEnabled)
         {
-            VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+            var overlay = SkillCdOverlayWindow.InstanceNullable();
+            overlay?.UpdateTexts(null);
             return;
         }
 
@@ -180,7 +186,8 @@ public class SkillCdTrigger : ITaskTrigger
         {
             if (_wasInContext)
             {
-                VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+                var overlay = SkillCdOverlayWindow.InstanceNullable();
+                overlay?.UpdateTexts(null);
                 _wasInContext = false;
                 _contextEnterTime = DateTime.MinValue;
                 _lastActiveIndex = -1;
@@ -360,7 +367,7 @@ public class SkillCdTrigger : ITaskTrigger
             content.CaptureRectArea.Y
         );
 
-        UpdateOverlay();
+        UpdateOverlay(content.CaptureRectArea);
     }
 
     /// <summary>
@@ -590,24 +597,37 @@ public class SkillCdTrigger : ITaskTrigger
     /// <summary>
     /// 更新 UI 层渲染
     /// </summary>
-    private void UpdateOverlay()
+    private void UpdateOverlay(ImageRegion captureRegion)
     {
-        var drawContent = VisionContext.Instance().DrawContent;
+        var overlay = SkillCdOverlayWindow.InstanceNullable();
+        if (overlay == null)
+        {
+            return;
+        }
+
         var sideRects = AutoFightAssets.Instance.AvatarSideIconRectList;
         var config = TaskContext.Instance().Config.SkillCdConfig;
-        
+
         if (sideRects == null || sideRects.Count < 4)
         {
-            drawContent.PutOrRemoveTextList("SkillCdText", null);
+            overlay.UpdateTexts(null);
             return;
         }
 
         var systemInfo = TaskContext.Instance().SystemInfo;
         double factor = (double)systemInfo.GameScreenSize.Width / systemInfo.ScaleMax1080PCaptureRect.Width;
-        
-        // 使用配置中的坐标（保留一位小数）
+
+        // 每3秒检测一次草露偏移，避免切人抖动
+        if ((DateTime.Now - _lastGrassDewCheckTime).TotalSeconds >= GrassDewCheckIntervalSeconds)
+        {
+            _cachedGrassDewOffsetY = PartyAvatarSideIndexHelper.DetectGrassDewOffsetY(captureRegion);
+            _lastGrassDewCheckTime = DateTime.Now;
+        }
+
+        int grassDewOffsetY = _cachedGrassDewOffsetY;
+
         double userPX = Math.Round(config.PX, 1);
-        double userPY = Math.Round(config.PY, 1);
+        double userPY = Math.Round(config.PY, 1) + (grassDewOffsetY == 0 ? 14 : 0);
         double userGap = Math.Round(config.Gap, 1);
 
         double basePx = userPX * factor;
@@ -615,32 +635,26 @@ public class SkillCdTrigger : ITaskTrigger
         double intervalY = userGap * factor;
 
         var textList = new List<TextDrawable>();
-        
+
         if (_isSyncingTeam)
         {
-            drawContent.PutOrRemoveTextList("SkillCdText", null);
+            overlay.UpdateTexts(null);
             return;
         }
 
-        // 检查是否有足够的角色信息（必须恰好4人）
         int validAvatarCount = _teamAvatarNames.Count(n => !string.IsNullOrEmpty(n));
-        // _logger.LogDebug("[SkillCD] UpdateOverlay: 有效角色数量={Count}, Names={Names}", validAvatarCount, string.Join(",", _teamAvatarNames));
-        
+
         if (validAvatarCount != 4)
         {
-            // 不是4人，确保清空
-            if (drawContent.TextList.ContainsKey("SkillCdText"))
-            {
-               drawContent.PutOrRemoveTextList("SkillCdText", null);
-            }
+            overlay.UpdateTexts(null);
             return;
         }
-        
+
         for (int i = 0; i < 4; i++)
         {
             if (!string.IsNullOrEmpty(_teamAvatarNames[i]))
             {
-                // 如果启用了"冷却为0时隐藏"，且CD为0，则跳过
+                // 冷却为0时隐藏
                 if (config.HideWhenZero && _cds[i] <= 0)
                 {
                     continue;
@@ -653,7 +667,6 @@ public class SkillCdTrigger : ITaskTrigger
             }
         }
 
-        if (textList.Count == 0) drawContent.PutOrRemoveTextList("SkillCdText", null);
-        else drawContent.PutOrRemoveTextList("SkillCdText", textList);
+        overlay.UpdateTexts(textList.Count == 0 ? null : textList);
     }
 }
