@@ -346,9 +346,10 @@ public class AutoFightTask : ISoloTask
                         
                         #region 初始寻敌处理
                         
-                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck)
+                        if ( _finishDetectConfig.RotateFindEnemyEnabled && i == 0 && _taskParam.IsFirstCheck && _taskParam.RotaryFactor > 0)
                         {
-                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,true,_taskParam.RotaryFactor);
+                            var clampedRotaryFactor = _taskParam.RotaryFactor is >= 1 and <= 13 ? _taskParam.RotaryFactor : 6;
+                            await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, clampedRotaryFactor);
                         }
                         
                         #endregion
@@ -754,32 +755,15 @@ public class AutoFightTask : ISoloTask
                Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
-    public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
+    private int _fightCheckCount = 0;
+    
+    /// <summary>
+    /// 打开编队界面检查战斗是否结束
+    /// </summary>
+    /// <param name="detectDelayTime">检测延迟时间</param>
+    /// <returns>战斗是否结束</returns>
+    private async Task<bool> CheckBattleEndByPartyScreen(int detectDelayTime)
     {
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
-        {
-            bool? result = null;
-            try
-            {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                result = false;
-            }
-            
-            AutoFightSeek.RotationCount = (result == null) ? 
-                AutoFightSeek.RotationCount + 1 :  0;
-            
-            if (result != null)
-            {
-                return result.Value;
-            }
-        }
-
-        if (!_finishDetectConfig.RotateFindEnemyEnabled)await Delay(delayTime, _ct);
-        
         // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
         Logger.LogInformation("打开编队界面检查战斗是否结束");
         // 最终方案确认战斗结束
@@ -801,14 +785,113 @@ public class AutoFightTask : ISoloTask
             Logger.LogInformation("识别到战斗结束");
             //取消正在进行的换队
             Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+            // 重置检查计数器
+            _fightCheckCount = 0;
             return true;
         }
 
         // Logger.LogInformation($"未识别到战斗结束yellow{b3.Item0},{b3.Item1},{b3.Item2}");
         // Logger.LogInformation($"未识别到战斗结束white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
         Logger.LogInformation($"未识别到战斗结束: yellow{b3.Item0},{b3.Item1},{b3.Item2};white{whiteTile.Item0},{whiteTile.Item1},{whiteTile.Item2}");
+        
+        return false;
+    }
+    
+    public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
+    {
+        _fightCheckCount++;
+        
+        // 记录开始时间
+        DateTime startTime = DateTime.Now;
+        
+        // 检查是否是第4的倍数次检查
+        bool skipBloodBarCheck = _fightCheckCount % 4 == 0;
+        
+        // 不是第4的倍数次检查时，先检查血条
+        if (!skipBloodBarCheck && _finishDetectConfig.RotateFindEnemyEnabled)
+        {
+            Logger.LogInformation("检查当前画面内是否存在血条");
+            
+            ImageRegion image;
+            Mat mask;
+            Mat labels;
+            Mat stats;
+            Mat centroids;
+            int numLabels;
+            int height;
+            int x;
+            bool success;
+            
+            try
+            {
+                Scalar bloodLower = new Scalar(255, 90, 90);
+                bool found = AutoFightSeek.DetectBloodBar(bloodLower, out image, out mask, out labels, out stats, out centroids, out numLabels, out height, out x, out success);
+                
+                // 释放资源
+                image?.Dispose();
+                mask?.Dispose();
+                labels?.Dispose();
+                stats?.Dispose();
+                centroids?.Dispose();
+                
+                if (found && success && height > 2 && height < 25)
+                {
+                    Logger.LogInformation("检测到血条，战斗未结束，跳过检查");
+                    _lastFightFlagTime = DateTime.Now;
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "血条检查发生异常");
+            }
+        }
+        
+        // 计算已经过的时间
+        int elapsedTime = (int)(DateTime.Now - startTime).TotalMilliseconds;
+        // 确保开始第一次检查时至少经过 delayTime
+        if (!_finishDetectConfig.RotateFindEnemyEnabled || elapsedTime < delayTime)
+        {
+            await Delay(Math.Max(0, delayTime - elapsedTime), _ct);
+        }
+        
+        // 第一次检查
+        bool battleEnd = await CheckBattleEndByPartyScreen(detectDelayTime);
+        if (battleEnd)
+        {
+            return true;
+        }
 
-        if (_finishDetectConfig.RotateFindEnemyEnabled)
+        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.RotaryFactor > 0)
+        {
+            bool? result = null;
+            try
+            {
+                var clampedRotaryFactor = _taskParam.RotaryFactor is >= 1 and <= 13 ? _taskParam.RotaryFactor : 6;
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct, false, clampedRotaryFactor);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
+            }
+            
+            AutoFightSeek.RotationCount = (result == null) ? 
+                AutoFightSeek.RotationCount + 1 :  0;
+            
+            if (result != null)
+            {
+                return result.Value;
+            }
+        }
+
+        // 第二次检查
+        battleEnd = await CheckBattleEndByPartyScreen(detectDelayTime);
+        if (battleEnd)
+        {
+            return true;
+        }
+
+        if (_finishDetectConfig.RotateFindEnemyEnabled && _taskParam.RotaryFactor > 0)
         {
             Task.Run(() =>
             {
