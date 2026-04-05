@@ -424,10 +424,9 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     private bool ShouldSendNotification(string eventCode)
     {
-        var subscribeEventStr = _notificationConfig?.NotificationEventSubscribe;
-        if (string.IsNullOrEmpty(subscribeEventStr)) return true;
-
-        return subscribeEventStr.Contains(eventCode);
+        return NotificationEventSubscriptionHelper.ShouldSendNotification(
+            _notificationConfig?.NotificationEventSubscribe,
+            eventCode);
     }
 
     /// <summary>
