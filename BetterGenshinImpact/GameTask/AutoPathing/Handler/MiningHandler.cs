@@ -38,7 +38,8 @@ public class MiningHandler : IActionHandler
         "坎蒂丝 e(hold,wait)",
         "雷泽 e(hold,wait)",
         "凝光 attack(4.0)",
-        "钟离 e(hold,wait)"
+        "钟离 e(hold,wait)",
+        "莉奈娅 moveby(0,500),wait(0.5),mousedown,wait(1.0),mouseup,wait(0.5),click(middle)",
     ];
     
 
