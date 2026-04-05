@@ -34,7 +34,7 @@
                 </Hyperlink>
             </emoji:TextBlock>
             <emoji:TextBlock Text="🔹 首次使用请先查看" Margin="5" FontSize="16">
-                <Hyperlink NavigateUri="https://bettergi.com/quickstart.html"
+                <Hyperlink NavigateUri="https://www.bettergi.com/quickstart.html"
                            RequestNavigate="HyperlinkRequestNavigate" Foreground="#1E9BFA">
                     《快速上手教程》
                 </Hyperlink>

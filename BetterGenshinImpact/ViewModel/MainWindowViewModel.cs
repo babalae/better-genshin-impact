@@ -412,12 +412,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    _logger.LogError("PaddleOcr预热异常，解决方案：【https://bettergi.com/faq.html】\r\n" + e.Source + "\r\n--" +
+                    _logger.LogError("PaddleOcr预热异常，解决方案：【https://www.bettergi.com/faq.html】\r\n" + e.Source + "\r\n--" +
                                      Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
                     var innerException = e.InnerException;
                     if (innerException != null)
                     {
-                        _logger.LogError("PaddleOcr预热内部异常，解决方案：【https://bettergi.com/faq.html】\r\n" +
+                        _logger.LogError("PaddleOcr预热内部异常，解决方案：【https://www.bettergi.com/faq.html】\r\n" +
                                          innerException.Source + "\r\n--" + Environment.NewLine +
                                          innerException.StackTrace + "\r\n---" + Environment.NewLine +
                                          innerException.Message);
@@ -432,11 +432,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
         catch (Exception e)
         {
-            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
+            ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://www.bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(
                 new ProcessStartInfo(
-                        "https://bettergi.com/faq.html#%E2%9D%93%E6%8F%90%E7%A4%BA-paddleocr%E9%A2%84%E7%83%AD%E5%A4%B1%E8%B4%A5-%E5%BA%94%E8%AF%A5%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3")
+                        "https://www.bettergi.com/faq.html#%E2%9D%93-%E6%8F%90%E7%A4%BA-paddleocr-%E9%A2%84%E7%83%AD%E5%A4%B1%E8%B4%A5-%E5%BA%94%E8%AF%A5%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3")
                 { UseShellExecute = true });
         }
     }

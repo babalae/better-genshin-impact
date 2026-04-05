@@ -1,16 +1,21 @@
-{
+﻿{
   "info": {
-    "authors": [],
+    "authors": [
+      {
+        "links": "",
+        "name": "ddaodan"
+      }
+    ],
     "bgi_version": "0.45.0",
     "description": "",
     "enable_monster_loot_split": false,
-    "last_modified_time": 1760586516234,
+    "last_modified_time": 1775105055739,
     "map_match_method": "",
     "map_name": "Teyvat",
     "name": "挪德卡莱3-月矩力试验设计局-2",
     "tags": [],
     "type": "collect",
-    "version": "1.0"
+    "version": "1.1"
   },
   "positions": [
     {
@@ -19,17 +24,17 @@
       "id": 1,
       "move_mode": "walk",
       "type": "teleport",
-      "x": 9375.3896484375,
-      "y": 3150.5361328125
+      "x": 9375.0771484375,
+      "y": 3150.26611328125
     },
     {
       "action": "",
       "action_params": "",
       "id": 2,
-      "move_mode": "walk",
-      "type": "target",
-      "x": 9379.1904296875,
-      "y": 3148.973876953125
+      "move_mode": "dash",
+      "type": "path",
+      "x": 9377.501953125,
+      "y": 3145.7734375
     },
     {
       "action": "",
@@ -37,26 +42,35 @@
       "id": 3,
       "move_mode": "jump",
       "type": "path",
-      "x": 9384.3466796875,
-      "y": 3152.6689453125
+      "x": 9380.072265625,
+      "y": 3141.0322265625
     },
     {
       "action": "",
       "action_params": "",
       "id": 4,
-      "move_mode": "jump",
+      "move_mode": "walk",
       "type": "path",
-      "x": 9392.90234375,
-      "y": 3154.693359375
+      "x": 9385.978515625,
+      "y": 3134.896484375
     },
     {
       "action": "",
       "action_params": "",
       "id": 5,
+      "move_mode": "jump",
+      "type": "path",
+      "x": 9396.578125,
+      "y": 3136.884765625
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 6,
       "move_mode": "dash",
       "type": "target",
-      "x": 9424.498046875,
-      "y": 3135.7734375
+      "x": 9423.1064453125,
+      "y": 3135.43310546875
     }
   ]
 }

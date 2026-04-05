@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv.FeatureMatch;
 using OpenCvSharp;
@@ -17,8 +18,9 @@ public class LargeSiftExtractor
 {
     private const int BLOCK_SIZE = 1024;
     private const int OVERLAP_SIZE = BLOCK_SIZE * 3;
-
-    private readonly Feature2D _sift = SIFT.Create();
+    private const int MAX_PARALLELISM = 24;
+    private const string MAP_VERSION = "6.5";
+    private static readonly string ROOT_PATH = $@"E:\HuiTask\更好的原神\地图匹配\拼图结果\{MAP_VERSION}";
     
     // public static void Gen1024()
     // {
@@ -38,7 +40,7 @@ public class LargeSiftExtractor
     {
         Environment.SetEnvironmentVariable("OPENCV_IO_MAX_IMAGE_PIXELS", Math.Pow(2, 40).ToString("F0"));
 
-        var rootPath = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4";
+        var rootPath = ROOT_PATH;
 
         // 缩小 2048/256 = 8
         var targetFilePath = $@"{rootPath}\Teyvat_0_256.png";
@@ -63,8 +65,8 @@ public class LargeSiftExtractor
     {
         Environment.SetEnvironmentVariable("OPENCV_IO_MAX_IMAGE_PIXELS", Math.Pow(2, 40).ToString("F0"));
         var extractor = new LargeSiftExtractor();
-        extractor.ExtractAndSaveSift(@"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4\map_2048.png",
-            @"E:\HuiTask\更好的原神\地图匹配\拼图结果\6.4\");
+        extractor.ExtractAndSaveSift(Path.Combine(ROOT_PATH, "map_2048.png"),
+            ROOT_PATH);
     }
 
     public void ExtractAndSaveSift(string imagePath, string outputPath)
@@ -77,29 +79,37 @@ public class LargeSiftExtractor
         // 计算需要切分的块数
         int rows = (int)Math.Ceiling(img.Height / (double)BLOCK_SIZE);
         int cols = (int)Math.Ceiling(img.Width / (double)BLOCK_SIZE);
+        int totalBlocks = rows * cols;
         Debug.WriteLine($"图像被分成 {rows} 行 {cols} 列的块。");
-
-        // 遍历每个块
-        for (int row = 0; row < rows; row++)
-        {
-            for (int col = 0; col < cols; col++)
+        var blockResults = new BlockProcessResult[totalBlocks];
+        Parallel.For(0, totalBlocks,
+            new ParallelOptions { MaxDegreeOfParallelism = MAX_PARALLELISM },
+            () => SIFT.Create(),
+            (index, _, sift) =>
             {
+                int row = index / cols;
+                int col = index % cols;
                 Debug.WriteLine($"处理第 {row} 行，第 {col} 列的块");
-                var (keypoints, descriptors) = ProcessBlock(img, row, col);
+                var (keypoints, descriptors) = ProcessBlock(img, row, col, sift);
+                blockResults[index] = new BlockProcessResult(row, col, keypoints, descriptors);
+                return sift;
+            },
+            sift => sift.Dispose());
 
-                // 调整keypoints的坐标
-                // 修改这里：使用 for 循环而不是 foreach
-                for (int i = 0; i < keypoints.Length; i++)
-                {
-                    var kp = keypoints[i];
-                    kp.Pt.X += col * BLOCK_SIZE;
-                    kp.Pt.Y += row * BLOCK_SIZE;
-                    keypoints[i] = kp;
-                }
-
-                allKeypoints.AddRange(keypoints);
-                allDescriptors.Add(descriptors);
+        for (int index = 0; index < totalBlocks; index++)
+        {
+            var blockResult = blockResults[index];
+            var keypoints = blockResult.Keypoints;
+            for (int i = 0; i < keypoints.Length; i++)
+            {
+                var kp = keypoints[i];
+                kp.Pt.X += blockResult.Col * BLOCK_SIZE;
+                kp.Pt.Y += blockResult.Row * BLOCK_SIZE;
+                keypoints[i] = kp;
             }
+
+            allKeypoints.AddRange(keypoints);
+            allDescriptors.Add(blockResult.Descriptors);
         }
 
         // 合并所有descriptors
@@ -118,7 +128,7 @@ public class LargeSiftExtractor
         Debug.WriteLine("SIFT特征提取和保存完成。");
     }
 
-    private (KeyPoint[] keypoints, Mat descriptors) ProcessBlock(Mat img, int row, int col)
+    private static (KeyPoint[] keypoints, Mat descriptors) ProcessBlock(Mat img, int row, int col, Feature2D sift)
     {
         // 计算当前块的范围
         int startY = row * BLOCK_SIZE;
@@ -142,7 +152,7 @@ public class LargeSiftExtractor
 
             KeyPoint[] kps;
             var desc = new Mat();
-            _sift.DetectAndCompute(blockRegion, null, out kps, desc);
+            sift.DetectAndCompute(blockRegion, null, out kps, desc);
             Debug.WriteLine($"Block at ({row},{col}) - Original keypoints count: {kps.Length}");
 
             // 找出中心区域关键点的索引
@@ -184,7 +194,7 @@ public class LargeSiftExtractor
                     Math.Min(BLOCK_SIZE, img.Height - startY)));
 
             var desc = new Mat();
-            _sift.DetectAndCompute(blockRegion, null, out var kps, desc);
+            sift.DetectAndCompute(blockRegion, null, out var kps, desc);
 
             Debug.WriteLine($"边缘区域处理了 {kps.Length} 个关键点。");
             return (kps, desc);
@@ -225,4 +235,6 @@ public class LargeSiftExtractor
         using var fs = new FileStream(outputPath, FileMode.Create);
         fs.Write(kpSpan);
     }
+
+    private readonly record struct BlockProcessResult(int Row, int Col, KeyPoint[] Keypoints, Mat Descriptors);
 }

@@ -32,6 +32,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject XKey;
 
     public RecognitionObject FriendChat;
+    public RecognitionObject ChatBackButtonRo;
 
     public RecognitionObject PartyBtnChooseView;
     public RecognitionObject PartyBtnDelete;
@@ -274,7 +275,16 @@ public class ElementAssets : BaseAssets<ElementAssets>
             DrawOnWindow = false
         }.InitTemplate();
 
-        // 队伍切换
+        // 聊天 UI 识别
+        ChatBackButtonRo = new RecognitionObject
+        {
+            Name = "ChatBackButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"UseRedeemCode", "esc_return_button.png", systemInfo),
+            RegionOfInterest = new Rect(0, 0, (int)(220 * AssetScale), (int)(160 * AssetScale)),
+            Threshold = 0.72,
+            DrawOnWindow = false
+        }.InitTemplate();
         PartyBtnChooseView = new RecognitionObject
         {
             Name = "PartyBtnChooseView",

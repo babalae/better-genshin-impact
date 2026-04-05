@@ -268,7 +268,7 @@ public partial class NotificationConfig : ObservableObject
 
     /// <summary>
     ///     Discord Webhook头像地址
-    ///     Default url from https://bettergi.com/
+    ///     Default url from https://www.bettergi.com/
     /// </summary>
     [ObservableProperty] private string _discordWebhookAvatarUrl =
         "https://img.alicdn.com/imgextra/i2/2042484851/O1CN01LQfLIG1lhoEZwz1Gt_!!2042484851.png";
