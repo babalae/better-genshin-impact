@@ -133,10 +133,10 @@ public class Avatar
                 
                 try
                 {
-                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).Wait(2000,cts.Token);
+                    pathExecutor.MovementController.FaceTo(AutoFightTask.FightWaypoint).Wait(2000,cts.Token);
                     AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code; // 改为跳飞
                     Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).Wait(15000,cts.Token);
+                    pathExecutor.MovementController.MoveTo(AutoFightTask.FightWaypoint).Wait(15000,cts.Token);
                     cts.Cancel();
                     AutoFightTask.FightWaypoint = null;
                     Simulation.SendInput.Mouse.RightButtonUp();

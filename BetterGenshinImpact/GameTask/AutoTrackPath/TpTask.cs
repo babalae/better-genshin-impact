@@ -120,7 +120,7 @@ public class TpTask
                 MoveMode = MoveModeEnum.Walk.Code
             };
             var waypointForTrack = new WaypointForTrack(waypoint, nameof(MapTypes.Teyvat), _mapMatchingMethod);
-            await new PathExecutor(ct).MoveTo(waypointForTrack);
+            await new PathExecutor(ct).MovementController.MoveTo(waypointForTrack);
             Simulation.SendInput.SimulateAction(GIActions.Drop);
         }
 
@@ -459,8 +459,26 @@ public class TpTask
                 // 传送点未激活或不存在 按ESC回到大地图界面
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(300, ct);
-                // throw; // 不抛出异常，继续重试
-                Logger.LogWarning(e.Message + "  重试");
+
+                if (_tpConfig.MapZoomEnabled && i < 2)
+                {
+                    double currentZoom = GetBigMapZoomLevel(CaptureToRectArea());
+                    if (currentZoom < 4.0)
+                    {
+                        Logger.LogInformation("传送点点击偏差：尝试扩大视野以增加特征点...");
+                        await AdjustMapZoomLevel(currentZoom, Math.Min(6.0, currentZoom + 1.5));
+                    }
+                    else
+                    {
+                        Logger.LogInformation("传送点点击偏差：尝试稍微移动地图以引入新特征...");
+                        await MouseMoveMap(60, 60, 4);
+                    }
+                    await Delay(500, ct);
+                }
+                else
+                {
+                    Logger.LogWarning(e.Message + "  重试");
+                }
             }
             catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
             {
@@ -818,8 +836,13 @@ public class TpTask
                 
                 if (rect == default)
                 {
-                    // 滚轮调整后再次识别
-                    Simulation.SendInput.Mouse.VerticalScroll(2);
+                    // 识别失败时，轻微拖动一下地图露出新特征，再试一次
+                    GameCaptureRegion.GameRegionMove((r, _) => (r.Width / 2d, r.Height / 2d));
+                    Simulation.SendInput.Mouse.LeftButtonDown();
+                    Sleep(50);
+                    GameCaptureRegion.GameRegionMoveBy((_, scale) => (50 * scale, 50 * scale));
+                    Sleep(50);
+                    Simulation.SendInput.Mouse.LeftButtonUp();
                     Sleep(500);
                     throw new RetryException("识别大地图位置失败");
                 }

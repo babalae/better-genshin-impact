@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
@@ -9,14 +9,16 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
+/// <summary>
+/// 处理强行停止飞行状态并施加下落攻击的动作逻辑 / Handles the execution logic for terminating flight via plunging attack action.
+/// </summary>
 public class StopFlyingHandler : IActionHandler
 {
+    /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        // 如果有参数，先自由落体，然后恢复飞行
-        if (waypointForTrack != null
-            && !string.IsNullOrEmpty(waypointForTrack.ActionParams)
-            && int.TryParse(waypointForTrack.ActionParams, out var stopFlyingWaitTime))
+        if (waypointForTrack != null && !string.IsNullOrWhiteSpace(waypointForTrack.ActionParams) && 
+            int.TryParse(waypointForTrack.ActionParams, out var stopFlyingWaitTime))
         {
             Simulation.SendInput.SimulateAction(GIActions.Jump);
             await Delay(stopFlyingWaitTime, ct);
@@ -24,31 +26,35 @@ public class StopFlyingHandler : IActionHandler
             await Delay(300, ct);
         }
 
-        // 下落攻击接近目的地
-        Logger.LogInformation("动作：下落攻击");
+        Logger.LogInformation("动作: 【下落攻击以停止飞行】 / Action: [Plunge Attack to stop flying]");
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-        int i;
-        for (i = 0; i < 50; i++)
+
+        const int maxAttempts = 50;
+        int i = 0;
+
+        for (; i < maxAttempts; i++)
         {
-            var screen = CaptureToRectArea();
-            var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
-            if (isFlying)
+            ct.ThrowIfCancellationRequested();
+            bool isFlying;
+            using (var screen = CaptureToRectArea())
             {
-                await Delay(300, ct);
+                isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             }
-            else
+            
+            if (!isFlying)
             {
                 break;
             }
+            await Delay(300, ct);
         }
 
-        if (i == 50)
+        if (i == maxAttempts)
         {
-            Logger.LogWarning("动作：下落攻击 超时结束");
+            Logger.LogWarning("动作：下落攻击未能在预计时间内完全落地(超时)");
         }
         else
         {
-            Logger.LogInformation("动作：下落攻击 结束");
+            Logger.LogInformation("动作：下落攻击正常结束，已落地");
         }
     }
 }

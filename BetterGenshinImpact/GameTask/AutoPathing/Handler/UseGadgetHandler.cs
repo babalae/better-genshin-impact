@@ -1,91 +1,90 @@
-﻿using BetterGenshinImpact.Core.Simulator;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
-using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
+using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 /// <summary>
-/// 触发使用小道具
+/// 处理使用小道具 (如四叶印等) 动作的逻辑 / Handles the execution logic for quick-use gadgets.
+/// 支持基于视觉的当前冷却时间 (CD) 推算与等待 / Supports visual-based CD checking and conditional waiting.
 /// </summary>
 public class UseGadgetHandler : IActionHandler
 {
+    /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行 {Text}", "使用小道具");
+        Logger.LogInformation("执行动作: 【使用小道具】");
         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
 
+        var actionParams = waypointForTrack?.ActionParams ?? string.Empty;
 
-        if (waypointForTrack != null
-            && !string.IsNullOrEmpty(waypointForTrack.ActionParams)
-            && waypointForTrack.ActionParams.Contains("not_wait", StringComparison.OrdinalIgnoreCase))
+        if (actionParams.Contains("not_wait", StringComparison.OrdinalIgnoreCase))
         {
-            // 不等待
+            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+            await Delay(300, ct);
+            return;
+        }
+
+        double maxWaitSeconds = 100;
+        if (!string.IsNullOrWhiteSpace(actionParams))
+        {
+            double.TryParse(actionParams, out maxWaitSeconds);
+        }
+
+        var screen = CaptureToRectArea();
+        var cd = GetCurrentCd(screen);
+
+        if (cd > 100)
+        {
+            Logger.LogWarning("小道具CD读取值异常: {Cd}秒。可能为识别错误，将强制跳过等待", cd);
+            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+        }
+        else if (cd > 0)
+        {
+            Logger.LogInformation("小道具正在冷却中，需等待：{Cd}秒", cd);
+            
+            var waitTimeMs = cd > maxWaitSeconds 
+                ? (int)(maxWaitSeconds * 1000) 
+                : (int)(cd * 1000) + 100;
+
+            if (cd > maxWaitSeconds)
+            {
+                Logger.LogDebug("CD 超过最大允许时限，截断等待时长为: {Max}秒", maxWaitSeconds);
+            }
+
+            await Delay(waitTimeMs, ct);
             Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
         }
         else
         {
-            double maxWaitSeconds = 100;
-            if (waypointForTrack != null
-                && !string.IsNullOrEmpty(waypointForTrack.ActionParams))
-            {
-                double.TryParse(waypointForTrack.ActionParams, out maxWaitSeconds); // 最大等待时间，单位秒
-            }
-
-            var screen = CaptureToRectArea();
-            var cd = GetCurrentCd(screen);
-            if (cd > 100)
-            {
-                Logger.LogWarning("小道具正在CD中，当前剩余时间：{Cd}秒，时间过长，可能是识别错误。跳过！", cd);
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-            }
-            else if (cd > 0)
-            {
-                Logger.LogInformation("小道具正在CD中，等待CD结束 ：{Cd}秒", cd);
-                // 等待小道具CD结束
-                int waitTime; // 等待CD结束后再继续
-                if (cd > maxWaitSeconds)
-                {
-                    waitTime = (int)(maxWaitSeconds * 1000);
-                    Logger.LogInformation("CD过长，使用最大CD：{Max}秒", maxWaitSeconds);
-                }
-                else
-                {
-                    waitTime = (int)(cd * 1000) + 100; // 等待CD结束后再继续
-                }
-
-                await Delay(waitTime, ct);
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-            }
-            else
-            {
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-            }
+            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
         }
 
-        Logger.LogInformation("使用小道具");
+        Logger.LogInformation("已完成小道具使用 / Completed gadget usage.");
         await Delay(300, ct);
     }
 
     /// <summary>
-    /// 小道具是否正在CD中
-    /// 77x77
+    /// 读取屏幕区域并OCR识别小道具当前CD值。 / OCR-based mechanism to extract the current Gadget CD.
     /// </summary>
     private double GetCurrentCd(ImageRegion imageRegion)
     {
         var eRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.ZCooldownRect);
-        var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+        
+        using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
+        
         return StringUtils.TryParseDouble(text);
     }
 }
