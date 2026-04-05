@@ -1,4 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoFight;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fischless.HotkeyCapture;
 using System;
@@ -108,7 +111,8 @@ public partial class HotKeySettingModel : ObservableObject
                 {
                     MouseMonitorHook = new MouseHook
                     {
-                        IsHold = IsHold
+                        IsHold = IsHold,
+                        ConfigPropertyName = ConfigPropertyName
                     };
 
                     if (OnKeyPressAction != null)
@@ -138,7 +142,8 @@ public partial class HotKeySettingModel : ObservableObject
                     }
                     KeyboardMonitorHook = new KeyboardHook
                     {
-                        IsHold = IsHold
+                        IsHold = IsHold,
+                        ConfigPropertyName = ConfigPropertyName
                     };
                     if (OnKeyPressAction != null)
                     {
@@ -169,17 +174,46 @@ public partial class HotKeySettingModel : ObservableObject
 
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)
     {
+        if (ShouldBlockGlobalRegister())
+        {
+            return;
+        }
+
         OnKeyPressAction?.Invoke(sender, e);
     }
 
     private void OnKeyDown(object? sender, KeyPressedEventArgs e)
     {
+        if (ShouldBlockGlobalRegister())
+        {
+            return;
+        }
+
         OnKeyDownAction?.Invoke(sender, e);
     }
 
     private void OnKeyUp(object? sender, KeyPressedEventArgs e)
     {
+        if (ShouldBlockGlobalRegister())
+        {
+            ResetBlockedKeyUpState();
+            return;
+        }
+
         OnKeyUpAction?.Invoke(sender, e);
+    }
+
+    private bool ShouldBlockGlobalRegister()
+    {
+        return HotKeyType == HotKeyTypeEnum.GlobalRegister && ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName);
+    }
+
+    private void ResetBlockedKeyUpState()
+    {
+        if (string.Equals(ConfigPropertyName, nameof(HotKeyConfig.OneKeyFightHotkey), StringComparison.Ordinal))
+        {
+            OneKeyFightTask.Instance.KeyUp();
+        }
     }
 
     public void UnRegisterHotKey()

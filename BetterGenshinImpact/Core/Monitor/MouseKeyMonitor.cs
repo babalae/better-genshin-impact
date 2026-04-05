@@ -102,6 +102,11 @@ public partial class  MouseKeyMonitor
         // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
         GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, Kernel32.GetTickCount());
 
+        if (SystemControl.IsGenshinImpactActive())
+        {
+            ChatUiHotkeyGuard.PrimeFromChatKey(e.KeyCode);
+        }
+
         // 热键按下事件
         HotKeyDown(sender, e);
 
