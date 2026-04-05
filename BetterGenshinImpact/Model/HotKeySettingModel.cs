@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using BetterGenshinImpact.GameTask;
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.ObjectModel;
@@ -108,7 +109,8 @@ public partial class HotKeySettingModel : ObservableObject
                 {
                     MouseMonitorHook = new MouseHook
                     {
-                        IsHold = IsHold
+                        IsHold = IsHold,
+                        ConfigPropertyName = ConfigPropertyName
                     };
 
                     if (OnKeyPressAction != null)
@@ -138,7 +140,8 @@ public partial class HotKeySettingModel : ObservableObject
                     }
                     KeyboardMonitorHook = new KeyboardHook
                     {
-                        IsHold = IsHold
+                        IsHold = IsHold,
+                        ConfigPropertyName = ConfigPropertyName
                     };
                     if (OnKeyPressAction != null)
                     {
@@ -169,16 +172,31 @@ public partial class HotKeySettingModel : ObservableObject
 
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)
     {
+        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        {
+            return;
+        }
+
         OnKeyPressAction?.Invoke(sender, e);
     }
 
     private void OnKeyDown(object? sender, KeyPressedEventArgs e)
     {
+        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        {
+            return;
+        }
+
         OnKeyDownAction?.Invoke(sender, e);
     }
 
     private void OnKeyUp(object? sender, KeyPressedEventArgs e)
     {
+        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        {
+            return;
+        }
+
         OnKeyUpAction?.Invoke(sender, e);
     }
 
