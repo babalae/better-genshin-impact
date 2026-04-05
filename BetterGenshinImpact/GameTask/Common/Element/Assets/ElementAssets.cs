@@ -33,8 +33,6 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject FriendChat;
     public RecognitionObject ChatBackButtonRo;
-    public RecognitionObject ChatListButtonRo;
-    public RecognitionObject ChatReviewButtonRo;
 
     public RecognitionObject PartyBtnChooseView;
     public RecognitionObject PartyBtnDelete;
@@ -277,31 +275,13 @@ public class ElementAssets : BaseAssets<ElementAssets>
             DrawOnWindow = false
         }.InitTemplate();
 
-        // 队伍切换
+        // 聊天 UI 识别
         ChatBackButtonRo = new RecognitionObject
         {
             Name = "ChatBackButton",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"UseRedeemCode", "esc_return_button.png", systemInfo),
             RegionOfInterest = new Rect(0, 0, (int)(220 * AssetScale), (int)(160 * AssetScale)),
-            Threshold = 0.72,
-            DrawOnWindow = false
-        }.InitTemplate();
-        ChatListButtonRo = new RecognitionObject
-        {
-            Name = "ChatListButton",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoMusicGame", "btn_list.png", systemInfo),
-            RegionOfInterest = new Rect(0, CaptureRect.Height / 2, CaptureRect.Width / 4, CaptureRect.Height / 2),
-            Threshold = 0.72,
-            DrawOnWindow = false
-        }.InitTemplate();
-        ChatReviewButtonRo = new RecognitionObject
-        {
-            Name = "ChatReviewButton",
-            RecognitionType = RecognitionTypes.TemplateMatch,
-            TemplateImageMat = GameTaskManager.LoadAssetImage(@"AutoSkip", "chat_review.png", systemInfo),
-            RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 4, CaptureRect.Height),
             Threshold = 0.72,
             DrawOnWindow = false
         }.InitTemplate();

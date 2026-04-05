@@ -1,6 +1,8 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoFight;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.ObjectModel;
@@ -172,7 +174,7 @@ public partial class HotKeySettingModel : ObservableObject
 
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)
     {
-        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        if (ShouldBlockGlobalRegister())
         {
             return;
         }
@@ -182,7 +184,7 @@ public partial class HotKeySettingModel : ObservableObject
 
     private void OnKeyDown(object? sender, KeyPressedEventArgs e)
     {
-        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        if (ShouldBlockGlobalRegister())
         {
             return;
         }
@@ -192,12 +194,26 @@ public partial class HotKeySettingModel : ObservableObject
 
     private void OnKeyUp(object? sender, KeyPressedEventArgs e)
     {
-        if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+        if (ShouldBlockGlobalRegister())
         {
+            ResetBlockedKeyUpState();
             return;
         }
 
         OnKeyUpAction?.Invoke(sender, e);
+    }
+
+    private bool ShouldBlockGlobalRegister()
+    {
+        return HotKeyType == HotKeyTypeEnum.GlobalRegister && ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName);
+    }
+
+    private void ResetBlockedKeyUpState()
+    {
+        if (string.Equals(ConfigPropertyName, nameof(HotKeyConfig.OneKeyFightHotkey), StringComparison.Ordinal))
+        {
+            OneKeyFightTask.Instance.KeyUp();
+        }
     }
 
     public void UnRegisterHotKey()
