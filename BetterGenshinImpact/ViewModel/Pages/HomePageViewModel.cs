@@ -271,6 +271,13 @@ public partial class HomePageViewModel : ViewModel
                 _maskWindow ??= new MaskWindow();
                 _maskWindow.Show();
                 MaskWindow.Instance().RefreshPosition();
+                SkillCdOverlayWindow.CreateInstance();
+                var skillCdOverlay = SkillCdOverlayWindow.InstanceNullable();
+                if (skillCdOverlay != null)
+                {
+                    skillCdOverlay.Show();
+                    skillCdOverlay.RefreshPosition();
+                }
                 _mouseKeyMonitor.Subscribe(hWnd);
                 TaskDispatcherEnabled = true;
             }

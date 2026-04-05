@@ -314,6 +314,32 @@ public class PartyAvatarSideIndexHelper
     }
 
     /// <summary>
+    /// 检测草露进度条偏移，有则返回 -14，无则返回 0
+    /// </summary>
+    public static int DetectGrassDewOffsetY(ImageRegion imageRegion)
+    {
+        var indexRectList = AutoFightAssets.Instance.AvatarIndexRectList;
+        if (indexRectList == null || indexRectList.Count < 3)
+        {
+            return 0;
+        }
+
+        var whitePointCount = 0;
+        foreach (var rectIndex in indexRectList)
+        {
+            int x = rectIndex.X + 2;
+            int y = rectIndex.Y - 5;
+            var color = imageRegion.SrcMat.At<Vec3b>(y, x);
+            if (color is { Item0: 255, Item1: 255, Item2: 255 })
+            {
+                whitePointCount++;
+            }
+        }
+
+        return whitePointCount >= 3 ? -14 : 0;
+    }
+
+    /// <summary>
     /// 识别当前出战角色编号
     /// 1. 颜色识别只要成功一次就认为成功并返回(优先级最高)
     /// 2. 出战标识识别成功，颜色识别失败，认为结果不确定，需要重试一次。2次后结果相同认为成功
