@@ -47,6 +47,11 @@ public sealed class SupabaseMissingTranslationReporter : IMissingTranslationRepo
             return false;
         }
 
+        if (ShouldSkipReporting(language, sourceInfo))
+        {
+            return false;
+        }
+
         return _channel.Writer.TryWrite(
             new MissingTranslationEvent(
                 language,
@@ -153,6 +158,8 @@ public sealed class SupabaseMissingTranslationReporter : IMissingTranslationRepo
             var payload = JsonSerializer.Serialize(
                 batch.Select(r => new SupabaseMissingRowSnake(r.Language, r.Key, r.Source, r.SourceInfo)),
                 SupabaseJsonOptions);
+            Debug.WriteLine(
+                $"[MissingTranslation][Supabase][Payload] batch={batch.Count}{Environment.NewLine}{FormatBatchKeysForDebug(batch, 50, 4000)}");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -215,6 +222,25 @@ public sealed class SupabaseMissingTranslationReporter : IMissingTranslationRepo
         }
 
         return text.Substring(0, maxLength) + "...(truncated)";
+    }
+
+    private static string FormatBatchKeysForDebug(IReadOnlyList<MissingTranslationUpsertRow> batch, int maxItems, int maxLength)
+    {
+        if (batch.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var lines = batch
+            .Take(maxItems)
+            .Select((row, index) => $"{index + 1}. [{row.Language}] {row.Key}");
+        var text = string.Join(Environment.NewLine, lines);
+        if (batch.Count > maxItems)
+        {
+            text += $"{Environment.NewLine}... and {batch.Count - maxItems} more";
+        }
+
+        return TruncateForLog(text, maxLength);
     }
 
     private static TranslationSourceInfo NormalizeSourceInfo(TranslationSourceInfo? sourceInfo)
@@ -396,4 +422,29 @@ public sealed class SupabaseMissingTranslationReporter : IMissingTranslationRepo
     {
         return ((int)source).ToString(CultureInfo.InvariantCulture);
     }
+
+    private static bool ShouldSkipReporting(string language, TranslationSourceInfo? sourceInfo)
+    {
+        // 中文语言不采集
+        if (language.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // 动态命名控件不采集
+        if (!string.IsNullOrWhiteSpace(sourceInfo?.ElementName)
+            && sourceInfo.ElementName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // Snackbar 弹出提示不采集
+        if (string.Equals(sourceInfo?.ElementType, "Wpf.Ui.Controls.Snackbar", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return false;
+    }
 }
+
