@@ -1,0 +1,30 @@
+name: I have feature requesting / 我有功能需求
+description: 提出新的功能想法 / Share a feature request
+title: "[feature] "
+labels:
+  - 功能建议
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: 功能请求
+      description: Feature Request
+      placeholder: 请简要说明你希望新增什么能力
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: Use Case
+      placeholder: 这个功能要解决什么问题？在哪些场景下使用？
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: Optional
+      placeholder: 可选，补充示意图、参考方案或限制条件
+    validations:
+      required: false

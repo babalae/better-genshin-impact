@@ -2,6 +2,7 @@
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Vanara.PInvoke;
@@ -24,6 +25,8 @@ public class KeyboardHook
 
     public bool IsPressed { get; set; }
 
+    public string ConfigPropertyName { get; set; } = string.Empty;
+
     /// <summary>
     /// 注意长按的时候会一直触发KeyDown
     /// </summary>
@@ -38,6 +41,11 @@ public class KeyboardHook
 
         if (e.KeyCode == BindKey)
         {
+            if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+            {
+                return;
+            }
+
             IsPressed = true;
             KeyDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
             if (IsHold)
@@ -65,6 +73,12 @@ public class KeyboardHook
         {
             while (IsPressed && KeyPressedEvent != null)
             {
+                if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+                {
+                    Thread.Sleep(10);
+                    continue;
+                }
+
                 KeyPressedEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
             }
         }
@@ -75,7 +89,7 @@ public class KeyboardHook
         if (e.KeyCode == BindKey)
         {
             IsPressed = false;
-            if (SystemControl.IsGenshinImpactActive())
+            if (SystemControl.IsGenshinImpactActive() && !ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
             {
                 KeyUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
             }

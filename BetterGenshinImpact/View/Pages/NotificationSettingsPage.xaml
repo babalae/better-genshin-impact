@@ -102,33 +102,59 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.NotificationConfig.JsNotificationEnabled, Mode=TwoWay}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="需要通知的事件"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
+                <StackPanel Margin="16">
+                    <ui:TextBlock FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        <ui:TextBlock.Inlines>
+                            <Run Text="需要通知的事件" />
+                            <ui:HyperlinkButton Margin="4,0,0,0"
+                                                Padding="0"
+                                                Command="{Binding OpenNotificationEventDocumentCommand}"
+                                                Cursor="Hand">
+                                <ui:HyperlinkButton.Content>
+                                    <TextBlock FontSize="11" Text="打开文档" />
+                                </ui:HyperlinkButton.Content>
+                            </ui:HyperlinkButton>
+                        </ui:TextBlock.Inlines>
+                    </ui:TextBlock>
+                    <ui:TextBlock Margin="0,4,0,0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="英文逗号分割，为空为全部通知"
+                                  Text="选择需要通知的事件；全部取消选择后按全部通知处理"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="220"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.NotificationEventSubscribe, Mode=TwoWay}" />
-                </Grid>
+                    <WrapPanel Margin="0,12,0,0">
+                        <ui:Button Margin="0,0,8,8"
+                                   Command="{Binding SelectAllNotificationEventsCommand}"
+                                   Content="全选" />
+                        <ui:Button Margin="0,0,8,8"
+                                   Command="{Binding ClearNotificationEventSelectionCommand}"
+                                   Content="取消选择" />
+                    </WrapPanel>
+                    <ui:TextBlock Margin="0,0,0,12"
+                                  Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                  Text="{Binding NotificationEventSelectionSummary}"
+                                  TextWrapping="Wrap" />
+                    <ItemsControl Margin="0,0,-12,0"
+                                  ItemsSource="{Binding NotificationEventOptions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="{Binding ActualWidth,
+                                                               RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}},
+                                                               Converter={StaticResource AdaptiveUniformGridColumnsConverter},
+                                                               ConverterParameter=280|4}" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox HorizontalAlignment="Stretch"
+                                          Margin="0,0,12,8"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               TextWrapping="Wrap" />
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
         </ui:CardExpander>
 

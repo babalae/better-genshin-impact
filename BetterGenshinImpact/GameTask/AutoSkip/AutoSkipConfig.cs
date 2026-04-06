@@ -124,6 +124,12 @@ public partial class AutoSkipConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _runBackgroundEnabled = false;
+    
+    /// <summary>
+    /// 后台剧情结束后切回游戏前台
+    /// </summary>
+    [ObservableProperty]
+    private bool _bringGameToFrontAfterBackgroundDialogEnabled = false;
 
     /// <summary>
     /// 提交物品

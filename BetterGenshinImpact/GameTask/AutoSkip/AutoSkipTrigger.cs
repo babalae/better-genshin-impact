@@ -159,6 +159,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private DateTime _prevGetDailyRewardsTime = DateTime.MinValue;
 
     private DateTime _prevClickTime = DateTime.MinValue;
+    private DateTime _prevBringToFrontTime = DateTime.MinValue;
+    private bool _pendingBringToFront;
 
     public void OnCapture(CaptureContent content)
     {
@@ -176,6 +178,15 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
         var isPlaying = content.CurrentGameUiCategory == GameUiCategory.Talk
                         || Bv.IsInTalkUi(content.CaptureRectArea); // 播放中
+
+        if (isPlaying && UseBackgroundOperation)
+        {
+            _pendingBringToFront = true;
+        }
+        else if (!isPlaying)
+        {
+            TryBringToFrontAfterBackgroundDialog();
+        }
 
         if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
         {
@@ -251,6 +262,31 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             ClickBlackGameScreen(content);
         }
+    }
+
+    private void TryBringToFrontAfterBackgroundDialog()
+    {
+        if (!_config.BringGameToFrontAfterBackgroundDialogEnabled || !_pendingBringToFront)
+        {
+            return;
+        }
+
+        if (SystemControl.IsGenshinImpactActive())
+        {
+            _pendingBringToFront = false;
+            return;
+        }
+
+        if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds <= 800
+            || (DateTime.Now - _prevBringToFrontTime).TotalSeconds <= 2)
+        {
+            return;
+        }
+
+        _prevBringToFrontTime = DateTime.Now;
+        SystemControl.ActivateWindow();
+        _pendingBringToFront = false;
+        _logger.LogInformation("自动剧情：后台对话结束，已自动切回游戏前台");
     }
 
     /// <summary>

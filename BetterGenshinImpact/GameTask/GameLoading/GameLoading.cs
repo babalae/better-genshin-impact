@@ -1,6 +1,8 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -35,6 +37,7 @@ public class GameLoadingTrigger : ITaskTrigger
     public bool IsBackgroundRunning => true;
 
     private readonly GameLoadingAssets _assets;
+    private readonly ElementAssets _elementAssets;
 
     private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
     private static ILogger<GameLoadingTrigger> _logger = App.GetLogger<GameLoadingTrigger>();
@@ -56,11 +59,15 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private bool biliLoginClicked = false;
     private (double x1080, double y1080)? lastAgreementClickPos = null;
+    private DateTime _prevAgePromptOcrTime = DateTime.MinValue;
+    private bool _agePromptTextMatched = false;
+    private List<Region> _latestLoadingOcrRegions = [];
 
     public GameLoadingTrigger()
     {
         GameLoadingAssets.DestroyInstance();
         _assets = GameLoadingAssets.Instance;
+        _elementAssets = ElementAssets.Instance;
     }
 
     public void InnerSetEnabled(bool enabled)
@@ -150,7 +157,7 @@ public class GameLoadingTrigger : ITaskTrigger
             }
             else
             {
-                TaskControl.Logger.LogWarning("没有检测到 Starward 协议注册，请查看帮助文档！");
+                // TaskControl.Logger.LogWarning("没有检测到 Starward 协议注册，请查看帮助文档！");
                 return false;
             }
         }
@@ -247,6 +254,7 @@ public class GameLoadingTrigger : ITaskTrigger
             InnerSetEnabled(false);
             return;
         }
+        
         // 成功进入游戏判断    
         if (Bv.IsInMainUi(content.CaptureRectArea) || Bv.IsInAnyClosableUi(content.CaptureRectArea) || Bv.IsInDomain(content.CaptureRectArea))
         {
@@ -254,6 +262,25 @@ public class GameLoadingTrigger : ITaskTrigger
             InnerSetEnabled(false);
             return;
         }
+
+        if ((DateTime.Now - _prevAgePromptOcrTime).TotalMilliseconds >= 1000)
+        {
+            _prevAgePromptOcrTime = DateTime.Now;
+            _latestLoadingOcrRegions = content.CaptureRectArea.FindMulti(RecognitionObject.OcrThis);
+            if (_latestLoadingOcrRegions.Any(region =>
+                    region.Text.Contains("适龄") || region.Text.Contains("监护")))
+            {
+                // 适龄提示窗口自动关闭
+                var agePopup = content.CaptureRectArea.Find(_elementAssets.BtnWhiteConfirm);
+                if (!agePopup.IsEmpty())
+                {
+                    agePopup.Click();
+                    _logger.LogInformation("检测到适龄提示，自动点击确认");
+                }
+            }
+        }
+        
+
 
         // B服判断
         if (!IsBiliJudged)

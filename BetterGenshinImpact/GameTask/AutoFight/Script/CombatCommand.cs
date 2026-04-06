@@ -108,7 +108,8 @@ public class CombatCommand
                     && Method != Method.KeyDown
                     && Method != Method.KeyUp
                     && Method != Method.KeyPress
-                    && Method != Method.Scroll)
+                    && Method != Method.Scroll
+                    && Method != Method.Ready)
                 {
                     avatar.Switch();
                 }
@@ -201,6 +202,10 @@ public class CombatCommand
         else if (Method == Method.Ready)
         {
             avatar.Ready();
+        }
+        else if (Method == Method.Check)
+        {
+            // check动作在AutoFightTask主循环中处理，此处不做任何操作
         }
         else if (Method == Method.Aim)
         {

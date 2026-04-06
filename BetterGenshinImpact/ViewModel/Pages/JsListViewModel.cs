@@ -185,7 +185,7 @@ public partial class JsListViewModel : ViewModel
     [RelayCommand]
     public void OnGoToJsScriptUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/jsscript.html")
+        Process.Start(new ProcessStartInfo("https://www.bettergi.com/feats/autos/jsscript.html")
             { UseShellExecute = true });
     }
 

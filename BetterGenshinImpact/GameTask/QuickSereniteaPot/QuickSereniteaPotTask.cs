@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
@@ -103,22 +103,26 @@ public class QuickSereniteaPotTask
                     }
                 }
             }
-            // 校验F交互是否是 进入[尘歌壶]
-            bool canIn = Bv.FindF(TaskControl.CaptureToRectArea(), "进入","尘歌壶");
+            // 校验F交互是否是 进入/离开[尘歌壶] 
+            var capture = TaskControl.CaptureToRectArea();
+            bool isEnter = Bv.FindF(capture, "进入", "尘歌壶");
+            bool isLeave = Bv.FindF(capture, "离开", "尘歌壶");
 
-            if (canIn) {
-                TaskControl.Logger.LogInformation("快速进入尘歌壶:识别到 进入尘歌壶");
-                // 按F进入
+            if (isEnter || isLeave) {
+                string action = isEnter ? "进入" : "离开";
+                TaskControl.Logger.LogInformation($"快速进出尘歌壶:识别到 {action}尘歌壶");
+                
+                // 按F触发交互
                 Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
-                TaskControl.Logger.LogInformation("快速进入尘歌壶:F进入尘歌壶");
+                TaskControl.Logger.LogInformation($"快速进出尘歌壶:F{action}尘歌壶");
                 TaskControl.CheckAndSleep(200);
-                // 点击进入尘歌壶
+                // 点击进入/离开尘歌壶
                 // 如果不是联机状态，此时玩家应已进入传送界面，本次点击不会影响实际功能
                 GameCaptureRegion.GameRegion1080PPosClick(1010, 760);
             }
             else
             {
-                TaskControl.Logger.LogInformation("快速进入尘歌壶:未识别到 进入尘歌壶");
+                TaskControl.Logger.LogInformation("快速进出尘歌壶:未识别到 进入或离开尘歌壶");
             }
         }
         catch (Exception e)

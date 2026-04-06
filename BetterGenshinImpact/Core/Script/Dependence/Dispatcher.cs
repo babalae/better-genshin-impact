@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoWood;
@@ -19,6 +20,8 @@ using System.Dynamic;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -193,6 +196,9 @@ public class Dispatcher
                 await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
                     cancellationToken);
                 return null;
+            case "AutoCook":
+                await new AutoCookTask().Start(cancellationToken);
+                return null;
             case "AutoEat":
                 {
                     string? foodName = soloTask.Config == null ? null : ScriptObjectConverter.GetValue((ScriptObject)soloTask.Config, "foodName", (string?)null);
@@ -338,5 +344,40 @@ public class Dispatcher
   
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
         await new AutoFightTask(param).Start(cancellationToken);  
+    }
+    
+    /// <summary>  
+    /// 运行自动地脉花任务
+    /// </summary>  
+    /// <param name="param">自动地脉花任务参数</param>  
+    /// <param name="customCt">自定义取消令牌</param>  
+    /// <returns></returns>  
+    public async Task RunAutoLeyLineOutcropTask(AutoLeyLineOutcropParam param, CancellationToken? customCt = null)  
+    {  
+        if (param == null)  
+        {  
+            throw new ArgumentNullException(nameof(param), "自动地脉花任务参数不能为空");  
+        }  
+  
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
+    }
+    
+        
+    /// <summary>  
+    /// 运行自动幽境危战任务
+    /// </summary>  
+    /// <param name="param">自动幽境危战任务参数</param>  
+    /// <param name="customCt">自定义取消令牌</param>  
+    /// <returns></returns>  
+    public async Task RunAutoStygianOnslaughtTask(AutoStygianOnslaughtParam param, CancellationToken? customCt = null)  
+    {  
+        if (param == null)  
+        {  
+            throw new ArgumentNullException(nameof(param), "自动幽境危战任务参数不能为空");  
+        }  
+  
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
+        await new AutoStygianOnslaughtTask(param).Start(cancellationToken);  
     }
 }

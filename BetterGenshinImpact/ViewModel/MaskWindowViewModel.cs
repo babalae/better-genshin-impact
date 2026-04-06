@@ -9,26 +9,20 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
-using LazyCache;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using PresentMonFps;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Model.MaskMap;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Vanara.PInvoke;
 using MaskMapPoint = BetterGenshinImpact.Model.MaskMap.MaskMapPoint;
 using MaskMapPointLabel = BetterGenshinImpact.Model.MaskMap.MaskMapPointLabel;
@@ -78,15 +72,35 @@ namespace BetterGenshinImpact.ViewModel
 
         [ObservableProperty] private string _mapPointsLoadingText = "正在加载点位...";
 
+        public double MiniMapOverlayLeftRatio => MapAssets.MimiMapRect1080P.X / 1920d;
+
+        public double MiniMapOverlayTopRatio => MapAssets.MimiMapRect1080P.Y / 1080d;
+
+        public double MiniMapOverlaySizeRatio => MapAssets.MimiMapRect1080P.Width / 1080d;
+
         public sealed record MapPointApiProviderOption(MapPointApiProvider Provider, string DisplayName);
+
+        public sealed record MapLanguageOption(string Code, string DisplayName);
 
         public IReadOnlyList<MapPointApiProviderOption> MapPointApiProviderOptions { get; } =
         [
             new(MapPointApiProvider.MihoyoMap, "米游社大地图"),
-            new(MapPointApiProvider.KongyingTavern, "空荧酒馆")
+            new(MapPointApiProvider.KongyingTavern, "空荧酒馆"),
+            new(MapPointApiProvider.HoYoLab, "HoYoLab")
+        ];
+
+        public IReadOnlyList<MapLanguageOption> HoYoLabLanguageOptions { get; } =
+        [
+            new(MapMaskConfig.HoYoLabLanguageEnUs, "English (en-us)"),
+            new(MapMaskConfig.HoYoLabLanguagePtPt, "Português (pt-pt)"),
+            new(MapMaskConfig.HoYoLabLanguageEsEs, "Español (es-es)")
         ];
 
         [ObservableProperty] private MapPointApiProviderOption? _selectedMapPointApiProviderOption;
+
+        [ObservableProperty] private MapLanguageOption? _selectedHoYoLabLanguageOption;
+
+        public bool IsHoYoLabProviderSelected => SelectedMapPointApiProviderOption?.Provider == MapPointApiProvider.HoYoLab;
 
         public MaskMapPointInfoPopupViewModel PointInfoPopup { get; } = new();
 
@@ -195,6 +209,7 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             SyncSelectedMapPointApiProviderFromConfig();
+            SyncSelectedHoYoLabLanguageFromConfig();
         }
 
         /// <summary>
@@ -221,12 +236,58 @@ namespace BetterGenshinImpact.ViewModel
 
         partial void OnSelectedMapPointApiProviderOptionChanged(MapPointApiProviderOption? value)
         {
+            OnPropertyChanged(nameof(IsHoYoLabProviderSelected));
             if (value == null)
             {
                 return;
             }
 
             _ = SwitchMapPointApiProviderAsync(value.Provider);
+        }
+
+        partial void OnSelectedHoYoLabLanguageOptionChanged(MapLanguageOption? value)
+        {
+            if (value == null)
+            {
+                return;
+            }
+
+            _ = SwitchHoYoLabLanguageAsync(value.Code);
+        }
+
+        private void SyncSelectedHoYoLabLanguageFromConfig()
+        {
+            var lang = HoYoLabMapApiService.NormalizeLanguage(TaskContext.Instance().Config.MapMaskConfig.HoYoLabLanguage);
+            SelectedHoYoLabLanguageOption = HoYoLabLanguageOptions.FirstOrDefault(x => x.Code == lang)
+                                         ?? HoYoLabLanguageOptions.FirstOrDefault();
+        }
+
+        private async Task SwitchHoYoLabLanguageAsync(string language)
+        {
+            try
+            {
+                var normalized = HoYoLabMapApiService.NormalizeLanguage(language);
+                var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+                if (mapMaskConfig.HoYoLabLanguage == normalized)
+                {
+                    return;
+                }
+
+                mapMaskConfig.HoYoLabLanguage = normalized;
+                if (Config != null)
+                {
+                    Config.MapMaskConfig.HoYoLabLanguage = normalized;
+                }
+
+                if (mapMaskConfig.MapPointApiProvider == MapPointApiProvider.HoYoLab)
+                {
+                    await ResetAndReloadMapPointPickerAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "切换HoYoLab语言时发生异常");
+            }
         }
 
         private async Task SwitchMapPointApiProviderAsync(MapPointApiProvider provider)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
 {
@@ -15,6 +15,11 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
         /// 目标编号（技能编号，从右往左）
         /// </summary>
         public int TargetIndex { get; set; }
+        
+        /// <summary>
+        /// 灵活改变骰子的数量（因为在不同的牌局中或者角色技能中会发生骰子实际需要的数量增加或减少）
+        /// </summary>
+        public int DiceDelta { get; set; } = 0;
 
         public override string? ToString()
         {
@@ -22,11 +27,11 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             {
                 if (string.IsNullOrEmpty(Character.Skills[TargetIndex].Name))
                 {
-                    return $"【{Character.Name}】使用【技能{TargetIndex}】";
+                    return $"【{Character.Name}】使用【技能{TargetIndex}】{(DiceDelta != 0 ? $"(骰子{(DiceDelta > 0 ? "增加" : "减少")}{Math.Abs(DiceDelta)})" : "")}";
                 }
                 else
                 {
-                    return $"【{Character.Name}】使用【{Character.Skills[TargetIndex].Name}】";
+                    return $"【{Character.Name}】使用【{Character.Skills[TargetIndex].Name}】{(DiceDelta != 0 ? $"(骰子{(DiceDelta > 0 ? "增加" : "减少")}{Math.Abs(DiceDelta)})" : "")}";
                 }
             }
             else if (Action == ActionEnum.SwitchLater)

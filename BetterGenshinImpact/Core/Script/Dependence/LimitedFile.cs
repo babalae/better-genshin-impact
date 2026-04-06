@@ -1,5 +1,7 @@
 using BetterGenshinImpact.Core.Script.Utils;
+using BetterGenshinImpact.Core.Config;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using OpenCvSharp;
@@ -68,6 +70,44 @@ public class LimitedFile(string rootPath)
         {
             // 记录异常并返回 false
             TaskControl.Logger.LogError("IsFolder 异常: {Message}", ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 判断指定路径是否为文件
+    /// </summary>
+    /// <param name="path">文件路径（相对于根目录）</param>
+    /// <returns>如果是文件则返回 true，否则返回 false</returns>
+    public bool IsFile(string path)
+    {
+        try
+        {
+            string normalizedPath = NormalizePath(path);
+            return File.Exists(normalizedPath);
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError("IsFile 异常: {Message}", ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 判断指定的文件或目录是否存在
+    /// </summary>
+    /// <param name="path">文件或目录路径（相对于根目录）</param>
+    /// <returns>如果存在返回 true，否则返回 false</returns>
+    public bool IsExists(string path)
+    {
+        try
+        {
+            string normalizedPath = NormalizePath(path);
+            return File.Exists(normalizedPath) || Directory.Exists(normalizedPath);
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError("IsExists 异常: {Message}", ex.Message);
             return false;
         }
     }
@@ -446,5 +486,52 @@ public class LimitedFile(string rootPath)
         }
         
         return true;
+    }
+	
+	/// <summary>
+    /// 重命名文件或文件夹（相对于根目录）
+    /// </summary>
+    /// <param name="oldPath">原路径</param>
+    /// <param name="newPath">新路径</param>
+    /// <returns>是否重命名成功</returns>
+    public bool RenamePathSync(string oldPath, string newPath)
+    {
+        try
+        {
+            // 标准化路径
+            oldPath = NormalizePath(oldPath);
+            newPath = NormalizePath(newPath);
+
+            // 检查原路径是否存在
+            if (!File.Exists(oldPath) && !Directory.Exists(oldPath))
+            {
+                TaskControl.Logger.LogError("RenamePathSync 异常: 原路径不存在 {Path}", oldPath);
+                return false;
+            }
+
+            //验证扩展名合法性
+            if (File.Exists(oldPath) && !IsValid(newPath))
+            {
+                TaskControl.Logger.LogError("RenamePathSync 异常: 新文件路径不合法 {Path}", newPath);
+                return false;
+            }
+
+            // 确保目标目录存在
+            string? directoryPath = Path.GetDirectoryName(newPath);
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            // 执行重命名
+            Directory.Move(oldPath, newPath);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError("RenamePathSync 异常: {Message}", ex.Message);
+            return false;
+        }
     }
 }

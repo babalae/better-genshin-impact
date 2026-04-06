@@ -224,7 +224,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     [RelayCommand]
     public void OnGoToKmScriptUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/autos/kmscript.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://www.bettergi.com/feats/autos/kmscript.html") { UseShellExecute = true });
     }
 
     [RelayCommand]

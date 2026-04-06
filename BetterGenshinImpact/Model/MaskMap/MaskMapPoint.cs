@@ -19,12 +19,12 @@ public class MaskMapPoint
     public double GameY { get; set; }
     
     /// <summary>
-    /// 游戏图像地图的坐标 X
+    /// 2048级别游戏图像地图的坐标 X
     /// </summary>
     public double ImageX { get; set; }
     
     /// <summary>
-    /// 游戏图像地图的坐标 Y
+    /// 2048级别游戏图像地图的坐标 Y
     /// </summary>
     public double ImageY { get; set; }
     

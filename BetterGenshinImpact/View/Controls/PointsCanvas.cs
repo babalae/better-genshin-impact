@@ -28,7 +28,7 @@ public class PointsCanvas : FrameworkElement
     private int _refreshQueued;
 
     // 私有字段
-    private ObservableCollection<MaskMapPoint> _points;
+    private ObservableCollection<MaskMapPoint>? _points;
     private List<MaskMapPoint> _allPoints = new();
     private Dictionary<string, MaskMapPointLabel> _labelMap = new();
     private Rect _viewportRect = Rect.Empty;
@@ -36,6 +36,20 @@ public class PointsCanvas : FrameworkElement
     public event EventHandler? ViewportChanged;
 
     #region 依赖属性
+
+    public static readonly DependencyProperty PointsSourceProperty =
+        DependencyProperty.Register(
+            nameof(PointsSource),
+            typeof(ObservableCollection<MaskMapPoint>),
+            typeof(PointsCanvas),
+            new PropertyMetadata(null, OnPointsSourceChanged));
+
+    public static readonly DependencyProperty LabelsSourceProperty =
+        DependencyProperty.Register(
+            nameof(LabelsSource),
+            typeof(IEnumerable<MaskMapPointLabel>),
+            typeof(PointsCanvas),
+            new PropertyMetadata(null, OnLabelsSourceChanged));
 
     public static readonly DependencyProperty PointClickCommandProperty =
         DependencyProperty.Register(
@@ -67,6 +81,18 @@ public class PointsCanvas : FrameworkElement
         set => SetValue(PointClickCommandProperty, value);
     }
 
+    public ObservableCollection<MaskMapPoint>? PointsSource
+    {
+        get => (ObservableCollection<MaskMapPoint>?)GetValue(PointsSourceProperty);
+        set => SetValue(PointsSourceProperty, value);
+    }
+
+    public IEnumerable<MaskMapPointLabel>? LabelsSource
+    {
+        get => (IEnumerable<MaskMapPointLabel>?)GetValue(LabelsSourceProperty);
+        set => SetValue(LabelsSourceProperty, value);
+    }
+
     /// <summary>
     /// 右键点击命令
     /// </summary>
@@ -86,6 +112,18 @@ public class PointsCanvas : FrameworkElement
     }
 
     #endregion
+
+    private static void OnPointsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var canvas = (PointsCanvas)d;
+        canvas.UpdatePoints(e.NewValue as ObservableCollection<MaskMapPoint>);
+    }
+
+    private static void OnLabelsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var canvas = (PointsCanvas)d;
+        canvas.UpdateLabels(e.NewValue as IEnumerable<MaskMapPointLabel>);
+    }
 
     public PointsCanvas()
     {
@@ -508,7 +546,7 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 更新点位数据
     /// </summary>
-    public void UpdatePoints(ObservableCollection<MaskMapPoint> points)
+    public void UpdatePoints(ObservableCollection<MaskMapPoint>? points)
     {
         // 取消订阅旧集合
         if (_points != null)
@@ -541,7 +579,7 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 更新标签数据
     /// </summary>
-    public void UpdateLabels(IEnumerable<MaskMapPointLabel> labels)
+    public void UpdateLabels(IEnumerable<MaskMapPointLabel>? labels)
     {
         if (labels != null)
         {

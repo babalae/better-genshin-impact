@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
@@ -31,7 +31,7 @@ public class PickTextInference : ITextInference
         if (!File.Exists(wordJsonPath)) throw new FileNotFoundException("Yap字典文件不存在", wordJsonPath);
 
         var json = File.ReadAllText(wordJsonPath);
-        _wordDictionary = JsonSerializer.Deserialize<Dictionary<int, string>>(json) ??
+        _wordDictionary = JsonConvert.DeserializeObject<Dictionary<int, string>>(json) ??
                           throw new Exception("index_2_word.json deserialize failed");
     }
 

@@ -28,7 +28,7 @@ github_actions_cache/
 
 *.zip
 
-# IDE & AI tools
+# Rider
 .idea
 .trae
 .claude

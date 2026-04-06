@@ -53,7 +53,7 @@ public class GenshinGameSettings
     public string GlobalPerfData { get; set; } // 全局性能数据
 
     [JsonProperty("miniMapConfig")]
-    public int MiniMapConfig { get; set; } // 小地图配置
+    public int MiniMapConfig { get; set; } // 小地图锁定 0:锁定玩家视角 1:锁定方向
 
     [JsonProperty("enableCameraSlope")]
     public bool EnableCameraSlope { get; set; } // 启用相机坡度

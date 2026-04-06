@@ -44,7 +44,9 @@
                PlacementTarget="{Binding ElementName=MainToggle}"
                StaysOpen="False"
                AllowsTransparency="True"
-               PopupAnimation="Slide">
+               PopupAnimation="Slide"
+               Opened="MainPopup_Opened"
+               Closed="MainPopup_Closed">
             <Border x:Name="PopupBorder"
                     Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
@@ -55,7 +57,8 @@
                     MinHeight="100"
                     MaxHeight="300"
                     MinWidth="120"
-                    MaxWidth="600">
+                    MaxWidth="600"
+                    PreviewMouseWheel="PopupBorder_PreviewMouseWheel">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="Black" Opacity="0.2"/>
                 </Border.Effect>
@@ -70,7 +73,8 @@
                               ItemsSource="{Binding FirstLevelOptions, ElementName=Root}"
                               BorderThickness="0"
                               SelectionChanged="FirstLevelListView_SelectionChanged"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>
@@ -86,7 +90,8 @@
                               ItemsSource="{Binding SecondLevelOptions, ElementName=Root}"
                               BorderThickness="0"
                               SelectionChanged="SecondLevelListView_SelectionChanged"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="False">
                         <ui:ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="8,4"/>

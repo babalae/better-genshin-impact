@@ -1,11 +1,17 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.ComponentModel;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
 [Serializable]
 public partial class AutoLeyLineOutcropConfig : ObservableObject
 {
+    public AutoLeyLineOutcropConfig()
+    {
+        AttachFightConfigEvents(_fightConfig);
+    }
+
     [ObservableProperty]
     private string _leyLineOutcropType = "启示之花";
 
@@ -44,4 +50,43 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
 
     [ObservableProperty]
     private bool _isGoToSynthesizer = false;
+
+    /// <summary>
+    /// 是否在领取地脉花奖励后扫描周围掉落物光柱。
+    /// </summary>
+    [ObservableProperty]
+    private bool _scanDropsAfterRewardEnabled = false;
+
+    /// <summary>
+    /// 领取奖励后扫描掉落物的最长时长，单位为秒。
+    /// </summary>
+    [ObservableProperty]
+    private int _scanDropsAfterRewardSeconds = 12;
+
+    [ObservableProperty]
+    private AutoLeyLineOutcropFightConfig _fightConfig = new();
+
+    partial void OnFightConfigChanged(AutoLeyLineOutcropFightConfig value)
+    {
+        AttachFightConfigEvents(value);
+        OnPropertyChanged(nameof(FightConfig));
+    }
+
+    private void AttachFightConfigEvents(AutoLeyLineOutcropFightConfig? config)
+    {
+        if (config == null)
+        {
+            return;
+        }
+
+        config.PropertyChanged -= OnFightConfigPropertyChanged;
+        config.PropertyChanged += OnFightConfigPropertyChanged;
+        config.FinishDetectConfig.PropertyChanged -= OnFightConfigPropertyChanged;
+        config.FinishDetectConfig.PropertyChanged += OnFightConfigPropertyChanged;
+    }
+
+    private void OnFightConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(FightConfig));
+    }
 }

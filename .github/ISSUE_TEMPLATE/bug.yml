@@ -1,0 +1,41 @@
+name: Bug report / 错误报告
+description: 提交可复现的问题，帮助我们定位错误 / Report a reproducible problem
+title: "[bug] "
+labels:
+  - BUG
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: 系统环境
+      description: System Environment，例如系统版本、运行环境
+      placeholder: Win11 / BetterGI 0.58.0 / .NET 8
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: BetterGI 版本号
+      description: BetterGI Version
+      placeholder: 0.58.0
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: Description of the issue
+      placeholder: 请详细描述你遇到的问题，可直接粘贴日志并附带截图
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: Reproduction steps
+      placeholder: |-
+        1. 打开……
+        2. 点击……
+        3. 出现……
+    validations:
+      required: true

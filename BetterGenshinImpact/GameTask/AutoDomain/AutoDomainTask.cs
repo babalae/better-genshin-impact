@@ -95,7 +95,7 @@ public class AutoDomainTask : ISoloTask
         this.clickanywheretocloseLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "点击任意位置关闭");
         this.matchingChallengeString = stringLocalizer.WithCultureGet(cultureInfo, "匹配挑战");
         this.rapidformationString = stringLocalizer.WithCultureGet(cultureInfo, "快速编队");
-        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全开");
+        this.limitedFullyString = stringLocalizer.WithCultureGet(cultureInfo, "限时全部开放");
         this.limitedFullyAllString = stringLocalizer.WithCultureGet(cultureInfo, "限时开放");
     }
 
@@ -208,8 +208,6 @@ public class AutoDomainTask : ISoloTask
                 Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
                 break;
             }
-
-            Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
         }
     }
 
@@ -382,7 +380,7 @@ public class AutoDomainTask : ISoloTask
         using var limitedFullyStringRa = CaptureToRectArea();
         var limitedFullyStringRaocrList =
             limitedFullyStringRa.FindMulti(RecognitionObject.Ocr(0, 0, limitedFullyStringRa.Width * 0.5,
-                limitedFullyStringRa.Height));
+                limitedFullyStringRa.Height * 0.5));
         var limitedFullyStringRaocrListdone = limitedFullyStringRaocrList.LastOrDefault(t =>
             Regex.IsMatch(t.Text, this.limitedFullyString) || Regex.IsMatch(t.Text, this.limitedFullyAllString));
         // 检测是否为限时全开秘境
@@ -1204,6 +1202,8 @@ public class AutoDomainTask : ISoloTask
             // 如果没有选择树脂的提示，说明只有原粹树脂
             // 继续向下执行
         }
+        
+        Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
 
         Sleep(1000, _ct);
 

@@ -9,8 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.Common;
-using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.Helpers;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -49,66 +48,56 @@ public class ApplicationHostService(IServiceProvider serviceProvider) : IHostedS
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
             _navigationWindow!.ShowWindow();
-            //
-            var args = Environment.GetCommandLineArgs();
 
-            if (args.Length > 1)
+            var cmdOptions = CommandLineOptions.Instance;
+
+            if (cmdOptions.HasTaskArgs)
             {
-
                 //无论如何，先跳到主页，否则在通过参数的任务在执行完之前，不会加载快捷键
                 _ = _navigationWindow.Navigate(typeof(HomePage));
 
-                // 命令行启动时，先等待自动更新订阅脚本完成，再运行配置组/一条龙
-                // （正常双击启动在 MainWindowViewModel.OnLoaded 中以 fire-and-forget 方式调用）
+                // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
+                // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
                 var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
                 if (scriptConfig.AutoUpdateBeforeCommandLineRun)
                 {
-                    await Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+                    ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
+                        Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
                 }
 
-                if (args[1].Contains("startOneDragon", StringComparison.InvariantCultureIgnoreCase))
+                switch (cmdOptions.Action)
                 {
+                    case CommandLineAction.StartOneDragon:
+                        // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
+                        _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
+                        // 后续代码在 OneDragonFlowViewModel / OnLoaded 中。
+                        break;
 
-                    // 通过命令行参数启动「一条龙」 => 跳转到一条龙配置页。
-                    _ = _navigationWindow.Navigate(typeof(OneDragonFlowPage));
-                    // 后续代码在 OneDragonFlowViewModel / OnLoaded 中。
-                }
-                else if (args[1].Trim().Equals("--startGroups", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
-                    _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                    if (args.Length > 2)
-                    {
-                        // 获取调度组
-                        var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
-                        // 启动调度器
-                        var scheduler = App.GetService<ScriptControlViewModel>();
-                        scheduler?.OnStartMultiScriptGroupWithNamesAsync(names);
-                    }
-                }else if (args[1].Trim().Equals("--TaskProgress", StringComparison.InvariantCultureIgnoreCase))
-                {
+                    case CommandLineAction.StartGroups:
+                        // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
+                        _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                        if (cmdOptions.GroupNames.Length > 0)
+                        {
+                            var scheduler = App.GetService<ScriptControlViewModel>();
+                            scheduler?.OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                        }
+                        break;
 
-                    // 通过命令行参数启动「调度组」 => 跳转到调度器配置页。
-                    _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
-                    if (args.Length > 1)
-                    {
-                        // 获取调度组
-                        var names = args.Skip(2).ToArray().Select(x => x.Trim()).ToArray();
-                        // 启动调度器
-                        var scheduler = App.GetService<ScriptControlViewModel>();
-                        scheduler?.OnStartMultiScriptTaskProgressAsync(names);
-                    }
-                }
-                else if (args[1].Contains("start"))
-                {
-                    // 通过命令行参数打开「启动页开关」 => 跳转到主页。
-                    _ = _navigationWindow.Navigate(typeof(HomePage));
-                    // 后续代码在 HomePageViewModel / OnLoaded 中。
-                }
-                else
-                {
-                    // 其它命令行参数 => 跳转到主页。
-                    _ = _navigationWindow.Navigate(typeof(HomePage));
+                    case CommandLineAction.TaskProgress:
+                        // 通过命令行参数启动「任务进度」 => 跳转到调度器配置页。
+                        _ = _navigationWindow.Navigate(typeof(ScriptControlPage));
+                        if (cmdOptions.GroupNames.Length > 0)
+                        {
+                            var scheduler = App.GetService<ScriptControlViewModel>();
+                            scheduler?.OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                        }
+                        break;
+
+                    case CommandLineAction.Start:
+                        // 通过命令行参数打开「启动页开关」 => 跳转到主页。
+                        _ = _navigationWindow.Navigate(typeof(HomePage));
+                        // 后续代码在 HomePageViewModel / OnLoaded 中。
+                        break;
                 }
             }
             else

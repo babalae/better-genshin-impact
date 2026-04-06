@@ -39,6 +39,7 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
 
     private string[] LoadCustomScript(string folder)
     {
+        Directory.CreateDirectory(folder);
         var files = Directory.GetFiles(folder, "*.*",
             SearchOption.AllDirectories);
 

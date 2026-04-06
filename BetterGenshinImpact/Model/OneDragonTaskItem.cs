@@ -127,7 +127,9 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
-                    await new AutoStygianOnslaughtTask(TaskContext.Instance().Config.AutoStygianOnslaughtConfig, path).Start(CancellationContext.Instance.Cts.Token);
+                    AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
+                    param.SetAutoStygianOnslaughtConfig(TaskContext.Instance().Config.AutoStygianOnslaughtConfig);
+                    await new AutoStygianOnslaughtTask(param, path).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "领取每日奖励":
@@ -171,7 +173,10 @@ public partial class OneDragonTaskItem : ObservableObject
                         {
                             taskConfig.Count = config.LeyLineRunCount;
                         }
-                        await new AutoLeyLineOutcropTask(taskConfig, config.LeyLineOneDragonMode)
+
+                        AutoLeyLineOutcropParam param = new AutoLeyLineOutcropParam();
+                        param.SetAutoLeyLineOutcropConfig(taskConfig);
+                        await new AutoLeyLineOutcropTask(param, config.LeyLineOneDragonMode)
                             .Start(CancellationContext.Instance.Cts.Token);
                     }
                     finally

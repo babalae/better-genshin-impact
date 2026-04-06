@@ -43,7 +43,6 @@ public partial class MaskWindow : Window
     private static readonly Typeface _typeface;
     private static readonly Typeface _fgiTypeface;
 
-    private nint _hWnd;
     private MaskWindowViewModel? _viewModel;
 
     private IRichTextBox? _richTextBox;
@@ -53,7 +52,6 @@ public partial class MaskWindow : Window
     private MaskWindowConfig? _maskWindowConfig;
     private MapLabelSearchWindow? _mapLabelSearchWindow;
     private CancellationTokenSource? _mapLabelCategorySelectCts;
-
     static MaskWindow()
     {
         if (Application.Current.TryFindResource("TextThemeFontFamily") is FontFamily fontFamily)
@@ -104,14 +102,7 @@ public partial class MaskWindow : Window
 
     public void RefreshPosition()
     {
-        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
-        {
-            RefreshPositionForSubform();
-        }
-        else
-        {
-            RefreshPositionForNormal();
-        }
+        RefreshPositionForNormal();
     }
 
     public void RefreshPositionForNormal()
@@ -128,13 +119,6 @@ public partial class MaskWindow : Window
             Height = currentRect.Height / dpiScale;
             BringToTop();
         });
-    }
-
-    public void RefreshPositionForSubform()
-    {
-        nint targetHWnd = TaskContext.Instance().GameHandle;
-        _ = User32.GetClientRect(targetHWnd, out RECT targetRect);
-        _ = User32.SetWindowPos(_hWnd, IntPtr.Zero, 0, 0, targetRect.Width, targetRect.Height, User32.SetWindowPosFlags.SWP_SHOWWINDOW);
     }
 
     public MaskWindow()
@@ -204,24 +188,8 @@ public partial class MaskWindow : Window
 
         UpdateClickThroughState();
 
-        if (TaskContext.Instance().Config.MaskWindowConfig.UseSubform)
-        {
-            _hWnd = new WindowInteropHelper(this).Handle;
-            nint targetHWnd = TaskContext.Instance().GameHandle;
-
-            if (User32.GetParent(_hWnd) != targetHWnd)
-            {
-                _ = User32.SetParent(_hWnd, targetHWnd);
-            }
-        }
-
         RefreshPosition();
         PrintSystemInfo();
-        if (_viewModel != null)
-        {
-            PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-            PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-        }
 
         PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
     }
@@ -284,27 +252,6 @@ public partial class MaskWindow : Window
             }
         }
 
-        if (e.PropertyName == nameof(MaskWindowViewModel.MapPointLabels))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_viewModel != null)
-                {
-                    PointsCanvasControl.UpdateLabels(_viewModel.MapPointLabels);
-                }
-            });
-        }
-
-        if (e.PropertyName == nameof(MaskWindowViewModel.MapPoints))
-        {
-            Dispatcher.Invoke(() =>
-            {
-                if (_viewModel != null)
-                {
-                    PointsCanvasControl.UpdatePoints(_viewModel.MapPoints);
-                }
-            });
-        }
     }
 
     private void UpdateClickThroughState()
@@ -515,96 +462,98 @@ public partial class MaskWindow : Window
                 return;
             }
 
-            // 先有上方判断的原因是，有可能Render的时候，配置还未初始化
-            if (!TaskContext.Instance().Config.MaskWindowConfig.DisplayRecognitionResultsOnMask)
+            var displayRecognitionResults = TaskContext.Instance().Config.MaskWindowConfig.DisplayRecognitionResultsOnMask;
+            if (!displayRecognitionResults)
             {
                 return;
             }
 
-            foreach (var kv in VisionContext.Instance().DrawContent.RectList)
+            if (displayRecognitionResults)
             {
-                foreach (var drawable in kv.Value)
+                foreach (var kv in VisionContext.Instance().DrawContent.RectList)
                 {
-                    if (!drawable.IsEmpty)
+                    foreach (var drawable in kv.Value)
                     {
-                        drawingContext.DrawRectangle(Brushes.Transparent,
-                            new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
-                            drawable.Rect);
+                        if (!drawable.IsEmpty)
+                        {
+                            drawingContext.DrawRectangle(
+                                Brushes.Transparent,
+                                new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width),
+                                drawable.Rect);
+                        }
+                    }
+                }
+
+                foreach (var kv in VisionContext.Instance().DrawContent.LineList)
+                {
+                    foreach (var drawable in kv.Value)
+                    {
+                        drawingContext.DrawLine(new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width), drawable.P1, drawable.P2);
+                    }
+                }
+
+                foreach (var kv in VisionContext.Instance().DrawContent.TextList)
+                {
+                    bool isSkillCd = kv.Key == "SkillCdText";
+                    var systemInfo = TaskContext.Instance().SystemInfo;
+                    var scaleTo1080 = systemInfo.ScaleTo1080PRatio;
+
+                    foreach (var drawable in kv.Value)
+                    {
+                        if (!drawable.IsEmpty)
+                        {
+                            var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+                            var renderPoint = new Point(drawable.Point.X / pixelsPerDip, drawable.Point.Y / pixelsPerDip);
+
+                            if (isSkillCd)
+                            {
+                                var skillConfigScale = TaskContext.Instance().Config.SkillCdConfig.Scale;
+                                double scaledFontSize = (26 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
+                                var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
+                                bool isZeroCd =
+                                    double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
+                                    && Math.Abs(cdValue) < 0.8;
+
+                                var skillConfig = TaskContext.Instance().Config.SkillCdConfig;
+                                string textColorStr = isZeroCd ? skillConfig.TextReadyColor : skillConfig.TextNormalColor;
+                                string bgColorStr = isZeroCd ? skillConfig.BackgroundReadyColor : skillConfig.BackgroundNormalColor;
+
+                                Color textColor = ParseColor(textColorStr) ?? (isZeroCd ? Color.FromRgb(93, 204, 23) : Color.FromRgb(218, 74, 35));
+                                Color bgColor = ParseColor(bgColorStr) ?? Colors.White;
+
+                                Brush textBrush = new SolidColorBrush(textColor);
+                                Brush bgBrush = new SolidColorBrush(bgColor);
+
+                                var formattedText = new FormattedText(
+                                    drawable.Text,
+                                    CultureInfo.GetCultureInfo("zh-cn"),
+                                    FlowDirection.LeftToRight,
+                                    mediumTypeface,
+                                    scaledFontSize,
+                                    textBrush,
+                                    pixelsPerDip);
+
+                                double px = (6 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
+                                double py = (2 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
+                                double radius = (5 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
+                                var bgRect = new Rect(renderPoint.X - px, renderPoint.Y - py, formattedText.Width + px * 2, formattedText.Height + py * 2);
+                                drawingContext.DrawRoundedRectangle(bgBrush, null, bgRect, radius, radius);
+                                drawingContext.DrawText(formattedText, renderPoint);
+                            }
+                            else
+                            {
+                                double defaultFontSize = (36 * scaleTo1080) / pixelsPerDip;
+                                drawingContext.DrawText(new FormattedText(drawable.Text,
+                                    CultureInfo.GetCultureInfo("zh-cn"),
+                                    FlowDirection.LeftToRight,
+                                    _typeface,
+                                    defaultFontSize, Brushes.Black, pixelsPerDip), renderPoint);
+                            }
+                        }
                     }
                 }
             }
 
-            foreach (var kv in VisionContext.Instance().DrawContent.LineList)
-            {
-                foreach (var drawable in kv.Value)
-                {
-                    drawingContext.DrawLine(new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width), drawable.P1, drawable.P2);
-                }
-            }
-
-            foreach (var kv in VisionContext.Instance().DrawContent.TextList)
-            {
-                bool isSkillCd = kv.Key == "SkillCdText";
-                var systemInfo = TaskContext.Instance().SystemInfo;
-                // 使用不封顶的物理比例进行 UI 大小缩放
-                var scaleTo1080 = systemInfo.ScaleTo1080PRatio;
-                
-                foreach (var drawable in kv.Value)
-                {
-                    if (!drawable.IsEmpty)
-                    {
-                        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-                        var renderPoint = new Point(drawable.Point.X / pixelsPerDip, drawable.Point.Y / pixelsPerDip);
-
-                        if (isSkillCd)
-                        {
-                            // 自定义缩放
-                            var skillConfigScale = TaskContext.Instance().Config.SkillCdConfig.Scale;
-                            double scaledFontSize = (26 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                            var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
-                            bool isZeroCd =
-                                double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
-                                && Math.Abs(cdValue) < 0.8;
-
-                            // 从配置读取颜色
-                            var skillConfig = TaskContext.Instance().Config.SkillCdConfig;
-                            string textColorStr = isZeroCd ? skillConfig.TextReadyColor : skillConfig.TextNormalColor;
-                            string bgColorStr = isZeroCd ? skillConfig.BackgroundReadyColor : skillConfig.BackgroundNormalColor;
-
-                            Color textColor = ParseColor(textColorStr) ?? (isZeroCd ? Color.FromRgb(93, 204, 23) : Color.FromRgb(218, 74, 35));
-                            Color bgColor = ParseColor(bgColorStr) ?? Colors.White;
-
-                            Brush textBrush = new SolidColorBrush(textColor);
-                            Brush bgBrush = new SolidColorBrush(bgColor);
-
-                            var formattedText = new FormattedText(
-                                drawable.Text,
-                                CultureInfo.GetCultureInfo("zh-cn"),
-                                FlowDirection.LeftToRight,
-                                mediumTypeface,
-                                scaledFontSize,
-                                textBrush,
-                                pixelsPerDip);
-
-                            double px = (6 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                            double py = (2 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                            double radius = (5 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                            var bgRect = new Rect(renderPoint.X - px, renderPoint.Y - py, formattedText.Width + px * 2, formattedText.Height + py * 2);
-                            drawingContext.DrawRoundedRectangle(bgBrush, null, bgRect, radius, radius);
-                            drawingContext.DrawText(formattedText, renderPoint);
-                        }
-                        else
-                        {
-                            double defaultFontSize = (36 * scaleTo1080) / pixelsPerDip;
-                            drawingContext.DrawText(new FormattedText(drawable.Text,
-                                CultureInfo.GetCultureInfo("zh-cn"),
-                                FlowDirection.LeftToRight,
-                                _typeface,
-                                defaultFontSize, Brushes.Black, pixelsPerDip), renderPoint);
-                        }
-                    }
-                }
-            }
         }
         catch (Exception e)
         {

@@ -101,6 +101,6 @@ public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private async Task OnGoToAutoEatUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/dev/js/dispatcher.html#autoeat-自动吃食物"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/dev/js/dispatcher.html#autoeat-自动吃食物"));
     }
 }

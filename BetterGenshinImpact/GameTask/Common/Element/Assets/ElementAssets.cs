@@ -13,6 +13,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
 
     public RecognitionObject BtnWhiteConfirm;
     public RecognitionObject BtnWhiteCancel;
+    public RecognitionObject BtnWhiteRecover;
     public RecognitionObject BtnBlackConfirm;
     public RecognitionObject BtnBlackCancel;
     public RecognitionObject BtnBackTeyvat;
@@ -31,6 +32,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject XKey;
 
     public RecognitionObject FriendChat;
+    public RecognitionObject ChatBackButtonRo;
 
     public RecognitionObject PartyBtnChooseView;
     public RecognitionObject PartyBtnDelete;
@@ -139,6 +141,15 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_cancel.png", systemInfo),
             Use3Channels = true
+        }.InitTemplate();
+        BtnWhiteRecover = new RecognitionObject
+        {
+            Name = "BtnWhiteRecover",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "btn_white_recover.png", systemInfo),
+            Use3Channels = true,
+            RegionOfInterest = new Rect((int)(580 * AssetScale), (int)(950 * AssetScale), (int)(90 * AssetScale), (int)(95 * AssetScale)),
+            // Threshold = 0.95
         }.InitTemplate();
         BtnBlackConfirm = new RecognitionObject
         {
@@ -264,7 +275,16 @@ public class ElementAssets : BaseAssets<ElementAssets>
             DrawOnWindow = false
         }.InitTemplate();
 
-        // 队伍切换
+        // 聊天 UI 识别
+        ChatBackButtonRo = new RecognitionObject
+        {
+            Name = "ChatBackButton",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"UseRedeemCode", "esc_return_button.png", systemInfo),
+            RegionOfInterest = new Rect(0, 0, (int)(220 * AssetScale), (int)(160 * AssetScale)),
+            Threshold = 0.72,
+            DrawOnWindow = false
+        }.InitTemplate();
         PartyBtnChooseView = new RecognitionObject
         {
             Name = "PartyBtnChooseView",

@@ -133,8 +133,9 @@ public partial class HomePageViewModel : ViewModel
 
         _autoRun = false;
 
-        var args = Environment.GetCommandLineArgs();
-        if (args.Length > 1 && args[1].Contains("start"))
+        // 只对纯 "start" 参数自动启动截图器
+        // startOneDragon、--startGroups 等由各自流程中的 StartGameTask 处理
+        if (CommandLineOptions.Instance.Action == CommandLineAction.Start)
         {
             _ = OnStartTriggerAsync();
         }
@@ -335,7 +336,7 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand]
     public void OnGoToWikiUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bettergi.com/doc.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://www.bettergi.com/doc.html") { UseShellExecute = true });
     }
 
     [RelayCommand]
@@ -383,7 +384,7 @@ public partial class HomePageViewModel : ViewModel
             // 弹出选择文件夹对话框
             var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
             {
-                Filter = "原神|YuanShen.exe|原神国际服|GenshinImpact.exe|所有文件|*.*"
+                Filter = "原神|YuanShen.exe;GenshinImpact.exe|可执行文件|*.exe|所有文件|*.*"
             };
             if (dialog.ShowDialog() == true)
             {

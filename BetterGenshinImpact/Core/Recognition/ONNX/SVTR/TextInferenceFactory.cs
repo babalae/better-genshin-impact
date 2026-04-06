@@ -6,7 +6,7 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 
 public class TextInferenceFactory
 {
-    public static ITextInference Pick { get; } = Create(OcrEngineTypes.YapModel);
+    public static readonly Lazy<ITextInference> Pick = new(() => Create(OcrEngineTypes.YapModel));
 
     public static ITextInference Create(OcrEngineTypes type)
     {

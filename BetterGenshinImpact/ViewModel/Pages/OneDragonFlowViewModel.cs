@@ -545,15 +545,16 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         _autoRun = false;
         //
-        var args = Environment.GetCommandLineArgs();
-        if (args.Length > 1 && args[1].Contains("startOneDragon"))
+        var cmdOptions = CommandLineOptions.Instance;
+        if (cmdOptions.Action == CommandLineAction.StartOneDragon)
         {
             // 通过命令行参数启动一条龙。
-            if (args.Length > 2)
+            if (cmdOptions.OneDragonConfigName != null)
             {
                 // 从命令行参数中提取一条龙配置名称。
-                _logger.LogInformation($"参数指定的一条龙配置：{args[2]}");
-                var argsOneDragonConfig = ConfigList.FirstOrDefault(x => x.Name == args[2], null);
+                _logger.LogInformation($"参数指定的一条龙配置：{cmdOptions.OneDragonConfigName}");
+                var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
+                    string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
                 if (argsOneDragonConfig != null)
                 {
                     // 设定配置，配置下拉框会选定。
@@ -586,9 +587,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         int finishTaskcount = 1;
         int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
         _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
-
-        await ScriptService.StartGameTask();
-
+        
         ReadScriptGroup();
         foreach (var task in ScriptGroupsdefault)
         {
@@ -741,7 +740,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void DeleteConfig()
+    private async Task DeleteConfig()
     {
         if (SelectedConfig == null)
         {
@@ -749,7 +748,14 @@ public partial class OneDragonFlowViewModel : ViewModel
             return;
         }
 
-        var result = System.Windows.MessageBox.Show($"确定要删除配置「{SelectedConfig.Name}」吗？", "删除配置", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        var displayName = SelectedConfig.Name.Length > 14 
+            ? $"{SelectedConfig.Name[..4]}...{SelectedConfig.Name[^4..]}" 
+            : SelectedConfig.Name;
+        var result = await ThemedMessageBox.ShowAsync(
+            $"确定要删除配置「{displayName}」吗？", 
+            "删除配置", 
+            System.Windows.MessageBoxButton.YesNo, 
+            ThemedMessageBox.MessageBoxIcon.Question);
         if (result != System.Windows.MessageBoxResult.Yes)
         {
             return;
@@ -789,6 +795,8 @@ public partial class OneDragonFlowViewModel : ViewModel
             
             // 刷新任务列表
             LoadDisplayTaskListFromConfig();
+            SelectedTask = null!;
+            InputScriptGroupName = string.Empty;
             
             // 保存配置
             SaveConfig();

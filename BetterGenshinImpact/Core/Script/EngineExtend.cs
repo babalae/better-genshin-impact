@@ -13,7 +13,9 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 namespace BetterGenshinImpact.Core.Script;
 
@@ -73,6 +75,8 @@ public class EngineExtend
         
         engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
+        engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
+        engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
         //鼠标回调
         engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
         // 添加C#的类型
@@ -83,6 +87,7 @@ public class EngineExtend
         engine.AddHostType("BvLocator", typeof(BvLocator));
         engine.AddHostType("BvImage", typeof(BvImage));
 
+        engine.AddHostObject("host", new CustomHostFunctions());
 
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html

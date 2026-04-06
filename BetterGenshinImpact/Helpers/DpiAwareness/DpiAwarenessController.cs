@@ -40,8 +40,7 @@ internal class DpiAwarenessController
         }
         else{
           SHCore
-              .SetProcessDpiAwareness(SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE)
-              .ThrowIfFailed();
+              .SetProcessDpiAwareness(SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE);
         }
     }
 

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
+using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Helpers;
@@ -18,7 +19,16 @@ public class DpiHelper
         if (Environment.OSVersion.Version >= new Version(6, 3)
          && UIDispatcherHelper.MainWindow != null)
         {
-            HWND hWnd = new WindowInteropHelper(Application.Current?.MainWindow).Handle;
+            HWND hWnd = HWND.NULL;
+            if (TaskContext.Instance().IsInitialized)
+            {
+                hWnd = TaskContext.Instance().GameHandle;
+            }
+            else
+            {
+                hWnd = new WindowInteropHelper(Application.Current?.MainWindow).Handle;
+            }
+
             HMONITOR hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
             SHCore.GetDpiForMonitor(hMonitor, SHCore.MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out _, out uint dpiY);
             return dpiY / 96f;
