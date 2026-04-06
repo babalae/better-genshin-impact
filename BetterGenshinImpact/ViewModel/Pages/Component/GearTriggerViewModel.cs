@@ -72,9 +72,6 @@ public partial class GearTriggerViewModel : ObservableObject
     [ObservableProperty]
     private DateTime? _lastRunTime;
 
-    [ObservableProperty]
-    private TriggerExecutionStatus? _lastRunStatus;
-
     public void UpdateNextRunTime()
     {
         if (TriggerType == TriggerType.Timed && !string.IsNullOrWhiteSpace(CronExpression))

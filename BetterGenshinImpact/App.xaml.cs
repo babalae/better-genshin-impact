@@ -37,7 +37,6 @@ using Wpf.Ui.DependencyInjection;
 using Wpf.Ui.Violeta.Appearance;
 using Wpf.Ui.Violeta.Controls;
 using Quartz;
-using BetterGenshinImpact.Model.Gear.Triggers;
 
 // Wine 平台适配
 using BetterGenshinImpact.Platform.Wine;
@@ -167,7 +166,6 @@ public partial class App : Application
                 services.AddTransient<TaskDefinitionEditWindow>();
                 services.AddTransient<TaskDefinitionEditWindowViewModel>();
 
-
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
                 // services.AddSingleton<DailyCommissionViewModel>();
@@ -197,7 +195,6 @@ public partial class App : Application
                 services.AddSingleton<IMaskMapPointService, MaskMapPointService>();
                 services.AddSingleton<GearTaskStorageService>();
                 services.AddSingleton<GearTriggerStorageService>();
-                services.AddSingleton<ITriggerHistoryService, TriggerHistoryService>();
 
                 
                 

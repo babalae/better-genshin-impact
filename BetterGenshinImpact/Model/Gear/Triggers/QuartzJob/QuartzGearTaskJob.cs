@@ -29,34 +29,11 @@ public class QuartzGearTaskJob : IJob
         
         using (LogContext.PushProperty("CorrelationId", correlationId))
         {
-            var historyService = App.GetService<ITriggerHistoryService>();
-            var record = new TriggerExecutionRecord
-            {
-                TriggerName = triggerName,
-                TriggerId = triggerId,
-                TaskName = taskDefinitionName ?? "Unknown",
-                StartTime = DateTime.Now,
-                Status = TriggerExecutionStatus.Running,
-                CorrelationId = correlationId
-            };
-
-            if (historyService != null)
-            {
-                await historyService.AddRecordAsync(record);
-            }
-
             try
             {
                 if (string.IsNullOrWhiteSpace(taskDefinitionName))
                 {
                     _logger.LogWarning("触发器 {TriggerName} 未配置任务定义名称", triggerName);
-                    if (historyService != null)
-                    {
-                        record.EndTime = DateTime.Now;
-                        record.Status = TriggerExecutionStatus.Failed;
-                        record.Message = "未配置任务定义名称";
-                        await historyService.UpdateRecordAsync(record);
-                    }
                     return;
                 }
 
@@ -70,26 +47,10 @@ public class QuartzGearTaskJob : IJob
                 await executor.ExecuteTaskDefinitionAsync(taskDefinitionName, context.CancellationToken);
 
                 _logger.LogInformation("触发器 {TriggerName} 的任务定义执行完成", triggerName);
-                
-                if (historyService != null)
-                {
-                    record.EndTime = DateTime.Now;
-                    record.Status = TriggerExecutionStatus.Success;
-                    record.Message = "执行成功";
-                    await historyService.UpdateRecordAsync(record);
-                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "执行定时任务时发生错误");
-                if (historyService != null)
-                {
-                    record.EndTime = DateTime.Now;
-                    record.Status = TriggerExecutionStatus.Failed;
-                    record.Message = ex.Message;
-                    record.LogDetails = ex.ToString();
-                    await historyService.UpdateRecordAsync(record);
-                }
                 throw;
             }
         }

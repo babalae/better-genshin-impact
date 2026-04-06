@@ -13,6 +13,4 @@ public class GearTaskPaths
     public static readonly string TaskListPath = Path.Combine(TaskV2Path, "list");
     
     public static readonly string TaskTriggerPath = Path.Combine(TaskV2Path, "trigger");
-
-    public static readonly string TaskHistoryPath = Path.Combine(TaskV2Path, "history");
 }
