@@ -229,18 +229,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             { 1, 100 }, { 2, 90 }, { 3, 80}, { 4, 70 }, { 5, 60}, { 6,45 },
             { 7, 30 }, { 8, 15 }, { 9, 6 }, { 10, 1 }, { 11,-10 }, { 12,-50 }, { 13, -60 }
         };
-        public static bool DetectBloodBar(Scalar bloodLower, out ImageRegion image, out Mat mask, out Mat labels, out Mat stats, out Mat centroids, out int numLabels, out int height, out int x, out bool success)
+        public static (bool found, int height, bool success) DetectBloodBar(Scalar bloodLower)
         {
-            image = null;
-            mask = null;
-            labels = null;
-            stats = null;
-            centroids = null;
-            numLabels = 0;
-            height = 0;
-            x = 0;
-            success = false;
-
+            ImageRegion image = null;
+            Mat mask = null;
+            Mat labels = null;
+            Mat stats = null;
+            Mat centroids = null;
+            
             try
             {
                 image = CaptureToRectArea();
@@ -250,23 +246,27 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 stats = new Mat();
                 centroids = new Mat();
 
-                numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                int numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
 
                 if (numLabels > 1)
                 {
                     using Mat firstRow = stats.Row(1);
                     int[] statsArray;
-                    success = firstRow.GetArray(out statsArray);
+                    bool success = firstRow.GetArray(out statsArray);
                     if (success)
                     {
-                        height = statsArray[3];
-                        x = statsArray[0];
-                        return true;
+                        int height = statsArray[3];
+                        return (true, height, success);
                     }
                 }
             }
             catch (Exception)
+            {
+                // 异常处理由上层调用者负责
+                throw;
+            }
+            finally
             {
                 // 清理资源
                 image?.Dispose();
@@ -274,12 +274,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 labels?.Dispose();
                 stats?.Dispose();
                 centroids?.Dispose();
-                
-                // 异常处理由上层调用者负责
-                throw;
             }
 
-            return false;
+            return (false, 0, false);
         }
         
         public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false,int rotaryFactor = 6)

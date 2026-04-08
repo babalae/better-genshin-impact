@@ -812,29 +812,12 @@ public class AutoFightTask : ISoloTask
         {
             Logger.LogInformation("检查当前画面内是否存在血条");
             
-            ImageRegion image;
-            Mat mask;
-            Mat labels;
-            Mat stats;
-            Mat centroids;
-            int numLabels;
-            int height;
-            int x;
-            bool success;
-            
             try
             {
                 Scalar bloodLower = new Scalar(255, 90, 90);
-                bool found = AutoFightSeek.DetectBloodBar(bloodLower, out image, out mask, out labels, out stats, out centroids, out numLabels, out height, out x, out success);
+                var result = AutoFightSeek.DetectBloodBar(bloodLower);
                 
-                // 释放资源
-                image?.Dispose();
-                mask?.Dispose();
-                labels?.Dispose();
-                stats?.Dispose();
-                centroids?.Dispose();
-                
-                if (found && success && height > 2 && height < 25)
+                if (result.found && result.success && result.height > 2 && result.height < 25)
                 {
                     Logger.LogInformation("检测到血条，战斗未结束，跳过检查");
                     _lastFightFlagTime = DateTime.Now;
