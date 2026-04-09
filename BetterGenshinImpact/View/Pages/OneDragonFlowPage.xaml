@@ -5,12 +5,14 @@
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
              xmlns:oneDragonView="clr-namespace:BetterGenshinImpact.View.Pages.OneDragon"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
              d:DataContext="{d:DesignInstance Type=pages:OneDragonFlowViewModel}"
              d:DesignHeight="1000"
              d:DesignWidth="800"
@@ -444,13 +446,14 @@
                                               Text="秘境名称"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
                                           Width="100"
                                           HorizontalAlignment="Left"
                                           Margin="10,0,10,0"
-                                          SelectedDomain="{Binding SelectedConfig.DomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="2"
                                               Margin="10,0,10,0"
@@ -550,11 +553,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -578,11 +582,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                             </Grid>
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -605,11 +610,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
                             </Grid>
                             <Grid Margin="16">
@@ -633,11 +639,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
                             </Grid>
                             <Grid Margin="16">
@@ -661,11 +668,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
 
                             </Grid>
@@ -690,11 +698,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
                             </Grid>
                             <Grid Margin="16">
@@ -723,11 +732,12 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="填写队伍名称 " />
-                                <controls:DomainSelector Grid.Row="0"
+                                <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          SelectedDomain="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}" />
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                 <Border Grid.Row="1"
                                         Grid.Column="0"
                                         Grid.ColumnSpan="3"
