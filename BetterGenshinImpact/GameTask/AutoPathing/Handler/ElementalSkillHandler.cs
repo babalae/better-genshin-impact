@@ -20,7 +20,7 @@ public class ElementalSkillHandler : IActionHandler
     /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行动作: 【释放元素战技】 / Executing action: [Elemental Skill]");
+        Logger.LogInformation("执行动作: 【释放元素战技】");
         Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
         await Delay(1000, ct);
     }

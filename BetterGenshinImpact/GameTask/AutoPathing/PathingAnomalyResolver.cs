@@ -24,10 +24,9 @@ public class PathingAnomalyResolver
     private readonly Func<ImageRegion> _captureAction;
     private readonly Func<bool> _isAutoSkipEnabled;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private readonly ReturnMainUiTask _returnMainUiTask = new();
     
     private AutoSkipTrigger? _autoSkipTrigger;
-
-    private const int UiCloseDelayMilliseconds = 1000;
     private const int AutoSkipPollingIntervalMilliseconds = 210;
     private const int MaxContinuousMissingUiTokens = 10;
 
@@ -54,30 +53,44 @@ public class PathingAnomalyResolver
     /// <returns>An awaitable <see cref="Task"/> representing completion. 表示异步操作的任务对象。</returns>
     public async Task ResolveAnomalies(ImageRegion? imageRegion = null)
     {
+        bool ownImageRegion = imageRegion == null;
         imageRegion ??= _captureAction();
         if (imageRegion == null) return;
 
-        bool hasBlockingUi = 
-            imageRegion.Find(AutoSkipAssets.Instance.CookRo).IsExist() ||
-            imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo).IsExist() ||
-            imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo).IsExist() ||
-            imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo).IsExist();
-
-        if (hasBlockingUi)
+        try
         {
-            if (!Bv.IsInBigMapUi(imageRegion))
+            using var cookRegion = imageRegion.Find(AutoSkipAssets.Instance.CookRo);
+            using var mainRegion = imageRegion.Find(AutoSkipAssets.Instance.PageCloseMainRo);
+            using var whiteRegion = imageRegion.Find(ElementAssets.Instance.PageCloseWhiteRo);
+            using var closeRegion = imageRegion.Find(AutoSkipAssets.Instance.PageCloseRo);
+
+            bool hasBlockingUi = 
+                cookRegion.IsExist() ||
+                mainRegion.IsExist() ||
+                whiteRegion.IsExist() ||
+                closeRegion.IsExist();
+
+            if (hasBlockingUi)
             {
-                Logger?.LogInformation("检测到其他界面，使用ESC关闭界面");
-                Simulation.SendInput?.Keyboard?.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
-                await Delay(UiCloseDelayMilliseconds, _ct).ConfigureAwait(false);
+                if (!Bv.IsInBigMapUi(imageRegion))
+                {
+                    await _returnMainUiTask.Start(_ct);
+                }
+            }
+
+            await _blessingOfTheWelkinMoonTask.Start(_ct).ConfigureAwait(false);
+
+            if (_isAutoSkipEnabled())
+            {
+                await AutoSkip().ConfigureAwait(false);
             }
         }
-
-        await _blessingOfTheWelkinMoonTask.Start(_ct).ConfigureAwait(false);
-
-        if (_isAutoSkipEnabled())
+        finally
         {
-            await AutoSkip().ConfigureAwait(false);
+            if (ownImageRegion)
+            {
+                imageRegion?.Dispose();
+            }
         }
     }
 
@@ -87,14 +100,15 @@ public class PathingAnomalyResolver
     /// </summary>
     private async Task AutoSkip()
     {
-        var captureRegion = _captureAction();
-        if (captureRegion == null) return;
-
-        var disabledUiButtonRegion = captureRegion.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
-        
-        if (!disabledUiButtonRegion.IsExist())
+        using (var initialCaptureRegion = _captureAction())
         {
-            return;
+            if (initialCaptureRegion == null) return;
+
+            using var initialDisabledUiButtonRegion = initialCaptureRegion.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+            if (!initialDisabledUiButtonRegion.IsExist())
+            {
+                return;
+            }
         }
 
         Logger?.LogWarning("进入剧情，自动点击剧情直到结束");
@@ -115,10 +129,10 @@ public class PathingAnomalyResolver
         
         while (!_ct.IsCancellationRequested)
         {
-            captureRegion = _captureAction();
+            using var captureRegion = _captureAction();
             if (captureRegion == null) break;
 
-            disabledUiButtonRegion = captureRegion.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+            using var disabledUiButtonRegion = captureRegion.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
             
             if (disabledUiButtonRegion.IsExist())
             {

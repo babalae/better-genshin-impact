@@ -18,7 +18,7 @@ public class NahidaCollectHandler : IActionHandler
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
+        Logger.LogInformation("执行动作: 【{Nhd}长按E转圈拾取】", "纳西妲");
 
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)

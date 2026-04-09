@@ -33,7 +33,7 @@ public class UpDownGrabLeafHandler : IActionHandler
     
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("尝试寻找 {syy}", "四叶印");
+        Logger.LogInformation("执行动作: 【寻找{syy}】", "四叶印");
         int direction = 1;
         if (!String.IsNullOrEmpty(waypointForTrack?.ActionParams))
         {

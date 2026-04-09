@@ -71,7 +71,7 @@ public class UseGadgetHandler : IActionHandler
             Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
         }
 
-        Logger.LogInformation("已完成小道具使用 / Completed gadget usage.");
+        Logger.LogInformation("已完成小道具使用。");
         await Delay(300, ct);
     }
 
