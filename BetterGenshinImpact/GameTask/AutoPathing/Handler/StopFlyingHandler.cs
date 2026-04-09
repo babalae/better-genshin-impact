@@ -26,7 +26,7 @@ public class StopFlyingHandler : IActionHandler
             await Delay(300, ct);
         }
 
-        Logger.LogInformation("动作: 【下落攻击以停止飞行】 / Action: [Plunge Attack to stop flying]");
+        Logger.LogInformation("执行动作: 【下落攻击以停止飞行】");
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
 
         const int maxAttempts = 50;

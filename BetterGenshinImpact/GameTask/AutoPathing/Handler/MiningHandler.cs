@@ -47,7 +47,7 @@ public class MiningHandler : IActionHandler
     /// <inheritdoc/>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行动作: 【执行挖矿】 / Executing action: [Mining]");
+        Logger.LogInformation("执行动作: 【执行挖矿】");
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {

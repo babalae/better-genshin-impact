@@ -39,7 +39,7 @@ public class AutoFightHandler : IActionHandler
     /// <returns>代表战斗任务执行过程的 <see cref="Task"/>。</returns>
     private async Task StartFightAsync(CancellationToken ct, object? config = null, WaypointForTrack? waypointForTrack = null)
     {
-        TaskControl.Logger.LogInformation("执行自动战斗任务");
+        TaskControl.Logger.LogInformation("执行动作: 【自动战斗】");
         
         AutoFightParam taskParams;
         if (config is PathingPartyConfig partyConfig && partyConfig.AutoFightEnabled)

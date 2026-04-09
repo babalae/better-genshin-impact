@@ -29,6 +29,8 @@ public class ElementalCollectHandler(ElementalType elementalType) : IActionHandl
     /// <returns>代表动作流转过程的任务实例。</returns>
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
+        Logger.LogInformation("执行动作: 【{ElementalType}元素采集】", elementalType);
+
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {

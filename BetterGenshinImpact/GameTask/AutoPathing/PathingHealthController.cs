@@ -354,7 +354,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
             public LegacyTeleportService(CancellationToken ct) => _ct = ct;
             public async Task TeleportToStatueOfTheSevenAsync(CancellationToken ct)
             {
-                var tpTask = new TpTask(_ct);
+                var tpTask = new TpTask(ct);
                 await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
             }
         }
