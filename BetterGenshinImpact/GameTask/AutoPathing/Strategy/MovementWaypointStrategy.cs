@@ -40,7 +40,13 @@ public class MovementWaypointStrategy : IWaypointStrategy
         }
         else if (!string.Equals(waypoint.Action, ActionEnum.UpDownGrabLeaf.Code, StringComparison.OrdinalIgnoreCase))
         {
-            await executor.MovementController.MoveTo(waypoint);
+            WaypointForTrack? previousWaypoint = null;
+            if (executor.CurWaypoint.Item1 > 0)
+            {
+                var waypoints = executor.CurWaypoints.Item2;
+                previousWaypoint = waypoints[executor.CurWaypoint.Item1 - 1];
+            }
+            await executor.MovementController.MoveTo(waypoint, previousWaypoint);
         }
 
         await BeforeMoveCloseToTarget(executor, waypoint);
