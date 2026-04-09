@@ -42,7 +42,7 @@ public class UseGadgetHandler : IActionHandler
             double.TryParse(actionParams, out maxWaitSeconds);
         }
 
-        var screen = CaptureToRectArea();
+        using var screen = CaptureToRectArea();
         var cd = GetCurrentCd(screen);
 
         if (cd > 100)

@@ -85,8 +85,8 @@ public class TrapEscaper
         ArgumentNullException.ThrowIfNull(waypoint);
 
         var startTime = DateTime.UtcNow;
-        var screen = CaptureToRectArea();
-        var position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
+        using var initialScreen = CaptureToRectArea();
+        var position = Navigation.GetPosition(initialScreen, waypoint.MapName, waypoint.MapMatchMethod);
         LastActionTime = DateTime.UtcNow;
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
@@ -110,8 +110,8 @@ public class TrapEscaper
                         Logger.LogWarning("脱困超时，作为兜底尝试向上一路点移动...");
                         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         
-                        screen = CaptureToRectArea();
-                        position = Navigation.GetPosition(screen, previousWaypoint.MapName, previousWaypoint.MapMatchMethod);
+                        using var fallbackScreen = CaptureToRectArea();
+                        position = Navigation.GetPosition(fallbackScreen, previousWaypoint.MapName, previousWaypoint.MapMatchMethod);
                         targetOrientation = Navigation.GetTargetOrientation(previousWaypoint, position);
                         
                         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
@@ -125,7 +125,7 @@ public class TrapEscaper
                     return false;
                 }
 
-                screen = CaptureToRectArea();
+                using var screen = CaptureToRectArea();
                 position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
 
                 // 旋转视角
