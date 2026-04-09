@@ -65,12 +65,22 @@ public class TrapEscaper
     /// </summary>
     private void ReduceRandomAngle() => AddRandomAngle(-45, -30);
 
+    private bool IsReversibleMoveMode(string? moveMode)
+    {
+        if (string.IsNullOrEmpty(moveMode)) return true;
+        return moveMode == MoveModeEnum.Walk.Code ||
+               moveMode == MoveModeEnum.Run.Code ||
+               moveMode == MoveModeEnum.Dash.Code ||
+               moveMode == MoveModeEnum.Swim.Code;
+    }
+
     /// <summary>
     /// 尝试移动脱困 / Attempts to move and escape the trap.
     /// </summary>
     /// <param name="waypoint">目标路点 / Target waypoint.</param>
+    /// <param name="previousWaypoint">上一个路点 / Previous waypoint.</param>
     /// <returns>异步任务 / Asynchronous task.</returns>
-    public async Task MoveTo(WaypointForTrack waypoint)
+    public async Task<bool> MoveTo(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint = null)
     {
         ArgumentNullException.ThrowIfNull(waypoint);
 
@@ -95,8 +105,24 @@ public class TrapEscaper
                 }
                 if ((now - startTime).TotalSeconds > MaxTimeoutSeconds)
                 {
-                    Logger.LogError("卡死脱困超时！");
-                    break;
+                    if (previousWaypoint != null && IsReversibleMoveMode(waypoint.MoveMode))
+                    {
+                        Logger.LogWarning("脱困超时，作为兜底尝试向上一路点移动...");
+                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                        
+                        screen = CaptureToRectArea();
+                        position = Navigation.GetPosition(screen, previousWaypoint.MapName, previousWaypoint.MapMatchMethod);
+                        targetOrientation = Navigation.GetTargetOrientation(previousWaypoint, position);
+                        
+                        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
+                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                        await Delay(3000, _ct);
+                    }
+                    else
+                    {
+                        Logger.LogError("卡死脱困超时！");
+                    }
+                    return false;
                 }
 
                 screen = CaptureToRectArea();
@@ -155,6 +181,7 @@ public class TrapEscaper
 
                 await Delay(100, _ct);
             }
+            return true;
         }
         finally
         {

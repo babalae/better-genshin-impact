@@ -120,8 +120,9 @@ public class PathingMovementController
     /// 移动至指定的路径点 / Moves to the specified waypoint.
     /// </summary>
     /// <param name="waypoint">目标路径点 / Target waypoint.</param>
+    /// <param name="previousWaypoint">上一个路径点 / Previous waypoint.</param>
     /// <returns>异步任务结果 / Asynchronous task result.</returns>
-    public async Task<bool> MoveTo(WaypointForTrack waypoint)
+    public async Task<bool> MoveTo(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint = null)
     {
         ArgumentNullException.ThrowIfNull(waypoint);
         var partyConfig = _partyConfigGetter();
@@ -295,7 +296,10 @@ public class PathingMovementController
 
                             Logger.LogWarning("疑似卡死，尝试脱离...");
                             await _trapEscaper.RotateAndMove();
-                            await _trapEscaper.MoveTo(waypoint);
+                            if (!await _trapEscaper.MoveTo(waypoint, previousWaypoint))
+                            {
+                                throw new RetryException("脱困失败，直接放弃！");
+                            }
                             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                             Logger.LogInformation("卡死脱离结束");
                             
