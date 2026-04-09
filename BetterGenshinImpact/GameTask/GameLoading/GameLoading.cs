@@ -1,6 +1,8 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.GameLoading.Assets;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -57,6 +59,9 @@ public class GameLoadingTrigger : ITaskTrigger
 
     private bool biliLoginClicked = false;
     private (double x1080, double y1080)? lastAgreementClickPos = null;
+    private DateTime _prevAgePromptOcrTime = DateTime.MinValue;
+    private bool _agePromptTextMatched = false;
+    private List<Region> _latestLoadingOcrRegions = [];
 
     public GameLoadingTrigger()
     {
@@ -257,13 +262,25 @@ public class GameLoadingTrigger : ITaskTrigger
             InnerSetEnabled(false);
             return;
         }
-        
-        // 适龄提示窗口自动关闭
-        var agePopup = content.CaptureRectArea.Find(_elementAssets.BtnWhiteConfirm);
-        if (!agePopup.IsEmpty())
+
+        if ((DateTime.Now - _prevAgePromptOcrTime).TotalMilliseconds >= 1000)
         {
-            agePopup.Click();
+            _prevAgePromptOcrTime = DateTime.Now;
+            _latestLoadingOcrRegions = content.CaptureRectArea.FindMulti(RecognitionObject.OcrThis);
+            if (_latestLoadingOcrRegions.Any(region =>
+                    region.Text.Contains("适龄") || region.Text.Contains("监护")))
+            {
+                // 适龄提示窗口自动关闭
+                var agePopup = content.CaptureRectArea.Find(_elementAssets.BtnWhiteConfirm);
+                if (!agePopup.IsEmpty())
+                {
+                    agePopup.Click();
+                    _logger.LogInformation("检测到适龄提示，自动点击确认");
+                }
+            }
         }
+        
+
 
         // B服判断
         if (!IsBiliJudged)

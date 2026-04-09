@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.59.2-alpha.1</Version>
+		<Version>0.59.2-alpha.3</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -43,8 +43,8 @@
 
 		
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.17" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.19" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.18" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.20" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.15" />
 		
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
@@ -67,7 +67,7 @@
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
-		<PackageReference Include="MimeKit" Version="4.14.0" />
+		<PackageReference Include="MimeKit" Version="4.15.1" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />

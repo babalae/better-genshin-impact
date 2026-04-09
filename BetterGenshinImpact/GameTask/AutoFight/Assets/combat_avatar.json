@@ -2063,5 +2063,17 @@
     "nameEn": "Varka",
     "skillCD": 16,
     "weapon": "10"
+  },
+  {
+    "alias": [
+      "莉奈娅",
+      "Linnea"
+    ],
+    "burstCD": 15,
+    "id": "10000130",
+    "name": "莉奈娅",
+    "nameEn": "Linnea",
+    "skillCD": 18,
+    "weapon": "10"
   }
 ]

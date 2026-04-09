@@ -44,17 +44,20 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
     private readonly ILogger<MaskMapPointService> _logger;
     private readonly IAppCache _cache;
+    private readonly IHoYoLabMapApiService _hoyolabMapApi;
     private readonly IMihoyoMapApiService _mihoyoMapApi;
     private readonly IKongyingTavernApiService _kongyingTavernApi;
 
     public MaskMapPointService(
         ILogger<MaskMapPointService> logger,
         IAppCache cache,
+        IHoYoLabMapApiService hoyolabMapApi,
         IMihoyoMapApiService mihoyoMapApi,
         IKongyingTavernApiService kongyingTavernApi)
     {
         _logger = logger;
         _cache = cache;
+        _hoyolabMapApi = hoyolabMapApi;
         _mihoyoMapApi = mihoyoMapApi;
         _kongyingTavernApi = kongyingTavernApi;
     }
@@ -91,12 +94,17 @@ public sealed class MaskMapPointService : IMaskMapPointService
         return TaskContext.Instance().Config.MapMaskConfig.MapPointApiProvider;
     }
 
+    private IMihoyoMapApiService GetMihoyoCompatibleApi()
+    {
+        return GetProvider() == MapPointApiProvider.HoYoLab ? _hoyolabMapApi : _mihoyoMapApi;
+    }
+
     private async Task<IReadOnlyList<MaskMapPointLabel>> GetMihoyoLabelCategoriesAsync(CancellationToken ct)
     {
         ApiResponse<LabelTreeData>? resp = null;
         try
         {
-            resp = await _mihoyoMapApi.GetLabelTreeAsync(new LabelTreeRequest(), ct);
+            resp = await GetMihoyoCompatibleApi().GetLabelTreeAsync(new LabelTreeRequest(), ct);
         }
         catch (Exception ex)
         {
@@ -230,18 +238,24 @@ public sealed class MaskMapPointService : IMaskMapPointService
     private Task<ApiResponse<PointListData>> GetMihoyoPointListCacheAsync(IReadOnlyList<int> parentLabelIds, CancellationToken ct)
     {
         var labelIds = parentLabelIds?.Distinct().OrderBy(x => x).ToArray() ?? Array.Empty<int>();
-        var key = $"mihoyo-map:point-list:2:ys_obc:zh-cn:{string.Join(",", labelIds)}";
+        var provider = GetProvider();
+        var providerKey = provider == MapPointApiProvider.HoYoLab ? "hoyolab" : "mihoyo-map";
+        var langSegment = provider == MapPointApiProvider.HoYoLab
+            ? $":lang:{HoYoLabMapApiService.NormalizeLanguage(TaskContext.Instance().Config.MapMaskConfig.HoYoLabLanguage)}"
+            : string.Empty;
+        var key = $"{providerKey}:point-list:2:ys_obc{langSegment}:{string.Join(",", labelIds)}";
         var request = new PointListRequest
         {
             LabelIds = labelIds.ToList()
         };
+        var api = GetMihoyoCompatibleApi();
 
         return _cache.GetOrAddAsync(
                 key,
                 async entry =>
                 {
                     entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-                    return await _mihoyoMapApi.GetPointListAsync(request, CancellationToken.None);
+                    return await api.GetPointListAsync(request, CancellationToken.None);
                 })
             .WaitAsync(ct);
     }
@@ -255,7 +269,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
         try
         {
-            var resp = await _mihoyoMapApi.GetPointInfoAsync(new PointInfoRequest { PointId = pointId }, ct);
+            var resp = await GetMihoyoCompatibleApi().GetPointInfoAsync(new PointInfoRequest { PointId = pointId }, ct);
             if (resp.Retcode != 0 || resp.Data == null)
             {
                 return new MaskMapPointInfo { Text = $"查询失败: {resp.Retcode} {resp.Message}" };

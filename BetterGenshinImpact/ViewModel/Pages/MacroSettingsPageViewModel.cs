@@ -41,6 +41,6 @@ public partial class MacroSettingsPageViewModel : ViewModel
     [RelayCommand]
     public void OnGoToOneKeyMacroUrl()
     {
-        Process.Start(new ProcessStartInfo("https://bettergi.com/feats/macro/onem.html") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://www.bettergi.com/feats/macro/onem.html") { UseShellExecute = true });
     }
 }
