@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.JsListPage"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.JsListPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -8,6 +8,7 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:drawer="clr-namespace:BetterGenshinImpact.View.Controls.Drawer"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              d:DataContext="{d:DesignInstance Type=pages:JsListViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="800"
@@ -173,6 +174,7 @@
             OpenHeight="{Binding DrawerVm.DrawerHeight}"
             DrawerBackground="{DynamicResource ControlFillColorDefaultBrush}"
             Content="{Binding DrawerVm.DrawerContent}"
+            behavior:AutoTranslateInterceptor.EnableAutoTranslate="False"
             Panel.ZIndex="100">
             <b:Interaction.Triggers>
                 <b:EventTrigger EventName="Opened">

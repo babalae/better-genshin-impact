@@ -9,6 +9,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:sys="clr-namespace:System;assembly=mscorlib"
       Title="TaskSettingsPage"
@@ -1290,12 +1291,13 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="自动传送到刷取的秘境"
                                   TextWrapping="Wrap" />
-                    <controls:DomainSelector Grid.Row="0"
+                    <vio:CascadingComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
                               Width="180"
                               Margin="0,0,36,0"
-                              SelectedDomain="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}" />
+                              ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                              SelectedCascadingItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
