@@ -4,12 +4,26 @@ title: "[feature] "
 labels:
   - 功能建议
 body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认 / Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: 我已经搜索过现有 issue，确认这不是重复建议 / I have searched existing issues and confirmed this is not a duplicate request
+          required: true
+        - label: 我已确认当前版本中尚未提供该功能，或至少没有等价实现 / I have confirmed this feature, or an equivalent one, is not already available in the current version
+          required: true
+        - label: 我认为这个需求能为更多用户带来明确收益，而不仅仅是个人偏好 / I believe this request provides clear value to a broader group of users, not just my personal preference
+          required: true
+        - label: 我理解这个需求可能因实现成本、维护成本或项目方向而暂不采纳 / I understand this request may not be accepted due to implementation cost, maintenance cost, or project direction
+          required: true
   - type: textarea
     id: request
     attributes:
       label: 功能请求
       description: Feature Request
-      placeholder: 请简要说明你希望新增什么能力
+      placeholder: 请简要说明你希望新增什么能力 / Briefly describe the capability you want to add
     validations:
       required: true
   - type: textarea
@@ -17,7 +31,15 @@ body:
     attributes:
       label: 使用场景
       description: Use Case
-      placeholder: 这个功能要解决什么问题？在哪些场景下使用？
+      placeholder: 这个功能要解决什么问题？在哪些场景下使用？ / What problem does this feature solve, and when would it be used?
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 潜在影响
+      description: Potential Impact
+      placeholder: 请说明这个功能是否可能带来新的问题、维护成本、使用门槛或兼容性影响；如果没有，请填写“无” / Describe any potential downsides such as new issues, maintenance cost, usability barriers, or compatibility impact. Write "None" if there are no obvious downsides.
     validations:
       required: true
   - type: textarea
@@ -25,6 +47,6 @@ body:
     attributes:
       label: 补充信息
       description: Optional
-      placeholder: 可选，补充示意图、参考方案或限制条件
+      placeholder: 可选，补充示意图、交互草图、参考链接或相关背景信息 / Optional: add mockups, interaction sketches, reference links, or other background information
     validations:
       required: false
