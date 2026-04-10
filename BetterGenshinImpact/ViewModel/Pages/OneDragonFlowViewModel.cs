@@ -609,7 +609,12 @@ public partial class OneDragonFlowViewModel : ViewModel
         int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
-        await ScriptService.StartGameTask();
+        bool started = await ScriptService.StartGameTask();
+        if (!started)
+        {
+            return;
+        }
+
         SaveConfig();
         int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
             t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));

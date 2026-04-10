@@ -90,7 +90,7 @@ Latest builds: [![](https://github.com/babalae/better-genshin-impact/actions/wor
 
 **⚠️ Notes:**
 1. Restart the app after changing window size/resolution/monitor.
-2. Disable all visual filters (HDR/NVIDIA Filters). Keep in-game brightness default.
+2. HDR, Windows Auto HDR, and NVIDIA Filters can affect recognition in the default capture modes. When BetterGI detects an HDR environment, switch to `WindowsGraphicsCapture (HDR)` or disable HDR / Auto HDR manually. If you keep the current mode, color detection may become unstable and tasks may fail. Keep in-game brightness default.
 3. Only supports `16:9` resolutions (recommended: `1920x1080` windowed).
 4. **Antivirus/security software may block simulated inputs. Add to whitelist.**
 
