@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Service.Hdr;
+using BetterGenshinImpact.Genshin.Settings;
 using Fischless.GameCapture;
 
 namespace BetterGenshinImpact.UnitTest.ServiceTests.HdrTests;
@@ -146,6 +147,68 @@ public class HdrDetectionEvaluatorTests
         Assert.Equal(HdrRiskLevel.Unknown, result.RiskLevel);
         Assert.False(result.IsDisplayHdrKnown);
         Assert.False(result.DisplayHdrEnabled);
+    }
+}
+
+public class HdrDetectionServiceTests
+{
+    [Theory]
+    [InlineData(@"C:\Games\YuanShen.exe", GenshinRegistryType.Chinese)]
+    [InlineData(@"C:\Games\GenshinImpact.exe", GenshinRegistryType.Global)]
+    [InlineData(@"C:\Games\something-else.exe", GenshinRegistryType.Auto)]
+    public void ResolveRegistryType_ShouldInferFromExeName(string gameExePath, GenshinRegistryType expected)
+    {
+        GenshinRegistryType result = HdrDetectionService.ResolveRegistryType(gameExePath);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ResolveRegistryType_ShouldFallbackToAuto_WhenGamePathIsMissing()
+    {
+        GenshinRegistryType result = HdrDetectionService.ResolveRegistryType(null);
+
+        Assert.Equal(GenshinRegistryType.Auto, result);
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, true)]
+    public void ParseGameHdrRegistryValue_ShouldParseIntegerValues(int rawValue, bool expected)
+    {
+        bool? result = HdrDetectionService.ParseGameHdrRegistryValue(rawValue);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("1", true)]
+    [InlineData("0", false)]
+    [InlineData("-1", true)]
+    public void ParseGameHdrRegistryValue_ShouldParseStringValues(string rawValue, bool expected)
+    {
+        bool? result = HdrDetectionService.ParseGameHdrRegistryValue(rawValue);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ParseGameHdrRegistryValue_ShouldParseBinaryDwordValues()
+    {
+        bool? result = HdrDetectionService.ParseGameHdrRegistryValue(new byte[] { 1, 0, 0, 0 });
+
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("true")]
+    public void ParseGameHdrRegistryValue_ShouldReturnNull_ForUnsupportedValues(object? rawValue)
+    {
+        bool? result = HdrDetectionService.ParseGameHdrRegistryValue(rawValue);
+
+        Assert.Null(result);
     }
 }
 

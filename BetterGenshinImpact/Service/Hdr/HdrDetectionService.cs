@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Genshin.Paths;
-using BetterGenshinImpact.Genshin.Settings2;
+using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -12,6 +12,8 @@ namespace BetterGenshinImpact.Service.Hdr;
 
 public class HdrDetectionService
 {
+    public const string GameHdrRegistryValueName = "WINDOWS_HDR_ON_h3132281285";
+
     private readonly ILogger<HdrDetectionService> _logger = App.GetLogger<HdrDetectionService>();
     private readonly IConfigService _configService;
 
@@ -24,7 +26,7 @@ public class HdrDetectionService
     {
         string? gameExePath = ResolveGameExePath(hWnd);
 
-        (bool isGameHdrKnown, bool gameHdrEnabled, string? gameHdrUnknownReason) = ReadGameHdrState();
+        (bool isGameHdrKnown, bool gameHdrEnabled, string? gameHdrUnknownReason) = ReadGameHdrState(gameExePath);
         (bool isAutoHdrKnown, AutoHdrState appState, AutoHdrState globalState, string? autoHdrUnknownReason) =
             ReadAutoHdrState(gameExePath);
         (bool isDisplayHdrKnown, DisplayHdrState displayHdrState, string? displayHdrUnknownReason) =
@@ -101,28 +103,64 @@ public class HdrDetectionService
         return Path.GetFullPath(path.Trim());
     }
 
-    private (bool IsKnown, bool Enabled, string? UnknownReason) ReadGameHdrState()
+    public static GenshinRegistryType ResolveRegistryType(string? gameExePath)
+    {
+        if (string.IsNullOrWhiteSpace(gameExePath))
+        {
+            return GenshinRegistryType.Auto;
+        }
+
+        string exeName = Path.GetFileName(gameExePath);
+        if (string.Equals(exeName, "YuanShen.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return GenshinRegistryType.Chinese;
+        }
+
+        if (string.Equals(exeName, "GenshinImpact.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return GenshinRegistryType.Global;
+        }
+
+        return GenshinRegistryType.Auto;
+    }
+
+    public static bool? ParseGameHdrRegistryValue(object? rawValue)
+    {
+        return rawValue switch
+        {
+            int intValue => intValue != 0,
+            long longValue => longValue != 0,
+            byte byteValue => byteValue != 0,
+            string strValue when int.TryParse(strValue, out int parsed) => parsed != 0,
+            byte[] { Length: >= 4 } byteArray => BitConverter.ToInt32(byteArray, 0) != 0,
+            _ => null,
+        };
+    }
+
+    private (bool IsKnown, bool Enabled, string? UnknownReason) ReadGameHdrState(string? gameExePath)
     {
         try
         {
-            string? settingStr = GenshinGameSettings.GetStrFromRegistry();
-            if (string.IsNullOrWhiteSpace(settingStr))
+            GenshinRegistryType registryType = ResolveRegistryType(gameExePath);
+            using RegistryKey? registryKey = GenshinRegistry.GetRegistryKey(registryType);
+            if (registryKey == null)
             {
-                return (false, false, "无法读取游戏设置注册表");
+                return (false, false, "无法读取游戏注册表中的 HDR 开关");
             }
 
-            GenshinGameSettings? settings = GenshinGameSettings.Parse(settingStr);
-            if (settings == null)
+            object? rawValue = registryKey.GetValue(GameHdrRegistryValueName);
+            bool? hdrEnabled = ParseGameHdrRegistryValue(rawValue);
+            if (!hdrEnabled.HasValue)
             {
-                return (false, false, "无法解析游戏设置中的 HDR 配置");
+                return (false, false, "无法解析游戏注册表中的 HDR 开关");
             }
 
-            return (true, settings.EnableHDR, null);
+            return (true, hdrEnabled.Value, null);
         }
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "读取游戏 HDR 设置失败");
-            return (false, false, "读取游戏设置中的 HDR 配置失败");
+            return (false, false, "读取游戏注册表中的 HDR 开关失败");
         }
     }
 
