@@ -47,6 +47,6 @@ body:
     attributes:
       label: 补充信息
       description: Optional
-      placeholder: 可选，补充示意图、交互草图、参考链接或相关背景信息 / Optional: add mockups, interaction sketches, reference links, or other background information
+      placeholder: "可选，补充示意图、交互草图、参考链接或相关背景信息 / Optional: add mockups, interaction sketches, reference links, or other background information"
     validations:
       required: false
