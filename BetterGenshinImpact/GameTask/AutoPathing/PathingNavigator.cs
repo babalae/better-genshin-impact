@@ -30,6 +30,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         private Point2f _prePosition;
         
         private int _isPositionAndTimeSuspended = 0;
+        private int _positionFailCount = 0;
+        private const int MaxPositionFailTolerance = 5;
 
         /// <summary>
         /// Indicates whether execution logic was suspended. Handles temporal disconnects.
@@ -187,9 +189,18 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
             {
                 if (!Bv.IsInMainUi(imageRegion))
                 {
-                    Logger?.LogDebug("小地图位置定位失败，且当前不是主界面，进入异常处理");
-                    await _resolveAnomaliesAction(imageRegion).ConfigureAwait(false);
+                    _positionFailCount++;
+                    if (_positionFailCount >= MaxPositionFailTolerance)
+                    {
+                        Logger?.LogDebug("小地图位置定位失败，且当前不是主界面连续{count}次，进入异常处理", _positionFailCount);
+                        await _resolveAnomaliesAction(imageRegion).ConfigureAwait(false);
+                        _positionFailCount = 0; // 重置
+                    }
                 }
+            }
+            else
+            {
+                _positionFailCount = 0; // 成功定位则重置容错计数
             }
 
             var distance = Navigation.GetDistance(waypoint, position);

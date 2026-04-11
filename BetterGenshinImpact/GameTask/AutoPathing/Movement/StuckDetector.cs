@@ -51,10 +51,10 @@ public class StuckDetector
             {
                 var oldestPosition = _prevPositions.Dequeue();
                 
-                // 物理校验：使用欧几里得距离平方规避开销
+                // 物理校验：使用欧几里得距离平方规避开销 
                 var dx = position.X - oldestPosition.X;
                 var dy = position.Y - oldestPosition.Y;
-                if (dx * dx + dy * dy < 9)
+                if (dx * dx + dy * dy < 25)
                 {
                     InTrapCount++;
                     return true;

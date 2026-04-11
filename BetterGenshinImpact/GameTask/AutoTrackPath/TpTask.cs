@@ -194,7 +194,7 @@ public class TpTask
                 await CheckInBigMapUi();
                 return;
             }
-            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException || e.GetType().Name == "NormalEndException")
             {
                 throw;
             }
@@ -480,7 +480,7 @@ public class TpTask
                     Logger.LogWarning(e.Message + "  重试");
                 }
             }
-            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException || e.GetType().Name == "NormalEndException")
             {
                 throw;
             }
