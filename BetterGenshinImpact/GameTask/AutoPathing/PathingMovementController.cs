@@ -45,8 +45,7 @@ public class PathingMovementController
     private DateTime _useGadgetLastUseTime = DateTime.MinValue;
     private readonly Movement.StuckDetector _stuckDetector = new();
     private readonly Movement.InertialTracker _inertialTracker = new();
-    
-    private readonly System.Collections.Generic.List<IMoveModeHandler> _moveModeHandlers;
+    private readonly List<IMoveModeHandler> _moveModeHandlers;
 
     /// <summary>
     /// 初始化寻路移动控制器 / Initializes a new instance of the pathing movement controller.
@@ -78,7 +77,7 @@ public class PathingMovementController
         _useElementalSkillAction = useElementalSkillAction ?? throw new ArgumentNullException(nameof(useElementalSkillAction));
         _partyConfigGetter = partyConfigGetter ?? throw new ArgumentNullException(nameof(partyConfigGetter));
         
-        _moveModeHandlers = new System.Collections.Generic.List<IMoveModeHandler>()
+        _moveModeHandlers = new List<IMoveModeHandler>()
         {
             new FlyMoveModeHandler(),
             new JumpMoveModeHandler(),
@@ -129,17 +128,7 @@ public class PathingMovementController
         var partyConfig = _partyConfigGetter();
         await _switchAvatarAction(partyConfig.MainAvatarIndex);
 
-        Point2f position;
-        int additionalTimeInMs;
-        using (var screen = _captureAction())
-        {
-            var result = await _navigator.GetPositionAndTime(screen, waypoint);
-            position = result.Item1;
-            additionalTimeInMs = result.Item2;
-            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-            await _waitUntilRotatedToAction(targetOrientation, 5);
-        }
+        Point2f position = await InitialCoarseApproach(waypoint);
         _moveToStartTime = DateTime.UtcNow;
 
         var fastMode = false;
@@ -169,161 +158,61 @@ public class PathingMovementController
         {
             while (!_ct.IsCancellationRequested)
             {
-                if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
-            {
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            }
-
-            num++;
-            var now = DateTime.UtcNow;
-            if ((now - _moveToStartTime).TotalSeconds > 240)
-            {
-                Logger.LogWarning("执行超时，放弃此次追踪");
-                throw new RetryException("路径点执行超时，放弃整条路径");
-            }
-
-            using var screen = _captureAction();
-            if (_endJudgmentAction(screen))
-            {
-                return true;
-            }
-
-            var (newPosition, newTime) = await _navigator.GetPositionAndTime(screen, waypoint);
-            position = newPosition;
-            additionalTimeInMs = newTime;
+                MaintainForwardKey();
                 
-            if (additionalTimeInMs > 0)
-            {
-                if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+                num++;
+                var now = DateTime.UtcNow;
+                if ((now - _moveToStartTime).TotalSeconds > 240)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    Logger.LogWarning("执行超时，放弃此次追踪");
+                    throw new RetryException("路径点执行超时，放弃整条路径");
                 }
 
-                additionalTimeInMs += 1000;
-            }
-
-            // 计算原始距离并判定视觉定位是否丢失
-            var rawDistance = Navigation.GetDistance(waypoint, position);
-            var isPositionLost = (position.X == 0 && position.Y == 0) || rawDistance > 500;
-
-            if (!isPositionLost)
-            {
-                _inertialTracker.MarkValid(position, now);
-            }
-            else
-            {
-                if (_pathExecutorSuspend.CheckAndResetSuspendPoint())
+                using var screen = _captureAction();
+                if (_endJudgmentAction(screen))
                 {
-                    throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+                    return true;
                 }
 
-                if (_inertialTracker.DistanceTooFarRetryCount > 50)
-                {
-                    Logger.LogWarning($"定位连续丢失 50 次，航迹推算达到极限。距离: {rawDistance}，放弃此路径点！");
-                    throw new HandledException("目标距离过远或定位彻底丢失，放弃此路径！");
-                }
-
-                if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 10 == 0)
-                {
-                    await _resolveAnomaliesAction(screen);
-                    Logger.LogInformation($"重置到上次正确识别的推算基准坐标 ({_inertialTracker.LastValidPosition.X},{_inertialTracker.LastValidPosition.Y})");
-                    Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
-                    await Delay(500, _ct);
-                }
+                var (newPosition, additionalTimeInMs) = await _navigator.GetPositionAndTime(screen, waypoint);
+                position = newPosition;
                 
-                // 介入惯性导航：接管当前缺失的坐标
-                position = _inertialTracker.TrackLost(now);
+                if (additionalTimeInMs > 0)
+                {
+                    MaintainForwardKey();
+                    additionalTimeInMs += 1000;
+                }
+
+                position = await HandleInertialPositioning(waypoint, position, screen, now);
+                var distance = Navigation.GetDistance(waypoint, position);
+                Debug.WriteLine($"接近目标点中，距离为{distance}");
                 
-                if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 5 == 0)
+                if (distance < 4)
                 {
-                    Logger.LogWarning($"视觉定位丢失 (重试 {_inertialTracker.DistanceTooFarRetryCount})，启用强退化惯性航迹推算。预测坐标：({position.X:F1},{position.Y:F1})");
-                }
-            }
-
-            // 使用视觉真实坐标或惯导推算坐标，重新计算距离
-            var distance = Navigation.GetDistance(waypoint, position);
-            Debug.WriteLine($"接近目标点中，距离为{distance}");
-            if (distance < 4)
-            {
-                Logger.LogDebug("到达路径点附近");
-                break;
-            }
-
-            if (!isPositionLost && waypoint.MoveMode != MoveModeEnum.Climb.Code)
-            {
-                if (_stuckDetector.CheckStuck(position, additionalTimeInMs))
-                {
-                    if (_stuckDetector.InTrapCount > 2)
-                    {
-                        throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
-                    }
-
-                    Logger.LogWarning("疑似卡死，尝试脱离...");
-                    await _trapEscaper.RotateAndMove();
-                    if (!await _trapEscaper.MoveTo(waypoint, previousWaypoint))
-                    {
-                        throw new RetryException("脱困失败，直接放弃！");
-                    }
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    Logger.LogInformation("卡死脱离结束");
-                    
-                    _stuckDetector.ClearQueue();
-                    continue;
-                }
-            }
-
-            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
-            if (num > 20)
-            {
-                consecutiveRotationCountBeyondAngle = Math.Abs(diff) > 5 ? consecutiveRotationCountBeyondAngle + 1 : 0;
-                if (consecutiveRotationCountBeyondAngle > 10)
-                {
-                    await _waitUntilRotatedToAction(targetOrientation, 2);
-                    consecutiveRotationCountBeyondAngle = 0;
-                }
-            }
-
-            moveContext.Screen = screen;
-            moveContext.Num = num;
-            moveContext.Distance = distance;
-
-            bool breakLoop = false;
-            foreach (var handler in _moveModeHandlers)
-            {
-                if (handler.CanHandle(waypoint.MoveMode))
-                {
-                    var handlerResult = await handler.ExecuteAsync(waypoint, moveContext);
-                    if (handlerResult == MoveModeResult.Continue)
-                    {
-                        breakLoop = true;
-                        break;
-                    }
-                    if (handlerResult == MoveModeResult.ReturnFalse)
-                    {
-                        return false;
-                    }
-
-                    // For Pass, break out of handler chain and continue to the next part of movement
+                    Logger.LogDebug("到达路径点附近");
                     break;
                 }
-            }
 
-            if (breakLoop)
-            {
-                continue;
-            }
+                await CheckAndHandleStuck(waypoint, previousWaypoint, position, additionalTimeInMs);
 
-            fastModeColdTime = moveContext.FastModeColdTime;
-            fastMode = moveContext.FastMode;
+                consecutiveRotationCountBeyondAngle = await AlignOrientation(waypoint, position, screen, num, consecutiveRotationCountBeyondAngle);
 
-            if (partyConfig.UseGadgetIntervalMs > 0 && (DateTime.UtcNow - _useGadgetLastUseTime).TotalMilliseconds > partyConfig.UseGadgetIntervalMs)
-            {
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-                _useGadgetLastUseTime = DateTime.UtcNow;
-            }
+                moveContext.Screen = screen;
+                moveContext.Num = num;
+                moveContext.Distance = distance;
 
-            await Delay(100, _ct);
+                if (await ApplyMoveModeHandlers(waypoint, moveContext))
+                {
+                    // Movement completed by a handler completely (ReturnFalse equivalent)
+                    return false;
+                }
+
+                fastModeColdTime = moveContext.FastModeColdTime;
+                fastMode = moveContext.FastMode;
+
+                AutoUseGadget(partyConfig);
+
+                await Delay(100, _ct);
             }
         }
         finally
@@ -333,6 +222,132 @@ public class PathingMovementController
 
         return false;
     }
+
+    private void MaintainForwardKey()
+    {
+        if (!Simulation.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        }
+    }
+
+    private async Task<Point2f> InitialCoarseApproach(WaypointForTrack waypoint)
+    {
+        using var screen = _captureAction();
+        var result = await _navigator.GetPositionAndTime(screen, waypoint);
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, result.Item1);
+        Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        await _waitUntilRotatedToAction(targetOrientation, 5);
+        return result.Item1;
+    }
+
+    private async Task<Point2f> HandleInertialPositioning(WaypointForTrack waypoint, Point2f position, ImageRegion screen, DateTime now)
+    {
+        var rawDistance = Navigation.GetDistance(waypoint, position);
+        var isPositionLost = (position.X == 0 && position.Y == 0) || rawDistance > 500;
+
+        if (!isPositionLost)
+        {
+            _inertialTracker.MarkValid(position, now);
+            return position;
+        }
+
+        if (_pathExecutorSuspend.CheckAndResetSuspendPoint())
+        {
+            throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
+        }
+
+        if (_inertialTracker.DistanceTooFarRetryCount > 50)
+        {
+            Logger.LogWarning($"定位连续丢失 50 次，航迹推算达到极限。距离: {rawDistance}，放弃此路径点！");
+            throw new HandledException("目标距离过远或定位彻底丢失，放弃此路径！");
+        }
+
+        if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 10 == 0)
+        {
+            await _resolveAnomaliesAction(screen);
+            Logger.LogInformation($"重置到上次正确识别的推算基准坐标 ({_inertialTracker.LastValidPosition.X},{_inertialTracker.LastValidPosition.Y})");
+            Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
+            await Delay(500, _ct);
+        }
+        
+        position = _inertialTracker.TrackLost(now);
+        
+        if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 5 == 0)
+        {
+            Logger.LogWarning($"视觉定位丢失 (重试 {_inertialTracker.DistanceTooFarRetryCount})，启用强退化惯性航迹推算。预测坐标：({position.X:F1},{position.Y:F1})");
+        }
+        
+        return position;
+    }
+
+    private async Task CheckAndHandleStuck(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint, Point2f position, int additionalTimeInMs)
+    {
+         if (_inertialTracker.DistanceTooFarRetryCount > 0 || waypoint.MoveMode == MoveModeEnum.Climb.Code)
+             return;
+             
+        if (_stuckDetector.CheckStuck(position, additionalTimeInMs))
+        {
+            if (_stuckDetector.InTrapCount > 2)
+            {
+                throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
+            }
+
+            Logger.LogWarning("疑似卡死，尝试脱离...");
+            await _trapEscaper.RotateAndMove();
+            if (!await _trapEscaper.MoveTo(waypoint, previousWaypoint))
+            {
+                throw new RetryException("脱困失败，直接放弃！");
+            }
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            Logger.LogInformation("卡死脱离结束");
+            
+            _stuckDetector.ClearQueue();
+        }
+    }
+
+    private async Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount)
+    {
+        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
+        if (loopNum > 20)
+        {
+            consecutiveCount = Math.Abs(diff) > 5 ? consecutiveCount + 1 : 0;
+            if (consecutiveCount > 10)
+            {
+                await _waitUntilRotatedToAction(targetOrientation, 2);
+                consecutiveCount = 0;
+            }
+        }
+        return consecutiveCount;
+    }
+
+    private async Task<bool> ApplyMoveModeHandlers(WaypointForTrack waypoint, PathingMovementContext context)
+    {
+        foreach (var handler in _moveModeHandlers)
+        {
+            if (handler.CanHandle(waypoint.MoveMode))
+            {
+                var handlerResult = await handler.ExecuteAsync(waypoint, context);
+                if (handlerResult == MoveModeResult.ReturnFalse)
+                {
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
+    }
+
+    private void AutoUseGadget(PathingPartyConfig partyConfig)
+    {
+        if (partyConfig.UseGadgetIntervalMs > 0 && (DateTime.UtcNow - _useGadgetLastUseTime).TotalMilliseconds > partyConfig.UseGadgetIntervalMs)
+        {
+            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+            _useGadgetLastUseTime = DateTime.UtcNow;
+        }
+    }
+
 
     /// <summary>
     /// 精确接近指定的路径点。
