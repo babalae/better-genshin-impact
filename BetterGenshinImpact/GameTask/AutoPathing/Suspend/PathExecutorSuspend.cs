@@ -141,6 +141,9 @@ public class PathExecutorSuspend : ISuspendable
     /// <inheritdoc/>
     public void Reset()
     {
+        _isSuspended = false;
+        _suspendTimeUtc = DateTime.MinValue;
+        _lastSuspendDuration = TimeSpan.Zero;
         _resuming = false;
         _resumeRetryConsumed = false;
         _resumeTimeUtc = DateTime.MinValue;

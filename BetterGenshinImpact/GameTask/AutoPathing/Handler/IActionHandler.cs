@@ -10,6 +10,12 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 public interface IActionHandler
 {
     /// <summary>
+    /// 是否覆盖（跳过）默认的 LocoMotion 移动行为 / Whether this action overrides the default locomotion behavior.
+    /// 当返回 true 时，寻路引擎将不执行默认的 MoveTo 移动，交由 Handler 自行控制角色的空间位移。
+    /// </summary>
+    bool OverridesLocomotion => false;
+
+    /// <summary>
     /// 异步执行具体的动作逻辑 / Asynchronously executes the specific action logic.
     /// </summary>
     /// <param name="ct">取消令牌 / Cancellation token.</param>

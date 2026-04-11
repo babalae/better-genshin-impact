@@ -52,18 +52,23 @@ public class MovementWaypointStrategy : IWaypointStrategy
         if (string.Equals(waypoint.Type, WaypointType.Orientation.Code, StringComparison.OrdinalIgnoreCase))
         {
             await executor.MovementController.FaceTo(waypoint);
+            return;
         }
-        // 抓叶子由自身 handler 解决，跳过常规移动
-        else if (!string.Equals(waypoint.Action, ActionEnum.UpDownGrabLeaf.Code, StringComparison.OrdinalIgnoreCase))
+        
+        // 如果前置处理动作声明能够覆盖控制权（如由飞越四叶印自主解决移动），则完全跳过框架级别的位移
+        var handler = ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
+        if (handler != null && handler.OverridesLocomotion)
         {
-            WaypointForTrack? previousWaypoint = null;
-            if (executor.CurWaypoint.Item1 > 0)
-            {
-                var waypoints = executor.CurWaypoints.Item2;
-                previousWaypoint = waypoints[executor.CurWaypoint.Item1 - 1];
-            }
-            await executor.MovementController.MoveTo(waypoint, previousWaypoint);
+            return;
         }
+        
+        WaypointForTrack? previousWaypoint = null;
+        if (executor.CurWaypoint.Item1 > 0)
+        {
+            var waypoints = executor.CurWaypoints.Item2;
+            previousWaypoint = waypoints[executor.CurWaypoint.Item1 - 1];
+        }
+        await executor.MovementController.MoveTo(waypoint, previousWaypoint);
     }
 
     private async Task PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
