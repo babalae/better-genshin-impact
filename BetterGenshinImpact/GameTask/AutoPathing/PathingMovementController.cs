@@ -201,10 +201,10 @@ public class PathingMovementController
                 moveContext.Num = num;
                 moveContext.Distance = distance;
 
-                if (await ApplyMoveModeHandlers(waypoint, moveContext))
+                var handlerStatus = await ApplyMoveModeHandlers(waypoint, moveContext);
+                if (handlerStatus == false)
                 {
-                    // Movement completed by a handler completely (ReturnFalse equivalent)
-                    return false;
+                    return false; // MoveModeResult.ReturnFalse
                 }
 
                 fastModeColdTime = moveContext.FastModeColdTime;
@@ -322,7 +322,7 @@ public class PathingMovementController
         return consecutiveCount;
     }
 
-    private async Task<bool> ApplyMoveModeHandlers(WaypointForTrack waypoint, PathingMovementContext context)
+    private async Task<bool?> ApplyMoveModeHandlers(WaypointForTrack waypoint, PathingMovementContext context)
     {
         foreach (var handler in _moveModeHandlers)
         {
@@ -331,12 +331,16 @@ public class PathingMovementController
                 var handlerResult = await handler.ExecuteAsync(waypoint, context);
                 if (handlerResult == MoveModeResult.ReturnFalse)
                 {
-                    return true;
+                    return false; // Interrupt movement entirely
                 }
-                break;
+                if (handlerResult == MoveModeResult.Continue)
+                {
+                    return true; // Bypass rest of the while loop body and continue to next iteration
+                }
+                break; // MoveModeResult.Pass falls through
             }
         }
-        return false;
+        return null; // Proceed normal execution
     }
 
     private void AutoUseGadget(PathingPartyConfig partyConfig)
@@ -358,7 +362,7 @@ public class PathingMovementController
     {
         Logger.LogDebug("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
 
-        const int maxSteps = 25;
+        const int maxSteps = 60;
         const float arriveDistance = 2f;
         const int maxLostRetryCount = 8;
         const int pulseForwardMs = 60;
