@@ -31,6 +31,9 @@ public class UpDownGrabLeafHandler : IActionHandler
     private static readonly Scalar LeafColorLower = new(245, 245, 245);
     private static readonly Scalar LeafColorUpper = new(255, 255, 255);
     
+    // 四叶印动作会彻底掌管角色位移，覆盖默认的寻路移动
+    public bool OverridesLocomotion => true;
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行动作: 【寻找{syy}】", "四叶印");

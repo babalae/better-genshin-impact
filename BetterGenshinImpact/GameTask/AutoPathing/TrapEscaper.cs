@@ -74,6 +74,28 @@ public class TrapEscaper
                moveMode == MoveModeEnum.Swim.Code;
     }
 
+    private async Task<bool> AttemptFallback(WaypointForTrack? previousWaypoint, string? currentMoveMode, string reason)
+    {
+        if (previousWaypoint != null && IsReversibleMoveMode(currentMoveMode))
+        {
+            Logger.LogWarning($"脱困失败({reason})，作为兜底尝试向上一路点移动...");
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            
+            using var fallbackScreen = CaptureToRectArea();
+            var position = Navigation.GetPosition(fallbackScreen, previousWaypoint.MapName, previousWaypoint.MapMatchMethod);
+            var targetOrientation = Navigation.GetTargetOrientation(previousWaypoint, position);
+            
+            await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            await Delay(3000, _ct);
+        }
+        else
+        {
+            Logger.LogError($"卡死脱困失败！({reason})");
+        }
+        return false;
+    }
+
     /// <summary>
     /// 尝试移动脱困 / Attempts to move and escape the trap.
     /// </summary>
@@ -86,10 +108,13 @@ public class TrapEscaper
 
         var startTime = DateTime.UtcNow;
         using var initialScreen = CaptureToRectArea();
-        var position = Navigation.GetPosition(initialScreen, waypoint.MapName, waypoint.MapMatchMethod);
+        var initialPosition = Navigation.GetPosition(initialScreen, waypoint.MapName, waypoint.MapMatchMethod);
+        var position = initialPosition;
         LastActionTime = DateTime.UtcNow;
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
+
+        int climbCount = 0;
 
         try
         {
@@ -101,28 +126,24 @@ public class TrapEscaper
                 var now = DateTime.UtcNow;
                 if ((now - LastActionTime).TotalSeconds > IdleTimeoutSeconds)
                 {
+                    // 判断是否有有效位移
+                    var dx = position.X - initialPosition.X;
+                    var dy = position.Y - initialPosition.Y;
+                    if (dx * dx + dy * dy < 9 && (position.X != 0 || position.Y != 0)) 
+                    {
+                        return await AttemptFallback(previousWaypoint, waypoint.MoveMode, "未产生有效位移");
+                    }
                     break;
                 }
+                
                 if ((now - startTime).TotalSeconds > MaxTimeoutSeconds)
                 {
-                    if (previousWaypoint != null && IsReversibleMoveMode(waypoint.MoveMode))
-                    {
-                        Logger.LogWarning("脱困超时，作为兜底尝试向上一路点移动...");
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                        
-                        using var fallbackScreen = CaptureToRectArea();
-                        position = Navigation.GetPosition(fallbackScreen, previousWaypoint.MapName, previousWaypoint.MapMatchMethod);
-                        targetOrientation = Navigation.GetTargetOrientation(previousWaypoint, position);
-                        
-                        await _rotateTask.WaitUntilRotatedTo(targetOrientation, 5);
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                        await Delay(3000, _ct);
-                    }
-                    else
-                    {
-                        Logger.LogError("卡死脱困超时！");
-                    }
-                    return false;
+                    return await AttemptFallback(previousWaypoint, waypoint.MoveMode, "超时");
+                }
+                
+                if (climbCount >= 4)
+                {
+                    return await AttemptFallback(previousWaypoint, waypoint.MoveMode, "反复攀爬阻挡");
                 }
 
                 using var screen = CaptureToRectArea();
@@ -164,6 +185,7 @@ public class TrapEscaper
                         }
 
                         LastActionTime = DateTime.UtcNow;
+                        climbCount++;
 
                         // 每次脱困时随机左右切换角度脱困
                         if (_random.Next(2) == 0)
