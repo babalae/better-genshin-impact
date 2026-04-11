@@ -32,12 +32,28 @@ public class MovementWaypointStrategy : IWaypointStrategy
         if (executor == null) throw new ArgumentNullException(nameof(executor));
         if (waypoint == null) throw new ArgumentNullException(nameof(waypoint));
 
-        await BeforeMoveToTarget(executor, waypoint);
-        
+        // 1. 前置动作（如：解包飞行、日志输出、抓取叶子等）
+        await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
+
+        // 2. 将具体的移动方式委托给对应的行为策略
+        await PerformLocomotionAsync(executor, waypoint);
+
+        // 3. 接近点位的处理（如抵达指定坐标点前如果需要停飞或最后调整）
+        await PerformProximityAsync(executor, waypoint);
+
+        // 4. 后置动作及状态结算（如：重置战斗目标、收集状态等）
+        await CompleteNavigationAsync(executor, waypoint);
+
+        return false;
+    }
+
+    private async Task PerformLocomotionAsync(PathExecutor executor, WaypointForTrack waypoint)
+    {
         if (string.Equals(waypoint.Type, WaypointType.Orientation.Code, StringComparison.OrdinalIgnoreCase))
         {
             await executor.MovementController.FaceTo(waypoint);
         }
+        // 抓叶子由自身 handler 解决，跳过常规移动
         else if (!string.Equals(waypoint.Action, ActionEnum.UpDownGrabLeaf.Code, StringComparison.OrdinalIgnoreCase))
         {
             WaypointForTrack? previousWaypoint = null;
@@ -48,14 +64,25 @@ public class MovementWaypointStrategy : IWaypointStrategy
             }
             await executor.MovementController.MoveTo(waypoint, previousWaypoint);
         }
+    }
 
-        await BeforeMoveCloseToTarget(executor, waypoint);
+    private async Task PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
+    {
+        // 检查某些在即将到达前才触发的条件，如即将靠岸/落地前停止飞行
+        if (string.Equals(waypoint.MoveMode, MoveModeEnum.Fly.Code, StringComparison.OrdinalIgnoreCase) && 
+            string.Equals(waypoint.Action, ActionEnum.StopFlying.Code, StringComparison.OrdinalIgnoreCase))
+        {
+            await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
+        }
 
         if (executor.IsTargetPoint(waypoint))
         {
             await executor.MovementController.MoveCloseTo(waypoint);
         }
+    }
 
+    private async Task CompleteNavigationAsync(PathExecutor executor, WaypointForTrack waypoint)
+    {
         bool hasValidAction = !string.IsNullOrEmpty(waypoint.Action);
         bool shouldExecuteAction = (hasValidAction && !executor._navigator.SkipOtherOperations) ||
                                    string.Equals(waypoint.Action, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase);
@@ -66,96 +93,30 @@ public class MovementWaypointStrategy : IWaypointStrategy
                 ? waypoint 
                 : null;
 
-            await AfterMoveToTarget(executor, waypoint);
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Executes pre-conditions or handlers right before closing the distance to the target.
-    /// 在接近目标之前执行前置条件或处理器。例如处理飞行停止状态。
-    /// </summary>
-    /// <param name="executor">The current navigation scope instance. 当前导航作用域实例。</param>
-    /// <param name="waypoint">The localized target location. 锚定的目标位置。</param>
-    private async Task BeforeMoveCloseToTarget(PathExecutor executor, WaypointForTrack waypoint)
-    {
-        if (string.Equals(waypoint.MoveMode, MoveModeEnum.Fly.Code, StringComparison.OrdinalIgnoreCase) && 
-            string.Equals(waypoint.Action, ActionEnum.StopFlying.Code, StringComparison.OrdinalIgnoreCase))
-        {
-            var handler = ActionFactory.GetBeforeHandler(ActionEnum.StopFlying.Code);
+            var handler = ActionFactory.GetAfterHandler(waypoint.Action ?? string.Empty);
             if (handler != null)
             {
-                await handler.RunAsync(executor.ct, waypoint);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Executes setup handlers before initiating target movement sequence.
-    /// 在发起目标移动序列之前执行设置处理器。处理特殊动作如抓叶子、日志输出或通用前置动作。
-    /// </summary>
-    /// <param name="executor">The current navigation scope instance. 当前导航作用域实例。</param>
-    /// <param name="waypoint">The localized target location. 锚定的目标位置。</param>
-    private async Task BeforeMoveToTarget(PathExecutor executor, WaypointForTrack waypoint)
-    {
-        if (string.Equals(waypoint.Action, ActionEnum.UpDownGrabLeaf.Code, StringComparison.OrdinalIgnoreCase))
-        {
-            Simulation.SendInput.Mouse.MiddleButtonClick();
-            await Delay(300, executor.ct);
-            using (var screen = CaptureToRectArea())
-            {
-                if (screen?.SrcMat != null && !screen.SrcMat.IsDisposed)
+                await handler.RunAsync(executor.ct, waypoint, executor.PartyConfig);
+                
+                // 特定后置统计：战斗次数
+                if (string.Equals(waypoint.Action, ActionEnum.Fight.Code, StringComparison.OrdinalIgnoreCase))
                 {
-                    var position = await executor._navigator.GetPosition(screen, waypoint);
-                    var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-                    await executor.WaitUntilRotatedTo(targetOrientation, 10);
+                    executor.IncrementSuccessFight();
                 }
-            }
-
-            var handler = ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
-            if (handler != null)
-            {
-                await handler.RunAsync(executor.ct, waypoint);
-            }
-        }
-        else if (string.Equals(waypoint.Action, ActionEnum.LogOutput.Code, StringComparison.OrdinalIgnoreCase))
-        {
-            if (!string.IsNullOrEmpty(waypoint.LogInfo))
-            {
-                Logger.LogInformation(waypoint.LogInfo);
-            }
-        }
-        else
-        {
-            var handler = ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
-            if (handler != null)
-            {
-                await handler.RunAsync(executor.ct, waypoint);
+                await Delay(1000, executor.ct);
             }
         }
     }
 
-    /// <summary>
-    /// Executes post-handlers after reaching the target, resolving specific tasks like combat or collection.
-    /// 在抵达目标后执行后置处理器，解决特定任务，如战斗结束统计或收集状态轮询。
-    /// </summary>
-    /// <param name="executor">The current navigation scope instance. 当前导航作用域实例。</param>
-    /// <param name="waypoint">The localized target location. 锚定的目标位置。</param>
-    private async Task AfterMoveToTarget(PathExecutor executor, WaypointForTrack waypoint)
+    private async Task ExecuteHandlerAsync(Func<string, IActionHandler?> factoryMethod, WaypointForTrack waypoint, PathExecutor executor)
     {
-        var handler = ActionFactory.GetAfterHandler(waypoint.Action ?? string.Empty);
+        if (string.IsNullOrEmpty(waypoint.Action)) return;
+        
+        var handler = factoryMethod(waypoint.Action);
         if (handler != null)
         {
-            await handler.RunAsync(executor.ct, waypoint, executor.PartyConfig);
-            
-            // Increment combat counter if action type strictly matches combat
-            // 统计结束战斗的次数
-            if (string.Equals(waypoint.Action, ActionEnum.Fight.Code, StringComparison.OrdinalIgnoreCase))
-            {
-                executor.IncrementSuccessFight();
-            }
-            await Delay(1000, executor.ct);
+            // 通过 config 传递 executor 上下文，交给 handler 自己决策细节
+            await handler.RunAsync(executor.ct, waypoint, executor);
         }
     }
 }
