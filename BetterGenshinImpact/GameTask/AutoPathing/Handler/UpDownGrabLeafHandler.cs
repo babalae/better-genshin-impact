@@ -34,6 +34,23 @@ public class UpDownGrabLeafHandler : IActionHandler
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行动作: 【寻找{syy}】", "四叶印");
+
+        // 提取自原 Strategy 中，预定位与视角偏转逻辑
+        if (config is PathExecutor executor && waypointForTrack != null)
+        {
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Task.Delay(300, ct);
+            using (var screen = CaptureToRectArea())
+            {
+                if (screen?.SrcMat != null && !screen.SrcMat.IsDisposed)
+                {
+                    var position = await executor._navigator.GetPosition(screen, waypointForTrack);
+                    var targetOrientation = Navigation.GetTargetOrientation(waypointForTrack, position);
+                    await executor.WaitUntilRotatedTo(targetOrientation, 10);
+                }
+            }
+        }
+
         int direction = 1;
         if (!String.IsNullOrEmpty(waypointForTrack?.ActionParams))
         {

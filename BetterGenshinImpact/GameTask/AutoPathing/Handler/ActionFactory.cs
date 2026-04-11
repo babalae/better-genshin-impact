@@ -36,7 +36,8 @@ public static class ActionFactory
     private static readonly Dictionary<string, IActionHandler> BeforeHandlers = new(StringComparer.OrdinalIgnoreCase)
     {
         ["up_down_grab_leaf"] = new UpDownGrabLeafHandler(),
-        ["stop_flying"] = new StopFlyingHandler()
+        ["stop_flying"] = new StopFlyingHandler(),
+        ["log_output"] = new LogOutputHandler()
     };
 
     /// <summary>
