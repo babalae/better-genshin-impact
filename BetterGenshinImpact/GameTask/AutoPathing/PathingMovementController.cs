@@ -43,7 +43,8 @@ public class PathingMovementController
     private DateTime _moveToStartTime;
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
     private DateTime _useGadgetLastUseTime = DateTime.MinValue;
-    private int _inTrap = 0;
+    private readonly Movement.StuckDetector _stuckDetector = new();
+    private readonly Movement.InertialTracker _inertialTracker = new();
     
     private readonly System.Collections.Generic.List<IMoveModeHandler> _moveModeHandlers;
 
@@ -141,16 +142,13 @@ public class PathingMovementController
         }
         _moveToStartTime = DateTime.UtcNow;
 
-        var lastPositionRecord = DateTime.UtcNow;
         var fastMode = false;
-        var prevPositions = new Queue<Point2f>(8);
         var fastModeColdTime = DateTime.MinValue;
         
-        var lastValidPosition = position;
-        var lastValidTime = DateTime.UtcNow;
-        var currentVelocity = new Point2f(0f, 0f);
+        _inertialTracker.Reset(position);
+        _stuckDetector.Reset();
 
-        int num = 0, distanceTooFarRetryCount = 0, consecutiveRotationCountBeyondAngle = 0;
+        int num = 0, consecutiveRotationCountBeyondAngle = 0;
 
         var moveContext = new PathingMovementContext
         {
@@ -210,25 +208,7 @@ public class PathingMovementController
 
             if (!isPositionLost)
             {
-                // 更新位移速度向量 (带简易低通滤波防抖)
-                var dt = (float)(now - lastValidTime).TotalSeconds;
-                if (dt > 0.1f)
-                {
-                    var vx = (position.X - lastValidPosition.X) / dt;
-                    var vy = (position.Y - lastValidPosition.Y) / dt;
-                    
-                    // 速度限幅过滤异常激增跳跃点
-                    if (vx * vx + vy * vy < 2500) 
-                    {
-                        currentVelocity = new Point2f(
-                            currentVelocity.X * 0.5f + vx * 0.5f, 
-                            currentVelocity.Y * 0.5f + vy * 0.5f);
-                    }
-                }
-                
-                lastValidPosition = position;
-                lastValidTime = now;
-                distanceTooFarRetryCount = 0;
+                _inertialTracker.MarkValid(position, now);
             }
             else
             {
@@ -237,32 +217,27 @@ public class PathingMovementController
                     throw new RetryNoCountException("可能暂停导致路径过远，重试一次此路线！");
                 }
 
-                distanceTooFarRetryCount++;
-                if (distanceTooFarRetryCount > 50)
+                if (_inertialTracker.DistanceTooFarRetryCount > 50)
                 {
                     Logger.LogWarning($"定位连续丢失 50 次，航迹推算达到极限。距离: {rawDistance}，放弃此路径点！");
                     throw new HandledException("目标距离过远或定位彻底丢失，放弃此路径！");
                 }
 
-                if (distanceTooFarRetryCount % 10 == 0)
+                if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 10 == 0)
                 {
                     await _resolveAnomaliesAction(screen);
-                    Logger.LogInformation($"重置到上次正确识别的推算基准坐标 ({lastValidPosition.X},{lastValidPosition.Y})");
-                    Navigation.SetPrevPosition(lastValidPosition.X, lastValidPosition.Y);
+                    Logger.LogInformation($"重置到上次正确识别的推算基准坐标 ({_inertialTracker.LastValidPosition.X},{_inertialTracker.LastValidPosition.Y})");
+                    Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
                     await Delay(500, _ct);
                 }
                 
-                // 介入惯性导航：用保留的速度向量与时间差进行航迹推算，接管当前缺失的坐标
-                var dt = (float)(now - lastValidTime).TotalSeconds;
-                position = new Point2f(
-                    lastValidPosition.X + currentVelocity.X * dt, 
-                    lastValidPosition.Y + currentVelocity.Y * dt);
+                // 介入惯性导航：接管当前缺失的坐标
+                position = _inertialTracker.TrackLost(now);
                 
-                if (distanceTooFarRetryCount % 5 == 0)
+                if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 5 == 0)
                 {
-                    Logger.LogWarning($"视觉定位丢失 (重试 {distanceTooFarRetryCount})，启用强退化惯性航迹推算。预测坐标：({position.X:F1},{position.Y:F1})");
+                    Logger.LogWarning($"视觉定位丢失 (重试 {_inertialTracker.DistanceTooFarRetryCount})，启用强退化惯性航迹推算。预测坐标：({position.X:F1},{position.Y:F1})");
                 }
-                // 允许控制流继续向下，让底层转向系统对推算的虚拟坐标进行平滑纠偏，而不是在原地瞎按W键
             }
 
             // 使用视觉真实坐标或惯导推算坐标，重新计算距离
@@ -276,37 +251,24 @@ public class PathingMovementController
 
             if (!isPositionLost && waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {
-                if ((DateTime.UtcNow - lastPositionRecord).TotalMilliseconds > 1000 + additionalTimeInMs)
+                if (_stuckDetector.CheckStuck(position, additionalTimeInMs))
                 {
-                    lastPositionRecord = DateTime.UtcNow;
-                    prevPositions.Enqueue(position);
-                    if (prevPositions.Count > 8)
+                    if (_stuckDetector.InTrapCount > 2)
                     {
-                        var oldestPosition = prevPositions.Dequeue();
-                        // 物理校验：使用欧几里得距离平方规避开销
-                        var dx = position.X - oldestPosition.X;
-                        var dy = position.Y - oldestPosition.Y;
-                        if (dx * dx + dy * dy < 9)
-                        {
-                            _inTrap++;
-                            if (_inTrap > 2)
-                            {
-                                throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
-                            }
-
-                            Logger.LogWarning("疑似卡死，尝试脱离...");
-                            await _trapEscaper.RotateAndMove();
-                            if (!await _trapEscaper.MoveTo(waypoint, previousWaypoint))
-                            {
-                                throw new RetryException("脱困失败，直接放弃！");
-                            }
-                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                            Logger.LogInformation("卡死脱离结束");
-                            
-                            prevPositions.Clear();
-                            continue;
-                        }
+                        throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
                     }
+
+                    Logger.LogWarning("疑似卡死，尝试脱离...");
+                    await _trapEscaper.RotateAndMove();
+                    if (!await _trapEscaper.MoveTo(waypoint, previousWaypoint))
+                    {
+                        throw new RetryException("脱困失败，直接放弃！");
+                    }
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    Logger.LogInformation("卡死脱离结束");
+                    
+                    _stuckDetector.ClearQueue();
+                    continue;
                 }
             }
 
