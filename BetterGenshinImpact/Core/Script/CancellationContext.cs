@@ -7,6 +7,7 @@ public class CancellationContext : Singleton<CancellationContext>
 {
     public CancellationTokenSource Cts { get; set; } = new();
     public bool IsManualStop { get; private set; }
+    public bool IsCancellationRequested => !disposed && Cts.IsCancellationRequested;
 
     private bool disposed;
 
