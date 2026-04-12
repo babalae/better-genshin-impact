@@ -19,4 +19,7 @@ public enum DisplayMapTypes
 
     [Description("远古圣山")]
     AncientSacredMountain,
+
+    [Description("空之神殿")]
+    TempleOfSpace,
 }
