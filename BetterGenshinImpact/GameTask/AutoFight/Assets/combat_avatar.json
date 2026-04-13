@@ -10,6 +10,9 @@
       "履刑者",
       "抽卡不歪真君"
     ],
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "20000000",
     "name": "旅行者",
     "nameEn": "Traveler",
@@ -28,6 +31,9 @@
       "包包",
       "宴宁"
     ],
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000007",
     "name": "荧",
     "nameEn": "PlayerGirl",
@@ -42,6 +48,9 @@
       "空哥",
       "男爷"
     ],
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000005",
     "name": "空",
     "nameEn": "PlayerBoy",
@@ -52,6 +61,9 @@
       "奇偶(男)",
       "MannequinBoy"
     ],
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000117",
     "name": "奇偶(男)",
     "nameEn": "MannequinBoy",
@@ -61,6 +73,9 @@
     "alias": [
       "奇偶(女)",
       "MannequinGirl"
+    ],
+    "combat_role": [
+      "sub_dps"
     ],
     "id": "10000118",
     "name": "奇偶(女)",
@@ -83,6 +98,9 @@
       "乌龟"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000002",
     "name": "神里绫华",
     "nameEn": "Ayaka",
@@ -99,6 +117,9 @@
       "蒲公英骑士"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000003",
     "name": "琴",
     "nameEn": "Qin",
@@ -115,6 +136,9 @@
       "阿姨"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000006",
     "name": "丽莎",
     "nameEn": "Lisa",
@@ -135,6 +159,9 @@
       "偶像"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000014",
     "name": "芭芭拉",
     "nameEn": "Barbara",
@@ -155,6 +182,9 @@
       "凝冰渡海真君"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000015",
     "name": "凯亚",
     "nameEn": "Kaeya",
@@ -179,6 +209,9 @@
       "落魄了家人们"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000016",
     "name": "迪卢克",
     "nameEn": "Diluc",
@@ -198,6 +231,9 @@
       "狼孩"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000020",
     "name": "雷泽",
     "nameEn": "Razor",
@@ -219,6 +255,9 @@
       "打火姬"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000021",
     "name": "安柏",
     "nameEn": "Ambor",
@@ -244,6 +283,9 @@
       "摸鱼"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000022",
     "name": "温迪",
     "nameEn": "Venti",
@@ -262,6 +304,9 @@
       "香师傅"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000023",
     "name": "香菱",
     "nameEn": "Xiangling",
@@ -277,6 +322,9 @@
       "无冕的龙王"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000024",
     "name": "北斗",
     "nameEn": "Beidou",
@@ -294,6 +342,9 @@
       "飞云商会二少爷"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000025",
     "name": "行秋",
     "nameEn": "Xingqiu",
@@ -319,6 +370,9 @@
       "风夜叉"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000026",
     "name": "魈",
     "nameEn": "Xiao",
@@ -334,6 +388,9 @@
       "天权"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000027",
     "name": "凝光",
     "nameEn": "Ningguang",
@@ -361,6 +418,9 @@
       "小太阳"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000029",
     "name": "可莉",
     "nameEn": "Klee",
@@ -382,6 +442,9 @@
       "拒收病婿"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000030",
     "name": "钟离",
     "nameEn": "Zhongli",
@@ -404,6 +467,9 @@
       "奥兹发射器"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000031",
     "name": "菲谢尔",
     "nameEn": "Fischl",
@@ -426,6 +492,9 @@
       "六星真神"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000032",
     "name": "班尼特",
     "nameEn": "Bennett",
@@ -448,6 +517,9 @@
       "愚人众末席"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000033",
     "name": "达达利亚",
     "nameEn": "Tartaglia",
@@ -464,6 +536,9 @@
       "岩王帝姬"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000034",
     "name": "诺艾尔",
     "nameEn": "Noel",
@@ -480,6 +555,9 @@
       "77"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000035",
     "name": "七七",
     "nameEn": "Qiqi",
@@ -494,6 +572,9 @@
       "冰棍"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000036",
     "name": "重云",
     "nameEn": "Chongyun",
@@ -509,6 +590,9 @@
       "王小美"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000037",
     "name": "甘雨",
     "nameEn": "Ganyu",
@@ -532,6 +616,9 @@
       "阿师傅"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000038",
     "name": "阿贝多",
     "nameEn": "Albedo",
@@ -551,6 +638,9 @@
       "调酒师"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000039",
     "name": "迪奥娜",
     "nameEn": "Diona",
@@ -575,6 +665,9 @@
       "梅姬斯图斯姬"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000041",
     "name": "莫娜",
     "nameEn": "Mona",
@@ -601,6 +694,9 @@
       "璃月雷神"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000042",
     "name": "刻晴",
     "nameEn": "Keqing",
@@ -614,6 +710,9 @@
       "sucrose"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000043",
     "name": "砂糖",
     "nameEn": "Sucrose",
@@ -629,6 +728,9 @@
       "摇滚"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000044",
     "name": "辛焱",
     "nameEn": "Xinyan",
@@ -659,6 +761,9 @@
       "萝沙利娅"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000045",
     "name": "罗莎莉亚",
     "nameEn": "Rosaria",
@@ -684,6 +789,9 @@
       "桃"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000046",
     "name": "胡桃",
     "nameEn": "Hutao",
@@ -701,6 +809,9 @@
       "叶师傅"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000047",
     "name": "枫原万叶",
     "nameEn": "Kazuha",
@@ -717,6 +828,9 @@
       "罗翔"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000048",
     "name": "烟绯",
     "nameEn": "Feiyan",
@@ -734,6 +848,9 @@
       "绷带女孩"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000049",
     "name": "宵宫",
     "nameEn": "Yoimiya",
@@ -751,6 +868,9 @@
       "拖马"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000050",
     "name": "托马",
     "nameEn": "Tohma",
@@ -769,6 +889,9 @@
       "劳伦斯"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000051",
     "name": "优菈",
     "nameEn": "Eula",
@@ -794,6 +917,9 @@
       "宅女"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000052",
     "name": "雷电将军",
     "nameEn": "Shougun",
@@ -810,6 +936,9 @@
       "貉"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000053",
     "name": "早柚",
     "nameEn": "Sayu",
@@ -831,6 +960,9 @@
       "美人鱼"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000054",
     "name": "珊瑚宫心海",
     "nameEn": "Kokomi",
@@ -847,6 +979,9 @@
       "希娜小姐"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000055",
     "name": "五郎",
     "nameEn": "Gorou",
@@ -865,6 +1000,9 @@
       "天狗"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000056",
     "name": "九条裟罗",
     "nameEn": "Sara",
@@ -894,6 +1032,9 @@
       "放牛的"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000057",
     "name": "荒泷一斗",
     "nameEn": "Itto",
@@ -921,6 +1062,9 @@
       "八神重子"
     ],
     "burstCD": 22,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000058",
     "name": "八重神子",
     "nameEn": "Yae",
@@ -939,6 +1083,9 @@
       "小鹿"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000059",
     "name": "鹿野院平藏",
     "nameEn": "Heizo",
@@ -955,6 +1102,9 @@
       "夜天后"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000060",
     "name": "夜兰",
     "nameEn": "Yelan",
@@ -979,6 +1129,9 @@
       "猫又"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000061",
     "name": "绮良良",
     "nameEn": "Momoka",
@@ -991,6 +1144,9 @@
       "Aloy"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000062",
     "name": "埃洛伊",
     "nameEn": "Aloy",
@@ -1007,6 +1163,9 @@
       "审鹤"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000063",
     "name": "申鹤",
     "nameEn": "Shenhe",
@@ -1025,6 +1184,9 @@
       "神女劈观"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000064",
     "name": "云堇",
     "nameEn": "Yunjin",
@@ -1048,6 +1210,9 @@
       "忍姐"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000065",
     "name": "久岐忍",
     "nameEn": "Shinobu",
@@ -1068,6 +1233,9 @@
       "大舅哥"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000066",
     "name": "神里绫人",
     "nameEn": "Ayato",
@@ -1087,6 +1255,9 @@
       "须弥飞行冠军"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000067",
     "name": "柯莱",
     "nameEn": "Collei",
@@ -1102,6 +1273,9 @@
       "奸商"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000068",
     "name": "多莉",
     "nameEn": "Dori",
@@ -1117,6 +1291,9 @@
       "驴"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000069",
     "name": "提纳里",
     "nameEn": "Tighnari",
@@ -1133,6 +1310,9 @@
       "红牛"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000070",
     "name": "妮露",
     "nameEn": "Nilou",
@@ -1149,6 +1329,9 @@
       "大风机关"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000071",
     "name": "赛诺",
     "nameEn": "Cyno",
@@ -1163,6 +1346,9 @@
       "坎迪斯"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000072",
     "name": "坎蒂丝",
     "nameEn": "Candace",
@@ -1188,6 +1374,9 @@
       "布耶尔"
     ],
     "burstCD": 13.5,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000073",
     "name": "纳西妲",
     "nameEn": "Nahida",
@@ -1204,6 +1393,9 @@
       "来依拉"
     ],
     "burstCD": 12,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000074",
     "name": "莱依拉",
     "nameEn": "Layla",
@@ -1224,6 +1416,9 @@
       "斯卡拉姆齐"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000075",
     "name": "流浪者",
     "nameEn": "Wanderer",
@@ -1246,6 +1441,9 @@
       "仙贝"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000076",
     "name": "珐露珊",
     "nameEn": "Faruzan",
@@ -1261,6 +1459,9 @@
       "月桂"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000077",
     "name": "瑶瑶",
     "nameEn": "Yaoyao",
@@ -1278,6 +1479,9 @@
       "书记官"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000078",
     "name": "艾尔海森",
     "nameEn": "Alhatham",
@@ -1294,6 +1498,9 @@
       "迪西亚"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000079",
     "name": "迪希雅",
     "nameEn": "Dehya",
@@ -1309,6 +1516,9 @@
       "凤头鹦鹉"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000080",
     "name": "米卡",
     "nameEn": "Mika",
@@ -1322,6 +1532,9 @@
       "艾尔海森室友"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000081",
     "name": "卡维",
     "nameEn": "Kaveh",
@@ -1336,6 +1549,9 @@
       "白医生"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000082",
     "name": "白术",
     "nameEn": "Baizhuer",
@@ -1355,6 +1571,9 @@
       "登登"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000083",
     "name": "琳妮特",
     "nameEn": "Linette",
@@ -1372,6 +1591,9 @@
       "魔术师"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000084",
     "name": "林尼",
     "nameEn": "Liney",
@@ -1386,6 +1608,9 @@
       "潜水员"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000085",
     "name": "菲米尼",
     "nameEn": "Freminet",
@@ -1403,6 +1628,9 @@
       "牢大"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000086",
     "name": "莱欧斯利",
     "nameEn": "Wriothesley",
@@ -1423,6 +1651,9 @@
       "水之龙王"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000087",
     "name": "那维莱特",
     "nameEn": "Neuvillette",
@@ -1441,6 +1672,9 @@
       "400D"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000088",
     "name": "夏洛蒂",
     "nameEn": "Charlotte",
@@ -1459,6 +1693,9 @@
       "傻芙芙"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000089",
     "name": "芙宁娜",
     "nameEn": "Furina",
@@ -1472,6 +1709,9 @@
       "夏沃雷"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000090",
     "name": "夏沃蕾",
     "nameEn": "Chevreuse",
@@ -1492,6 +1732,9 @@
       "娜维雅"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000091",
     "name": "娜维娅",
     "nameEn": "Navia",
@@ -1511,6 +1754,9 @@
       "舞狮"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000092",
     "name": "嘉明",
     "nameEn": "Gaming",
@@ -1532,6 +1778,9 @@
       "很会聊天真君"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000093",
     "name": "闲云",
     "nameEn": "Liuyun",
@@ -1548,6 +1797,9 @@
       "千织屋老板"
     ],
     "burstCD": 13.5,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000094",
     "name": "千织",
     "nameEn": "Chiori",
@@ -1563,6 +1815,9 @@
       "护士长"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000095",
     "name": "希格雯",
     "nameEn": "Sigewinne",
@@ -1581,6 +1836,9 @@
       "佩露薇利"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000096",
     "name": "阿蕾奇诺",
     "nameEn": "Arlecchino",
@@ -1596,6 +1854,9 @@
       "赛索思"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000097",
     "name": "赛索斯",
     "nameEn": "Sethos",
@@ -1613,6 +1874,9 @@
       "苹果姐"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000098",
     "name": "克洛琳德",
     "nameEn": "Clorinde",
@@ -1629,6 +1893,9 @@
       "现场清理人"
     ],
     "burstCD": 13.5,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000099",
     "name": "艾梅莉埃",
     "nameEn": "Emilie",
@@ -1648,6 +1915,9 @@
       "岩莉莉"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000100",
     "name": "卡齐娜",
     "nameEn": "Kachina",
@@ -1663,6 +1933,9 @@
       "蜘蛛侠"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000101",
     "name": "基尼奇",
     "nameEn": "Kinich",
@@ -1681,6 +1954,9 @@
       "逐浪客"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000102",
     "name": "玛拉妮",
     "nameEn": "Mualani",
@@ -1700,6 +1976,9 @@
       "西诺宁"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000103",
     "name": "希诺宁",
     "nameEn": "Xilonen",
@@ -1715,6 +1994,9 @@
       "鸟人"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000104",
     "name": "恰斯卡",
     "nameEn": "Chasca",
@@ -1731,6 +2013,9 @@
       "蝙蝠侠"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000105",
     "name": "欧洛伦",
     "nameEn": "Olorun",
@@ -1749,6 +2034,9 @@
       "玛微卡"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000106",
     "name": "玛薇卡",
     "nameEn": "Mavuika",
@@ -1769,6 +2057,9 @@
       "老伴"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "shield"
+    ],
     "id": "10000107",
     "name": "茜特菈莉",
     "nameEn": "Citlali",
@@ -1789,6 +2080,9 @@
       "兰颜"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "buffer"
+    ],
     "id": "10000108",
     "name": "蓝砚",
     "nameEn": "Lanyan",
@@ -1813,6 +2107,9 @@
       "心理诊疗师"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000109",
     "name": "梦见月瑞希",
     "nameEn": "Mizuki",
@@ -1829,6 +2126,9 @@
       "依安珊"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000110",
     "name": "伊安珊",
     "nameEn": "Iansan",
@@ -1852,6 +2152,9 @@
       "粉牛"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000111",
     "name": "瓦雷莎",
     "nameEn": "Varesa",
@@ -1868,6 +2171,9 @@
       "艾可非"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000112",
     "name": "爱可菲",
     "nameEn": "Escoffier",
@@ -1883,6 +2189,9 @@
       "医生"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "healer"
+    ],
     "id": "10000113",
     "name": "伊法",
     "nameEn": "Ifa",
@@ -1897,6 +2206,9 @@
       "斯柯克"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000114",
     "name": "丝柯克",
     "nameEn": "SkirkNew",
@@ -1913,6 +2225,9 @@
       "助祭"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000115",
     "name": "塔利雅",
     "nameEn": "Dahlia",
@@ -1927,6 +2242,9 @@
       "机娘"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "main_dps"
+    ],
     "id": "10000116",
     "name": "伊涅芙",
     "nameEn": "Ineffa",
@@ -1939,6 +2257,9 @@
       "Lauma"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000119",
     "name": "菈乌玛",
     "nameEn": "Lauma",
@@ -1951,6 +2272,9 @@
       "Flins"
     ],
     "burstCD": 20,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000120",
     "name": "菲林斯",
     "nameEn": "Flins",
@@ -1964,6 +2288,9 @@
       "Aino"
     ],
     "burstCD": 13.5,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000121",
     "name": "爱诺",
     "nameEn": "Aino",
@@ -1976,6 +2303,9 @@
       "Nefer"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000122",
     "name": "奈芙尔",
     "nameEn": "Nefer",
@@ -1988,6 +2318,9 @@
       "Durin"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000123",
     "name": "杜林",
     "nameEn": "Durin",
@@ -2000,6 +2333,9 @@
       "Jahoda"
     ],
     "burstCD": 18,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000124",
     "name": "雅珂达",
     "nameEn": "Jahoda",
@@ -2016,6 +2352,9 @@
       "月之少女"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000125",
     "name": "哥伦比娅",
     "nameEn": "Columbina",
@@ -2030,6 +2369,9 @@
       "白马"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000126",
     "name": "兹白",
     "nameEn": "Zibai",
@@ -2044,6 +2386,9 @@
       "小少爷"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000127",
     "name": "叶洛亚",
     "nameEn": "Illuga",
@@ -2058,6 +2403,9 @@
       "法尔加"
     ],
     "burstCD": 16,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000128",
     "name": "法尔伽",
     "nameEn": "Varka",
@@ -2070,6 +2418,9 @@
       "Linnea"
     ],
     "burstCD": 15,
+    "combat_role": [
+      "sub_dps"
+    ],
     "id": "10000130",
     "name": "莉奈娅",
     "nameEn": "Linnea",
