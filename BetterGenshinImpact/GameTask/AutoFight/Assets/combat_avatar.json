@@ -13,6 +13,10 @@
     "id": "20000000",
     "name": "旅行者",
     "nameEn": "Traveler",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "weapon": "1"
   },
   {
@@ -31,6 +35,10 @@
     "id": "10000007",
     "name": "荧",
     "nameEn": "PlayerGirl",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "weapon": "1"
   },
   {
@@ -45,6 +53,10 @@
     "id": "10000005",
     "name": "空",
     "nameEn": "PlayerBoy",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "weapon": "1"
   },
   {
@@ -55,6 +67,9 @@
     "id": "10000117",
     "name": "奇偶(男)",
     "nameEn": "MannequinBoy",
+    "position": [
+      "Support"
+    ],
     "weapon": "1"
   },
   {
@@ -65,6 +80,9 @@
     "id": "10000118",
     "name": "奇偶(女)",
     "nameEn": "MannequinGirl",
+    "position": [
+      "Support"
+    ],
     "weapon": "1"
   },
   {
@@ -86,6 +104,9 @@
     "id": "10000002",
     "name": "神里绫华",
     "nameEn": "Ayaka",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 10,
     "weapon": "1"
   },
@@ -102,6 +123,10 @@
     "id": "10000003",
     "name": "琴",
     "nameEn": "Qin",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 6,
     "weapon": "1"
   },
@@ -118,6 +143,10 @@
     "id": "10000006",
     "name": "丽莎",
     "nameEn": "Lisa",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 1,
     "skillHoldCD": 16,
     "weapon": "10"
@@ -138,6 +167,9 @@
     "id": "10000014",
     "name": "芭芭拉",
     "nameEn": "Barbara",
+    "position": [
+      "Survival"
+    ],
     "skillCD": 32,
     "weapon": "10"
   },
@@ -158,6 +190,10 @@
     "id": "10000015",
     "name": "凯亚",
     "nameEn": "Kaeya",
+    "position": [
+      "Sub DPS",
+      "Main DPS"
+    ],
     "skillCD": 6,
     "weapon": "1"
   },
@@ -182,6 +218,9 @@
     "id": "10000016",
     "name": "迪卢克",
     "nameEn": "Diluc",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 10,
     "weapon": "11"
   },
@@ -201,6 +240,9 @@
     "id": "10000020",
     "name": "雷泽",
     "nameEn": "Razor",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 6,
     "skillHoldCD": 10,
     "weapon": "11"
@@ -222,6 +264,10 @@
     "id": "10000021",
     "name": "安柏",
     "nameEn": "Ambor",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "12"
   },
@@ -247,6 +293,10 @@
     "id": "10000022",
     "name": "温迪",
     "nameEn": "Venti",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 6,
     "skillHoldCD": 15,
     "weapon": "12"
@@ -265,6 +315,9 @@
     "id": "10000023",
     "name": "香菱",
     "nameEn": "Xiangling",
+    "position": [
+      "Sub DPS"
+    ],
     "skillCD": 12,
     "weapon": "13"
   },
@@ -280,6 +333,10 @@
     "id": "10000024",
     "name": "北斗",
     "nameEn": "Beidou",
+    "position": [
+      "Sub DPS",
+      "Survival"
+    ],
     "skillCD": 7.5,
     "weapon": "11"
   },
@@ -297,6 +354,10 @@
     "id": "10000025",
     "name": "行秋",
     "nameEn": "Xingqiu",
+    "position": [
+      "Sub DPS",
+      "Survival"
+    ],
     "skillCD": 21,
     "weapon": "1"
   },
@@ -322,6 +383,9 @@
     "id": "10000026",
     "name": "魈",
     "nameEn": "Xiao",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 10,
     "weapon": "13"
   },
@@ -337,6 +401,10 @@
     "id": "10000027",
     "name": "凝光",
     "nameEn": "Ningguang",
+    "position": [
+      "Main DPS",
+      "Sub DPS"
+    ],
     "skillCD": 12,
     "weapon": "10"
   },
@@ -364,6 +432,9 @@
     "id": "10000029",
     "name": "可莉",
     "nameEn": "Klee",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 20,
     "weapon": "10"
   },
@@ -385,6 +456,10 @@
     "id": "10000030",
     "name": "钟离",
     "nameEn": "Zhongli",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 4,
     "skillHoldCD": 12,
     "weapon": "13"
@@ -407,6 +482,9 @@
     "id": "10000031",
     "name": "菲谢尔",
     "nameEn": "Fischl",
+    "position": [
+      "Sub DPS"
+    ],
     "skillCD": 25,
     "weapon": "12"
   },
@@ -429,6 +507,10 @@
     "id": "10000032",
     "name": "班尼特",
     "nameEn": "Bennett",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 5,
     "weapon": "1"
   },
@@ -451,6 +533,9 @@
     "id": "10000033",
     "name": "达达利亚",
     "nameEn": "Tartaglia",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 6,
     "skillHoldCD": 45,
     "weapon": "12"
@@ -467,6 +552,10 @@
     "id": "10000034",
     "name": "诺艾尔",
     "nameEn": "Noel",
+    "position": [
+      "Main DPS",
+      "Survival"
+    ],
     "skillCD": 24,
     "weapon": "11"
   },
@@ -483,6 +572,9 @@
     "id": "10000035",
     "name": "七七",
     "nameEn": "Qiqi",
+    "position": [
+      "Survival"
+    ],
     "skillCD": 30,
     "weapon": "1"
   },
@@ -497,6 +589,10 @@
     "id": "10000036",
     "name": "重云",
     "nameEn": "Chongyun",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "11"
   },
@@ -512,6 +608,10 @@
     "id": "10000037",
     "name": "甘雨",
     "nameEn": "Ganyu",
+    "position": [
+      "Main DPS",
+      "Sub DPS"
+    ],
     "skillCD": 10,
     "weapon": "12"
   },
@@ -535,6 +635,10 @@
     "id": "10000038",
     "name": "阿贝多",
     "nameEn": "Albedo",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 4,
     "weapon": "1"
   },
@@ -554,6 +658,10 @@
     "id": "10000039",
     "name": "迪奥娜",
     "nameEn": "Diona",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 6,
     "skillHoldCD": 15,
     "weapon": "12"
@@ -578,6 +686,10 @@
     "id": "10000041",
     "name": "莫娜",
     "nameEn": "Mona",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 12,
     "weapon": "10"
   },
@@ -604,6 +716,9 @@
     "id": "10000042",
     "name": "刻晴",
     "nameEn": "Keqing",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 7.5,
     "weapon": "1"
   },
@@ -617,6 +732,9 @@
     "id": "10000043",
     "name": "砂糖",
     "nameEn": "Sucrose",
+    "position": [
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "10"
   },
@@ -632,6 +750,10 @@
     "id": "10000044",
     "name": "辛焱",
     "nameEn": "Xinyan",
+    "position": [
+      "Survival",
+      "Sub DPS"
+    ],
     "skillCD": 18,
     "weapon": "11"
   },
@@ -662,6 +784,10 @@
     "id": "10000045",
     "name": "罗莎莉亚",
     "nameEn": "Rosaria",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 6,
     "weapon": "13"
   },
@@ -687,6 +813,9 @@
     "id": "10000046",
     "name": "胡桃",
     "nameEn": "Hutao",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 16,
     "weapon": "13"
   },
@@ -704,6 +833,10 @@
     "id": "10000047",
     "name": "枫原万叶",
     "nameEn": "Kazuha",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 6,
     "skillHoldCD": 9,
     "weapon": "1"
@@ -720,6 +853,9 @@
     "id": "10000048",
     "name": "烟绯",
     "nameEn": "Feiyan",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 9,
     "weapon": "10"
   },
@@ -737,6 +873,9 @@
     "id": "10000049",
     "name": "宵宫",
     "nameEn": "Yoimiya",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 18,
     "weapon": "12"
   },
@@ -754,6 +893,10 @@
     "id": "10000050",
     "name": "托马",
     "nameEn": "Tohma",
+    "position": [
+      "Survival",
+      "Sub DPS"
+    ],
     "skillCD": 15,
     "weapon": "13"
   },
@@ -772,6 +915,9 @@
     "id": "10000051",
     "name": "优菈",
     "nameEn": "Eula",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 4,
     "skillHoldCD": 10,
     "weapon": "11"
@@ -797,6 +943,11 @@
     "id": "10000052",
     "name": "雷电将军",
     "nameEn": "Shougun",
+    "position": [
+      "Main DPS",
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 10,
     "weapon": "13"
   },
@@ -813,6 +964,10 @@
     "id": "10000053",
     "name": "早柚",
     "nameEn": "Sayu",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 6,
     "weapon": "11"
   },
@@ -834,6 +989,10 @@
     "id": "10000054",
     "name": "珊瑚宫心海",
     "nameEn": "Kokomi",
+    "position": [
+      "Survival",
+      "Main DPS"
+    ],
     "skillCD": 20,
     "weapon": "10"
   },
@@ -850,6 +1009,9 @@
     "id": "10000055",
     "name": "五郎",
     "nameEn": "Gorou",
+    "position": [
+      "Support"
+    ],
     "skillCD": 10,
     "weapon": "12"
   },
@@ -868,6 +1030,10 @@
     "id": "10000056",
     "name": "九条裟罗",
     "nameEn": "Sara",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 10,
     "weapon": "12"
   },
@@ -897,6 +1063,9 @@
     "id": "10000057",
     "name": "荒泷一斗",
     "nameEn": "Itto",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 10,
     "weapon": "11"
   },
@@ -924,6 +1093,9 @@
     "id": "10000058",
     "name": "八重神子",
     "nameEn": "Yae",
+    "position": [
+      "Sub DPS"
+    ],
     "skillCD": 4,
     "weapon": "10"
   },
@@ -942,6 +1114,9 @@
     "id": "10000059",
     "name": "鹿野院平藏",
     "nameEn": "Heizo",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 10,
     "weapon": "10"
   },
@@ -958,6 +1133,10 @@
     "id": "10000060",
     "name": "夜兰",
     "nameEn": "Yelan",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 10,
     "weapon": "12"
   },
@@ -982,6 +1161,9 @@
     "id": "10000061",
     "name": "绮良良",
     "nameEn": "Momoka",
+    "position": [
+      "Survival"
+    ],
     "skillCD": 8,
     "weapon": "1"
   },
@@ -994,6 +1176,10 @@
     "id": "10000062",
     "name": "埃洛伊",
     "nameEn": "Aloy",
+    "position": [
+      "Sub DPS",
+      "Main DPS"
+    ],
     "skillCD": 20,
     "weapon": "12"
   },
@@ -1010,6 +1196,9 @@
     "id": "10000063",
     "name": "申鹤",
     "nameEn": "Shenhe",
+    "position": [
+      "Support"
+    ],
     "skillCD": 10,
     "skillHoldCD": 15,
     "weapon": "13"
@@ -1028,6 +1217,9 @@
     "id": "10000064",
     "name": "云堇",
     "nameEn": "Yunjin",
+    "position": [
+      "Support"
+    ],
     "skillCD": 9,
     "weapon": "13"
   },
@@ -1051,6 +1243,10 @@
     "id": "10000065",
     "name": "久岐忍",
     "nameEn": "Shinobu",
+    "position": [
+      "Survival",
+      "Sub DPS"
+    ],
     "skillCD": 15,
     "weapon": "1"
   },
@@ -1071,6 +1267,9 @@
     "id": "10000066",
     "name": "神里绫人",
     "nameEn": "Ayato",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 12,
     "weapon": "1"
   },
@@ -1090,6 +1289,10 @@
     "id": "10000067",
     "name": "柯莱",
     "nameEn": "Collei",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 12,
     "weapon": "12"
   },
@@ -1105,6 +1308,10 @@
     "id": "10000068",
     "name": "多莉",
     "nameEn": "Dori",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 9,
     "weapon": "11"
   },
@@ -1120,6 +1327,9 @@
     "id": "10000069",
     "name": "提纳里",
     "nameEn": "Tighnari",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 12,
     "weapon": "12"
   },
@@ -1136,6 +1346,10 @@
     "id": "10000070",
     "name": "妮露",
     "nameEn": "Nilou",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 18,
     "weapon": "1"
   },
@@ -1152,6 +1366,9 @@
     "id": "10000071",
     "name": "赛诺",
     "nameEn": "Cyno",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 7.5,
     "skillHoldCD": 3,
     "weapon": "13"
@@ -1166,6 +1383,10 @@
     "id": "10000072",
     "name": "坎蒂丝",
     "nameEn": "Candace",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 6,
     "skillHoldCD": 9,
     "weapon": "13"
@@ -1191,6 +1412,10 @@
     "id": "10000073",
     "name": "纳西妲",
     "nameEn": "Nahida",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 5,
     "skillHoldCD": 6,
     "weapon": "10"
@@ -1207,6 +1432,10 @@
     "id": "10000074",
     "name": "莱依拉",
     "nameEn": "Layla",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 12,
     "weapon": "1"
   },
@@ -1227,6 +1456,9 @@
     "id": "10000075",
     "name": "流浪者",
     "nameEn": "Wanderer",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 6,
     "weapon": "10"
   },
@@ -1249,6 +1481,9 @@
     "id": "10000076",
     "name": "珐露珊",
     "nameEn": "Faruzan",
+    "position": [
+      "Support"
+    ],
     "skillCD": 6,
     "weapon": "12"
   },
@@ -1264,6 +1499,10 @@
     "id": "10000077",
     "name": "瑶瑶",
     "nameEn": "Yaoyao",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "13"
   },
@@ -1281,6 +1520,9 @@
     "id": "10000078",
     "name": "艾尔海森",
     "nameEn": "Alhatham",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 18,
     "weapon": "1"
   },
@@ -1297,6 +1539,10 @@
     "id": "10000079",
     "name": "迪希雅",
     "nameEn": "Dehya",
+    "position": [
+      "Survival",
+      "Sub DPS"
+    ],
     "skillCD": 20,
     "weapon": "11"
   },
@@ -1312,6 +1558,10 @@
     "id": "10000080",
     "name": "米卡",
     "nameEn": "Mika",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "13"
   },
@@ -1325,6 +1575,9 @@
     "id": "10000081",
     "name": "卡维",
     "nameEn": "Kaveh",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 6,
     "weapon": "11"
   },
@@ -1339,6 +1592,10 @@
     "id": "10000082",
     "name": "白术",
     "nameEn": "Baizhuer",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 10,
     "weapon": "10"
   },
@@ -1358,6 +1615,10 @@
     "id": "10000083",
     "name": "琳妮特",
     "nameEn": "Linette",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 12,
     "weapon": "1"
   },
@@ -1375,6 +1636,9 @@
     "id": "10000084",
     "name": "林尼",
     "nameEn": "Liney",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 15,
     "weapon": "12"
   },
@@ -1389,6 +1653,9 @@
     "id": "10000085",
     "name": "菲米尼",
     "nameEn": "Freminet",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 10,
     "weapon": "11"
   },
@@ -1406,6 +1673,9 @@
     "id": "10000086",
     "name": "莱欧斯利",
     "nameEn": "Wriothesley",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 16,
     "weapon": "10"
   },
@@ -1426,6 +1696,9 @@
     "id": "10000087",
     "name": "那维莱特",
     "nameEn": "Neuvillette",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 12,
     "weapon": "10"
   },
@@ -1444,6 +1717,9 @@
     "id": "10000088",
     "name": "夏洛蒂",
     "nameEn": "Charlotte",
+    "position": [
+      "Survival"
+    ],
     "skillCD": 12,
     "skillHoldCD": 18,
     "weapon": "10"
@@ -1462,6 +1738,10 @@
     "id": "10000089",
     "name": "芙宁娜",
     "nameEn": "Furina",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 20,
     "weapon": "1"
   },
@@ -1475,6 +1755,10 @@
     "id": "10000090",
     "name": "夏沃蕾",
     "nameEn": "Chevreuse",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "13"
   },
@@ -1495,6 +1779,10 @@
     "id": "10000091",
     "name": "娜维娅",
     "nameEn": "Navia",
+    "position": [
+      "Main DPS",
+      "Sub DPS"
+    ],
     "skillCD": 9,
     "weapon": "11"
   },
@@ -1514,6 +1802,9 @@
     "id": "10000092",
     "name": "嘉明",
     "nameEn": "Gaming",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 6,
     "weapon": "11"
   },
@@ -1535,6 +1826,10 @@
     "id": "10000093",
     "name": "闲云",
     "nameEn": "Liuyun",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 12,
     "weapon": "10"
   },
@@ -1551,6 +1846,9 @@
     "id": "10000094",
     "name": "千织",
     "nameEn": "Chiori",
+    "position": [
+      "Sub DPS"
+    ],
     "skillCD": 16,
     "weapon": "1"
   },
@@ -1566,6 +1864,10 @@
     "id": "10000095",
     "name": "希格雯",
     "nameEn": "Sigewinne",
+    "position": [
+      "Survival",
+      "Sub DPS"
+    ],
     "skillCD": 18,
     "weapon": "12"
   },
@@ -1584,6 +1886,9 @@
     "id": "10000096",
     "name": "阿蕾奇诺",
     "nameEn": "Arlecchino",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 30,
     "weapon": "13"
   },
@@ -1599,6 +1904,9 @@
     "id": "10000097",
     "name": "赛索斯",
     "nameEn": "Sethos",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 8,
     "weapon": "12"
   },
@@ -1616,6 +1924,9 @@
     "id": "10000098",
     "name": "克洛琳德",
     "nameEn": "Clorinde",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 16,
     "weapon": "1"
   },
@@ -1632,6 +1943,9 @@
     "id": "10000099",
     "name": "艾梅莉埃",
     "nameEn": "Emilie",
+    "position": [
+      "Sub DPS"
+    ],
     "skillCD": 10,
     "skillHoldCD": 14,
     "weapon": "13"
@@ -1651,6 +1965,10 @@
     "id": "10000100",
     "name": "卡齐娜",
     "nameEn": "Kachina",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 20,
     "weapon": "13"
   },
@@ -1666,6 +1984,9 @@
     "id": "10000101",
     "name": "基尼奇",
     "nameEn": "Kinich",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 18,
     "weapon": "11"
   },
@@ -1684,6 +2005,9 @@
     "id": "10000102",
     "name": "玛拉妮",
     "nameEn": "Mualani",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 1.8,
     "skillHoldCD": 6,
     "weapon": "10"
@@ -1703,6 +2027,10 @@
     "id": "10000103",
     "name": "希诺宁",
     "nameEn": "Xilonen",
+    "position": [
+      "Support",
+      "Survival"
+    ],
     "skillCD": 7,
     "weapon": "1"
   },
@@ -1718,6 +2046,9 @@
     "id": "10000104",
     "name": "恰斯卡",
     "nameEn": "Chasca",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 6.5,
     "weapon": "12"
   },
@@ -1734,6 +2065,10 @@
     "id": "10000105",
     "name": "欧洛伦",
     "nameEn": "Olorun",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "12"
   },
@@ -1752,6 +2087,11 @@
     "id": "10000106",
     "name": "玛薇卡",
     "nameEn": "Mavuika",
+    "position": [
+      "Main DPS",
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "11"
   },
@@ -1772,6 +2112,10 @@
     "id": "10000107",
     "name": "茜特菈莉",
     "nameEn": "Citlali",
+    "position": [
+      "Support",
+      "Survival"
+    ],
     "skillCD": 16,
     "weapon": "10"
   },
@@ -1792,6 +2136,10 @@
     "id": "10000108",
     "name": "蓝砚",
     "nameEn": "Lanyan",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 16,
     "weapon": "10"
   },
@@ -1816,6 +2164,10 @@
     "id": "10000109",
     "name": "梦见月瑞希",
     "nameEn": "Mizuki",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "10"
   },
@@ -1832,6 +2184,9 @@
     "id": "10000110",
     "name": "伊安珊",
     "nameEn": "Iansan",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 16,
     "weapon": "13"
   },
@@ -1855,6 +2210,10 @@
     "id": "10000111",
     "name": "瓦雷莎",
     "nameEn": "Varesa",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 9,
     "weapon": "10"
   },
@@ -1871,6 +2230,10 @@
     "id": "10000112",
     "name": "爱可菲",
     "nameEn": "Escoffier",
+    "position": [
+      "Support",
+      "Sub DPS"
+    ],
     "skillCD": 15,
     "skillHoldCD": 6,
     "weapon": "13"
@@ -1886,6 +2249,10 @@
     "id": "10000113",
     "name": "伊法",
     "nameEn": "Ifa",
+    "position": [
+      "Survival",
+      "Support"
+    ],
     "skillCD": 7.5,
     "weapon": "10"
   },
@@ -1900,6 +2267,9 @@
     "id": "10000114",
     "name": "丝柯克",
     "nameEn": "SkirkNew",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 8,
     "weapon": "1"
   },
@@ -1916,6 +2286,10 @@
     "id": "10000115",
     "name": "塔利雅",
     "nameEn": "Dahlia",
+    "position": [
+      "Sub DPS",
+      "Support"
+    ],
     "skillCD": 9,
     "weapon": "1"
   },
@@ -1930,6 +2304,9 @@
     "id": "10000116",
     "name": "伊涅芙",
     "nameEn": "Ineffa",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 16,
     "weapon": "13"
   },
@@ -1942,6 +2319,9 @@
     "id": "10000119",
     "name": "菈乌玛",
     "nameEn": "Lauma",
+    "position": [
+      "Support"
+    ],
     "skillCD": 12,
     "weapon": "10"
   },
@@ -1954,6 +2334,9 @@
     "id": "10000120",
     "name": "菲林斯",
     "nameEn": "Flins",
+    "position": [
+      "Support"
+    ],
     "skillCD": 6,
     "skillHoldCD": 16,
     "weapon": "13"
@@ -1967,6 +2350,9 @@
     "id": "10000121",
     "name": "爱诺",
     "nameEn": "Aino",
+    "position": [
+      "Support"
+    ],
     "skillCD": 10,
     "weapon": "11"
   },
@@ -1979,6 +2365,9 @@
     "id": "10000122",
     "name": "奈芙尔",
     "nameEn": "Nefer",
+    "position": [
+      "Support"
+    ],
     "skillCD": 9,
     "weapon": "10"
   },
@@ -1991,6 +2380,9 @@
     "id": "10000123",
     "name": "杜林",
     "nameEn": "Durin",
+    "position": [
+      "Sub DPS"
+    ],
     "skillCD": 12,
     "weapon": "10"
   },
@@ -2003,6 +2395,9 @@
     "id": "10000124",
     "name": "雅珂达",
     "nameEn": "Jahoda",
+    "position": [
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "10"
   },
@@ -2019,6 +2414,9 @@
     "id": "10000125",
     "name": "哥伦比娅",
     "nameEn": "Columbina",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 17,
     "weapon": "10"
   },
@@ -2033,6 +2431,9 @@
     "id": "10000126",
     "name": "兹白",
     "nameEn": "Zibai",
+    "position": [
+      "Support"
+    ],
     "skillCD": 18,
     "weapon": "10"
   },
@@ -2047,6 +2448,9 @@
     "id": "10000127",
     "name": "叶洛亚",
     "nameEn": "Illuga",
+    "position": [
+      "Support"
+    ],
     "skillCD": 15,
     "weapon": "10"
   },
@@ -2061,6 +2465,9 @@
     "id": "10000128",
     "name": "法尔伽",
     "nameEn": "Varka",
+    "position": [
+      "Main DPS"
+    ],
     "skillCD": 16,
     "weapon": "10"
   },
@@ -2073,6 +2480,9 @@
     "id": "10000130",
     "name": "莉奈娅",
     "nameEn": "Linnea",
+    "position": [
+      "Support"
+    ],
     "skillCD": 18,
     "weapon": "10"
   }
