@@ -572,7 +572,7 @@ public class Genshin
                 var changed = false;
                 while ((DateTime.Now - waitStart) < timeout)
                 {
-                    Thread.Sleep(500);
+                    await Task.Delay(500, ct);
                     try
                     {
                         using var bitmap = gameCapture.Capture();
@@ -612,6 +612,16 @@ public class Genshin
         }
         finally
         {
+            // 确保定时器恢复运行
+            try
+            {
+                dispatcher.StartTimer();
+            }
+            catch
+            {
+                // 忽略重复启动
+            }
+
             dispatcher.IsResolutionChanging = false;
         }
     }

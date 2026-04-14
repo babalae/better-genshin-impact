@@ -220,11 +220,15 @@ namespace BetterGenshinImpact.GameTask
         public void RebuildCapture(IntPtr hWnd, CaptureModes mode)
         {
             GameCapture?.Stop();
-            GameCapture = GameCaptureFactory.Create(mode);
-            GameCapture.Start(hWnd, new Dictionary<string, object>()
+            var newCapture = GameCaptureFactory.Create(mode);
+            newCapture.Start(hWnd, new Dictionary<string, object>()
             {
-                { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
+                {
+                    "autoFixWin11BitBlt",
+                    OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt
+                }
             });
+            GameCapture = newCapture;
         }
 
         public void StopTimer()
