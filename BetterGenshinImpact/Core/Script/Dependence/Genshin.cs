@@ -455,6 +455,10 @@ public class Genshin
             var targetW = width.ToString();
             var targetH = height.ToString();
 
+            // 在变更前记录原始窗口尺寸
+            var hWnd = TaskContext.Instance().GameHandle;
+            var origRect = SystemControl.GetCaptureRect(hWnd);
+
             await new ReturnMainUiTask().Start(ct);
 
             var escSettingsRo = ElementAssets.Instance.EscSettingsRo.Clone();
@@ -559,43 +563,18 @@ public class Genshin
             // 更新缓存的分辨率指标
             GlobalMethod.SetGameMetrics(width, height);
 
-            // 通过截图轮询检测分辨率是否已变更（与原分辨率比较，有差异即成功，部分电脑可设置的最大分辨率与实际情况不匹配，只能做此处理）
-            Logger.LogInformation("等待游戏分辨率变更...");
-            var gameCapture = dispatcher.GameCapture
-                ?? throw new InvalidOperationException("截图器未初始化");
-            using (var origBitmap = gameCapture.Capture())
+            // 通过窗口尺寸变化检测分辨率是否已变更（与原尺寸比较，有差异即成功）
+            var waitStart = DateTime.Now;
+            var timeout = TimeSpan.FromSeconds(10);
+            while ((DateTime.Now - waitStart) < timeout)
             {
-                var origW = origBitmap?.Width ?? 0;
-                var origH = origBitmap?.Height ?? 0;
-                var waitStart = DateTime.Now;
-                var timeout = TimeSpan.FromSeconds(10);
-                var changed = false;
-                while ((DateTime.Now - waitStart) < timeout)
+                Thread.Sleep(500);
+                var currentRect = SystemControl.GetCaptureRect(hWnd);
+                if (currentRect.Width != origRect.Width || currentRect.Height != origRect.Height)
                 {
-                    await Task.Delay(500, ct);
-                    try
-                    {
-                        using var bitmap = gameCapture.Capture();
-                        if (bitmap != null && (bitmap.Width != origW || bitmap.Height != origH))
-                        {
-                            changed = true;
-                            break;
-                        }
-                    }
-                    catch
-                    {
-                        // 分辨率切换过程中截图可能暂时失败
-                    }
-                }
-
-                if (!changed)
-                {
-                    throw new TimeoutException("等待分辨率变更超时（10秒）");
+                    break;
                 }
             }
-
-            // 重新初始化任务上下文
-            var hWnd = TaskContext.Instance().GameHandle;
             TaskContext.Instance().Init(hWnd);
             // 重建截图器
             var captureMode = Enum.Parse<Fischless.GameCapture.CaptureModes>(TaskContext.Instance().Config.CaptureMode);
