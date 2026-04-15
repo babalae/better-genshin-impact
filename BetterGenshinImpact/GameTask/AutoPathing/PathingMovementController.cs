@@ -462,6 +462,16 @@ public class PathingMovementController
         }
 
         var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
+
+        // 防御性保护：当小地图丢失、图像无法识别时，RotateToApproach 返回哨兵值 360f。
+        // 若不将其剔除，它会作为 +360 的巨大误差值直接注入下方 PID 的积分与微分项中，
+        // 瞬间触发 +-600 的满载补偿动作，导致死锁性质的剧烈抖动与瞎转。
+        if (Math.Abs(diff) >= 360f)
+        {
+            consecutiveCount = 0;
+            _pidIntegral = 0;
+            return consecutiveCount;
+        }
         
         // 动态转角容差：距离近时容差变大以防打圈，平时要求5度内
         int tolerance = currentDistance < 5.0 ? 15 : 5;

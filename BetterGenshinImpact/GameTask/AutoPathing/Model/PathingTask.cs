@@ -89,6 +89,38 @@ public class PathingTask
         return null;
     }
 
+    public List<PathingTask> SplitTasks()
+    {
+        var result = new List<PathingTask>();
+        var tempList = new List<Waypoint>();
+
+        if (Positions == null || Positions.Count == 0) return result;
+
+        foreach (var p in Positions)
+        {
+            if (p == null) continue;
+
+            if (p.Type == "teleport" && tempList.Count > 0)
+            {
+                var clone = (PathingTask)this.MemberwiseClone();
+                clone.Positions = tempList;
+                result.Add(clone);
+                tempList = new List<Waypoint>();
+            }
+
+            tempList.Add(p);
+        }
+
+        if (tempList.Count > 0)
+        {
+            var clone = (PathingTask)this.MemberwiseClone();
+            clone.Positions = tempList;
+            result.Add(clone);
+        }
+
+        return result;
+    }
+
     public static PathingTask? BuildFromFilePath(string filePath)
     {
         //var json = File.ReadAllText(filePath);
