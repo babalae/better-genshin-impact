@@ -194,7 +194,7 @@ public class TpTask
                 await CheckInBigMapUi();
                 return;
             }
-            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException || e.GetType().Name == "NormalEndException")
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
             {
                 throw;
             }

@@ -203,85 +203,77 @@ public class PathExecutor
             await Delay(100, ct);
             Navigation.WarmUp(task.Info.MapMatchMethod); // 提前加载地图特征点
 
-            foreach (var waypoints in waypointsList) // 按传送点分割的路径
+            var waypoints = waypointsList.FirstOrDefault() ?? new();
+            RouteTelemetryManager.CurrentAnchorContext = waypoints.FirstOrDefault();
+            CurWaypoints = (0, waypoints);
+            
+            for (var i = 0; i < RetryTimes; i++)
             {
-                RouteTelemetryManager.CurrentAnchorContext = waypoints.FirstOrDefault();
-                CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
-                for (var i = 0; i < RetryTimes; i++)
+                try
                 {
-                    try
+                    await ResolveAnomalies(); // 异常场景处理
+
+                    // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
+                    if (waypoints.Count > 0 && waypoints[0].Type != WaypointType.Teleport.Code)
                     {
-                        await ResolveAnomalies(); // 异常场景处理
+                        Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
+                    }
 
-                        // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
-                        if (waypoints[0].Type != WaypointType.Teleport.Code)
+                    foreach (var waypoint in waypoints) // 一条路径
+                    {
+                        CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
+                        _navigator.TryCloseSkipOtherOperations();
+                        
+                        var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
+                        if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
                         {
-                            Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
+                            throw new RetryException("神像回血完成后重试路线");
                         }
 
-                        foreach (var waypoint in waypoints) // 一条路径
-                        {
-                            CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
-                            _navigator.TryCloseSkipOtherOperations();
-                            
-                            var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
-                            if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
-                            {
-                                throw new RetryException("神像回血完成后重试路线");
-                            }
-
-                            var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
-                            if (await strategy.ExecuteAsync(this, waypoint, waypointsList))
-                            {
-                                SuccessEnd = true;
-                                return;
-                            }
-                        }
-
-                        if (waypoints == waypointsList.Last())
+                        var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
+                        if (await strategy.ExecuteAsync(this, waypoint, waypointsList))
                         {
                             SuccessEnd = true;
+                            return;
                         }
+                    }
+
+                    SuccessEnd = true;
+                    break;
+                }
+                catch (HandledException handledExc)
+                {
+                    Logger.LogWarning(handledExc.Message);
+                    break;
+                }
+                catch (TaskCanceledException)
+                {
+                    if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
+                    {
+                        throw;
+                    }
+                    else
+                    {
                         break;
                     }
-                    catch (HandledException handledExc)
-                    {
-                        Logger.LogWarning(handledExc.Message);
-                        return;
-                    }
-                    catch (TaskCanceledException)
-                    {
-                        if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
-                        {
-                            throw;
-                        }
-                        else
-                        {
-                            return;
-                        }
-                    }
-                    catch (RetryException retryException)
-                    {
-                        _navigator.StartSkipOtherOperations();
-                        Logger.LogWarning(retryException.Message);
-                        if (i == RetryTimes - 1)
-                        {
-                            return;
-                        }
-                    }
-                    catch (RetryNoCountException retryException)
-                    {
-                        //特殊情况下，重试不消耗次数
-                        i--;
-                        _navigator.StartSkipOtherOperations();
-                        Logger.LogWarning(retryException.Message);
-                    }
-                    finally
-                    {
-                        // 不管咋样，松开所有按键
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                    }
+                }
+                catch (RetryException retryException)
+                {
+                    _navigator.StartSkipOtherOperations();
+                    Logger.LogWarning(retryException.Message);
+                }
+                catch (RetryNoCountException retryException)
+                {
+                    //特殊情况下，重试不消耗次数
+                    i--;
+                    _navigator.StartSkipOtherOperations();
+                    Logger.LogWarning(retryException.Message);
+                }
+                finally
+                {
+                    // 不管咋样，松开所有按键
+                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                 }
             }
         }
