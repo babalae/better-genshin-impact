@@ -1,21 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Strategy;
 
 /// <summary>
-/// Strategy for executing movement-based waypoint navigation tasks.
 /// 执行基于移动的路点导航任务的策略。处理朝向、移动、接近以及相关动作触发的前后置逻辑。
+/// Strategy for executing movement-based waypoint navigation tasks.
 /// </summary>
 public class MovementWaypointStrategy : IWaypointStrategy
 {
@@ -63,12 +59,20 @@ public class MovementWaypointStrategy : IWaypointStrategy
         }
         
         WaypointForTrack? previousWaypoint = null;
-        if (executor.CurWaypoint.Item1 > 0)
+        WaypointForTrack? nextWaypoint = null;
+        var waypoints = executor.CurWaypoints.Item2;
+        var currentIndex = executor.CurWaypoint.Item1;
+        
+        if (currentIndex > 0)
         {
-            var waypoints = executor.CurWaypoints.Item2;
-            previousWaypoint = waypoints[executor.CurWaypoint.Item1 - 1];
+            previousWaypoint = waypoints[currentIndex - 1];
         }
-        await executor.MovementController.MoveTo(waypoint, previousWaypoint);
+        if (currentIndex < waypoints.Count - 1)
+        {
+            nextWaypoint = waypoints[currentIndex + 1];
+        }
+        
+        await executor.MovementController.MoveTo(waypoint, previousWaypoint, nextWaypoint);
     }
 
     private async Task PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
