@@ -163,7 +163,7 @@
   },
   {
     "name": "胡桃",
-    "scriptContent1": "charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),dash,wait(0.1),charge(0.3),wait(0.1),j,wait(0.52)",
+    "scriptContent1": "click,wait(0.25),click,wait(0.05),mousedown,wait(0.265),mouseup,click(right),wait(0.02),keypress(S),wait(0.02),keypress(w),wait(0.35)",
     "macroPriority": 0
   },
   {
