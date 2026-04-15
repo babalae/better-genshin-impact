@@ -28,6 +28,13 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 /// </summary>
 public class PathingMovementController
 {
+    private const int TIMEOUT_SECONDS = 240;
+    private const double ARRIVE_DISTANCE_THRESHOLD = 4.0;
+    private const int MAX_PID_CONSECUTIVE_COUNT = 10;
+    private const int MAX_STUCK_TRAP_COUNT = 2;
+    private const int MAX_INERTIAL_RETRY_COUNT = 50;
+    private const float SMOOTH_RADIUS = 6.0f;
+
     private readonly CancellationToken _ct;
     private readonly PathingNavigator _navigator;
     private readonly CameraRotateTask _rotateTask;
@@ -48,7 +55,8 @@ public class PathingMovementController
     private readonly List<IMoveModeHandler> _moveModeHandlers;
 
     /// <summary>
-    /// 初始化寻路移动控制器 / Initializes a new instance of the pathing movement controller.
+    /// 初始化寻路移动控制器 
+    ///  Initializes a new instance of the pathing movement controller.
     /// </summary>
     public PathingMovementController(
         CancellationToken ct,
@@ -109,12 +117,16 @@ public class PathingMovementController
 
         var position = await _navigator.GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogDebug("朝向点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("[寻路系统] 正在调整角色朝向，目标坐标：({X}, {Y})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _waitUntilRotatedToAction(targetOrientation, 2);
         await Delay(500, _ct);
 
         return false;
     }
+
+    // 【自进化寻路】提供给上层调用的路线记录回调，无论有无偏差，只要成功走完，都记录下来用于生成提瓦特主干道。
+    // 参数: (起步点, 终点, 真实摸索出的生还轨迹)
+    public Action<WaypointForTrack?, WaypointForTrack, List<Point2f>>? OnRouteTraversed { get; set; }
 
     /// <summary>
     /// 移动至指定的路径点 / Moves to the specified waypoint.
@@ -146,6 +158,9 @@ public class PathingMovementController
 
         _inertialTracker.Reset(position);
         _stuckDetector.Reset();
+        _pidIntegral = 0f;
+        _pidLastError = 0f;
+        _pidLastTime = DateTime.UtcNow;
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         
@@ -155,16 +170,22 @@ public class PathingMovementController
         double distance = 0;
         bool isRouteCompleted = false;
         bool exitBecauseEndJudgment = false;
+        Exception? caughtException = null;
+
+        // 【自进化寻路】遥测采集数据
+        var actualTrajectory = new List<Point2f>();
 
         // 【架构颠覆: 组合式行为树 (Behavior Tree)】
         var rootNode = new BTSelector(
             
             // 致命拦截
             new BTSequence(
-                new BTCondition(() => (DateTime.UtcNow - _moveToStartTime).TotalSeconds > 240),
+                new BTCondition(() => (DateTime.UtcNow - _moveToStartTime).TotalSeconds > TIMEOUT_SECONDS),
                 new BTAction((Action)(() => {
-                    Logger.LogWarning("执行超时，放弃此次追踪");
-                    throw new RetryException("路径点执行超时，放弃整条路径");
+                    Logger.LogWarning("[寻路系统] 路径点追踪超时（> {Timeout} 秒），已放弃当前路径追踪任务。", TIMEOUT_SECONDS);
+                    isRouteCompleted = true;
+                    exitBecauseEndJudgment = false;
+                    caughtException = new RetryException("路径点执行超时，放弃整条路径");
                 }))
             ),
             
@@ -186,17 +207,38 @@ public class PathingMovementController
             new BTSequence(
                 new BTAction(() => MaintainForwardKey()),
                 new BTAction(async () => {
-                    var (newPosition, addonTime) = await _navigator.GetPositionAndTime(moveContext.Screen, waypoint);
-                    additionalTimeInMs = addonTime;
-                    if (additionalTimeInMs > 0)
+                    try
                     {
-                        MaintainForwardKey();
-                        additionalTimeInMs += 1000;
+                        var (newPosition, addonTime) = await _navigator.GetPositionAndTime(moveContext.Screen, waypoint);
+                        additionalTimeInMs = addonTime;
+                        if (additionalTimeInMs > 0)
+                        {
+                            MaintainForwardKey();
+                            additionalTimeInMs += 1000;
+                        }
+                        position = await HandleInertialPositioning(waypoint, newPosition, moveContext.Screen, DateTime.UtcNow);
+                        distance = Navigation.GetDistance(waypoint, position);
+                        Logger.LogDebug("[寻路系统] 正在向目标点移动，当前实时距离：{Distance:F1}", distance);
+
+                        // 【自进化寻路】定距抽样刻录真实坐标足迹 (每2.0距离记录一次)
+                        if (position.X != 0 && position.Y != 0)
+                        {
+                            var point2fPos = new Point2f(position.X, position.Y);
+                            if (actualTrajectory.Count == 0 || Navigation.GetDistance(new Waypoint { X = actualTrajectory[^1].X, Y = actualTrajectory[^1].Y }, position) > 2.0)
+                            {
+                                actualTrajectory.Add(point2fPos);
+                            }
+                        }
+
+                        return BTStatus.Success;
                     }
-                    position = await HandleInertialPositioning(waypoint, newPosition, moveContext.Screen, DateTime.UtcNow);
-                    distance = Navigation.GetDistance(waypoint, position);
-                    Debug.WriteLine($"接近目标点中，距离为{distance}");
-                    return BTStatus.Success;
+                    catch (Exception ex)
+                    {
+                        caughtException = ex;
+                        isRouteCompleted = true;
+                        exitBecauseEndJudgment = false;
+                        return BTStatus.Failure;
+                    }
                 }),
                 
                 // 运动分支派布
@@ -204,9 +246,9 @@ public class PathingMovementController
                     
                     // 到达内圈死区中断点
                     new BTSequence(
-                        new BTCondition(() => distance < 4),
+                        new BTCondition(() => distance < ARRIVE_DISTANCE_THRESHOLD),
                         new BTAction(() => {
-                            Logger.LogDebug("到达路径点附近");
+                            Logger.LogInformation("[寻路系统] 成功抵达目标路径点附近（距离 < {Threshold:F1}）。", ARRIVE_DISTANCE_THRESHOLD);
                             isRouteCompleted = true;
                             return BTStatus.Success;
                         })
@@ -214,7 +256,24 @@ public class PathingMovementController
                     
                     // 卡墙脱困反馈
                     new BTSequence(
-                        new BTAction(async () => await CheckAndHandleStuck(waypoint, previousWaypoint, position, additionalTimeInMs) ? BTStatus.Success : BTStatus.Failure),
+                        new BTAction(async () => {
+                            try 
+                            {
+                                bool needsEscape = await CheckAndHandleStuck(waypoint, previousWaypoint, position, additionalTimeInMs);
+                                if (needsEscape) {
+                                    // 触发脱困动作
+                                    return BTStatus.Success;
+                                }
+                                return BTStatus.Failure;
+                            }
+                            catch (Exception ex)
+                            {
+                                caughtException = ex;
+                                isRouteCompleted = true;
+                                exitBecauseEndJudgment = false;
+                                return BTStatus.Failure;
+                            }
+                        }),
                         new BTAction(() => {
                             consecutiveRotationCountBeyondAngle = 0;
                             return BTStatus.Running;
@@ -255,8 +314,20 @@ public class PathingMovementController
                 
                 await rootNode.TickAsync();
                 
+                if (caughtException != null)
+                {
+                    throw caughtException;
+                }
+
                 if (isRouteCompleted)
                 {
+                    // 【自进化寻路】完赛统计：抵达终点即刻作为提瓦特可行走主干道向外供出
+                    if (OnRouteTraversed != null)
+                    {
+                        actualTrajectory.Add(new Point2f((float)waypoint.X, (float)waypoint.Y)); 
+                        OnRouteTraversed.Invoke(previousWaypoint, waypoint, actualTrajectory);
+                    }
+
                     return exitBecauseEndJudgment;
                 }
             }
@@ -282,7 +353,7 @@ public class PathingMovementController
         using var screen = _captureAction();
         var result = await _navigator.GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, result.Item1);
-        Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("[寻路系统] 启动初步接近，开始转向目标坐标：({X}, {Y})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
         await _waitUntilRotatedToAction(targetOrientation, 5);
         return result.Item1;
     }
@@ -305,14 +376,14 @@ public class PathingMovementController
 
         if (_inertialTracker.DistanceTooFarRetryCount > 50)
         {
-            Logger.LogWarning($"定位连续丢失 50 次，航迹推算达到极限。距离: {rawDistance}，放弃此路径点！");
+            Logger.LogError("[寻路系统] 视觉定位连续丢失超过 50 次，航迹推算已达极限（偏离距离：{Distance:F1}），终止当前路径。请检查游戏画面或网络状态。", rawDistance);
             throw new HandledException("目标距离过远或定位彻底丢失，放弃此路径！");
         }
 
         if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 10 == 0)
         {
             await _resolveAnomaliesAction(screen);
-            Logger.LogInformation($"重置到上次正确识别的推算基准坐标 ({_inertialTracker.LastValidPosition.X},{_inertialTracker.LastValidPosition.Y})");
+            Logger.LogInformation("[寻路系统] 正在尝试通过异常处理重置推算基准，上次有效坐标：({X:F1}, {Y:F1})", _inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
             Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
             await Delay(500, _ct);
         }
@@ -321,7 +392,7 @@ public class PathingMovementController
         
         if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 5 == 0)
         {
-            Logger.LogWarning($"视觉定位丢失 (重试 {_inertialTracker.DistanceTooFarRetryCount})，启用强退化惯性航迹推算。预测坐标：({position.X:F1},{position.Y:F1})");
+            Logger.LogWarning("[寻路系统] 游戏视觉定位丢失（重试累计：{Count}次），已切换至惯性航迹推算模式，当前预测位置：({X:F1}, {Y:F1})", _inertialTracker.DistanceTooFarRetryCount, position.X, position.Y);
         }
         
         return position;
@@ -334,19 +405,19 @@ public class PathingMovementController
              
         if (_stuckDetector.CheckStuck(position, additionalTimeInMs))
         {
-            if (_stuckDetector.InTrapCount > 2)
+            if (_stuckDetector.InTrapCount > MAX_STUCK_TRAP_COUNT)
             {
-                throw new RetryException("此路线出现3次卡死，重试一次路线或放弃此路线！");
+                throw new RetryException($"此路线出现{MAX_STUCK_TRAP_COUNT + 1}次卡死，重试一次路线或放弃此路线！");
             }
 
-            Logger.LogWarning("疑似卡死，尝试脱离...");
+            Logger.LogWarning("[防卡死机制] 角色似乎遇到了障碍物，即将启动自动脱困逃脱程序...");
             await _trapEscaper.RotateAndMove();
             if (!await _trapEscaper.MoveTo(waypoint, previousWaypoint))
             {
                 throw new RetryException("脱困失败，直接放弃！");
             }
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            Logger.LogInformation("卡死脱离结束");
+            Logger.LogInformation("[防卡死机制] 自动脱困完成，已恢复常规寻路。");
             
             _stuckDetector.ClearQueue();
             return true;
@@ -356,6 +427,7 @@ public class PathingMovementController
 
     private float _pidIntegral = 0f;
     private float _pidLastError = 0f;
+    private DateTime _pidLastTime = DateTime.MinValue;
 
     private async Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount, WaypointForTrack? nextWaypoint = null)
     {
@@ -368,12 +440,10 @@ public class PathingMovementController
             && string.IsNullOrEmpty(waypoint.Action) 
             && (waypoint.MoveMode == MoveModeEnum.Run.Code || waypoint.MoveMode == MoveModeEnum.Dash.Code || waypoint.MoveMode == MoveModeEnum.Walk.Code);
 
-        float smoothRadius = 6.0f;
-
-        if (canSmooth && currentDistance < smoothRadius && currentDistance > 2.0f)
+        if (canSmooth && currentDistance < SMOOTH_RADIUS && currentDistance > 2.0f)
         {
-            // t 属于 0 到 1。进入 6 单位缓冲圈后逐渐开始引导视线向下一个路口倾斜，实现小幅度丝滑拉弧角转弯
-            float t = 1.0f - ((float)currentDistance / smoothRadius);
+            // t 属于 0 到 1。进入 SMOOTH_RADIUS 单位缓冲圈后逐渐开始引导视线向下一个路口倾斜，实现小幅度丝滑拉弧角转弯
+            float t = 1.0f - ((float)currentDistance / SMOOTH_RADIUS);
             t = Math.Clamp(t, 0f, 1f);
             
             float u = 1 - t;
@@ -396,6 +466,12 @@ public class PathingMovementController
         // 动态转角容差：距离近时容差变大以防打圈，平时要求5度内
         int tolerance = currentDistance < 5.0 ? 15 : 5;
 
+        // 计算真实的时间差 (dt)
+        var now = DateTime.UtcNow;
+        float dt = _pidLastTime != DateTime.MinValue ? (float)(now - _pidLastTime).TotalSeconds : 0.1f;
+        if (dt <= 0f) dt = 0.01f; // 防止除0异常
+        _pidLastTime = now;
+
         // 【平滑提升: 引入 PID 控制取代线程阻塞强行旋转】
         // 当偏差持续过大时，抛弃掉以往 await 一种固定帧率阻塞，而是叠加一抹带阻尼的高级鼠标偏移纠正
         if (loopNum > 20 && Math.Abs(diff) > tolerance)
@@ -403,16 +479,16 @@ public class PathingMovementController
             consecutiveCount++;
 
             // 积分控制 (I): 如果多帧依然转不过来（比如鼠标卡住），累加动量
-            _pidIntegral += diff * 0.1f; // 假设常规每帧 0.1s
+            _pidIntegral += diff * dt; // 采用真实的帧间差
             _pidIntegral = Math.Clamp(_pidIntegral, -60f, 60f); // 积分限幅防暴走
             
             // 微分控制 (D): 利用倒数前相预测震荡并衰减
-            float derivative = (diff - _pidLastError) / 0.1f;
+            float derivative = (diff - _pidLastError) / dt;
             
             // PID 合成权重：这里补码作为额外动量输出，不抢占原初控制，只是在遇到强力折转/调头时增持辅助
             float pidCompensation = (0.5f * diff) + (0.2f * _pidIntegral) + (0.05f * derivative);
 
-            if (consecutiveCount > 10)
+            if (consecutiveCount > MAX_PID_CONSECUTIVE_COUNT)
             {
                 // 用 PID 算出应该补的像素。这种带有缓冲计算的动量比原本死锁等待的阻塞硬转柔和很多
                 int extraMouseDx = (int)Math.Clamp(pidCompensation * 5.0f, -600, 600);
@@ -474,7 +550,7 @@ public class PathingMovementController
     /// <returns>到达目的地返回 true，否则返回 false。</returns>
     public async Task<bool> MoveCloseTo(WaypointForTrack waypoint)
     {
-        Logger.LogDebug("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        Logger.LogDebug("[寻路系统] 启动精确接近模式，目标坐标锁定在：({X}, {Y})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
 
         const int maxSteps = 60;
         const float arriveDistance = 2f;
@@ -499,7 +575,7 @@ public class PathingMovementController
             new BTSequence(
                 new BTCondition(() => stepsTaken > maxSteps),
                 new BTAction((Action)(() => {
-                    Logger.LogWarning("精确接近超时");
+                    Logger.LogWarning("[精细寻路] 接近时间过长，已触发生命周期保护，当前微调接近中断。");
                     isRouteCompleted = true;
                 }))
             ),
@@ -533,14 +609,14 @@ public class PathingMovementController
                         {
                             position = lastValidPosition.Value;
                             if (lostRetryCount == 1 || lostRetryCount % 3 == 0)
-                                Logger.LogWarning($"精确接近阶段定位丢失，使用兜底坐标:({position.X:F1},{position.Y:F1})");
+                                Logger.LogWarning("[精细寻路] 瞬时视觉失常，启用位置缓存作为保险坐标：({X:F1}, {Y:F1})", position.X, position.Y);
                             return BTStatus.Success; // 使用了兜底坐标，容许通过
                         }
                         
                         if (lostRetryCount % 3 == 0)
                             await _resolveAnomaliesAction(screen);
 
-                        Logger.LogWarning("精确接近阶段定位持续丢失，终止本次精确接近");
+                        Logger.LogWarning("[精细寻路] 视觉坐标信号断开时间过长，安全停止本次路径微调...");
                         isRouteCompleted = true;
                         return BTStatus.Failure;
                     }
@@ -551,7 +627,7 @@ public class PathingMovementController
                         var currentDistance = Navigation.GetDistance(waypoint, position);
                         if (prevDistance < 6.0f && currentDistance > prevDistance + 0.3f)
                         {
-                            Logger.LogDebug("检测到距离不减反增(可能绕圈)，提前终止精确接近");
+                            Logger.LogDebug("[精细寻路] {Message}", "当前角色向后偏移或可能在进行徒劳寻圈，正在取消微调过程避免陷入死循环。");
                             isRouteCompleted = true;
                             return BTStatus.Failure;
                         }
@@ -570,7 +646,7 @@ public class PathingMovementController
                             return distance < arriveDistance;
                         }),
                         new BTAction((Action)(() => {
-                            Logger.LogDebug("已到达路径点");
+                            Logger.LogInformation("[精细寻路] 到达目标点（误差距离: < {Distance:F1}），此次寻路任务圆满完成。", arriveDistance);
                             isRouteCompleted = true;
                         }))
                     ),
@@ -609,64 +685,5 @@ public class PathingMovementController
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         await Delay(1000, _ct);
         return exitBecauseEndJudgment;
-    }
-}
-
-// ==========================================
-// 行为树基础引擎 / Behavior Tree Foundation Engine
-// ==========================================
-
-public enum BTStatus { Success, Failure, Running }
-
-public interface IBTNode
-{
-    Task<BTStatus> TickAsync();
-}
-
-public class BTAction : IBTNode
-{
-    private readonly Func<Task<BTStatus>> _action;
-    public BTAction(Func<Task<BTStatus>> action) => _action = action;
-    public BTAction(Func<BTStatus> action) => _action = () => Task.FromResult(action());
-    public BTAction(Action action) => _action = () => { action(); return Task.FromResult(BTStatus.Success); };
-    public Task<BTStatus> TickAsync() => _action();
-}
-
-public class BTCondition : IBTNode
-{
-    private readonly Func<bool> _condition;
-    public BTCondition(Func<bool> condition) => _condition = condition;
-    public Task<BTStatus> TickAsync() => Task.FromResult(_condition() ? BTStatus.Success : BTStatus.Failure);
-}
-
-// 顺序节点：遇到第一个非 Success 的节点即返回该状态（中断后续执行）
-public class BTSequence : IBTNode
-{
-    private readonly IBTNode[] _nodes;
-    public BTSequence(params IBTNode[] nodes) => _nodes = nodes;
-    public async Task<BTStatus> TickAsync()
-    {
-        foreach (var node in _nodes)
-        {
-            var status = await node.TickAsync();
-            if (status != BTStatus.Success) return status;
-        }
-        return BTStatus.Success;
-    }
-}
-
-// 选择节点：遇到第一个非 Failure 的节点即返回该状态（具有 Fallback 特性）
-public class BTSelector : IBTNode
-{
-    private readonly IBTNode[] _nodes;
-    public BTSelector(params IBTNode[] nodes) => _nodes = nodes;
-    public async Task<BTStatus> TickAsync()
-    {
-        foreach (var node in _nodes)
-        {
-            var status = await node.TickAsync();
-            if (status != BTStatus.Failure) return status;
-        }
-        return BTStatus.Failure;
     }
 }

@@ -79,6 +79,8 @@ public class PathExecutor
     /// </summary>
     public PathingMovementController MovementController { get; }
     
+    public Telemetry.RouteTelemetryManager RouteTelemetryManager { get; } = new();
+    
     internal CancellationToken ct;
     internal PathExecutorSuspend pathExecutorSuspend;
     internal readonly PathingHealthController _healthController;
@@ -111,6 +113,10 @@ public class PathExecutor
             index => SwitchAvatar(index),
             UseElementalSkill,
             () => PartyConfig);
+            
+        MovementController.OnRouteTraversed = (prev, target, actualTraj) => {
+            RouteTelemetryManager.RecordSuccessfulRoute(prev, target, actualTraj);
+        };
     }
 
     /// <summary>
@@ -199,6 +205,7 @@ public class PathExecutor
 
             foreach (var waypoints in waypointsList) // 按传送点分割的路径
             {
+                RouteTelemetryManager.CurrentAnchorContext = waypoints.FirstOrDefault();
                 CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
                 for (var i = 0; i < RetryTimes; i++)
                 {
@@ -283,6 +290,9 @@ public class PathExecutor
             // 任务结束时清理暂停/恢复的临时状态，避免影响下一次路径执行。
             pathExecutorSuspend.Reset();
             IsPositionAndTimeSuspended = false;
+            
+            // 触发遥测落盘策略，强制当前积累的路线无论多少都全量写入 JSON 文件
+            _ = RouteTelemetryManager.FlushAsync();
         }
     }
 
