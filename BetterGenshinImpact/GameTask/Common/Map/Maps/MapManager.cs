@@ -58,6 +58,7 @@ public static class MapManager
                 MapTypes.Enkanomiya => new EnkanomiyaMap(),
                 MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
                 MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
+                MapTypes.TempleOfSpace => new TempleOfSpaceMap(),
                 _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))
             };
         }
@@ -70,6 +71,7 @@ public static class MapManager
                 MapTypes.Enkanomiya => new EnkanomiyaMapTest(),
                 MapTypes.AncientSacredMountain => new AncientSacredMountainMap(),
                 MapTypes.SeaOfBygoneEras => new SeaOfBygoneErasMap(),
+                MapTypes.TempleOfSpace => new TempleOfSpaceMap(),
                 _ => throw new System.ArgumentException($"未知的地图类型: {mapType}", nameof(mapType))
             };
         }

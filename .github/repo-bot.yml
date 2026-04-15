@@ -6,7 +6,7 @@ providers:
   openAiCompatible:
     enabled: true
     baseUrl: https://api.openai.com/v1
-    model: gpt-5.2-codex
+    model: gpt-5.4
     apiStyle: responses
     timeoutMs: 30000
 

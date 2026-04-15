@@ -262,7 +262,6 @@ public class Avatar
                 if (i == tryTimes - 1)
                 {
                     Logger.LogWarning("切换角色失败，最后一次尝试，当前角色编号:{CurrentIndex}，期望角色编号:{ExpectedIndex}", CombatScenes.GetActiveAvatarIndex(region, context), Index);
-                    region.SrcMat.SaveImage($"log/{Name}_切换失败.png");
                 }
             }
 

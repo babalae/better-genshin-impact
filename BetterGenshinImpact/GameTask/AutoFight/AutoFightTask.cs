@@ -25,6 +25,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
@@ -299,6 +300,16 @@ public class AutoFightTask : ISoloTask
         
         AutoFightSeek.RotationCount= 0; // 重置旋转次数
         
+        // 基于经验值的战后拾取检测：在战斗过程中异步检测精英怪经验值图标
+        // 仅在万叶拾取总开关开启时才启动经验值检测
+        ExperienceDetector? expDetector = null;
+        if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
+        {
+            var expRos = AutoFightAssets.Instance.ExperienceRecognitionObjects;
+            expDetector = new ExperienceDetector(expRos, cts2.Token);
+            expDetector.Start();
+        }
+
         // 战斗操作
         var fightTask = Task.Run(async () =>
         {
@@ -489,6 +500,50 @@ public class AutoFightTask : ISoloTask
         }, cts2.Token);
 
         await fightTask;
+
+        try
+        {
+            // 基于经验值检测结果的拾取判断
+            if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled && expDetector != null)
+            {
+                // 战斗结束与怪物死亡可能几乎同时发生，检测器可能还没来得及捕获经验值图标
+                // 保持检测器运行，每 100ms 轮询一次结果，最多等待 1.1 秒
+                if (!expDetector.HasDetectedExperience)
+                {
+                    Logger.LogInformation("基于经验值判断：等待经验值检测结果");
+                    var waitMs = 1100;
+                    while (!expDetector.HasDetectedExperience && waitMs > 0)
+                    {
+                        await Delay(100, ct);
+                        waitMs -= 100;
+                    }
+                }
+
+                await expDetector.StopAsync();
+                var shouldPickup = expDetector.HasDetectedExperience;
+                Logger.LogInformation("基于经验值判断：{Result} 战后拾取", shouldPickup ? "执行" : "不执行");
+
+                if (!shouldPickup)
+                {
+                    // 经验值检测未通过，跳过拾取（但仍执行扫描拾取逻辑）
+                    if (_taskParam is { PickDropsAfterFightEnabled: true })
+                    {
+                        await new ScanPickTask().Start(ct);
+                    }
+                    return;
+                }
+            }
+        }
+        finally
+        {
+            // 确保检测器在任何路径（异常/取消/正常）都被停止和释放
+            if (expDetector != null)
+            {
+                await expDetector.StopAsync();
+                expDetector.Dispose();
+            }
+        }
+
         if (_taskParam.BattleThresholdForLoot>=2 && countFight < _taskParam.BattleThresholdForLoot)
         {
             Logger.LogInformation($"战斗人次（{countFight}）低于配置人次（{_taskParam.BattleThresholdForLoot}），跳过此次拾取！");

@@ -407,7 +407,8 @@ public class PartyAvatarSideIndexHelper
                 // 方法3：使用更加靠谱的差值识别（-1是未识别），但是不支持非满队
                 if (mats.Length == 4)
                 {
-                    return ImageDifferenceDetector.FindMostDifferentImage(mats);
+                    var result = ImageDifferenceDetector.FindMostDifferentImage(mats);
+                    return result >= 0 ? result + 1 : -1;
                 }
                 else
                 {
