@@ -1130,7 +1130,8 @@
                                      IsChecked="{Binding Config.AutoFightConfig.ExpBasedPickupEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Separator Margin="-18,0"
-                           BorderThickness="0,1,0,0" />
+                           BorderThickness="0,1,0,0"
+                           Visibility="{Binding Config.AutoFightConfig.KazuhaPickupEnabled, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 
                 <Grid Margin="16,16,16,16">
                     <Grid.RowDefinitions>
