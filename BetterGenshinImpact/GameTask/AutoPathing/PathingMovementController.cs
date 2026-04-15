@@ -491,7 +491,8 @@ public class PathingMovementController
             if (consecutiveCount > MAX_PID_CONSECUTIVE_COUNT)
             {
                 // 用 PID 算出应该补的像素。这种带有缓冲计算的动量比原本死锁等待的阻塞硬转柔和很多
-                int extraMouseDx = (int)Math.Clamp(pidCompensation * 5.0f, -600, 600);
+                // 注意：RotateToApproach 计算出差值为正时，说明实际需要向左转（即负坐标偏移），因此这里叠加动量时必须反号以同向发力！
+                int extraMouseDx = (int)Math.Clamp(-pidCompensation * 5.0f, -600, 600);
                 if (extraMouseDx != 0)
                 {
                     Simulation.SendInput?.Mouse?.MoveMouseBy(extraMouseDx, 0);
