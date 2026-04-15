@@ -1,8 +1,12 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
 using OpenCvSharp;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.Common;
+using Microsoft.Extensions.Logging;
 
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -44,6 +48,11 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect GadgetRect;
 
     public RecognitionObject AbnormalIconRa;
+
+    /// <summary>
+    /// 经验值模板识别对象列表，用于检测怪物死亡时掉落的经验值数字图标
+    /// </summary>
+    public IReadOnlyList<RecognitionObject> ExperienceRecognitionObjects { get; private set; } = Array.Empty<RecognitionObject>();
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
     private AutoFightAssets() : base()
@@ -264,5 +273,56 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             RegionOfInterest = new Rect(0, (int)(CaptureRect.Height * 0.08), (int)(CaptureRect.Width * 0.04), (int)(CaptureRect.Height * 0.07)),
             DrawOnWindow = false
         }.InitTemplate();
+
+        // 加载经验值模板图片（用于检测精英怪死亡时的经验值数字图标）
+        try
+        {
+            LoadExperienceRecognitionObjects();
+        }
+        catch (Exception)
+        {
+            // 经验值模板加载失败不应阻止 AutoFightAssets 初始化
+            ExperienceRecognitionObjects = Array.Empty<RecognitionObject>();
+        }
+    }
+
+    /// <summary>
+    /// 加载经验值模板图片，文件缺失时跳过，不影响其他功能
+    /// </summary>
+    private void LoadExperienceRecognitionObjects()
+    {
+        var experienceValues = new[] { 57, 58, 60 };
+        var threshold = CaptureRect.Width > 1920 ? 0.6 : 0.9;
+        var roi = new Rect(
+            (int)(CaptureRect.Width * 0.145),
+            (int)(CaptureRect.Height * 0.5),
+            (int)(CaptureRect.Width * 0.02),
+            (int)(CaptureRect.Height * 0.22));
+
+        var list = new List<RecognitionObject>();
+        foreach (var exp in experienceValues)
+        {
+            var fileName = $"experience_{exp}.png";
+            try
+            {
+                var ro = new RecognitionObject
+                {
+                    Name = $"Experience_{exp}",
+                    RecognitionType = RecognitionTypes.TemplateMatch,
+                    TemplateImageMat = GameTaskManager.LoadAssetImage("AutoFight", fileName, this.systemInfo),
+                    RegionOfInterest = roi,
+                    UseMask = true,
+                    Threshold = threshold,
+                    DrawOnWindow = true,
+                }.InitTemplate();
+                list.Add(ro);
+            }
+            catch (Exception)
+            {
+                // 构造阶段 Logger 可能不可用，静默跳过缺失的模板
+            }
+        }
+
+        ExperienceRecognitionObjects = list.AsReadOnly();
     }
 }
