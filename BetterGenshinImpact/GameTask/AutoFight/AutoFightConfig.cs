@@ -158,6 +158,12 @@ public partial class AutoFightConfig : ObservableObject
     private bool _swimmingEnabled = false;
 
     /// <summary>
+    /// 基于经验值判断是否执行战后拾取（检测到精英怪经验值图标时才拾取）
+    /// </summary>
+    [ObservableProperty]
+    private bool _expBasedPickupEnabled = false;
+
+    /// <summary>
     /// 战斗超时，单位秒
     /// </summary>
     [ObservableProperty]
