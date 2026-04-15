@@ -434,6 +434,7 @@ public class Genshin
     /// </summary>
     /// <param name="width">目标宽度</param>
     /// <param name="height">目标高度</param>
+    /// <param name="fullscreen">是否允许选择独占全屏分辨率，默认 false</param>
     /// <remarks>
     /// 注意：分辨率变更后，此前通过 dispatcher.addTimer / dispatcher.addTrigger 注册的自定义触发器配置会丢失
     /// </remarks>
