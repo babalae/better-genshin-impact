@@ -164,7 +164,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             (StygianState.EventMenu, [StygianState.StygianOnslaughtPage]),
             (StygianState.StygianOnslaughtPage, [StygianState.TeleportMap, StygianState.DomainEntrance]),
             (StygianState.TeleportMap, [StygianState.DomainEntrance]),
-            (StygianState.DomainEntrance, [StygianState.DifficultySelect]),
+            (StygianState.DomainEntrance, [StygianState.DomainEntrance, StygianState.DifficultySelect]),
             (StygianState.DifficultySelect, [StygianState.DomainLobby]),
             (StygianState.DomainLobby, [StygianState.BossSelect, StygianState.LeylineFlowerPrompt]),
 
@@ -369,10 +369,10 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             await Delay(500, _ct);
 
             // 2. 在列表区域内查找"幽境危战"并点击
-            var listItem = page.GetByText("幽境危战").WithRoi(listRegion);
-            if (listItem.IsExist())
+            var target = page.GetByText("幽境危战").WithRoi(listRegion).FindAll().FirstOrDefault();
+            if (target != null)
             {
-                listItem.FindAll().FirstOrDefault()?.Click();
+                target.Click();
                 await Delay(300, _ct);
                 return StateHandlerResult.Success; // 等待转换到 StygianOnslaughtPage
             }
@@ -382,15 +382,20 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
         // 如果两次都没找到，可能"幽境危战"已经被选中，直接尝试检测下一状态
         Logger.LogWarning($"{Name}：未找到幽境危战，可能已被选中，尝试检测 StygianOnslaughtPage");
-        page.GetByText("幽境危战").WithRoi(listRegion).FindAll().FirstOrDefault()?.Click();
-        await Delay(300, _ct);
-        return StateHandlerResult.Success; // 等待转换到 StygianOnslaughtPage
+        return StateHandlerResult.Success; // 让状态机继续等待邻接状态出现
     }
 
     private async Task<StateHandlerResult> HandleStygianOnslaughtPageState(BvPage page)
     {
         Logger.LogInformation($"{Name}：点击前往挑战");
-        page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).FindAll().FirstOrDefault()?.Click();
+        var challengeButton = page.GetByText("前往挑战").WithRoi(r => r.CutRight(0.5)).FindAll().FirstOrDefault();
+        if (challengeButton == null)
+        {
+            Logger.LogWarning($"{Name}：未找到前往挑战按钮");
+            return StateHandlerResult.Retry;
+        }
+
+        challengeButton.Click();
         await Delay(300, _ct);
         return StateHandlerResult.Success; // 等待转换到 TeleportMap 或 DomainEntrance
     }
@@ -398,7 +403,14 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task<StateHandlerResult> HandleTeleportMapState(BvPage page)
     {
         Logger.LogInformation($"{Name}：点击传送");
-        page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo).FindAll().FirstOrDefault()?.Click();
+        var teleportButton = page.Locator(QuickTeleportAssets.Instance.TeleportButtonRo).FindAll().FirstOrDefault();
+        if (teleportButton == null)
+        {
+            Logger.LogWarning($"{Name}：未找到传送按钮");
+            return StateHandlerResult.Retry;
+        }
+
+        teleportButton.Click();
         await Delay(300, _ct);
         return StateHandlerResult.Success; // 等待转换到 DomainEntrance
     }
@@ -421,6 +433,12 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         // 点击确认进入
         using var ra = CaptureToRectArea();
         var btn = ra.Find(ElementAssets.Instance.BtnWhiteConfirm);
+        if (btn.IsEmpty())
+        {
+            Logger.LogWarning($"{Name}：未找到进入确认按钮");
+            return StateHandlerResult.Retry;
+        }
+
         btn.Click();
         await Delay(300, _ct);
         return StateHandlerResult.Success; // 等待转换到 DomainLobby

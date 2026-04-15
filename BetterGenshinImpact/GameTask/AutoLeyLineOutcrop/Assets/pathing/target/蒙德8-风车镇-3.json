@@ -1,0 +1,29 @@
+{
+  "info": {
+    "authors": [
+      {
+        "links": "",
+        "name": "ddaodan"
+      }
+    ],
+    "bgi_version": "0.60.0",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1775793214341,
+    "map_match_method": "SIFT",
+    "map_name": "Teyvat",
+    "name": "蒙德8-风车镇-3",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": -330.87890625,
+      "y": 3226.130859375,
+      "type": "target",
+      "move_mode": "walk"
+    }
+  ]
+}
