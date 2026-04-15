@@ -315,7 +315,7 @@ namespace BetterGenshinImpact.GameTask
                     PictureInPictureService.Hide(resetManual: true);
                     // if (!_prevGameActive)
                     // {
-                    maskWindow.Invoke(() =>
+                    maskWindow.BeginInvoke(() =>
                     {
                         if (maskWindow.IsExist())
                         {
