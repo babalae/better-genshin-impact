@@ -52,7 +52,7 @@ public class MiningHandler : IActionHandler
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)
         {
-            Logger.LogError("队伍识别未初始化成功，无法进行队伍挖矿调度！/ Party recognition uninitialized.");
+            Logger.LogError("队伍识别未初始化成功，无法进行队伍挖矿调度！");
             return;
         }
 

@@ -122,7 +122,7 @@ public class PathingMovementController
     /// <param name="waypoint">目标路径点 / Target waypoint.</param>
     /// <param name="previousWaypoint">上一个路径点 / Previous waypoint.</param>
     /// <returns>异步任务结果 / Asynchronous task result.</returns>
-    public async Task<bool> MoveTo(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint = null)
+    public async Task<bool> MoveTo(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint = null, WaypointForTrack? nextWaypoint = null)
     {
         ArgumentNullException.ThrowIfNull(waypoint);
         var partyConfig = _partyConfigGetter();
@@ -130,14 +130,6 @@ public class PathingMovementController
 
         Point2f position = await InitialCoarseApproach(waypoint);
         _moveToStartTime = DateTime.UtcNow;
-
-        var fastMode = false;
-        var fastModeColdTime = DateTime.MinValue;
-        
-        _inertialTracker.Reset(position);
-        _stuckDetector.Reset();
-
-        int num = 0, consecutiveRotationCountBeyondAngle = 0;
 
         var moveContext = new PathingMovementContext
         {
@@ -148,71 +140,125 @@ public class PathingMovementController
             SetElementalSkillLastUseTime = t => _elementalSkillLastUseTime = t,
             GetUseGadgetLastUseTime = () => _useGadgetLastUseTime,
             SetUseGadgetLastUseTime = t => _useGadgetLastUseTime = t,
-            FastMode = fastMode,
-            FastModeColdTime = fastModeColdTime
+            FastMode = false,
+            FastModeColdTime = DateTime.MinValue
         };
+
+        _inertialTracker.Reset(position);
+        _stuckDetector.Reset();
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         
-        try
-        {
-            while (!_ct.IsCancellationRequested)
-            {
-                MaintainForwardKey();
-                
-                num++;
-                var now = DateTime.UtcNow;
-                if ((now - _moveToStartTime).TotalSeconds > 240)
-                {
+        using var ticker = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        int consecutiveRotationCountBeyondAngle = 0;
+        int additionalTimeInMs = 0;
+        double distance = 0;
+        bool isRouteCompleted = false;
+        bool exitBecauseEndJudgment = false;
+
+        // 【架构颠覆: 组合式行为树 (Behavior Tree)】
+        var rootNode = new BTSelector(
+            
+            // 致命拦截
+            new BTSequence(
+                new BTCondition(() => (DateTime.UtcNow - _moveToStartTime).TotalSeconds > 240),
+                new BTAction((Action)(() => {
                     Logger.LogWarning("执行超时，放弃此次追踪");
                     throw new RetryException("路径点执行超时，放弃整条路径");
-                }
+                }))
+            ),
+            
+            // 终点感知
+            new BTSequence(
+                new BTCondition(() => {
+                    if (_endJudgmentAction(moveContext.Screen))
+                    {
+                        exitBecauseEndJudgment = true;
+                        isRouteCompleted = true;
+                        return true;
+                    }
+                    return false;
+                }),
+                new BTAction(() => BTStatus.Success)
+            ),
+            
+            // 主推进与环境感知
+            new BTSequence(
+                new BTAction(() => MaintainForwardKey()),
+                new BTAction(async () => {
+                    var (newPosition, addonTime) = await _navigator.GetPositionAndTime(moveContext.Screen, waypoint);
+                    additionalTimeInMs = addonTime;
+                    if (additionalTimeInMs > 0)
+                    {
+                        MaintainForwardKey();
+                        additionalTimeInMs += 1000;
+                    }
+                    position = await HandleInertialPositioning(waypoint, newPosition, moveContext.Screen, DateTime.UtcNow);
+                    distance = Navigation.GetDistance(waypoint, position);
+                    Debug.WriteLine($"接近目标点中，距离为{distance}");
+                    return BTStatus.Success;
+                }),
+                
+                // 运动分支派布
+                new BTSelector(
+                    
+                    // 到达内圈死区中断点
+                    new BTSequence(
+                        new BTCondition(() => distance < 4),
+                        new BTAction(() => {
+                            Logger.LogDebug("到达路径点附近");
+                            isRouteCompleted = true;
+                            return BTStatus.Success;
+                        })
+                    ),
+                    
+                    // 卡墙脱困反馈
+                    new BTSequence(
+                        new BTAction(async () => await CheckAndHandleStuck(waypoint, previousWaypoint, position, additionalTimeInMs) ? BTStatus.Success : BTStatus.Failure),
+                        new BTAction(() => {
+                            consecutiveRotationCountBeyondAngle = 0;
+                            return BTStatus.Running;
+                        })
+                    ),
+                    
+                    // 姿态驱动与按键分发
+                    new BTSequence(
+                        new BTAction(async () => {
+                            consecutiveRotationCountBeyondAngle = await AlignOrientation(waypoint, position, moveContext.Screen, moveContext.Num, consecutiveRotationCountBeyondAngle, nextWaypoint);
+                            moveContext.Distance = distance;
+                            return BTStatus.Success;
+                        }),
+                        new BTAction(async () => {
+                            var handlerStatus = await ApplyMoveModeHandlers(waypoint, moveContext);
+                            if (handlerStatus == false)
+                            {
+                                // 中断链路，由于无法前进
+                                isRouteCompleted = true;
+                                exitBecauseEndJudgment = false;
+                                return BTStatus.Failure;
+                            }
+                            AutoUseGadget(partyConfig);
+                            return BTStatus.Running;
+                        })
+                    )
+                )
+            )
+        );
 
+        try
+        {
+            while (await ticker.WaitForNextTickAsync(_ct))
+            {
+                moveContext.Num++;
                 using var screen = _captureAction();
-                if (_endJudgmentAction(screen))
-                {
-                    return true;
-                }
-
-                var (newPosition, additionalTimeInMs) = await _navigator.GetPositionAndTime(screen, waypoint);
-                position = newPosition;
-                
-                if (additionalTimeInMs > 0)
-                {
-                    MaintainForwardKey();
-                    additionalTimeInMs += 1000;
-                }
-
-                position = await HandleInertialPositioning(waypoint, position, screen, now);
-                var distance = Navigation.GetDistance(waypoint, position);
-                Debug.WriteLine($"接近目标点中，距离为{distance}");
-                
-                if (distance < 4)
-                {
-                    Logger.LogDebug("到达路径点附近");
-                    break;
-                }
-
-                await CheckAndHandleStuck(waypoint, previousWaypoint, position, additionalTimeInMs);
-
-                consecutiveRotationCountBeyondAngle = await AlignOrientation(waypoint, position, screen, num, consecutiveRotationCountBeyondAngle);
-
                 moveContext.Screen = screen;
-                moveContext.Num = num;
-                moveContext.Distance = distance;
-
-                var handlerStatus = await ApplyMoveModeHandlers(waypoint, moveContext);
-                if (handlerStatus == false)
+                
+                await rootNode.TickAsync();
+                
+                if (isRouteCompleted)
                 {
-                    return false; // MoveModeResult.ReturnFalse
+                    return exitBecauseEndJudgment;
                 }
-
-                fastModeColdTime = moveContext.FastModeColdTime;
-                fastMode = moveContext.FastMode;
-
-                AutoUseGadget(partyConfig);
-
-                await Delay(100, _ct);
             }
         }
         finally
@@ -281,10 +327,10 @@ public class PathingMovementController
         return position;
     }
 
-    private async Task CheckAndHandleStuck(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint, Point2f position, int additionalTimeInMs)
+    private async Task<bool> CheckAndHandleStuck(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint, Point2f position, int additionalTimeInMs)
     {
          if (_inertialTracker.DistanceTooFarRetryCount > 0 || waypoint.MoveMode == MoveModeEnum.Climb.Code)
-             return;
+             return false;
              
         if (_stuckDetector.CheckStuck(position, additionalTimeInMs))
         {
@@ -303,22 +349,90 @@ public class PathingMovementController
             Logger.LogInformation("卡死脱离结束");
             
             _stuckDetector.ClearQueue();
+            return true;
         }
+        return false;
     }
 
-    private async Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount)
+    private float _pidIntegral = 0f;
+    private float _pidLastError = 0f;
+
+    private async Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount, WaypointForTrack? nextWaypoint = null)
     {
-        var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
-        if (loopNum > 20)
+        int targetOrientation;
+        var currentDistance = Navigation.GetDistance(waypoint, position);
+
+        // 【平滑提升: 二阶贝塞尔(Bézier)柔性过弯预判】
+        // 安全拦截：防止切角过大导致避障节点失效。只在无任何特殊动作，且处于常规地面移动状态下，并且缩小圆角半径至 6.0 内时才触发平滑。
+        bool canSmooth = nextWaypoint != null 
+            && string.IsNullOrEmpty(waypoint.Action) 
+            && (waypoint.MoveMode == MoveModeEnum.Run.Code || waypoint.MoveMode == MoveModeEnum.Dash.Code || waypoint.MoveMode == MoveModeEnum.Walk.Code);
+
+        float smoothRadius = 6.0f;
+
+        if (canSmooth && currentDistance < smoothRadius && currentDistance > 2.0f)
         {
-            consecutiveCount = Math.Abs(diff) > 5 ? consecutiveCount + 1 : 0;
+            // t 属于 0 到 1。进入 6 单位缓冲圈后逐渐开始引导视线向下一个路口倾斜，实现小幅度丝滑拉弧角转弯
+            float t = 1.0f - ((float)currentDistance / smoothRadius);
+            t = Math.Clamp(t, 0f, 1f);
+            
+            float u = 1 - t;
+            float tt = t * t;
+            float uu = u * u;
+            
+            float targetX = uu * position.X + 2 * u * t * (float)waypoint.X + tt * (float)nextWaypoint.X;
+            float targetY = uu * position.Y + 2 * u * t * (float)waypoint.Y + tt * (float)nextWaypoint.Y;
+            
+            var virtualWaypoint = new Waypoint { X = targetX, Y = targetY };
+            targetOrientation = Navigation.GetTargetOrientation(virtualWaypoint, position);
+        }
+        else
+        {
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+        }
+
+        var diff = _rotateTask.RotateToApproach(targetOrientation, screen);
+        
+        // 动态转角容差：距离近时容差变大以防打圈，平时要求5度内
+        int tolerance = currentDistance < 5.0 ? 15 : 5;
+
+        // 【平滑提升: 引入 PID 控制取代线程阻塞强行旋转】
+        // 当偏差持续过大时，抛弃掉以往 await 一种固定帧率阻塞，而是叠加一抹带阻尼的高级鼠标偏移纠正
+        if (loopNum > 20 && Math.Abs(diff) > tolerance)
+        {
+            consecutiveCount++;
+
+            // 积分控制 (I): 如果多帧依然转不过来（比如鼠标卡住），累加动量
+            _pidIntegral += diff * 0.1f; // 假设常规每帧 0.1s
+            _pidIntegral = Math.Clamp(_pidIntegral, -60f, 60f); // 积分限幅防暴走
+            
+            // 微分控制 (D): 利用倒数前相预测震荡并衰减
+            float derivative = (diff - _pidLastError) / 0.1f;
+            
+            // PID 合成权重：这里补码作为额外动量输出，不抢占原初控制，只是在遇到强力折转/调头时增持辅助
+            float pidCompensation = (0.5f * diff) + (0.2f * _pidIntegral) + (0.05f * derivative);
+
             if (consecutiveCount > 10)
             {
-                await _waitUntilRotatedToAction(targetOrientation, 2);
-                consecutiveCount = 0;
+                // 用 PID 算出应该补的像素。这种带有缓冲计算的动量比原本死锁等待的阻塞硬转柔和很多
+                int extraMouseDx = (int)Math.Clamp(pidCompensation * 5.0f, -600, 600);
+                if (extraMouseDx != 0)
+                {
+                    Simulation.SendInput?.Mouse?.MoveMouseBy(extraMouseDx, 0);
+                }
+                
+                // 去除这里原先那种硬生生的堵塞 UI 线程的做法
+                // 注释掉：await _waitUntilRotatedToAction(targetOrientation, 2);
             }
         }
+        else
+        {
+            // 一旦追回，即刻抹除积分系历史，防止过调漂移回荡 (Overshoot)
+            consecutiveCount = 0;
+            _pidIntegral = 0;
+        }
+
+        _pidLastError = diff;
         return consecutiveCount;
     }
 
@@ -371,86 +485,188 @@ public class PathingMovementController
         var lostRetryCount = 0;
         Point2f? lastValidPosition = null;
 
-        while (!_ct.IsCancellationRequested)
+        using var microTicker = new PeriodicTimer(TimeSpan.FromMilliseconds(20));
+
+        ImageRegion screen = null!;
+        Point2f position = default;
+        double distance = 0f;
+        bool isRouteCompleted = false;
+        bool exitBecauseEndJudgment = false;
+
+        var rootNode = new BTSelector(
+            
+            // 超时熔断
+            new BTSequence(
+                new BTCondition(() => stepsTaken > maxSteps),
+                new BTAction((Action)(() => {
+                    Logger.LogWarning("精确接近超时");
+                    isRouteCompleted = true;
+                }))
+            ),
+
+            // 目标判定达成
+            new BTSequence(
+                new BTCondition(() => {
+                    if (_endJudgmentAction(screen))
+                    {
+                        exitBecauseEndJudgment = true;
+                        isRouteCompleted = true;
+                        return true;
+                    }
+                    return false;
+                }),
+                new BTAction(() => BTStatus.Success)
+            ),
+
+            // 精调管线主序列
+            new BTSequence(
+                // 视觉坐标采集与脱围容错判定
+                new BTAction(async () => {
+                    position = await _navigator.GetPosition(screen, waypoint);
+                    var rawDistance = Navigation.GetDistance(waypoint, position);
+                    var isPositionLost = (position.X == 0 && position.Y == 0) || rawDistance > 500;
+
+                    if (isPositionLost)
+                    {
+                        lostRetryCount++;
+                        if (lastValidPosition.HasValue && lostRetryCount <= maxLostRetryCount)
+                        {
+                            position = lastValidPosition.Value;
+                            if (lostRetryCount == 1 || lostRetryCount % 3 == 0)
+                                Logger.LogWarning($"精确接近阶段定位丢失，使用兜底坐标:({position.X:F1},{position.Y:F1})");
+                            return BTStatus.Success; // 使用了兜底坐标，容许通过
+                        }
+                        
+                        if (lostRetryCount % 3 == 0)
+                            await _resolveAnomaliesAction(screen);
+
+                        Logger.LogWarning("精确接近阶段定位持续丢失，终止本次精确接近");
+                        isRouteCompleted = true;
+                        return BTStatus.Failure;
+                    }
+
+                    if (lastValidPosition.HasValue)
+                    {
+                        var prevDistance = Navigation.GetDistance(waypoint, lastValidPosition.Value);
+                        var currentDistance = Navigation.GetDistance(waypoint, position);
+                        if (prevDistance < 6.0f && currentDistance > prevDistance + 0.3f)
+                        {
+                            Logger.LogDebug("检测到距离不减反增(可能绕圈)，提前终止精确接近");
+                            isRouteCompleted = true;
+                            return BTStatus.Failure;
+                        }
+                    }
+
+                    lostRetryCount = 0;
+                    lastValidPosition = position;
+                    return BTStatus.Success;
+                }),
+
+                // 死区逼近检测与打断
+                new BTSelector(
+                    new BTSequence(
+                        new BTCondition(() => {
+                            distance = Navigation.GetDistance(waypoint, position);
+                            return distance < arriveDistance;
+                        }),
+                        new BTAction((Action)(() => {
+                            Logger.LogDebug("已到达路径点");
+                            isRouteCompleted = true;
+                        }))
+                    ),
+                    
+                    // 单发微位移控制 (Pulse Control)
+                    new BTSequence(
+                        new BTAction(async () => {
+                            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+                            await _waitUntilRotatedToAction(targetOrientation, distance < 3.5f ? 5 : 2);
+                            
+                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                            await Delay(distance < 3.5f ? pulseForwardMs / 2 : pulseForwardMs, _ct);
+                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                            
+                            return BTStatus.Running; // 微位移循环结束，等待下一个帧
+                        })
+                    )
+                )
+            )
+        );
+
+        while (await microTicker.WaitForNextTickAsync(_ct))
         {
             stepsTaken++;
-            if (stepsTaken > maxSteps)
-            {
-                Logger.LogWarning("精确接近超时");
-                break;
-            }
-
-            using var screen = _captureAction();
-            if (_endJudgmentAction(screen))
-            {
-                return true;
-            }
-
-            var position = await _navigator.GetPosition(screen, waypoint);
-            var rawDistance = Navigation.GetDistance(waypoint, position);
-            var isPositionLost = (position.X == 0 && position.Y == 0) || rawDistance > 500;
-
-            if (isPositionLost)
-            {
-                lostRetryCount++;
-                if (lastValidPosition.HasValue && lostRetryCount <= maxLostRetryCount)
-                {
-                    position = lastValidPosition.Value;
-                    if (lostRetryCount == 1 || lostRetryCount % 3 == 0)
-                    {
-                        Logger.LogWarning($"精确接近阶段定位丢失，使用最近有效坐标兜底（第 {lostRetryCount} 次）：({position.X:F1},{position.Y:F1})");
-                    }
-                }
-                else
-                {
-                    if (lostRetryCount % 3 == 0)
-                    {
-                        await _resolveAnomaliesAction(screen);
-                    }
-
-                    Logger.LogWarning("精确接近阶段定位持续丢失，终止本次精确接近");
-                    break;
-                }
-            }
-            else
-            {
-                if (lastValidPosition.HasValue)
-                {
-                    var prevDistance = Navigation.GetDistance(waypoint, lastValidPosition.Value);
-                    var currentDistance = Navigation.GetDistance(waypoint, position);
-
-                    // 防绕圈/防越过机制：如果距离较近，且发生明显的距离反增（超过容差0.3f）
-                    if (prevDistance < 6.0f && currentDistance > prevDistance + 0.3f)
-                    {
-                        Logger.LogDebug("检测到距离不减反增(可能由于步长过大越过目标点或绕圈)，提前终止精确接近: {Prev} -> {Cur}", prevDistance, currentDistance);
-                        break;
-                    }
-                }
-
-                lostRetryCount = 0;
-                lastValidPosition = position;
-            }
-
-            var distance = Navigation.GetDistance(waypoint, position);
-            if (distance < arriveDistance)
-            {
-                Logger.LogDebug("已到达路径点");
-                break;
-            }
-
-            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            // 极近距离下，稍微放宽对准角度容差以防止准星高频抖动进入轨道路线
-            await _waitUntilRotatedToAction(targetOrientation, distance < 3.5f ? 5 : 2);
+            using var currentScreen = _captureAction();
+            screen = currentScreen;
             
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            // 距离越近，点按时长减半（例如把 60ms 切成 30ms），极大降低飞跑越过目标的概率
-            await Delay(distance < 3.5f ? pulseForwardMs / 2 : pulseForwardMs, _ct);
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            await Delay(20, _ct);
+            await rootNode.TickAsync();
+            
+            if (isRouteCompleted)
+            {
+                break; // 打断微循环计时流
+            }
         }
 
         Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         await Delay(1000, _ct);
-        return false;
+        return exitBecauseEndJudgment;
+    }
+}
+
+// ==========================================
+// 行为树基础引擎 / Behavior Tree Foundation Engine
+// ==========================================
+
+public enum BTStatus { Success, Failure, Running }
+
+public interface IBTNode
+{
+    Task<BTStatus> TickAsync();
+}
+
+public class BTAction : IBTNode
+{
+    private readonly Func<Task<BTStatus>> _action;
+    public BTAction(Func<Task<BTStatus>> action) => _action = action;
+    public BTAction(Func<BTStatus> action) => _action = () => Task.FromResult(action());
+    public BTAction(Action action) => _action = () => { action(); return Task.FromResult(BTStatus.Success); };
+    public Task<BTStatus> TickAsync() => _action();
+}
+
+public class BTCondition : IBTNode
+{
+    private readonly Func<bool> _condition;
+    public BTCondition(Func<bool> condition) => _condition = condition;
+    public Task<BTStatus> TickAsync() => Task.FromResult(_condition() ? BTStatus.Success : BTStatus.Failure);
+}
+
+// 顺序节点：遇到第一个非 Success 的节点即返回该状态（中断后续执行）
+public class BTSequence : IBTNode
+{
+    private readonly IBTNode[] _nodes;
+    public BTSequence(params IBTNode[] nodes) => _nodes = nodes;
+    public async Task<BTStatus> TickAsync()
+    {
+        foreach (var node in _nodes)
+        {
+            var status = await node.TickAsync();
+            if (status != BTStatus.Success) return status;
+        }
+        return BTStatus.Success;
+    }
+}
+
+// 选择节点：遇到第一个非 Failure 的节点即返回该状态（具有 Fallback 特性）
+public class BTSelector : IBTNode
+{
+    private readonly IBTNode[] _nodes;
+    public BTSelector(params IBTNode[] nodes) => _nodes = nodes;
+    public async Task<BTStatus> TickAsync()
+    {
+        foreach (var node in _nodes)
+        {
+            var status = await node.TickAsync();
+            if (status != BTStatus.Failure) return status;
+        }
+        return BTStatus.Failure;
     }
 }
