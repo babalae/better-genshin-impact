@@ -86,6 +86,19 @@ public class Avatar
     /// 战斗场景
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
+
+    /// <summary>
+    /// 脱困方向数组（前/后/左/右）
+    /// </summary>
+    private static readonly GIActions[] UnstuckDirections =
+    {
+        GIActions.MoveForward,
+        GIActions.MoveBackward,
+        GIActions.MoveLeft,
+        GIActions.MoveRight
+    };
+
+    private static readonly Random UnstuckRandom = new();
     
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
@@ -229,6 +242,13 @@ public class Avatar
             SimulateSwitchAction(Index);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
+
+            // 第13次重试时，战斗状态下执行脱困动作
+            if (i == 10 && AutoFightTask.FightStatusFlag)
+            {
+                PerformUnstuckAction(Ct);
+            }
+
             Sleep(250, Ct);
         }
     }
@@ -259,12 +279,19 @@ public class Avatar
             }
             else
             {
-                if (i == tryTimes - 1)
+                if (i == tryTimes - 1 && tryTimes == 4) //默认状态，没有特意设置重试次数的情况下，最后一次重试失败才输出日志
                 {
                     Logger.LogWarning("切换角色失败，最后一次尝试，当前角色编号:{CurrentIndex}，期望角色编号:{ExpectedIndex}", CombatScenes.GetActiveAvatarIndex(region, context), Index);
                 }
+                else
+                {
+                    // 特意需要脱困情形下，会设置重试次数激活脱困检测，第10次重试时(2.5秒切换失败，超过角色的大招动画时间)，如在盾奶位功能中次数会到第十次。
+                    if (i == 10 && AutoFightTask.FightStatusFlag)
+                    {
+                        PerformUnstuckAction(Ct);
+                    }
+                }
             }
-
 
             SimulateSwitchAction(Index);
 
@@ -299,6 +326,23 @@ public class Avatar
             default:
                 break;
         }
+    }
+
+    /// <summary>
+    /// 战斗中切换角色卡住时的脱困动作：跳跃 → 随机方向移动+切换 → 攻击 → 释放按键
+    /// </summary>
+    private void PerformUnstuckAction(CancellationToken ct)
+    {
+        var direction = UnstuckDirections[UnstuckRandom.Next(4)];
+        Logger.LogWarning("切换角色卡住，执行脱困（方向：{Dir}）", direction);
+
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        Sleep(200, ct);
+        Simulation.SendInput.SimulateAction(direction, KeyType.KeyDown);
+        SimulateSwitchAction(Index);
+        Sleep(1000, ct);
+        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        Simulation.ReleaseAllKey();
     }
 
     /// <summary>
