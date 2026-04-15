@@ -437,7 +437,7 @@ public class Genshin
     /// <remarks>
     /// 注意：分辨率变更后，此前通过 dispatcher.addTimer / dispatcher.addTrigger 注册的自定义触发器配置会丢失
     /// </remarks>
-    public async Task ChangeResolution(int width, int height)
+    public async Task ChangeResolution(int width, int height, bool fullscreen = false)
     {
         var dispatcher = TaskTriggerDispatcher.Instance();
 
@@ -537,7 +537,7 @@ public class Genshin
                     var texts = line.Select(r => r.Text).ToList();
                     if (texts.Any(t => t.Contains(targetW))
                         && texts.Any(t => t.Contains(targetH))
-                        && !texts.Any(t => t.Contains("全屏") || t.Contains("独占")))
+                        && (fullscreen || !texts.Any(t => t.Contains("全屏") || t.Contains("独占"))))
                     {
                         line.First(r => r.Text.Contains(targetW) || r.Text.Contains(targetH)).Click();
                         resolutionFound = true;
