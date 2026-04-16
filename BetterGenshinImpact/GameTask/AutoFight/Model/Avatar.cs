@@ -165,9 +165,13 @@ public class Avatar
                     pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
                     Logger.LogInformation("游泳检测：移动结束");
                 }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (OperationCanceledException)
                 {
-                    Logger.LogWarning("游泳检测：回到战斗地点超时或被取消");
+                    Logger.LogWarning("游泳检测：回到战斗地点超时");
                 }
                 catch (Exception ex)
                 {
