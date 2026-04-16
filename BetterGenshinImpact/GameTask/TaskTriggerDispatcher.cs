@@ -38,6 +38,26 @@ namespace BetterGenshinImpact.GameTask
         private RECT _gameRect = RECT.Empty;
         private bool _prevGameActive;
 
+        /// <summary>
+        /// 分辨率变更保护标志。
+        /// 为 true 时，SyncMaskWindowPosition 检测到窗口尺寸变化不会自动重启截图器。
+        /// 设回 false 时会自动将 _gameRect 同步为当前 CaptureAreaRect。
+        /// </summary>
+        private bool _isResolutionChanging;
+
+        public bool IsResolutionChanging
+        {
+            get => _isResolutionChanging;
+            set
+            {
+                _isResolutionChanging = value;
+                if (!value)
+                {
+                    _gameRect = new RECT(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+                }
+            }
+        }
+
         private DateTime _prevManualGc = DateTime.MinValue;
 
         private static readonly object _triggerListLocker = new();
@@ -192,6 +212,23 @@ namespace BetterGenshinImpact.GameTask
             {
                 _timer.Start();
             }
+        }
+
+        /// <summary>
+        /// 重建截图器
+        /// </summary>
+        public void RebuildCapture(IntPtr hWnd, CaptureModes mode)
+        {
+            GameCapture?.Stop();
+            var newCapture = GameCaptureFactory.Create(mode);
+            newCapture.Start(hWnd, new Dictionary<string, object>()
+            {
+                {
+                    "autoFixWin11BitBlt",
+                    OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt
+                }
+            });
+            GameCapture = newCapture;
         }
 
         public void StopTimer()
@@ -453,10 +490,13 @@ namespace BetterGenshinImpact.GameTask
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
-                    UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
-                    UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
-                    _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
+                    if (!IsResolutionChanging)
+                    {
+                        _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                        UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
+                        UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
+                        _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
+                    }
                 }
 
                 _gameRect = new RECT(currentRect);
