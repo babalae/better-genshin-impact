@@ -286,7 +286,7 @@ public class Avatar
                 else
                 {
                     // 特意需要脱困情形下，会设置重试次数激活脱困检测，第10次重试时(2.5秒切换失败，超过角色的大招动画时间)，如在盾奶位功能中次数会到第十次。
-                    if (i == 10 && AutoFightTask.FightStatusFlag)
+                    if (i == 9 && AutoFightTask.FightStatusFlag)
                     {
                         PerformUnstuckAction(Ct);
                     }
