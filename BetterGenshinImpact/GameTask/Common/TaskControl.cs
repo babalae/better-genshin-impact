@@ -54,6 +54,12 @@ public class TaskControl
         var isSuspend = RunnerContext.Instance.IsSuspend;
         while (RunnerContext.Instance.IsSuspend)
         {
+            if (BetterGenshinImpact.Core.Script.CancellationContext.Instance.Cts.IsCancellationRequested)
+            {
+                RunnerContext.Instance.IsSuspend = false;
+                break;
+            }
+
             if (first)
             {
                 RunnerContext.Instance.StopAutoPick();

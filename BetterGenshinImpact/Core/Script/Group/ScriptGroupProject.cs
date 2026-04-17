@@ -236,21 +236,34 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 return;
             }
-            var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
-            pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
-            if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
-            {
-                TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
-            }
-            await pathingTask.Pathing(task);
-
             
-            executionRecord.IsSuccessful = pathingTask.SuccessEnd;
+            var tasks = task.SplitTasks();
+            bool isSuccess = false;
+            int totalSuccessFight = 0;
+
+            foreach (var chunk in tasks)
+            {
+                var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
+                pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
+                if (pathingTask.PartyConfig is null || pathingTask.PartyConfig.AutoPickEnabled)
+                {
+                    TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+                }
+                await pathingTask.Pathing(chunk);
+                isSuccess = pathingTask.SuccessEnd;
+                totalSuccessFight += pathingTask.SuccessFight;
+                if (!isSuccess)
+                {
+                    break;
+                }
+            }
+            
+            executionRecord.IsSuccessful = isSuccess;
             OtherConfig.AutoRestart autoRestart = TaskContext.Instance().Config.OtherConfig.AutoRestartConfig;
-            if (!pathingTask.SuccessEnd)
+            if (!isSuccess)
             {
                 TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
-                if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional && !pathingTask.SuccessEnd)
+                if (autoRestart.Enabled && autoRestart.IsPathingFailureExceptional)
                 {
                     throw new Exception($"路径追踪任务未完全走完，判定失败，触发异常！");
                 }
@@ -258,14 +271,14 @@ public partial class ScriptGroupProject : ObservableObject
 
             if (task.FarmingInfo.AllowFarmingCount)
             {
-                var successFight = pathingTask.SuccessEnd;
+                var successFight = isSuccess;
                 var fightCount = 0;
                
                 //未走完完整路径下，才校验打架次数
                 if (!successFight)
                 {
                     fightCount = task.Positions.Count(pos => pos.Action == ActionEnum.Fight.Code);
-                    successFight = pathingTask.SuccessFight >= fightCount;
+                    successFight = totalSuccessFight >= fightCount;
                     //判断为锄地脚本
                     if (task.FarmingInfo.PrimaryTarget!="disable")
                     {
@@ -274,7 +287,7 @@ public partial class ScriptGroupProject : ObservableObject
                             &&autoRestart.IsFightFailureExceptional
                             &&!successFight)
                         {
-                            throw new Exception($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
+                            throw new Exception($"实际战斗次数({totalSuccessFight})<预期战斗次数（{fightCount}），判定失败，触发异常！");
                         }
                     }
                 }
@@ -291,7 +304,7 @@ public partial class ScriptGroupProject : ObservableObject
                 }
                 else
                 {
-                    TaskControl.Logger.LogWarning($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，此次不纳入成功锄地规划的统计上限！");
+                    TaskControl.Logger.LogWarning($"实际战斗次数({totalSuccessFight})<预期战斗次数（{fightCount}），判定失败，此次不纳入成功锄地规划的统计上限！");
                 }
 
             }

@@ -10,7 +10,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 /// <summary>
-/// 使用纳西妲长按E技能进行收集，360°球形无死角扫码，`type = target`的情况才有效
+/// 使用纳西妲长按E技能进行收集，360°球形无死角扫码
 /// </summary>
 public class NahidaCollectHandler : IActionHandler
 {
@@ -18,7 +18,7 @@ public class NahidaCollectHandler : IActionHandler
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("执行 {Nhd} 长按E转圈拾取", "纳西妲");
+        Logger.LogInformation("执行动作: 【{Nhd}长按E转圈拾取】", "纳西妲");
 
         var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
         if (combatScenes == null)

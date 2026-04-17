@@ -23,10 +23,37 @@ public class UpDownGrabLeafHandler : IActionHandler
     private const int DelayBetweenCycles = 100;
     private const int ConsecutiveDetectionsRequired = 2;
     private const int DetectionDelayMs = 150;
+
+    // 优化 1：提取静态变量，消除高频检测时的内存分配开销
+    private static readonly Point[] DetectPointsOrigin = { new(1500, 1000), new(1508, 1041), new(1500, 987), new(1500, 1010) };
+    private static readonly Point[] DetectPointsShiftedRight = { new(1620, 1000), new(1628, 1041), new(1620, 987), new(1620, 1010) };
+    private static readonly Point[] DetectPointsShiftedLeft = { new(1396, 1000), new(1404, 1041), new(1396, 987), new(1396, 1010) };
+    private static readonly Scalar LeafColorLower = new(245, 245, 245);
+    private static readonly Scalar LeafColorUpper = new(255, 255, 255);
     
+    // 四叶印动作会彻底掌管角色位移，覆盖默认的寻路移动
+    public bool OverridesLocomotion => true;
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        Logger.LogInformation("尝试寻找 {syy}", "四叶印");
+        Logger.LogInformation("执行动作: 【寻找{syy}】", "四叶印");
+
+        // 提取自原 Strategy 中，预定位与视角偏转逻辑
+        if (config is PathExecutor executor && waypointForTrack != null)
+        {
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Task.Delay(300, ct);
+            using (var screen = CaptureToRectArea())
+            {
+                if (screen?.SrcMat != null && !screen.SrcMat.IsDisposed)
+                {
+                    var position = await executor._navigator.GetPosition(screen, waypointForTrack);
+                    var targetOrientation = Navigation.GetTargetOrientation(waypointForTrack, position);
+                    await executor.WaitUntilRotatedTo(targetOrientation, 10);
+                }
+            }
+        }
+
         int direction = 1;
         if (!String.IsNullOrEmpty(waypointForTrack?.ActionParams))
         {
@@ -38,7 +65,9 @@ public class UpDownGrabLeafHandler : IActionHandler
         
         while (remainingCycles > 0 && !ct.IsCancellationRequested)
         {
-            if (remainingCycles % MovementDirectionChangeInterval == 0)
+            // 优化 2：避免第一次进循环（40）时就翻转方向
+            int currentCycle = TotalCycles - remainingCycles;
+            if (currentCycle > 0 && currentCycle % MovementDirectionChangeInterval == 0)
                 verticalMovement = -verticalMovement;
                 
             bool currentDetection = DetectLeaf();
@@ -76,25 +105,19 @@ public class UpDownGrabLeafHandler : IActionHandler
         if (captureRegion.SrcMat.Empty())
             return false;
             
-        // 第一组检测点 (原始位置)
-        Point[] detectPoints = { new(1500, 1000), new( 1508, 1041), new(1500, 987), new(1500, 1010) };
-        // 第二组检测点 (右移120像素)
-        Point[] detectPointsShifted1 = { new(1620, 1000), new(1628, 1041), new(1620, 987), new(1620, 1010)};
-        // 第二组检测点 (左移104像素)
-        Point[] detectPointsShifted2 = { new(1396, 1000), new(1404, 1041), new(1396, 987), new(1396, 1010)};
-        
-        var lower = new Scalar(245, 245, 245);
-        var upper = new Scalar(255, 255, 255);
-        return CheckPointsInRange(captureRegion.SrcMat, detectPoints, lower, upper) ||
-               CheckPointsInRange(captureRegion.SrcMat, detectPointsShifted1, lower, upper) ||
-               CheckPointsInRange(captureRegion.SrcMat, detectPointsShifted2, lower, upper);
+        // 引用提取好的静态数组
+        return CheckPointsInRange(captureRegion.SrcMat, DetectPointsOrigin, LeafColorLower, LeafColorUpper) ||
+               CheckPointsInRange(captureRegion.SrcMat, DetectPointsShiftedRight, LeafColorLower, LeafColorUpper) ||
+               CheckPointsInRange(captureRegion.SrcMat, DetectPointsShiftedLeft, LeafColorLower, LeafColorUpper);
     }
     
     private async Task InteractWithLeaf(CancellationToken ct)
     {
         Logger.LogInformation("连续检测到 {syy}，开始交互", "四叶印");
         Simulation.SendInput.SimulateAction(GIActions.InteractionInSomeMode);
-        await Delay(200, ct);
+        
+        // 优化 3：这里增加到足够的前摇等待时间，避免动画没结束就强行按跳跃打断四叶印
+        await Delay(200, ct); 
         Simulation.SendInput.Mouse.MiddleButtonClick();
         
         for (int i = 0; i < 20; i++)
@@ -103,7 +126,7 @@ public class UpDownGrabLeafHandler : IActionHandler
             var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             if (!isFlying)
             {
-                // 能按空格起飞说明到终点了
+                // 如果等了很久都没判定为飞行，按空格补充起飞
                 Simulation.SendInput.SimulateAction(GIActions.Jump);
                 await Delay(500, ct);
             }
@@ -115,5 +138,4 @@ public class UpDownGrabLeafHandler : IActionHandler
 
         await Delay(200, ct);
     }
-    
 }
