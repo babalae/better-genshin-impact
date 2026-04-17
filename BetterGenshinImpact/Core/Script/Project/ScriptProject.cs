@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.View;
 using Microsoft.ClearScript.JavaScript;
 
 namespace BetterGenshinImpact.Core.Script.Project;
@@ -138,6 +139,7 @@ public class ScriptProject
         }
         finally
         {
+            HtmlMaskWindow.CloseAll();
             engine.Dispose();
         }
     }
