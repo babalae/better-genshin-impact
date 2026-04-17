@@ -6,7 +6,11 @@ using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
+using System.Linq;
+using System.Text.RegularExpressions;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -16,6 +20,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -42,6 +47,41 @@ public class Genshin
     /// 系统屏幕的DPI缩放比例
     /// </summary>
     public double ScreenDpiScale => TaskContext.Instance().DpiScale;
+    
+    /// <summary>
+    /// 通过 OCR 识别当前角色的 UID
+    /// </summary>
+    /// <returns>UID 数字，如果识别失败则返回 0</returns>
+    public async Task<int> Uid()
+    {
+        try
+        {
+            var x = 1683;
+            var y = 1051;
+            var width = 234;
+            var height = 28;
+            var scaleTo1080PRatio = this.ScaleTo1080PRatio;
+            
+            x = (int)Math.Round(x * scaleTo1080PRatio);
+            y = (int)Math.Round(y * scaleTo1080PRatio);
+            width = (int)Math.Round(width * scaleTo1080PRatio);
+            height = (int)Math.Round(height * scaleTo1080PRatio);
+            
+            using var region = CaptureToRectArea();
+            var recognitionObjectOcr = RecognitionObject.Ocr(x, y, width, height);
+            var res = region.Find(recognitionObjectOcr);
+            if (res?.Text == null) return 0;
+            var matches = Regex.Matches(res.Text, @"\d+");
+            if (matches.Count == 0) return 0;
+            var numberStr = string.Join("", matches.Select(m => m.Value));
+            return int.TryParse(numberStr, out var uid) ? uid : 0;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "OCR 识别 UID 异常");
+            return 0;
+        }
+    }
     
     public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
     {
