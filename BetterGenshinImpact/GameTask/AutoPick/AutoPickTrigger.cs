@@ -336,7 +336,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             imageRegion.SrcMat.SaveImage(@"log/pick/rednet_input.png");
             var prediction = _pickRedNetPredictor.Value.Predict(imageRegion.CacheImage);
             // Debug.WriteLine($"AutoPickTrigger: RedNet预测结果 {prediction.ClassLabel} 置信度 {prediction.Confidence}");
-            if (prediction.Confidence < 0.6)
+            if (prediction.Confidence < 0.47)
             {
                 return string.Empty;
             }
