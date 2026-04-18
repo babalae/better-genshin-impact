@@ -10,6 +10,7 @@ using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -24,13 +25,15 @@ public class LiniaMiningTask
     #region 配置参数
 
     // 聚类距离阈值（基于宽度缩放）
-    private const double BaseClusterDistance = 600;
+    private const double BaseClusterDistance = 300;
     // 对准判定阈值（基于宽度缩放）
     private const double BaseArrivalThreshold = 45;
     // 屏幕边缘忽略区域宽度（基于宽度缩放）
     private const double BaseEdgeIgnore = 200;
-    // 瞄准模式灵敏度补偿系数
-    private const double AimSensitivityFactor = 0.82;
+    // 瞄准模式X轴灵敏度补偿系数
+    private const double AimSensitivityFactorX = 0.45;
+    // 瞄准模式Y轴灵敏度补偿系数
+    private const double AimSensitivityFactorY = 0.78;
     // 检测置信度阈值
     private const float ConfidenceThreshold = 0.8f;
     // 聚类面积差异倍率
@@ -51,6 +54,7 @@ public class LiniaMiningTask
     private readonly BgiYoloPredictor _predictor;
     private readonly double _dpi = TaskContext.Instance().DpiScale;
     private readonly double _widthScale = TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / 1920.0;
+    private readonly double _heightScale = TaskContext.Instance().SystemInfo.CaptureAreaRect.Height / 1080.0;
     private readonly double ClusterDistanceThreshold;
     private readonly double ArrivalThreshold;
     private readonly double EdgeIgnore;
@@ -118,7 +122,6 @@ public class LiniaMiningTask
 
                     if (Math.Abs(offsetX) <= ArrivalThreshold && Math.Abs(offsetY) <= ArrivalThreshold)
                     {
-                        Logger.LogInformation("已对准矿物");
                         aligned = true;
                         break;
                     }
@@ -126,8 +129,8 @@ public class LiniaMiningTask
                     var dist = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
                     if (dist < 1) dist = 1;
 
-                    var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactor);
-                    var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactor);
+                    var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactorX / _widthScale);
+                    var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactorY / _heightScale);
                     Simulation.SendInput.Mouse.MoveMouseBy(mouseDx, mouseDy);
                     await Delay(200, ct);
 
@@ -151,6 +154,7 @@ public class LiniaMiningTask
 
                 if (aligned)
                 {
+                    Logger.LogInformation("开始挖矿");
                     await Mine(ct);
                     break;
                 }
@@ -181,6 +185,7 @@ public class LiniaMiningTask
     private static async Task Mine(CancellationToken ct)
     {
         // TODO: 挖矿逻辑
+        // Simulation.SendInput.Mouse.LeftButtonClick();
         await Delay(2000, ct);
     }
 
@@ -192,15 +197,37 @@ public class LiniaMiningTask
         var systemInfo = TaskContext.Instance().SystemInfo;
         var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
         var ra = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
-        var rawResult = _predictor.Predictor.Detect(ra.CacheImage);
+
+        // Letterbox预处理
+        const int targetSize = 640;
+        var srcW = ra.SrcMat.Width;
+        var srcH = ra.SrcMat.Height;
+        var scale = Math.Max((double)srcW, srcH) / targetSize;
+        var newW = (int)(srcW / scale);
+        var newH = (int)(srcH / scale);
+        var padX = (targetSize - newW) / 2;
+        var padY = (targetSize - newH) / 2;
+
+        using var resizedMat = new Mat();
+        Cv2.Resize(ra.SrcMat, resizedMat, new OpenCvSharp.Size(newW, newH));
+        using var letterboxMat = new Mat(targetSize, targetSize, ra.SrcMat.Type(), new Scalar(114, 114, 114));
+        Cv2.CopyMakeBorder(resizedMat, letterboxMat, padY, targetSize - newH - padY, padX, targetSize - newW - padX,
+            BorderTypes.Constant, new Scalar(114, 114, 114));
+
+        var inputRa = new ImageRegion(letterboxMat, 0, 0);
+        var rawResult = _predictor.Predictor.Detect(inputRa.CacheImage);
 
         var centerX = ra.CacheImage.Width / 2.0;
         var centerY = ra.CacheImage.Height / 2.0;
 
-        // 只保留置信度达标的 ore 检测框
+        // 检测框坐标在640空间，扣除pad后映射回原图
         var oreBoxes = rawResult
             .Where(box => box.Name.Name is "ore" && box.Confidence >= ConfidenceThreshold)
-            .Select(box => new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height))
+            .Select(box => new Rect(
+                (int)((box.Bounds.X - padX) * scale),
+                (int)((box.Bounds.Y - padY) * scale),
+                (int)(box.Bounds.Width * scale),
+                (int)(box.Bounds.Height * scale)))
             .ToList();
 
         // 画框
