@@ -332,7 +332,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             using var imageRegion = content.CaptureRectArea.DeriveCrop(iconRect);
             var prediction = _pickRedNetPredictor.Value.Predict(imageRegion.CacheImage);
-            Debug.WriteLine($"AutoPickTrigger: RedNet预测结果 {prediction.ClassLabel} 置信度 {prediction.Confidence}");
+            // Debug.WriteLine($"AutoPickTrigger: RedNet预测结果 {prediction.ClassLabel} 置信度 {prediction.Confidence}");
             if (prediction.Confidence < 0.47)
             {
                 return string.Empty;
