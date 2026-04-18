@@ -312,6 +312,17 @@ public class BgiOnnxFactory
     }
 
     /// <summary>
+    ///     根据模型创建一个 RedNet 分类预测器
+    /// </summary>
+    /// <param name="model">模型</param>
+    /// <param name="labelRelativePath">标签文件相对路径，可选，支持 .txt/.json</param>
+    /// <returns>BgiRedNetPredictor</returns>
+    public BgiRedNetPredictor CreateRedNetPredictor(BgiOnnxModel model, string? labelRelativePath = null)
+    {
+        return new BgiRedNetPredictor(model, CreateInferenceSession(model), labelRelativePath);
+    }
+
+    /// <summary>
     ///     根据模型创建一个onnx运行时的InferenceSession
     /// </summary>
     /// <param name="model">模型</param>

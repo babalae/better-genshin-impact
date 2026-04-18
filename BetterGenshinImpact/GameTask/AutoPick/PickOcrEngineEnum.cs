@@ -1,4 +1,4 @@
-﻿namespace BetterGenshinImpact.GameTask.AutoPick;
+namespace BetterGenshinImpact.GameTask.AutoPick;
 
 public enum PickOcrEngineEnum
 {

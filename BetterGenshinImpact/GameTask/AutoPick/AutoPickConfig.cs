@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace BetterGenshinImpact.GameTask.AutoPick
@@ -36,6 +36,14 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         /// </summary>
         [ObservableProperty]
         private string _ocrEngine = PickOcrEngineEnum.Paddle.ToString();
+
+        /// <summary>
+        /// 拾取识别模式
+        /// - Ocr: 通过OCR识别物品名
+        /// - RedNet: 通过分类模型直接识别物品名
+        /// </summary>
+        [ObservableProperty]
+        private string _recognitionMode = PickRecognitionModeEnum.Ocr.ToString();
 
         /// <summary>
         /// 急速模式

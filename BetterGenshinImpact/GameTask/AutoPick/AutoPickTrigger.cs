@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
@@ -8,6 +9,7 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -49,9 +51,14 @@ public partial class AutoPickTrigger : ITaskTrigger
     private HashSet<string> _whiteList = [];
 
     private RecognitionObject _pickRo;
+    private readonly Lazy<BgiRedNetPredictor> _pickRedNetPredictor = new(() =>
+        App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateRedNetPredictor(BgiOnnxModel.BgiPickRedNet110));
 
     // 外部配置
     private AutoPickExternalConfig? _externalConfig;
+    
+    double scale = TaskContext.Instance().SystemInfo.AssetScale;
+    AutoPickConfig config = TaskContext.Instance().Config.AutoPickConfig;
 
     public AutoPickTrigger()
     {
@@ -192,8 +199,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
-        var config = TaskContext.Instance().Config.AutoPickConfig;
+
 
         // 存在 L 键位是千星奇遇，无需拾取
         using var lKeyRa = content.CaptureRectArea.Find(_autoPickAssets.LRo);
@@ -204,9 +210,10 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 识别到拾取键，开始识别物品图标
         var isExcludeIcon = false;
-        _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
+        var iconRect = new Rect(
             foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
             (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
+        _autoPickAssets.ChatIconRo.RegionOfInterest = iconRect;
         using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
         speedTimer.Record("识别聊天图标");
         if (!chatIconRa.IsEmpty())
@@ -251,66 +258,15 @@ public partial class AutoPickTrigger : ITaskTrigger
         //    return;
         //}
 
-        // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
-        // 计算出文字区域
-        var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
-            (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
-        if (textRect.X + textRect.Width > content.CaptureRectArea.CacheGreyMat.Width
-            || textRect.Y + textRect.Height > content.CaptureRectArea.CacheGreyMat.Height)
-        {
-            Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
-            return;
-        }
-
-        using var gradMat = new Mat(content.CaptureRectArea.CacheGreyMat,
-            new Rect(textRect.X, textRect.Y, textRect.Width, Math.Min(textRect.Height, 3)));
-        var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
-        if (avgGrad < -3)
-        {
-            Debug.WriteLine($"AutoPickTrigger: 已在拾取中，跳过本次拾取 {avgGrad}");
-            return;
-        }
 
         string text;
-        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
+        if (config.RecognitionMode == nameof(PickRecognitionModeEnum.RedNet))
         {
-            var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
-            text = TextInferenceFactory.Pick.Value.Inference(textMat);
+            text = RecognizePickTextByRedNet(content, iconRect);
         }
         else
         {
-            using var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
-            // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
-            // 如果找到有效区域
-            if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
-            {
-                // 截取只包含文字的区域
-                using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
-                    boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
-                text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
-
-                // if (RuntimeHelper.IsDebug)
-                // {
-                //     // 如果不等于正确文字，则保存图片
-                //     if (text != "烹饪")
-                //     {
-                //         var path = Global.Absolute("log/pick");
-                //         Directory.CreateDirectory(path);
-                //         var str = $"{DateTime.Now:yyyyMMddHHmmssfff}";
-                //         // textMat.SaveImage(Path.Combine(path, $"pick_ocr_ori_{str}.png"));
-                //         // 画上 boundingRect
-                //         Cv2.Rectangle(textMat, boundingRect, new Scalar(0, 0, 255), 1);
-                //         textMat.SaveImage(Path.Combine(path, $"pick_ocr_rect_{str}.png"));
-                //         bin.SaveImage(Path.Combine(path, $"bin_{str}.png"));
-                //     }
-                // }
-            }
-            else
-            {
-                Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
-                text = OcrFactory.Paddle.Ocr(textMat);
-            }
+            text = RecognizePickTextByOcr(content, foundRectArea, config.OcrEngine);
         }
 
         speedTimer.Record("文字识别");
@@ -368,6 +324,87 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
+    }
+
+    private string RecognizePickTextByRedNet(CaptureContent content, Rect iconRect)
+    {
+        try
+        {
+            using var imageRegion = content.CaptureRectArea.DeriveCrop(iconRect);
+            var prediction = _pickRedNetPredictor.Value.Predict(imageRegion.CacheImage);
+            Debug.WriteLine($"AutoPickTrigger: RedNet预测结果 {prediction.ClassLabel} 置信度 {prediction.Confidence}");
+            if (prediction.Confidence < 0.47)
+            {
+                return string.Empty;
+            }
+
+            return prediction.ClassLabel;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "AutoPick RedNet推理失败，回退OCR");
+            return string.Empty;
+        }
+    }
+
+    private string RecognizePickTextByOcr(CaptureContent content, Region foundRectArea, string ocrEngine)
+    {
+        // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
+        // 计算出文字区域
+        var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
+            (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
+        if (textRect.X + textRect.Width > content.CaptureRectArea.CacheGreyMat.Width
+            || textRect.Y + textRect.Height > content.CaptureRectArea.CacheGreyMat.Height)
+        {
+            Debug.WriteLine("AutoPickTrigger: 文字区域 out of range");
+            return string.Empty;
+        }
+
+        using var gradMat = new Mat(content.CaptureRectArea.CacheGreyMat,
+            new Rect(textRect.X, textRect.Y, textRect.Width, Math.Min(textRect.Height, 3)));
+        var avgGrad = gradMat.Sobel(MatType.CV_32F, 1, 0).Mean().Val0;
+        if (avgGrad < -3)
+        {
+            Debug.WriteLine($"AutoPickTrigger: 已在拾取中，跳过本次拾取 {avgGrad}");
+            return string.Empty;
+        }
+        
+        if (ocrEngine == nameof(PickOcrEngineEnum.Yap))
+        {
+            using var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
+            return TextInferenceFactory.Pick.Value.Inference(textMat);
+        }
+
+        using var paddleMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
+        var boundingRect = TextRectExtractor.GetTextBoundingRect(paddleMat);
+        // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
+        // 如果找到有效区域
+        if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
+        {
+            // 截取只包含文字的区域
+            using var textOnlyMat = new Mat(paddleMat, new Rect(0, 0,
+                boundingRect.Right + 5 < paddleMat.Width ? boundingRect.Right + 5 : paddleMat.Width, paddleMat.Height));
+            return OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
+
+            // if (RuntimeHelper.IsDebug)
+            // {
+            //     // 如果不等于正确文字，则保存图片
+            //     if (text != "烹饪")
+            //     {
+            //         var path = Global.Absolute("log/pick");
+            //         Directory.CreateDirectory(path);
+            //         var str = $"{DateTime.Now:yyyyMMddHHmmssfff}";
+            //         // textMat.SaveImage(Path.Combine(path, $"pick_ocr_ori_{str}.png"));
+            //         // 画上 boundingRect
+            //         Cv2.Rectangle(textMat, boundingRect, new Scalar(0, 0, 255), 1);
+            //         textMat.SaveImage(Path.Combine(path, $"pick_ocr_rect_{str}.png"));
+            //         bin.SaveImage(Path.Combine(path, $"bin_{str}.png"));
+            //     }
+            // }
+        }
+
+        Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
+        return OcrFactory.Paddle.Ocr(paddleMat);
     }
 
     private bool DoNotPick(string text)

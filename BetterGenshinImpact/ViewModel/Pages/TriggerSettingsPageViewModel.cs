@@ -30,6 +30,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
     [ObservableProperty] private string[] _selectChatOptionTypeNames = [SelectChatOptionTypes.UseMouse, SelectChatOptionTypes.UseInteractionKey];
 
+    [ObservableProperty] private string[] _pickRecognitionModeNames = [PickRecognitionModeEnum.Ocr.ToString(), PickRecognitionModeEnum.RedNet.ToString()];
+
     [ObservableProperty] private string[] _pickOcrEngineNames = [PickOcrEngineEnum.Paddle.ToString(), PickOcrEngineEnum.Yap.ToString()];
 
     [ObservableProperty] private List<string> _pickButtonNames;

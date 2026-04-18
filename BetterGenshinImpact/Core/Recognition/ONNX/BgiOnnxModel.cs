@@ -51,6 +51,12 @@ public class BgiOnnxModel
         Register("BgiAvatarSide", @"Assets\Model\Common\avatar_side_classify_sim.onnx");
 
     /// <summary>
+    /// 角色识别（RedNet-110）
+    /// </summary>
+    public static readonly BgiOnnxModel BgiPickRedNet110 =
+        Register("BgiPickRedNet110", @"Assets\Model\Common\resnet_pick.onnx");
+
+    /// <summary>
     /// paddleOCR V4 检测模型
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrDetV4 =
