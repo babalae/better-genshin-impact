@@ -262,7 +262,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         string text;
         if (config.RecognitionMode == nameof(PickRecognitionModeEnum.RedNet))
         {
-            text = RecognizePickTextByRedNet(content, iconRect);
+            text = RecognizePickTextByRedNet(content, foundRectArea);
         }
         else
         {
@@ -326,14 +326,17 @@ public partial class AutoPickTrigger : ITaskTrigger
         speedTimer.DebugPrint();
     }
 
-    private string RecognizePickTextByRedNet(CaptureContent content, Rect iconRect)
+    private string RecognizePickTextByRedNet(CaptureContent content, Region foundRectArea)
     {
         try
         {
+            // 32x32 图片
+            var iconRect = new Rect(foundRectArea.X + (int)((config.ItemIconLeftOffset + 10) * scale), foundRectArea.Y, (int)(32 * scale), (int)(32 * scale));
             using var imageRegion = content.CaptureRectArea.DeriveCrop(iconRect);
+            imageRegion.SrcMat.SaveImage(@"log/pick/rednet_input.png");
             var prediction = _pickRedNetPredictor.Value.Predict(imageRegion.CacheImage);
             // Debug.WriteLine($"AutoPickTrigger: RedNet预测结果 {prediction.ClassLabel} 置信度 {prediction.Confidence}");
-            if (prediction.Confidence < 0.47)
+            if (prediction.Confidence < 0.6)
             {
                 return string.Empty;
             }
