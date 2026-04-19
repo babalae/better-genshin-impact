@@ -427,8 +427,10 @@ public class Genshin
     /// <summary>
     /// 莉奈娅挖矿
     /// </summary>
-    public async Task StartMining()
+    /// <param name="mineCount">射箭次数，默认1</param>
+    /// <param name="scanRounds">大循环寻矿次数，默认5</param>
+    public async Task StartMining(int mineCount = 1, int scanRounds = 5)
     {
-        await new LiniaMiningTask().Start(CancellationContext.Instance.Cts.Token);
+        await new LiniaMiningTask(scanRounds, mineCount).Start(CancellationContext.Instance.Cts.Token);
     }
 }

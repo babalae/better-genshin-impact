@@ -25,7 +25,9 @@ public class LiniaMiningTask
     #region 配置参数
 
     // 聚类距离阈值（基于宽度缩放）
-    private const double BaseClusterDistance = 250;
+    private const double BaseClusterDistance = 300;
+    // 聚类面积基准值（1920宽度下的标准矿石面积）
+    private const double BaseClusterArea = 1800;
     // 对准判定阈值（基于宽度缩放）
     private const double BaseArrivalThreshold = 50;
     // 屏幕边缘忽略区域宽度（基于宽度缩放）
@@ -35,19 +37,17 @@ public class LiniaMiningTask
     // 瞄准模式Y轴灵敏度补偿系数
     private const double AimSensitivityFactorY = 0.80;
     // 检测置信度阈值
-    private const float ConfidenceThreshold = 0.75f;
+    private const float ConfidenceThreshold = 0.78f;
     // 聚类面积差异倍率
     private const double AreaRatioThreshold = 4;
-    // 目标X偏移
-    private const int TargetXOffset = -10;
     // 左转步长
-    private const int LeftTurnStep = -30;
-    // 外层最大重试次数
-    private const int MaxOuterRetry = 5;
+    private const int LeftTurnStep = -250;
     // 内层最大检测次数
     private const int MaxInnerRetry = 7;
-    // 开始左转的外层重试次数
-    private const int ScanFromRetry = 3;
+    // 默认大循环次数
+    private const int DefaultScanRounds = 5;
+    // 元素视野刷新间隔
+    private const int ElementSightRefreshMs = 3000;
 
     #endregion
 
@@ -59,10 +59,15 @@ public class LiniaMiningTask
     private readonly double ArrivalThreshold;
     private readonly double EdgeIgnore;
 
-    public LiniaMiningTask()
+    private readonly int _scanRounds;
+    private readonly int _mineCount;
+
+    public LiniaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = 1)
     {
+        _scanRounds = scanRounds;
+        _mineCount = mineCount;
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>()
-            .CreateYoloPredictor(BgiOnnxModel.BgiOre);
+            .CreateYoloPredictor(BgiOnnxModel.BgiMine);
         ClusterDistanceThreshold = BaseClusterDistance * _widthScale;
         ArrivalThreshold = BaseArrivalThreshold * _widthScale;
         EdgeIgnore = BaseEdgeIgnore * _widthScale;
@@ -75,81 +80,56 @@ public class LiniaMiningTask
         {
             Logger.LogInformation("开始寻矿");
 
-            // R进入瞄准状态
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
             aimingModeEntered = true;
             await Delay(400, ct);
 
-            var outerRetry = 0;
-            // 元素视野刷新间隔
-            const int ElementSightRefreshMs = 3000;
+            var minedCount = 0;
 
-            while (!ct.IsCancellationRequested && outerRetry < MaxOuterRetry)
+            for (var round = 0; round < _scanRounds && !ct.IsCancellationRequested; round++)
             {
-                outerRetry++;
-
-                // 中键进入元素视野
                 Simulation.SendInput.Mouse.MiddleButtonDown();
                 await Delay(1200, ct);
+                _lastRefreshTime = Environment.TickCount64;
 
-                var aligned = false;
-                var lastRefreshTime = Environment.TickCount64;
+                var (cluster, centerX, centerY) = FindNearestMineralCluster();
 
-                // 检测+移动
-                for (var retry = 0; retry < MaxInnerRetry; retry++)
+                if (cluster != null)
                 {
-                    // 元素视野计时器刷新
-                    if (Environment.TickCount64 - lastRefreshTime >= ElementSightRefreshMs)
+                    var (aligned, compensateDx, compensateDy) = await AlignAndMine(cluster, centerX, centerY, ct);
+                    if (aligned)
                     {
-                        Simulation.SendInput.Mouse.MiddleButtonUp();
-                        await Delay(100, ct);
-                        Simulation.SendInput.Mouse.MiddleButtonDown();
-                        await Delay(1200, ct);
-                        lastRefreshTime = Environment.TickCount64;
-                    }
-
-                    // 第ScanFromRetry次外层重试起，每次检测前左转寻矿
-                    if (outerRetry >= ScanFromRetry)
-                    {
-                        Simulation.SendInput.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi), 0);
-                        await Delay(800, ct);
-                    }
-
-                    var (cluster, centerX, centerY) = FindNearestMineralCluster();
-
-                    if (cluster == null)
-                    {
+                        minedCount++;
+                        if (minedCount >= _mineCount) break;
                         continue;
                     }
 
-                    var offsetX = cluster.CenterX - centerX + TargetXOffset;
-                    var offsetY = cluster.CenterY - centerY;
+                    Simulation.SendInput.Mouse.MiddleButtonUp();
+                    await Delay(300, ct);
 
-                    if (Math.Abs(offsetX) <= ArrivalThreshold / 2 && Math.Abs(offsetY) <= ArrivalThreshold / 2)
+                    if (compensateDx != 0 || compensateDy != 0)
                     {
-                        aligned = true;
-                        break;
+                        Simulation.SendInput.Mouse.MiddleButtonDown();
+                        await Delay(1200, ct);
+                        _lastRefreshTime = Environment.TickCount64;
+                        Simulation.SendInput.Mouse.MoveMouseBy(-compensateDx, -compensateDy);
+                        await Delay(800, ct);
+                        Simulation.SendInput.Mouse.MiddleButtonUp();
+                        await Delay(300, ct);
                     }
 
-                    var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactorX / _widthScale);
-                    var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactorY / _heightScale);
-                    Simulation.SendInput.Mouse.MoveMouseBy(mouseDx, mouseDy);
-                    await Delay(100, ct);
+                    Simulation.SendInput.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
+                    await Delay(800, ct);
+                    continue;
                 }
 
-                // 松中键退出元素视野
                 Simulation.SendInput.Mouse.MiddleButtonUp();
                 await Delay(300, ct);
 
-                if (aligned)
-                {
-                    Logger.LogInformation("开始挖矿");
-                    await Mine(ct);
-                    break;
-                }
+                Simulation.SendInput.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
+                await Delay(800, ct);
             }
 
-            // R退出瞄准状态
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
             aimingModeEntered = false;
         }
@@ -168,8 +148,57 @@ public class LiniaMiningTask
                 Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
             }
 
+            Simulation.SendInput.Mouse.MiddleButtonUp();
             VisionContext.Instance().DrawContent.ClearAll();
         }
+    }
+
+    private long _lastRefreshTime;
+
+    private async Task<(bool aligned, int compensateDx, int compensateDy)> AlignAndMine(
+        MineralCluster cluster, double centerX, double centerY, CancellationToken ct)
+    {
+        var totalDx = 0;
+        var totalDy = 0;
+
+        for (var retry = 0; retry < MaxInnerRetry && !ct.IsCancellationRequested; retry++)
+        {
+            if (Environment.TickCount64 - _lastRefreshTime >= ElementSightRefreshMs)
+            {
+                Simulation.SendInput.Mouse.MiddleButtonUp();
+                await Delay(100, ct);
+                Simulation.SendInput.Mouse.MiddleButtonDown();
+                await Delay(1200, ct);
+                _lastRefreshTime = Environment.TickCount64;
+            }
+
+            var offsetX = cluster.TargetX - centerX;
+            var offsetY = cluster.TargetY - centerY;
+
+            if (Math.Abs(offsetX) <= ArrivalThreshold / 2 && Math.Abs(offsetY) <= ArrivalThreshold / 2)
+            {
+                Simulation.SendInput.Mouse.MiddleButtonUp();
+                await Delay(300, ct);
+                Logger.LogInformation("开始挖矿");
+                await Mine(ct);
+                return (true, 0, 0);
+            }
+
+            var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactorX / _widthScale);
+            var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactorY / _heightScale);
+            Simulation.SendInput.Mouse.MoveMouseBy(mouseDx, mouseDy);
+            totalDx += mouseDx;
+            totalDy += mouseDy;
+            await Delay(100, ct);
+
+            (cluster, centerX, centerY) = FindNearestMineralCluster();
+            if (cluster == null)
+            {
+                return (false, totalDx, totalDy);
+            }
+        }
+
+        return (false, totalDx, totalDy);
     }
 
     /// <summary>
@@ -177,7 +206,6 @@ public class LiniaMiningTask
     /// </summary>
     private static async Task Mine(CancellationToken ct)
     {
-        // TODO: 挖矿逻辑
         Simulation.SendInput.Mouse.MoveMouseBy(0, -20);
         await Delay(10, ct);
         Simulation.SendInput.Mouse.LeftButtonClick();
@@ -243,9 +271,9 @@ public class LiniaMiningTask
         foreach (var cluster in clusters)
         {
             var half = (int)markerSize / 2;
-            var mark = new Rect((int)cluster.CenterX - half, (int)cluster.CenterY - half, (int)markerSize, (int)markerSize);
+            var mark = new Rect((int)cluster.TargetX - half, (int)cluster.TargetY - half, (int)markerSize, (int)markerSize);
             clusterDrawList.Add(ra.ToRectDrawable(mark,
-                $"({(int)cluster.CenterX},{(int)cluster.CenterY})",
+                $"({(int)cluster.TargetX},{(int)cluster.TargetY})",
                 new Pen(Color.DodgerBlue, 2)
             ));
         }
@@ -267,10 +295,13 @@ public class LiniaMiningTask
     }
 
     /// <summary>
-    /// 贪心聚类：距离小于阈值的检测框归入同一簇
+    /// 贪心聚类：距离小于阈值的检测框归入同一簇，阈值根据元素面积动态缩放
     /// </summary>
     private List<MineralCluster> ClusterMinerals(List<Rect> rects)
     {
+        if (rects.Count == 0) return [];
+
+        var refArea = BaseClusterArea * _widthScale * _widthScale;
         var clusters = new List<MineralCluster>();
 
         foreach (var rect in rects)
@@ -291,9 +322,17 @@ public class LiniaMiningTask
                 }
             }
 
-            if (nearest != null && nearestDist < ClusterDistanceThreshold && nearest.TryAddRect(rect))
+            if (nearest != null)
             {
-                continue;
+                var clusterAvgArea = nearest.Rects.Average(r => (double)r.Width * r.Height);
+                var rectArea = (double)rect.Width * rect.Height;
+                var combinedAvg = (clusterAvgArea * nearest.Rects.Count + rectArea) / (nearest.Rects.Count + 1);
+                var effectiveThreshold = ClusterDistanceThreshold * Math.Sqrt(combinedAvg / Math.Max(1, refArea));
+
+                if (nearestDist < effectiveThreshold && nearest.TryAddRect(rect))
+                {
+                    continue;
+                }
             }
 
             clusters.Add(new MineralCluster(rect, AreaRatioThreshold));
@@ -311,6 +350,8 @@ public class MineralCluster
     public List<Rect> Rects { get; } = new();
     public double CenterX { get; private set; }
     public double CenterY { get; private set; }
+    public double TargetX { get; private set; }
+    public double TargetY { get; private set; }
 
     public MineralCluster(Rect firstRect, double areaRatioThreshold = 5)
     {
@@ -335,5 +376,22 @@ public class MineralCluster
     {
         CenterX = Rects.Average(r => r.X + r.Width / 2.0);
         CenterY = Rects.Average(r => r.Y + r.Height / 2.0);
+
+        Rect? nearestRect = null;
+        var minDist = double.MaxValue;
+        foreach (var r in Rects)
+        {
+            var cx = r.X + r.Width / 2.0;
+            var cy = r.Y + r.Height / 2.0;
+            var d = Math.Pow(cx - CenterX, 2) + Math.Pow(cy - CenterY, 2);
+            if (d < minDist)
+            {
+                minDist = d;
+                nearestRect = r;
+            }
+        }
+
+        TargetX = nearestRect!.Value.X + nearestRect!.Value.Width / 2.0;
+        TargetY = nearestRect!.Value.Y + nearestRect!.Value.Height / 2.0;
     }
 }
