@@ -16,7 +16,29 @@ public static class HdrStartPolicy
             CaptureModes.WindowsGraphicsCaptureHdr.ToString(),
             StringComparison.Ordinal);
 
-        if (usingHdrCaptureMode || detectionResult.RiskLevel == HdrRiskLevel.Safe)
+        if (usingHdrCaptureMode)
+        {
+            if (detectionResult.RiskLevel == HdrRiskLevel.Safe)
+            {
+                return new HdrStartDecision
+                {
+                    ShouldWarn = true,
+                    CanSwitchToHdrCapture = false,
+                    CanOpenGraphicsSettings = false,
+                    ContinueIsPrimary = true,
+                    Title = "当前未开启 HDR",
+                    Message = $"{detectionResult.ReasonText}\n\n你当前选择的是 WindowsGraphicsCapture（HDR），但现在没有检测到 HDR 已开启。这通常不是必须的；如果只是普通 SDR 环境，建议改回普通截图模式后再启动。\n\n如果你是有意这样配置，也可以继续执行。",
+                };
+            }
+
+            return new HdrStartDecision
+            {
+                ShouldWarn = false,
+                CanSwitchToHdrCapture = false,
+            };
+        }
+
+        if (detectionResult.RiskLevel == HdrRiskLevel.Safe)
         {
             return new HdrStartDecision
             {
@@ -41,6 +63,7 @@ public static class HdrStartPolicy
         {
             ShouldWarn = true,
             CanSwitchToHdrCapture = hdrCaptureSupported,
+            CanOpenGraphicsSettings = true,
             Title = detectionResult.RiskLevel == HdrRiskLevel.Risky ? "检测到 HDR 已开启" : "HDR 状态未知",
             Message = $"{unknownHint}\n\n{detectionResult.ReasonText}\n\n{scopeWarning}\n{switchHint}\n\n如果仍选择继续执行，可能出现颜色异常、识别失败、任务中断或结果不稳定。",
         };

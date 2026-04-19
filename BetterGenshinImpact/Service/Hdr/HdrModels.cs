@@ -63,6 +63,10 @@ public sealed class HdrStartDecision
 
     public bool CanSwitchToHdrCapture { get; init; }
 
+    public bool CanOpenGraphicsSettings { get; init; } = true;
+
+    public bool ContinueIsPrimary { get; init; }
+
     public string Title { get; init; } = string.Empty;
 
     public string Message { get; init; } = string.Empty;

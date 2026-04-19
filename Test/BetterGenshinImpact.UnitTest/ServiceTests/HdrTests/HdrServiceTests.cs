@@ -256,6 +256,22 @@ public class HdrStartPolicyTests
     }
 
     [Fact]
+    public void Evaluate_ShouldWarn_WhenHdrCaptureModeIsEnabledButHdrIsSafe()
+    {
+        HdrStartDecision result = HdrStartPolicy.Evaluate(
+            CreateDetectionResult(HdrRiskLevel.Safe),
+            CaptureModes.WindowsGraphicsCaptureHdr.ToString(),
+            HdrStartPurpose.RealtimeOnly,
+            hdrCaptureSupported: true);
+
+        Assert.True(result.ShouldWarn);
+        Assert.False(result.CanSwitchToHdrCapture);
+        Assert.False(result.CanOpenGraphicsSettings);
+        Assert.True(result.ContinueIsPrimary);
+        Assert.Equal("当前未开启 HDR", result.Title);
+    }
+
+    [Fact]
     public void Evaluate_ShouldDisableSwitchAction_WhenHdrCaptureIsNotSupported()
     {
         HdrStartDecision result = HdrStartPolicy.Evaluate(

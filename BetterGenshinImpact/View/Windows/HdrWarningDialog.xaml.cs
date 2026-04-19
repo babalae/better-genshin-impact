@@ -27,9 +27,13 @@ public partial class HdrWarningDialog : Wpf.Ui.Controls.FluentWindow
         MessageTextBlock.Text = decision.Message;
         Owner = Application.Current.MainWindow;
         SwitchButton.Visibility = decision.CanSwitchToHdrCapture ? Visibility.Visible : Visibility.Collapsed;
-        SettingsButton.Appearance = decision.CanSwitchToHdrCapture
-            ? Wpf.Ui.Controls.ControlAppearance.Secondary
-            : Wpf.Ui.Controls.ControlAppearance.Primary;
+        SettingsButton.Visibility = decision.CanOpenGraphicsSettings ? Visibility.Visible : Visibility.Collapsed;
+        ContinueButton.Appearance = decision.ContinueIsPrimary
+            ? Wpf.Ui.Controls.ControlAppearance.Primary
+            : Wpf.Ui.Controls.ControlAppearance.Secondary;
+        SettingsButton.Appearance = !decision.CanSwitchToHdrCapture && decision.CanOpenGraphicsSettings && !decision.ContinueIsPrimary
+            ? Wpf.Ui.Controls.ControlAppearance.Primary
+            : Wpf.Ui.Controls.ControlAppearance.Secondary;
 
         SourceInitialized += OnSourceInitialized;
         Closed += OnClosed;
