@@ -25,9 +25,9 @@ public class LiniaMiningTask
     #region 配置参数
 
     // 聚类距离阈值（基于宽度缩放）
-    private const double BaseClusterDistance = 300;
+    private const double BaseClusterDistance = 250;
     // 对准判定阈值（基于宽度缩放）
-    private const double BaseArrivalThreshold = 45;
+    private const double BaseArrivalThreshold = 30;
     // 屏幕边缘忽略区域宽度（基于宽度缩放）
     private const double BaseEdgeIgnore = 200;
     // 瞄准模式X轴灵敏度补偿系数
@@ -45,7 +45,7 @@ public class LiniaMiningTask
     // 外层最大重试次数
     private const int MaxOuterRetry = 5;
     // 内层最大检测次数
-    private const int MaxInnerRetry = 5;
+    private const int MaxInnerRetry = 7;
     // 开始左转的外层重试次数
     private const int ScanFromRetry = 3;
 
@@ -79,6 +79,8 @@ public class LiniaMiningTask
             await Delay(400, ct);
 
             var outerRetry = 0;
+            // 元素视野刷新间隔
+            const int ElementSightRefreshMs = 3000;
 
             while (!ct.IsCancellationRequested && outerRetry < MaxOuterRetry)
             {
@@ -86,20 +88,22 @@ public class LiniaMiningTask
 
                 // 中键进入元素视野
                 Simulation.SendInput.Mouse.MiddleButtonDown();
-                await Delay(1500, ct);
+                await Delay(1200, ct);
 
                 var aligned = false;
+                var lastRefreshTime = Environment.TickCount64;
 
                 // 检测+移动
                 for (var retry = 0; retry < MaxInnerRetry; retry++)
                 {
-                    // 元素视野刷新
-                    if (retry > 0 && retry % 2 == 0)
+                    // 元素视野计时器刷新
+                    if (Environment.TickCount64 - lastRefreshTime >= ElementSightRefreshMs)
                     {
                         Simulation.SendInput.Mouse.MiddleButtonUp();
-                        await Delay(300, ct);
+                        await Delay(100, ct);
                         Simulation.SendInput.Mouse.MiddleButtonDown();
-                        await Delay(1500, ct);
+                        await Delay(1200, ct);
+                        lastRefreshTime = Environment.TickCount64;
                     }
 
                     // 第ScanFromRetry次外层重试起，每次检测前左转寻矿
@@ -132,20 +136,7 @@ public class LiniaMiningTask
                     var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactorX / _widthScale);
                     var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactorY / _heightScale);
                     Simulation.SendInput.Mouse.MoveMouseBy(mouseDx, mouseDy);
-                    await Delay(200, ct);
-
-                    // 后验对准
-                    var (postCluster, postCenterX, postCenterY) = FindNearestMineralCluster();
-                    if (postCluster != null)
-                    {
-                        var postOffsetX = postCluster.CenterX - postCenterX + TargetXOffset;
-                        var postOffsetY = postCluster.CenterY - postCenterY;
-                        if (Math.Abs(postOffsetX) <= ArrivalThreshold && Math.Abs(postOffsetY) <= ArrivalThreshold)
-                        {
-                            aligned = true;
-                            break;
-                        }
-                    }
+                    await Delay(100, ct);
                 }
 
                 // 松中键退出元素视野
@@ -243,7 +234,7 @@ public class LiniaMiningTask
         var clusters = ClusterMinerals(oreBoxes);
 
         // 画聚类中心标记框
-        var markerSize = 50 * _widthScale;
+        var markerSize = ArrivalThreshold;
         var clusterDrawList = new List<RectDrawable>();
         foreach (var cluster in clusters)
         {
