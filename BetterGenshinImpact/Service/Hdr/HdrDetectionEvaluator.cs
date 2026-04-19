@@ -22,6 +22,7 @@ public static class HdrDetectionEvaluator
             : AutoHdrState.Unknown;
 
         bool effectiveAutoHdrEnabled = effectiveAutoHdrState == AutoHdrState.Enabled;
+        bool isEffectiveAutoHdrKnown = effectiveAutoHdrState != AutoHdrState.Unknown;
         bool displayHdrEnabled = isDisplayHdrKnown && displayHdrState == DisplayHdrState.Enabled;
         HdrRiskLevel riskLevel;
 
@@ -29,7 +30,7 @@ public static class HdrDetectionEvaluator
         {
             riskLevel = HdrRiskLevel.Risky;
         }
-        else if (!isGameHdrKnown || !isAutoHdrKnown || !isDisplayHdrKnown)
+        else if (!isGameHdrKnown || !isEffectiveAutoHdrKnown || !isDisplayHdrKnown)
         {
             riskLevel = HdrRiskLevel.Unknown;
         }
@@ -46,7 +47,7 @@ public static class HdrDetectionEvaluator
             AppAutoHdrState = isAutoHdrKnown ? appAutoHdrState : AutoHdrState.Unknown,
             GlobalAutoHdrState = isAutoHdrKnown ? globalAutoHdrState : AutoHdrState.Unknown,
             AutoHdrState = effectiveAutoHdrState,
-            IsAutoHdrKnown = isAutoHdrKnown,
+            IsAutoHdrKnown = isEffectiveAutoHdrKnown,
             EffectiveAutoHdrEnabled = effectiveAutoHdrEnabled,
             DisplayHdrState = isDisplayHdrKnown ? displayHdrState : DisplayHdrState.Unknown,
             IsDisplayHdrKnown = isDisplayHdrKnown,
@@ -55,7 +56,7 @@ public static class HdrDetectionEvaluator
                 riskLevel,
                 isGameHdrKnown,
                 gameHdrEnabled,
-                isAutoHdrKnown,
+                isEffectiveAutoHdrKnown,
                 effectiveAutoHdrEnabled,
                 isDisplayHdrKnown,
                 displayHdrEnabled,

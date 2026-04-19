@@ -46,15 +46,6 @@ public partial class OneDragonTaskItem : ObservableObject
 
     public void InitAction(OneDragonFlowConfig config)
     {
-        if (config.TaskEnabledList.TryGetValue(Name, out _))
-        {
-            config.TaskEnabledList[Name] = IsEnabled;
-        }
-        else
-        {
-            config.TaskEnabledList.Add(Name, IsEnabled);
-        }
-
         switch (Name)
         {
             case "领取邮件":

@@ -1,12 +1,9 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using System.Windows;
 using System.Windows.Forms;
-using System.Windows.Interop;
 using Microsoft.Extensions.Logging;
 using FormsScreen = System.Windows.Forms.Screen;
-using WpfApplication = System.Windows.Application;
 
 namespace BetterGenshinImpact.Service.Hdr;
 
@@ -44,9 +41,12 @@ internal static class DisplayHdrStateReader
 
     private static string? ResolveDisplayDeviceName(nint hWnd)
     {
-        IntPtr handle = hWnd != 0
-            ? (IntPtr)hWnd
-            : ResolveMainWindowHandle();
+        if (hWnd == 0)
+        {
+            return null;
+        }
+
+        IntPtr handle = (IntPtr)hWnd;
 
         if (handle != IntPtr.Zero)
         {
@@ -60,17 +60,7 @@ internal static class DisplayHdrStateReader
             }
         }
 
-        return FormsScreen.PrimaryScreen?.DeviceName;
-    }
-
-    private static IntPtr ResolveMainWindowHandle()
-    {
-        if (WpfApplication.Current?.MainWindow == null)
-        {
-            return IntPtr.Zero;
-        }
-
-        return new WindowInteropHelper(WpfApplication.Current.MainWindow).Handle;
+        return null;
     }
 
     private static bool? TryReadAdvancedColorEnabled(string displayDeviceName)

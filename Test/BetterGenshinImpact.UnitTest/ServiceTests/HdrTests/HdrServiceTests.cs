@@ -113,6 +113,25 @@ public class HdrDetectionEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_ShouldReturnUnknown_WhenEffectiveAutoHdrStateIsUnknown()
+    {
+        HdrDetectionResult result = HdrDetectionEvaluator.Evaluate(
+            isGameHdrKnown: true,
+            gameHdrEnabled: false,
+            isAutoHdrKnown: true,
+            appAutoHdrState: AutoHdrState.Unknown,
+            globalAutoHdrState: AutoHdrState.Disabled,
+            isDisplayHdrKnown: true,
+            displayHdrState: DisplayHdrState.Disabled,
+            gameExePath: @"C:\Games\Genshin Impact Game\YuanShen.exe");
+
+        Assert.Equal(HdrRiskLevel.Unknown, result.RiskLevel);
+        Assert.False(result.IsAutoHdrKnown);
+        Assert.Equal(AutoHdrState.Unknown, result.AutoHdrState);
+        Assert.False(result.EffectiveAutoHdrEnabled);
+    }
+
+    [Fact]
     public void Evaluate_ShouldMarkRisky_WhenSystemDisplayHdrEnabled()
     {
         HdrDetectionResult result = HdrDetectionEvaluator.Evaluate(

@@ -64,6 +64,7 @@ public partial class HomePageViewModel : ViewModel
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
+    private readonly IConfigService _configService;
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
@@ -90,6 +91,7 @@ public partial class HomePageViewModel : ViewModel
 
     public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher, HdrDetectionService hdrDetectionService)
     {
+        _configService = configService;
         _taskDispatcher = taskTriggerDispatcher;
         _hdrDetectionService = hdrDetectionService;
         Config = configService.Get();
@@ -430,6 +432,7 @@ public partial class HomePageViewModel : ViewModel
     private void SwitchCaptureModeWithoutPrompt(string captureMode, IntPtr hWnd)
     {
         Config.CaptureMode = captureMode;
+        _configService.Save();
         if (TaskDispatcherEnabled && hWnd != IntPtr.Zero)
         {
             _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
