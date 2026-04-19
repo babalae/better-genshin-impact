@@ -110,7 +110,7 @@ public class LiniaMiningTask
                     if (compensateDx != 0 || compensateDy != 0)
                     {
                         Simulation.SendInput.Mouse.MiddleButtonDown();
-                        await Delay(1200, ct);
+                        await Delay(1500, ct);
                         _lastRefreshTime = Environment.TickCount64;
                         Simulation.SendInput.Mouse.MoveMouseBy(-compensateDx, -compensateDy);
                         await Delay(800, ct);
@@ -168,7 +168,7 @@ public class LiniaMiningTask
                 Simulation.SendInput.Mouse.MiddleButtonUp();
                 await Delay(100, ct);
                 Simulation.SendInput.Mouse.MiddleButtonDown();
-                await Delay(1200, ct);
+                await Delay(1500, ct);
                 _lastRefreshTime = Environment.TickCount64;
             }
 
