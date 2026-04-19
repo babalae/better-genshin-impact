@@ -27,7 +27,7 @@ public class LiniaMiningTask
     // 聚类距离阈值（基于宽度缩放）
     private const double BaseClusterDistance = 250;
     // 对准判定阈值（基于宽度缩放）
-    private const double BaseArrivalThreshold = 30;
+    private const double BaseArrivalThreshold = 40;
     // 屏幕边缘忽略区域宽度（基于宽度缩放）
     private const double BaseEdgeIgnore = 200;
     // 瞄准模式X轴灵敏度补偿系数
@@ -126,7 +126,7 @@ public class LiniaMiningTask
                     var offsetX = cluster.CenterX - centerX + TargetXOffset;
                     var offsetY = cluster.CenterY - centerY;
 
-                    if (Math.Abs(offsetX) <= ArrivalThreshold && Math.Abs(offsetY) <= ArrivalThreshold)
+                    if (Math.Abs(offsetX) <= ArrivalThreshold / 2 && Math.Abs(offsetY) <= ArrivalThreshold / 2)
                     {
                         aligned = true;
                         break;
