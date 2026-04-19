@@ -27,15 +27,15 @@ public class LiniaMiningTask
     // 聚类距离阈值（基于宽度缩放）
     private const double BaseClusterDistance = 250;
     // 对准判定阈值（基于宽度缩放）
-    private const double BaseArrivalThreshold = 40;
+    private const double BaseArrivalThreshold = 50;
     // 屏幕边缘忽略区域宽度（基于宽度缩放）
     private const double BaseEdgeIgnore = 200;
     // 瞄准模式X轴灵敏度补偿系数
     private const double AimSensitivityFactorX = 0.45;
     // 瞄准模式Y轴灵敏度补偿系数
-    private const double AimSensitivityFactorY = 0.78;
+    private const double AimSensitivityFactorY = 0.80;
     // 检测置信度阈值
-    private const float ConfidenceThreshold = 0.8f;
+    private const float ConfidenceThreshold = 0.75f;
     // 聚类面积差异倍率
     private const double AreaRatioThreshold = 4;
     // 目标X偏移
@@ -119,7 +119,6 @@ public class LiniaMiningTask
 
                     if (cluster == null)
                     {
-                        Logger.LogInformation("[{Retry}] 未检测到矿物", retry);
                         continue;
                     }
 
@@ -156,11 +155,10 @@ public class LiniaMiningTask
         }
         catch (OperationCanceledException)
         {
-            Logger.LogInformation("挖矿取消");
+            Logger.LogInformation("取消挖矿");
         }
         catch (Exception e)
         {
-            Logger.LogDebug(e, "挖矿异常");
             Logger.LogError("挖矿异常: {Msg}", e.Message);
         }
         finally
@@ -171,7 +169,6 @@ public class LiniaMiningTask
             }
 
             VisionContext.Instance().DrawContent.ClearAll();
-            Simulation.ReleaseAllKey();
         }
     }
 
@@ -181,7 +178,9 @@ public class LiniaMiningTask
     private static async Task Mine(CancellationToken ct)
     {
         // TODO: 挖矿逻辑
-        // Simulation.SendInput.Mouse.LeftButtonClick();
+        Simulation.SendInput.Mouse.MoveMouseBy(0, -20);
+        await Delay(10, ct);
+        Simulation.SendInput.Mouse.LeftButtonClick();
         await Delay(2000, ct);
     }
 
