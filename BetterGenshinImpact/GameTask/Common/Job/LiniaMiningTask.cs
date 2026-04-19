@@ -70,12 +70,14 @@ public class LiniaMiningTask
 
     public async Task Start(CancellationToken ct)
     {
+        var aimingModeEntered = false;
         try
         {
             Logger.LogInformation("开始寻矿");
 
             // R进入瞄准状态
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
+            aimingModeEntered = true;
             await Delay(400, ct);
 
             var outerRetry = 0;
@@ -130,9 +132,6 @@ public class LiniaMiningTask
                         break;
                     }
 
-                    var dist = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-                    if (dist < 1) dist = 1;
-
                     var mouseDx = (int)(offsetX * _dpi * AimSensitivityFactorX / _widthScale);
                     var mouseDy = (int)(offsetY * _dpi * AimSensitivityFactorY / _heightScale);
                     Simulation.SendInput.Mouse.MoveMouseBy(mouseDx, mouseDy);
@@ -153,6 +152,7 @@ public class LiniaMiningTask
 
             // R退出瞄准状态
             Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
+            aimingModeEntered = false;
         }
         catch (OperationCanceledException)
         {
@@ -165,6 +165,11 @@ public class LiniaMiningTask
         }
         finally
         {
+            if (aimingModeEntered)
+            {
+                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
+            }
+
             VisionContext.Instance().DrawContent.ClearAll();
             Simulation.ReleaseAllKey();
         }
@@ -201,7 +206,7 @@ public class LiniaMiningTask
 
         using var resizedMat = new Mat();
         Cv2.Resize(ra.SrcMat, resizedMat, new OpenCvSharp.Size(newW, newH));
-        using var letterboxMat = new Mat(targetSize, targetSize, ra.SrcMat.Type(), new Scalar(114, 114, 114));
+        using var letterboxMat = new Mat();
         Cv2.CopyMakeBorder(resizedMat, letterboxMat, padY, targetSize - newH - padY, padX, targetSize - newW - padX,
             BorderTypes.Constant, new Scalar(114, 114, 114));
 
@@ -287,14 +292,12 @@ public class LiniaMiningTask
                 }
             }
 
-            if (nearest != null && nearestDist < ClusterDistanceThreshold)
+            if (nearest != null && nearestDist < ClusterDistanceThreshold && nearest.TryAddRect(rect))
             {
-                nearest.TryAddRect(rect);
+                continue;
             }
-            else
-            {
-                clusters.Add(new MineralCluster(rect, AreaRatioThreshold));
-            }
+
+            clusters.Add(new MineralCluster(rect, AreaRatioThreshold));
         }
 
         return clusters;

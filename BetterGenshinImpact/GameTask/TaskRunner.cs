@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Helpers;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -159,7 +160,9 @@ public class TaskRunner
         {
             return;
         }
-        
+
+        Simulation.ReleaseAllKey();
+
         // 还原实时任务触发器
         TaskTriggerDispatcher.Instance().ClearTriggers();
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
