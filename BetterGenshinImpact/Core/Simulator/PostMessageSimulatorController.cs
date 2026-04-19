@@ -51,6 +51,12 @@ public class PostMessageSimulatorController
         return this;
     }
 
+    public PostMessageSimulatorController DisconnectController()
+    {
+        ControllerSimulator.BreakOffGamepad();
+        return this;
+    }
+
     public PostMessageSimulatorController ButtonAPress()
     {
         if (!_config.AutoSkipControllerEnabled)

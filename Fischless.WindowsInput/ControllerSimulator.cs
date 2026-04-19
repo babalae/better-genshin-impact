@@ -62,17 +62,22 @@ namespace GamepadController.Simulator
             BreakOffGamepad();
         }
 
+        public void Deconstruct()
+        {
+            BreakOffGamepad();
+        }
+
         private bool check()
         {
             if (!isConnected)
             {
-                // Console.WriteLine($"controller not connected");
+                Console.WriteLine($"controller not connected");
                 return false;
             }
 
             if (Xbox360Controller == null)
             {
-                // Console.WriteLine($"controller not init");
+                Console.WriteLine($"controller not init");
                 return false;
             }
 
@@ -147,7 +152,6 @@ namespace GamepadController.Simulator
                 Console.WriteLine(e);
                 throw;
             }
-
             Console.WriteLine($"ConnectGamepad disconnect {isConnected}");
         }
     }
