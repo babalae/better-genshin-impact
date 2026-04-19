@@ -78,7 +78,7 @@ public partial class HomePageViewModel : ViewModel
 
     [ObservableProperty] private string _hdrStatusDescription = "正在检测 HDR 是否开启...";
 
-    [ObservableProperty] private string _hdrStatusActionText = "如需手动处理，可打开 Windows 图形设置。";
+    [ObservableProperty] private string _hdrStatusActionText = "可刷新或打开 Windows 图形设置。";
 
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
@@ -322,6 +322,9 @@ public partial class HomePageViewModel : ViewModel
             case HdrWarningDialogResult.SwitchToHdrCapture:
                 SwitchCaptureModeWithoutPrompt(CaptureModes.WindowsGraphicsCaptureHdr.ToString(), hWnd);
                 return true;
+            case HdrWarningDialogResult.SwitchToBitBlt:
+                SwitchCaptureModeWithoutPrompt(CaptureModes.BitBlt.ToString(), hWnd);
+                return true;
             case HdrWarningDialogResult.OpenGraphicsSettings:
                 await OpenDisplayAdvancedGraphicsSettingsAsync();
                 return false;
@@ -467,22 +470,31 @@ public partial class HomePageViewModel : ViewModel
         bool usingHdrCaptureMode = string.Equals(Config.CaptureMode, CaptureModes.WindowsGraphicsCaptureHdr.ToString(), StringComparison.Ordinal);
         if (statusLabel == "关闭")
         {
-            return "当前 HDR 处于关闭状态，保持现有截图模式即可。";
+            return usingHdrCaptureMode
+                ? "当前使用 HDR 截图模式，可改回 BitBlt。"
+                : "保持当前截图模式即可。";
         }
 
         if (statusLabel == "未知")
         {
-            return "当前无法完整判断 HDR 是否开启；如继续执行后出现颜色异常或识别失败，可切到 WindowsGraphicsCapture（HDR）或手动关闭 HDR。";
+            if (SupportsHdrCaptureMode)
+            {
+                return usingHdrCaptureMode
+                    ? "如仍有识别异常，建议手动关闭 HDR。"
+                    : "如出现识别异常，建议切到 WindowsGraphicsCapture（HDR）。";
+            }
+
+            return "如出现识别异常，建议先关闭 HDR。";
         }
 
         if (SupportsHdrCaptureMode)
         {
             return usingHdrCaptureMode
-                ? "当前 HDR 处于开启状态，且已选择 WindowsGraphicsCapture（HDR）。若仍出现识别异常，可手动关闭 HDR。"
-                : "当前 HDR 处于开启状态，建议优先切换到 WindowsGraphicsCapture（HDR）；若继续执行，可能出现颜色异常、识别失败或任务不稳定。";
+                ? "已使用 HDR 截图模式，可直接继续。"
+                : "建议切到 WindowsGraphicsCapture（HDR）。";
         }
 
-        return "当前 HDR 处于开启状态，但系统不支持 WindowsGraphicsCapture（HDR）；建议手动关闭 HDR，否则继续执行时可能出现颜色异常、识别失败或任务不稳定。";
+        return "当前系统不支持 HDR 截图模式，建议先关闭 HDR。";
     }
 
     [RelayCommand]

@@ -93,42 +93,40 @@ public static class HdrDetectionEvaluator
 
             if (displayHdrEnabled)
             {
-                riskSources.Add("Windows 显示 HDR / Advanced Color");
+                riskSources.Add("系统显示 HDR");
             }
 
-            string prefix = riskSources.Count > 0
-                ? $"检测到{string.Join("、", riskSources)}已开启。"
-                : "检测到 HDR 风险状态。";
-
-            return prefix + "当前 HDR 处于开启状态，默认截图模式下颜色识别可能异常，自动战斗、秘境和一条龙等功能更容易失效。";
+            return riskSources.Count > 0
+                ? $"来源：{string.Join("、", riskSources)}。"
+                : "检测到 HDR 风险。";
         }
 
         if (riskLevel == HdrRiskLevel.Safe)
         {
-            return "未检测到游戏内 HDR、Windows Auto HDR 或系统显示 HDR，当前 HDR 处于关闭状态。默认截图模式通常可继续使用。";
+            return "未检测到游戏内 HDR、Windows Auto HDR 或系统显示 HDR。";
         }
 
         List<string> reasons = [];
         if (!isGameHdrKnown)
         {
-            reasons.Add(gameHdrUnknownReason ?? "无法读取游戏内 HDR 配置");
+            reasons.Add(gameHdrUnknownReason ?? "无法读取游戏内 HDR 设置");
         }
 
         if (!isAutoHdrKnown)
         {
-            reasons.Add(autoHdrUnknownReason ?? "无法判断 Windows Auto HDR 状态");
+            reasons.Add(autoHdrUnknownReason ?? "无法判断 Windows Auto HDR");
         }
 
         if (!isDisplayHdrKnown)
         {
-            reasons.Add(displayHdrUnknownReason ?? "无法判断系统显示 HDR 状态");
+            reasons.Add(displayHdrUnknownReason ?? "无法判断系统显示 HDR");
         }
 
         if (reasons.Count == 0)
         {
-            reasons.Add("HDR 状态无法完整判断");
+            reasons.Add("HDR 状态未知");
         }
 
-        return string.Join("；", reasons) + "。当前无法完整判断 HDR 是否开启；如果继续执行后出现颜色异常、识别失败或任务不稳定，建议切换到 WindowsGraphicsCapture（HDR）或手动关闭 HDR。";
+        return string.Join("；", reasons) + "。";
     }
 }

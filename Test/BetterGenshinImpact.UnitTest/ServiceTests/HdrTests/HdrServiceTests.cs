@@ -266,9 +266,10 @@ public class HdrStartPolicyTests
 
         Assert.True(result.ShouldWarn);
         Assert.False(result.CanSwitchToHdrCapture);
+        Assert.True(result.CanSwitchToBitBlt);
         Assert.False(result.CanOpenGraphicsSettings);
-        Assert.True(result.ContinueIsPrimary);
-        Assert.Equal("当前未开启 HDR", result.Title);
+        Assert.False(result.ContinueIsPrimary);
+        Assert.Equal("HDR 未开启", result.Title);
     }
 
     [Fact]

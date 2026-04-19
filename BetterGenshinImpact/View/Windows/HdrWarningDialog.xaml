@@ -5,25 +5,25 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
-                 Width="620"
-                 Height="340"
-                 MinWidth="520"
-                 MinHeight="300"
+                 Width="540"
+                 MinHeight="10"
+                 MinWidth="480"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  behavior:AutoTranslateInterceptor.EnableAutoTranslate="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  ResizeMode="NoResize"
+                 SizeToContent="Height"
                  WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
                  WindowStyle="SingleBorderWindow"
                  mc:Ignorable="d">
 
-    <Grid>
+    <Grid x:Name="LayoutRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -36,7 +36,7 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 
-        <Grid Grid.Row="1" Margin="24,16,24,12">
+        <Grid Grid.Row="1" Margin="24,16,24,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -45,14 +45,16 @@
             <ui:SymbolIcon Grid.Column="0"
                            Margin="0,0,16,0"
                            VerticalAlignment="Top"
-                           FontSize="44"
+                           FontSize="40"
                            Foreground="{DynamicResource SystemFillColorAttentionBrush}"
                            Symbol="Warning24" />
 
             <ScrollViewer Grid.Column="1"
+                          MaxHeight="220"
                           VerticalScrollBarVisibility="Auto">
                 <ui:TextBlock x:Name="MessageTextBlock"
                               FontSize="14"
+                              LineHeight="26"
                               TextAlignment="Left"
                               TextWrapping="Wrap"
                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -60,28 +62,35 @@
         </Grid>
 
         <StackPanel Grid.Row="2"
-                    Margin="24,0,24,24"
+                    Margin="24,8,24,20"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal">
-            <ui:Button x:Name="SwitchButton"
-                       MinWidth="118"
+            <ui:Button x:Name="CancelButton"
+                       MinWidth="84"
                        Margin="0,0,8,0"
-                       Appearance="Primary"
-                       Click="SwitchButton_Click"
-                       Content="切到 HDR 截图"
-                       ToolTip="切换到 WindowsGraphicsCapture（HDR）" />
+                       Appearance="Secondary"
+                       Click="CancelButton_Click"
+                       Content="取消" />
+            <ui:Button x:Name="ContinueButton"
+                       MinWidth="84"
+                       Margin="0,0,8,0"
+                       Appearance="Secondary"
+                       Click="ContinueButton_Click"
+                       Content="继续" />
             <ui:Button x:Name="SettingsButton"
-                       MinWidth="108"
+                       MinWidth="92"
                        Margin="0,0,8,0"
                        Appearance="Secondary"
                        Click="SettingsButton_Click"
                        Content="图形设置"
                        ToolTip="打开 Windows 图形设置" />
-            <ui:Button x:Name="ContinueButton"
-                       MinWidth="92"
-                       Appearance="Secondary"
-                       Click="ContinueButton_Click"
-                       Content="继续执行" />
+            <ui:Button x:Name="SwitchButton"
+                       MinWidth="100"
+                       Margin="0"
+                       Appearance="Primary"
+                       Click="SwitchButton_Click"
+                       Content="切到WGC(HDR)"
+                       ToolTip="切换到 WindowsGraphicsCapture（HDR）" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

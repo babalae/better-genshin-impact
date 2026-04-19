@@ -10,8 +10,10 @@ public enum HdrWarningDialogResult
 {
     None,
     SwitchToHdrCapture,
+    SwitchToBitBlt,
     OpenGraphicsSettings,
     Continue,
+    Cancel,
 }
 
 public partial class HdrWarningDialog : Wpf.Ui.Controls.FluentWindow
@@ -26,12 +28,28 @@ public partial class HdrWarningDialog : Wpf.Ui.Controls.FluentWindow
         Title = decision.Title;
         MessageTextBlock.Text = decision.Message;
         Owner = Application.Current.MainWindow;
-        SwitchButton.Visibility = decision.CanSwitchToHdrCapture ? Visibility.Visible : Visibility.Collapsed;
+        if (decision.CanSwitchToHdrCapture)
+        {
+            SwitchButton.Visibility = Visibility.Visible;
+            SwitchButton.Content = "切到 WGC(HDR)";
+            SwitchButton.ToolTip = "切换到 WindowsGraphicsCapture（HDR）";
+        }
+        else if (decision.CanSwitchToBitBlt)
+        {
+            SwitchButton.Visibility = Visibility.Visible;
+            SwitchButton.Content = "切到 BitBlt";
+            SwitchButton.ToolTip = "切换到 BitBlt";
+        }
+        else
+        {
+            SwitchButton.Visibility = Visibility.Collapsed;
+        }
+
         SettingsButton.Visibility = decision.CanOpenGraphicsSettings ? Visibility.Visible : Visibility.Collapsed;
         ContinueButton.Appearance = decision.ContinueIsPrimary
             ? Wpf.Ui.Controls.ControlAppearance.Primary
             : Wpf.Ui.Controls.ControlAppearance.Secondary;
-        SettingsButton.Appearance = !decision.CanSwitchToHdrCapture && decision.CanOpenGraphicsSettings && !decision.ContinueIsPrimary
+        SettingsButton.Appearance = !decision.CanSwitchToHdrCapture && !decision.CanSwitchToBitBlt && decision.CanOpenGraphicsSettings && !decision.ContinueIsPrimary
             ? Wpf.Ui.Controls.ControlAppearance.Primary
             : Wpf.Ui.Controls.ControlAppearance.Secondary;
 
@@ -58,7 +76,9 @@ public partial class HdrWarningDialog : Wpf.Ui.Controls.FluentWindow
 
     private void SwitchButton_Click(object sender, RoutedEventArgs e)
     {
-        _result = HdrWarningDialogResult.SwitchToHdrCapture;
+        _result = string.Equals(SwitchButton.Content?.ToString(), "切到 BitBlt", StringComparison.Ordinal)
+            ? HdrWarningDialogResult.SwitchToBitBlt
+            : HdrWarningDialogResult.SwitchToHdrCapture;
         Close();
     }
 
@@ -71,6 +91,12 @@ public partial class HdrWarningDialog : Wpf.Ui.Controls.FluentWindow
     private void ContinueButton_Click(object sender, RoutedEventArgs e)
     {
         _result = HdrWarningDialogResult.Continue;
+        Close();
+    }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e)
+    {
+        _result = HdrWarningDialogResult.Cancel;
         Close();
     }
 }

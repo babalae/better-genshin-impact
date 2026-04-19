@@ -63,6 +63,8 @@ public sealed class HdrStartDecision
 
     public bool CanSwitchToHdrCapture { get; init; }
 
+    public bool CanSwitchToBitBlt { get; init; }
+
     public bool CanOpenGraphicsSettings { get; init; } = true;
 
     public bool ContinueIsPrimary { get; init; }
