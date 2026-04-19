@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.Hdr;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Webview;
@@ -63,6 +64,7 @@ public partial class HomePageViewModel : ViewModel
     private MaskWindow? _maskWindow;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
+    private readonly IConfigService _configService;
     private readonly TaskTriggerDispatcher _taskDispatcher;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
@@ -73,12 +75,25 @@ public partial class HomePageViewModel : ViewModel
 
     [ObservableProperty] private ImageSource _bannerImageSource;
 
+    [ObservableProperty] private string _hdrStatusLabel = "未知";
+
+    [ObservableProperty] private string _hdrStatusDescription = "正在检测 HDR 是否开启...";
+
+    [ObservableProperty] private string _hdrStatusActionText = "可刷新或打开 Windows 图形设置。";
+
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
+    private readonly HdrDetectionService _hdrDetectionService;
 
-    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public IntPtr CurrentGameHandle => _hWnd;
+
+    private bool SupportsHdrCaptureMode => OsVersionHelper.IsWindows10_1903_OrGreater;
+
+    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher, HdrDetectionService hdrDetectionService)
     {
+        _configService = configService;
         _taskDispatcher = taskTriggerDispatcher;
+        _hdrDetectionService = hdrDetectionService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
@@ -88,8 +103,17 @@ public partial class HomePageViewModel : ViewModel
         // https://github.com/babalae/better-genshin-impact/issues/394
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
-            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture
-            _modeNames = _modeNames.Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()).ToList();
+            var unsupportedModes = new HashSet<string>
+            {
+                CaptureModes.WindowsGraphicsCapture.ToString(),
+                CaptureModes.WindowsGraphicsCaptureHdr.ToString(),
+            };
+
+            _modeNames = _modeNames.Where(x => !unsupportedModes.Contains(x.EnumName)).ToList();
+            if (unsupportedModes.Contains(Config.CaptureMode))
+            {
+                Config.CaptureMode = CaptureModes.BitBlt.ToString();
+            }
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
@@ -116,6 +140,8 @@ public partial class HomePageViewModel : ViewModel
                 }
             }
         });
+
+        RefreshHdrStatusCore();
     }
 
     private bool _autoRun = true;
@@ -123,6 +149,8 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand]
     private void OnLoaded()
     {
+        RefreshHdrStatusCore();
+
         // OnTest();
 
         // 组件首次加载时运行一次。
@@ -156,8 +184,13 @@ public partial class HomePageViewModel : ViewModel
         {
             _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
             OnStopTrigger();
-            await OnStartTriggerAsync();
+            if (_hWnd != IntPtr.Zero)
+            {
+                await StartWithPurposeAsync(_hWnd, HdrStartPurpose.RealtimeOnly);
+            }
         }
+
+        RefreshHdrStatusCore(_hWnd);
     }
 
     // [RelayCommand]
@@ -186,7 +219,7 @@ public partial class HomePageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private void OnManualPickWindow()
+    private async Task OnManualPickWindow()
     {
         var picker = new PickerWindow();
         if (picker.PickCaptureTarget(new WindowInteropHelper(UIDispatcherHelper.MainWindow).Handle, out var hWnd))
@@ -194,7 +227,7 @@ public partial class HomePageViewModel : ViewModel
             if (hWnd != IntPtr.Zero)
             {
                 _hWnd = hWnd;
-                Start(hWnd);
+                await StartWithPurposeAsync(hWnd, HdrStartPurpose.RealtimeOnly);
             }
             else
             {
@@ -217,6 +250,11 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
+        await TryStartDispatcherAsync(HdrStartPurpose.RealtimeOnly);
+    }
+
+    public async Task<bool> TryStartDispatcherAsync(HdrStartPurpose purpose)
+    {
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
@@ -225,28 +263,78 @@ public partial class HomePageViewModel : ViewModel
                 if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
                 {
                     await ThemedMessageBox.ErrorAsync("没有找到原神的安装路径");
-                    return;
+                    return false;
+                }
+
+                if (!await EnsureHdrReadyForStartAsync(IntPtr.Zero, purpose))
+                {
+                    return false;
                 }
 
                 hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
                 if (hWnd != IntPtr.Zero)
                 {
                     TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
+                    Start(hWnd);
+                    return true;
                 }
-                else
-                {
-                    return;
-                }
+
+                return false;
             }
 
             if (hWnd == IntPtr.Zero)
             {
                 await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
-                return;
+                return false;
             }
         }
 
+        return await StartWithPurposeAsync(hWnd, purpose);
+    }
+
+    public async Task<bool> StartWithPurposeAsync(IntPtr hWnd, HdrStartPurpose purpose)
+    {
+        if (!await EnsureHdrReadyForStartAsync(hWnd, purpose))
+        {
+            return false;
+        }
+
         Start(hWnd);
+        return true;
+    }
+
+    public async Task<bool> EnsureHdrReadyForStartAsync(IntPtr hWnd, HdrStartPurpose purpose)
+    {
+        HdrDetectionResult detectionResult = RefreshHdrStatusCore(hWnd);
+        HdrStartDecision decision = HdrStartPolicy.Evaluate(
+            detectionResult,
+            Config.CaptureMode,
+            purpose,
+            SupportsHdrCaptureMode);
+
+        if (!decision.ShouldWarn)
+        {
+            return true;
+        }
+
+        HdrWarningDialog dialog = new(decision);
+        HdrWarningDialogResult dialogResult = await dialog.ShowDialogAsync();
+        switch (dialogResult)
+        {
+            case HdrWarningDialogResult.SwitchToHdrCapture:
+                SwitchCaptureModeWithoutPrompt(CaptureModes.WindowsGraphicsCaptureHdr.ToString(), hWnd);
+                return true;
+            case HdrWarningDialogResult.SwitchToBitBlt:
+                SwitchCaptureModeWithoutPrompt(CaptureModes.BitBlt.ToString(), hWnd);
+                return true;
+            case HdrWarningDialogResult.OpenGraphicsSettings:
+                await OpenDisplayAdvancedGraphicsSettingsAsync();
+                return false;
+            case HdrWarningDialogResult.Continue:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void Start(IntPtr hWnd)
@@ -275,6 +363,8 @@ public partial class HomePageViewModel : ViewModel
                 TaskDispatcherEnabled = true;
             }
         }
+
+        RefreshHdrStatusCore(hWnd);
     }
 
     private CaptureModes GetCaptureMode()
@@ -283,7 +373,7 @@ public partial class HomePageViewModel : ViewModel
         {
             return Config.CaptureMode.ToCaptureMode();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
             return CaptureModes.BitBlt;
@@ -331,6 +421,83 @@ public partial class HomePageViewModel : ViewModel
     private void OnUiTaskStartTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(() => Start(_hWnd));
+    }
+
+    [RelayCommand]
+    private void OnRefreshHdrStatus()
+    {
+        RefreshHdrStatusCore(_hWnd);
+    }
+
+    private void SwitchCaptureModeWithoutPrompt(string captureMode, IntPtr hWnd)
+    {
+        Config.CaptureMode = captureMode;
+        _configService.Save();
+        if (TaskDispatcherEnabled && hWnd != IntPtr.Zero)
+        {
+            _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
+            OnStopTrigger();
+            Start(hWnd);
+        }
+
+        RefreshHdrStatusCore(hWnd);
+    }
+
+    private HdrDetectionResult RefreshHdrStatusCore(IntPtr hWnd = default)
+    {
+        HdrDetectionResult detectionResult = _hdrDetectionService.Detect(hWnd);
+        HdrStatusLabel = GetHdrStatusLabel(detectionResult);
+        HdrStatusDescription = detectionResult.ReasonText;
+        HdrStatusActionText = BuildHdrStatusActionText(detectionResult);
+        return detectionResult;
+    }
+
+    private static string GetHdrStatusLabel(HdrDetectionResult detectionResult)
+    {
+        if (detectionResult.GameHdrEnabled || detectionResult.EffectiveAutoHdrEnabled || detectionResult.DisplayHdrEnabled)
+        {
+            return "开启";
+        }
+
+        if (detectionResult.RiskLevel == HdrRiskLevel.Safe)
+        {
+            return "关闭";
+        }
+
+        return "未知";
+    }
+
+    private string BuildHdrStatusActionText(HdrDetectionResult detectionResult)
+    {
+        string statusLabel = GetHdrStatusLabel(detectionResult);
+        bool usingHdrCaptureMode = string.Equals(Config.CaptureMode, CaptureModes.WindowsGraphicsCaptureHdr.ToString(), StringComparison.Ordinal);
+        if (statusLabel == "关闭")
+        {
+            return usingHdrCaptureMode
+                ? "当前使用 HDR 截图模式，可改回 BitBlt。"
+                : "保持当前截图模式即可。";
+        }
+
+        if (statusLabel == "未知")
+        {
+            if (SupportsHdrCaptureMode)
+            {
+                return usingHdrCaptureMode
+                    ? "如仍有识别异常，建议手动关闭 HDR。"
+                    : "如出现识别异常，建议切到 WindowsGraphicsCapture（HDR）。";
+            }
+
+            return "如出现识别异常，建议先关闭 HDR。";
+        }
+
+        if (SupportsHdrCaptureMode)
+        {
+            return usingHdrCaptureMode
+                ? "已使用 HDR 截图模式，可直接继续。"
+                : "建议切到 WindowsGraphicsCapture（HDR）。";
+        }
+
+        return "当前系统不支持 HDR 截图模式，建议先关闭 HDR。";
     }
 
     [RelayCommand]
@@ -395,6 +562,7 @@ public partial class HomePageViewModel : ViewModel
                 }
 
                 Config.GenshinStartConfig.InstallPath = path;
+                UIDispatcherHelper.Invoke(() => RefreshHdrStatusCore());
             }
         });
     }
@@ -409,17 +577,29 @@ public partial class HomePageViewModel : ViewModel
                 var p1 = RegistryGameLocator.GetDefaultGameInstallPath();
                 if (!string.IsNullOrEmpty(p1))
                 {
-                    Config.GenshinStartConfig.InstallPath = p1;
+                    UIDispatcherHelper.Invoke(() =>
+                    {
+                        Config.GenshinStartConfig.InstallPath = p1;
+                        RefreshHdrStatusCore();
+                    });
                 }
                 else
                 {
                     var p2 = await UnityLogGameLocator.LocateSingleGamePathAsync();
                     if (!string.IsNullOrEmpty(p2))
                     {
-                        Config.GenshinStartConfig.InstallPath = p2;
+                        UIDispatcherHelper.Invoke(() =>
+                        {
+                            Config.GenshinStartConfig.InstallPath = p2;
+                            RefreshHdrStatusCore();
+                        });
                     }
                 }
             });
+        }
+        else
+        {
+            RefreshHdrStatusCore();
         }
     }
 

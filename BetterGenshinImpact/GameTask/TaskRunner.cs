@@ -8,6 +8,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service.Hdr;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
@@ -119,7 +120,12 @@ public class TaskRunner
     {
         // 没启动的时候先启动
         bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") && !soloTask.Name.Contains("幽境危战");
-        await ScriptService.StartGameTask(waitForMainUi);
+        bool started = await ScriptService.StartGameTask(waitForMainUi, HdrStartPurpose.StandaloneOrAutomation);
+        if (!started)
+        {
+            return;
+        }
+
         await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
     }
 

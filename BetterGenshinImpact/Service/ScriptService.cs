@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.TaskProgress;
+using BetterGenshinImpact.Service.Hdr;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
@@ -139,7 +140,11 @@ public partial class ScriptService : IScriptService
         // }
 
         // 没启动时候，启动截图器
-        await StartGameTask();
+        bool started = await StartGameTask(true, HdrStartPurpose.StandaloneOrAutomation);
+        if (!started)
+        {
+            return;
+        }
         
         
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
@@ -559,67 +564,81 @@ public partial class ScriptService : IScriptService
     private static partial Regex DispatcherAddTimerRegex();
 
 
-    public static async Task StartGameTask(bool waitForMainUi = true)
+    public static async Task<bool> StartGameTask(bool waitForMainUi = true, HdrStartPurpose purpose = HdrStartPurpose.StandaloneOrAutomation)
     {
         // 没启动时候，启动截图器
         var homePageViewModel = App.GetService<HomePageViewModel>();
         if (!homePageViewModel!.TaskDispatcherEnabled)
         {
-            await homePageViewModel.OnStartTriggerAsync();
-
-            if (waitForMainUi)
+            bool started = await homePageViewModel.TryStartDispatcherAsync(purpose);
+            if (!started)
             {
-                await Task.Run(async () =>
+                return false;
+            }
+        }
+        else
+        {
+            nint hWnd = homePageViewModel.CurrentGameHandle != IntPtr.Zero
+                ? homePageViewModel.CurrentGameHandle
+                : TaskContext.Instance().GameHandle;
+            bool allowed = await homePageViewModel.EnsureHdrReadyForStartAsync(hWnd, purpose);
+            if (!allowed)
+            {
+                return false;
+            }
+        }
+
+        if (waitForMainUi)
+        {
+            await Task.Run(async () =>
+            {
+                await Task.Delay(200);
+                var first = true;
+                var sw = Stopwatch.StartNew();
+                var loseFocusCount = 0;
+                while (true)
                 {
-                    await Task.Delay(200);
-                    var first = true;
-                    var sw = Stopwatch.StartNew();
-                    var loseFocusCount = 0;
-                    while (true)
+                    if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
                     {
-                        if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
-                        {
-                            await Task.Delay(500);
-                            continue;
-                        }
-
-                        using var content = TaskControl.CaptureToRectArea();
-                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
-                        {
-                            return;
-                        }
-
-                        if (first)
-                        {
-                            first = false;
-                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
-                        }
-
                         await Task.Delay(500);
-                        if (sw.Elapsed.TotalSeconds >= 30)
+                        continue;
+                    }
+
+                    using var content = TaskControl.CaptureToRectArea();
+                    if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
+                    {
+                        return;
+                    }
+
+                    if (first)
+                    {
+                        first = false;
+                        TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
+                        TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
+                    }
+
+                    await Task.Delay(500);
+                    if (sw.Elapsed.TotalSeconds >= 30)
+                    {
+                        //防止自启动游戏后因为一些原因失焦，导致一直卡住
+                        if (!SystemControl.IsGenshinImpactActiveByProcess())
                         {
-                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
-                            if (!SystemControl.IsGenshinImpactActiveByProcess())
+                            loseFocusCount++;
+                            if (loseFocusCount>50 && loseFocusCount<100)
                             {
-                                loseFocusCount++;
-                                if (loseFocusCount>50 && loseFocusCount<100)
-                                {
-                                    SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
-                                }
-                                SystemControl.ActivateWindow();
+                                SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
                             }
+                            SystemControl.ActivateWindow();
+                        }
 
-                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
-                            if (sw.Elapsed.TotalSeconds < 200)
-                            {
-                                GlobalMethod.MoveMouseTo(300, 300);
-                            }
-
+                        //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
+                        if (sw.Elapsed.TotalSeconds < 200)
+                        {
+                            GlobalMethod.MoveMouseTo(300, 300);
                         }
                     }
-                });
-            }
+                }
+            });
         }
 
         // 等待命令行启动时并行执行的自动更新完成（如果有）
@@ -629,5 +648,7 @@ public partial class ScriptService : IScriptService
             await pendingUpdate;
             ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask = null;
         }
+
+        return true;
     }
 }
