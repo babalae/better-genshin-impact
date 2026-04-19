@@ -53,19 +53,26 @@ namespace GamepadController.Simulator
             InitButtons();
             var viGEmClient = new ViGEmClient();
             Xbox360Controller = viGEmClient.CreateXbox360Controller();
+            ConnectGamepad();
+        }
+
+        // 析构函数，断连虚拟手柄
+        ~ControllerSimulator()
+        {
+            BreakOffGamepad();
         }
 
         private bool check()
         {
             if (!isConnected)
             {
-                Console.WriteLine($"controller not connected");
+                // Console.WriteLine($"controller not connected");
                 return false;
             }
 
             if (Xbox360Controller == null)
             {
-                Console.WriteLine($"controller not init");
+                // Console.WriteLine($"controller not init");
                 return false;
             }
 
@@ -86,7 +93,7 @@ namespace GamepadController.Simulator
 
             Xbox360Button button = (Xbox360Button)ButtonMap[buttonId];
             Xbox360Controller.SetButtonState(button, true);
-            System.Threading.Thread.Sleep(millisecondsPressDelay);
+            Thread.Sleep(millisecondsPressDelay);
             Xbox360Controller.SetButtonState(button, false);
 
             return true;

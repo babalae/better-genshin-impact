@@ -227,7 +227,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
                 else
                 {
-                    _postMessageSimulatorController?.ButtonBPress();
                     if (IsControllerMode)
                     {
                         _postMessageSimulatorController?.ButtonBPress();
