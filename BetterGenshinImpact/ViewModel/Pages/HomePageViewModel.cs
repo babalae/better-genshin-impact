@@ -318,6 +318,8 @@ public partial class HomePageViewModel : ViewModel
 
                 TaskDispatcherEnabled = false;
                 _mouseKeyMonitor.Unsubscribe();
+                // 断开虚拟手柄
+                TaskContext.Instance().PostMessageSimulatorController.DisconnectController();
                 TaskContext.Instance().IsInitialized = false;
             }
         }

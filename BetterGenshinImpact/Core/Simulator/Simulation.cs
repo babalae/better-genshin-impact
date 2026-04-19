@@ -1,5 +1,6 @@
 ﻿using Fischless.WindowsInput;
 using System;
+using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
@@ -17,6 +18,11 @@ public class Simulation
         return new PostMessageSimulator(hWnd);
     }
 
+    public static PostMessageSimulatorController PostMessageController(IntPtr hWnd, AutoSkipConfig config)
+    {
+        return new PostMessageSimulatorController(hWnd, config);
+    }
+    
     public static void ReleaseAllKey()
     {
         foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))

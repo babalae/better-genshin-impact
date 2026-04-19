@@ -13,6 +13,8 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoSkip;
+using Microsoft.Extensions.Logging;
 
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -32,6 +34,7 @@ public static partial class Bv
         using var region = TaskControl.CaptureToRectArea();
         return WhichGameUi(region);
     }
+    private static readonly ILogger Logger = App.GetLogger<AutoSkipConfig>();
 
     public static GameUiCategory WhichGameUi(ImageRegion region)
     {
@@ -331,6 +334,13 @@ public static partial class Bv
     public static bool IsInTalkUi(ImageRegion captureRa)
     {
         using var ra = captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
+        using var raController = captureRa.Find(AutoSkipAssets.Instance.ControllerDisabledUiButtonRo);
+        // Logger.LogWarning($"IsInTalkUi check result: {ra.IsExist()} {raController.IsExist()} size:{captureRa.Width}x{captureRa.Height}");
+        bool isControllerMode = TaskContext.Instance().Config.AutoSkipConfig.AutoSkipControllerEnabled;
+        if (isControllerMode)
+        {
+            return raController.IsExist();
+        }
         return ra.IsExist();
     }
 

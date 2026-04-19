@@ -38,6 +38,7 @@ using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service.Tavern;
 
+
 namespace BetterGenshinImpact;
 
 public partial class App : Application
