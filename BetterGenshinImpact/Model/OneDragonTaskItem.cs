@@ -131,7 +131,8 @@ public partial class OneDragonTaskItem : ObservableObject
                         }
                         catch (Exception e)
                         {
-                            TaskControl.Logger.LogError("自定义配置组 {Name} 执行异常：{Msg}", domainName, e.Message);
+                            var filePath = Global.Absolute($@"User\ScriptGroup\{domainName}.json");
+                            TaskControl.Logger.LogError(e, "自定义配置组 {Name} 执行异常，配置文件：{Path}", domainName, filePath);
                         }
                     }
                     else
