@@ -1,7 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using System;
@@ -9,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.GameTask.AutoSkip;
 
 namespace BetterGenshinImpact.GameTask
 {
@@ -39,7 +37,7 @@ namespace BetterGenshinImpact.GameTask
         {
             GameHandle = hWnd;
             PostMessageSimulator = Simulation.PostMessage(GameHandle);
-            PostMessageSimulatorController = Simulation.PostMessageController(GameHandle, Config.AutoSkipConfig);
+            PostMessageSimulatorController = Simulation.PostMessageController(GameHandle, Config);
             SystemInfo = new SystemInfo(hWnd);
             DpiScale = DpiHelper.ScaleY;
             //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;

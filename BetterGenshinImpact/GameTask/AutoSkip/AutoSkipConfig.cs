@@ -53,12 +53,6 @@ public partial class AutoSkipConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _autoReExploreEnabled = true;
-    
-    /// <summary>
-    /// 手柄模式自动跳过
-    /// </summary>
-    [ObservableProperty]
-    private bool _autoSkipControllerEnabled = false;
 
     /// <summary>
     /// 自动重新派遣使用角色配置，逗号分割

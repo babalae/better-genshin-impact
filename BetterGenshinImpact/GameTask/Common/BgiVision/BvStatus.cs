@@ -336,7 +336,7 @@ public static partial class Bv
         using var ra = captureRa.Find(AutoSkipAssets.Instance.DisabledUiButtonRo);
         using var raController = captureRa.Find(AutoSkipAssets.Instance.ControllerDisabledUiButtonRo);
         // Logger.LogWarning($"IsInTalkUi check result: {ra.IsExist()} {raController.IsExist()} size:{captureRa.Width}x{captureRa.Height}");
-        bool isControllerMode = TaskContext.Instance().Config.AutoSkipConfig.AutoSkipControllerEnabled;
+        bool isControllerMode = TaskContext.Instance().Config.AutoSkipControllerEnabled;
         if (isControllerMode)
         {
             return raController.IsExist();

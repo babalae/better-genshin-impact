@@ -1,5 +1,6 @@
 ﻿using Fischless.WindowsInput;
 using System;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,7 @@ public class Simulation
         return new PostMessageSimulator(hWnd);
     }
 
-    public static PostMessageSimulatorController PostMessageController(IntPtr hWnd, AutoSkipConfig config)
+    public static PostMessageSimulatorController PostMessageController(IntPtr hWnd, AllConfig config)
     {
         return new PostMessageSimulatorController(hWnd, config);
     }

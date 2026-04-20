@@ -103,7 +103,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         _postMessageSimulatorController = TaskContext.Instance().PostMessageSimulatorController;
 
         // 手柄模式是否启用
-        IsControllerMode = _config.AutoSkipControllerEnabled;
+        IsControllerMode = TaskContext.Instance().Config.AutoSkipControllerEnabled;
 
         if (!_isCustomConfiguration)
         {
@@ -239,6 +239,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
 
             // 对话选项选择
+            // TODO 手柄模式非快速跳过对话适配
             bool hasOption;
             if (UseBackgroundOperation || IsUseInteractionKey)
             {

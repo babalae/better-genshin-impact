@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using GamepadController.Simulator;
 using Microsoft.Extensions.Logging;
@@ -16,16 +17,17 @@ namespace BetterGenshinImpact.Core.Simulator;
 public class PostMessageSimulatorController
 {
     private readonly IntPtr _hWnd;
-    private readonly AutoSkipConfig _config;
-    private ControllerSimulator ControllerSimulator;
+    private readonly AllConfig _config;
+    private ControllerSimulator? _controllerSimulator;
     private static readonly ILogger Logger = App.GetLogger<AutoSkipConfig>();
-    public PostMessageSimulatorController(IntPtr hWnd, AutoSkipConfig config)
+
+    public PostMessageSimulatorController(IntPtr hWnd, AllConfig config)
     {
         _hWnd = hWnd;
         _config = config;
         if (_config.AutoSkipControllerEnabled)
         {
-            ControllerSimulator = new ControllerSimulator();
+            _controllerSimulator = new ControllerSimulator();
         }
     }
 
@@ -36,7 +38,7 @@ public class PostMessageSimulatorController
             return this;
         }
 
-        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonX, 100);
+        _controllerSimulator?.OnButtonPressed(ControllerSimulator.ButtonX, 100);
         return this;
     }
 
@@ -47,13 +49,13 @@ public class PostMessageSimulatorController
             return this;
         }
 
-        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonY, 100);
+        _controllerSimulator?.OnButtonPressed(ControllerSimulator.ButtonY, 100);
         return this;
     }
 
     public PostMessageSimulatorController DisconnectController()
     {
-        ControllerSimulator.BreakOffGamepad();
+        _controllerSimulator?.BreakOffGamepad();
         return this;
     }
 
@@ -64,7 +66,7 @@ public class PostMessageSimulatorController
             return this;
         }
 
-        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonA, 100);
+        _controllerSimulator?.OnButtonPressed(ControllerSimulator.ButtonA, 100);
         return this;
     }
 
@@ -74,7 +76,8 @@ public class PostMessageSimulatorController
         {
             return this;
         }
-        ControllerSimulator.OnButtonPressed(ControllerSimulator.ButtonB, 100);
+
+        _controllerSimulator?.OnButtonPressed(ControllerSimulator.ButtonB, 100);
         return this;
     }
 }

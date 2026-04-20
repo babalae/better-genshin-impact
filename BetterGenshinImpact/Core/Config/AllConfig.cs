@@ -72,6 +72,12 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _autoFixWin11BitBlt = true;
+    
+    /// <summary>
+    /// 手柄模式-基于手柄操作进行自动跳过
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoSkipControllerEnabled = true;
 
     // /// <summary>
     // /// 推理使用的设备

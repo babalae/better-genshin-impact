@@ -50,6 +50,10 @@ public partial class AutoPickTrigger : ITaskTrigger
     private HashSet<string> _whiteList = [];
 
     private RecognitionObject _pickRo;
+    private RecognitionObject _controllerPickRo;
+    private PostMessageSimulatorController _postMessageSimulatorController;
+    private bool _controllerMode = false;
+    
 
     // 外部配置
     private AutoPickExternalConfig? _externalConfig;
@@ -58,6 +62,9 @@ public partial class AutoPickTrigger : ITaskTrigger
     {
         _autoPickAssets = AutoPickAssets.Instance;
         _pickRo = _autoPickAssets.PickRo;
+        _controllerPickRo = _autoPickAssets.ControllerPickRo;
+        _postMessageSimulatorController = TaskContext.Instance().PostMessageSimulatorController;
+        _controllerMode = TaskContext.Instance().Config.AutoSkipControllerEnabled;
     }
 
     public AutoPickTrigger(AutoPickExternalConfig? config) : this()
@@ -169,8 +176,21 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         var speedTimer = new SpeedTimer();
 
-        using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
+        var foundRectArea = new Region();
+        // using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
+        // using var foundRectAreaController = content.CaptureRectArea.Find(_controllerPickRo);
+        // _logger.LogWarning($"AutoPick found rect: {foundRectArea.IsExist()} {foundRectAreaController.IsExist()}");
+        // _logger.LogWarning($"AutoPick found foundRectAreaController: {foundRectAreaController}");
 
+        if (_controllerMode)
+        {
+            // 手柄模式foundRectArea后面需要使用
+            foundRectArea = content.CaptureRectArea.Find(_controllerPickRo);
+        }
+        else
+        {
+            foundRectArea = content.CaptureRectArea.Find(_pickRo);
+        }
         if (foundRectArea.IsEmpty())
         {
             // 没有识别到F键，先判断是否有滚轮图标信息
@@ -180,7 +200,6 @@ public partial class AutoPickTrigger : ITaskTrigger
                 Simulation.SendInput.Mouse.VerticalScroll(2);
                 Thread.Sleep(50);
             }
-
             return;
         }
 
@@ -189,7 +208,16 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (_externalConfig is { ForceInteraction: true })
         {
             LogPick(content, "直接拾取");
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            // _logger.LogWarning($"AutoPick 直接拾取");
+            if (_controllerMode)
+            {
+                // 手柄模式使用X键
+                _postMessageSimulatorController.ButtonXPress();
+            }
+            else
+            {
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            }
             return;
         }
 
@@ -202,13 +230,50 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             return;
         }
-
         // 识别到拾取键，开始识别物品图标
+        // 物品图片区域，使用，拾取键中心坐标进行计算
+        // 因为手柄拾取图标较小，找到拾取按键之后，将找到的区域高度扩充
+        var newX = (int)(foundRectArea.X + foundRectArea.Width / 2d - 20 * scale);
+        var newY = (int)(foundRectArea.Y + foundRectArea.Height / 2d - 20 * scale);
+        var newWidth = foundRectArea.Width;
+        var newHeight = (int)(40 * scale);
+        var newFoundArea =  new Region(newX, newY, newWidth, newHeight);
+        if (_controllerMode)
+        {
+            _autoPickAssets.ControllerChatIconRo.RegionOfInterest = new Rect(
+                newFoundArea.X + (int)(config.ItemIconLeftOffset * scale), newFoundArea.Y,
+                (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), newFoundArea.Height);
+        }
+        else
+        {
+            _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
+                foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
+                (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
+        }
+        
         var isExcludeIcon = false;
-        _autoPickAssets.ChatIconRo.RegionOfInterest = new Rect(
-            foundRectArea.X + (int)(config.ItemIconLeftOffset * scale), foundRectArea.Y,
-            (int)((config.ItemTextLeftOffset - config.ItemIconLeftOffset) * scale), foundRectArea.Height);
-        using var chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+
+        // _logger.LogWarning($"CaptureRectArea,X:{content.CaptureRectArea.X} " +
+        //                    $"Y:{content.CaptureRectArea.Y} " +
+        //                    $"width:{content.CaptureRectArea.Width} " +
+        //                    $"height:{content.CaptureRectArea.Height}");
+        // _logger.LogWarning($"RegionOfInterest,X:{_autoPickAssets.ChatIconRo.RegionOfInterest.X} " +
+        //                    $"Y:{_autoPickAssets.ChatIconRo.RegionOfInterest.Y} " +
+        //                    $"width:{_autoPickAssets.ChatIconRo.RegionOfInterest.Width} " +
+        //                    $"height:{_autoPickAssets.ChatIconRo.RegionOfInterest.Height}");
+        // _logger.LogWarning($"foundRectArea,X:{foundRectArea.X} " +
+        //                    $"Y:{foundRectArea.Y} " +
+        //                    $"width:{foundRectArea.Width} " +
+        //                    $"height:{foundRectArea.Height}");
+        var chatIconRa = new Region();
+        if (_controllerMode)
+        {
+            chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ControllerChatIconRo);
+        }
+        else
+        {
+            chatIconRa = content.CaptureRectArea.Find(_autoPickAssets.ChatIconRo);
+        }
         speedTimer.Record("识别聊天图标");
         if (!chatIconRa.IsEmpty())
         {
@@ -226,7 +291,6 @@ public partial class AutoPickTrigger : ITaskTrigger
                 isExcludeIcon = true;
             }
         }
-
         if (!config.WhiteListEnabled && isExcludeIcon)
         {
             // 默认不拾取且没有白名单直接放弃OCR
@@ -236,7 +300,15 @@ public partial class AutoPickTrigger : ITaskTrigger
         if (!config.WhiteListEnabled && !config.BlackListEnabled && !isExcludeIcon)
         {
             // 没有黑白名单直接拾取
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            if (_controllerMode)
+            {
+                // 手柄模式使用X键
+                _postMessageSimulatorController.ButtonXPress();
+            }
+            else
+            {
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            }
             LogPick(content, "黑名单未启用，直接拾取");
         }
 
@@ -254,8 +326,17 @@ public partial class AutoPickTrigger : ITaskTrigger
 
         // 这类文字识别比较特殊，都是针对某个场景的文字识别，所以暂时未抽象到识别对象中
         // 计算出文字区域
-        var textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
-            (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
+        var textRect = new Rect();
+        if (_controllerMode)
+        {
+            textRect = new Rect(newFoundArea.X + (int)(config.ItemTextLeftOffset * scale), newFoundArea.Y,
+                (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), newFoundArea.Height);
+        }
+        else
+        {
+            textRect = new Rect(foundRectArea.X + (int)(config.ItemTextLeftOffset * scale), foundRectArea.Y,
+                (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), foundRectArea.Height);
+        }
         if (textRect.X + textRect.Width > content.CaptureRectArea.CacheGreyMat.Width
             || textRect.Y + textRect.Height > content.CaptureRectArea.CacheGreyMat.Height)
         {
@@ -271,7 +352,6 @@ public partial class AutoPickTrigger : ITaskTrigger
             Debug.WriteLine($"AutoPickTrigger: 已在拾取中，跳过本次拾取 {avgGrad}");
             return;
         }
-
         string text;
         if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
         {
@@ -334,7 +414,15 @@ public partial class AutoPickTrigger : ITaskTrigger
             if (config.WhiteListEnabled && _whiteList.Contains(text))
             {
                 LogPick(content, text);
-                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                if (_controllerMode)
+                {
+                    // 手柄模式使用X键
+                    _postMessageSimulatorController.ButtonXPress();
+                }
+                else
+                {
+                    Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+                }
                 return;
             }
 
@@ -365,7 +453,15 @@ public partial class AutoPickTrigger : ITaskTrigger
             speedTimer.Record("黑名单判断");
 
             LogPick(content, text);
-            Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            if (_controllerMode)
+            {
+                // 手柄模式使用X键
+                _postMessageSimulatorController.ButtonXPress();
+            }
+            else
+            {
+                Simulation.SendInput.Keyboard.KeyPress(AutoPickAssets.Instance.PickVk);
+            }
         }
 
         speedTimer.DebugPrint();
