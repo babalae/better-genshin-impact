@@ -505,15 +505,86 @@ public partial class ScriptService : IScriptService
     // }
 
     /// <summary>
-    /// 公开的项目执行入口，供一条龙自定义配置组内联调用（不创建新的 TaskRunner）
+    /// 内联执行配置组项目列表，复用 RunMulti 的全部语义（跳过规则、月卡检测、触发器清理、通知等），
+    /// 但不创建新的 TaskRunner，供一条龙等已在 TaskRunner 内的场景调用。
     /// </summary>
-    public async Task ExecuteProjectPublic(ScriptGroupProject project)
+    public async Task RunMultiInline(IEnumerable<ScriptGroupProject> projectList, string? groupName = null)
     {
-        // 重新加载项目以确保脚本引用正确
-        var reloaded = ReloadScriptProjects(new[] { project });
-        if (reloaded.Count > 0)
+        groupName ??= "默认";
+        var list = ReloadScriptProjects(projectList);
+        foreach (var p in projectList) p.SkipFlag = false;
+
+        _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始内联执行", groupName, list.Count);
+
+        bool first = true;
+        _projectExecutionCount.Clear();
+        var stopwatch = new Stopwatch();
+
+        for (int x = 0; x < list.Count; x++)
         {
-            await ExecuteProject(reloaded[0]);
+            var project = list[x];
+
+            if (project is { SkipFlag: true }) continue;
+            if (ShouldSkipTask(project)) continue;
+
+            // 月卡检测
+            await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
+
+            if (project.Status != "Enabled")
+            {
+                _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
+                continue;
+            }
+
+            if (CancellationContext.Instance.Cts.IsCancellationRequested) break;
+
+            if (first)
+            {
+                first = false;
+                Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+            }
+
+            for (var i = 0; i < project.RunNum; i++)
+            {
+                try
+                {
+                    TaskTriggerDispatcher.Instance().ClearTriggers();
+                    _logger.LogInformation("------------------------------");
+                    stopwatch.Reset();
+                    stopwatch.Start();
+
+                    await ExecuteProject(project);
+
+                    if (project.RunNum > 1 && ShouldSkipTask(project)) continue;
+                }
+                catch (NormalEndException) { throw; }
+                catch (TaskCanceledException e)
+                {
+                    _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug(e, "执行脚本时发生异常");
+                    _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                }
+                finally
+                {
+                    stopwatch.Stop();
+                    var elapsed = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
+                    _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒",
+                        project.Name, elapsed.Hours * 60 + elapsed.Minutes, elapsed.TotalSeconds % 60);
+                    _logger.LogInformation("------------------------------");
+                }
+
+                await Task.Delay(1000);
+            }
+        }
+
+        _logger.LogInformation("配置组 {Name} 内联执行结束", groupName);
+        if (!first && CancellationContext.Instance.IsManualStop is false)
+        {
+            Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
         }
     }
 

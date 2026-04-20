@@ -464,7 +464,7 @@
                                 </ToggleButton>
                                 <!-- 添加自定义配置组弹窗 -->
                                 <Popup Grid.Row="0" Grid.Column="1"
-                                       IsOpen="{Binding IsChecked, ElementName=AddDomainToggle}"
+                                       IsOpen="{Binding IsChecked, ElementName=AddDomainToggle, Mode=TwoWay}"
                                        PlacementTarget="{Binding ElementName=AddDomainToggle}"
                                        Placement="Bottom"
                                        StaysOpen="False"
@@ -504,7 +504,7 @@
                                 </ToggleButton>
                                 <!-- 删除自定义配置组弹窗 -->
                                 <Popup Grid.Row="1" Grid.Column="1"
-                                       IsOpen="{Binding IsChecked, ElementName=RemoveDomainToggle}"
+                                       IsOpen="{Binding IsChecked, ElementName=RemoveDomainToggle, Mode=TwoWay}"
                                        PlacementTarget="{Binding ElementName=RemoveDomainToggle}"
                                        Placement="Bottom"
                                        StaysOpen="False"
@@ -641,7 +641,7 @@
                                         <Viewbox><TextBlock Text="+" /></Viewbox>
                                     </ToggleButton>
                                     <Popup Grid.Column="1"
-                                           IsOpen="{Binding IsChecked, ElementName=AddDomainToggle2}"
+                                           IsOpen="{Binding IsChecked, ElementName=AddDomainToggle2, Mode=TwoWay}"
                                            PlacementTarget="{Binding ElementName=AddDomainToggle2}"
                                            Placement="Bottom" StaysOpen="False"
                                            AllowsTransparency="True" PopupAnimation="Fade"
@@ -676,7 +676,7 @@
                                         <Viewbox><TextBlock Text="-" /></Viewbox>
                                     </ToggleButton>
                                     <Popup Grid.Column="2"
-                                           IsOpen="{Binding IsChecked, ElementName=RemoveDomainToggle2}"
+                                           IsOpen="{Binding IsChecked, ElementName=RemoveDomainToggle2, Mode=TwoWay}"
                                            PlacementTarget="{Binding ElementName=RemoveDomainToggle2}"
                                            Placement="Bottom" StaysOpen="False"
                                            AllowsTransparency="True" PopupAnimation="Fade">

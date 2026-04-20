@@ -119,7 +119,7 @@ public partial class OneDragonTaskItem : ObservableObject
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
                             var projects = ScriptControlViewModel.GetNextProjects(group);
 
-                            // 直接内联执行脚本项目，避免 RunMulti 创建新的 TaskRunner 导致冲突
+                            // 使用 RunMultiInline 内联执行，复用完整的跳过规则、月卡检测、触发器清理等语义
                             var scriptService = App.GetService<IScriptService>() as ScriptService;
                             if (scriptService == null)
                             {
@@ -127,17 +127,7 @@ public partial class OneDragonTaskItem : ObservableObject
                                 return;
                             }
 
-                            foreach (var project in projects)
-                            {
-                                if (CancellationContext.Instance.Cts.IsCancellationRequested)
-                                    break;
-
-                                if (project.Status != "Enabled")
-                                    continue;
-
-                                await scriptService.ExecuteProjectPublic(project);
-                                await Task.Delay(1000);
-                            }
+                            await scriptService.RunMultiInline(projects, domainName);
                         }
                         catch (Exception e)
                         {

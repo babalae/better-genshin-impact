@@ -81,19 +81,24 @@ public partial class OneDragonFlowPage
     }
 
     /// <summary>
-    /// 关闭弹窗（确定按钮点击后）
+    /// 关闭弹窗并复位 ToggleButton（确定按钮点击后）
     /// </summary>
     private void ClosePopup_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe)
         {
-            // 向上查找 Popup 并关闭
+            // 向上查找 Popup 并关闭，同时复位宿主 ToggleButton
             var parent = fe.Parent;
             while (parent != null)
             {
                 if (parent is System.Windows.Controls.Primitives.Popup popup)
                 {
                     popup.IsOpen = false;
+                    // 复位绑定的 ToggleButton，防止下次需要点两下才能打开
+                    if (popup.PlacementTarget is System.Windows.Controls.Primitives.ToggleButton toggle)
+                    {
+                        toggle.IsChecked = false;
+                    }
                     return;
                 }
                 parent = (parent as FrameworkElement)?.Parent;
