@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 莉奈娅挖矿
 /// </summary>
-public class LiniaMiningTask
+public class LinneaMiningTask
 {
     #region 配置参数
 
@@ -62,7 +62,7 @@ public class LiniaMiningTask
     private readonly int _scanRounds;
     private readonly int _mineCount;
 
-    public LiniaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = 1)
+    public LinneaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = 1)
     {
         _scanRounds = scanRounds;
         _mineCount = mineCount;

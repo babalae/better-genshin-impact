@@ -431,6 +431,6 @@ public class Genshin
     /// <param name="scanRounds">大循环寻矿次数，默认5</param>
     public async Task StartMining(int mineCount = 1, int scanRounds = 5)
     {
-        await new LiniaMiningTask(scanRounds, mineCount).Start(CancellationContext.Instance.Cts.Token);
+        await new LinneaMiningTask(scanRounds, mineCount).Start(CancellationContext.Instance.Cts.Token);
     }
 }

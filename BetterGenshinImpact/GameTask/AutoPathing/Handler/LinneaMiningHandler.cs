@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.AutoFight.Model;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
@@ -11,12 +13,33 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// 格式: "射箭次数,大循环次数" 或 "射箭次数"
 /// 例: "3" 或 "3,10" 或 "mines=3,rounds=10"
 /// </summary>
-public class LiniaMiningHandler : IActionHandler
+public class LinneaMiningHandler : IActionHandler
 {
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         var (mineCount, scanRounds) = ParseParams(waypointForTrack?.ActionParams);
-        await new LiniaMiningTask(scanRounds, mineCount).Start(ct);
+
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        if (combatScenes == null)
+        {
+            Logger.LogError("队伍识别未初始化成功！");
+            return;
+        }
+
+        // 切人
+        var linia = combatScenes.SelectAvatar("莉奈娅");
+        if (linia is not null)
+        {
+            linia.TrySwitch();
+            await Delay(500, ct);
+        }
+        else
+        {
+            Logger.LogError("队伍中未找到莉奈娅！");
+            return;
+        }
+
+        await new LinneaMiningTask(scanRounds, mineCount).Start(ct);
     }
 
     private static (int mineCount, int scanRounds) ParseParams(string? actionParams)
