@@ -44,9 +44,10 @@
                PlacementTarget="{Binding ElementName=MainToggle}"
                StaysOpen="False"
                AllowsTransparency="True"
-               PopupAnimation="Slide"
+               PopupAnimation="None"
                Opened="MainPopup_Opened"
                Closed="MainPopup_Closed">
+            <!-- 固定尺寸的弹窗容器，防止内容变化时抖动 -->
             <Border x:Name="PopupBorder"
                     Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
@@ -54,19 +55,17 @@
                     CornerRadius="8"
                     Margin="0,4,0,0"
                     Padding="4"
-                    MinHeight="100"
-                    MaxHeight="300"
-                    MinWidth="120"
-                    MaxWidth="600"
+                    Width="400"
+                    Height="350"
                     PreviewMouseWheel="PopupBorder_PreviewMouseWheel">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="10" ShadowDepth="2" Direction="270" Color="Black" Opacity="0.2"/>
                 </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" MinWidth="100"/>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto" MinWidth="100"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <ui:ListView x:Name="FirstLevelListView"

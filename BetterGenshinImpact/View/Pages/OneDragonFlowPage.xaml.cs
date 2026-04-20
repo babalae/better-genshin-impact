@@ -33,7 +33,63 @@ public partial class OneDragonFlowPage
             { ExpBottleBigCheckBox, "祝圣精华" },
             { ExpBottleSmallCheckBox, "祝圣油膏" }
         };
-        
+
+        // 监听配置切换和 DomainName 变化，更新秘境相关控件的显隐
+        viewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(viewModel.SelectedConfig))
+            {
+                WatchDomainNameChange();
+                UpdateDomainVisibility();
+            }
+        };
+        WatchDomainNameChange();
+    }
+
+    private System.ComponentModel.PropertyChangedEventHandler? _configHandler;
+
+    /// <summary>
+    /// 监听当前配置单的 DomainName 属性变化
+    /// </summary>
+    private void WatchDomainNameChange()
+    {
+        // 移除旧监听
+        if (_configHandler != null && ViewModel.SelectedConfig != null)
+            ViewModel.SelectedConfig.PropertyChanged -= _configHandler;
+
+        _configHandler = (s, e) =>
+        {
+            if (e.PropertyName == nameof(BetterGenshinImpact.Core.Config.OneDragonFlowConfig.DomainName))
+                UpdateDomainVisibility();
+        };
+
+        if (ViewModel.SelectedConfig != null)
+            ViewModel.SelectedConfig.PropertyChanged += _configHandler;
+    }
+
+    /// <summary>
+    /// 根据当前 DomainName 判断是否为标准秘境，控制队伍名称和选择序号的显隐
+    /// </summary>
+    private void UpdateDomainVisibility()
+    {
+        var name = ViewModel.SelectedConfig?.DomainName;
+        bool isStandard = true;
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            // 一条龙默认任务
+            if (Helpers.DomainCascadingItems.DefaultTaskNames.Contains(name))
+                isStandard = false;
+            // 配置组文件
+            else if (System.IO.File.Exists(Core.Config.Global.Absolute($@"User\ScriptGroup\{name}.json")))
+                isStandard = false;
+        }
+
+        var vis = isStandard ? Visibility.Visible : Visibility.Collapsed;
+        PartyNameGrid.Visibility = vis;
+        SundayLabelText.Visibility = vis;
+        SundaySubLabelText.Visibility = vis;
+        SundayComboBox.Visibility = vis;
     }
     
     private async void SereniteaPotTpType_Clicked(object sender, RoutedEventArgs e)

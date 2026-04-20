@@ -1,16 +1,21 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -98,18 +103,60 @@ public partial class OneDragonTaskItem : ObservableObject
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过", "未选择");
                         return;
                     }
+
+                    // 判断是否为非标准秘境（一条龙任务或配置组）
+                    var scriptFilePath = Global.Absolute($@"User\ScriptGroup\{domainName}.json");
+                    var isScriptGroup = File.Exists(scriptFilePath);
+                    var isDefaultTask = DomainCascadingItems.DefaultTaskNames.Contains(domainName);
+
+                    if (isScriptGroup || isDefaultTask)
+                    {
+                        try
+                        {
+                            if (isScriptGroup)
+                            {
+                                // 配置组：加载并内联执行
+                                TaskControl.Logger.LogInformation("自动秘境任务：执行配置组 {Name}", domainName);
+                                var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(scriptFilePath));
+                                var projects = ScriptControlViewModel.GetNextProjects(group);
+
+                                var scriptService = App.GetService<IScriptService>() as ScriptService;
+                                if (scriptService == null)
+                                {
+                                    TaskControl.Logger.LogError("ScriptService 获取失败，跳过");
+                                    return;
+                                }
+
+                                await scriptService.RunMultiInline(projects, domainName);
+                            }
+                            else
+                            {
+                                // 一条龙默认任务：创建临时 TaskItem 执行
+                                TaskControl.Logger.LogInformation("自动秘境任务：执行一条龙任务 {Name}", domainName);
+                                var taskItem = new OneDragonTaskItem(domainName);
+                                taskItem.InitAction(config);
+                                if (taskItem.Action != null)
+                                {
+                                    await taskItem.Action();
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            TaskControl.Logger.LogError(e, "非标准秘境 {Name} 执行异常，文件：{Path}", domainName, scriptFilePath);
+                        }
+                    }
                     else
                     {
                         TaskControl.Logger.LogInformation("自动秘境任务：执行");
+                        var autoDomainParam = new AutoDomainParam(0, path)
+                        {
+                            PartyName = partyName,
+                            DomainName = domainName,
+                            SundaySelectedValue = sundaySelectedValue
+                        };
+                        await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                     }
-
-                    var autoDomainParam = new AutoDomainParam(0, path)
-                    {
-                        PartyName = partyName,
-                        DomainName = domainName,
-                        SundaySelectedValue = sundaySelectedValue
-                    };
-                    await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "自动幽境危战":

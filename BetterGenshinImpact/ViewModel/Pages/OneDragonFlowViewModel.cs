@@ -218,59 +218,53 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         var stackPanel = new StackPanel();
         var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
-        CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
         foreach (var scriptGroup in ScriptGroups)
         {
             if (TaskList.Any(taskName => scriptGroup.Name == taskName.Name))
             {
-                continue; // 只有当文件名完全相同时才跳过显示
+                continue;
             }
             var checkBox = new CheckBox
             {
                 Content = scriptGroup.Name,
                 Tag = scriptGroup,
-                IsChecked = false // 初始状态下都未选中
+                IsChecked = false
             };
             checkBoxes[scriptGroup] = checkBox;
             stackPanel.Children.Add(checkBox);
         }
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
-        Title = "选择增加的配置组（可多选）",
-        Content = new ScrollViewer
-        {
-            Content = stackPanel,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        },
-        CloseButtonText = "关闭",
-        PrimaryButtonText = "确认",
-        Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
-        WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
-        MaxHeight = 600,
+            Title = "选择增加的配置组（可多选）",
+            Content = new ScrollViewer
+            {
+                Content = stackPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            },
+            CloseButtonText = "关闭",
+            PrimaryButtonText = "确认",
+            Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            SizeToContent = SizeToContent.Width,
+            MaxHeight = 600,
         };
         uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
         var result = await uiMessageBox.ShowDialogAsync();
         if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
         {
-            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
+            List<string> selectedItems = new List<string>();
             foreach (var checkBox in checkBoxes.Values)
             {
                 if (checkBox.IsChecked == true)
                 {
-                    // 确保 Tag 是 ScriptGroup 类型，并返回其 Name 属性
                     var scriptGroup = checkBox.Tag as ScriptGroup;
                     if (scriptGroup != null)
-                    { 
-                        selectedItems.Add(scriptGroup.Name);
-                    }
-                    else
                     {
-                        Toast.Error("配置组加载失败");
+                        selectedItems.Add(scriptGroup.Name);
                     }
                 }
             }
-            return string.Join(",", selectedItems); // 返回所有选中的项
+            return string.Join(",", selectedItems);
         }
         return null;
     }
@@ -286,6 +280,11 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private List<string> _adventurersGuildCountry = ["挪德卡莱", "枫丹", "稻妻", "璃月", "蒙德"];
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
+
+    /// <summary>
+    /// 秘境级联选择器数据源（一条龙任务 + 配置组 + 标准秘境）
+    /// </summary>
+    [ObservableProperty] private Dictionary<string, List<string>> _domainOptions = DomainCascadingItems.Options;
 
     [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
 
@@ -396,6 +395,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         SelectedConfig = selected;
         LoadDisplayTaskListFromConfig(); // 加载 DisplayTaskList 从配置文件
         SetSomeSelectedConfig(SelectedConfig);
+        // 首次加载时构建级联数据
+        RefreshDomainItems();
     }
 
     // 新增方法：从配置文件加载 DisplayTaskList
@@ -497,7 +498,18 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             LoadDisplayTaskListFromConfig();
+            RefreshDomainItems();
         }
+    }
+
+    /// <summary>
+    /// 刷新秘境级联选择器数据源（自动扫描一条龙任务 + 配置组 + 标准秘境）
+    /// </summary>
+    private void RefreshDomainItems()
+    {
+        DomainCascadingItems.DefaultTaskNames = ScriptGroupsdefault.Select(t => t.Name).ToList();
+        DomainCascadingItems.Rebuild();
+        DomainOptions = DomainCascadingItems.Options;
     }
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
