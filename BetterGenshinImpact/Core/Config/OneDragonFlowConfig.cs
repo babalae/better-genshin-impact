@@ -35,6 +35,10 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private string _domainName = string.Empty;
 
+    // 自定义配置组名称列表（用于在秘境选择中添加自定义脚本配置组）
+    [ObservableProperty]
+    private List<string> _customDomainList = new();
+
     [ObservableProperty]
     private bool _weeklyDomainEnabled = false;
     

@@ -287,6 +287,11 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
+    /// <summary>
+    /// 秘境级联选择器数据源（包含自定义配置组）
+    /// </summary>
+    [ObservableProperty] private IReadOnlyList<ICascadingItem> _domainItems = DomainCascadingItems.Items;
+
     [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
 
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
@@ -396,6 +401,8 @@ public partial class OneDragonFlowViewModel : ViewModel
         SelectedConfig = selected;
         LoadDisplayTaskListFromConfig(); // 加载 DisplayTaskList 从配置文件
         SetSomeSelectedConfig(SelectedConfig);
+        // 首次加载时需要更新 ItemsSource 以包含自定义配置组
+        RefreshDomainItems(updateItemsSource: true);
     }
 
     // 新增方法：从配置文件加载 DisplayTaskList
@@ -497,7 +504,147 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             LoadDisplayTaskListFromConfig();
+            RefreshDomainItems();
         }
+    }
+
+    /// <summary>
+    /// 是否存在自定义配置组（用于控制"-"按钮的启用状态）
+    /// </summary>
+    public bool HasCustomDomains => SelectedConfig?.CustomDomainList?.Count > 0;
+
+    /// <summary>
+    /// 刷新秘境级联选择器数据源，重建包含自定义配置组的级联数据
+    /// </summary>
+    private bool _suppressConfigSave;
+
+    private void RefreshDomainItems(bool updateItemsSource = false)
+    {
+        // 始终重建静态级联数据（供 Converter 查找使用）
+        DomainCascadingItems.Rebuild(SelectedConfig?.CustomDomainList);
+
+        // 仅在显式要求时更新 ItemsSource（添加/删除自定义配置组时）
+        // CascadingComboBox 在 ItemsSource 变更时会清空选中项并通过 TwoWay 绑定写回空值
+        // 因此需要临时保存并恢复所有 DomainName 字段
+        if (updateItemsSource && SelectedConfig != null)
+        {
+            // 保存当前所有秘境选择值
+            var savedDomain = SelectedConfig.DomainName;
+            var savedMon = SelectedConfig.MondayDomainName;
+            var savedTue = SelectedConfig.TuesdayDomainName;
+            var savedWed = SelectedConfig.WednesdayDomainName;
+            var savedThu = SelectedConfig.ThursdayDomainName;
+            var savedFri = SelectedConfig.FridayDomainName;
+            var savedSat = SelectedConfig.SaturdayDomainName;
+            var savedSun = SelectedConfig.SundayDomainName;
+
+            // 抑制 ConfigPropertyChanged 中的自动保存，防止空值被持久化
+            _suppressConfigSave = true;
+            DomainItems = DomainCascadingItems.Items;
+            _suppressConfigSave = false;
+
+            // 恢复被清空的秘境选择值
+            SelectedConfig.DomainName = savedDomain;
+            SelectedConfig.MondayDomainName = savedMon;
+            SelectedConfig.TuesdayDomainName = savedTue;
+            SelectedConfig.WednesdayDomainName = savedWed;
+            SelectedConfig.ThursdayDomainName = savedThu;
+            SelectedConfig.FridayDomainName = savedFri;
+            SelectedConfig.SaturdayDomainName = savedSat;
+            SelectedConfig.SundayDomainName = savedSun;
+        }
+        else if (updateItemsSource)
+        {
+            DomainItems = DomainCascadingItems.Items;
+        }
+
+        OnPropertyChanged(nameof(HasCustomDomains));
+    }
+
+    /// <summary>
+    /// 可添加的配置组列表（供 XAML Popup 绑定）
+    /// </summary>
+    [ObservableProperty] private List<string> _availableScriptGroups = new();
+
+    /// <summary>
+    /// 添加对话框中选中的配置组名称
+    /// </summary>
+    [ObservableProperty] private string? _selectedCustomDomainToAdd;
+
+    /// <summary>
+    /// 删除对话框中选中的配置组名称
+    /// </summary>
+    [ObservableProperty] private string? _selectedCustomDomainToRemove;
+
+    /// <summary>
+    /// 刷新可添加的配置组列表（排除已添加的和系统秘境同名的）
+    /// </summary>
+    [RelayCommand]
+    private void RefreshAvailableScriptGroups()
+    {
+        var scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
+        if (!Directory.Exists(scriptGroupPath)) { AvailableScriptGroups = new(); return; }
+
+        var existing = SelectedConfig?.CustomDomainList ?? new();
+        var systemNames = MapLazyAssets.Instance.DomainNameList;
+        AvailableScriptGroups = Directory.GetFiles(scriptGroupPath, "*.json")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(n => !string.IsNullOrEmpty(n) && !existing.Contains(n!) && !systemNames.Contains(n!))
+            .ToList()!;
+        SelectedCustomDomainToAdd = AvailableScriptGroups.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// 确认添加自定义配置组
+    /// </summary>
+    [RelayCommand]
+    private void ConfirmAddCustomDomain()
+    {
+        if (SelectedConfig == null || string.IsNullOrEmpty(SelectedCustomDomainToAdd)) return;
+
+        if (SelectedConfig.CustomDomainList.Contains(SelectedCustomDomainToAdd))
+        { Toast.Warning("自定义配置组已存在"); return; }
+
+        SelectedConfig.CustomDomainList.Add(SelectedCustomDomainToAdd);
+        // 重新赋值触发 PropertyChanged，使绑定的 ComboBox 刷新
+        SelectedConfig.CustomDomainList = new List<string>(SelectedConfig.CustomDomainList);
+        SaveConfig();
+        RefreshDomainItems(updateItemsSource: true);
+        Toast.Success($"已添加自定义配置组「{SelectedCustomDomainToAdd}」");
+    }
+
+    /// <summary>
+    /// 确认删除自定义配置组，并清理所有引用
+    /// </summary>
+    [RelayCommand]
+    private void ConfirmRemoveCustomDomain()
+    {
+        if (SelectedConfig == null || string.IsNullOrEmpty(SelectedCustomDomainToRemove)) return;
+
+        var name = SelectedCustomDomainToRemove;
+        SelectedConfig.CustomDomainList.Remove(name);
+        // 重新赋值触发 PropertyChanged，使绑定的 ComboBox 刷新
+        SelectedConfig.CustomDomainList = new List<string>(SelectedConfig.CustomDomainList);
+        ClearDomainReferences(SelectedConfig, name);
+        SaveConfig();
+        RefreshDomainItems(updateItemsSource: true);
+        SelectedCustomDomainToRemove = SelectedConfig.CustomDomainList.FirstOrDefault();
+        Toast.Success($"已删除自定义配置组「{name}」");
+    }
+
+    /// <summary>
+    /// 将配置中所有等于指定名称的秘境字段重置为空
+    /// </summary>
+    private static void ClearDomainReferences(OneDragonFlowConfig config, string name)
+    {
+        if (config.DomainName == name) config.DomainName = string.Empty;
+        if (config.MondayDomainName == name) config.MondayDomainName = string.Empty;
+        if (config.TuesdayDomainName == name) config.TuesdayDomainName = string.Empty;
+        if (config.WednesdayDomainName == name) config.WednesdayDomainName = string.Empty;
+        if (config.ThursdayDomainName == name) config.ThursdayDomainName = string.Empty;
+        if (config.FridayDomainName == name) config.FridayDomainName = string.Empty;
+        if (config.SaturdayDomainName == name) config.SaturdayDomainName = string.Empty;
+        if (config.SundayDomainName == name) config.SundayDomainName = string.Empty;
     }
 
     private async void TaskPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -508,6 +655,8 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private void ConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // 刷新 DomainItems 期间抑制自动保存，防止 CascadingComboBox 清空选中项时写入空值
+        if (_suppressConfigSave) return;
         SaveConfig();
         WriteConfig(SelectedConfig);
     }

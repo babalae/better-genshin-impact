@@ -504,6 +504,19 @@ public partial class ScriptService : IScriptService
     //     return jsProjects;
     // }
 
+    /// <summary>
+    /// 公开的项目执行入口，供一条龙自定义配置组内联调用（不创建新的 TaskRunner）
+    /// </summary>
+    public async Task ExecuteProjectPublic(ScriptGroupProject project)
+    {
+        // 重新加载项目以确保脚本引用正确
+        var reloaded = ReloadScriptProjects(new[] { project });
+        if (reloaded.Count > 0)
+        {
+            await ExecuteProject(reloaded[0]);
+        }
+    }
+
     private async Task ExecuteProject(ScriptGroupProject project)
     {
         TaskContext.Instance().CurrentScriptProject = project;

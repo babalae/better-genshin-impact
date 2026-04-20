@@ -71,5 +71,34 @@ public partial class OneDragonFlowPage
         }
         
     }
+
+    /// <summary>
+    /// 添加配置组弹窗打开时刷新可用列表
+    /// </summary>
+    private void AddDomainPopup_Opened(object sender, System.EventArgs e)
+    {
+        ViewModel.RefreshAvailableScriptGroupsCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 关闭弹窗（确定按钮点击后）
+    /// </summary>
+    private void ClosePopup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+        {
+            // 向上查找 Popup 并关闭
+            var parent = fe.Parent;
+            while (parent != null)
+            {
+                if (parent is System.Windows.Controls.Primitives.Popup popup)
+                {
+                    popup.IsOpen = false;
+                    return;
+                }
+                parent = (parent as FrameworkElement)?.Parent;
+            }
+        }
+    }
     
 }

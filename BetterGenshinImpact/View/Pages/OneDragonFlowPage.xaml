@@ -430,6 +430,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
@@ -446,16 +447,95 @@
                                               Text="秘境名称"
                                               Width="Auto"
                                               TextWrapping="Wrap" />
+                                <ToggleButton Grid.Row="0"
+                                        Grid.Column="1"
+                                        x:Name="AddDomainToggle"
+                                        Margin="5,0,0,0"
+                                        FontFamily="{StaticResource TextThemeFontFamily}"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Left"
+                                        Width="16" Height="16"
+                                        BorderThickness="1"
+                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                        Background="Transparent"
+                                        Padding="0"
+                                        ToolTip="添加自定义配置组">
+                                    <Viewbox><TextBlock Text="+" /></Viewbox>
+                                </ToggleButton>
+                                <!-- 添加自定义配置组弹窗 -->
+                                <Popup Grid.Row="0" Grid.Column="1"
+                                       IsOpen="{Binding IsChecked, ElementName=AddDomainToggle}"
+                                       PlacementTarget="{Binding ElementName=AddDomainToggle}"
+                                       Placement="Bottom"
+                                       StaysOpen="False"
+                                       AllowsTransparency="True"
+                                       PopupAnimation="Fade"
+                                       Opened="AddDomainPopup_Opened">
+                                    <Border CornerRadius="8"
+                                            Background="{DynamicResource ApplicationBackgroundBrush}"
+                                            BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                            BorderThickness="1"
+                                            Padding="12" Margin="4">
+                                        <StackPanel MinWidth="200">
+                                            <ui:TextBlock Text="选择要添加的配置组" FontSize="13" Margin="0,0,0,8" />
+                                            <ComboBox ItemsSource="{Binding AvailableScriptGroups}"
+                                                      SelectedItem="{Binding SelectedCustomDomainToAdd, Mode=TwoWay}"
+                                                      MinWidth="180" Margin="0,0,0,8" />
+                                            <Button Content="确定" HorizontalAlignment="Right"
+                                                    Command="{Binding ConfirmAddCustomDomainCommand}"
+                                                    Click="ClosePopup_Click" />
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                                <ToggleButton Grid.Row="1"
+                                        Grid.Column="1"
+                                        x:Name="RemoveDomainToggle"
+                                        Margin="5,0,0,0"
+                                        FontFamily="{StaticResource TextThemeFontFamily}"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Left"
+                                        Width="16" Height="16"
+                                        Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                        Background="Transparent"
+                                        Padding="0"
+                                        IsEnabled="{Binding HasCustomDomains}"
+                                        ToolTip="删除自定义配置组">
+                                    <Viewbox><TextBlock Text="-" /></Viewbox>
+                                </ToggleButton>
+                                <!-- 删除自定义配置组弹窗 -->
+                                <Popup Grid.Row="1" Grid.Column="1"
+                                       IsOpen="{Binding IsChecked, ElementName=RemoveDomainToggle}"
+                                       PlacementTarget="{Binding ElementName=RemoveDomainToggle}"
+                                       Placement="Bottom"
+                                       StaysOpen="False"
+                                       AllowsTransparency="True"
+                                       PopupAnimation="Fade">
+                                    <Border CornerRadius="8"
+                                            Background="{DynamicResource ApplicationBackgroundBrush}"
+                                            BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                            BorderThickness="1"
+                                            Padding="12" Margin="4">
+                                        <StackPanel MinWidth="200">
+                                            <ui:TextBlock Text="选择要删除的配置组" FontSize="13" Margin="0,0,0,8" />
+                                            <ComboBox ItemsSource="{Binding SelectedConfig.CustomDomainList}"
+                                                      SelectedItem="{Binding SelectedCustomDomainToRemove, Mode=TwoWay}"
+                                                      MinWidth="180" Margin="0,0,0,8" />
+                                            <Button Content="确定" HorizontalAlignment="Right"
+                                                    Command="{Binding ConfirmRemoveCustomDomainCommand}"
+                                                    Click="ClosePopup_Click" />
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
-                                          Grid.Column="1"
+                                          Grid.Column="2"
                                           Width="100"
                                           HorizontalAlignment="Left"
                                           Margin="10,0,10,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                 <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="2"
+                                              Grid.Column="3"
                                               Margin="10,0,10,0"
                                               FontTypography="Body"
                                               HorizontalAlignment="Right"
@@ -463,7 +543,7 @@
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="2"
+                                              Grid.Column="3"
                                               Margin="10,0,10,0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               HorizontalAlignment="Right"
@@ -471,7 +551,7 @@
                                               Width="Auto"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           Grid.RowSpan="2"
                                           MinWidth="60"
                                           Margin="0,0,36,0"
@@ -531,6 +611,91 @@
                                               Text="周期始于凌晨 4:00 ，如周一 4:00 至周二 3:59 刷取周一秘境" 
                                               TextWrapping="Wrap">
                                 </ui:TextBlock>
+                                <!-- 自定义增减配置组到自动秘境任务 -->
+                                <Grid HorizontalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Column="0"
+                                                  Margin="0,0,0,-5"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Left"
+                                                  FontTypography="Body"
+                                                  FontSize="12"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="自定义增减配置组到自动秘境任务：" />
+                                    <ToggleButton Grid.Column="1"
+                                            x:Name="AddDomainToggle2"
+                                            Margin="5,0,0,0"
+                                            FontFamily="{StaticResource TextThemeFontFamily}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Left"
+                                            Width="16" Height="16"
+                                            BorderThickness="1"
+                                            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                            Background="Transparent"
+                                            Padding="0"
+                                            ToolTip="添加自定义配置组">
+                                        <Viewbox><TextBlock Text="+" /></Viewbox>
+                                    </ToggleButton>
+                                    <Popup Grid.Column="1"
+                                           IsOpen="{Binding IsChecked, ElementName=AddDomainToggle2}"
+                                           PlacementTarget="{Binding ElementName=AddDomainToggle2}"
+                                           Placement="Bottom" StaysOpen="False"
+                                           AllowsTransparency="True" PopupAnimation="Fade"
+                                           Opened="AddDomainPopup_Opened">
+                                        <Border CornerRadius="8"
+                                                Background="{DynamicResource ApplicationBackgroundBrush}"
+                                                BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                BorderThickness="1" Padding="12" Margin="4">
+                                            <StackPanel MinWidth="200">
+                                                <ui:TextBlock Text="选择要添加的配置组" FontSize="13" Margin="0,0,0,8" />
+                                                <ComboBox ItemsSource="{Binding AvailableScriptGroups}"
+                                                          SelectedItem="{Binding SelectedCustomDomainToAdd, Mode=TwoWay}"
+                                                          MinWidth="180" Margin="0,0,0,8" />
+                                                <Button Content="确定" HorizontalAlignment="Right"
+                                                        Command="{Binding ConfirmAddCustomDomainCommand}"
+                                                        Click="ClosePopup_Click" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                    <ToggleButton Grid.Column="2"
+                                            x:Name="RemoveDomainToggle2"
+                                            Margin="5,0,0,0"
+                                            FontFamily="{StaticResource TextThemeFontFamily}"
+                                            VerticalAlignment="Center"
+                                            HorizontalAlignment="Left"
+                                            Width="16" Height="16"
+                                            Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                            Background="Transparent"
+                                            Padding="0"
+                                            IsEnabled="{Binding HasCustomDomains}"
+                                            ToolTip="删除自定义配置组">
+                                        <Viewbox><TextBlock Text="-" /></Viewbox>
+                                    </ToggleButton>
+                                    <Popup Grid.Column="2"
+                                           IsOpen="{Binding IsChecked, ElementName=RemoveDomainToggle2}"
+                                           PlacementTarget="{Binding ElementName=RemoveDomainToggle2}"
+                                           Placement="Bottom" StaysOpen="False"
+                                           AllowsTransparency="True" PopupAnimation="Fade">
+                                        <Border CornerRadius="8"
+                                                Background="{DynamicResource ApplicationBackgroundBrush}"
+                                                BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                BorderThickness="1" Padding="12" Margin="4">
+                                            <StackPanel MinWidth="200">
+                                                <ui:TextBlock Text="选择要删除的配置组" FontSize="13" Margin="0,0,0,8" />
+                                                <ComboBox ItemsSource="{Binding SelectedConfig.CustomDomainList}"
+                                                          SelectedItem="{Binding SelectedCustomDomainToRemove, Mode=TwoWay}"
+                                                          MinWidth="180" Margin="0,0,0,8" />
+                                                <Button Content="确定" HorizontalAlignment="Right"
+                                                        Command="{Binding ConfirmRemoveCustomDomainCommand}"
+                                                        Click="ClosePopup_Click" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
                            
                             <Grid Margin="16">
                                 <Grid.ColumnDefinitions>
@@ -557,7 +722,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                             </Grid>
                             <Grid Margin="16">
@@ -586,7 +751,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                             </Grid>
                             <Grid Margin="16">
@@ -614,7 +779,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
                             </Grid>
@@ -643,7 +808,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
                             </Grid>
@@ -672,7 +837,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
 
@@ -702,7 +867,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
 
                             </Grid>
@@ -736,7 +901,7 @@
                                           Grid.Column="2"
                                           Width="100"
                                           Margin="0,0,36,0"
-                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          ItemsSource="{Binding DomainItems}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                 <Border Grid.Row="1"
                                         Grid.Column="0"

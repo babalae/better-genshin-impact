@@ -1,16 +1,20 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -98,18 +102,59 @@ public partial class OneDragonTaskItem : ObservableObject
                         TaskControl.Logger.LogError("一条龙配置内{Msg}需要刷的秘境，跳过", "未选择");
                         return;
                     }
+
+                    // 判断是否为自定义配置组
+                    if (config.CustomDomainList.Contains(domainName))
+                    {
+                        try
+                        {
+                            var filePath = Global.Absolute($@"User\ScriptGroup\{domainName}.json");
+                            if (!File.Exists(filePath))
+                            {
+                                TaskControl.Logger.LogError("自定义配置组 {Name} 对应的文件不存在，跳过", domainName);
+                                return;
+                            }
+
+                            TaskControl.Logger.LogInformation("自动秘境任务：执行自定义配置组 {Name}", domainName);
+                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath));
+                            var projects = ScriptControlViewModel.GetNextProjects(group);
+
+                            // 直接内联执行脚本项目，避免 RunMulti 创建新的 TaskRunner 导致冲突
+                            var scriptService = App.GetService<IScriptService>() as ScriptService;
+                            if (scriptService == null)
+                            {
+                                TaskControl.Logger.LogError("ScriptService 获取失败，跳过自定义配置组");
+                                return;
+                            }
+
+                            foreach (var project in projects)
+                            {
+                                if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                                    break;
+
+                                if (project.Status != "Enabled")
+                                    continue;
+
+                                await scriptService.ExecuteProjectPublic(project);
+                                await Task.Delay(1000);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            TaskControl.Logger.LogError("自定义配置组 {Name} 执行异常：{Msg}", domainName, e.Message);
+                        }
+                    }
                     else
                     {
                         TaskControl.Logger.LogInformation("自动秘境任务：执行");
+                        var autoDomainParam = new AutoDomainParam(0, path)
+                        {
+                            PartyName = partyName,
+                            DomainName = domainName,
+                            SundaySelectedValue = sundaySelectedValue
+                        };
+                        await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                     }
-
-                    var autoDomainParam = new AutoDomainParam(0, path)
-                    {
-                        PartyName = partyName,
-                        DomainName = domainName,
-                        SundaySelectedValue = sundaySelectedValue
-                    };
-                    await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);
                 };
                 break;
             case "自动幽境危战":
