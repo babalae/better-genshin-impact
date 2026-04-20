@@ -602,8 +602,13 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         if (SelectedConfig == null || string.IsNullOrEmpty(SelectedCustomDomainToAdd)) return;
 
+        // 校验：不允许与已有自定义配置组重名
         if (SelectedConfig.CustomDomainList.Contains(SelectedCustomDomainToAdd))
         { Toast.Warning("自定义配置组已存在"); return; }
+
+        // 校验：不允许与系统预定义秘境名称重名，防止运行时误判执行路径
+        if (MapLazyAssets.Instance.DomainNameList.Contains(SelectedCustomDomainToAdd))
+        { Toast.Warning("名称与系统秘境冲突"); return; }
 
         SelectedConfig.CustomDomainList.Add(SelectedCustomDomainToAdd);
         // 重新赋值触发 PropertyChanged，使绑定的 ComboBox 刷新
