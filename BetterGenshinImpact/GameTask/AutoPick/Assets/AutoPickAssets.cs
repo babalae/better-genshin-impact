@@ -89,7 +89,7 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
                 (int)(330 * AssetScale),
                 (int)(60 * AssetScale),
                 (int)(420 * AssetScale)),
-            DrawOnWindow = true,
+            DrawOnWindow = false,
             Use3Channels = true
         }.InitTemplate();
         var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
