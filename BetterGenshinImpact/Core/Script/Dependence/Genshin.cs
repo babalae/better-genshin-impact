@@ -16,6 +16,11 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Core.Recognition.ONNX;
+using System.Linq;
+using BetterGenshinImpact.View.Drawable;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -417,5 +422,15 @@ public class Genshin
         if (!int.TryParse(minute, out var m) || m < 0 || m > 59)
             throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
         await new SetTimeTask().Start(h, m, CancellationContext.Instance.Cts.Token, skip);
+    }
+
+    /// <summary>
+    /// 莉奈娅挖矿
+    /// </summary>
+    /// <param name="mineCount">射箭次数，默认1</param>
+    /// <param name="scanRounds">大循环寻矿次数，默认5</param>
+    public async Task StartMining(int mineCount = 1, int scanRounds = 5)
+    {
+        await new LinneaMiningTask(scanRounds, mineCount).Start(CancellationContext.Instance.Cts.Token);
     }
 }

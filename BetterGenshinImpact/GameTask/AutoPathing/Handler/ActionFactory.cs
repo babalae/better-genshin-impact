@@ -26,6 +26,7 @@ public class ActionFactory
                 "pyro_collect" => new ElementalCollectHandler(ElementalType.Pyro),
                 "combat_script" => new CombatScriptHandler(),
                 "mining" => new MiningHandler(),
+                "linnea_mining" => new LinneaMiningHandler(),
                 "fishing" => new FishingHandler(),
                 "exit_and_relogin" => new ExitAndReloginHandler(),
                 "wonderland_cycle" => new EnterAndExitWonderlandHandler(),
