@@ -27,10 +27,10 @@ public class LinneaMiningHandler : IActionHandler
         }
 
         // 切人
-        var linia = combatScenes.SelectAvatar("莉奈娅");
-        if (linia is not null)
+        var linnea = combatScenes.SelectAvatar("莉奈娅");
+        if (linnea is not null)
         {
-            linia.TrySwitch();
+            linnea.TrySwitch();
             await Delay(500, ct);
         }
         else
