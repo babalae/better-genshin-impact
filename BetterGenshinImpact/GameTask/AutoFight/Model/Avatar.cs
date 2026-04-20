@@ -134,29 +134,44 @@ public class Avatar
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
+                // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
+                Sleep(800, ct);
                 using var ra = CaptureToRectArea();
-                if (!SwimmingConfirm(ra)) //二次确认
+                if (!SwimmingConfirm(ra))
                 {
                     return;
                 }
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
-                var cts = new CancellationTokenSource();
-                var pathExecutor = new PathExecutor(cts.Token);
+                
+                // 保存原始 MoveMode，用于 finally 还原
+                var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
+                // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 
                 try
                 {
-                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).Wait(2000,cts.Token);
-                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code; // 改为跳飞
+                    var pathExecutor = new PathExecutor(cts.Token);
+                    
+                    // FaceTo 朝向战斗点，超时 2 秒
+                    cts.CancelAfter(2000);
+                    pathExecutor.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                    
+                    // 重置超时，MoveTo 超时 15 秒
+                    cts.CancelAfter(15000);
+                    // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
+                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
                     Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).Wait(15000,cts.Token);
-                    cts.Cancel();
-                    AutoFightTask.FightWaypoint = null;
-                    Simulation.SendInput.Mouse.RightButtonUp();
+                    pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                    Logger.LogInformation("游泳检测：移动结束");
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    Logger.LogError("游泳检测：回到战斗地点任务被取消");
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger.LogWarning("游泳检测：回到战斗地点超时");
                 }
                 catch (Exception ex)
                 {
@@ -164,6 +179,11 @@ public class Avatar
                 }
                 finally
                 {
+                    // 确保所有资源和状态在任何路径都被正确清理
+                    cts.Cancel(); // 终止 PathExecutor 内部截屏循环
+                    AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
+                    AutoFightTask.FightWaypoint = null;
+                    Simulation.SendInput.Mouse.RightButtonUp();
                     Simulation.ReleaseAllKey();
                 }
                 
@@ -171,7 +191,7 @@ public class Avatar
                 if (!SwimmingConfirm(bitmap2))
                 {
                     Logger.LogInformation("游泳检测：游泳脱困成功");
-                   return;
+                    return;
                 }
                 
                 Logger.LogWarning("游泳检测：回到战斗地点失败");
@@ -243,7 +263,7 @@ public class Avatar
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
 
-            // 第13次重试时，战斗状态下执行脱困动作
+            // 第10次重试时，战斗状态下执行脱困动作
             if (i == 10 && AutoFightTask.FightStatusFlag)
             {
                 PerformUnstuckAction(Ct);
