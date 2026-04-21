@@ -27,7 +27,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding SelectedValue, ElementName=Root, TargetNullValue='请选择', FallbackValue='请选择'}"
+                            <TextBlock Text="{Binding DisplayValue, ElementName=Root, TargetNullValue='请选择', FallbackValue='请选择'}"
                                        VerticalAlignment="Center"
                                        Margin="5,0,0,0"
                                        TextTrimming="CharacterEllipsis"/>

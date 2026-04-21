@@ -91,13 +91,40 @@ public partial class CascadeSelector : UserControl
     public static readonly DependencyProperty DefaultValueProperty =
         DependencyProperty.Register("DefaultValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
 
+    /// <summary>
+    /// 显示用的值（去掉类型前缀），供 ToggleButton 文本绑定
+    /// </summary>
+    public string? DisplayValue
+    {
+        get { return (string?)GetValue(DisplayValueProperty); }
+        set { SetValue(DisplayValueProperty, value); }
+    }
+
+    public static readonly DependencyProperty DisplayValueProperty =
+        DependencyProperty.Register("DisplayValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
+
+    /// <summary>
+    /// 去掉类型前缀，返回显示名称
+    /// </summary>
+    private static string StripPrefix(string value)
+    {
+        if (value.StartsWith("task:")) return value[5..];
+        if (value.StartsWith("script:")) return value[7..];
+        return value;
+    }
+
     private void UpdateFirstLevelOptions()
     {
         FirstLevelOptions = CascadeOptions?.Keys.ToList() ?? new List<string>();
+        // 数据源变化后重新同步当前选中项的定位
+        HandleSelectedValueChanged(SelectedValue);
     }
 
     private void HandleSelectedValueChanged(string? newValue)
     {
+        // 更新显示值（去掉前缀）
+        DisplayValue = string.IsNullOrEmpty(newValue) ? null : StripPrefix(newValue);
+
         if (string.IsNullOrEmpty(newValue) || CascadeOptions == null)
         {
             return;
@@ -108,20 +135,28 @@ public partial class CascadeSelector : UserControl
             if (kvp.Value.Contains(newValue))
             {
                 FirstLevelListView.SelectedItem = kvp.Key;
-                SecondLevelOptions = kvp.Value;
-                SecondLevelListView.SelectedItem = newValue;
+                _secondLevelDisplayNames = kvp.Value.Select(StripPrefix).ToList();
+                SecondLevelOptions = _secondLevelDisplayNames;
+                SecondLevelListView.SelectedItem = StripPrefix(newValue);
                 break;
             }
         }
     }
 
+    /// <summary>
+    /// 当前二级列表的显示名称（去掉前缀）
+    /// </summary>
+    private List<string> _secondLevelDisplayNames = new();
+
     private void FirstLevelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (FirstLevelListView.SelectedItem is string selectedFirstLevel)
         {
-            if (CascadeOptions != null && CascadeOptions.TryGetValue(selectedFirstLevel, out var secondLevelOptions))
+            if (CascadeOptions != null && CascadeOptions.TryGetValue(selectedFirstLevel, out var secondLevelValues))
             {
-                SecondLevelOptions = secondLevelOptions;
+                // 存储原始值用于选择时回写
+                _secondLevelDisplayNames = secondLevelValues.Select(StripPrefix).ToList();
+                SecondLevelOptions = _secondLevelDisplayNames;
                 SecondLevelListView.SelectedItem = null;
             }
         }
@@ -129,9 +164,20 @@ public partial class CascadeSelector : UserControl
 
     private void SecondLevelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (SecondLevelListView.SelectedItem is string selectedSecondLevel)
+        if (SecondLevelListView.SelectedItem is string selectedDisplay)
         {
-            SelectedValue = selectedSecondLevel;
+            // 从当前一级分类中找到对应的完整值（带前缀）
+            if (FirstLevelListView.SelectedItem is string firstLevel
+                && CascadeOptions != null
+                && CascadeOptions.TryGetValue(firstLevel, out var values))
+            {
+                var idx = _secondLevelDisplayNames.IndexOf(selectedDisplay);
+                if (idx >= 0 && idx < values.Count)
+                {
+                    SelectedValue = values[idx]; // 写回带前缀的完整值
+                }
+            }
+
             if (MainToggle.IsChecked == true)
             {
                 MainToggle.IsChecked = false;

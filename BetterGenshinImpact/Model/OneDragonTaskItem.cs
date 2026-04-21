@@ -104,55 +104,71 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
-                    // 判断是否为非标准秘境（一条龙任务或配置组）
-                    var scriptFilePath = Global.Absolute($@"User\ScriptGroup\{domainName}.json");
-                    var isScriptGroup = File.Exists(scriptFilePath);
-                    var isDefaultTask = DomainCascadingItems.DefaultTaskNames.Contains(domainName);
+                    // 解析 DomainName 的类型前缀，确定执行路径
+                    var (domainType, domainDisplayName) = DomainCascadingItems.Parse(domainName);
 
-                    if (isScriptGroup || isDefaultTask)
+                    if (domainType == "script")
                     {
+                        // 配置组：加载并内联执行
                         try
                         {
-                            if (isScriptGroup)
+                            var scriptFilePath = Global.Absolute($@"User\ScriptGroup\{domainDisplayName}.json");
+                            if (!File.Exists(scriptFilePath))
                             {
-                                // 配置组：加载并内联执行
-                                TaskControl.Logger.LogInformation("自动秘境任务：执行配置组 {Name}", domainName);
-                                var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(scriptFilePath));
-                                var projects = ScriptControlViewModel.GetNextProjects(group);
-
-                                var scriptService = App.GetService<IScriptService>() as ScriptService;
-                                if (scriptService == null)
-                                {
-                                    TaskControl.Logger.LogError("ScriptService 获取失败，跳过");
-                                    return;
-                                }
-
-                                await scriptService.RunMultiInline(projects, domainName);
+                                TaskControl.Logger.LogError("配置组 {Name} 对应的文件不存在，跳过", domainDisplayName);
+                                return;
                             }
-                            else
+
+                            TaskControl.Logger.LogInformation("自动秘境任务：执行配置组 {Name}", domainDisplayName);
+                            var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(scriptFilePath));
+                            var projects = ScriptControlViewModel.GetNextProjects(group);
+
+                            var scriptService = App.GetService<IScriptService>() as ScriptService;
+                            if (scriptService == null)
                             {
-                                // 一条龙默认任务：创建临时 TaskItem 执行
-                                TaskControl.Logger.LogInformation("自动秘境任务：执行一条龙任务 {Name}", domainName);
-                                var taskItem = new OneDragonTaskItem(domainName);
-                                taskItem.InitAction(config);
-                                if (taskItem.Action != null)
-                                {
-                                    await taskItem.Action();
-                                }
+                                TaskControl.Logger.LogError("ScriptService 获取失败，跳过");
+                                return;
+                            }
+
+                            await scriptService.RunMultiInline(projects, domainDisplayName);
+                        }
+                        catch (Exception e)
+                        {
+                            TaskControl.Logger.LogError(e, "配置组 {Name} 执行异常", domainDisplayName);
+                        }
+                    }
+                    else if (domainType == "task")
+                    {
+                        // 一条龙默认任务：防止递归调用自身
+                        if (domainDisplayName == "自动秘境")
+                        {
+                            TaskControl.Logger.LogError("不能在自动秘境中选择自动秘境自身，跳过");
+                            return;
+                        }
+
+                        try
+                        {
+                            TaskControl.Logger.LogInformation("自动秘境任务：执行一条龙任务 {Name}", domainDisplayName);
+                            var taskItem = new OneDragonTaskItem(domainDisplayName);
+                            taskItem.InitAction(config);
+                            if (taskItem.Action != null)
+                            {
+                                await taskItem.Action();
                             }
                         }
                         catch (Exception e)
                         {
-                            TaskControl.Logger.LogError(e, "非标准秘境 {Name} 执行异常，文件：{Path}", domainName, scriptFilePath);
+                            TaskControl.Logger.LogError(e, "一条龙任务 {Name} 执行异常", domainDisplayName);
                         }
                     }
                     else
                     {
+                        // 标准秘境：使用解析后的显示名称（无前缀）
                         TaskControl.Logger.LogInformation("自动秘境任务：执行");
                         var autoDomainParam = new AutoDomainParam(0, path)
                         {
                             PartyName = partyName,
-                            DomainName = domainName,
+                            DomainName = domainDisplayName,
                             SundaySelectedValue = sundaySelectedValue
                         };
                         await new AutoDomainTask(autoDomainParam).Start(CancellationContext.Instance.Cts.Token);

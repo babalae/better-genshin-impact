@@ -264,7 +264,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     }
                 }
             }
-            return string.Join(",", selectedItems);
+            return selectedItems.Count > 0 ? string.Join(",", selectedItems) : null;
         }
         return null;
     }
@@ -507,7 +507,11 @@ public partial class OneDragonFlowViewModel : ViewModel
     /// </summary>
     private void RefreshDomainItems()
     {
-        DomainCascadingItems.DefaultTaskNames = ScriptGroupsdefault.Select(t => t.Name).ToList();
+        // 排除"自动秘境"自身，防止递归调用
+        DomainCascadingItems.DefaultTaskNames = ScriptGroupsdefault
+            .Select(t => t.Name)
+            .Where(n => n != "自动秘境")
+            .ToList();
         DomainCascadingItems.Rebuild();
         DomainOptions = DomainCascadingItems.Options;
     }

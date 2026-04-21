@@ -47,15 +47,18 @@ public partial class OneDragonFlowPage
     }
 
     private System.ComponentModel.PropertyChangedEventHandler? _configHandler;
+    private BetterGenshinImpact.Core.Config.OneDragonFlowConfig? _watchedConfig;
 
     /// <summary>
     /// 监听当前配置单的 DomainName 属性变化
     /// </summary>
     private void WatchDomainNameChange()
     {
-        // 移除旧监听
-        if (_configHandler != null && ViewModel.SelectedConfig != null)
-            ViewModel.SelectedConfig.PropertyChanged -= _configHandler;
+        // 从旧配置对象上解绑（而非当前 SelectedConfig，避免切换后解绑错对象）
+        if (_configHandler != null && _watchedConfig != null)
+            _watchedConfig.PropertyChanged -= _configHandler;
+
+        _watchedConfig = ViewModel.SelectedConfig;
 
         _configHandler = (s, e) =>
         {
@@ -63,29 +66,22 @@ public partial class OneDragonFlowPage
                 UpdateDomainVisibility();
         };
 
-        if (ViewModel.SelectedConfig != null)
-            ViewModel.SelectedConfig.PropertyChanged += _configHandler;
+        if (_watchedConfig != null)
+            _watchedConfig.PropertyChanged += _configHandler;
+
+        // 立即更新一次，确保初始状态正确
+        UpdateDomainVisibility();
     }
 
     /// <summary>
-    /// 根据当前 DomainName 判断是否为标准秘境，控制队伍名称和选择序号的显隐
+    /// 根据当前 DomainName 的类型前缀判断是否为标准秘境，控制队伍名称和选择序号的显隐
     /// </summary>
     private void UpdateDomainVisibility()
     {
         var name = ViewModel.SelectedConfig?.DomainName;
-        bool isStandard = true;
-
-        if (!string.IsNullOrEmpty(name))
-        {
-            // 一条龙默认任务
-            if (Helpers.DomainCascadingItems.DefaultTaskNames.Contains(name))
-                isStandard = false;
-            // 配置组文件
-            else if (System.IO.File.Exists(Core.Config.Global.Absolute($@"User\ScriptGroup\{name}.json")))
-                isStandard = false;
-        }
-
-        var vis = isStandard ? Visibility.Visible : Visibility.Collapsed;
+        var (type, _) = Helpers.DomainCascadingItems.Parse(name);
+        // 标准秘境（type == "domain" 或空）显示，一条龙任务和配置组隐藏
+        var vis = (type == "domain" || type == "") ? Visibility.Visible : Visibility.Collapsed;
         PartyNameGrid.Visibility = vis;
         SundayLabelText.Visibility = vis;
         SundaySubLabelText.Visibility = vis;
