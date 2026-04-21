@@ -104,9 +104,22 @@ public partial class CascadeSelector : UserControl
         DependencyProperty.Register("DisplayValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
 
     /// <summary>
-    /// 去掉类型前缀，返回显示名称
+    /// 去掉类型前缀，返回显示名称（标准秘境附加奖励信息）
     /// </summary>
     private static string StripPrefix(string value)
+    {
+        if (value.StartsWith("task:")) return value[5..];
+        if (value.StartsWith("script:")) return value[7..];
+        // 标准秘境：查显示名称映射，附加奖励信息
+        if (Helpers.DomainCascadingItems.DomainDisplayNames.TryGetValue(value, out var display))
+            return display;
+        return value;
+    }
+
+    /// <summary>
+    /// 去掉类型前缀，返回简短名称（用于 ToggleButton 文本，不带奖励）
+    /// </summary>
+    private static string StripPrefixShort(string value)
     {
         if (value.StartsWith("task:")) return value[5..];
         if (value.StartsWith("script:")) return value[7..];
@@ -122,8 +135,8 @@ public partial class CascadeSelector : UserControl
 
     private void HandleSelectedValueChanged(string? newValue)
     {
-        // 更新显示值（去掉前缀）
-        DisplayValue = string.IsNullOrEmpty(newValue) ? null : StripPrefix(newValue);
+        // 更新显示值（去掉前缀，ToggleButton 显示简短名称）
+        DisplayValue = string.IsNullOrEmpty(newValue) ? null : StripPrefixShort(newValue);
 
         if (string.IsNullOrEmpty(newValue) || CascadeOptions == null)
         {

@@ -62,9 +62,15 @@ public static class DomainCascadingItems
         return ("domain", domainName); // 标准秘境无前缀
     }
 
+    /// <summary>
+    /// 标准秘境的显示名称映射（"秘境名" → "秘境名 | 奖励物料"），供 CascadeSelector 二级列表显示
+    /// </summary>
+    public static Dictionary<string, string> DomainDisplayNames { get; private set; } = new();
+
     private static Dictionary<string, List<string>> BuildOptions()
     {
         var options = new Dictionary<string, List<string>>();
+        DomainDisplayNames.Clear();
 
         // 一条龙任务分类（带 task: 前缀）
         if (DefaultTaskNames.Count > 0)
@@ -90,17 +96,22 @@ public static class DomainCascadingItems
             }
         }
 
-        // 标准秘境分类（无前缀，向后兼容）
+        // 标准秘境分类（无前缀，向后兼容；同时构建显示名称映射）
         foreach (var country in MapLazyAssets.Instance.CountryToDomains.Keys.Reverse())
         {
             var domains = MapLazyAssets.Instance.CountryToDomains[country]
                 .AsEnumerable()
                 .Reverse()
-                .Select(d => d.Name!)
                 .ToList();
-            if (domains.Count > 0)
+            var names = new List<string>();
+            foreach (var d in domains)
             {
-                options[country] = domains;
+                names.Add(d.Name!);
+                DomainDisplayNames[d.Name!] = d.Name! + " | " + string.Join(" ", d.Rewards);
+            }
+            if (names.Count > 0)
+            {
+                options[country] = names;
             }
         }
 

@@ -55,7 +55,8 @@
                     CornerRadius="8"
                     Margin="0,4,0,0"
                     Padding="4"
-                    Width="400"
+                    MinWidth="300"
+                    MaxWidth="800"
                     Height="350"
                     PreviewMouseWheel="PopupBorder_PreviewMouseWheel">
                 <Border.Effect>
@@ -63,9 +64,9 @@
                 </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" MinWidth="80" MaxWidth="120"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" MinWidth="200"/>
                     </Grid.ColumnDefinitions>
 
                     <ui:ListView x:Name="FirstLevelListView"
