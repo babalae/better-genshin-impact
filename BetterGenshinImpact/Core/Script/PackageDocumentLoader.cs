@@ -12,6 +12,7 @@ namespace BetterGenshinImpact.Core.Script
     public class PackageDocumentLoader : DocumentLoader
     {
         private readonly string _scriptRootPath;
+        private readonly Dictionary<string, Document> _moduleCache = new();
 
         public PackageDocumentLoader(string scriptRootPath)
         {
@@ -30,9 +31,16 @@ namespace BetterGenshinImpact.Core.Script
             // 处理 JS 文件的重写
             if (Path.GetExtension(targetPath).ToLower() == ".js")
             {
+                if (_moduleCache.TryGetValue(targetPath, out var cached))
+                {
+                    return cached;
+                }
+
                 string content = await File.ReadAllTextAsync(targetPath);
                 string processedCode = RewriteScriptCode(content, targetPath);
-                return new StringDocument(new DocumentInfo(targetPath) { Category = ModuleCategory.Standard }, processedCode);
+                var document = new StringDocument(new DocumentInfo(targetPath) { Category = ModuleCategory.Standard }, processedCode);
+                _moduleCache[targetPath] = document;
+                return document;
             }
 
             return await Default.LoadDocumentAsync(settings, sourceInfo, specifier, category, contextCallback);

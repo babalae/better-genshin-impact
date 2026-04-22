@@ -116,9 +116,6 @@ public class ScriptProject
 
             if (useModule)
             {
-                // 清除Document缓存
-                DocumentLoader.Default.DiscardCachedDocuments();
-
                 string mainScriptPath = Path.Combine(ProjectPath, Manifest.Main);
                 string runtimeCode = loader.RewriteScriptCode(code, mainScriptPath);
                 
