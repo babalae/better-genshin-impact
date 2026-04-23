@@ -407,10 +407,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    
     [ObservableProperty] private bool _switchRoleBasedAutoFightEnabled;
-
-
+    
     [RelayCommand]
     public async Task OnSwitchRoleBasedAutoFight()
     {
