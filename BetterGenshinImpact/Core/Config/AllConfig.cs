@@ -143,6 +143,7 @@ public partial class AllConfig : ObservableObject
     ///     自动战斗配置
     /// </summary>
     public AutoFightConfig AutoFightConfig { get; set; } = new();
+    public BetterGenshinImpact.GameTask.RoleBasedAutoFight.RoleBasedAutoFightConfig RoleBasedAutoFightConfig { get; set; } = new();
 
     /// <summary>
     ///     自动乐曲配置 - 千音雅集
@@ -270,6 +271,7 @@ public partial class AllConfig : ObservableObject
         HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
+        RoleBasedAutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoStygianOnslaughtConfig.PropertyChanged += OnAnyPropertyChanged;
         AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;

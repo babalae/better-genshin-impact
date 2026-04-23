@@ -46,4 +46,9 @@ public class CombatAvatar
     /// </summary>
     public List<string> Alias { get; set; } = [];
 
+    /// <summary>
+    /// 角色定位
+    /// </summary>
+    public List<string> CombatRole { get; set; } = [];
+
 }

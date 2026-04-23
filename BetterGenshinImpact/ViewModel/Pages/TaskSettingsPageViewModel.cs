@@ -407,6 +407,20 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    
+    [ObservableProperty] private bool _switchRoleBasedAutoFightEnabled;
+
+
+    [RelayCommand]
+    public async Task OnSwitchRoleBasedAutoFight()
+    {
+        SwitchRoleBasedAutoFightEnabled = true;
+        var param = new BetterGenshinImpact.GameTask.RoleBasedAutoFight.RoleBasedAutoFightParam(Config.RoleBasedAutoFightConfig);
+        await new TaskRunner().RunSoloTaskAsync(new BetterGenshinImpact.GameTask.RoleBasedAutoFight.RoleBasedAutoFightTask(param));
+        SwitchRoleBasedAutoFightEnabled = false;
+    }
+
+    [RelayCommand]
     public async Task OnSwitchAutoFight()
     {
         if (GetFightStrategy(out var path))

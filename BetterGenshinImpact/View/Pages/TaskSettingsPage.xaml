@@ -1153,6 +1153,50 @@
         </ui:CardExpander>
 
         
+        
+        <!-- 智能定位战斗 -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf0e7;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="BodyStrong" Text="智能定位战斗 (基于Utility AI)" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" Text="无需配置脚本，根据队伍角色定位（主C、副C、奶妈、护盾等）自动进行战斗决策" TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Appearance="Primary" Command="{Binding SwitchRoleBasedAutoFightCommand}" Content="启动" IsEnabled="{Binding SwitchRoleBasedAutoFightEnabled, Converter={StaticResource InverseBooleanConverter}}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16,16,16,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="战斗超时时间" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" Text="超过此时间（秒）将强制结束战斗" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,24,0" Width="150" HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding Config.RoleBasedAutoFightConfig.Timeout}"/>
+
+                    <ui:TextBlock Grid.Row="0" Grid.Column="2" FontTypography="Body" Text="红血Z键吃药" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="2" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}" Text="角色红血时自动按Z键使用便携营养袋" TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="3" Margin="10,0,36,0" HorizontalAlignment="Right" IsChecked="{Binding Config.RoleBasedAutoFightConfig.UseNreGadget, Mode=TwoWay}" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
         <!--  自动刷本  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>
