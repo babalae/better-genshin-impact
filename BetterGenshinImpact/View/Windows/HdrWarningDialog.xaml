@@ -89,7 +89,7 @@
                        Margin="0"
                        Appearance="Primary"
                        Click="SwitchButton_Click"
-                       Content="切到WGC(HDR)"
+                       Content="切到 WGC(HDR)"
                        ToolTip="切换到 WindowsGraphicsCapture（HDR）" />
         </StackPanel>
     </Grid>
