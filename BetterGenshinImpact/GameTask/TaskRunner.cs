@@ -42,14 +42,20 @@ public class TaskRunner
     /// 加锁并独立运行任务
     /// </summary>
     /// <param name="action"></param>
+    /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
+    /// <param name="clearCancellationContextOnLockFailure">获取信号量锁失败时是否清理 CancellationContext。</param>
     /// <returns></returns>
-    public async Task RunCurrentAsync(Func<Task> action)
+    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false)
     {
         // 加锁
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
+            if (clearCancellationContextOnLockFailure)
+            {
+                CancellationContext.Instance.Clear();
+            }
             return;
         }
         try
@@ -58,8 +64,10 @@ public class TaskRunner
 
             // 初始化
             Init();
-            
-            CancellationContext.Instance.Set();
+            if (resetCancellationContext)
+            {
+                CancellationContext.Instance.Set();
+            }
             RunnerContext.Instance.Clear();
 
             await action();
@@ -118,10 +126,24 @@ public class TaskRunner
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
+        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+        CancellationContext.Instance.Set();
+
         // 没启动的时候先启动
-        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") && !soloTask.Name.Contains("幽境危战");
+        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
+                             !soloTask.Name.Contains("幽境危战");
         await ScriptService.StartGameTask(waitForMainUi);
-        await Task.Run(() => RunCurrentAsync(async () => await soloTask.Start(CancellationContext.Instance.Cts.Token)));
+        if (CancellationContext.Instance.IsCancellationRequested)
+        {
+            _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
+            CancellationContext.Instance.Clear();
+            return;
+        }
+        
+        await Task.Run(() => RunCurrentAsync(
+            async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
+            resetCancellationContext: false,
+            clearCancellationContextOnLockFailure: true));
     }
 
     public void Init()
