@@ -229,10 +229,65 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             { 1, 100 }, { 2, 90 }, { 3, 80}, { 4, 70 }, { 5, 60}, { 6,45 },
             { 7, 30 }, { 8, 15 }, { 9, 6 }, { 10, 1 }, { 11,-10 }, { 12,-50 }, { 13, -60 }
         };
+        public static (bool found, int height, bool success) DetectBloodBar(Scalar bloodLower)
+        {
+            ImageRegion image = null;
+            Mat mask = null;
+            Mat labels = null;
+            Mat stats = null;
+            Mat centroids = null;
+            
+            try
+            {
+                image = CaptureToRectArea();
+                mask = OpenCvCommonHelper.Threshold(image.DeriveCrop(0, 0, 1500, 900).SrcMat, bloodLower);
+                
+                labels = new Mat();
+                stats = new Mat();
+                centroids = new Mat();
+
+                int numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                    connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+                if (numLabels > 1)
+                {
+                    using Mat firstRow = stats.Row(1);
+                    int[] statsArray;
+                    bool success = firstRow.GetArray(out statsArray);
+                    if (success)
+                    {
+                        int height = statsArray[3];
+                        return (true, height, success);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // 异常处理由上层调用者负责
+                throw;
+            }
+            finally
+            {
+                // 清理资源
+                image?.Dispose();
+                mask?.Dispose();
+                labels?.Dispose();
+                stats?.Dispose();
+                centroids?.Dispose();
+            }
+
+            return (false, 0, false);
+        }
         
         public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false,int rotaryFactor = 6)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
+            
+            // 防御性检查：确保 rotaryFactor 在有效范围内
+            if (!RotaryFactorMapping.ContainsKey(rotaryFactor))
+            {
+                rotaryFactor = 6;
+            }
             
             var adjustedX = RotaryFactorMapping[rotaryFactor];
             var adjustedDivisor = rotaryFactor<=12 ? 2 : 1.3;
@@ -317,28 +372,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     }
                 }
                 
-                if (retryCount == 0)
-                {
-                    await Delay(delayTime,ct);
-                    // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
-                    Logger.LogInformation("打开编队界面检查战斗是否结束");
-                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                    await Delay(detectDelayTime, ct);
-                    var ra3 = CaptureToRectArea();
-                    var b33 = ra3.SrcMat.At<Vec3b>(50, 790); // 进度条颜色
-                    var whiteTile3 = ra3.SrcMat.At<Vec3b>(50, 768); // 白块
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
-                    ra3.Dispose();
-                
-                    if (IsWhite(whiteTile3.Item2, whiteTile3.Item1, whiteTile3.Item0) &&
-                        IsYellow(b33.Item2, b33.Item1, b33.Item0))
-                    {
-                        logger.LogInformation("识别到战斗结束-s");
-                        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-                        return true;
-                    }
-                }
-
                 if (RotationCount == 3 && retryCount == 0)
                 {
                     Simulation.SendInput.Mouse.MiddleButtonClick();
