@@ -13,6 +13,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Hutao;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Hdr;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
@@ -155,6 +156,7 @@ public partial class App : Application
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
                 services.AddSingleton<NotifierManager>();
+                services.AddSingleton<HdrDetectionService>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<HutaoNamedPipe>();
                 services.AddSingleton<BgiOnnxFactory>();

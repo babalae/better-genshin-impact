@@ -576,6 +576,13 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
+        if (SelectedConfig == null)
+        {
+            Toast.Warning("请先选择配置");
+            _logger.LogInformation("没有配置,退出执行");
+            return;
+        }
+
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
         foreach (var task in taskListCopy)
@@ -583,36 +590,32 @@ public partial class OneDragonFlowViewModel : ViewModel
             task.InitAction(SelectedConfig);
         }
 
+        HashSet<string> defaultTaskNames = ScriptGroupsdefault
+            .Select(task => task.Name)
+            .ToHashSet(StringComparer.Ordinal);
         int finishOneTaskcount = 1;
         int finishTaskcount = 1;
-        int enabledTaskCountall = SelectedConfig.TaskEnabledList.Count(t => t.Value);
+        int enabledTaskCountall = taskListCopy.Count(task => task.IsEnabled);
         _logger.LogInformation($"启用任务总数量: {enabledTaskCountall}");
         
-        ReadScriptGroup();
-        foreach (var task in ScriptGroupsdefault)
-        {
-            ScriptGroups.Remove(task);
-        }
-
-        foreach (var scriptGroup in ScriptGroups)
-        {
-            SelectedConfig.TaskEnabledList.Remove(scriptGroup.Name);
-        }
-
-        if (SelectedConfig == null || taskListCopy.Count(t => t.IsEnabled) == 0)
+        if (taskListCopy.Count(t => t.IsEnabled) == 0)
         {
             Toast.Warning("请先选择任务");
             _logger.LogInformation("没有配置,退出执行!");
             return;
         }
 
-        int enabledoneTaskCount = SelectedConfig.TaskEnabledList.Count(t => t.Value);
+        int enabledoneTaskCount = taskListCopy.Count(task => task.IsEnabled && defaultTaskNames.Contains(task.Name));
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
-        await ScriptService.StartGameTask();
+        bool started = await ScriptService.StartGameTask();
+        if (!started)
+        {
+            return;
+        }
+
         SaveConfig();
-        int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
-            t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
+        int enabledTaskCount = taskListCopy.Count(task => task.IsEnabled && !defaultTaskNames.Contains(task.Name));
         _logger.LogInformation($"启用配置组任务的数量: {enabledTaskCount}");
 
         if (enabledoneTaskCount <= 0)
@@ -625,7 +628,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         {
             if (task is { IsEnabled: true, Action: not null })
             {
-                if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
+                if (defaultTaskNames.Contains(task.Name))
                 {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
                     await new TaskRunner().RunThreadAsync(async () =>
@@ -646,7 +649,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
                         Notify.Event(NotificationEvent.DragonStart).Success("配置组任务启动");
 
-                        if (SelectedConfig.TaskEnabledList[task.Name])
+                        if (task.IsEnabled)
                         {
                             _logger.LogInformation($"配置组任务执行: {finishTaskcount++}/{enabledTaskCount}");
                             await Task.Delay(500);
