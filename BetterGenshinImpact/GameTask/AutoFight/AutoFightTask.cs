@@ -816,7 +816,7 @@ public class AutoFightTask : ISoloTask
             bool? result = null;
             try
             {
-                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct);
+                result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, _ct, false, _taskParam.RotaryFactor);
             }
             catch (Exception ex)
             {
