@@ -94,6 +94,7 @@ internal static class DisplayHdrStateReader
 
             bool matchedAnyPath = false;
             bool anyKnownState = false;
+            bool anyUnknownState = false;
 
             for (int i = 0; i < pathCount; i++)
             {
@@ -111,6 +112,7 @@ internal static class DisplayHdrStateReader
                 matchedAnyPath = true;
                 if (!TryGetAdvancedColorInfo(path.TargetInfo.AdapterId, path.TargetInfo.Id, out DisplayConfigGetAdvancedColorInfo info))
                 {
+                    anyUnknownState = true;
                     continue;
                 }
 
@@ -121,13 +123,18 @@ internal static class DisplayHdrStateReader
                 }
             }
 
-            if (!matchedAnyPath)
-            {
-                return null;
-            }
-
-            return anyKnownState ? false : null;
+            return ResolveMatchedPathState(matchedAnyPath, anyKnownState, anyUnknownState);
         }
+    }
+
+    private static bool? ResolveMatchedPathState(bool matchedAnyPath, bool anyKnownState, bool anyUnknownState)
+    {
+        if (!matchedAnyPath || anyUnknownState)
+        {
+            return null;
+        }
+
+        return anyKnownState ? false : null;
     }
 
     private static bool TryGetSourceDeviceName(Luid adapterId, uint sourceId, out string? sourceDeviceName)

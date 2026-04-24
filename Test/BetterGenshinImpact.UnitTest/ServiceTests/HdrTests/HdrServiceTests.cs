@@ -169,6 +169,31 @@ public class HdrDetectionEvaluatorTests
     }
 }
 
+public class DisplayHdrStateReaderTests
+{
+    [Theory]
+    [InlineData(false, false, false, null)]
+    [InlineData(true, false, false, null)]
+    [InlineData(true, true, false, false)]
+    [InlineData(true, true, true, null)]
+    public void ResolveMatchedPathState_ShouldReturnExpectedResult(
+        bool matchedAnyPath,
+        bool anyKnownState,
+        bool anyUnknownState,
+        bool? expected)
+    {
+        Type? readerType = typeof(HdrDetectionService).Assembly.GetType("BetterGenshinImpact.Service.Hdr.DisplayHdrStateReader");
+        Assert.NotNull(readerType);
+
+        var method = readerType!.GetMethod("ResolveMatchedPathState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(method);
+
+        bool? result = (bool?)method!.Invoke(null, [matchedAnyPath, anyKnownState, anyUnknownState]);
+
+        Assert.Equal(expected, result);
+    }
+}
+
 public class HdrDetectionServiceTests
 {
     [Theory]
