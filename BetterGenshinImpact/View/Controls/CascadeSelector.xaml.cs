@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,13 +10,6 @@ namespace BetterGenshinImpact.View.Controls;
 
 public partial class CascadeSelector : UserControl
 {
-    private const double HorizontalMargin = 40;
-    private const double MinFirstLevelWidth = 100;
-    private const double MaxFirstLevelWidth = 300;
-    private const double MinSecondLevelWidth = 100;
-    private const double MaxSecondLevelWidth = 300;
-    private const double MinPopupWidth = 120;
-    private const double MaxPopupWidth = 600;
 
     public CascadeSelector()
     {
@@ -29,7 +21,6 @@ public partial class CascadeSelector : UserControl
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         UpdateFirstLevelOptions();
-        UpdatePopupWidth();
     }
 
     /// <summary>
@@ -73,16 +64,7 @@ public partial class CascadeSelector : UserControl
 
     public static readonly DependencyProperty SecondLevelOptionsProperty =
         DependencyProperty.Register("SecondLevelOptions", typeof(List<string>), typeof(CascadeSelector), 
-            new PropertyMetadata(null, OnSecondLevelOptionsChanged));
-
-    private static void OnSecondLevelOptionsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = (CascadeSelector)d;
-        control.Dispatcher.BeginInvoke(() =>
-        {
-            control.AdjustSecondLevelListWidth();
-        }, System.Windows.Threading.DispatcherPriority.Render);
-    }
+            new PropertyMetadata(null));
 
     public string? SelectedValue
     {
@@ -109,145 +91,53 @@ public partial class CascadeSelector : UserControl
     public static readonly DependencyProperty DefaultValueProperty =
         DependencyProperty.Register("DefaultValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
 
-    private double MeasureTextWidth(string text, double fontSize)
+    /// <summary>
+    /// 显示用的值（去掉类型前缀），供 ToggleButton 文本绑定
+    /// </summary>
+    public string? DisplayValue
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return 0;
-        }
-
-        var formattedText = new FormattedText(
-            text,
-            CultureInfo.CurrentCulture,
-            FlowDirection.LeftToRight,
-            new Typeface(FontFamily, FontStyle, FontWeight, FontStretch),
-            fontSize,
-            Brushes.Black,
-            new NumberSubstitution(),
-            TextFormattingMode.Display,
-            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-        return formattedText.WidthIncludingTrailingWhitespace;
+        get { return (string?)GetValue(DisplayValueProperty); }
+        set { SetValue(DisplayValueProperty, value); }
     }
 
-    private void AdjustFirstLevelListWidth()
+    public static readonly DependencyProperty DisplayValueProperty =
+        DependencyProperty.Register("DisplayValue", typeof(string), typeof(CascadeSelector), new PropertyMetadata(null));
+
+    /// <summary>
+    /// 去掉类型前缀，返回显示名称（标准秘境附加奖励信息）
+    /// </summary>
+    private static string StripPrefix(string value)
     {
-        if (FirstLevelOptions == null || FirstLevelOptions.Count == 0)
-        {
-            return;
-        }
-
-        double maxWidth = MinFirstLevelWidth;
-        foreach (var option in FirstLevelOptions)
-        {
-            double textWidth = MeasureTextWidth(option, FontSize) + HorizontalMargin;
-            if (textWidth > maxWidth)
-            {
-                maxWidth = textWidth;
-            }
-        }
-
-        if (maxWidth > MaxFirstLevelWidth)
-        {
-            maxWidth = MaxFirstLevelWidth;
-        }
-
-        var grid = PopupBorder?.Child as Grid;
-        var firstColumn = grid?.ColumnDefinitions[0];
-        if (firstColumn != null)
-        {
-            firstColumn.Width = new GridLength(maxWidth);
-        }
+        if (value.StartsWith("task:")) return value[5..];
+        if (value.StartsWith("script:")) return value[7..];
+        // 标准秘境：查显示名称映射，附加奖励信息
+        if (Helpers.DomainCascadingItems.DomainDisplayNames.TryGetValue(value, out var display))
+            return display;
+        return value;
     }
 
-    private void AdjustSecondLevelListWidth()
+    /// <summary>
+    /// 去掉类型前缀，返回简短名称（用于 ToggleButton 文本，不带奖励）
+    /// </summary>
+    private static string StripPrefixShort(string value)
     {
-        if (SecondLevelOptions == null || SecondLevelOptions.Count == 0)
-        {
-            UpdatePopupWidth();
-            return;
-        }
-
-        double maxWidth = MinSecondLevelWidth;
-        foreach (var option in SecondLevelOptions)
-        {
-            double textWidth = MeasureTextWidth(option, FontSize) + HorizontalMargin;
-            if (textWidth > maxWidth)
-            {
-                maxWidth = textWidth;
-            }
-        }
-
-        if (maxWidth > MaxSecondLevelWidth)
-        {
-            maxWidth = MaxSecondLevelWidth;
-        }
-
-        var grid = PopupBorder?.Child as Grid;
-        var thirdColumn = grid?.ColumnDefinitions[2];
-        if (thirdColumn != null)
-        {
-            thirdColumn.Width = new GridLength(maxWidth);
-        }
-
-        Dispatcher.BeginInvoke(() => UpdatePopupWidth(), System.Windows.Threading.DispatcherPriority.Render);
-    }
-
-    private void UpdatePopupWidth()
-    {
-        var grid = PopupBorder?.Child as Grid;
-        if (grid == null || grid.ColumnDefinitions.Count < 3)
-        {
-            return;
-        }
-
-        double totalWidth = 0;
-
-        var firstColumn = grid.ColumnDefinitions[0];
-        var secondColumn = grid.ColumnDefinitions[1];
-        var thirdColumn = grid.ColumnDefinitions[2];
-
-        if (firstColumn.Width.IsAuto)
-        {
-            firstColumn.Width = new GridLength(MinFirstLevelWidth);
-        }
-        totalWidth += firstColumn.Width.Value;
-
-        totalWidth += secondColumn.Width.Value;
-        totalWidth += thirdColumn.Width.Value;
-
-        totalWidth += 8;
-
-        if (totalWidth < MinPopupWidth)
-        {
-            totalWidth = MinPopupWidth;
-        }
-        if (totalWidth > MaxPopupWidth)
-        {
-            totalWidth = MaxPopupWidth;
-        }
-
-        PopupBorder.Width = totalWidth;
+        if (value.StartsWith("task:")) return value[5..];
+        if (value.StartsWith("script:")) return value[7..];
+        return value;
     }
 
     private void UpdateFirstLevelOptions()
     {
-        if (CascadeOptions != null)
-        {
-            FirstLevelOptions = CascadeOptions.Keys.ToList();
-            Dispatcher.BeginInvoke(() =>
-            {
-                AdjustFirstLevelListWidth();
-                UpdatePopupWidth();
-            }, System.Windows.Threading.DispatcherPriority.Render);
-        }
-        else
-        {
-            FirstLevelOptions = new List<string>();
-        }
+        FirstLevelOptions = CascadeOptions?.Keys.ToList() ?? new List<string>();
+        // 数据源变化后重新同步当前选中项的定位
+        HandleSelectedValueChanged(SelectedValue);
     }
 
     private void HandleSelectedValueChanged(string? newValue)
     {
+        // 更新显示值（去掉前缀，ToggleButton 显示简短名称）
+        DisplayValue = string.IsNullOrEmpty(newValue) ? null : StripPrefixShort(newValue);
+
         if (string.IsNullOrEmpty(newValue) || CascadeOptions == null)
         {
             return;
@@ -258,20 +148,28 @@ public partial class CascadeSelector : UserControl
             if (kvp.Value.Contains(newValue))
             {
                 FirstLevelListView.SelectedItem = kvp.Key;
-                SecondLevelOptions = kvp.Value;
-                SecondLevelListView.SelectedItem = newValue;
+                _secondLevelDisplayNames = kvp.Value.Select(StripPrefix).ToList();
+                SecondLevelOptions = _secondLevelDisplayNames;
+                SecondLevelListView.SelectedItem = StripPrefix(newValue);
                 break;
             }
         }
     }
 
+    /// <summary>
+    /// 当前二级列表的显示名称（去掉前缀）
+    /// </summary>
+    private List<string> _secondLevelDisplayNames = new();
+
     private void FirstLevelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (FirstLevelListView.SelectedItem is string selectedFirstLevel)
         {
-            if (CascadeOptions != null && CascadeOptions.TryGetValue(selectedFirstLevel, out var secondLevelOptions))
+            if (CascadeOptions != null && CascadeOptions.TryGetValue(selectedFirstLevel, out var secondLevelValues))
             {
-                SecondLevelOptions = secondLevelOptions;
+                // 存储原始值用于选择时回写
+                _secondLevelDisplayNames = secondLevelValues.Select(StripPrefix).ToList();
+                SecondLevelOptions = _secondLevelDisplayNames;
                 SecondLevelListView.SelectedItem = null;
             }
         }
@@ -279,9 +177,20 @@ public partial class CascadeSelector : UserControl
 
     private void SecondLevelListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (SecondLevelListView.SelectedItem is string selectedSecondLevel)
+        if (SecondLevelListView.SelectedItem is string selectedDisplay)
         {
-            SelectedValue = selectedSecondLevel;
+            // 从当前一级分类中找到对应的完整值（带前缀）
+            if (FirstLevelListView.SelectedItem is string firstLevel
+                && CascadeOptions != null
+                && CascadeOptions.TryGetValue(firstLevel, out var values))
+            {
+                var idx = _secondLevelDisplayNames.IndexOf(selectedDisplay);
+                if (idx >= 0 && idx < values.Count)
+                {
+                    SelectedValue = values[idx]; // 写回带前缀的完整值
+                }
+            }
+
             if (MainToggle.IsChecked == true)
             {
                 MainToggle.IsChecked = false;
