@@ -282,6 +282,12 @@ public partial class App : Application
     {
         try
         {
+            // 忽略V8引擎释放后pending的Task回调抛出的异常
+            if (IsV8EngineReleasedException(e.Exception))
+            {
+                return;
+            }
+
             HandleException(e.Exception);
         }
         catch (Exception ex)
@@ -292,6 +298,21 @@ public partial class App : Application
         {
             e.SetObserved();
         }
+    }
+
+    private static bool IsV8EngineReleasedException(Exception? ex)
+    {
+        while (ex != null)
+        {
+            if (ex.Message?.Contains("V8 object has been released") == true)
+            {
+                return true;
+            }
+
+            ex = ex.InnerException;
+        }
+
+        return false;
     }
 
     //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)

@@ -139,6 +139,8 @@ public class ScriptProject
         }
         finally
         {
+            // 终止代码执行
+            engine.Interrupt();
             engine.Dispose();
         }
     }
