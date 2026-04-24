@@ -24,6 +24,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using Vanara.Extensions.Reflection;
 using Vanara.PInvoke;
 using Region = BetterGenshinImpact.GameTask.Model.Area.Region;
 
@@ -49,6 +50,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool UseBackgroundOperation { get; private set; }
 
     public bool IsUseInteractionKey { get; set; } = false;
+    
+    public bool IsControllerMode { get; private set; }
 
     private readonly AutoSkipAssets _autoSkipAssets;
 
@@ -70,6 +73,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private List<string> _selectList = [];
 
     private PostMessageSimulator? _postMessageSimulator;
+    private PostMessageSimulatorController? _postMessageSimulatorController;
     
     private readonly bool _isCustomConfiguration;
 
@@ -96,6 +100,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
         IsBackgroundRunning = _config.RunBackgroundEnabled;
         // IsUseInteractionKey = _config.SelectChatOptionType == SelectChatOptionTypes.UseInteractionKey;
         _postMessageSimulator = TaskContext.Instance().PostMessageSimulator;
+        _postMessageSimulatorController = TaskContext.Instance().PostMessageSimulatorController;
+
+        // 手柄模式是否启用
+        IsControllerMode = TaskContext.Instance().Config.AutoSkipControllerEnabled;
 
         if (!_isCustomConfiguration)
         {
@@ -230,11 +238,19 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
                 else
                 {
-                    _postMessageSimulator?.KeyPressBackground(User32.VK.VK_SPACE);
+                    if (IsControllerMode)
+                    {
+                        _postMessageSimulatorController?.ButtonBPress();
+                    }
+                    else
+                    {
+                        _postMessageSimulator?.KeyPressBackground(User32.VK.VK_SPACE);
+                    }
                 }
             }
 
             // 对话选项选择
+            // TODO 手柄模式非快速跳过对话适配
             bool hasOption;
             if (UseBackgroundOperation || IsUseInteractionKey)
             {

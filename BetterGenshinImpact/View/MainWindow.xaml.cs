@@ -44,6 +44,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
     protected override void OnClosed(EventArgs e)
     {
         _logger.LogDebug("主窗体退出");
+        TaskContext.Instance().PostMessageSimulatorController.DisconnectController();
         base.OnClosed(e);
         App.GetService<NotifyIconViewModel>()?.Exit();
     }

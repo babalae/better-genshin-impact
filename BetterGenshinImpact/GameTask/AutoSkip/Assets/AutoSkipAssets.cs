@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoSkip.Assets;
@@ -37,6 +38,22 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
 
     public RecognitionObject HangoutUnselectedRo;
     public RecognitionObject HangoutSkipRo;
+    // 手柄适配
+    // 隐藏对话ui按钮
+    public RecognitionObject ControllerDisabledUiButtonRo;
+    // 自动对话按钮
+    public RecognitionObject ControllerAutoTalkButtonRo;
+    // 自动对话播放中
+    public RecognitionObject ControllerPlayingTextRo;
+    // 确认按钮
+    public RecognitionObject ControllerConfirmButtonRo;
+    // 对话选项按钮
+    public RecognitionObject ControllerChoiceButtonRo;
+    // 调节音量按钮
+    public RecognitionObject ControllerAdjustVolumeButtonRo;
+
+    
+    private static readonly ILogger Logger = App.GetLogger<AutoSkipAssets>();
 
     private AutoSkipAssets()
     {
@@ -211,5 +228,60 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "hangout_skip.png"),
             RegionOfInterest = new Rect(0, 0, CaptureRect.Width / 5, CaptureRect.Height / 8)
         }.InitTemplate();
+        
+        // 手柄适配
+        // 隐藏对话ui按钮
+        ControllerDisabledUiButtonRo = new RecognitionObject
+        {
+            Name = "ControllerDisabledUiButtonRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "controller_talk_disable_ui_button.png"),
+            DrawOnWindow = true,
+            Use3Channels = true,
+        }.InitTemplate();
+        ControllerPlayingTextRo = new RecognitionObject
+        {
+            Name = "ControllerPlayingTextRo",
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)(100 * AssetScale), (int)(35 * AssetScale), (int)(85 * AssetScale), (int)(35 * AssetScale)),
+            OneContainMatchText = ["播", "番", "放", "中"],
+            DrawOnWindow = true
+        }.InitTemplate();
+        // 自动对话按钮
+        ControllerAutoTalkButtonRo = new RecognitionObject
+        {
+            Name = "ControllerAutoTalkButtonRo",
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)(100 * AssetScale), (int)(35 * AssetScale), (int)(85 * AssetScale), (int)(35 * AssetScale)),
+            OneContainMatchText = ["自", "动"],
+            DrawOnWindow = true
+        }.InitTemplate();
+        // 确认按钮
+        ControllerConfirmButtonRo = new RecognitionObject
+        {
+            Name = "ControllerConfirmButtonRo",
+            RecognitionType = RecognitionTypes.OcrMatch,
+            RegionOfInterest = new Rect((int)(100 * AssetScale), (int)(35 * AssetScale), (int)(85 * AssetScale), (int)(35 * AssetScale)),
+            OneContainMatchText = ["确", "认"],
+            DrawOnWindow = true
+        }.InitTemplate();
+        // 对话选项按钮
+        ControllerChoiceButtonRo = new RecognitionObject
+        {
+            Name = "ControllerChoiceButtonRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "controller_talk_choice.png"),
+            DrawOnWindow = true,
+            RegionOfInterest = OptionRoi
+        }.InitTemplate();
+        // 调节音量按钮
+        ControllerAdjustVolumeButtonRo = new RecognitionObject
+        {
+            Name = "ControllerAdjustVolumeButtonRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "controller_talk_adjust_volume_button.png"),
+            DrawOnWindow = true,
+        }.InitTemplate();
+    
     }
 }
