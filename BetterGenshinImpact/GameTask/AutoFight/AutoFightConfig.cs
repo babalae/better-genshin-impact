@@ -85,7 +85,7 @@ public partial class AutoFightConfig : ObservableObject
         private string _beforeDetectDelay = "0.4";
         
         /// <summary>
-        /// 旋转寻找敌人位置的旋转因子，默认为5，越大越快。
+        /// 旋转寻找敌人位置的旋转因子，默认为12（范围1-13），越大越快。
         /// </summary>
         [ObservableProperty]
         private int _rotaryFactor = 12;
