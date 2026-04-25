@@ -441,7 +441,7 @@ public class NotificationService : IHostedService, IDisposable
 
         try
         {
-            var mat = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.GlobalGameCapture);
+            var mat = TaskControl.CaptureGameImageNoRetry(App.GetService<CaptureService>()?.GameCapture);
             if (mat != null)
             {
                 var imageRegion = new ImageRegion(mat, 0, 0);

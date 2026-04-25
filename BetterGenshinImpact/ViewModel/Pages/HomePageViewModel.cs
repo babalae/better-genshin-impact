@@ -267,9 +267,7 @@ public partial class HomePageViewModel : ViewModel
                 _hWnd = hWnd;
                 _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
                 _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
                 _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
                 _maskWindow ??= new MaskWindow();
                 _maskWindow.Show();
                 MaskWindow.Instance().RefreshPosition();
@@ -328,11 +326,6 @@ public partial class HomePageViewModel : ViewModel
     private void OnUiTaskStopTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(Stop);
-    }
-
-    private void OnUiTaskStartTick(object? sender, EventArgs e)
-    {
-        UIDispatcherHelper.Invoke(() => Start(_hWnd));
     }
 
     [RelayCommand]

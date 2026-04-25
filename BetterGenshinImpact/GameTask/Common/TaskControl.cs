@@ -186,14 +186,15 @@ public class TaskControl
 
     public static Mat CaptureGameImage(IGameCapture? gameCapture)
     {
-        var image = gameCapture?.Capture();
+        var captureService = App.GetService<CaptureService>();
+        var image = gameCapture?.Capture() ?? captureService?.CaptureWithRetry();
         if (image == null)
         {
             Logger.LogWarning("截图失败!");
             // 重试3次
             for (var i = 0; i < 3; i++)
             {
-                image = gameCapture?.Capture();
+                image = gameCapture?.Capture() ?? captureService?.CaptureWithRetry();
                 if (image != null)
                 {
                     return image;
@@ -212,7 +213,7 @@ public class TaskControl
 
     public static Mat? CaptureGameImageNoRetry(IGameCapture? gameCapture)
     {
-        return gameCapture?.Capture();
+        return gameCapture?.Capture() ?? App.GetService<CaptureService>()?.CaptureNoRetry();
     }
 
     /// <summary>
@@ -221,7 +222,7 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
+        var image = CaptureGameImage(App.GetService<CaptureService>()?.GameCapture);
         var content = new CaptureContent(image, 0, 0);
         return content.CaptureRectArea;
     }
