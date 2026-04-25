@@ -24,6 +24,7 @@ using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoCook;
 using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.RevivePrompt;
 using BetterGenshinImpact.GameTask.SkillCd;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 
@@ -188,6 +189,11 @@ public partial class AllConfig : ObservableObject
     public SkillCdConfig SkillCdConfig { get; set; } = new();
 
     /// <summary>
+    /// 复苏提示
+    /// </summary>
+    public RevivePromptConfig RevivePromptConfig { get; set; } = new();
+
+    /// <summary>
     /// 自动使用
     /// </summary>
     public AutoRedeemCodeConfig AutoRedeemCodeConfig { get; set; } = new();
@@ -285,6 +291,7 @@ public partial class AllConfig : ObservableObject
         DevConfig.PropertyChanged += OnAnyPropertyChanged;
         HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
         SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
+        RevivePromptConfig.PropertyChanged += OnAnyPropertyChanged;
     }
 
     public void OnAnyPropertyChanged(object? sender, EventArgs args)

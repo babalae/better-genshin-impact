@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -8,6 +8,8 @@ namespace BetterGenshinImpact.GameTask.RevivePrompt;
 
 public class RevivePromptTrigger : ITaskTrigger
 {
+    private readonly RevivePromptConfig _config;
+
     public string Name => "复苏提示";
     public bool IsEnabled { get; set; }
     public int Priority => 15;
@@ -17,9 +19,14 @@ public class RevivePromptTrigger : ITaskTrigger
 
     private DateTime _prevExecute = DateTime.MinValue;
 
+    public RevivePromptTrigger()
+    {
+        _config = TaskContext.Instance().Config.RevivePromptConfig;
+    }
+
     public void Init()
     {
-        IsEnabled = true;
+        IsEnabled = _config.Enabled;
     }
 
     public void OnCapture(CaptureContent content)

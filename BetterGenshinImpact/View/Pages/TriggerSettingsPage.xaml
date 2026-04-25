@@ -794,6 +794,38 @@
             </StackPanel>
         </ui:CardExpander>
 
+        <!--  复苏提示  -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Icon="{ui:SymbolIcon HeartPulse24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="复苏提示"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="检测到角色倒下后的复苏弹窗时，自动点击确认"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.RevivePromptConfig.Enabled, Mode=TwoWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel />
+        </ui:CardExpander>
+
         <!--  自动吃药  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>

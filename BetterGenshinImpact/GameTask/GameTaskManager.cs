@@ -128,6 +128,7 @@ internal class GameTaskManager
             TriggerDictionary.GetValueOrDefault("AutoEat")?.Init();
             TriggerDictionary.GetValueOrDefault("MapMask")?.Init();
             TriggerDictionary.GetValueOrDefault("SkillCd")?.Init();
+            TriggerDictionary.GetValueOrDefault("RevivePrompt")?.Init();
             // 清理画布
             VisionContext.Instance().DrawContent.ClearAll();
         }
