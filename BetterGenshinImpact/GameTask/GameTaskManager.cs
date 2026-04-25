@@ -25,6 +25,7 @@ using BetterGenshinImpact.GameTask.AutoDomain.Assets;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
+using BetterGenshinImpact.GameTask.RevivePrompt;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -50,6 +51,8 @@ internal class GameTaskManager
         TriggerDictionary.TryAdd("AutoEat", new AutoEat.AutoEatTrigger());
         TriggerDictionary.TryAdd("MapMask", new MapMaskTrigger());
         TriggerDictionary.TryAdd("SkillCd", new SkillCdTrigger());
+        //监测复苏页面，点击复活
+        TriggerDictionary.TryAdd("RevivePrompt", new RevivePromptTrigger());
 
         return ConvertToTriggerList();
     }
