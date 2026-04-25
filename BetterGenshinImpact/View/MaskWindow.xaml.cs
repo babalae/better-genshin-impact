@@ -23,6 +23,8 @@ using System.Windows.Interop;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Genshin.Settings2;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.ViewModel;
@@ -284,7 +286,12 @@ public partial class MaskWindow : Window
         var dpiScale = TaskContext.Instance().DpiScale;
         _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
             width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
-
+        using var ra = TaskControl.CaptureToRectArea();
+        if (Bv.ClickIfInReviveModal(ra))
+        {
+            // 已点击“复苏”
+            _logger.LogInformation("已点击复苏");
+        }
         if (width * 9 != height * 16)
         {
             _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
