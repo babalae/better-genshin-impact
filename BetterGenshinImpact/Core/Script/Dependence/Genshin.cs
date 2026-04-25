@@ -500,13 +500,13 @@ public class Genshin
             }
 
             var viewModeRegion = page.GetByText("显示模式")
-                .WithRoi(new Rect(
-                    (int)(450 * captureRect.Width / 1920),
-                    (int)(200 * captureRect.Height / 1080),
-                    (int)(200 * captureRect.Width / 1920),
-                    (int)(200 * captureRect.Height / 1080)))
-                .FindAll().FirstOrDefault()
-                ?? throw new TimeoutException("未找到「显示模式」选项");
+                                     .WithRoi(new Rect(
+                                         (int)(450 * captureRect.Width / 1920),
+                                         (int)(200 * captureRect.Height / 1080),
+                                         (int)(200 * captureRect.Width / 1920),
+                                         (int)(200 * captureRect.Height / 1080)))
+                                     .FindAll().FirstOrDefault()
+                                 ?? throw new TimeoutException("未找到「显示模式」选项");
 
             page.Click(
                 (viewModeRegion.X + 1100 * captureRect.Width / 1920) * 1920.0 / captureRect.Width,
@@ -580,6 +580,7 @@ public class Genshin
                     break;
                 }
             }
+
             TaskContext.Instance().Init(hWnd);
             // 重建截图器
             var captureMode = Enum.Parse<Fischless.GameCapture.CaptureModes>(TaskContext.Instance().Config.CaptureMode);
@@ -608,6 +609,8 @@ public class Genshin
 
             dispatcher.IsResolutionChanging = false;
         }
+    }
+
     /// 莉奈娅挖矿
     /// </summary>
     /// <param name="mineCount">射箭次数，默认1</param>
