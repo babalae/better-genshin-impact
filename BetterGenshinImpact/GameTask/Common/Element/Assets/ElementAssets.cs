@@ -68,6 +68,7 @@ public class ElementAssets : BaseAssets<ElementAssets>
     public RecognitionObject PrimogemRo;
 
     public RecognitionObject EscMailReward;
+    public RecognitionObject EscSettingsRo;
     public RecognitionObject CollectRo;
 
     public RecognitionObject PageCloseWhiteRo;
@@ -563,6 +564,13 @@ public class ElementAssets : BaseAssets<ElementAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_mail_reward.png", systemInfo),
             RegionOfInterest = CaptureRect.CutLeftBottom(0.1, 0.5)
+        }.InitTemplate();
+
+        EscSettingsRo = new RecognitionObject
+        {
+            Name = "EscSettings",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage(@"Common\Element", "esc_settings.png", systemInfo),
         }.InitTemplate();
 
         CollectRo = new RecognitionObject

@@ -6,6 +6,7 @@ using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
+using System.Linq;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
@@ -16,6 +17,13 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
+using System.Threading;
+using BetterGenshinImpact.View;
+using BetterGenshinImpact.Core.BgiVision;
+using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using System.Linq;
 using BetterGenshinImpact.View.Drawable;
@@ -425,6 +433,184 @@ public class Genshin
     }
 
     /// <summary>
+    /// 修改游戏分辨率，在变更期间暂停截图器但不会中断当前 JS 脚本执行。
+    /// 变更完成后截图器自动重启，所有分辨率相关资源（触发器、模板等）会被重置。
+    /// </summary>
+    /// <param name="width">目标宽度</param>
+    /// <param name="height">目标高度</param>
+    /// <param name="fullscreen">是否允许选择独占全屏分辨率，默认 false</param>
+    /// <remarks>
+    /// 注意：分辨率变更后，此前通过 dispatcher.addTimer / dispatcher.addTrigger 注册的自定义触发器配置会丢失
+    /// </remarks>
+    public async Task ChangeResolution(int width, int height, bool fullscreen = false)
+    {
+        var dispatcher = TaskTriggerDispatcher.Instance();
+
+        if (dispatcher.IsResolutionChanging)
+        {
+            throw new InvalidOperationException("已经在进行分辨率变更中，请勿重复调用");
+        }
+
+        dispatcher.IsResolutionChanging = true;
+        try
+        {
+            var ct = CancellationContext.Instance.Cts.Token;
+            var page = new BvPage(ct);
+            var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+            var targetW = width.ToString();
+            var targetH = height.ToString();
+
+            // 在变更前记录原始窗口尺寸
+            var hWnd = TaskContext.Instance().GameHandle;
+            var origRect = SystemControl.GetCaptureRect(hWnd);
+
+            await new ReturnMainUiTask().Start(ct);
+
+            var escSettingsRo = ElementAssets.Instance.EscSettingsRo.Clone();
+            escSettingsRo.DrawOnWindow = false;
+            var pageCloseRo = ElementAssets.Instance.PageCloseWhiteRo.Clone();
+            pageCloseRo.DrawOnWindow = false;
+
+            if (!await NewRetry.WaitForElementAppear(escSettingsRo,
+                    () => page.Keyboard.KeyPress(User32.VK.VK_ESCAPE), ct, 5, 1500))
+            {
+                throw new TimeoutException("打开菜单超时");
+            }
+
+            if (!await NewRetry.WaitForElementAppear(pageCloseRo,
+                    () => page.Click(45, 825), ct, 5, 1500))
+            {
+                throw new TimeoutException("打开设置页面超时");
+            }
+
+            var viewModeRo = new RecognitionObject
+            {
+                RecognitionType = RecognitionTypes.Ocr,
+                RegionOfInterest = new Rect(
+                    (int)(450 * captureRect.Width / 1920),
+                    (int)(200 * captureRect.Height / 1080),
+                    (int)(200 * captureRect.Width / 1920),
+                    (int)(200 * captureRect.Height / 1080)),
+                Text = "显示模式"
+            };
+            if (!await NewRetry.WaitForElementAppear(viewModeRo,
+                    () => page.GetByText("图像").WithRoi(captureRect.CutLeft(0.20)).Click(), ct, 5, 1500))
+            {
+                throw new TimeoutException("切换到图像标签超时");
+            }
+
+            var viewModeRegion = page.GetByText("显示模式")
+                                     .WithRoi(new Rect(
+                                         (int)(450 * captureRect.Width / 1920),
+                                         (int)(200 * captureRect.Height / 1080),
+                                         (int)(200 * captureRect.Width / 1920),
+                                         (int)(200 * captureRect.Height / 1080)))
+                                     .FindAll().FirstOrDefault()
+                                 ?? throw new TimeoutException("未找到「显示模式」选项");
+
+            page.Click(
+                (viewModeRegion.X + 1100 * captureRect.Width / 1920) * 1920.0 / captureRect.Width,
+                (viewModeRegion.Y + 20 * captureRect.Height / 1080) * 1080.0 / captureRect.Height);
+            await page.Wait(1500);
+
+            Simulation.SendInput.Mouse.MoveMouseBy(0, 100);
+            await page.Wait(200);
+            for (var count = 0; count < 20; count++)
+            {
+                Simulation.SendInput.Mouse.VerticalScroll(100);
+                await page.Wait(200);
+            }
+
+            await page.Wait(500);
+
+            var listRegion = new Rect(
+                (int)(1400 * captureRect.Width / 1920),
+                (int)(300 * captureRect.Height / 1080),
+                (int)(400 * captureRect.Width / 1920),
+                (int)(600 * captureRect.Height / 1080));
+            var resolutionFound = false;
+
+            for (var scrollAttempt = 0; scrollAttempt < 30; scrollAttempt++)
+            {
+                Simulation.SendInput.Mouse.VerticalScroll(-100);
+                await page.Wait(1000);
+
+                var allResults = page.GetByText(string.Empty, listRegion).FindAll();
+                // 按行聚合
+                foreach (var line in allResults.GroupBy(r => r.Y / (int)(20 * captureRect.Height / 1080.0)))
+                {
+                    var texts = line.Select(r => r.Text).ToList();
+                    if (texts.Any(t => t.Contains(targetW))
+                        && texts.Any(t => t.Contains(targetH))
+                        && (fullscreen || !texts.Any(t => t.Contains("全屏") || t.Contains("独占"))))
+                    {
+                        line.First(r => r.Text.Contains(targetW) || r.Text.Contains(targetH)).Click();
+                        resolutionFound = true;
+                        break;
+                    }
+                }
+
+                if (resolutionFound) break;
+            }
+
+            if (!resolutionFound)
+            {
+                throw new TimeoutException($"未在下拉列表中找到分辨率 {width}x{height}");
+            }
+
+            await page.Wait(1000);
+
+            await new ReturnMainUiTask().Start(ct);
+
+            // 暂停截图定时器，等待分辨率生效
+            dispatcher.StopTimer();
+
+            // 更新缓存的分辨率指标
+            GlobalMethod.SetGameMetrics(width, height);
+
+            // 通过窗口尺寸变化检测分辨率是否已变更（与原尺寸比较，有差异即成功）
+            var waitStart = DateTime.Now;
+            var timeout = TimeSpan.FromSeconds(10);
+            while ((DateTime.Now - waitStart) < timeout)
+            {
+                Thread.Sleep(500);
+                var currentRect = SystemControl.GetCaptureRect(hWnd);
+                if (currentRect.Width != origRect.Width || currentRect.Height != origRect.Height)
+                {
+                    break;
+                }
+            }
+
+            TaskContext.Instance().Init(hWnd);
+            // 重建截图器
+            var captureMode = Enum.Parse<Fischless.GameCapture.CaptureModes>(TaskContext.Instance().Config.CaptureMode);
+            dispatcher.RebuildCapture(hWnd, captureMode);
+            // 重建触发器
+            var triggers = GameTaskManager.LoadInitialTriggers();
+            dispatcher.SetTriggers(triggers);
+            // 更新内部游戏区域跟踪
+            var newRect = SystemControl.GetCaptureRect(hWnd);
+            TaskContext.Instance().SystemInfo.CaptureAreaRect = newRect;
+            MaskWindow.Instance().RefreshPosition();
+            // 恢复截图定时器，清标志（setter 会自动同步 _gameRect）
+            dispatcher.StartTimer();
+        }
+        finally
+        {
+            // 确保定时器恢复运行
+            try
+            {
+                dispatcher.StartTimer();
+            }
+            catch
+            {
+                // 忽略重复启动
+            }
+
+            dispatcher.IsResolutionChanging = false;
+        }
+    }
+
     /// 莉奈娅挖矿
     /// </summary>
     /// <param name="mineCount">射箭次数，默认1</param>
