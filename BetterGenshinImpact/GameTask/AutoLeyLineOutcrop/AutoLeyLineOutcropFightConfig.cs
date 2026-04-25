@@ -48,6 +48,9 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
     [ObservableProperty] private bool _kazuhaPickupEnabled = true;
     [ObservableProperty] private bool _qinDoublePickUp = false;
     [ObservableProperty] private int _timeout = 120;
+    [ObservableProperty] private bool _seekEnemyEnabled = false;
+    [ObservableProperty] private int _seekEnemyIntervalSeconds = 3;
+    [ObservableProperty] private int _seekEnemyRotaryFactor = 6;
 
     public void CopyFromAutoFightConfig(AutoFightConfig source)
     {

@@ -24,6 +24,10 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.Core.Recognition.ONNX;
+using System.Linq;
+using BetterGenshinImpact.View.Drawable;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -604,5 +608,12 @@ public class Genshin
 
             dispatcher.IsResolutionChanging = false;
         }
+    /// 莉奈娅挖矿
+    /// </summary>
+    /// <param name="mineCount">射箭次数，默认1</param>
+    /// <param name="scanRounds">大循环寻矿次数，默认5</param>
+    public async Task StartMining(int mineCount = 1, int scanRounds = 5)
+    {
+        await new LinneaMiningTask(scanRounds, mineCount).Start(CancellationContext.Instance.Cts.Token);
     }
 }

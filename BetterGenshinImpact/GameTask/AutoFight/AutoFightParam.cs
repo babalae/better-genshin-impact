@@ -56,6 +56,7 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         RotaryFactor = autoFightConfig.FinishDetectConfig.RotaryFactor;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
+        ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
     }
 
     public FightFinishDetectConfig FinishDetectConfig { get; set; } = new();
@@ -83,6 +84,11 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     
     public bool QinDoublePickUp { get; set; } = false;
     public static bool SwimmingEnabled  { get; set; } = false;
+
+    /// <summary>
+    /// 基于经验值判断是否执行战后拾取
+    /// </summary>
+    public bool ExpBasedPickupEnabled { get; set; } = false;
 
     public AutoFightParam(string? strategyName = null) : base(null, null)
     {
@@ -140,5 +146,6 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         GuardianAvatarHold = autoFightConfig.GuardianAvatarHold;
         SwimmingEnabled = autoFightConfig.SwimmingEnabled;
         QinDoublePickUp = autoFightConfig.QinDoublePickUp;
+        ExpBasedPickupEnabled = autoFightConfig.ExpBasedPickupEnabled;
     }
 }
