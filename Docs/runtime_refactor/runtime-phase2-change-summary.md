@@ -140,6 +140,42 @@
 
 它说明第二阶段不只是改调度器本身，也开始处理业务代码里直接持有全局截图入口的问题。
 
+### 可测试性与验证文件
+
+#### BetterGenshinImpact/AssemblyInfo.cs
+
+这里加入 `InternalsVisibleTo("BetterGenshinImpact.UnitTest")`，意义是让测试程序集可以访问第二阶段为测试开放的最小内部入口。
+
+这样做避免了为了测试去扩大正式公开 API 面。
+
+#### Test/BetterGenshinImpact.UnitTest/GameTaskTests/RuntimeTests/CaptureServiceTests.cs
+
+这个文件把第二阶段最关键的运行时契约写成了自动化测试。
+
+当前覆盖的点包括：
+
+1. 启动与内部重启是否保留启动上下文
+2. `CaptureVersion` 是否按预期递增
+3. `CaptureUnavailable` 和 `CaptureRecovered` 是否按预期触发
+4. 重试窗口内是否能自动恢复取帧
+5. 连续失败是否会升级为 `PermanentFailure`
+6. 恢复后失败窗口是否被正确重置
+7. 停止后是否禁止继续内部重启
+8. `Start`、`Capture`、`Stop`、`Dispose` 异常路径是否按预期降级处理
+9. 零句柄启动保护是否生效
+
+这个文件的意义不是增加功能，而是给第二阶段划出一条不能回退的行为底线。
+
+#### Docs/runtime-phase2-validation.md
+
+这个文档是第二阶段的验收清单。
+
+它的意义有三个：
+
+1. 把自动化测试和手动回归场景放到同一个验证口径里
+2. 明确“第二阶段完成”的判断标准
+3. 避免后续继续重构时只看是否能编译，而忽略运行时语义是否保持正确
+
 ## 当前第二阶段还没完成的部分
 
 第二阶段虽然已经完成了关键语义切换，但还没有彻底结束。
