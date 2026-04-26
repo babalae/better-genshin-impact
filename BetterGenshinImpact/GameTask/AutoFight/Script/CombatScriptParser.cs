@@ -177,7 +177,7 @@ public class CombatScriptParser
             string trimmedPart = part.Trim();
 
             // === 处理 -round 段 ===
-            if (trimmedPart.StartsWith("-round("))
+            if (trimmedPart.StartsWith("-round(", StringComparison.OrdinalIgnoreCase))
             {
                 int startIdx = trimmedPart.IndexOf('(') + 1;
                 int endIdx = trimmedPart.IndexOf(')');
