@@ -16,6 +16,8 @@ public class CombatCommand
 
     public List<int> ActivatingRound { get; set; }
 
+    public bool IsRoundExclude { get; set; } = false;
+
     public CombatCommand(string name, string command)
     {
         Name = name.Trim();

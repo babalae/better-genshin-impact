@@ -174,18 +174,41 @@ public class CombatScriptParser
         var fullCombatCommands = new List<CombatCommand>();
         foreach (var part in parts)
         {
-            var combatCommands = ParseLinePart(part, avatarName);
-            if (combatCommands.Count > 0 && combatCommands[0].Method == Method.Round) {
-                // 遇到round指令，作为回合分隔符使用，不加入最终指令列表
-                var roundCommand = combatCommands[0];
-                var activatingRounds = ParseRoundCommand(roundCommand);
-                combatCommands.RemoveAt(0);
-                foreach (var combatCommand in combatCommands) {
-                    
-                    combatCommand.ActivatingRound = activatingRounds;
+            string trimmedPart = part.Trim();
+
+            // === 处理 -round 段 ===
+            if (trimmedPart.StartsWith("-round(", StringComparison.OrdinalIgnoreCase))
+            {
+                int startIdx = trimmedPart.IndexOf('(') + 1;
+                int endIdx = trimmedPart.IndexOf(')');
+                if (endIdx == -1)
+                    throw new FormatException($"无效的 -round 格式：{trimmedPart}");
+                string roundsStr = trimmedPart.Substring(startIdx, endIdx - startIdx);
+                string remaining = trimmedPart.Substring(endIdx + 1).TrimStart(',').Trim();
+
+                var combatCommands = ParseLinePart(remaining, avatarName);
+                var activatingRounds = ParseRoundCommand(new CombatCommand(avatarName, "round(" + roundsStr + ")"));
+                foreach (var cmd in combatCommands)
+                {
+                    cmd.IsRoundExclude = true;
+                    cmd.ActivatingRound = activatingRounds;
                 }
+                fullCombatCommands.AddRange(combatCommands);
             }
-            fullCombatCommands.AddRange(combatCommands);
+            // === 处理普通段和正 round 段 ===
+            else
+            {
+                var combatCommands = ParseLinePart(part, avatarName);
+                if (combatCommands.Count > 0 && combatCommands[0].Method == Method.Round) {
+                    var roundCommand = combatCommands[0];
+                    var activatingRounds = ParseRoundCommand(roundCommand);
+                    combatCommands.RemoveAt(0);
+                    foreach (var combatCommand in combatCommands) {
+                        combatCommand.ActivatingRound = activatingRounds;
+                    }
+                }
+                fullCombatCommands.AddRange(combatCommands);
+            }
         }
         // foreach (var combatCommand in fullCombatCommands)
         // {
