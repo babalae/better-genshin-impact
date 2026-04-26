@@ -24,13 +24,15 @@ namespace BetterGenshinImpact.GameTask
     public class TaskTriggerDispatcher : IDisposable
     {
         private readonly ILogger<TaskTriggerDispatcher> _logger = App.GetLogger<TaskTriggerDispatcher>();
+        private readonly GameSessionService _gameSessionService;
+        private readonly CaptureService _captureService;
 
         private static TaskTriggerDispatcher? _instance;
 
         private readonly System.Timers.Timer _timer = new();
         private List<ITaskTrigger>? _triggers;
 
-        public IGameCapture? GameCapture { get; private set; }
+        public IGameCapture? GameCapture => _captureService.GameCapture;
 
         private static readonly object _locker = new();
         private int _frameIndex = 0;
@@ -44,7 +46,7 @@ namespace BetterGenshinImpact.GameTask
 
         private User32.HWINEVENTHOOK _winEventHookMoveSize;
         private User32.HWINEVENTHOOK _winEventHookLocation;
-        private User32.WinEventProc _winEventProc;
+        private User32.WinEventProc _winEventProc = (_, _, _, _, _, _, _) => { };
         private const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
         private const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
         private const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
@@ -53,14 +55,14 @@ namespace BetterGenshinImpact.GameTask
 
         public event EventHandler? UiTaskStopTickEvent;
 
-        public event EventHandler? UiTaskStartTickEvent;
-
         private GameUiCategory PrevGameUiCategory = GameUiCategory.Unknown; // 上一个UI类别
         private DateTime PrevGameUiChangeTime = DateTime.Now; // 上一次UI变化时间
         
 
-        public TaskTriggerDispatcher()
+        public TaskTriggerDispatcher(GameSessionService gameSessionService, CaptureService captureService)
         {
+            _gameSessionService = gameSessionService;
+            _captureService = captureService;
             _instance = this;
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
@@ -81,13 +83,14 @@ namespace BetterGenshinImpact.GameTask
             get
             {
                 _instance = Instance();
+                var gameCapture = _instance.GameCapture;
 
-                if (_instance.GameCapture == null)
+                if (gameCapture == null)
                 {
-                    throw new Exception("截图器未初始化!");
+                    throw new InvalidOperationException("截图器未初始化!");
                 }
 
-                return _instance.GameCapture;
+                return gameCapture;
             }
         }
 
@@ -124,14 +127,13 @@ namespace BetterGenshinImpact.GameTask
 
         public void Start(IntPtr hWnd, CaptureModes mode, int interval = 50)
         {
-            // 初始化截图器
             ChatUiHotkeyGuard.Reset();
-            GameCapture = GameCaptureFactory.Create(mode);
+
             // 激活窗口 保证后面能够正常获取窗口信息
             SystemControl.ActivateWindow(hWnd);
 
             // 初始化任务上下文(一定要在初始化触发器前完成)
-            TaskContext.Instance().Init(hWnd);
+            _gameSessionService.Attach(hWnd);
 
             // 初始化触发器(一定要在任务上下文初始化完毕后使用)
             _triggers = GameTaskManager.LoadInitialTriggers();
@@ -143,12 +145,7 @@ namespace BetterGenshinImpact.GameTask
             // }
 
             // 启动截图
-            GameCapture.Start(hWnd,
-                new Dictionary<string, object>()
-                {
-                    { "autoFixWin11BitBlt", OsVersionHelper.IsWindows11_OrGreater && TaskContext.Instance().Config.AutoFixWin11BitBlt }
-                }
-            );
+            _captureService.Start(hWnd, mode);
 
             // 使用 SetWinEventHook 监听窗口移动和大小变化事件
             _winEventProc = WinEventCallback;
@@ -169,7 +166,7 @@ namespace BetterGenshinImpact.GameTask
         {
             _timer.Stop();
             ChatUiHotkeyGuard.Reset();
-            GameCapture?.Stop();
+            _captureService.Stop();
             _gameRect = RECT.Empty;
             _prevGameActive = false;
             PictureInPictureService.Hide(resetManual: true);
@@ -223,7 +220,8 @@ namespace BetterGenshinImpact.GameTask
 
                 // 检查截图器是否初始化
                 var maskWindow = MaskWindow.Instance();
-                if (GameCapture == null || !GameCapture.IsCapturing)
+                var gameCapture = GameCapture;
+                if (gameCapture == null || !gameCapture.IsCapturing)
                 {
                     ChatUiHotkeyGuard.Reset();
                     if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
@@ -233,11 +231,14 @@ namespace BetterGenshinImpact.GameTask
                     else
                     {
                         _logger.LogInformation("游戏已退出，BetterGI 自动停止截图器");
+                        UiTaskStopTickEvent?.Invoke(sender, e);
+                        maskWindow.Invoke(maskWindow.HideSelf);
+                        return;
                     }
 
                     PictureInPictureService.Hide(resetManual: true);
-                    UiTaskStopTickEvent?.Invoke(sender, e);
                     maskWindow.Invoke(maskWindow.HideSelf);
+                    _captureService.Restart("截图器未初始化或已停止");
                     return;
                 }
                 
@@ -348,12 +349,12 @@ namespace BetterGenshinImpact.GameTask
 
                 var speedTimer = new SpeedTimer();
                 // 捕获游戏画面
-                var bitmap = GameCapture.Capture();
+                var bitmap = _captureService.CaptureWithRetry();
                 speedTimer.Record("截图");
 
                 if (bitmap == null)
                 {
-                    _logger.LogWarning("截图失败!");
+                    PictureInPictureService.Hide();
                     return;
                 }
 
@@ -453,14 +454,20 @@ namespace BetterGenshinImpact.GameTask
                 if ((_gameRect.Width != currentRect.Width || _gameRect.Height != currentRect.Height)
                     && !SizeIsZero(_gameRect) && !SizeIsZero(currentRect))
                 {
-                    _logger.LogError("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 自动重启截图器中...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
-                    UiTaskStopTickEvent?.Invoke(null, EventArgs.Empty);
-                    UiTaskStartTickEvent?.Invoke(null, EventArgs.Empty);
-                    _logger.LogInformation("► 游戏窗口大小发生变化，截图器重启完成！");
+                    _logger.LogWarning("► 游戏窗口大小发生变化 {W}x{H}->{CW}x{CH}, 正在内部重启截图器...", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    PictureInPictureService.Hide(resetManual: true);
+                    if (_captureService.Restart("游戏窗口大小发生变化"))
+                    {
+                        _logger.LogInformation("► 游戏窗口大小发生变化，截图器内部重启完成！");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("► 游戏窗口大小发生变化后截图器内部重启失败 {W}x{H}->{CW}x{CH}。请考虑手动停止并重新启动任务，或检查日志定位截图后端问题。", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    }
                 }
 
                 _gameRect = new RECT(currentRect);
-                TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
+                _gameSessionService.UpdateCaptureRect(currentRect);
                 MaskWindow.Instance().RefreshPosition();
                 return true;
             }
@@ -506,7 +513,7 @@ namespace BetterGenshinImpact.GameTask
                 Mat mat;
                 try
                 {
-                    mat = TaskControl.CaptureGameImage(GameCapture);
+                    mat = TaskControl.CaptureGameImage();
                 }
                 catch (Exception)
                 {

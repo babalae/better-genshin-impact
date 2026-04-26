@@ -143,8 +143,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         break;
                     }
 
-                    using var bitmap =
-                        TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.Instance().GameCapture);
+                    using var bitmap = TaskControl.CaptureGameImageNoRetry();
                     if (bitmap == null)
                     {
                         _logger.LogWarning("截图失败");
