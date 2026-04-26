@@ -130,6 +130,7 @@ public class CaptureServiceTests
     {
         var failedCapture = new FakeGameCapture { ThrowOnStart = true };
         var recoveredCapture = new FakeGameCapture();
+        recoveredCapture.EnqueueCaptureResult(new Mat(1, 1, MatType.CV_8UC1, Scalar.All(1)));
         var service = CreateService(new Queue<IGameCapture>([failedCapture, recoveredCapture]));
         var unavailableCount = 0;
         var recoveredCount = 0;
@@ -147,6 +148,12 @@ public class CaptureServiceTests
         Assert.Same(recoveredCapture, service.GameCapture);
         Assert.True(service.IsCapturing);
         Assert.Equal(1, service.CaptureVersion);
+
+        Assert.Equal(0, recoveredCount);
+
+        using var recoveredImage = service.CaptureNoRetry();
+
+        Assert.NotNull(recoveredImage);
         Assert.Equal(1, recoveredCount);
     }
 
@@ -274,6 +281,22 @@ public class CaptureServiceTests
         Assert.Equal(0, service.CaptureVersion);
         Assert.Equal(0, capture.StartCallCount);
         Assert.False(service.Restart("zero handle"));
+    }
+
+    [Fact]
+    public void Dispose_ShouldReleaseCurrentCapture_AndBeIdempotent()
+    {
+        var capture = new FakeGameCapture();
+        var service = CreateService(new Queue<IGameCapture>([capture]));
+        service.Start((nint)18, CaptureModes.BitBlt);
+
+        service.Dispose();
+        service.Dispose();
+
+        Assert.Null(service.GameCapture);
+        Assert.False(service.IsCapturing);
+        Assert.Equal(1, capture.StopCallCount);
+        Assert.Equal(1, capture.DisposeCallCount);
     }
 
     private static CaptureService CreateService(Queue<IGameCapture> captures, FakeTimeProvider? clock = null)

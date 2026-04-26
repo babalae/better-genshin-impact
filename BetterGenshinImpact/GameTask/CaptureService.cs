@@ -8,11 +8,12 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask;
 
-public class CaptureService
+public class CaptureService : IDisposable
 {
     private readonly ILogger<CaptureService> _logger;
     private readonly object _locker = new();
 
+    private IGameCapture? _gameCapture;
     private IntPtr _hWnd;
     private CaptureModes _mode;
     private bool _hasStartContext;
@@ -20,8 +21,14 @@ public class CaptureService
     private DateTime _firstCaptureFailureTime = DateTime.MinValue;
     private bool _permanentFailureRaised;
     private DateTime _lastRestartAttemptTime = DateTime.MinValue;
+    private int _startGate;
+    private int _disposeState;
 
-    public IGameCapture? GameCapture { get; private set; }
+    public IGameCapture? GameCapture
+    {
+        get => Volatile.Read(ref _gameCapture);
+        private set => Volatile.Write(ref _gameCapture, value);
+    }
 
     public int CaptureVersion { get; private set; }
 
@@ -87,8 +94,16 @@ public class CaptureService
         ResetFailureState();
     }
 
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
     public Mat? CaptureNoRetry()
     {
+        // Snapshot the current capture instance. Stop/Restart may retire it concurrently,
+        // so callers must tolerate transient failures and this method treats them as recoverable.
         var capture = GameCapture;
         if (capture == null || !capture.IsCapturing)
         {
@@ -124,7 +139,8 @@ public class CaptureService
                 return image;
             }
 
-            if ((GameCapture == null || !GameCapture.IsCapturing || _consecutiveCaptureFailures >= 2)
+            var currentCapture = GameCapture;
+            if ((currentCapture == null || !currentCapture.IsCapturing || Volatile.Read(ref _consecutiveCaptureFailures) >= 2)
                 && attempt < retryCount - 1)
             {
                 Restart($"截图失败，正在恢复 ({attempt + 1}/{retryCount})");
@@ -141,65 +157,126 @@ public class CaptureService
 
     public IGameCapture RequireGameCapture()
     {
-        if (GameCapture == null)
+        var capture = GameCapture;
+        if (capture == null)
         {
-            throw new Exception("截图器未初始化!");
+            throw new InvalidOperationException("截图器未初始化!");
         }
 
-        return GameCapture;
+        return capture;
     }
 
     private bool StartCore()
     {
-        IntPtr hWnd;
-        CaptureModes mode;
-        lock (_locker)
+        if (Interlocked.CompareExchange(ref _startGate, 1, 0) != 0)
         {
-            if (!_hasStartContext || _hWnd == IntPtr.Zero)
-            {
-                return false;
-            }
-
-            hWnd = _hWnd;
-            mode = _mode;
+            _logger.LogDebug("截图器启动或重启已在进行中，跳过本次请求");
+            return false;
         }
+
+        IGameCapture? nextCapture = null;
+        IGameCapture? previousCapture = null;
 
         try
         {
             lock (_locker)
             {
-                StopCore(clearStartContext: false);
-                var capture = CaptureFactory(mode);
-                capture.Start(hWnd, StartSettingsFactory());
-                GameCapture = capture;
-                CaptureVersion++;
+                if (!_hasStartContext || _hWnd == IntPtr.Zero)
+                {
+                    return false;
+                }
             }
 
-            MarkCaptureRecoveredIfNeeded();
+            IntPtr hWnd;
+            CaptureModes mode;
+            lock (_locker)
+            {
+                hWnd = _hWnd;
+                mode = _mode;
+            }
+
+            nextCapture = CaptureFactory(mode);
+            nextCapture.Start(hWnd, StartSettingsFactory());
+
+            var adopted = false;
+            lock (_locker)
+            {
+                if (_hasStartContext && _hWnd == hWnd && _mode == mode)
+                {
+                    previousCapture = GameCapture;
+                    GameCapture = nextCapture;
+                    CaptureVersion++;
+                    ResetFailureWindowAfterStartSuccessUnderLock();
+                    adopted = true;
+                }
+            }
+
+            if (!adopted)
+            {
+                _logger.LogDebug("截图器启动完成时上下文已变化，放弃切换到新实例");
+                ReleaseCapture(nextCapture);
+                nextCapture = null;
+                return false;
+            }
+
+            ReleaseCapture(previousCapture);
+            previousCapture = null;
+            nextCapture = null;
             return true;
         }
         catch (Exception ex)
         {
+            ReleaseCapture(nextCapture);
             _logger.LogError(ex, "截图器启动失败");
             MarkCaptureFailed();
             return false;
+        }
+        finally
+        {
+            Volatile.Write(ref _startGate, 0);
         }
     }
 
     private void StopCore(bool clearStartContext)
     {
-        IGameCapture? captureToStop;
+        ReleaseCapture(DetachCapture(clearStartContext));
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing || Interlocked.Exchange(ref _disposeState, 1) != 0)
+        {
+            return;
+        }
+
+        Stop();
+
         lock (_locker)
         {
-            captureToStop = GameCapture;
+            CaptureUnavailable = null;
+            CaptureRecovered = null;
+            PermanentFailure = null;
+        }
+    }
+
+    private IGameCapture? DetachCapture(bool clearStartContext)
+    {
+        lock (_locker)
+        {
+            var captureToStop = GameCapture;
             GameCapture = null;
             if (clearStartContext)
             {
                 _hWnd = IntPtr.Zero;
                 _hasStartContext = false;
             }
-        }
 
+            return captureToStop;
+        }
+    }
+
+    private void ReleaseCapture(IGameCapture? captureToStop)
+    {
         try
         {
             captureToStop?.Stop();
@@ -209,6 +286,20 @@ public class CaptureService
         {
             _logger.LogDebug(ex, "停止截图器时出现异常");
         }
+    }
+
+    private void ResetFailureWindowAfterStartSuccessUnderLock()
+    {
+        if (_consecutiveCaptureFailures > 0)
+        {
+            _firstCaptureFailureTime = Now();
+        }
+        else
+        {
+            _firstCaptureFailureTime = DateTime.MinValue;
+        }
+
+        _permanentFailureRaised = false;
     }
 
     private void MarkCaptureFailed()
@@ -255,7 +346,7 @@ public class CaptureService
         lock (_locker)
         {
             shouldRaiseRecovered = _consecutiveCaptureFailures > 0;
-            ResetFailureState();
+            ResetFailureStateUnderLock();
         }
 
         if (shouldRaiseRecovered)
@@ -269,10 +360,15 @@ public class CaptureService
     {
         lock (_locker)
         {
-            _consecutiveCaptureFailures = 0;
-            _firstCaptureFailureTime = DateTime.MinValue;
-            _permanentFailureRaised = false;
+            ResetFailureStateUnderLock();
         }
+    }
+
+    private void ResetFailureStateUnderLock()
+    {
+        _consecutiveCaptureFailures = 0;
+        _firstCaptureFailureTime = DateTime.MinValue;
+        _permanentFailureRaised = false;
     }
 
     private Dictionary<string, object> CreateDefaultStartSettings()

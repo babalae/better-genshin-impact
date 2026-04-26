@@ -184,36 +184,22 @@ public class TaskControl
         }
     }
 
-    public static Mat CaptureGameImage(IGameCapture? gameCapture)
+    public static Mat CaptureGameImage()
     {
         var captureService = App.GetService<CaptureService>();
-        var image = gameCapture?.Capture() ?? captureService?.CaptureWithRetry();
-        if (image == null)
-        {
-            Logger.LogWarning("截图失败!");
-            // 重试3次
-            for (var i = 0; i < 3; i++)
-            {
-                image = gameCapture?.Capture() ?? captureService?.CaptureWithRetry();
-                if (image != null)
-                {
-                    return image;
-                }
-
-                Sleep(30);
-            }
-
-            throw new Exception("尝试多次后,截图失败!");
-        }
-        else
+        var image = captureService?.CaptureWithRetry();
+        if (image != null)
         {
             return image;
         }
+
+        Logger.LogWarning("截图失败!");
+        throw new InvalidOperationException("尝试多次后,截图失败!");
     }
 
-    public static Mat? CaptureGameImageNoRetry(IGameCapture? gameCapture)
+    public static Mat? CaptureGameImageNoRetry()
     {
-        return gameCapture?.Capture() ?? App.GetService<CaptureService>()?.CaptureNoRetry();
+        return App.GetService<CaptureService>()?.CaptureNoRetry();
     }
 
     /// <summary>
@@ -222,7 +208,7 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        var image = CaptureGameImage(App.GetService<CaptureService>()?.GameCapture);
+        var image = CaptureGameImage();
         var content = new CaptureContent(image, 0, 0);
         return content.CaptureRectArea;
     }

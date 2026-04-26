@@ -74,6 +74,52 @@ RuntimeCoordinator
 
 长期上不推荐“截图器依赖调度器”，因为调度器本质是帧消费者，不应成为截图器的宿主。
 
+### RuntimeCoordinator
+
+`RuntimeCoordinator` 是长期目标中的协调层，而不是新的业务宿主。它负责把多个运行时服务按依赖图启动、停止和暴露给调用方，但不直接持有截图算法、触发器逻辑或脚本业务规则。
+
+职责边界：
+
+1. 维护服务依赖图与生命周期状态迁移，例如 `Stopped -> SessionAttached -> CaptureReady -> SchedulerRunning -> ScriptRunning`
+2. 根据调用方请求决定需要启动到哪个层级，例如“仅附着会话”“附着会话 + 截图”“完整运行时”
+3. 在启动失败时负责回滚已经成功启动的下游服务，并向 UI 或调用方返回可诊断的失败原因
+4. 向 UI、脚本和任务入口暴露统一的服务访问面，而不是让它们直接拼装服务顺序
+
+不负责：
+
+1. 不直接创建 `CaptureContent`
+2. 不直接执行 `ITaskTrigger`
+3. 不直接注入 JS 宿主对象细节
+4. 不替代现有 DI 容器作为新的全局 ServiceLocator
+
+计划公共 API：
+
+1. `Start(RuntimeStartLevel level, CancellationToken ct = default)`
+2. `Stop(RuntimeStopReason reason, CancellationToken ct = default)`
+3. `GetService<T>()` / `TryGetService<T>(out T service)`
+4. `RegisterService(IRuntimeService service)`
+
+启动与停止编排规则：
+
+1. 启动顺序遵循依赖图：`GameSessionService -> CaptureService -> TriggerScheduler -> ScriptRuntimeService`
+2. 若请求层级为 `GameWindow`，则只启动到 `GameSessionService`
+3. 若请求层级为 `Capture`，则至少启动到 `CaptureService`，并在截图能力就绪后才允许上游消费
+4. 关闭顺序与启动顺序相反，先停止脚本与调度，再停止截图，最后分离会话
+5. 若 `CaptureService` 启动失败，协调层应停止已启动的下游服务并保留会话层诊断信息；是否重试由阶段二的截图契约决定
+
+与 `App.xaml.cs` 的集成方式：
+
+1. 第一阶段仍然由 `App.xaml.cs` 直接把 `GameSessionService`、`CaptureService`、`TaskTriggerDispatcher` 注册到内置 DI 容器
+2. 第一阶段不强制引入 `RuntimeCoordinator` 实现，协调逻辑仍由现有页面和服务组合完成
+3. 第二阶段开始可以在内置 DI 上方增加一个轻量 `RuntimeCoordinator` 门面，但不替换现有注册方式
+4. 第三至第四阶段再逐步把 UI 入口从“直接拿具体服务”迁移到“先拿协调器，再由协调器编排服务”
+
+阶段定位：
+
+1. `RuntimeCoordinator` 不是第一阶段必须交付物
+2. 第一阶段只要求在文档中定义边界并保留向该方向演进的迁移路径
+3. 当前分支的服务注册方式被视为过渡态，而不是最终协调模型
+
 ## 运行时职责划分
 
 ### GameSessionService
@@ -200,6 +246,35 @@ RuntimeCoordinator
 2. 所有依赖截图的代码路径在进入截图边界前，都必须先从 `CaptureService` 读取当前 `CaptureVersion`，再调用 `EnsureCaptureReadyAsync(expectedVersion, timeout)` 或等价 API 校验捕获能力是否已准备完成。
 3. 如果调用方持有的 `CaptureVersion` 与 `CaptureService` 当前版本不一致，则不得继续使用旧的 `IGameCapture` 或旧帧上下文，而是暂停当前捕获步骤、等待新版本就绪，并刷新本地 `CaptureVersion` 后再继续。
 4. 第二阶段后禁止长生命周期对象跨版本缓存 `IGameCapture`；允许缓存版本号，但每次取帧都必须重新通过 `CaptureService` 获取当前有效实例。
+
+#### EnsureCaptureReadyAsync 契约
+
+为避免不同调用方对“等待截图恢复”产生不同语义，第二阶段约定 `CaptureService` 对外提供如下准备就绪契约：
+
+1. 建议签名：`ValueTask<bool> EnsureCaptureReadyAsync(int expectedVersion, TimeSpan timeout, CancellationToken ct = default)`
+2. 返回值语义：
+   - `true`：当前可用的截图实例已经达到或超过 `expectedVersion`，调用方可以刷新本地 `CaptureVersion` 后继续取帧
+   - `false`：在 `timeout` 窗口内未能拿到满足条件的截图能力；这是正常超时结果，不抛 `TimeoutException`
+3. 版本不匹配语义：
+   - 若 `CaptureService.CaptureVersion == expectedVersion` 且当前实例已就绪，立即返回 `true`
+   - 若 `CaptureService.CaptureVersion > expectedVersion` 且新版本已就绪，立即返回 `true`，调用方必须先刷新本地版本号再继续使用
+   - 若 `CaptureService.CaptureVersion < expectedVersion` 或当前版本仍未就绪，则在 `timeout` 内等待，直至版本满足条件或返回 `false`
+4. 异常语义：
+   - `OperationCanceledException` 仅用于外部 `CancellationToken` 被取消
+   - `InvalidOperationException` 仅用于服务未附着会话、已释放或处于非法生命周期状态
+   - 普通超时不抛异常，统一返回 `false`
+5. 并发与线程安全保证：
+   - `CaptureService` 必须保证 `EnsureCaptureReadyAsync` 可被并发调用
+   - 并发调用应尽量复用同一轮准备就绪等待，而不是为每个调用方重复触发重启
+   - 等待过程不得长时间持有 `_locker`，避免阻塞 `Stop`、`Restart` 和取帧快路径
+   - 与 `Start/Restart` 的协作遵循“单次启动门禁 + 版本快照”规则，避免重复启动或版本回退
+
+调用方约束：
+
+1. `TriggerScheduler` 在每次帧循环开始前检查 `CaptureVersion`，必要时调用 `EnsureCaptureReadyAsync`
+2. `TaskControl.CaptureToRectArea` 及其派生公共截图辅助入口必须遵循同一契约
+3. `ScriptRuntimeService` 暴露的截图宿主能力在真正取帧前必须执行版本检查与等待
+4. 所有长生命周期、基于 `RunToken` 的截图任务不得缓存旧 `IGameCapture`，只允许缓存版本号并按上面的契约刷新
 
 检查点：
 

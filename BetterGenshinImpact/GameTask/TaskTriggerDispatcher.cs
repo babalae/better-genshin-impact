@@ -83,13 +83,14 @@ namespace BetterGenshinImpact.GameTask
             get
             {
                 _instance = Instance();
+                var gameCapture = _instance.GameCapture;
 
-                if (_instance.GameCapture == null)
+                if (gameCapture == null)
                 {
-                    throw new Exception("截图器未初始化!");
+                    throw new InvalidOperationException("截图器未初始化!");
                 }
 
-                return _instance.GameCapture;
+                return gameCapture;
             }
         }
 
@@ -219,7 +220,8 @@ namespace BetterGenshinImpact.GameTask
 
                 // 检查截图器是否初始化
                 var maskWindow = MaskWindow.Instance();
-                if (GameCapture == null || !GameCapture.IsCapturing)
+                var gameCapture = GameCapture;
+                if (gameCapture == null || !gameCapture.IsCapturing)
                 {
                     ChatUiHotkeyGuard.Reset();
                     if (!TaskContext.Instance().SystemInfo.GameProcess.HasExited)
@@ -458,6 +460,10 @@ namespace BetterGenshinImpact.GameTask
                     {
                         _logger.LogInformation("► 游戏窗口大小发生变化，截图器内部重启完成！");
                     }
+                    else
+                    {
+                        _logger.LogWarning("► 游戏窗口大小发生变化后截图器内部重启失败 {W}x{H}->{CW}x{CH}。请考虑手动停止并重新启动任务，或检查日志定位截图后端问题。", _gameRect.Width, _gameRect.Height, currentRect.Width, currentRect.Height);
+                    }
                 }
 
                 _gameRect = new RECT(currentRect);
@@ -507,7 +513,7 @@ namespace BetterGenshinImpact.GameTask
                 Mat mat;
                 try
                 {
-                    mat = TaskControl.CaptureGameImage(GameCapture);
+                    mat = TaskControl.CaptureGameImage();
                 }
                 catch (Exception)
                 {
