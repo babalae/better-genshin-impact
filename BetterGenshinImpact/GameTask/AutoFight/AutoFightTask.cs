@@ -53,7 +53,7 @@ public class AutoFightTask : ISoloTask
     
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
-    int round = 0; // 用于记录当前回合
+
 
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
@@ -280,6 +280,7 @@ public class AutoFightTask : ISoloTask
         // if (await CheckFightFinish()) {
         //     return;
         // }
+        var round = 0; // 用于记录当前回合
         var fightEndFlag = false;
         var timeOutFlag = false;
         string lastFightName = "";
