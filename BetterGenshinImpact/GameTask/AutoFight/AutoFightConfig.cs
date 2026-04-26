@@ -76,7 +76,7 @@ public partial class AutoFightConfig : ObservableObject
         /// 检查战斗结束的延时，即角色，默认为1.5秒。也可以指定特定角色之后延时多少时间检查。格式如：2.5;白术,1.5;钟离,1.0;
         /// </summary>
         [ObservableProperty]
-        private string _checkEndDelay = "0.4";
+        private string _checkEndDelay = "0.4;钟离,1.4;";
 
         /// <summary>
         /// 按下切换队伍后去检查屏幕色块的延迟，默认为0.45秒。若频繁误判可以适当提高这个值。确保这个延迟不会真的把队伍配置界面切出来。
