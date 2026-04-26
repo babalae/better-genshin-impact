@@ -53,6 +53,8 @@ public class AutoFightTask : ISoloTask
     
     private readonly ReturnMainUiTask _returnMainUiTask = new();
 
+    int round = 0; // 用于记录当前回合
+
     // 战斗点位
     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
     
@@ -319,6 +321,7 @@ public class AutoFightTask : ISoloTask
                 
                 while (!cts2.Token.IsCancellationRequested)
                 {
+                    round++; // 每个完整循环视为一个回合
                     // 所有战斗角色都可以被取消
 
                     #region 本次战斗的跳过战斗判定
@@ -344,6 +347,20 @@ public class AutoFightTask : ISoloTask
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
+                        // === 按回合过滤指令 ===
+                        if (command.ActivatingRound != null && command.ActivatingRound.Count > 0)
+                        {
+                            if (command.IsRoundExclude) // -round 段：在指定回合直接跳过
+                            {
+                                if (command.ActivatingRound.Contains(round))
+                                    continue;
+                            }
+                            else // 正 round 段：仅在指定回合执行
+                            {
+                                if (!command.ActivatingRound.Contains(round))
+                                    continue;
+                            }
+                        }
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
                         
                         #region 盾奶位技能优先功能
