@@ -1,0 +1,127 @@
+Subject: [PATCH] 现在自动战斗支持round指令，另添加了-round
+Index: BetterGenshinImpact/GameTask/AutoFight/AutoFightTask.cs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/BetterGenshinImpact/GameTask/AutoFight/AutoFightTask.cs b/BetterGenshinImpact/GameTask/AutoFight/AutoFightTask.cs
+--- a/BetterGenshinImpact/GameTask/AutoFight/AutoFightTask.cs	(revision f8b30143ac8fdc2a6232cb6842078a4b7889d781)
++++ b/BetterGenshinImpact/GameTask/AutoFight/AutoFightTask.cs	(revision d03210fd23004a4ffdad7892aaa873bd70964677)
+@@ -70,6 +70,8 @@
+     public static bool IsTpForRecover {get; set;} = false;
+     
+     public static volatile  bool FightEndTotoly = false;
++    
++    int round = 0; // <--- 新增：用于记录当前回合
+ 
+     // 战斗点位
+     public static WaypointForTrack? FightWaypoint  {get; set;} = null;
+@@ -543,6 +545,7 @@
+                 
+                 while (!cts2.Token.IsCancellationRequested && !FightEndTotoly)
+                 {
++                    round++; // <--- 新增：每个完整循环视为一个回合
+                    // 所有战斗角色都可以被取消
+                     #region 本次战斗的跳过战斗判定
+ 
+@@ -567,6 +570,21 @@
+                     for (var i = 0; i < combatCommands.Count; i++)
+                     {
+                         var command = combatCommands[i];
++                        // === 新增：按回合过滤指令 ===
++                        // ========== Round 与 -Round 过滤 ==========
++                        if (command.ActivatingRound != null && command.ActivatingRound.Count > 0)
++                        {
++                            if (command.IsRoundExclude) // -round 段：在指定回合直接跳过
++                            {
++                                if (command.ActivatingRound.Contains(round))
++                                    continue;
++                            }
++                            else // 正 round 段：仅在指定回合执行
++                            {
++                                if (!command.ActivatingRound.Contains(round))
++                                    continue;
++                            }
++                        }
+                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
+                         
+                         #region 盾奶位技能优先和自动EQ功能
+Index: BetterGenshinImpact/GameTask/AutoFight/Script/CombatCommand.cs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/BetterGenshinImpact/GameTask/AutoFight/Script/CombatCommand.cs b/BetterGenshinImpact/GameTask/AutoFight/Script/CombatCommand.cs
+--- a/BetterGenshinImpact/GameTask/AutoFight/Script/CombatCommand.cs	(revision f8b30143ac8fdc2a6232cb6842078a4b7889d781)
++++ b/BetterGenshinImpact/GameTask/AutoFight/Script/CombatCommand.cs	(revision d03210fd23004a4ffdad7892aaa873bd70964677)
+@@ -17,6 +17,8 @@
+     public List<string>? Args { get; set; }
+ 
+     public List<int> ActivatingRound { get; set; }
++    
++    public bool IsRoundExclude { get; set; } = false;
+ 
+     public CombatCommand(string name, string command)
+     {
+Index: BetterGenshinImpact/GameTask/AutoFight/Script/CombatScriptParser.cs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/BetterGenshinImpact/GameTask/AutoFight/Script/CombatScriptParser.cs b/BetterGenshinImpact/GameTask/AutoFight/Script/CombatScriptParser.cs
+--- a/BetterGenshinImpact/GameTask/AutoFight/Script/CombatScriptParser.cs	(revision f8b30143ac8fdc2a6232cb6842078a4b7889d781)
++++ b/BetterGenshinImpact/GameTask/AutoFight/Script/CombatScriptParser.cs	(revision d03210fd23004a4ffdad7892aaa873bd70964677)
+@@ -174,18 +174,41 @@
+         var fullCombatCommands = new List<CombatCommand>();
+         foreach (var part in parts)
+         {
+-            var combatCommands = ParseLinePart(part, avatarName);
+-            if (combatCommands.Count > 0 && combatCommands[0].Method == Method.Round) {
+-                // 遇到round指令，作为回合分隔符使用，不加入最终指令列表
+-                var roundCommand = combatCommands[0];
+-                var activatingRounds = ParseRoundCommand(roundCommand);
+-                combatCommands.RemoveAt(0);
+-                foreach (var combatCommand in combatCommands) {
+-                    
+-                    combatCommand.ActivatingRound = activatingRounds;
+-                }
+-            }
+-            fullCombatCommands.AddRange(combatCommands);
++            string trimmedPart = part.Trim();
++    
++            // === 处理 -round 段 ===
++            if (trimmedPart.StartsWith("-round("))
++            {
++                int startIdx = trimmedPart.IndexOf('(') + 1;
++                int endIdx = trimmedPart.IndexOf(')');
++                if (endIdx == -1)
++                    throw new FormatException($"无效的 -round 格式：{trimmedPart}");
++                string roundsStr = trimmedPart.Substring(startIdx, endIdx - startIdx);
++                string remaining = trimmedPart.Substring(endIdx + 1).TrimStart(',').Trim();
++        
++                var combatCommands = ParseLinePart(remaining, avatarName);
++                var activatingRounds = ParseRoundCommand(new CombatCommand(avatarName, "round(" + roundsStr + ")"));
++                foreach (var cmd in combatCommands)
++                {
++                    cmd.IsRoundExclude = true;
++                    cmd.ActivatingRound = activatingRounds;
++                }
++                fullCombatCommands.AddRange(combatCommands);
++            }
++            // === 处理普通段和正 round 段 ===
++            else
++            {
++                var combatCommands = ParseLinePart(part, avatarName);
++                if (combatCommands.Count > 0 && combatCommands[0].Method == Method.Round) {
++                    var roundCommand = combatCommands[0];
++                    var activatingRounds = ParseRoundCommand(roundCommand);
++                    combatCommands.RemoveAt(0);
++                    foreach (var combatCommand in combatCommands) {
++                        combatCommand.ActivatingRound = activatingRounds;
++                    }
++                }
++                fullCombatCommands.AddRange(combatCommands);
++            }
+         }
+         // foreach (var combatCommand in fullCombatCommands)
+         // {
