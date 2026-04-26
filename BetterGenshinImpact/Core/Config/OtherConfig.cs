@@ -29,6 +29,22 @@ public partial class OtherConfig : ObservableObject
     //OCR配置
     [ObservableProperty]
     private Ocr _ocrConfig = new();
+
+    [ObservableProperty]
+    private HttpLogServer _httpLogServerConfig = new();
+
+
+    public partial class HttpLogServer : ObservableObject
+    {
+        [ObservableProperty]
+        private bool _enabled = false;
+
+        [ObservableProperty]
+        private int _port = 8080;
+
+        [ObservableProperty]
+        private string _listenAddress = "0.0.0.0";
+    }
     
 
     public partial class AutoRestart : ObservableObject
