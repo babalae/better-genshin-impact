@@ -155,7 +155,7 @@ public partial class AutoFightConfig : ObservableObject
     private string _kazuhaPartyName = "";
     
     [ObservableProperty]
-    private bool _swimmingEnabled = false;
+    private bool _swimmingEnabled = true;
 
     /// <summary>
     /// 基于经验值判断是否执行战后拾取（检测到精英怪经验值图标时才拾取）
