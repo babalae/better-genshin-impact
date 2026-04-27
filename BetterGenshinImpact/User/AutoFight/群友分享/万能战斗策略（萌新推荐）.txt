@@ -1,29 +1,31 @@
 // 作者：火山
-// 描述：万能战斗策略（新手推荐）。内含详细使用说明，请务必打开本文档！！！（内含少部分满命、进阶操作，默认已注释不开启）
-// 版本：v2.0
+// 描述：（锄地+副本）请务必打开本文档仔细阅读说明设置！！！【此版本增加Check、ready两种新战斗策略语法的应用，实现自主动精准控制战斗结束检查时间点，有bug或者异常卡顿请及时向管理反馈】（内含少部分满命、进阶操作，默认已注释不开启。本策略作为示范教学，希望大家学习理解bgi战斗逻辑，如有更好的策略，欢迎提交）
+// 版本：v3.2
 
 // 战斗配置设置流程
 // 该设置从调度器入口开始，按以下层级路径操作，核心为开启相关功能并配置关键参数。
 // 1. 进入战斗配置页面
-// 路径：调度器 → 配置组 → 设置 → 战斗配置操作：将 “战斗配置” 功能开启
+// 路径：调度器 → 配置组 → 设置 → 战斗配置操作：将 “战斗配置” 功能开启！（必须开启战斗配置，底下的设置才能生效，每个配置组设置独立的）
 
-// 2. 战斗结束检测相关设置
-// 所有子项均需开启，用于快速识别战斗状态，提升效率。
+// 2. 战斗结束检测相关设置（——————没有的选项为茶包版本设置———————）
 // 自动检测战斗结束：开启
-// 更快检查结束战斗：开启，参数设置为 1
+// 更快检查结束战斗：关闭（一定要关闭！！）
 // 检查战斗结束的延时：设置为 0.4
 // 按键触发后检查延时：设置为 0.4
+// 按键触发后检查延时（快速模式建议配合“不等待旋转结束”使用）: 开启（默认值0.15）
 
-// 3. 敌人定位与面向设置
+// 3. 敌人定位与面向设置（——————没有的选项为茶包版本设置———————）
 // 用于自动调整角色朝向，优化战斗操作。
-// 旋转寻找敌人位置：开启
-// Q 前检测：开启
-// 尝试面向敌人：可选开启（根据需求选择）
+// 旋转寻找敌人位置：关闭（可以把旋转速度条拉到最左）；也可选择开启（旋转速度条先拉到最右，再往左一格，过快会导致卡检测和乱转）
+// Q 前检测：关闭
+// 尝试面向敌人：关闭（可以选择开启，如果开旋转寻找敌人位置）
+// 单次接近敌人行走时间(毫秒）：500 （设置0则不接近敌人）
+// 不等待旋转结束：开启
 
 // 4. 技能释放与角色优先级设置
 // 核心为盾奶角色技能优先释放，需准确配置角色位置。
-// 盾奶角色优先释放技能：开启
-// 关键设置：在队伍栏中，选择盾角色对应的序号（务必准确，不可选错）。
+// 盾奶角色优先释放技能：开启（非常重要！！！）
+// 关键设置：在队伍栏中，选择盾角色对应的序号（务必准确，不可选错！！！）。
 
 // 5. 掉落物拾取设置
 // 需根据队伍角色情况选择开启，核心注意万叶 / 琴的特殊设置。
@@ -34,84 +36,140 @@
 // 以下是战斗策略正文，注意合理搭配队伍
 // ！！！请严格遵守BGI战斗配队逻辑！！！（以 盾【刚需】+主c【可以是后台输出角色】+副c【可以是后台输出角色】+万叶/琴【如需要捡掉落物的可以带，比如精英怪，小怪、副本可酌情不带换成，奶妈 or 后台输出角色】）
 
-// 盾（刚需）
-茜特菈莉 e,attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2),keypress(q),attack(0.2),keypress(e)
-伊涅芙 e,attack(0.22),keypress(q),wait(0.1),keypress(q),attack(0.2),keypress(q),attack(0.2)
-钟离 s(0.2), e(hold), wait(0.2), w(0.2),keypress(q),wait(0.2),keypress(q),attack(0.1)
-莱依拉 e,wait(0.2), keypress(q),wait(0.2),keypress(q),attack(0.2),keypress(q),attack(0.2)
-绮良良 e,attack(0.2), keypress(q),attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2)
-托马 e,attack(0.22),keypress(q),wait(0.1),keypress(q),attack(0.2),keypress(q),attack(0.2)
-蓝砚 e,wait(0.8),s(0.2),attack(0.33),dash(0.1),attack(0.55),keypress(q),attack(0.1)
+// 前置防止未拉到怪物仇恨脱战 or 超前爆发【适合自定义需要提前释放技能的角色】（不需要可以注释掉）
+茜特菈莉 e
+
+伊涅芙 e
+
+钟离  s(0.2), e(hold), wait(0.2), w(0.2)
+
+莱依拉 e
+
+绮良良 e
+
+托马 e
+
+芙宁娜 attack(0.1), keydown(E), wait(0.3), keyup(E)
+
+玛薇卡 e
+
+哥伦比娅 attack(0.1), check, keydown(e), wait(0.3), keyup(e), wait(0.1), check, wait(0.3)
+
+莉奈娅 attack(0.1), keypress(q), wait(0.1), ready, check, attack(0.4), keydown(E), wait(0.05), attack(0.82), keyup(E), wait(1), check
+
+// 盾（刚需）————强调一下，只需要带一个盾位就够了，盾量不够穿千岩
+茜特菈莉 e, attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), ready, check, wait(0.3), attack(0.3), check, wait(0.3)
+
+伊涅芙 e, attack(0.1), check, attack(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+
+钟离 s(0.2), e(hold), wait(0.2), w(0.2), check, wait(0.3), keypress(q), wait(0.1),keypress(q), wait(0.1), ready, check, wait(0.3)
+
+莱依拉 e, wait(0.3), check, keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), check, wait(0.3)
+
+绮良良 e, wait(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), check, wait(0.3)
+
+托马 e, wait(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), check, wait(0.3)
+
+蓝砚 e, wait(0.8), s(0.2), attack(0.33), dash(0.1), attack(0.55), check, wait(0.3), keypress(q), wait(0.1), check, wait(0.3)
 
 // 后台、挂元素、副C、先手
-玛薇卡 attack(0.2),e,wait(0.2),keypress(q),attack(0.15)
-杜林 attack(0.1), keypress(q), attack(0.2), click(middle), e, wait(0.2), e, keypress(q), wait(0.2), keypress(q), attack(0.2), keypress(q), attack(0.2)
-迪希雅 e,attack(0.2),e
-香菱 e,wait(0.3),keypress(q),attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2)
-仆人 attack,e
+玛薇卡  e, wait(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+迪希雅 e, attack(0.3), e, wait(0.3), check, wait(0.3)
+香菱 e, wait(0.3),check, keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), check, wait(0.3)
+仆人 attack(0.3), check, wait(0.3), e, wait(0.3), check, wait(0.3)
 
 // 夜兰顺时针
-夜兰 attack(0.5),keydown(VK_W),wait(0.05),keydown(VK_E),wait(0.4),keyup(VK_E),wait(0.1),keydown(VK_D),keyup(VK_W),wait(0.4),keydown(VK_S),keyup(VK_D),wait(0.4),keydown(VK_A),keyup(VK_S),wait(0.4),keydown(VK_W),keyup(VK_A),wait(0.3),keydown(VK_S),keyup(VK_W),wait(0.15),keyup(VK_S),keypress(e), attack(0.2), keypress(Q), attack(0.2), keypress(Q), attack(0.2)
-哥伦比娅 e,keypress(q),attack(0.2),keypress(q),attack
-那维莱特 attack(0.05),click(middle),e,wait(0.15),keydown(VK_LBUTTON),wait(0.27),keyup(VK_LBUTTON),wait(0.15),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),keydown(VK_LBUTTON),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),click(middle),j,click(middle),wait(0.05),keyup(VK_LBUTTON)
-纳西妲 e(hold),click(middle),keypress(q),wait(0.3),keypress(q),attack(0.3),keypress(q),attack(0.2)
-艾梅莉埃 e,attack(0.2), keypress(q),attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2)
-丝柯克 attack(0.2),click(middle),keypress(q),wait(0.05),keypress(q),attack(0.05),click(middle),keydown(E),wait(0.22),attack(0.08),click(middle),keyup(E),keypress(q),wait(0.08),keypress(q)
-芙宁娜 e,attack(0.85), keypress(e), keypress(Q), attack(0.2), keydown(S), keypress(e), attack(0.2), keyup(S), keypress(Q), attack(0.2)
-爱诺 e, wait(0.3), keypress(q), attack(0.22), keypress(q), attack(0.21)
-夏洛蒂 e, click(middle), attack(0.3), keypress(q), attack(0.22), click(middle), dash(0.1),wait(0.3),keypress(q), attack(0.21)
-菈乌玛 attack(0.1),keypress(q),attack(0.15),keydown(E),wait(0.4),attack(0.3),keyup(E),attack(0.15),keypress(q),attack(0.15),keydown(E),wait(0.4),attack(0.3),keyup(E),attack(0.2),wait(0.1)
+夜兰 attack(0.2), check, wait(0.3),keydown(VK_W), wait(0.05), keydown(VK_E), wait(0.4), keyup(VK_E), wait(0.1), keydown(VK_D), keyup(VK_W), wait(0.4), keydown(VK_S), keyup(VK_D), wait(0.4), keydown(VK_A), keyup(VK_S), wait(0.4), keydown(VK_W), keyup(VK_A), wait(0.3), keydown(VK_S), keyup(VK_W), wait(0.15), keyup(VK_S), keypress(e), attack(0.2), check, wait(0.3), keypress(Q), wait(0.1), keypress(Q), wait(0.1), keypress(Q), wait(0.1), ready, check, wait(0.3)
 
-// （有奈芙尔就去掉角色名之前的内容，→（//+一个空格 =// ） ←按照我注释的格式给上一行的菈乌玛长e策略注释掉，后面是短e策略，不消耗草露），菈乌玛 e,attack(0.2), keypress(q),attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2)
+哥伦比娅 e, attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, attack, e, attack(0.3), check, wait(0.3)
 
-白术 e,attack(0.2)
-珊瑚宫心海 e
-芭芭拉 e,attack(0.2)
-希格雯 e(hold),wait(0.2),attack(0.21),keypress(q),wait(0.2),keypress(q)
-爱可菲 e,attack(0.2), keypress(q),attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2)
-菲谢尔 e
-欧洛伦 e,attack(0.3), keypress(q),wait(0.2),attack(0.3),keypress(q),wait(0.2),attack(0.3),keypress(q),wait(0.3)
-雷电将军 e,attack(0.22),keypress(q),wait(0.1),keypress(q),attack(0.2),keypress(q),attack(0.2)
-久岐忍 e,wait(0.2),keypress(q),attack(0.15),keypress(q),e
-欧洛伦 e,attack(0.3), keypress(q),wait(0.2),attack(0.3),keypress(q),wait(0.2),dash(0.1),attack(0.3),keypress(q),wait(0.3)
-瓦雷莎 e, attack(1.25),wait(0.45), s(0.4), click(middle), e, attack(1.25), wait(0.3),keypress(q), wait(0.45)
+那维莱特 attack(0.05), click(middle), check, wait(0.3), e, wait(0.05), keydown(VK_LBUTTON), wait(0.27), keyup(VK_LBUTTON), wait(0.15), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), keydown(VK_LBUTTON), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), click(middle), j, click(middle), wait(0.05), keyup(VK_LBUTTON), wait(0.15), check, wait(0.3)
+
+纳西妲 click(middle),keydown(e),wait(0.25),moveby(2100,0),wait(0.05),moveby(2100,0),wait(0.05),moveby(2100,-1100),wait(0.05),moveby(1300,-1800),wait(0.05),moveby(1300,-1800),keyup(e),wait(0.12),click(middle), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+艾梅莉埃 e, wait(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q),  wait(0.1), ready, check, wait(0.3)
+
+丝柯克 attack(0.2), check, wait(0.3), click(middle), keypress(q), wait(0.05), keypress(q), attack(0.05), click(middle), keydown(E), wait(0.22), attack(0.08), click(middle), keyup(E), keypress(q), wait(0.08), keypress(q), wait(0.1), ready, check, wait(0.3)
+
+芙宁娜 e, attack(0.85), keypress(e), wait(0.1), check, keypress(Q), wait(0.1), ready, check, attack(0.2), keydown(S), keypress(e), attack(0.3), keyup(S), check, keypress(Q), wait(0.1), ready, attack(0.2), check, wait(0.3)
+
+爱诺 e, wait(0.3),check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), attack, check, wait(0.3)
+
+夏洛蒂 e, click(middle), attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1),keypress(q), attack(0.22), click(middle), dash(0.1), wait(0.3), keypress(q), wait(0.1), check, wait(0.3)
+
+叶洛亚 e, attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), check, wait(0.3)
+
+莉奈娅 attack(0.05), keydown(E),wait(0.05),attack(0.82),keyup(E), wait(1), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+
+菈乌玛 attack(0.1), check, wait(0.3), keypress(q), wait(0.1), ready, check, keydown(E), wait(0.4), attack(0.3), keyup(E), wait(0.1), check, keypress(q), wait(0.1), ready, check, keypress(q), wait(0.1), ready, check, keydown(E), wait(0.4), attack(0.3), keyup(E), attack(0.2), check, wait(0.3)
+
+// （有奈芙尔就去掉角色名之前的内容，→（//+一个空格 =// ） ←按照我注释的格式给上一行的菈乌玛长e策略注释掉，后面是短e策略，不消耗草露），菈乌玛 e, attack(0.2), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+
+白术 e, wait(0.3),check, wait(0.3)
+珊瑚宫心海 e, wait(0.3),check, wait(0.3)
+芭芭拉 e, wait(0.3),check, wait(0.3)
+希格雯 e(hold), wait(0.2), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+爱可菲 e, attack(0.2), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+菲谢尔 e, wait(0.3), check, wait(0.3)
+欧洛伦 e, attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), check, wait(0.3)
+雷电将军 e, attack(0.22), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check
+久岐忍 e, wait(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), e, check
+瓦雷莎 e, attack(1.25), wait(0.45), check, s(0.4), click(middle), e, attack(1.25), wait(0.3), keypress(q), wait(0.45), check
 
 
 // 中置位
-夏沃蕾 attack(0.08),keypress(q),wait(0.2),keypress(q),wait(0.2),attack(0.21),keydown(e),wait(0.15), moveby(0,1300),wait(0.18),keyup(e),attack(0.15)
-白术 attack(0.2), keypress(q),attack(0.2),keypress(q),wait(0.2),keypress(q),attack(0.2)
-// 奈芙尔 attack(0.08), keydown(VK_LBUTTON), keydown(E), wait(0.015), keyup(E), wait(0.015), wait(0.95), wait(0.015), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.015), wait(0.015), wait(0.5), keyup(VK_LBUTTON),keypress(q),attack(0.2)
-雅珂达 attack(0.2),click(middle),attack(0.2), keydown(E), keydown(W), wait(0.4), keyup(W), keydown(S), wait(0.25), keydown(W), wait(0.25), keyup(W), keydown(S), wait(0.25), keyup(S), keydown(W), wait(0.25), keyup(W), keydown(S), wait(0.25), keyup(S), keydown(W), wait(0.25), keyup(W), keydown(S), wait(0.25), keyup(S), keydown(W), wait(0.25), keyup(W), keydown(S), wait(0.25), keyup(S), keydown(W), wait(0.25), keyup(W), keydown(S), wait(0.25), keyup(S), keyup(E), attack(0.2), keypress(q),attack(0.2), keypress(q),attack(0.3)
+夏沃蕾 attack(0.1), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), attack(0.21), keydown(e), wait(0.15), moveby(0, 1300), wait(0.18), keyup(e), attack(0.15), check, wait(0.3)
+白术 attack(0.2),check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+// 奈芙尔 attack(0.08), keydown(VK_LBUTTON), keydown(E), wait(0.015), keyup(E), wait(0.015), wait(0.95), wait(0.015), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.015), wait(0.015), wait(0.5), keyup(VK_LBUTTON), keypress(q), attack(0.2), check, wait(0.3)
+雅珂达 attack(0.2), click(middle), attack(0.2), check, keydown(E), w(0.1), a(0.1), s(0.1), d(0.1), w(0.1), a(0.1), s(0.1), d(0.1), w(0.1), a(0.1), s(0.1), d(0.1), w(0.1), a(0.1), s(0.1), d(0.1), w(0.1), a(0.1), s(0.1), d(0.1), w(0.1), a(0.1), attack(0.2), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
+
 
 
 // 减抗
-希诺宁 s(0.2),e,w(0.2),attack(0.35),wait(0.1),attack(0.35),keypress(x), wait(0.2), keypress(q), wait(0.3), keypress(q),keypress(x), wait(0.08), keypress(x),attack(0.2)
-枫原万叶 attack(0.08),keypress(q),wait(0.3),keypress(q),wait(0.3),attack(0.2),keydown(E),wait(0.48),keyup(E),attack(0.3), wait(0.5),attack(0.1)
-砂糖 e,attack(0.2),keypress(q),attack(0.2),keypress(q),e,attack(0.2)
-琴 attack(0.21),keydown(e),wait(0.14), moveby(0,1300),wait(0.75),keyup(e),attack(0.12),keypress(q),attack(0.11),keypress(q),attack
+希诺宁 s(0.2), e, w(0.18), attack(0.7), keypress(x), wait(0.2), check, keypress(q), wait(0.1), keypress(q), wait(0.1), ready, attack, e, wait(0.3), check, wait(0.3)
+枫原万叶 attack(0.08), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, keydown(E), wait(0.48), keyup(E), attack(0.3), wait(0.5), attack
+砂糖 e, attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), check, wait(0.3), e, attack(0.2)
+琴 attack(0.21), check, wait(0.3), keydown(e), wait(0.14), moveby(0, 1300), wait(0.75), keyup(e), attack(0.12), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
 
 // 夜兰逆时针
-夜兰 attack(0.5),keydown(VK_W),wait(0.05),keydown(VK_E),wait(0.4),keyup(VK_E),wait(0.1),keydown(VK_A),keyup(VK_W),wait(0.4),keydown(VK_S),keyup(VK_A),wait(0.4),keydown(VK_D),keyup(VK_S),wait(0.4),keydown(VK_W),keyup(VK_D),wait(0.3),keydown(VK_S),keyup(VK_W),wait(0.15),keyup(VK_S),keypress(e), attack(0.2), keypress(Q), attack(0.2), keypress(Q), attack(0.2)
+夜兰 attack(0.5), keydown(VK_W), wait(0.05), keydown(VK_E), wait(0.4), keyup(VK_E), wait(0.1), keydown(VK_A), keyup(VK_W), wait(0.4), keydown(VK_S), keyup(VK_A), wait(0.4), keydown(VK_D), keyup(VK_S), wait(0.4), keydown(VK_W), keyup(VK_D), wait(0.3), keydown(VK_S), keyup(VK_W), wait(0.15), keyup(VK_S), keypress(e), attack(0.2), check, wait(0.3), keypress(Q), wait(0.1), keypress(Q), wait(0.1), keypress(q), wait(0.1), ready, check, wait(0.3)
 
 // 爆发
-玛薇卡 attack(0.08),keydown(E),wait(0.4),attack(0.2),wait(0.01),keyup(E),click(middle),attack(0.08),keypress(Q), wait(0.2), keypress(Q),charge(3.8), keydown(space), wait(0.1), keyup(space), attack(0.2),wait(0.2)
+玛薇卡 attack(0.08), check, wait(0.3), keydown(E), wait(0.4), attack(0.2), wait(0.01), keyup(E), click(middle), attack(0.08), check, wait(0.3), keypress(Q), wait(0.1), keypress(Q), wait(0.1), ready, check, wait(0.3), charge(3.8), keydown(space), wait(0.1), keyup(space), attack(0.2), wait(0.2), check, wait(0.3)
 
 
 // 收尾，长轴
-那维莱特 attack(0.05),keypress(q),wait(0.05),keypress(q),click(middle),e,wait(0.15),keydown(VK_LBUTTON),wait(0.27),keyup(VK_LBUTTON),wait(0.15),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),keydown(VK_LBUTTON),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),click(middle),j,click(middle),keyup(VK_LBUTTON),wait(0.5),attack(0.2), click(middle),wait(0.2),keydown(VK_LBUTTON),wait(0.35),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),keydown(VK_LBUTTON),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),click(middle),j,click(middle),wait(0.05),keyup(VK_LBUTTON)
+那维莱特 attack(0.05), check, wait(0.3), keypress(q), wait(0.1), keypress(q), wait(0.1), ready, click(middle), e, wait(0.15), keydown(VK_LBUTTON), wait(0.27), keyup(VK_LBUTTON), wait(0.15), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), keydown(VK_LBUTTON), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), click(middle), j, click(middle), keyup(VK_LBUTTON), wait(0.5), check, attack(0.2), click(middle), wait(0.2), keydown(VK_LBUTTON), wait(0.35), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), keydown(VK_LBUTTON), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -2100), wait(0.05), moveby(1800, -1100), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1200), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 1300), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), moveby(1800, 0), wait(0.05), click(middle), j, click(middle), wait(0.05), keyup(VK_LBUTTON), wait(0.15), check, wait(0.3)
 
-温迪 attack(0.1), keypress(Q), e, click(middle), attack(0.2), keypress(Q), attack(0.22), e, click(middle), dash(0.1), attack(1.2), e, attack(0.5), click(middle), attack(0.2),dash(0.1),attack(1.2)
+温迪 attack(0.1), check, wait(0.3), keypress(Q), wait(0.1), ready, check, e, click(middle), attack(0.2), keypress(Q), wait(0.1), ready, attack(0.22), e, click(middle), dash(0.1), attack(1.2), e, attack(0.5), click(middle), attack(0.2), dash(0.1), attack(1.2), check, wait(0.3)
 
-芭芭拉 e,attack(0.6),keypress(q),attack(2),charge(0.5),keypress(q),attack(0.2)
-丝柯克 attack(0.05),keypress(e),wait(0.05),keypress(e),wait(0.2),attack(2.27),keypress(Q),dash,attack(2.27),keydown(S),keypress(Q),dash,keyup(S),attack(2.27),wait(0.11),charge(0.3),attack(1)
-迪希雅 keypress(q),attack(0.1),dash(0.2),keypress(q),attack(0.3),keypress(q),attack(0.3),keypress(q),attack(0.3),keydown(S),attack(0.5),keyup(S),keydown(W),attack(0.5),keyup(W),keydown(S),attack(0.5),keyup(S),keydown(W),attack(0.5),keyup(W),keydown(S),attack(0.5),keyup(S),keydown(W),attack(0.5),keyup(W),keydown(S),attack(0.5),keyup(S)
-娜维娅 keypress(q),attack(0.1),keypress(q),attack(0.1),keypress(q),attack(0.1),keypress(q),keydown(E),wait(0.8),keyup(E),attack(1.6),keydown(E),wait(0.8),keyup(E),attack(0.1),keydown(S),attack(0.33),keyup(S),keydown(W),attack(0.3),keyup(W),keydown(S),attack(0.3),keyup(S),keydown(W),attack(0.3),keyup(W),keydown(S),attack(0.3),keyup(S),keydown(W),attack(0.3),keyup(W),attack(0.2)
-// （奈芙尔3zs）奈芙尔 attack(0.08), keydown(VK_LBUTTON), keydown(E), wait(0.015), keyup(E), wait(0.015), wait(0.95), wait(0.015), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.015), wait(0.015), wait(0.5), keyup(VK_LBUTTON)
-// （满命6刀）芙宁娜 attack(0.01),e,attack(0.1),dash(0.1),jump,wait(0.2),keypress(q),keydown(W),attack(0.3),keypress(q),keyup(W),attack(0.3),keypress(q),attack(0.1),keydown(S),attack(0.33),keyup(S),keydown(W),attack(0.3),keyup(W),keydown(S),attack(0.3),keyup(S),keydown(W),attack(0.3),keyup(W),keydown(S),attack(0.3),keyup(S),keydown(W),attack(0.3),keyup(W)
-// （火神AZS）玛薇卡  q,attack(0.1),e,charge(0.6),dash(0.3),moveby(500,0),moveby(2300,0),attack(0.1),charge(0.7),dash(0.3),moveby(-500,0),moveby(-2300,-0),attack(0.1),charge(0.7),dash(0.3),moveby(500,0),moveby(2600,0),attack(0.1),charge(0.8),dash(0.3),moveby(-500,0),moveby(-2300,-0),attack(0.1),charge(0.8),dash(0.3),moveby(500,0),moveby(2300,0),attack(0.1),charge(0.8),dash(0.3),moveby(-500,0),moveby(-2300,-0)
-// （火神ZZS）玛薇卡 attack(0.08), keypress(q),attack(0.03),keypress(q),keydown(E),wait(0.35),keyup(E),attack(0.03),wait(0.25), keydown(VK_LBUTTON),wait(0.155),keydown(VK_RBUTTON),wait(0.18),keyup(VK_LBUTTON),wait(0.02),keyup(VK_RBUTTON),wait(0.02),keydown(VK_LBUTTON),wait(0.16),keydown(VK_RBUTTON),wait(0.18),keyup(VK_LBUTTON),wait(0.02),keyup(VK_RBUTTON),wait(0.1),keydown(VK_LBUTTON),wait(0.05),keyup(VK_LBUTTON),wait(0.05),keydown(VK_LBUTTON),wait(0.05),keyup(VK_LBUTTON),wait(1.25), keydown(VK_LBUTTON),wait(0.155),keydown(VK_RBUTTON),wait(0.18),keyup(VK_LBUTTON),wait(0.02),keyup(VK_RBUTTON),wait(0.02),keydown(VK_LBUTTON),wait(0.16),keydown(VK_RBUTTON),wait(0.18),keyup(VK_LBUTTON),wait(0.02),keyup(VK_RBUTTON),wait(0.1),keydown(VK_LBUTTON),wait(0.05),keyup(VK_LBUTTON),wait(0.05),keydown(VK_LBUTTON),wait(0.05),keyup(VK_LBUTTON),wait(0.83)
-// （回身 QE ZZS）玛薇卡 attack(0.03),keypress(q),keypress(q),keydown(E),wait(0.45),keyup(E),wait(0.2),keydown(VK_LBUTTON),wait(0.155),wait(0.359),keyup(VK_LBUTTON),wait(0.05),wait(0.05), keydown(VK_LBUTTON),wait(0.1),keyup(VK_LBUTTON),wait(0.05),keydown(VK_LBUTTON),wait(0.1),keyup(VK_LBUTTON),click(middle),wait(0.45),  moveby(5500,0),wait(0.05),keydown(VK_LBUTTON),wait(0.125),keydown(VK_RBUTTON),wait(0.15),s(0.1),wait(0.1),keyup(VK_LBUTTON),wait(0.01),keyup(VK_RBUTTON),wait(0.08),keydown(VK_LBUTTON),wait(0.125),keydown(VK_RBUTTON),wait(0.1),s(0.1),wait(0.1),keyup(VK_LBUTTON),wait(0.01),keyup(VK_RBUTTON),wait(0.1),keydown(VK_LBUTTON),wait(0.05),keyup(VK_LBUTTON),wait(0.05),keydown(VK_LBUTTON),wait(0.05),keyup(VK_LBUTTON),wait(0.3)
-瓦雷莎 e, attack(1.25),click(middle),wait(0.45), keydown(s), e, attack(1.25),keyup(s), wait(0.3),keypress(q), click(middle),wait(0.45)
-仆人 charge(0.35), j, keydown(s),attack(1.17),attack(0.45),keyup(s),keydown(w),attack(0.38),attack(0.6),keyup(w),wait(0.2),keydown(s),attack(1.17),attack(0.45),keyup(s),keydown(w),attack(0.38),attack(0.6),keyup(w),wait(0.2)
+芭芭拉 e, attack(0.6), check, wait(0.3), keypress(q), wait(0.1), ready, attack(2), charge(0.5), keypress(q), wait(0.1), ready, attack(0.2), check, wait(0.3)
 
-// （满命转圈喷5.5秒）希格雯 e(hold),keypress(q),wait(0.2),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1),moveby(300,0),wait(0.1)
+丝柯克 e, wait(0.1), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.15), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), keydown(q), wait(0.05), keyup(q), wait(0.66), mousedown(left), wait(0.05), mouseup(left), check, wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.16), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), wait(0.23), mousedown(left), wait(0.05), mouseup(left), check, wait(0.79), keydown(w), wait(0.05), keyup(w), wait(0.2), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.16), mousedown(left), wait(0.21), mouseup(left), wait(0.66), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), wait(0.23), mousedown(left), wait(0.05), mouseup(left), check, wait(0.79), keydown(w), wait(0.05), keyup(w), wait(0.2), mousedown(left), wait(0.05), mouseup(left), wait(0.13), mousedown(left), wait(0.05), mouseup(left), check, wait(0.19), mousedown(right), wait(0.05), mouseup(right), wait(0.16), mousedown(left), wait(0.05), mouseup(left), wait(0.16), mousedown(left), wait(0.05), mouseup(left), check, wait(0.3)
+
+迪希雅 attack(0.1), check, wait(0.3), dash(0.2), keypress(q), wait(0.1), ready, attack(0.3), keypress(q), attack(0.3), keypress(q), attack(0.3), keydown(S), attack(0.5), keyup(S), keydown(W), attack(0.5), keyup(W), wait(0.1), check, wait(0.3), keydown(S), attack(0.5), keyup(S), keydown(W), attack(0.5), keyup(W), keydown(S), attack(0.5), keyup(S), keydown(W), attack(0.5), keyup(W), keydown(S), attack(0.5), keyup(S), check, wait(0.3)
+
+娜维娅  attack(0.1), check, wait(0.3), keypress(q), wait(0.1), ready, attack(0.1), keypress(q), wait(0.1), keypress(q), ready, check, wait(0.3), keydown(E), wait(0.8), keyup(E), attack(1.6), check, wait(0.3), keydown(E), wait(0.8), keyup(E), attack(0.1), keydown(S), attack(0.33), keyup(S), keydown(W), attack(0.3), keyup(W), keydown(S), attack(0.3), keyup(S), keydown(W), attack(0.3), keyup(W), keydown(S), attack(0.3), keyup(S), keydown(W), attack(0.3), keyup(W), attack(0.2), check, wait(0.3)
+
+// （奈芙尔3zs）奈芙尔 attack(0.08), keydown(VK_LBUTTON), keydown(E), wait(0.015), keyup(E), wait(0.015), wait(0.95), wait(0.015), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), wait(0.015), keyup(W), wait(0.85), keydown(VK_RBUTTON), wait(0.015), keyup(VK_RBUTTON), wait(0.015), keydown(S), wait(0.015), keyup(S), wait(0.25), keydown(W), wait(0.015), keyup(W), wait(0.015), wait(0.015), wait(0.5), keyup(VK_LBUTTON), check, wait(0.3)
+
+// （满命6刀）芙宁娜 attack(0.01), e, attack(0.1), dash(0.1), jump, wait(0.2), keypress(q), keydown(W), attack(0.3), keypress(q), keyup(W), attack(0.3), keypress(q), attack(0.1), keydown(S), attack(0.33), keyup(S), keydown(W), attack(0.3), keyup(W), keydown(S), attack(0.3), keyup(S), keydown(W), attack(0.3), keyup(W), keydown(S), attack(0.3), keyup(S), keydown(W), attack(0.3), keyup(W), check, wait(0.3)
+
+// （火神AZS）玛薇卡  q, attack(0.1), e, charge(0.6), dash(0.3), moveby(500, 0), moveby(2300, 0), attack(0.1), charge(0.7), dash(0.3), moveby(-500, 0), moveby(-2300, -0), attack(0.1), charge(0.7), dash(0.3), moveby(500, 0), moveby(2600, 0), attack(0.1), charge(0.8), dash(0.3), moveby(-500, 0), moveby(-2300, -0), attack(0.1), charge(0.8), dash(0.3), moveby(500, 0), moveby(2300, 0), attack(0.1), charge(0.8), dash(0.3), moveby(-500, 0), moveby(-2300, -0), check, wait(0.3)
+
+// （火神ZZS）玛薇卡 attack(0.08), keypress(q), attack(0.03), keypress(q), keydown(E), wait(0.35), keyup(E), attack(0.03), wait(0.25), keydown(VK_LBUTTON), wait(0.155), keydown(VK_RBUTTON), wait(0.18), keyup(VK_LBUTTON), wait(0.02), keyup(VK_RBUTTON), wait(0.02), keydown(VK_LBUTTON), wait(0.16), keydown(VK_RBUTTON), wait(0.18), keyup(VK_LBUTTON), wait(0.02), keyup(VK_RBUTTON), wait(0.1), keydown(VK_LBUTTON), wait(0.05), keyup(VK_LBUTTON), wait(0.05), keydown(VK_LBUTTON), wait(0.05), keyup(VK_LBUTTON), wait(1.25), keydown(VK_LBUTTON), wait(0.155), keydown(VK_RBUTTON), wait(0.18), keyup(VK_LBUTTON), wait(0.02), keyup(VK_RBUTTON), wait(0.02), keydown(VK_LBUTTON), wait(0.16), keydown(VK_RBUTTON), wait(0.18), keyup(VK_LBUTTON), wait(0.02), keyup(VK_RBUTTON), wait(0.1), keydown(VK_LBUTTON), wait(0.05), keyup(VK_LBUTTON), wait(0.05), keydown(VK_LBUTTON), wait(0.05), keyup(VK_LBUTTON), wait(0.83),check
+
+// （回身 QE ZZS）玛薇卡 attack(0.03), keypress(q), keypress(q), keydown(E), wait(0.45), keyup(E), wait(0.2), keydown(VK_LBUTTON), wait(0.155), wait(0.359), keyup(VK_LBUTTON), wait(0.05), wait(0.05), keydown(VK_LBUTTON), wait(0.1), keyup(VK_LBUTTON), wait(0.05), keydown(VK_LBUTTON), wait(0.1), keyup(VK_LBUTTON), click(middle), wait(0.45), moveby(5500, 0), wait(0.05), keydown(VK_LBUTTON), wait(0.125), keydown(VK_RBUTTON), wait(0.15), s(0.1), wait(0.1), keyup(VK_LBUTTON), wait(0.01), keyup(VK_RBUTTON), wait(0.08), keydown(VK_LBUTTON), wait(0.125), keydown(VK_RBUTTON), wait(0.1), s(0.1), wait(0.1), keyup(VK_LBUTTON), wait(0.01), keyup(VK_RBUTTON), wait(0.1), keydown(VK_LBUTTON), wait(0.05), keyup(VK_LBUTTON), wait(0.05), keydown(VK_LBUTTON), wait(0.05), keyup(VK_LBUTTON), wait(0.3), check
+
+瓦雷莎 e, attack(1.25), click(middle), wait(0.45),check, keydown(s), e, attack(1.25), keyup(s), wait(0.3), keypress(q), click(middle), wait(0.45), check, wait(0.3)
+
+仆人 charge(0.35), j, wait(0.3), check, wait(0.3), keydown(s), attack(1.17), attack(0.45), keyup(s), keydown(w), attack(0.38), attack(0.6), keyup(w), wait(0.2), keydown(s), attack(1.17), attack(0.45), keyup(s), keydown(w), attack(0.38), attack(0.6), keyup(w), wait(0.2), check, wait(0.3)
+
+// （满命转圈喷5.5秒）希格雯 e(hold),wait(0.3),check, wait(0.3), keypress(q), wait(0.2), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.1), moveby(300, 0), wait(0.2), check, wait(0.3)
+
+菲谢尔 attack(0.3), check, wait(0.3), keypress(q), wait(0.1), keypress(q), j, attack(0.2), ready, check, wait(0.3)
+
+菲林斯 attack(0.2), click(middle), check, wait(0.3), keydown(w), e, attack(0.3), keyup(w), keydown(s), e, keypress(q), attack(0.3), keyup(s), keydown(w), attack(0.33), keyup(w), check, wait(0.3), e, keypress(q), attack(0.33), keydown(s), e, attack(0.33), keyup(s), keypress(q), attack(0.2), keydown(w), attack(0.2), keyup(w), keydown(s), e, attack(0.2), keyup(s), keypress(e), attack(0.25), e, keypress(q), ready, keydown(w), e, attack(0.3), keyup(w), check, wait(0.3), keydown(s), e, keypress(q), attack(0.3), keyup(s), keydown(w), attack(0.33), keyup(w), check, wait(0.3), e, keypress(q), attack(0.33), keydown(s), e, attack(0.33), keyup(s), attack(0.2), keypress(q), ready, check, wait(0.3)
+
+// （6命单喷4s） 那维莱特 attack(0.05),click(middle), check, wait(0.3), e, wait(0.15), keydown(VK_LBUTTON), wait(0.27),keyup(VK_LBUTTON),wait(0.15),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),keydown(VK_LBUTTON),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-2100),wait(0.05),moveby(1800,-1100),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1200),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,0),wait(0.05),moveby(1800,1300),wait(0.05),j,click(middle),click(middle),wait(0.05),keyup(VK_LBUTTON), check, wait(0.3)
+
+// （大团长满命策略） 法尔伽 attack(0.05), check, wait(0.3), e,attack(0.2),e,attack(0.1),e,attack(0.05),e,keydown(s),attack(1),keyup(s),attack(2.1),keydown(w),e,attack(0.05),e,attack(0.05),e,attack(0.2),e,keyup(w),keydown(s),attack(0.5),e,attack(0.5),e,keyup(s),attack(0.05),e,attack(0.05),e,attack(0.1),e,attack(0.1),e,attack(0.35),keypress(q),wait(0.1),keypress(q), wait(0.1), ready, check, wait(0.3)
