@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -31,6 +31,7 @@ public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private readonly HashSet<string> _executingScriptGroupRefs = new();
     private static bool IsCurrentHourEqual(string input)
     {
         // 尝试将输入字符串转换为整数
@@ -535,6 +536,45 @@ public partial class ScriptService : IScriptService
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             await project.Run();
+        }
+        else if (project.Type == "ScriptGroupRef")
+        {
+            if (_executingScriptGroupRefs.Contains(project.Name))
+            {
+                _logger.LogWarning("检测到配置组引用循环依赖 [{Name}]，跳过执行以避免无限递归", project.Name);
+                return;
+            }
+
+            _logger.LogInformation("→ 开始执行配置组引用: {Name}", project.Name);
+            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
+            var scriptGroupRef = App.GetService<ScriptControlViewModel>().ScriptGroups.FirstOrDefault(g => g.Name == project.Name);
+            if (scriptGroupRef == null)
+            {
+                _logger.LogWarning("配置组引用 [{Name}] 未找到，跳过执行", project.Name);
+                return;
+            }
+
+            _executingScriptGroupRefs.Add(project.Name);
+            try
+            {
+                foreach (var refProject in scriptGroupRef.Projects)
+                {
+                    if (refProject.Status != "Enabled")
+                    {
+                        _logger.LogInformation("配置组引用 [{Name}] 中的脚本 {ProjectName} 状态为禁用，跳过执行", project.Name, refProject.Name);
+                        continue;
+                    }
+                    if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    await ExecuteProject(refProject);
+                }
+            }
+            finally
+            {
+                _executingScriptGroupRefs.Remove(project.Name);
+            }
         }
     }
 

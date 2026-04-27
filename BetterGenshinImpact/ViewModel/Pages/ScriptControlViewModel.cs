@@ -874,6 +874,42 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void OnAddScriptGroupRef()
+    {
+        if (SelectedScriptGroup == null)
+        {
+            return;
+        }
+
+        var availableGroups = ScriptGroups
+            .Where(g => g.Name != SelectedScriptGroup.Name)
+            .Select(g => g.Name)
+            .ToList();
+
+        if (availableGroups.Count == 0)
+        {
+            Toast.Warning("没有其他可引用的配置组");
+            return;
+        }
+
+        var combobox = new ComboBox
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
+
+        foreach (var groupName in availableGroups)
+        {
+            combobox.Items.Add(groupName);
+        }
+
+        var result = PromptDialog.Prompt("请选择需要引用的配置组", "添加配置组引用", combobox);
+        if (!string.IsNullOrEmpty(result))
+        {
+            SelectedScriptGroup.AddProject(ScriptGroupProject.BuildScriptGroupRefProject(result));
+        }
+    }
+
+    [RelayCommand]
     private async Task OnAddPathing()
     {
         try

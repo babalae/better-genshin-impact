@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.ScriptControlPage"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.ScriptControlPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -234,6 +234,7 @@
                                 <MenuItem Header="地图追踪任务" Command="{Binding AddPathingCommand}" />
                                 <MenuItem Header="键鼠脚本" Command="{Binding AddKmScriptCommand}" />
                                 <MenuItem Header="Shell" Command="{Binding AddShellCommand}" />
+                                <MenuItem Header="配置组引用" Command="{Binding AddScriptGroupRefCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
@@ -335,6 +336,7 @@
                             <MenuItem Command="{Binding AddPathingCommand}" Header="添加地图追踪任务" />
                             <MenuItem Command="{Binding AddKmScriptCommand}" Header="添加键鼠脚本" />
                             <MenuItem Command="{Binding AddShellCommand}" Header="添加Shell" />
+                            <MenuItem Command="{Binding AddScriptGroupRefCommand}" Header="添加配置组引用" />
                             <MenuItem Command="{Binding AddNextFlagCommand}" Header="下一次任务从此处执行"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       />

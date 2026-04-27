@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
@@ -165,6 +165,11 @@ public partial class ScriptGroupProject : ObservableObject
     public static ScriptGroupProject BuildPathingProject(string name, string folder)
     {
         return new ScriptGroupProject(name, folder, "Pathing");
+    }
+
+    public static ScriptGroupProject BuildScriptGroupRefProject(string scriptGroupName)
+    {
+        return new ScriptGroupProject(scriptGroupName, "", "ScriptGroupRef");
     }
 
     /// <summary>
@@ -409,7 +414,8 @@ public class ScriptGroupProjectExtensions
         { "Javascript", "JS脚本" },
         { "KeyMouse", "键鼠脚本" },
         { "Pathing", "地图追踪" },
-        { "Shell", "Shell" }
+        { "Shell", "Shell" },
+        { "ScriptGroupRef", "配置组引用" }
     };
 
     public static readonly Dictionary<string, string> StatusDescriptions = new()
