@@ -474,6 +474,12 @@ public partial class ScriptService : IScriptService
                 list.Add(newProject);
                 // hasTimer = true;
             }
+            else if (project.Type == "ScriptGroupRef")
+            {
+                var newProject = ScriptGroupProject.BuildScriptGroupRefProject(project.Name);
+                CopyProjectProperties(project, newProject);
+                list.Add(newProject);
+            }
         }
 
         return list;
@@ -557,8 +563,14 @@ public partial class ScriptService : IScriptService
             _executingScriptGroupRefs.Add(project.Name);
             try
             {
-                foreach (var refProject in scriptGroupRef.Projects)
+                var refProjects = ReloadScriptProjects(scriptGroupRef.Projects);
+                foreach (var refProject in refProjects)
                 {
+                    if (refProject is { SkipFlag: true } || ShouldSkipTask(refProject))
+                    {
+                        continue;
+                    }
+
                     if (refProject.Status != "Enabled")
                     {
                         _logger.LogInformation("配置组引用 [{Name}] 中的脚本 {ProjectName} 状态为禁用，跳过执行", project.Name, refProject.Name);
