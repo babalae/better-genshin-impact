@@ -15,6 +15,8 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
 
     public RecognitionObject FRo;
     public RecognitionObject ChatIconRo;
+    // 手柄识别对话选项
+    public RecognitionObject ControllerChatIconRo;
     public RecognitionObject SettingsIconRo;
     public RecognitionObject LRo;
 
@@ -22,6 +24,8 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
     public User32.VK PickVk = User32.VK.VK_F;
     public RecognitionObject PickRo;
     public RecognitionObject ChatPickRo;
+    
+    public RecognitionObject ControllerPickRo;
 
     private AutoPickAssets()
     {
@@ -42,6 +46,15 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
             Name = "ChatIcon",
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "icon_option.png"),
+            DrawOnWindow = false,
+            DrawOnWindowPen = new Pen(Color.Chocolate, 2)
+        }.InitTemplate();
+        
+        ControllerChatIconRo = new RecognitionObject
+        {
+            Name = "ControllerChatIconRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "controller_chat_icon.png"),
             DrawOnWindow = false,
             DrawOnWindowPen = new Pen(Color.Chocolate, 2)
         }.InitTemplate();
@@ -67,6 +80,18 @@ public class AutoPickAssets : BaseAssets<AutoPickAssets>
 
 
         PickRo = FRo;
+        ControllerPickRo = new RecognitionObject
+        {
+            Name = "ControllerPickRo",
+            RecognitionType = RecognitionTypes.TemplateMatch,
+            TemplateImageMat = GameTaskManager.LoadAssetImage("AutoPick", "controller_pick_button.png"),
+            RegionOfInterest = new Rect((int)(1090 * AssetScale),
+                (int)(330 * AssetScale),
+                (int)(60 * AssetScale),
+                (int)(420 * AssetScale)),
+            DrawOnWindow = false,
+            Use3Channels = true
+        }.InitTemplate();
         var keyName = TaskContext.Instance().Config.AutoPickConfig.PickKey;
         if (!string.IsNullOrEmpty(keyName))
         {

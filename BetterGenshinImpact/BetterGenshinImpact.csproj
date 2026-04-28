@@ -15,7 +15,7 @@
 		<Platforms>x64</Platforms>
 		<DebugType>embedded</DebugType>
 	</PropertyGroup>
-
+	
 <!--	<ItemGroup>
 		<None Remove="Assets\Images\*.jpg" />
 		<None Remove="Assets\Images\*" />

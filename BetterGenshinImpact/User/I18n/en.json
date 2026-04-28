@@ -82,6 +82,7 @@
   "画中画窗口（建议和后台模式同时开启）": "Picture-in-picture window (recommended with background mode)",
   "游戏请不要最小化，不在对话中的时候鼠标会自动吸附回游戏中": "Do not minimize the game. When not in dialogue, the mouse will snap back into the game automatically.",
   "启用后台模式（会只用交互键进行剧情）": "Enable background mode (only uses the Interact key for quests)",
+  "启用Xbox手柄模式": "Enable Xbox Controller",
   "默认为 F，自带了 E 和 G 按键，需要改成其他键的请阅读文档": "Default is F. Includes E and G keys. To change to other keys, please read the docs.",
   "自定义拾取按键": "Custom pickup key",
   "需要主动按下 F 交互的内容，请配合黑名单使用": "For interactions that require pressing F manually, use the blacklist",
