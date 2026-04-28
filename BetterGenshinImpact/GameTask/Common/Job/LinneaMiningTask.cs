@@ -135,7 +135,6 @@ public class LinneaMiningTask
                 if (round < _scanRounds - 1)
                 {
                     Simulation.SendInput.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
-                    await Delay(800, ct);
                 }
                 await Delay(800, ct);
             }
