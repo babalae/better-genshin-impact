@@ -196,7 +196,7 @@ public class LinneaMiningTask
                 Simulation.SendInput.Mouse.MiddleButtonUp();
                 await Delay(300, ct);
                 // Logger.LogInformation("开始挖矿");
-                await Mine(ct);
+                await Mine(ct, totalDy < 0);
                 return (true, isAligned, 0, 0);
             }
 
@@ -221,10 +221,13 @@ public class LinneaMiningTask
     /// <summary>
     /// 执行挖矿操作
     /// </summary>
-    private static async Task Mine(CancellationToken ct)
+    private static async Task Mine(CancellationToken ct, bool compensateUp)
     {
-        Simulation.SendInput.Mouse.MoveMouseBy(0, -25);
-        await Delay(10, ct);
+        if (compensateUp)
+        {
+            Simulation.SendInput.Mouse.MoveMouseBy(0, -25);
+            await Delay(10, ct);
+        }
         Simulation.SendInput.Mouse.LeftButtonClick();
         await Delay(2000, ct);
     }
