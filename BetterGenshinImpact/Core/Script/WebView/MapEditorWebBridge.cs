@@ -25,9 +25,9 @@ public class MapEditorWebBridge
     {
         await ScriptService.StartGameTask();
         SystemControl.ActivateWindow();
-        var task = PathingTask.BuildFromJson(json);
         await new TaskRunner().RunThreadAsync(async () =>
         {
+            var task = PathingTask.BuildFromJson(json);
             var pathExecutor = new PathExecutor(CancellationContext.Instance.Cts.Token);
             await pathExecutor.Pathing(task);
         });
