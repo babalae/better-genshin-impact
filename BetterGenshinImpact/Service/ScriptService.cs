@@ -564,6 +564,7 @@ public partial class ScriptService : IScriptService
             try
             {
                 var refProjects = ReloadScriptProjects(scriptGroupRef.Projects);
+                var stopwatch = new Stopwatch();
                 foreach (var refProject in refProjects)
                 {
                     if (refProject is { SkipFlag: true } || ShouldSkipTask(refProject))
@@ -580,7 +581,48 @@ public partial class ScriptService : IScriptService
                     {
                         break;
                     }
-                    await ExecuteProject(refProject);
+
+                    for (var i = 0; i < refProject.RunNum; i++)
+                    {
+                        try
+                        {
+                            TaskTriggerDispatcher.Instance().ClearTriggers();
+                            _logger.LogInformation("------------------------------");
+                            stopwatch.Reset();
+                            stopwatch.Start();
+
+                            await ExecuteProject(refProject);
+
+                            if (refProject.RunNum > 1 && ShouldSkipTask(refProject))
+                            {
+                                break;
+                            }
+                        }
+                        catch (NormalEndException)
+                        {
+                            throw;
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            throw;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogDebug(e, "执行引用组脚本时发生异常");
+                            _logger.LogError("执行引用组脚本时发生异常: {Msg}", e.Message);
+                            break;
+                        }
+                        finally
+                        {
+                            stopwatch.Stop();
+                            var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
+                            _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", refProject.Name,
+                                elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
+                            _logger.LogInformation("------------------------------");
+                        }
+
+                        await Task.Delay(1000);
+                    }
                 }
             }
             finally
