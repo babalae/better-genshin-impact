@@ -74,7 +74,7 @@ public partial class ScriptService : IScriptService
                     _logger.LogInformation($"{project.Name}任务已经不在执行周期（当前值${index}!=配置值${tcc.Index}），将跳过此任务！");
                     return true;
                 }
-               
+                
             }
             
         }
@@ -129,9 +129,7 @@ public partial class ScriptService : IScriptService
             scriptGroupProject.SkipFlag = false;
         }
 
-
-
-        // // 针对JS 脚本，检查是否包含定时器操作
+        // 针对JS 脚本，检查是否包含定时器操作
         // var jsProjects = ExtractJsProjects(list);
         // if (!hasTimer && jsProjects.Count > 0)
         // {
@@ -329,7 +327,6 @@ public partial class ScriptService : IScriptService
                             {
                                 TaskTriggerDispatcher.Instance().ClearTriggers();
 
-
                                 _logger.LogInformation("------------------------------");
 
                                 stopwatch.Reset();
@@ -511,6 +508,30 @@ public partial class ScriptService : IScriptService
     //     return jsProjects;
     // }
 
+    private async Task<bool> ExecuteProjectWithBlessingAsync(ScriptGroupProject project)
+    {
+        try
+        {
+            await _blessingOfTheWelkinMoonTask.Start(CancellationContext.Instance.Cts.Token);
+            await ExecuteProject(project);
+            return true;
+        }
+        catch (NormalEndException)
+        {
+            throw;
+        }
+        catch (TaskCanceledException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "执行项目时发生异常");
+            _logger.LogError("执行项目时发生异常: {Msg}", e.Message);
+            return false;
+        }
+    }
+
     private async Task ExecuteProject(ScriptGroupProject project)
     {
         TaskContext.Instance().CurrentScriptProject = project;
@@ -591,7 +612,7 @@ public partial class ScriptService : IScriptService
                             stopwatch.Reset();
                             stopwatch.Start();
 
-                            await ExecuteProject(refProject);
+                            await ExecuteProjectWithBlessingAsync(refProject);
 
                             if (refProject.RunNum > 1 && ShouldSkipTask(refProject))
                             {
