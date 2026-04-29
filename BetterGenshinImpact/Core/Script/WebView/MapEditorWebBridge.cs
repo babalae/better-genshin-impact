@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -29,6 +30,7 @@ public class MapEditorWebBridge
         {
             var task = PathingTask.BuildFromJson(json);
             var pathExecutor = new PathExecutor(CancellationContext.Instance.Cts.Token);
+            pathExecutor.PartyConfig = new PathingPartyConfig { AutoFightEnabled = false };
             await pathExecutor.Pathing(task);
         });
     }
