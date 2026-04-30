@@ -1,13 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.ViewModel.Message;
-using CommunityToolkit.Mvvm.Messaging;
-using Wpf.Ui.Violeta.Controls;
+using BetterGenshinImpact.GameTask.AutoPathing;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Service;
+using Serilog.Core;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -22,5 +19,17 @@ public class MapEditorWebBridge
     public void ChangeMapName(string mapName)
     {
         TaskContext.Instance().Config.DevConfig.RecordMapName = mapName;
+    }
+
+    public async Task RunPathing(string json)
+    {
+        await ScriptService.StartGameTask();
+        SystemControl.ActivateWindow();
+        await new TaskRunner().RunThreadAsync(async () =>
+        {
+            var task = PathingTask.BuildFromJson(json);
+            var pathExecutor = new PathExecutor(CancellationContext.Instance.Cts.Token);
+            await pathExecutor.Pathing(task);
+        });
     }
 }
