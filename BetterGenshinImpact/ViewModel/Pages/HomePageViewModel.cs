@@ -64,6 +64,7 @@ public partial class HomePageViewModel : ViewModel
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
     private readonly TaskTriggerDispatcher _taskDispatcher;
+    private readonly GameSessionService _gameSessionService;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
 
     // 记录上次使用原神的句柄
@@ -76,9 +77,10 @@ public partial class HomePageViewModel : ViewModel
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
 
-    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public HomePageViewModel(IConfigService configService, TaskTriggerDispatcher taskTriggerDispatcher, GameSessionService gameSessionService)
     {
         _taskDispatcher = taskTriggerDispatcher;
+        _gameSessionService = gameSessionService;
         Config = configService.Get();
         ReadGameInstallPath();
         InitializeBannerImage();
@@ -265,9 +267,7 @@ public partial class HomePageViewModel : ViewModel
                 _hWnd = hWnd;
                 _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
                 _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
                 _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
                 _maskWindow ??= new MaskWindow();
                 _maskWindow.Show();
                 MaskWindow.Instance().RefreshPosition();
@@ -318,7 +318,7 @@ public partial class HomePageViewModel : ViewModel
 
                 TaskDispatcherEnabled = false;
                 _mouseKeyMonitor.Unsubscribe();
-                TaskContext.Instance().IsInitialized = false;
+                _gameSessionService.Detach();
             }
         }
     }
@@ -326,11 +326,6 @@ public partial class HomePageViewModel : ViewModel
     private void OnUiTaskStopTick(object? sender, EventArgs e)
     {
         UIDispatcherHelper.Invoke(Stop);
-    }
-
-    private void OnUiTaskStartTick(object? sender, EventArgs e)
-    {
-        UIDispatcherHelper.Invoke(() => Start(_hWnd));
     }
 
     [RelayCommand]

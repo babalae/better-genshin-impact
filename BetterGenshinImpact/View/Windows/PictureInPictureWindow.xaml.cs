@@ -24,6 +24,7 @@ public partial class PictureInPictureWindow : Window
     private const double MaxWidth = 1280;
     private const double MarginSize = 16;
 
+    private readonly CaptureService? _captureService;
     private double _aspectRatio = 16d / 9d;
     private bool _initializedPosition;
     private bool _pointerDown;
@@ -35,6 +36,7 @@ public partial class PictureInPictureWindow : Window
 
     public PictureInPictureWindow()
     {
+        _captureService = App.GetService<CaptureService>();
         InitializeComponent();
         ShowActivated = false;
         Opacity = 0;
@@ -56,7 +58,7 @@ public partial class PictureInPictureWindow : Window
             return;
         }
 
-        using var mat = TaskTriggerDispatcher.GlobalGameCapture?.Capture();
+        using var mat = _captureService?.CaptureNoRetry();
         if (mat != null)
         {
             if (_cacheSize != mat.Size() || PreviewImage.Source == null)
