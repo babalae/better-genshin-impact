@@ -173,6 +173,7 @@ namespace BetterGenshinImpact.GameTask
             _gameRect = RECT.Empty;
             _prevGameActive = false;
             PictureInPictureService.Hide(resetManual: true);
+            SkillCdOverlayWindow.DestroyInstance();
             if (_winEventHookMoveSize != default)
             {
                 User32.UnhookWinEvent(_winEventHookMoveSize);
@@ -278,6 +279,14 @@ namespace BetterGenshinImpact.GameTask
                     {
                         // Debug.WriteLine(pName + "：hide mask window");
                         maskWindow.Invoke(() => { maskWindow.HideSelf(); });
+                        var skillCdOverlay = SkillCdOverlayWindow.InstanceNullable();
+                        skillCdOverlay?.Invoke(() =>
+                        {
+                            if (skillCdOverlay.IsVisible)
+                            {
+                                skillCdOverlay.Hide();
+                            }
+                        });
                     }
 
                     _prevGameActive = active;
@@ -324,6 +333,14 @@ namespace BetterGenshinImpact.GameTask
                             {
                                 maskWindow.BringToTop();
                             }
+                        }
+                    });
+                    var skillCdOverlay = SkillCdOverlayWindow.InstanceNullable();
+                    skillCdOverlay?.Invoke(() =>
+                    {
+                        if (!skillCdOverlay.IsVisible)
+                        {
+                            skillCdOverlay.Show();
                         }
                     });
                     // }
@@ -462,6 +479,8 @@ namespace BetterGenshinImpact.GameTask
                 _gameRect = new RECT(currentRect);
                 TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
                 MaskWindow.Instance().RefreshPosition();
+                var skillCdOverlay = SkillCdOverlayWindow.InstanceNullable();
+                skillCdOverlay?.RefreshPosition();
                 return true;
             }
 
