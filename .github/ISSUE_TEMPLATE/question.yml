@@ -4,12 +4,22 @@ title: "[question] "
 labels:
   - 问题咨询
 body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认 / Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: 我已经搜索过现有 issue，确认这不是重复问题 / I have searched existing issues and confirmed this is not a duplicate question
+          required: true
+        - label: "我已阅读过[文档](https://www.bettergi.com/doc.html)，确认文档的内容无法解决我的问题 / I have read the [documentation](https://www.bettergi.com/doc.html) and confirmed it does not solve my problem"
+          required: true
   - type: textarea
     id: question
     attributes:
       label: 问题描述
       description: Problem Description
-      placeholder: 请清楚描述你的问题
+      placeholder: 请清楚描述你的问题 / Clearly describe your question
     validations:
       required: true
   - type: textarea
@@ -17,6 +27,6 @@ body:
     attributes:
       label: 已尝试内容
       description: Screenshots / logs / what you already tried
-      placeholder: 可附上截图、日志，以及你已经尝试过的排查过程
+      placeholder: 可附上截图、日志，以及你已经尝试过的排查过程 / Add screenshots, logs, and what you have already tried
     validations:
       required: true

@@ -4,12 +4,23 @@ title: "[bug] "
 labels:
   - BUG
 body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认 / Checklist
+      description: Checklist before submitting
+      options:
+        - label: 我已经搜索过现有 issue，确认这不是重复问题 / I have searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: "我已阅读过[文档](https://www.bettergi.com/doc.html)，确认文档的内容无法解决我的问题 / I have read the [documentation](https://www.bettergi.com/doc.html) and confirmed it does not solve my problem"
+          required: true
+        - label: 我愿意为了解决这个问题尽自己所能 / I am willing to do my part to help resolve this issue
   - type: textarea
     id: environment
     attributes:
       label: 系统环境
-      description: System Environment，例如系统版本、运行环境
-      placeholder: Win11 / BetterGI 0.58.0 / .NET 8
+      description: System environment，例如操作系统版本、运行时版本、显卡驱动版本
+      placeholder: Windows 11 24H2 (26100.3775) / .NET Desktop Runtime 8.0.15 / NVIDIA 572.83
     validations:
       required: true
   - type: input
@@ -17,15 +28,23 @@ body:
     attributes:
       label: BetterGI 版本号
       description: BetterGI Version
-      placeholder: 0.58.0
+      placeholder: e.g. 0.58.0
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
       label: 问题描述
-      description: Description of the issue
-      placeholder: 请详细描述你遇到的问题，可直接粘贴日志并附带截图
+      description: Describe the actual behavior and impact
+      placeholder: 请描述实际出现的问题，以及这个问题对使用造成了什么影响 / Describe the actual behavior and impact
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      description: Expected behavior
+      placeholder: 请描述你期望出现的正确行为或结果 / Describe the expected behavior or result
     validations:
       required: true
   - type: textarea
@@ -34,8 +53,22 @@ body:
       label: 复现步骤
       description: Reproduction steps
       placeholder: |-
-        1. 打开……
-        2. 点击……
-        3. 出现……
+        1. 打开…… / Open ...
+        2. 点击…… / Click ...
+        3. 出现…… / Observe ...
     validations:
       required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与附件
+      description: Logs and attachments，可直接拖拽上传日志文件、压缩包、截图或视频
+      placeholder: |-
+        可在这里补充日志和附件说明 / Add logs and attachment notes here:
+        - 可直接粘贴关键日志片段 / Paste key log snippets directly
+        - 可拖拽上传日志文件或压缩包 / Drag and drop log files or archives
+        - 可拖拽上传截图、录屏或演示视频 / Drag and drop screenshots or videos
+        - 若附件较多，请说明对应的时间点、任务名称或异常现象 / If there are many files, explain the relevant timestamps or symptoms
+        - 提交前请注意移除账号、路径等隐私信息 / Remove private information before submitting
+    validations:
+      required: false

@@ -120,6 +120,6 @@ public class PathingTask
     public void SaveToFile(string filePath)
     {
         var json = JsonSerializer.Serialize(this, PathRecorder.JsonOptions);
-        File.WriteAllText(filePath, json, Encoding.UTF8);
+        File.WriteAllText(filePath, json, new UTF8Encoding(false));
     }
 }
