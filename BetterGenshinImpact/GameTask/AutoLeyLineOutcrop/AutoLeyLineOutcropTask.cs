@@ -81,6 +81,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
+    private const int KazuhaPickupPostSkillWaitMs = 3000;
     private static readonly TimeSpan LeyLineFightSeekInitialDelay = TimeSpan.FromSeconds(2);
     private static readonly Rect HandbookTrackActionButtonRoi = new(ScaleTo1080(1120), ScaleTo1080(680), ScaleTo1080(700), ScaleTo1080(320));
     private static readonly System.Drawing.Pen OcrOverlayPen = new(System.Drawing.Color.Lime, 2);
@@ -1085,6 +1086,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
         await Delay(1500, _ct);
         kazuha.AfterUseSkill();
+        _logger.LogInformation("战后聚集拾取：万叶长E动作完成，等待拾取动作结束");
+        await Delay(KazuhaPickupPostSkillWaitMs, _ct);
         _logger.LogInformation("战后聚集拾取：万叶长E聚集动作执行完成");
     }
 
@@ -1961,7 +1964,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         Simulation.SendInput.Mouse.LeftButtonUp();
         await Delay(60, _ct);
 
-        var (success, _) = AutoDomainTask.PressUseResin(promptRegions, resinName);
+        var (success, _) = AutoDomainTask.PressUseResin(promptRegions, resinName, Name);
         if (success)
         {
             _logger.LogDebug("奖励页面已尝试使用树脂：{ResinName}", resinName);

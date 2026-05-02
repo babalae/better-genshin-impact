@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.View;
 using Microsoft.ClearScript.JavaScript;
 using Microsoft.Extensions.Logging;
 
@@ -126,8 +127,9 @@ public class ScriptProject
 
                 string mainScriptPath = Path.Combine(ProjectPath, Manifest.Main);
                 string runtimeCode = loader.RewriteScriptCode(code, mainScriptPath);
-
-                var evaluation = engine.Evaluate(new DocumentInfo(mainScriptPath) { Category = ModuleCategory.Standard }, runtimeCode);
+                
+                var documentInfo = new DocumentInfo(new Uri(mainScriptPath)) { Category = ModuleCategory.Standard };
+                var evaluation = engine.Evaluate(documentInfo, runtimeCode);
                 if (evaluation is Task task) await task;
             }
             else
@@ -153,6 +155,7 @@ public class ScriptProject
                 TaskControl.Logger.LogError(e, "中断脚本执行异常：" + e.Message);
             }
 
+            HtmlMaskWindow.CloseAll();
             engine.Dispose();
         }
     }

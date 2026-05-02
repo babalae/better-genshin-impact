@@ -217,6 +217,8 @@ public partial class HomePageViewModel : ViewModel
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
+        await DisableGenshinHdrIfNeededAsync();
+
         var hWnd = SystemControl.FindGenshinImpactHandle();
         if (hWnd == IntPtr.Zero)
         {
@@ -247,6 +249,24 @@ public partial class HomePageViewModel : ViewModel
         }
 
         Start(hWnd);
+    }
+
+    private Task DisableGenshinHdrIfNeededAsync()
+    {
+        if (!Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!GenshinHdrRegistryHelper.TryDisableHdr(out _))
+        {
+            return Task.CompletedTask;
+        }
+
+        // 这行日志可能看不到
+        _logger.LogWarning(
+            "检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
+        return Task.CompletedTask;
     }
 
     private void Start(IntPtr hWnd)

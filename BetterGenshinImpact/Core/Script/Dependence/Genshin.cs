@@ -16,11 +16,6 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.Core.Recognition.ONNX;
-using System.Linq;
-using BetterGenshinImpact.View.Drawable;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -47,6 +42,15 @@ public class Genshin
     /// 系统屏幕的DPI缩放比例
     /// </summary>
     public double ScreenDpiScale => TaskContext.Instance().DpiScale;
+    
+    /// <summary>
+    /// 通过 OCR 识别当前角色的 UID
+    /// </summary>
+    /// <returns>UID 数字，如果识别失败则返回 0</returns>
+    public Task<int> Uid()
+    {
+        return Task.FromResult(Bv.Uid());
+    }
     
     public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
     {
@@ -424,13 +428,16 @@ public class Genshin
         await new SetTimeTask().Start(h, m, CancellationContext.Instance.Cts.Token, skip);
     }
 
-    /// <summary>
-    /// 莉奈娅挖矿
-    /// </summary>
-    /// <param name="mineCount">射箭次数，默认1</param>
-    /// <param name="scanRounds">大循环寻矿次数，默认5</param>
-    public async Task StartMining(int mineCount = 1, int scanRounds = 5)
-    {
-        await new LinneaMiningTask(scanRounds, mineCount).Start(CancellationContext.Instance.Cts.Token);
-    }
+    // /// <summary>
+    // /// 莉奈娅挖矿，调试使用，暂时注释
+    // /// </summary>
+    // /// <param name="mineCount">射箭次数，默认1</param>
+    // /// <param name="scanRounds">大循环寻矿次数。不传则默认5；传单个数字时与射箭次数相同</param>
+    // public async Task StartMining(int? mineCount = null, int? scanRounds = null)
+    // {
+    //     var actualMine = mineCount ?? 1;
+    //     var actualScan = scanRounds ?? (mineCount ?? 5);
+    //     if (actualScan < actualMine) actualScan = actualMine;
+    //     await new LinneaMiningTask(actualScan, actualMine).Start(CancellationContext.Instance.Cts.Token);
+    // }
 }
