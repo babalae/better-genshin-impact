@@ -1,11 +1,13 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View.Windows;
 using OpenCvSharp;
 using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using Application = System.Windows.Application;
 
 namespace BetterGenshinImpact.Service;
 
@@ -13,6 +15,8 @@ public class ConfigService : IConfigService
 {
     private readonly object _locker = new(); // 只有UI线程会调用这个方法，lock好像意义不大，而且浪费了下面的读写锁hhh
     private readonly ReaderWriterLockSlim _rwLock = new();
+    private const string ConfigRelativePath = @"User/config.json";
+    private const string BackupFolderName = "backup";
 
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -61,9 +65,9 @@ public class ConfigService : IConfigService
     public AllConfig Read()
     {
         _rwLock.EnterReadLock();
+        var filePath = Global.Absolute(ConfigRelativePath);
         try
         {
-            var filePath = Global.Absolute(@"User/config.json");
             if (!File.Exists(filePath))
             {
                 return new AllConfig();
@@ -83,6 +87,8 @@ public class ConfigService : IConfigService
         {
             Console.WriteLine(e.Message);
             Console.WriteLine(e.StackTrace);
+            BackupConfigFile(filePath);
+            ShowConfigExceptionDialog("读取", e);
             return new AllConfig();
         }
         finally
@@ -94,6 +100,7 @@ public class ConfigService : IConfigService
     public void Write(AllConfig config)
     {
         _rwLock.EnterWriteLock();
+        var file = Global.Absolute(ConfigRelativePath);
         try
         {
             var path = Global.Absolute("User");
@@ -102,18 +109,61 @@ public class ConfigService : IConfigService
                 Directory.CreateDirectory(path);
             }
 
-            var file = Path.Combine(path, "config.json");
             File.WriteAllText(file, JsonSerializer.Serialize(config, JsonOptions));
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
             Console.WriteLine(e.StackTrace);
+            ShowConfigExceptionDialog("写入", e);
         }
         finally
         {
             _rwLock.ExitWriteLock();
         }
+    }
+
+    private static void BackupConfigFile(string filePath)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+            {
+                return;
+            }
+
+            var directoryPath = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return;
+            }
+
+            var backupDirectory = Path.Combine(directoryPath, BackupFolderName);
+            Directory.CreateDirectory(backupDirectory);
+
+            var backupFileName = $"config_{DateTime.Now:yyyyMMdd_HHmmss_fff}.json.bak";
+            var backupFilePath = Path.Combine(backupDirectory, backupFileName);
+            File.Copy(filePath, backupFilePath, false);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    private static void ShowConfigExceptionDialog(string operation, Exception exception)
+    {
+        var current = Application.Current;
+        if (current?.Dispatcher == null)
+        {
+            return;
+        }
+
+        var coreException = exception.GetBaseException();
+        var coreStack = string.IsNullOrWhiteSpace(coreException.StackTrace) ? "无可用堆栈信息" : coreException.StackTrace;
+        var message = $"配置文件{operation}失败\n错误：{coreException.Message}\n堆栈：\n{coreStack}";
+        _ = ThemedMessageBox.ErrorAsync(message, "配置文件异常");
     }
 }
 

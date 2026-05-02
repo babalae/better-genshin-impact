@@ -388,7 +388,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnGoToAutoGeniusInvokationUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/tcg.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/tcg.html"));
     }
 
     [RelayCommand]
@@ -403,7 +403,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnGoToAutoWoodUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/felling.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/felling.html"));
     }
 
     [RelayCommand]
@@ -425,7 +425,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnGoToAutoFightUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/domain.html"));
     }
 
     [RelayCommand]
@@ -474,7 +474,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnGoToAutoDomainUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/domain.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/domain.html"));
     }
 
     [RelayCommand]
@@ -496,7 +496,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToAutoStygianOnslaughtUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/stygian.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/stygian.html"));
     }
 
     [RelayCommand]
@@ -544,7 +544,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnGoToAutoTrackUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/track.html"));
     }
 
     [Obsolete]
@@ -579,7 +579,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToAutoTrackPathUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/track.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/track.html"));
     }
 
     [RelayCommand]
@@ -594,7 +594,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToAutoMusicGameUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/music.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/music.html"));
     }
 
     [RelayCommand]
@@ -639,7 +639,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToAutoFishingUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/fish.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/fish.html"));
     }
 
     [RelayCommand]
@@ -672,7 +672,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToArtifactSalvageUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/feats/task/artifactSalvage.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/feats/task/artifactSalvage.html"));
     }
 
     [RelayCommand]
@@ -757,7 +757,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnGoToGetGridIconsUrlAsync()
     {
-        await Launcher.LaunchUriAsync(new Uri("https://bettergi.com/dev/getGridIcons.html"));
+        await Launcher.LaunchUriAsync(new Uri("https://www.bettergi.com/dev/getGridIcons.html"));
     }
 
     [RelayCommand]

@@ -18,7 +18,10 @@ public enum MapTypes
     SeaOfBygoneEras,
 
     [Description("远古圣山")]
-    AncientSacredMountain
+    AncientSacredMountain,
+
+    [Description("空之神殿")]
+    TempleOfSpace,
 }
 public static class MapTypesExtensions
 {

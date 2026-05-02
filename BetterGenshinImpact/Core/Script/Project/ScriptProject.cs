@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.View;
 using Microsoft.ClearScript.JavaScript;
 
 namespace BetterGenshinImpact.Core.Script.Project;
@@ -122,7 +123,8 @@ public class ScriptProject
                 string mainScriptPath = Path.Combine(ProjectPath, Manifest.Main);
                 string runtimeCode = loader.RewriteScriptCode(code, mainScriptPath);
                 
-                var evaluation = engine.Evaluate(new DocumentInfo(mainScriptPath) { Category = ModuleCategory.Standard }, runtimeCode);
+                var documentInfo = new DocumentInfo(new Uri(mainScriptPath)) { Category = ModuleCategory.Standard };
+                var evaluation = engine.Evaluate(documentInfo, runtimeCode);
                 if (evaluation is Task task) await task;
             }
             else
@@ -138,6 +140,7 @@ public class ScriptProject
         }
         finally
         {
+            HtmlMaskWindow.CloseAll();
             engine.Dispose();
         }
     }

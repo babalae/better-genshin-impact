@@ -1226,7 +1226,7 @@
         "nameEn": "barbara",
         "type": "character",
         "name": "芭芭拉",
-        "hp": 10,
+        "hp": 12,
         "energy": 3,
         "element": "水元素",
         "weapon": "法器",
@@ -2155,6 +2155,152 @@
                         "count": 2
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": 1215,
+        "nameEn": "dahlia",
+        "type": "character",
+        "name": "塔利雅",
+        "hp": 10,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "单手剑",
+        "skills": [
+            {
+                "nameEn": "favonius_bladework_ritual",
+                "name": "西风剑术·祭仪",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "immersive_ordinance",
+                "name": "圣浸的礼典",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "radiant_psalter",
+                "name": "纯耀的祷咏",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 1216,
+        "nameEn": "aino",
+        "type": "character",
+        "name": "爱诺",
+        "hp": 10,
+        "energy": 2,
+        "element": "水元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "bishbashbosh_repair",
+                "name": "敲打修理法",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "musecatcher",
+                "name": "妙思捕手",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "precision_hydronic_cooler",
+                "name": "精密水冷仪",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "modular_efficiency_protocol",
+                "name": "模块式高效运作",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
             }
         ]
     },
@@ -9670,6 +9816,83 @@
             {
                 "nameEn": "gluttonous_rex",
                 "name": "贪食之王",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2705,
+        "nameEn": "consecrated_fanged_beast",
+        "type": "character",
+        "name": "圣骸牙兽",
+        "hp": 10,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "claw_slash",
+                "name": "利爪猛击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "siphon_wave",
+                "name": "掠能绿波",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "sprawling_blighted_vines",
+                "name": "横生厄蔓",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "hunger_from_the_remains",
+                "name": "亡骸饥渴",
                 "skillTag": [
                     "被动技能"
                 ],
