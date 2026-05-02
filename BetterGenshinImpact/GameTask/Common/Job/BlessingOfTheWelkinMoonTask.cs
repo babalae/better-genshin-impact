@@ -35,6 +35,7 @@ public class BlessingOfTheWelkinMoonTask
                         {
                             // 双击快速跳过
                             GameCaptureRegion.GameRegion1080PPosClick(100, 100);
+                            await Task.Delay(100, ct);
                             GameCaptureRegion.GameRegion1080PPosClick(100, 100);
                         }
                         await Delay(500, ct);
