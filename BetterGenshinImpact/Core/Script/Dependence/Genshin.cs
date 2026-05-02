@@ -6,11 +6,7 @@ using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.ViewModel.Pages;
 using System;
-using System.Linq;
-using System.Text.RegularExpressions;
-using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -20,12 +16,6 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
-using Microsoft.Extensions.Logging;
-using BetterGenshinImpact.Core.Recognition.ONNX;
-using System.Linq;
-using BetterGenshinImpact.View.Drawable;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
