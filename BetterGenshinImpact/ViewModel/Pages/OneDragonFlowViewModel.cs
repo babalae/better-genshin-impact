@@ -522,6 +522,10 @@ public partial class OneDragonFlowViewModel : ViewModel
     public async Task OnOneKeyExecute()
     {
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
+
+        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+        CancellationContext.Instance.Set();
+
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
         foreach (var task in taskListCopy)
         {
@@ -555,6 +559,12 @@ public partial class OneDragonFlowViewModel : ViewModel
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
         await ScriptService.StartGameTask();
+        if (CancellationContext.Instance.IsCancellationRequested)
+        {
+            _logger.LogInformation("一条龙在启动阶段被取消");
+            return;
+        }
+
         SaveConfig();
         int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
             t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));
