@@ -16,11 +16,6 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.Core.Recognition.ONNX;
-using System.Linq;
-using BetterGenshinImpact.View.Drawable;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -47,6 +42,15 @@ public class Genshin
     /// 系统屏幕的DPI缩放比例
     /// </summary>
     public double ScreenDpiScale => TaskContext.Instance().DpiScale;
+    
+    /// <summary>
+    /// 通过 OCR 识别当前角色的 UID
+    /// </summary>
+    /// <returns>UID 数字，如果识别失败则返回 0</returns>
+    public Task<int> Uid()
+    {
+        return Task.FromResult(Bv.Uid());
+    }
     
     public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
     {
