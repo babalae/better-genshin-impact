@@ -15827,6 +15827,411 @@
           ]
         }
       ]
+    },
+    {
+      "sceneId": 103,
+      "mapName": "TempleOfSpace",
+      "description": "空之神殿",
+      "points": [
+        {
+          "id": 1,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿"
+          ],
+          "position": [
+            -54.55967,
+            94.86076,
+            422.8673
+          ],
+          "tranPosition": [
+            -56.074036,
+            94.98824,
+            416.23694
+          ]
+        },
+        {
+          "id": 2,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "「沙上楼阁」"
+          ],
+          "position": [
+            753.4533,
+            167.7142,
+            406.8993
+          ],
+          "tranPosition": [
+            750.10944,
+            168.12778,
+            404.4207
+          ]
+        },
+        {
+          "id": 3,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "柱殿中央区"
+          ],
+          "position": [
+            199.4993,
+            285.1512,
+            421.763
+          ],
+          "tranPosition": [
+            188.9862,
+            286,
+            415.9903
+          ]
+        },
+        {
+          "id": 4,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "非有非无有之笼"
+          ],
+          "position": [
+            141.1487,
+            1023.361,
+            397.4059
+          ],
+          "tranPosition": [
+            146.44849,
+            1023.595,
+            398.8499
+          ]
+        },
+        {
+          "id": 5,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "大方广"
+          ],
+          "position": [
+            -211.06,
+            99.55,
+            1077.296
+          ],
+          "tranPosition": [
+            -208.68654,
+            99.78452,
+            1078.6156
+          ]
+        },
+        {
+          "id": 6,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "「沙上楼阁」"
+          ],
+          "position": [
+            820.533,
+            205.5557,
+            398.7081
+          ],
+          "tranPosition": [
+            827.40546,
+            205.42303,
+            397.87726
+          ]
+        },
+        {
+          "id": 7,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "麓阳书院"
+          ],
+          "position": [
+            278.373,
+            76.166,
+            -63.747
+          ],
+          "tranPosition": [
+            274.3983,
+            81.7,
+            -90.75065
+          ]
+        },
+        {
+          "id": 8,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "无想之间"
+          ],
+          "position": [
+            223.6314,
+            -639.5626,
+            340.3265
+          ],
+          "tranPosition": [
+            234.13805,
+            -639.21765,
+            340.76056
+          ]
+        },
+        {
+          "id": 9,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "柱殿中央区"
+          ],
+          "position": [
+            488.6741,
+            222.6675,
+            420.6201
+          ],
+          "tranPosition": [
+            486.98044,
+            222.82823,
+            412.4271
+          ]
+        },
+        {
+          "id": 10,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "柱殿中央区"
+          ],
+          "position": [
+            155.0897,
+            149.385,
+            554.323
+          ],
+          "tranPosition": [
+            152.0113,
+            149,
+            557.715
+          ]
+        },
+        {
+          "id": 11,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "大方广"
+          ],
+          "position": [
+            -29.19872,
+            96.02325,
+            798.1201
+          ],
+          "tranPosition": [
+            -33.452164,
+            95.713165,
+            797.0473
+          ]
+        },
+        {
+          "id": 13,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "「沙上楼阁」"
+          ],
+          "position": [
+            775.6891,
+            -327.1821,
+            377.7858
+          ],
+          "tranPosition": [
+            774.40875,
+            -327.0491,
+            373.75824
+          ]
+        },
+        {
+          "id": 15,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "非有非无有之笼·偏观"
+          ],
+          "position": [
+            182.5881,
+            849.3398,
+            439.3099
+          ],
+          "tranPosition": [
+            187.40652,
+            853.72705,
+            456.6145
+          ]
+        },
+        {
+          "id": 16,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "麓阳书院"
+          ],
+          "position": [
+            246.311,
+            98.3308,
+            -386.82
+          ],
+          "tranPosition": [
+            245.6576,
+            98.5,
+            -384.9
+          ]
+        },
+        {
+          "id": 17,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "麓阳书院"
+          ],
+          "position": [
+            308.613,
+            144.1657,
+            -471.317
+          ],
+          "tranPosition": [
+            311.5699,
+            144.1,
+            -470.9256
+          ]
+        },
+        {
+          "id": 18,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿"
+          ],
+          "position": [
+            -151.602,
+            90.222,
+            61.155
+          ],
+          "tranPosition": [
+            -156,
+            90.57036,
+            61
+          ]
+        },
+        {
+          "id": 19,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "遗世之路"
+          ],
+          "position": [
+            -320.8844,
+            -503.6001,
+            319.1273
+          ],
+          "tranPosition": [
+            -320.71454,
+            -503.4747,
+            309.4051
+          ]
+        },
+        {
+          "id": 20,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "柱殿中央区"
+          ],
+          "position": [
+            339.9739,
+            205.945,
+            519.2927
+          ],
+          "tranPosition": [
+            329.09018,
+            206.11433,
+            517.0902
+          ]
+        },
+        {
+          "id": 25,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "麓阳书院"
+          ],
+          "position": [
+            303.0637,
+            247.7,
+            -557.0782
+          ],
+          "tranPosition": [
+            307.1052,
+            247.2,
+            -565.4739
+          ]
+        },
+        {
+          "id": 26,
+          "type": "TeleportWaypoint",
+          "name": "传送锚点",
+          "country": "空之神殿",
+          "areas": [
+            "空之神殿",
+            "大方广"
+          ],
+          "position": [
+            -214.0386,
+            136.9813,
+            1307.659
+          ],
+          "tranPosition": [
+            -204.69,
+            137.13,
+            1305.77
+          ]
+        }
+      ]
     }
   ]
 }

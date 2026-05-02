@@ -84,7 +84,7 @@ public class FileAccessBridge
             // if (!string.IsNullOrEmpty(directory))
             //     Directory.CreateDirectory(directory);
 
-            File.WriteAllText(fullPath, content, Encoding.UTF8);
+            File.WriteAllText(fullPath, content, new UTF8Encoding(false));
         }
         catch (Exception ex)
         {

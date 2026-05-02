@@ -23,17 +23,10 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Violeta.Controls;
-using System.Windows.Controls;
-using ABI.Windows.UI.UIAutomation;
-using Wpf.Ui;
-using StackPanel = Wpf.Ui.Controls.StackPanel;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
-using TextBlock = Wpf.Ui.Controls.TextBlock;
 using System.Collections.Specialized;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -93,7 +86,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     private readonly string _scriptGroupPath = Global.Absolute(@"User\ScriptGroup");
     private readonly string _basePath = AppDomain.CurrentDomain.BaseDirectory;
     
-    private void ReadScriptGroup()
+    public void ReadScriptGroup()
     {
         try
         {
@@ -147,19 +140,26 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     private async void AddNewTaskGroup()
     {
-        ReadScriptGroup();
-        var selectedGroupNamePick = await OnStartMultiScriptGroupAsync();
-        if (selectedGroupNamePick == null)
+        // 这个方法现在由XAML中的Popup处理，保留为空或者可以删除
+        // 实际逻辑已经移到ProcessSelectedGroups方法中
+    }
+
+    public void ProcessSelectedGroups(List<string> selectedGroupNames)
+    {
+        if (selectedGroupNames == null || !selectedGroupNames.Any())
         {
             return;
         }
-        int pickTaskCount = selectedGroupNamePick.Split(',').Count();
-        foreach (var selectedGroupName in selectedGroupNamePick.Split(','))
+
+        int pickTaskCount = selectedGroupNames.Count;
+        
+        foreach (var selectedGroupName in selectedGroupNames)
         {
             var taskItem = new OneDragonTaskItem(selectedGroupName)
             {
                 IsEnabled = true
             };
+            
             if (TaskList.All(task => task.Name != taskItem.Name))
             {
                 var names = selectedGroupName.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
@@ -167,6 +167,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     .ToList();
                 bool containsAnyDefaultGroup =
                     names.Any(name => ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == name));
+                    
                 if (containsAnyDefaultGroup)
                 {
                     int lastDefaultGroupIndex = -1;
@@ -210,70 +211,11 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
         if (pickTaskCount > 1)
         {
-                Toast.Success(pickTaskCount + " 个任务添加成功");  
+            Toast.Success(pickTaskCount + " 个任务添加成功");  
         }
     }
 
-    public async Task<string?> OnStartMultiScriptGroupAsync()
-    {
-        var stackPanel = new StackPanel();
-        var checkBoxes = new Dictionary<ScriptGroup, CheckBox>();
-        CheckBox selectedCheckBox = null; // 用于保存当前选中的 CheckBox
-        foreach (var scriptGroup in ScriptGroups)
-        {
-            if (TaskList.Any(taskName => scriptGroup.Name == taskName.Name))
-            {
-                continue; // 只有当文件名完全相同时才跳过显示
-            }
-            var checkBox = new CheckBox
-            {
-                Content = scriptGroup.Name,
-                Tag = scriptGroup,
-                IsChecked = false // 初始状态下都未选中
-            };
-            checkBoxes[scriptGroup] = checkBox;
-            stackPanel.Children.Add(checkBox);
-        }
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-        Title = "选择增加的配置组（可多选）",
-        Content = new ScrollViewer
-        {
-            Content = stackPanel,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-        },
-        CloseButtonText = "关闭",
-        PrimaryButtonText = "确认",
-        Owner = Application.Current.ShutdownMode == ShutdownMode.OnMainWindowClose ? null : Application.Current.MainWindow,
-        WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        SizeToContent = SizeToContent.Width , // 确保弹窗根据内容自动调整大小
-        MaxHeight = 600,
-        };
-        uiMessageBox.SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(uiMessageBox);
-        var result = await uiMessageBox.ShowDialogAsync();
-        if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
-        {
-            List<string> selectedItems = new List<string>(); // 用于存储所有选中的项
-            foreach (var checkBox in checkBoxes.Values)
-            {
-                if (checkBox.IsChecked == true)
-                {
-                    // 确保 Tag 是 ScriptGroup 类型，并返回其 Name 属性
-                    var scriptGroup = checkBox.Tag as ScriptGroup;
-                    if (scriptGroup != null)
-                    { 
-                        selectedItems.Add(scriptGroup.Name);
-                    }
-                    else
-                    {
-                        Toast.Error("配置组加载失败");
-                    }
-                }
-            }
-            return string.Join(",", selectedItems); // 返回所有选中的项
-        }
-        return null;
-    }
+    // 原来的OnStartMultiScriptGroupAsync方法已被移除，功能已迁移到XAML Popup中
     
     [ObservableProperty] private ObservableCollection<OneDragonFlowConfig> _configList = [];
     /// <summary>
@@ -471,10 +413,13 @@ public partial class OneDragonFlowViewModel : ViewModel
     [RelayCommand]
     private void AddTaskGroup()
     {
-        AddNewTaskGroup();
-        SaveConfig();
-        SelectedTask = null;
+        // 触发弹窗显示的事件，让View层处理
+        // 我们可以通过一个属性来通知View显示弹窗
+        ShouldShowAddTaskGroupPopup = true;
     }
+    
+    [ObservableProperty]
+    private bool _shouldShowAddTaskGroupPopup = false;
 
     [RelayCommand]
     private void SaveActionConfig()
@@ -577,6 +522,10 @@ public partial class OneDragonFlowViewModel : ViewModel
     public async Task OnOneKeyExecute()
     {
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
+
+        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+        CancellationContext.Instance.Set();
+
         var taskListCopy = new List<OneDragonTaskItem>(TaskList);//避免执行过程中修改TaskList
         foreach (var task in taskListCopy)
         {
@@ -610,6 +559,12 @@ public partial class OneDragonFlowViewModel : ViewModel
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
         await ScriptService.StartGameTask();
+        if (CancellationContext.Instance.IsCancellationRequested)
+        {
+            _logger.LogInformation("一条龙在启动阶段被取消");
+            return;
+        }
+
         SaveConfig();
         int enabledTaskCount = SelectedConfig.TaskEnabledList.Count(t =>
             t.Value && ScriptGroupsdefault.All(defaultTask => defaultTask.Name != t.Key));

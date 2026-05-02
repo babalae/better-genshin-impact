@@ -120,6 +120,9 @@ public partial class ScriptService : IScriptService
     {
         groupName ??= "默认";
 
+        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+        CancellationContext.Instance.Set();
+
         var list = ReloadScriptProjects(projectList);
         
         //恢复临时的跳过标志
@@ -140,6 +143,11 @@ public partial class ScriptService : IScriptService
 
         // 没启动时候，启动截图器
         await StartGameTask();
+        if (CancellationContext.Instance.IsCancellationRequested)
+        {
+            _logger.LogInformation("配置组 {Name} 在启动阶段被取消", groupName);
+            return;
+        }
         
         
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
@@ -577,6 +585,12 @@ public partial class ScriptService : IScriptService
                     var loseFocusCount = 0;
                     while (true)
                     {
+                        if (CancellationContext.Instance.IsCancellationRequested)
+                        {
+                            TaskControl.Logger.LogInformation("检测到停止指令，退出启动等待");
+                            return;
+                        }
+
                         if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
                         {
                             await Task.Delay(500);
