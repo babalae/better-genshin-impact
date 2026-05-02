@@ -155,7 +155,6 @@ public class ScriptProject
                 TaskControl.Logger.LogError(e, "中断脚本执行异常：" + e.Message);
             }
 
-            HtmlMaskWindow.CloseAll();
             engine.Dispose();
         }
     }
