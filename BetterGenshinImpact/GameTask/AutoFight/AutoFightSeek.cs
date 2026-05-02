@@ -261,11 +261,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     }
                 }
             }
-            catch (Exception)
-            {
-                // 异常处理由上层调用者负责
-                throw;
-            }
             finally
             {
                 // 清理资源
