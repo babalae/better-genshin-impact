@@ -106,6 +106,10 @@ public partial class MapViewerViewModel : ObservableObject
         {
             _mapImage = new Mat(Global.Absolute(@"Assets/Map/AncientSacredMountain/AncientSacredMountain_0_1024.png"));
         }
+        else if (mapName == MapTypes.TempleOfSpace.ToString())
+        {
+            _mapImage = new Mat(Global.Absolute(@"Assets/Map/TempleOfSpace/TempleOfSpace_0_1024.png"));
+        }
         else
         {
             throw new Exception("暂时不支持展示路径的地图类型:" + mapName);

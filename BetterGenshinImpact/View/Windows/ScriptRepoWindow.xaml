@@ -279,7 +279,7 @@
                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                           TextWrapping="Wrap">
                                 <Run Text="可以从这里获取zip：" />
-                                <Hyperlink NavigateUri="https://bettergi.com/feats/autos/srepo.html" RequestNavigate="Hyperlink_RequestNavigate">
+                                <Hyperlink NavigateUri="https://www.bettergi.com/feats/autos/srepo.html" RequestNavigate="Hyperlink_RequestNavigate">
                                     <Run Text="脚本仓库文档" />
                                 </Hyperlink>
                             </ui:TextBlock>

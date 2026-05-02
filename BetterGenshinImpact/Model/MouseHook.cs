@@ -3,6 +3,7 @@ using Fischless.HotkeyCapture;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Vanara.PInvoke;
@@ -25,6 +26,8 @@ public class MouseHook
 
     public bool IsPressed { get; set; }
 
+    public string ConfigPropertyName { get; set; } = string.Empty;
+
     public void MouseDown(object? sender, MouseEventExtArgs e)
     {
         if (!SystemControl.IsGenshinImpactActive())
@@ -34,6 +37,11 @@ public class MouseHook
 
         if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
+            if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+            {
+                return;
+            }
+
             IsPressed = true;
             MouseDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             if (IsHold)
@@ -58,6 +66,12 @@ public class MouseHook
         {
             while (IsPressed)
             {
+                if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
+                {
+                    Thread.Sleep(10);
+                    continue;
+                }
+
                 MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             }
         }
@@ -68,7 +82,7 @@ public class MouseHook
         if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)
         {
             IsPressed = false;
-            if (SystemControl.IsGenshinImpactActive())
+            if (SystemControl.IsGenshinImpactActive() && !ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
             {
                 MouseUpEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             }

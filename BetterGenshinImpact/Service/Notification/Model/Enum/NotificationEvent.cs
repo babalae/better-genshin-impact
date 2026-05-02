@@ -1,7 +1,23 @@
-﻿namespace BetterGenshinImpact.Service.Notification.Model.Enum;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+
+namespace BetterGenshinImpact.Service.Notification.Model.Enum;
 
 public class NotificationEvent(string code, string msg)
 {
+    private static readonly Lazy<IReadOnlyList<NotificationEvent>> AllEvents = new(() =>
+        typeof(NotificationEvent)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(field => field.FieldType == typeof(NotificationEvent))
+            .OrderBy(field => field.MetadataToken)
+            .Select(field => field.GetValue(null))
+            .OfType<NotificationEvent>()
+            .GroupBy(notificationEvent => notificationEvent.Code, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray());
+
     public static readonly NotificationEvent Test = new("notify.test", "测试通知");
     public static readonly NotificationEvent DomainReward = new("domain.reward", "自动秘境奖励");
     public static readonly NotificationEvent DomainStart = new("domain.start", "自动秘境启动");
@@ -24,7 +40,12 @@ public class NotificationEvent(string code, string msg)
     public static readonly NotificationEvent AutoEatStart = new("autoeat.start", "自动吃药启动");
     public static readonly NotificationEvent AutoEatEnd = new("autoeat.end", "自动吃药结束");
     public static readonly NotificationEvent AutoEatInfo = new("autoeat.info", "自动吃药信息");
-    
+
+    public static IReadOnlyList<NotificationEvent> GetAll()
+    {
+        return AllEvents.Value;
+    }
+
     public string Code { get; private set; } = code;
     public string Msg { get; private set; } = msg;
 }

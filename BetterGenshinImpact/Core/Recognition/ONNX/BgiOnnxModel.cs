@@ -45,6 +45,11 @@ public class BgiOnnxModel
     public static readonly BgiOnnxModel BgiWorld = Register("BgiTree", @"Assets\Model\World\bgi_world.onnx");
 
     /// <summary>
+    /// 矿物识别模型
+    /// </summary>
+    public static readonly BgiOnnxModel BgiMine = Register("BgiMine", @"Assets\Model\Mine\bgi_mine.onnx");
+
+    /// <summary>
     /// 角色识别
     /// </summary>
     public static readonly BgiOnnxModel BgiAvatarSide =

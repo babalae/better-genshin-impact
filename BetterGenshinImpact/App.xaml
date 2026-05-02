@@ -17,6 +17,7 @@
 
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
+            <bgivc:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:BooleanToEnableTextConverter x:Key="BooleanToEnableTextConverter" />
@@ -26,6 +27,7 @@
             <bgivc:CultureInfoNameToKVPConverter x:Key="CultureInfoNameToKVPConverter" />
             <bgivc:StringToColorConverter x:Key="StringToColorConverter" />
             <bgivc:TrConverter x:Key="TrConverter" />
+            <bgivc:AdaptiveUniformGridColumnsConverter x:Key="AdaptiveUniformGridColumnsConverter" />
             <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
             </Style>
