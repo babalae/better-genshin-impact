@@ -6,6 +6,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:gearTask="clr-namespace:BetterGenshinImpact.ViewModel.Windows.GearTask"
                  xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+                 xmlns:cron="clr-namespace:BetterGenshinImpact.View.Controls.Cron"
                  xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
                  d:DataContext="{d:DesignInstance Type=gearTask:AddTriggerDialogViewModel}"
                  Width="500"
@@ -65,7 +66,10 @@
                 <!-- 定时触发设置 -->
                 <StackPanel Margin="0,16,0,0"
                             Visibility="{Binding SelectedTriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Timed}">
-                    <ui:TextBlock Text="Cron 表达式" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ui:TextBlock Text="执行时间" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <cron:ScheduleCronPicker CronExpression="{Binding CronExpression, Mode=TwoWay}" />
+
+                    <ui:TextBlock Text="Cron 表达式" FontWeight="SemiBold" Margin="0,12,0,8" />
                     <ui:TextBox Text="{Binding CronExpression, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 PlaceholderText="例如: 0 0 8 * * ? (每天8点)"
                                 FontFamily="Consolas" />
