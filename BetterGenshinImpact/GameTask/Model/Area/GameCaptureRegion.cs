@@ -63,15 +63,15 @@ public class GameCaptureRegion(Mat mat, int initX, int initY, Region? owner = nu
     /// <returns></returns>
     public ImageRegion DeriveTo1080P()
     {
-        if (Width <= 1920)
+        if (Width <= 1920 || Height <= 1080)
         {
             return this;
         }
 
-        var scale = Width / 1920d;
+        var scale = SystemInfo.MinZoomOut1080PRatio(Width, Height);
 
         var newMat = new Mat();
-        Cv2.Resize(SrcMat, newMat, new Size(1920, Height / scale));
+        Cv2.Resize(SrcMat, newMat, new Size(Width / scale, Height / scale));
         Dispose();
         return new ImageRegion(newMat, 0, 0, this, new ScaleConverter(scale));
         // return new ImageRegion(newMat, 0, 0, this, new TranslationConverter(0, 0));

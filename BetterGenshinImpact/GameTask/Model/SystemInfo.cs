@@ -81,12 +81,12 @@ namespace BetterGenshinImpact.GameTask.Model
             }
 
             // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
-            if (GameScreenSize.Width < 1920)
+            if (GameScreenSize.Width < 1920 || GameScreenSize.Height < 1080)
             {
-                ZoomOutMax1080PRatio = GameScreenSize.Width / 1920d;
+                ZoomOutMax1080PRatio = MinZoomOut1080PRatio(GameScreenSize.Width, GameScreenSize.Height);
                 AssetScale = ZoomOutMax1080PRatio;
             }
-            ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
+            ScaleTo1080PRatio = MinZoomOut1080PRatio(GameScreenSize.Width, GameScreenSize.Height); // 1080P 为标准
 
             CaptureAreaRect = SystemControl.GetCaptureRect(hWnd);
             if (CaptureAreaRect.Width > 1920)
@@ -98,6 +98,11 @@ namespace BetterGenshinImpact.GameTask.Model
             {
                 ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, CaptureAreaRect.Width, CaptureAreaRect.Height);
             }
+        }
+
+        public static double MinZoomOut1080PRatio(double width, double height)
+        {
+            return Math.Min(width / 1920d, height / 1080d);
         }
     }
 }
