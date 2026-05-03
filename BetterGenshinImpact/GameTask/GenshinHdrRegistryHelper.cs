@@ -30,7 +30,7 @@ public static class GenshinHdrRegistryHelper
 
     public static bool TryDisableHdr(out IReadOnlyList<string> deletedFullKeyPaths)
     {
-        var deletedPaths = new List<string>();
+        var updatedPaths = new List<string>();
         foreach (var parentKeyPath in HdrRegistryParentKeyPaths)
         {
             try
@@ -41,21 +41,34 @@ public static class GenshinHdrRegistryHelper
                     continue;
                 }
 
-                if (key.GetValue(HdrRegistryEntryName) == null)
+                var value = key.GetValue(HdrRegistryEntryName);
+                if (value == null)
                 {
                     continue;
                 }
 
-                key.DeleteValue(HdrRegistryEntryName, throwOnMissingValue: false);
-                deletedPaths.Add($@"HKEY_CURRENT_USER\{parentKeyPath}\{HdrRegistryEntryName}");
+                var isHdrEnabled = value switch
+                {
+                    int intValue => intValue == 1,
+                    long longValue => longValue == 1L,
+                    _ => false
+                };
+
+                if (!isHdrEnabled)
+                {
+                    continue;
+                }
+
+                key.SetValue(HdrRegistryEntryName, 0, RegistryValueKind.DWord);
+                updatedPaths.Add($@"HKEY_CURRENT_USER\{parentKeyPath}\{HdrRegistryEntryName}");
             }
             catch
             {
-                // 忽略删除失败，避免影响启动流程
+                // 忽略写入失败，避免影响启动流程
             }
         }
 
-        deletedFullKeyPaths = deletedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        deletedFullKeyPaths = updatedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         return deletedFullKeyPaths.Count > 0;
     }
 }
