@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using Vanara.PInvoke;
+using static BetterGenshinImpact.Core.Simulator.Extensions.SimulateKeyHelper;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
@@ -30,8 +32,8 @@ public class LinneaMiningTask
     private const double BaseClusterDistance = 400;
     // 聚类面积基准值（1920宽度下的标准矿石面积）
     private const double BaseClusterArea = 1800;
-    // 对准判定阈值（基于宽度缩放）
-    private const double BaseArrivalThreshold = 50;
+    // 对准判定：使用目标矿物框四周扩张像素（基于宽度缩放）
+    private const double BaseAlignmentExpansion = 3;
     // 屏幕边缘忽略区域宽度（基于宽度缩放）
     private const double BaseEdgeIgnore = 200;
     // 瞄准模式X轴灵敏度补偿系数
@@ -46,8 +48,10 @@ public class LinneaMiningTask
     private const int LeftTurnStep = -250;
     // 内层最大检测次数
     private const int MaxInnerRetry = 7;
+    // 默认射箭次数
+    public const int DefaultMineCount = 1;
     // 默认大循环次数
-    private const int DefaultScanRounds = 5;
+    public const int DefaultScanRounds = 1;
     // 元素视野刷新间隔
     private const int ElementSightRefreshMs = 3000;
 
@@ -58,22 +62,22 @@ public class LinneaMiningTask
     private readonly double _widthScale = TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / 1920.0;
     private readonly double _heightScale = TaskContext.Instance().SystemInfo.CaptureAreaRect.Height / 1080.0;
     private readonly double ClusterDistanceThreshold;
-    private readonly double ArrivalThreshold;
     private readonly double EdgeIgnore;
+    private readonly double AlignmentExpansion;
 
     private readonly int _scanRounds;
     private readonly int _mineCount;
     private int _debugIndex;
 
-    public LinneaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = 1)
+    public LinneaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = DefaultMineCount)
     {
         _scanRounds = scanRounds;
         _mineCount = mineCount;
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>()
             .CreateYoloPredictor(BgiOnnxModel.BgiMine);
         ClusterDistanceThreshold = BaseClusterDistance * _widthScale;
-        ArrivalThreshold = BaseArrivalThreshold * _widthScale;
         EdgeIgnore = BaseEdgeIgnore * _widthScale;
+        AlignmentExpansion = BaseAlignmentExpansion * _widthScale;
     }
 
     public async Task Start(CancellationToken ct)
@@ -83,7 +87,7 @@ public class LinneaMiningTask
         {
             // Logger.LogInformation("开始寻矿");
 
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
+            Simulation.SendInput.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             aimingModeEntered = true;
             await Delay(400, ct);
 
@@ -139,7 +143,7 @@ public class LinneaMiningTask
                 await Delay(800, ct);
             }
 
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
+            Simulation.SendInput.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             aimingModeEntered = false;
         }
         catch (OperationCanceledException)
@@ -154,7 +158,7 @@ public class LinneaMiningTask
         {
             if (aimingModeEntered)
             {
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_R);
+                Simulation.SendInput.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             }
 
             Simulation.SendInput.Mouse.MiddleButtonUp();
@@ -184,18 +188,16 @@ public class LinneaMiningTask
 
             var offsetX = cluster.TargetX - centerX;
             var offsetY = cluster.TargetY - centerY;
-            var avgArea = cluster.Rects.Average(r => (double)r.Width * r.Height);
-            var refArea = BaseClusterArea * _widthScale * _widthScale;
-            var dynamicThreshold = ArrivalThreshold * Math.Max(1.0, Math.Sqrt(avgArea / refArea));
 
             var isLast = retry == MaxInnerRetry - 1;
-            var isAligned = Math.Abs(offsetX) <= dynamicThreshold / 2 && Math.Abs(offsetY) <= dynamicThreshold / 2;
+            var isAligned = Math.Abs(offsetX) <= (cluster.TargetWidth + AlignmentExpansion * 2) / 2
+                         && Math.Abs(offsetY) <= (cluster.TargetHeight + AlignmentExpansion * 2) / 2;
             // 前面所有循环都检测成功时，以不计入总次数的方式兜底射击一次
             if (isAligned || (isLast && hadResult))
             {
                 Simulation.SendInput.Mouse.MiddleButtonUp();
                 await Delay(300, ct);
-                // Logger.LogInformation("开始挖矿");
+                Logger.LogInformation("开始挖矿");
                 await Mine(ct, totalDy < 0);
                 return (true, isAligned, 0, 0);
             }
@@ -288,20 +290,17 @@ public class LinneaMiningTask
 
         var clusters = ClusterMinerals(oreBoxes);
 
-        // 画聚类中心标记框
-        var refArea = BaseClusterArea * _widthScale * _widthScale;
-        var clusterDrawList = new List<RectDrawable>();
-        foreach (var cluster in clusters)
+        // 画聚类目标矿物框
+        var expansion = (int)AlignmentExpansion;
+        var clusterDrawList = clusters.Select(c =>
         {
-            var avgArea = cluster.Rects.Average(r => (double)r.Width * r.Height);
-            var markerSize = ArrivalThreshold * Math.Max(1.0, Math.Sqrt(avgArea / refArea));
-            var half = (int)markerSize / 2;
-            var mark = new Rect((int)cluster.TargetX - half, (int)cluster.TargetY - half, (int)markerSize, (int)markerSize);
-            clusterDrawList.Add(ra.ToRectDrawable(mark,
-                $"({(int)cluster.TargetX},{(int)cluster.TargetY})",
+            var mark = new Rect((int)(c.TargetX - c.TargetWidth / 2) - expansion, (int)(c.TargetY - c.TargetHeight / 2) - expansion,
+                (int)c.TargetWidth + expansion * 2, (int)c.TargetHeight + expansion * 2);
+            return ra.ToRectDrawable(mark,
+                $"({(int)c.TargetX},{(int)c.TargetY})",
                 new Pen(Color.DodgerBlue, 2)
-            ));
-        }
+            );
+        }).ToList();
         VisionContext.Instance().DrawContent.PutOrRemoveRectList("MiningCluster", clusterDrawList);
 
         // 忽略屏幕边缘聚类，仅当中间区域存在聚类时生效
@@ -377,6 +376,8 @@ public class MineralCluster
     public double CenterY { get; private set; }
     public double TargetX { get; private set; }
     public double TargetY { get; private set; }
+    public double TargetWidth { get; private set; }
+    public double TargetHeight { get; private set; }
 
     public MineralCluster(Rect firstRect, double areaRatioThreshold = 5)
     {
@@ -402,16 +403,19 @@ public class MineralCluster
         CenterX = Rects.Average(r => r.X + r.Width / 2.0);
         CenterY = Rects.Average(r => r.Y + r.Height / 2.0);
 
-        // 按距离质心排序，取最近2个中靠左的
+        // 按距离质心排序，取最近2个中靠右的
         var candidates = Rects
             .Select(r => (cx: r.X + r.Width / 2.0, cy: r.Y + r.Height / 2.0,
-                dist: Math.Pow(r.X + r.Width / 2.0 - CenterX, 2) + Math.Pow(r.Y + r.Height / 2.0 - CenterY, 2)))
+                dist: Math.Pow(r.X + r.Width / 2.0 - CenterX, 2) + Math.Pow(r.Y + r.Height / 2.0 - CenterY, 2),
+                w: (double)r.Width, h: (double)r.Height))
             .OrderBy(t => t.dist)
             .Take(2)
-            .OrderBy(t => t.cx)
+            .OrderByDescending(t => t.cx)
             .First();
 
         TargetX = candidates.cx;
         TargetY = candidates.cy;
+        TargetWidth = candidates.w;
+        TargetHeight = candidates.h;
     }
 }
