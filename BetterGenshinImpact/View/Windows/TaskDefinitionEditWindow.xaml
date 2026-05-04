@@ -1,0 +1,73 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.TaskDefinitionEditWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Width="450"
+                 Height="280"
+                 MinWidth="400"
+                 MinHeight="250"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 WindowStartupLocation="CenterOwner"
+                 WindowStyle="SingleBorderWindow">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 内容部分 -->
+        <Grid Grid.Row="1" Margin="12,12,12,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- 名称输入 -->
+            <StackPanel Grid.Row="0" Margin="5,5,5,15">
+                <ui:TextBlock Text="名称:" Margin="0,0,0,5" FontWeight="Medium" />
+                <ui:TextBox x:Name="NameTextBox"
+                            Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="请输入任务定义名称" />
+            </StackPanel>
+
+            <!-- 描述输入 -->
+            <StackPanel Grid.Row="1" Margin="5,0,5,5">
+                <ui:TextBlock Text="描述:" Margin="0,0,0,5" FontWeight="Medium" />
+                <ui:TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="请输入任务定义描述（可选）" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 按钮部分 -->
+        <Grid Grid.Row="2" Margin="12">
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <ui:Button Name="BtnOk"
+                           Margin="5"
+                           Appearance="Primary"
+                           Command="{Binding ConfirmCommand}"
+                           Content="确定"
+                           IsDefault="True"
+                           MinWidth="80" />
+                <ui:Button Name="BtnCancel"
+                           Margin="5"
+                           Command="{Binding CancelCommand}"
+                           Content="取消"
+                           IsCancel="True"
+                           MinWidth="80" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 标题栏 -->
+        <ui:TitleBar Name="MyTitleBar" Grid.Row="0" Title="任务定义编辑">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+    </Grid>
+</ui:FluentWindow>
