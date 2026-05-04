@@ -7,6 +7,7 @@
                  xmlns:gearTask="clr-namespace:BetterGenshinImpact.ViewModel.Windows.GearTask"
                  xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
                  xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  d:DataContext="{d:DesignInstance Type=gearTask:AddTriggerDialogViewModel}"
                  Width="500"
                  Height="450"
@@ -65,11 +66,25 @@
                 <!-- 定时触发设置 -->
                 <StackPanel Margin="0,16,0,0"
                             Visibility="{Binding SelectedTriggerType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Timed}">
-                    <ui:TextBlock Text="Cron 表达式" FontWeight="SemiBold" Margin="0,0,0,8" />
-                    <ui:TextBox Text="{Binding CronExpression, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                PlaceholderText="例如: 0 0 8 * * ? (每天8点)"
-                                FontFamily="Consolas" />
-                    <ui:TextBlock Text="格式: 秒 分 时 日 月 星期 [年]"
+                    <ui:TextBlock Text="定时规则" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <ComboBox ItemsSource="{Binding CronInputModes}"
+                              SelectedValue="{Binding SelectedCronInputMode, Mode=TwoWay}"
+                              SelectedValuePath="Value"
+                              DisplayMemberPath="DisplayName" />
+
+                    <StackPanel Margin="0,8,0,0"
+                                Visibility="{Binding SelectedCronInputMode, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Preset}">
+                        <controls:CronSchedulePicker CronExpression="{Binding CronExpression, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,8,0,0"
+                                Visibility="{Binding SelectedCronInputMode, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter=Manual}">
+                        <ui:TextBox Text="{Binding CronExpression, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="例如: 0 0 8 * * ? (每天8点)"
+                                    FontFamily="Consolas" />
+                    </StackPanel>
+
+                    <ui:TextBlock Text="最终格式: 秒 分 时 日 月 星期 [年]"
                                   FontSize="12"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   Margin="0,4,0,0" />

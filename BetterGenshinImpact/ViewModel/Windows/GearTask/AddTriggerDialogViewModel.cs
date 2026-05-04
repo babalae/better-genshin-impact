@@ -10,6 +10,7 @@ using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.Helpers.Extensions;
+using System.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Windows.GearTask;
 
@@ -31,7 +32,10 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     private TriggerType _selectedTriggerType = TriggerType.Timed;
 
     [ObservableProperty]
-    private string _cronExpression = "0 0 8 * * ?"; // 默认每天8点
+    private string _cronExpression = "1 0 4 * * ?"; // 默认每天 04:00:01
+
+    [ObservableProperty]
+    private CronInputMode _selectedCronInputMode = CronInputMode.Preset;
 
     [ObservableProperty]
     private HotKey? _selectedHotkey;
@@ -63,6 +67,15 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     {
         EnumItem<TriggerType>.Create(TriggerType.Timed),
         EnumItem<TriggerType>.Create(TriggerType.Hotkey)
+    };
+
+    /// <summary>
+    /// Cron 输入模式
+    /// </summary>
+    public ObservableCollection<EnumItem<CronInputMode>> CronInputModes { get; } = new()
+    {
+        EnumItem<CronInputMode>.Create(CronInputMode.Preset),
+        EnumItem<CronInputMode>.Create(CronInputMode.Manual)
     };
 
     /// <summary>
@@ -131,6 +144,9 @@ public partial class AddTriggerDialogViewModel : ObservableObject
         CronExpression = existingTrigger.TriggerType == TriggerType.Timed
             ? (existingTrigger.CronExpression ?? CronExpression)
             : CronExpression;
+        SelectedCronInputMode = existingTrigger.TriggerType == TriggerType.Timed
+            ? CronInputMode.Manual
+            : CronInputMode.Preset;
 
         SelectedHotkey = existingTrigger.TriggerType == TriggerType.Hotkey
             ? existingTrigger.Hotkey
@@ -211,6 +227,19 @@ public partial class AddTriggerDialogViewModel : ObservableObject
         GenerateDefaultName();
     }
 
+    partial void OnSelectedCronInputModeChanged(CronInputMode value)
+    {
+        if (SelectedTriggerType != TriggerType.Timed)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CronExpression))
+        {
+            CronExpression = "1 0 4 * * ?";
+        }
+    }
+
     /// <summary>
     /// 确认创建触发器
     /// </summary>
@@ -225,7 +254,9 @@ public partial class AddTriggerDialogViewModel : ObservableObject
 
         if (SelectedTriggerType == TriggerType.Timed && string.IsNullOrWhiteSpace(CronExpression))
         {
-            Toast.Error("请输入 Cron 表达式");
+            Toast.Error(SelectedCronInputMode == CronInputMode.Manual
+                ? "请输入 Cron 表达式"
+                : "请先完成定时选择");
             return;
         }
 
@@ -275,4 +306,12 @@ public partial class AddTriggerDialogViewModel : ObservableObject
         // 移除旧的示例代码，现在使用HotKeyTextBox直接设置
         // HotKeyTextBox会直接绑定到SelectedHotkey属性
     }
+}
+
+public enum CronInputMode
+{
+    [Description("可视化选择")]
+    Preset,
+    [Description("手动 Cron")]
+    Manual
 }

@@ -1,0 +1,90 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.CronSchedulePicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root"
+             mc:Ignorable="d"
+             d:DesignHeight="40"
+             d:DesignWidth="420">
+    <Grid>
+        <ui:Button x:Name="TriggerButton"
+                   HorizontalAlignment="Stretch"
+                   HorizontalContentAlignment="Left"
+                   Appearance="Secondary"
+                   Icon="{ui:SymbolIcon CalendarClock24}"
+                   Content="{Binding DisplayText, ElementName=Root}"
+                   Click="TriggerButton_OnClick" />
+
+        <Popup x:Name="PickerPopup"
+               PlacementTarget="{Binding ElementName=TriggerButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               PopupAnimation="Fade">
+            <Border Margin="0,6,0,0"
+                    Padding="12"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Width="360">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10"
+                                      ShadowDepth="2"
+                                      Direction="270"
+                                      Color="Black"
+                                      Opacity="0.2" />
+                </Border.Effect>
+                <StackPanel>
+                    <ui:TextBlock Text="周期类型" FontWeight="SemiBold" />
+                    <ComboBox x:Name="ModeComboBox"
+                              Margin="0,6,0,0"
+                              SelectionChanged="ModeComboBox_OnSelectionChanged">
+                        <ComboBoxItem Content="每日" Tag="Daily" />
+                        <ComboBoxItem Content="每周" Tag="Weekly" />
+                    </ComboBox>
+
+                    <ui:TextBlock Margin="0,12,0,0" Text="执行时间" FontWeight="SemiBold" />
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox x:Name="HourComboBox" Grid.Column="0" SelectionChanged="TimeComboBox_OnSelectionChanged" />
+                        <ui:TextBlock Grid.Column="1" Margin="8,0" VerticalAlignment="Center" Text=":" />
+                        <ComboBox x:Name="MinuteComboBox" Grid.Column="2" SelectionChanged="TimeComboBox_OnSelectionChanged" />
+                        <ui:TextBlock Grid.Column="3" Margin="8,0" VerticalAlignment="Center" Text=":" />
+                        <ComboBox x:Name="SecondComboBox" Grid.Column="4" SelectionChanged="TimeComboBox_OnSelectionChanged" />
+                    </Grid>
+
+                    <StackPanel x:Name="WeeklyPanel" Margin="0,12,0,0">
+                        <ui:TextBlock Text="每周执行日" FontWeight="SemiBold" />
+                        <UniformGrid Margin="0,6,0,0" Columns="4">
+                            <CheckBox Content="周一" Tag="MON" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                            <CheckBox Content="周二" Tag="TUE" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                            <CheckBox Content="周三" Tag="WED" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                            <CheckBox Content="周四" Tag="THU" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                            <CheckBox Content="周五" Tag="FRI" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                            <CheckBox Content="周六" Tag="SAT" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                            <CheckBox Content="周日" Tag="SUN" Margin="0,0,8,6" Checked="WeekdayCheckBox_OnChanged" Unchecked="WeekdayCheckBox_OnChanged" />
+                        </UniformGrid>
+                    </StackPanel>
+
+                    <ui:TextBlock Margin="0,8,0,0"
+                                  Text="{Binding DisplayText, ElementName=Root}"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <ui:Button Content="关闭" Appearance="Secondary" Click="CloseButton_OnClick" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>
