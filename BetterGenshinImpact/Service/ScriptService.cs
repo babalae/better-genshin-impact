@@ -23,6 +23,7 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Service;
@@ -359,8 +360,18 @@ public partial class ScriptService : IScriptService
                                 _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
                                 throw;
                             }
+                            catch (OperationCanceledException)
+                            {
+                                throw;
+                            }
                             catch (Exception e)
                             {
+                                if (e is ScriptEngineException see && IsTaskCanceledInside(see))
+                                {
+                                    _logger.LogInformation("取消执行");
+                                    throw;
+                                }
+
                                 _logger.LogDebug(e, "执行脚本时发生异常");
                                 _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
                                 if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.CurrentScriptGroupProjectInfo != null)
@@ -556,6 +567,24 @@ public partial class ScriptService : IScriptService
         }
 
         return codeList;
+    }
+
+    /// <summary>
+    /// 检查 ScriptEngineException 的内部异常链中是否包含 TaskCanceledException，
+    /// 用于处理 ClearScript Task-Promise 桥接将取消异常包装为 ScriptEngineException 的情况
+    /// </summary>
+    private static bool IsTaskCanceledInside(Exception ex)
+    {
+        var inner = ex.InnerException;
+        while (inner != null)
+        {
+            if (inner is TaskCanceledException)
+            {
+                return true;
+            }
+            inner = inner.InnerException;
+        }
+        return false;
     }
 
     private bool HasTimerOperation(IEnumerable<string> codeList)
