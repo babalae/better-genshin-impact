@@ -114,15 +114,15 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         {
             PathingTasks.Clear();
 
-            var pathingPath = Path.Combine(ScriptRepoUpdater.CenterRepoPath, "repo", "pathing");
-            if (!Directory.Exists(pathingPath))
+            const string pathingRoot = "pathing";
+            if (!ScriptRepoUpdater.Instance.DirectoryExistsInCenterRepo(pathingRoot))
             {
-                _logger.LogWarning($"地图追踪任务目录不存在: {pathingPath}");
+                _logger.LogWarning("地图追踪任务目录不存在: {PathingRoot}", pathingRoot);
                 return;
             }
 
-            // 加载根目录下的直接子项
-            LoadDirectChildrenFromDirectory(pathingPath, pathingPath, PathingTasks);
+            // 加载 pathing 根目录下的直接子项
+            LoadDirectChildrenFromRepo(pathingRoot, PathingTasks);
             FilterTasks();
         }
         catch (Exception ex)
@@ -132,46 +132,37 @@ public partial class PathingTaskSelectionViewModel : ViewModel
     }
 
     /// <summary>
-    /// 从目录加载直接子项（用于构建层级结构）
+    /// 从仓库加载直接子项（用于构建层级结构）
     /// </summary>
-    private void LoadDirectChildrenFromDirectory(string directoryPath, string rootPath, ObservableCollection<PathingTaskInfo> parentCollection)
+    private void LoadDirectChildrenFromRepo(string repoRelativePath, ObservableCollection<PathingTaskInfo> parentCollection)
     {
         try
         {
-            // 加载文件夹
-            foreach (var dir in Directory.GetDirectories(directoryPath))
+            var children = ScriptRepoUpdater.Instance.GetChildrenFromCenterRepo(repoRelativePath);
+            foreach (var child in children)
             {
-                var taskInfo = new PathingTaskInfo(dir, rootPath)
+                var taskInfo = new PathingTaskInfo
                 {
-                    IsDirectory = true
+                    Name = child.Name,
+                    FolderName = Path.GetFileNameWithoutExtension(child.Name),
+                    FullPath = child.RelativePath,
+                    IsDirectory = child.IsDirectory,
+                    ParentPath = GetParentPath(child.RelativePath),
+                    RelativePath = TrimPathingRoot(child.RelativePath).Replace('/', Path.DirectorySeparatorChar)
                 };
 
-                // 设置图标
                 SetTaskIcon(taskInfo);
 
-                // 递归加载子目录到当前任务的Children集合中
-                LoadDirectChildrenFromDirectory(dir, rootPath, taskInfo.Children);
-
-                parentCollection.Add(taskInfo);
-            }
-
-            // 加载JSON文件（默认展示到文件级别）
-            foreach (var file in Directory.GetFiles(directoryPath, "*.json"))
-            {
-                var taskInfo = new PathingTaskInfo(file, rootPath)
+                if (taskInfo.IsDirectory)
                 {
-                    IsDirectory = false
-                };
-
-                // 设置图标
-                SetTaskIcon(taskInfo);
-
+                    LoadDirectChildrenFromRepo(child.RelativePath, taskInfo.Children);
+                }
                 parentCollection.Add(taskInfo);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"加载目录任务失败: {directoryPath}");
+            _logger.LogError(ex, "加载目录任务失败: {RepoRelativePath}", repoRelativePath);
         }
     }
 
@@ -203,16 +194,13 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         {
             if (taskInfo.IsDirectory && string.IsNullOrEmpty(taskInfo.ReadmeContent))
             {
-                var readmePath = Path.Combine(taskInfo.FullPath, "README.md");
-                if (File.Exists(readmePath))
-                {
-                    taskInfo.ReadmeContent = File.ReadAllText(readmePath);
-                }
+                var readmePath = $"{NormalizeRepoPath(taskInfo.FullPath)}/README.md";
+                taskInfo.ReadmeContent = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(readmePath) ?? string.Empty;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"加载README内容失败: {taskInfo.FullPath}");
+            _logger.LogError(ex, "加载README内容失败: {FullPath}", taskInfo.FullPath);
             taskInfo.ReadmeContent = "README加载失败";
         }
     }
@@ -226,7 +214,13 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         {
             if (!taskInfo.IsDirectory && taskInfo.FullPath.EndsWith(".json") && string.IsNullOrEmpty(taskInfo.JsonContent))
             {
-                var jsonContent = File.ReadAllText(taskInfo.FullPath);
+                var jsonContent = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(taskInfo.FullPath);
+                if (string.IsNullOrWhiteSpace(jsonContent))
+                {
+                    taskInfo.JsonContent = "JSON文件不存在";
+                    return;
+                }
+
                 // 格式化JSON
                 var jsonObject = JsonConvert.DeserializeObject(jsonContent);
                 taskInfo.JsonContent = JsonConvert.SerializeObject(jsonObject, Formatting.Indented);
@@ -234,7 +228,7 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"加载JSON内容失败: {taskInfo.FullPath}");
+            _logger.LogError(ex, "加载JSON内容失败: {FullPath}", taskInfo.FullPath);
             taskInfo.JsonContent = "JSON格式错误";
         }
     }
@@ -353,49 +347,40 @@ public partial class PathingTaskSelectionViewModel : ViewModel
         if (!directory.IsDirectory)
             return 0;
 
-        int count = 0;
-
-        // 计算当前目录下的JSON文件数量
         try
         {
-            count += Directory.GetFiles(directory.FullPath, "*.json").Length;
-
-            // 递归计算子目录
-            foreach (var subDir in Directory.GetDirectories(directory.FullPath))
-            {
-                count += CountTasksInDirectoryPath(subDir);
-            }
+            return ScriptRepoUpdater.Instance.CountFilesInCenterRepo(directory.FullPath, ".json", recursive: true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"计算目录任务数量失败: {directory.FullPath}");
+            _logger.LogError(ex, "计算目录任务数量失败: {FullPath}", directory.FullPath);
+            return 0;
         }
-
-        return count;
     }
 
-    /// <summary>
-    /// 计算指定路径目录下的任务数量（递归）
-    /// </summary>
-    private int CountTasksInDirectoryPath(string directoryPath)
+    private static string NormalizeRepoPath(string path)
     {
-        int count = 0;
+        return path.Replace('\\', '/').Trim('/');
+    }
 
-        try
+    private static string TrimPathingRoot(string repoRelativePath)
+    {
+        var normalized = NormalizeRepoPath(repoRelativePath);
+        if (normalized.StartsWith("pathing/", StringComparison.OrdinalIgnoreCase))
         {
-            count += Directory.GetFiles(directoryPath, "*.json").Length;
-
-            foreach (var subDir in Directory.GetDirectories(directoryPath))
-            {
-                count += CountTasksInDirectoryPath(subDir);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"计算目录任务数量失败: {directoryPath}");
+            return normalized["pathing/".Length..];
         }
 
-        return count;
+        return string.Equals(normalized, "pathing", StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : normalized;
+    }
+
+    private static string GetParentPath(string repoRelativePath)
+    {
+        var normalized = NormalizeRepoPath(repoRelativePath);
+        var idx = normalized.LastIndexOf('/');
+        return idx > 0 ? normalized[..idx] : string.Empty;
     }
 
     /// <summary>

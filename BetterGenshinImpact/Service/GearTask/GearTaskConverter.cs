@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 using BetterGenshinImpact.Model.Gear;
 using BetterGenshinImpact.Model.Gear.Tasks;
 using BetterGenshinImpact.Model.Gear.Parameter;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Config;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -16,8 +19,12 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class GearTaskConverter
 {
+    private const string PathingRepoFolderPlaceholder = "{pathingRepoFolder}";
+
     private readonly ILogger<GearTaskConverter> _logger;
     private readonly GearTaskFactory _taskFactory;
+    private readonly object _mirrorLock = new();
+    private bool _pathingRepoMirrorInitialized;
 
     public GearTaskConverter(ILogger<GearTaskConverter> logger, GearTaskFactory taskFactory)
     {
@@ -78,6 +85,11 @@ public class GearTaskConverter
             // 如果是目录类型或者任务被禁用，创建容器任务
             if (taskData.IsDirectory || !taskData.IsEnabled)
             {
+                if (taskData.IsDirectory && taskData.IsEnabled)
+                {
+                    MaterializePathingReferenceIfNeeded(taskData);
+                }
+
                 task = new ContainerGearTask
                 {
                     Name = taskData.Name,
@@ -92,7 +104,8 @@ public class GearTaskConverter
             else
             {
                 // 使用工厂创建具体的任务实例
-                task = await _taskFactory.CreateTaskAsync(taskData);
+                var preparedTaskData = PrepareTaskDataForExecution(taskData);
+                task = await _taskFactory.CreateTaskAsync(preparedTaskData);
                 task.Father = parent;
                 
                 _logger.LogDebug("创建具体任务: {TaskName} ({TaskType})", taskData.Name, taskData.TaskType);
@@ -286,6 +299,268 @@ public class GearTaskConverter
         }
         return count;
     }
+
+    private void MaterializePathingReferenceIfNeeded(GearTaskData taskData)
+    {
+        if (taskData.Children.Count > 0 || string.IsNullOrWhiteSpace(taskData.Path))
+        {
+            return;
+        }
+
+        if (!TryExtractPathingRepoRelativePath(taskData.Path, out var repoRelativePath))
+        {
+            return;
+        }
+
+        var children = BuildPathingReferenceChildren(repoRelativePath);
+        if (children.Count == 0)
+        {
+            _logger.LogWarning("引用目录为空或不存在: {Path}", taskData.Path);
+            return;
+        }
+
+        taskData.Children = children;
+        _logger.LogDebug("已展开地图追踪引用节点: {NodeName}, 子节点数量: {ChildCount}", taskData.Name, children.Count);
+    }
+
+    private List<GearTaskData> BuildPathingReferenceChildren(string repoRelativePath)
+    {
+        var result = new List<GearTaskData>();
+        var children = ScriptRepoUpdater.Instance.GetChildrenFromCenterRepo(repoRelativePath);
+        foreach (var entry in children)
+        {
+            if (entry.IsDirectory)
+            {
+                result.Add(new GearTaskData
+                {
+                    Name = entry.Name,
+                    TaskType = string.Empty,
+                    IsEnabled = true,
+                    IsDirectory = true,
+                    Path = BuildPathingPlaceholderPath(entry.RelativePath, true),
+                    Parameters = "{}",
+                });
+                continue;
+            }
+
+            if (!entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var executionPath = GetPathingExecutionFilePath(entry.RelativePath);
+            var parameters = new PathingGearTaskParams { Path = executionPath };
+            result.Add(new GearTaskData
+            {
+                Name = Path.GetFileNameWithoutExtension(entry.Name),
+                TaskType = "Pathing",
+                IsEnabled = true,
+                IsDirectory = false,
+                Path = BuildPathingPlaceholderPath(entry.RelativePath, false),
+                Parameters = JsonConvert.SerializeObject(parameters),
+            });
+        }
+
+        return result;
+    }
+
+    private GearTaskData PrepareTaskDataForExecution(GearTaskData taskData)
+    {
+        if (!string.Equals(taskData.TaskType, "Pathing", StringComparison.OrdinalIgnoreCase))
+        {
+            return taskData;
+        }
+
+        var parameters = DeserializePathingParams(taskData.Parameters);
+        if (!string.IsNullOrWhiteSpace(parameters.Path))
+        {
+            return taskData;
+        }
+
+        if (string.IsNullOrWhiteSpace(taskData.Path))
+        {
+            return taskData;
+        }
+
+        if (TryExtractPathingRepoRelativePath(taskData.Path, out var repoRelativePath)
+            && repoRelativePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            parameters.Path = GetPathingExecutionFilePath(repoRelativePath);
+        }
+        else
+        {
+            parameters.Path = taskData.Path.Trim().TrimEnd('\\', '/');
+        }
+
+        return new GearTaskData
+        {
+            Name = taskData.Name,
+            TaskType = taskData.TaskType,
+            Path = taskData.Path,
+            IsEnabled = taskData.IsEnabled,
+            IsDirectory = taskData.IsDirectory,
+            IsExpanded = taskData.IsExpanded,
+            Parameters = JsonConvert.SerializeObject(parameters),
+            CreatedTime = taskData.CreatedTime,
+            ModifiedTime = taskData.ModifiedTime,
+            Priority = taskData.Priority,
+            Children = taskData.Children
+        };
+    }
+
+    private PathingGearTaskParams DeserializePathingParams(string? parametersJson)
+    {
+        if (string.IsNullOrWhiteSpace(parametersJson))
+        {
+            return new PathingGearTaskParams();
+        }
+
+        try
+        {
+            return JsonConvert.DeserializeObject<PathingGearTaskParams>(parametersJson) ?? new PathingGearTaskParams();
+        }
+        catch
+        {
+            return new PathingGearTaskParams();
+        }
+    }
+
+    private static string BuildPathingPlaceholderPath(string repoRelativePath, bool isDirectory)
+    {
+        var normalized = repoRelativePath.Replace('/', Path.DirectorySeparatorChar);
+        if (normalized.StartsWith("pathing\\", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["pathing\\".Length..];
+        }
+        else if (string.Equals(normalized, "pathing", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = string.Empty;
+        }
+
+        var path = string.IsNullOrEmpty(normalized)
+            ? PathingRepoFolderPlaceholder
+            : $@"{PathingRepoFolderPlaceholder}\{normalized}";
+
+        if (isDirectory && !path.EndsWith('\\'))
+        {
+            path += "\\";
+        }
+
+        return path;
+    }
+
+    private bool TryExtractPathingRepoRelativePath(string sourcePath, out string repoRelativePath)
+    {
+        repoRelativePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return false;
+        }
+
+        var normalized = sourcePath.Replace('\\', '/').Trim();
+        if (!normalized.StartsWith(PathingRepoFolderPlaceholder, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var relative = normalized[PathingRepoFolderPlaceholder.Length..].Trim('/');
+        repoRelativePath = string.IsNullOrEmpty(relative)
+            ? "pathing"
+            : $"pathing/{relative}";
+        return true;
+    }
+
+    private string GetPathingExecutionFilePath(string repoRelativeJsonPath)
+    {
+        EnsurePathingRepoMirrorInitialized();
+
+        var normalized = repoRelativeJsonPath.Replace('\\', '/').Trim('/');
+        var relativeUnderPathing = normalized.StartsWith("pathing/", StringComparison.OrdinalIgnoreCase)
+            ? normalized["pathing/".Length..]
+            : normalized;
+
+        var mirrorRoot = GetPathingRepoMirrorRoot();
+        var target = Path.Combine(mirrorRoot, relativeUnderPathing.Replace('/', Path.DirectorySeparatorChar));
+        if (File.Exists(target))
+        {
+            return target;
+        }
+
+        // 兜底：镜像中不存在时按需写入
+        var content = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(normalized);
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new FileNotFoundException($"仓库中不存在地图追踪文件: {normalized}");
+        }
+
+        var dir = Path.GetDirectoryName(target);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+        File.WriteAllText(target, content);
+        return target;
+    }
+
+    private void EnsurePathingRepoMirrorInitialized()
+    {
+        if (_pathingRepoMirrorInitialized)
+        {
+            return;
+        }
+
+        lock (_mirrorLock)
+        {
+            if (_pathingRepoMirrorInitialized)
+            {
+                return;
+            }
+
+            var mirrorRoot = GetPathingRepoMirrorRoot();
+            if (Directory.Exists(mirrorRoot))
+            {
+                Directory.Delete(mirrorRoot, true);
+            }
+            Directory.CreateDirectory(mirrorRoot);
+
+            MirrorPathingJsonRecursively("pathing", mirrorRoot);
+            _pathingRepoMirrorInitialized = true;
+        }
+    }
+
+    private void MirrorPathingJsonRecursively(string repoRelativePath, string localPath)
+    {
+        var entries = ScriptRepoUpdater.Instance.GetChildrenFromCenterRepo(repoRelativePath);
+        foreach (var entry in entries)
+        {
+            if (entry.IsDirectory)
+            {
+                var dirPath = Path.Combine(localPath, entry.Name);
+                Directory.CreateDirectory(dirPath);
+                MirrorPathingJsonRecursively(entry.RelativePath, dirPath);
+                continue;
+            }
+
+            if (!entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var content = ScriptRepoUpdater.Instance.ReadFileFromCenterRepo(entry.RelativePath);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                continue;
+            }
+
+            var filePath = Path.Combine(localPath, entry.Name);
+            File.WriteAllText(filePath, content);
+        }
+    }
+
+    private static string GetPathingRepoMirrorRoot()
+    {
+        return Global.Absolute(@"User\Temp\GearTask\PathingRepoMirror");
+    }
 }
 
 /// <summary>
@@ -296,34 +571,4 @@ public class TaskValidationResult
     public bool IsValid { get; set; }
     public List<string> Errors { get; set; } = new();
     public List<string> Warnings { get; set; } = new();
-}
-
-/// <summary>
-/// 容器任务，用于目录类型或禁用的任务
-/// </summary>
-internal class ContainerGearTask : BaseGearTask
-{
-    public override async Task Run(CancellationToken ct)
-    {
-        // 容器任务本身不执行任何操作，只是作为子任务的容器
-        await Task.CompletedTask;
-    }
-}
-
-/// <summary>
-/// 错误任务，用于转换失败的任务占位符
-/// </summary>
-internal class ErrorGearTask : BaseGearTask
-{
-    private readonly string _errorMessage;
-
-    public ErrorGearTask(string errorMessage)
-    {
-        _errorMessage = errorMessage;
-    }
-
-    public override async Task Run(CancellationToken ct)
-    {
-        throw new InvalidOperationException($"任务转换失败: {_errorMessage}");
-    }
 }

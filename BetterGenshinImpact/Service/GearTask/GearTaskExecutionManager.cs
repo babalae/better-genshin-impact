@@ -149,6 +149,8 @@ public partial class GearTaskExecutionManager : ObservableObject
             // 初始化执行信息
             InitializeExecutionInfo(rootTask);
             
+            await ScriptService.StartGameTask();
+            
             // 开始执行
             await ExecuteTaskWithTrackingAsync(rootTask, _cancellationTokenSource.Token);
             

@@ -253,6 +253,7 @@ public partial class GearTaskExecutor : ObservableObject
         {
             Name = viewModel.Name,
             TaskType = viewModel.TaskType,
+            Path = viewModel.Path,
             IsEnabled = viewModel.IsEnabled,
             IsDirectory = viewModel.IsDirectory,
             Parameters = viewModel.Parameters,
