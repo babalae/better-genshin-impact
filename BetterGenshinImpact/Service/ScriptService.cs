@@ -578,7 +578,7 @@ public partial class ScriptService : IScriptService
         var inner = ex.InnerException;
         while (inner != null)
         {
-            if (inner is TaskCanceledException)
+            if (inner is OperationCanceledException)
             {
                 return true;
             }
