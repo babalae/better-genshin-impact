@@ -144,6 +144,10 @@
                            Content="新建"
                            Icon="{ui:SymbolIcon Add24}"
                            Margin="0,0,4,0" />
+                <ui:Button Command="{Binding ExecuteSelectedTaskDefinitionCommand}"
+                           Content="执行任务组"
+                           Icon="{ui:SymbolIcon Play24}"
+                           Margin="0,0,4,0" />
             </StackPanel>
 
             <!-- 任务定义列表 -->
@@ -167,6 +171,10 @@
                             <MenuItem Header="新增任务定义"
                                       Command="{Binding AddTaskDefinitionCommand}"
                                       Icon="{ui:SymbolIcon Add24}" />
+                            <MenuItem Header="执行选中任务组"
+                                      Command="{Binding ExecuteTaskDefinitionCommand}"
+                                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
+                                      Icon="{ui:SymbolIcon Play24}" />
                             <Separator />
                             <MenuItem Header="编辑选中项"
                                       Command="{Binding EditSelectedTaskDefinitionCommand}"

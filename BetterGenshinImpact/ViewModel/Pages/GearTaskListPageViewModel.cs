@@ -317,6 +317,46 @@ public partial class GearTaskListPageViewModel : ViewModel
         await DeleteTaskDefinition(SelectedTaskDefinition);
     }
 
+    /// <summary>
+    /// 执行选中的任务定义（整组执行）
+    /// </summary>
+    [RelayCommand]
+    private async Task ExecuteSelectedTaskDefinition()
+    {
+        await ExecuteTaskDefinition(SelectedTaskDefinition);
+    }
+
+    /// <summary>
+    /// 执行指定任务定义（整组执行）
+    /// </summary>
+    [RelayCommand]
+    private async Task ExecuteTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
+    {
+        taskDefinition ??= SelectedTaskDefinition;
+        if (taskDefinition == null)
+        {
+            Toast.Warning("请先选择要执行的任务组");
+            return;
+        }
+
+        try
+        {
+            var executor = App.GetRequiredService<GearTaskExecutor>();
+            if (executor.IsExecuting)
+            {
+                Toast.Warning("已有任务组正在执行，请稍后再试");
+                return;
+            }
+
+            await executor.ExecuteTaskDefinitionAsync(taskDefinition.Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "执行任务定义失败: {TaskName}", taskDefinition.Name);
+            Toast.Error($"执行任务组失败：{ex.Message}");
+        }
+    }
+
 
     /// <summary>
     /// 添加任务节点
