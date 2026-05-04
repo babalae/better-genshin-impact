@@ -217,9 +217,9 @@ public class Genshin
         return GetPositionFromMap(MapTypes.Teyvat.ToString());
     }
     
-    public Point2f? GetPositionFromMap(string matchingMethod)
+    public Point2f? GetPositionFromMapWithMatchingMethod(string matchingMethod)
     {
-        return GetPositionFromMap(nameof(MapTypes.Teyvat), matchingMethod);
+        return GetPositionFromMapWithMatchingMethod(nameof(MapTypes.Teyvat), matchingMethod);
     }
 
     public float GetCameraOrientation()
@@ -237,10 +237,10 @@ public class Genshin
     public Point2f? GetPositionFromMap(string mapName, int cacheTimeMs = 900)
     {
         var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        return GetPositionFromMap(mapName,matchingMethod, cacheTimeMs);
+        return GetPositionFromMapWithMatchingMethod(mapName,matchingMethod, cacheTimeMs);
     }
     
-    public Point2f? GetPositionFromMap(string mapName, string matchingMethod, int cacheTimeMs = 900)
+    public Point2f? GetPositionFromMapWithMatchingMethod(string mapName, string matchingMethod, int cacheTimeMs = 900)
     {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
