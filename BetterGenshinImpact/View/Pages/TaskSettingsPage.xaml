@@ -623,14 +623,14 @@
                                                   FontTypography="Body"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                                   FontSize="9"
-                                                  Text="旋转速度(建议单次360°左右)："
+                                                  Text="旋转速度(滑块在最左侧表示只检查血条不旋转，建议单次360°左右)："
                                                   Margin="5,8,0,10"
                                                   HorizontalAlignment="Left"
                                                   VerticalAlignment="Center"
                                                   TextWrapping="Wrap" />
                                     <Slider Grid.Row="0"
                                             Grid.Column="2"
-                                            Minimum="1"
+                                            Minimum="0"
                                             Maximum="13"
                                             Value="{Binding Config.AutoFightConfig.FinishDetectConfig.RotaryFactor, Mode=TwoWay}"
                                             Margin="3,0,5,10"
@@ -646,7 +646,7 @@
                                                   VerticalAlignment="Stretch"
                                                   Margin="0,0,5,0"
                                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人)"
+                                                  Text="(建议配合1秒左右“更快检测结束战斗”) 打开队伍界面检测战斗结束前，先检测敌人，判断是否需靠近敌或旋转寻找敌人。(Q前检查：释放Q技能前检测是否结束战斗。尝试面敌：开战寻敌，战斗尝试面向敌人。旋转速度滑块在最左侧时不执行开战寻敌)"
                                                   TextWrapping="Wrap" />
                                     
                                     <ui:ToggleSwitch Grid.Row="0"
