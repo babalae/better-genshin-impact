@@ -10,6 +10,7 @@
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
+                 WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
                  WindowStyle="SingleBorderWindow">
     

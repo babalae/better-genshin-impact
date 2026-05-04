@@ -216,6 +216,11 @@ public class Genshin
     {
         return GetPositionFromMap(MapTypes.Teyvat.ToString());
     }
+    
+    public Point2f? GetPositionFromMap(string matchingMethod)
+    {
+        return GetPositionFromMap(nameof(MapTypes.Teyvat), matchingMethod);
+    }
 
     public float GetCameraOrientation()
     {
@@ -231,13 +236,17 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromMap(string mapName, int cacheTimeMs = 900)
     {
+        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        return GetPositionFromMap(mapName,matchingMethod, cacheTimeMs);
+    }
+    
+    public Point2f? GetPositionFromMap(string mapName, string matchingMethod, int cacheTimeMs = 900)
+    {
         var imageRegion = CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         return MapManager.GetMap(mapName, matchingMethod)
             .ConvertImageCoordinatesToGenshinMapCoordinates(LazyNavigationInstance.Value
                 .GetPositionStableByCache(imageRegion, mapName, matchingMethod, cacheTimeMs));
