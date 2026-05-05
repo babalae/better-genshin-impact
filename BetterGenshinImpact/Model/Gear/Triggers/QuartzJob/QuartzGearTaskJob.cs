@@ -1,7 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using System.Windows;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.GearTask;
+using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Serilog.Context;
@@ -38,6 +41,12 @@ public class QuartzGearTaskJob : IJob
                 }
 
                 var shouldInterrupt = jobDataMap.GetBooleanValue("ShouldInterruptOthers");
+                if (!await ConfirmExecutionIfGameNotActiveAsync(triggerName))
+                {
+                    _logger.LogInformation("用户取消执行定时触发任务: {TriggerName}", triggerName);
+                    return;
+                }
+
                 if (shouldInterrupt)
                 {
                     await InterruptOtherJobs(context, triggerId);
@@ -54,6 +63,80 @@ public class QuartzGearTaskJob : IJob
                 throw;
             }
         }
+    }
+
+    /// <summary>
+    /// 原神未在前台时，确认是否继续执行定时触发任务。
+    /// </summary>
+    private async Task<bool> ConfirmExecutionIfGameNotActiveAsync(string triggerName)
+    {
+        if (IsGenshinImpactForeground())
+        {
+            return true;
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null)
+        {
+            _logger.LogWarning("无法显示定时触发确认对话框，已放弃执行任务: {TriggerName}", triggerName);
+            return false;
+        }
+
+        await dispatcher.InvokeAsync(ActivateMainWindow);
+
+        var result = await ThemedMessageBox.QuestionAsync(
+            $"定时触发任务「{triggerName}」已到执行时间，但当前原神未在前台或尚未启动。\n\n是否执行该任务？\n选择「是」后，任务执行器会继续自动启动/切换到游戏窗口；选择「否」将放弃本次执行。",
+            "定时触发任务确认",
+            MessageBoxButton.YesNo,
+            MessageBoxResult.No);
+
+        return result == MessageBoxResult.Yes;
+    }
+
+    private bool IsGenshinImpactForeground()
+    {
+        try
+        {
+            if (SystemControl.IsGenshinImpactActiveByProcess())
+            {
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "按前台进程判断原神焦点状态失败");
+        }
+
+        try
+        {
+            return TaskContext.Instance().IsInitialized && SystemControl.IsGenshinImpactActive();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "按窗口句柄判断原神焦点状态失败");
+            return false;
+        }
+    }
+
+    private static void ActivateMainWindow()
+    {
+        var mainWindow = Application.Current?.MainWindow;
+        if (mainWindow == null)
+        {
+            return;
+        }
+
+        if (!mainWindow.IsVisible)
+        {
+            mainWindow.Show();
+        }
+
+        if (mainWindow.WindowState == WindowState.Minimized)
+        {
+            mainWindow.WindowState = WindowState.Normal;
+        }
+
+        mainWindow.Activate();
     }
 
     /// <summary>
