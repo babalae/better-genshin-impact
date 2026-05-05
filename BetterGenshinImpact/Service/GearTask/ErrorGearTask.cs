@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model.Gear.Tasks;
 
-namespace BetterGenshinImpact.Service;
+namespace BetterGenshinImpact.Service.GearTask;
 
 /// <summary>
 /// 错误占位任务，执行时抛出创建阶段捕获到的异常信息。

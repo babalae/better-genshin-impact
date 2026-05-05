@@ -120,11 +120,11 @@ public class GearTaskFactory
         if (taskData.Parameters != null)
         {
             // 尝试从参数中获取路径
-            if (taskData.Parameters is string pathStr)
+            if (taskData.Parameters is { } pathStr)
             {
                 filePath = pathStr;
             }
-            else if (taskData.Parameters.ToString() is string paramStr)
+            else if (taskData.Parameters is { } paramStr)
             {
                 // 尝试解析 JSON 对象中的路径
                 try

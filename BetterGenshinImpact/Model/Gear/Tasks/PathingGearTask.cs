@@ -23,7 +23,7 @@ public class PathingGearTask : BaseGearTask
     {
         // 加载并执行
         var task = PathingTask.BuildFromFilePath(_params.Path);
-        var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
+        var pathingTask = new PathExecutor(ct);
 
         if (_params.PathingPartyConfig != null)
         {

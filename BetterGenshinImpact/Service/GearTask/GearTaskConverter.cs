@@ -9,6 +9,7 @@ using BetterGenshinImpact.Model.Gear.Tasks;
 using BetterGenshinImpact.Model.Gear.Parameter;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.GearTask;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 

@@ -52,7 +52,7 @@ public class GearTaskData
     public bool IsExpanded { get; set; } = false;
 
     [JsonProperty("parameters")]
-    public string Parameters { get; set; } = "{}";
+    public string? Parameters { get; set; } = "{}";
 
     [JsonProperty("created_time")]
     public DateTime CreatedTime { get; set; } = DateTime.Now;
