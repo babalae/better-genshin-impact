@@ -1084,6 +1084,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
         kazuha.UseSkill(true);
         await Delay(50, _ct);
         Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        await Delay(100, _ct);
+        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        await Delay(100, _ct);
+        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
         await Delay(1500, _ct);
         kazuha.AfterUseSkill();
         _logger.LogInformation("战后聚集拾取：万叶长E动作完成，等待拾取动作结束");

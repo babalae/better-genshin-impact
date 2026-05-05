@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
@@ -24,6 +24,10 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.Core.Recognition.ONNX;
+using Compunet.YoloSharp;
+using Compunet.YoloSharp.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -99,7 +103,10 @@ public class Avatar
     };
 
     private static readonly Random UnstuckRandom = new();
-    
+
+    private static readonly Lazy<BgiYoloPredictor> QBurstClassifierLazy = new(() =>
+        App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiQClassify));
+
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
@@ -591,6 +598,13 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
+        // CD 中立即返回，其余场景尝试释放
+        using var region1 = CaptureToRectArea();
+        if (IsBurstReadyByClassify(region1) == BurstReadyState.Cooldown)
+        {
+            return;
+        }
+        
         for (var i = 0; i < 10; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -610,7 +624,44 @@ public class Avatar
                 Sleep(1500, Ct);
                 return;
             }
+            else
+            {
+                // 找到编号块判断是否进入了CD，四星角色没有大招动画
+                if (IsBurstReadyByClassify(region) == BurstReadyState.Cooldown)
+                {
+                    Sleep(1500, Ct);
+                    return;
+                }
+            }
         }
+    }
+
+    private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
+    {
+        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.QRect);
+        var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
+        var topClass = result.GetTopClass();
+        var topClassName = topClass.Name.Name;
+
+        // 置信度不足时，直接返回未知，避免误判导致漏放/乱放
+        if (topClass.Confidence <= 0.7)
+        {
+            Logger.LogDebug("Q技能冷却分类置信度不足：{Confidence:F2}，类别：{ClassName}", topClass.Confidence, topClassName);
+            return BurstReadyState.Unknown;
+        }
+
+        if (topClassName.Contains("cd_1", StringComparison.OrdinalIgnoreCase))
+        {
+            return BurstReadyState.Cooldown;
+        }
+
+        if (topClassName.Contains("cd_0", StringComparison.OrdinalIgnoreCase))
+        {
+            return BurstReadyState.Ready;
+        }
+
+        Logger.LogDebug("Q技能冷却分类出现未知类别：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
+        return BurstReadyState.Unknown;
     }
 
     // /// <summary>
