@@ -17,7 +17,7 @@ using Microsoft.Web.WebView2.Core;
 namespace BetterGenshinImpact.View;
 
 /// <summary>
-/// HTML遮罩窗口 - 仅用于显示，不可交互（点击穿透）
+/// HTML遮罩窗口
 /// </summary>
 public partial class HtmlMaskWindow : Window
 {
@@ -460,6 +460,37 @@ public partial class HtmlMaskWindow : Window
         _isClickThrough = enabled;
 
         SetBackgroundOpacity(!enabled);
+
+        if (!enabled)
+        {
+            // 禁用穿透：激活遮罩窗口，确保获得键盘和鼠标焦点
+            try
+            {
+                User32.SetForegroundWindow(hwnd);
+                User32.BringWindowToTop(hwnd);
+                Dispatcher.Invoke(() => Activate());
+            }
+            catch (Exception ex)
+            {
+                TaskControl.Logger.LogDebug(ex, "HTML遮罩窗口激活失败");
+            }
+        }
+        else
+        {
+            // 开启穿透：将焦点还给游戏窗口
+            try
+            {
+                var gameHandle = TaskContext.Instance().GameHandle;
+                if (gameHandle != IntPtr.Zero)
+                {
+                    SystemControl.FocusWindow(gameHandle);
+                }
+            }
+            catch (Exception ex)
+            {
+                TaskControl.Logger.LogDebug(ex, "HTML遮罩恢复游戏焦点失败");
+            }
+        }
     }
 
     /// <summary>
@@ -474,7 +505,7 @@ public partial class HtmlMaskWindow : Window
     }
 
     /// <summary>
-    /// 设置点击穿透模式（公开方法）
+    /// 设置点击穿透模式
     /// </summary>
     /// <param name="enabled">true=点击穿透，false=可交互</param>
     public void SetClickThroughMode(bool enabled)
@@ -483,7 +514,7 @@ public partial class HtmlMaskWindow : Window
     }
 
     /// <summary>
-    /// 原子切换点击穿透模式（在UI线程上执行读取和设置，避免竞态条件）
+    /// 切换点击穿透模式
     /// </summary>
     private void ToggleClickThroughCore()
     {
