@@ -152,9 +152,6 @@ public class HtmlMask : IDisposable
     /// <param name="enabled">true=点击穿透，false=可交互</param>
     public void SetClickThrough(string windowId, bool enabled)
     {
-        if (!HtmlMaskWindow.Exists(windowId))
-            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
-
         HtmlMaskWindow.SetClickThrough(windowId, enabled);
     }
 
@@ -165,9 +162,6 @@ public class HtmlMask : IDisposable
     /// <returns>true=点击穿透，false=可交互</returns>
     public bool GetClickThrough(string windowId)
     {
-        if (!HtmlMaskWindow.Exists(windowId))
-            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
-
         return HtmlMaskWindow.GetClickThrough(windowId);
     }
 
@@ -177,9 +171,6 @@ public class HtmlMask : IDisposable
     /// <param name="windowId">窗口ID</param>
     public void ToggleClickThrough(string windowId)
     {
-        if (!HtmlMaskWindow.Exists(windowId))
-            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
-
         HtmlMaskWindow.ToggleClickThrough(windowId);
     }
 

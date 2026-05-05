@@ -167,20 +167,25 @@ public partial class HtmlMaskWindow : Window
     }
 
     /// <summary>
+    /// 获取窗口实例，不存在则抛出异常
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    /// <returns>窗口实例</returns>
+    private static HtmlMaskWindow GetWindowOrThrow(string windowId)
+    {
+        if (_windows.TryGetValue(windowId, out var window))
+            return window;
+        throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
+    }
+
+    /// <summary>
     /// 设置指定窗口的点击穿透模式
     /// </summary>
     /// <param name="windowId">窗口ID</param>
     /// <param name="enabled">true=点击穿透，false=可交互</param>
     public static void SetClickThrough(string windowId, bool enabled)
     {
-        if (_windows.TryGetValue(windowId, out var window))
-        {
-            window.SetClickThroughMode(enabled);
-        }
-        else
-        {
-            TaskControl.Logger.LogWarning("设置点击穿透失败，窗口不存在: {WindowId}", windowId);
-        }
+        GetWindowOrThrow(windowId).SetClickThroughMode(enabled);
     }
 
     /// <summary>
@@ -190,12 +195,7 @@ public partial class HtmlMaskWindow : Window
     /// <returns>点击穿透状态</returns>
     public static bool GetClickThrough(string windowId)
     {
-        if (_windows.TryGetValue(windowId, out var window))
-        {
-            return window.IsClickThrough;
-        }
-        TaskControl.Logger.LogWarning("获取点击穿透状态失败，窗口不存在: {WindowId}", windowId);
-        return false;
+        return GetWindowOrThrow(windowId).IsClickThrough;
     }
 
     /// <summary>
@@ -204,14 +204,7 @@ public partial class HtmlMaskWindow : Window
     /// <param name="windowId">窗口ID</param>
     public static void ToggleClickThrough(string windowId)
     {
-        if (_windows.TryGetValue(windowId, out var window))
-        {
-            window.ToggleClickThroughCore();
-        }
-        else
-        {
-            TaskControl.Logger.LogWarning("切换点击穿透失败，窗口不存在: {WindowId}", windowId);
-        }
+        GetWindowOrThrow(windowId).ToggleClickThroughCore();
     }
 
     /// <summary>
@@ -461,7 +454,7 @@ public partial class HtmlMaskWindow : Window
 
         int newStyle = enabled
             ? (_originalStyle | (int)User32.WindowStylesEx.WS_EX_TRANSPARENT | (int)User32.WindowStylesEx.WS_EX_LAYERED)
-            : (_originalStyle & ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT & ~(int)User32.WindowStylesEx.WS_EX_LAYERED);
+            : _originalStyle;
 
         User32.SetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE, (IntPtr)newStyle);
         _isClickThrough = enabled;
