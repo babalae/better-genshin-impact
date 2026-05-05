@@ -29,11 +29,20 @@ public partial class HtmlMaskWindow : Window
     private readonly string _webView2DataPath;
     private readonly string _pageUrl;
     private bool _navigationCompleted;
+    private bool _styleCaptured;
+    private int _originalStyle;
+    private volatile bool _isClickThrough = true;
+    private readonly System.Windows.Media.SolidColorBrush _backgroundBrush = new();
 
     /// <summary>
     /// 窗口唯一标识
     /// </summary>
     public string MaskId => _id;
+
+    /// <summary>
+    /// 当前是否处于点击穿透模式
+    /// </summary>
+    public bool IsClickThrough => _isClickThrough;
 
     private HtmlMaskWindow(string url, string? id, string workDir)
     {
@@ -42,6 +51,7 @@ public partial class HtmlMaskWindow : Window
         _webView2DataPath = Path.Combine(workDir, "WebView2Data");
         _pageUrl = url;
         InitializeComponent();
+        ClickThroughBorder.Background = _backgroundBrush;
         Loaded += OnLoaded;
         InitializeAsync(url);
     }
@@ -157,6 +167,54 @@ public partial class HtmlMaskWindow : Window
     }
 
     /// <summary>
+    /// 设置指定窗口的点击穿透模式
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    /// <param name="enabled">true=点击穿透，false=可交互</param>
+    public static void SetClickThrough(string windowId, bool enabled)
+    {
+        if (_windows.TryGetValue(windowId, out var window))
+        {
+            window.SetClickThroughMode(enabled);
+        }
+        else
+        {
+            TaskControl.Logger.LogWarning("设置点击穿透失败，窗口不存在: {WindowId}", windowId);
+        }
+    }
+
+    /// <summary>
+    /// 获取指定窗口的点击穿透状态
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    /// <returns>点击穿透状态</returns>
+    public static bool GetClickThrough(string windowId)
+    {
+        if (_windows.TryGetValue(windowId, out var window))
+        {
+            return window.IsClickThrough;
+        }
+        TaskControl.Logger.LogWarning("获取点击穿透状态失败，窗口不存在: {WindowId}", windowId);
+        return false;
+    }
+
+    /// <summary>
+    /// 原子切换指定窗口的点击穿透模式
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    public static void ToggleClickThrough(string windowId)
+    {
+        if (_windows.TryGetValue(windowId, out var window))
+        {
+            window.ToggleClickThroughCore();
+        }
+        else
+        {
+            TaskControl.Logger.LogWarning("切换点击穿透失败，窗口不存在: {WindowId}", windowId);
+        }
+    }
+
+    /// <summary>
     /// 通知窗口刷新待推送的消息
     /// </summary>
     internal static void NotifyFlush(string windowId)
@@ -178,7 +236,7 @@ public partial class HtmlMaskWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        SetClickThrough();
+        SetClickThrough(true);
         UpdatePosition();
     }
 
@@ -387,14 +445,56 @@ public partial class HtmlMaskWindow : Window
     }
 
     /// <summary>
-    /// 设置点击穿透
+    /// 设置点击穿透模式
     /// </summary>
-    private void SetClickThrough()
+    /// <param name="enabled">true=点击穿透，false=可交互</param>
+    private void SetClickThrough(bool enabled)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        var style = (int)GetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE);
-        User32.SetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE,
-            (IntPtr)(style | (int)User32.WindowStylesEx.WS_EX_TRANSPARENT));
+        if (hwnd == IntPtr.Zero) return;
+
+        if (!_styleCaptured)
+        {
+            _originalStyle = (int)GetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE);
+            _styleCaptured = true;
+        }
+
+        int newStyle = enabled
+            ? (_originalStyle | (int)User32.WindowStylesEx.WS_EX_TRANSPARENT | (int)User32.WindowStylesEx.WS_EX_LAYERED)
+            : (_originalStyle & ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT & ~(int)User32.WindowStylesEx.WS_EX_LAYERED);
+
+        User32.SetWindowLong(hwnd, WindowLongFlags.GWL_EXSTYLE, (IntPtr)newStyle);
+        _isClickThrough = enabled;
+
+        SetBackgroundOpacity(!enabled);
+    }
+
+    /// <summary>
+    /// 设置背景透明度
+    /// </summary>
+    /// <param name="isInteractive">是否处于交互模式</param>
+    private void SetBackgroundOpacity(bool isInteractive)
+    {
+        _backgroundBrush.Color = isInteractive
+            ? System.Windows.Media.Color.FromArgb(1, 0, 0, 0)
+            : System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
+    }
+
+    /// <summary>
+    /// 设置点击穿透模式（公开方法）
+    /// </summary>
+    /// <param name="enabled">true=点击穿透，false=可交互</param>
+    public void SetClickThroughMode(bool enabled)
+    {
+        Dispatcher.Invoke(() => SetClickThrough(enabled));
+    }
+
+    /// <summary>
+    /// 原子切换点击穿透模式（在UI线程上执行读取和设置，避免竞态条件）
+    /// </summary>
+    private void ToggleClickThroughCore()
+    {
+        Dispatcher.Invoke(() => SetClickThrough(!_isClickThrough));
     }
 
     /// <summary>
