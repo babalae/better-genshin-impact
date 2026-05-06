@@ -640,6 +640,10 @@ public partial class ScriptControlViewModel : ViewModel
                 if (newScriptGroup != null)
                 {
                     newScriptGroup.Name = str;
+                    foreach (var project in newScriptGroup.Projects)
+                    {
+                        project.Uid = Guid.NewGuid().ToString("N");
+                    }
                     ScriptGroups.Add(newScriptGroup);
                 }
 

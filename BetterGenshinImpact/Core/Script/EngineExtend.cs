@@ -132,6 +132,7 @@ public class EngineExtend
         // }
 
 #pragma warning disable CS8974 // Converting method group to non-delegate type
+        engine.AddHostObject("getInstanceId", GlobalMethod.GetInstanceId);
         engine.AddHostObject("sleep", GlobalMethod.Sleep);
         engine.AddHostObject("getVersion", GlobalMethod.GetVersion);
         engine.AddHostObject("keyDown", GlobalMethod.KeyDown);

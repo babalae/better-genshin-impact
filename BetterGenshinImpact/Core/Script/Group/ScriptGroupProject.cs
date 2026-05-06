@@ -110,6 +110,11 @@ public partial class ScriptGroupProject : ObservableObject
     private string? _allowJsHTTPHash = "";
 
     /// <summary>
+    /// 脚本实例全局唯一标识
+    /// </summary>
+    public string Uid { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>
     /// 是否允许JS脚本发送HTTP请求，通过验证Hash来控制
     /// </summary>
     [JsonIgnore]
@@ -220,7 +225,10 @@ public partial class ScriptGroupProject : ObservableObject
             CleanInvalidSettingsValues();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
+            if (string.IsNullOrEmpty(Uid)) Uid = Guid.NewGuid().ToString("N");
+            ScriptProject.CurrentInstanceId = Uid;
             await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig);
+            ScriptProject.CurrentInstanceId = null;
         }
         else if (Type == "KeyMouse")
         {

@@ -488,6 +488,7 @@ public partial class ScriptService : IScriptService
 
     private void CopyProjectProperties(ScriptGroupProject source, ScriptGroupProject target)
     {
+        target.Uid = source.Uid;
         target.Status = source.Status;
         target.Schedule = source.Schedule;
         target.RunNum = source.RunNum;

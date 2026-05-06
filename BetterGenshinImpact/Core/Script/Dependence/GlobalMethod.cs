@@ -30,6 +30,11 @@ public class GlobalMethod
         return Global.Version;
     }
 
+    public static string GetInstanceId()
+    {
+        return Project.ScriptProject.CurrentInstanceId ?? string.Empty;
+    }
+
     #region 键盘操作
 
     public static void KeyDown(string key)

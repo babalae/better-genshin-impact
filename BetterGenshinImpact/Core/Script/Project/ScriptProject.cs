@@ -19,6 +19,8 @@ namespace BetterGenshinImpact.Core.Script.Project;
 
 public class ScriptProject
 {
+    public static string? CurrentInstanceId { get; set; }
+
     public string ProjectPath { get; set; }
     public string ManifestFile { get; set; }
 
