@@ -693,14 +693,21 @@ public class AutoFightTask : ISoloTask
                                 Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                             }
                             await Delay(50, ct);
-                            for (var i = 0; i < 6; i++)
+                            try
+                            {
+                                for (var i = 0; i < 6; i++)
+                                {
+                                    Simulation.SendInput.Mouse.LeftButtonUp();
+                                    await Delay(10, ct);
+                                    Simulation.SendInput.Mouse.LeftButtonDown();
+                                    await Delay(35, ct);
+                                    Simulation.SendInput.Mouse.LeftButtonUp();
+                                    await Delay(50, ct);
+                                }
+                            }
+                            finally
                             {
                                 Simulation.SendInput.Mouse.LeftButtonUp();
-                                await Delay(10, ct);
-                                Simulation.SendInput.Mouse.LeftButtonDown();
-                                await Delay(35, ct);
-                                Simulation.SendInput.Mouse.LeftButtonUp();
-                                await Delay(50, ct);
                             }
                             await Delay(1500, ct);
                             picker.AfterUseSkill();
