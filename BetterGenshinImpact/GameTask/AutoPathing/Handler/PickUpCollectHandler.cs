@@ -25,7 +25,7 @@ public class PickUpCollectHandler : IActionHandler
     /// </summary>
     public static readonly string[] PickUpActions =
     [
-        "枫原万叶-长E attack(0.08),keydown(E),wait(1),keyup(E),attack(0.5)",
+        "枫原万叶-长E attack(0.08),keydown(E),wait(0.8),keyup(E),attack(0.5)",
         "枫原万叶-短E attack(0.08),keydown(E),wait(0.47),keyup(E),attack(0.5)",
         "琴-短E wait(0.1),keydown(E),wait(0.4),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,0),wait(0.2),moveby(1000,-3500),wait(1.8),keyup(E),wait(0.3),click(middle)",
         "琴-长E wait(0.1),click(middle),keydown(E),click(middle),wait(0.4),moveby(500,0),wait(0.1),moveby(500,0),wait(0.1)," +

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Config;
@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -1081,15 +1082,44 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         _logger.LogInformation("战后聚集拾取：万叶已切换，等待元素战技CD");
         await kazuha.WaitSkillCd(_ct);
-        kazuha.UseSkill(true);
+        Simulation.SendInput.Mouse.LeftButtonUp();
+        await Delay(10, _ct);
+        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+        try
+        {
+            await Delay(1000, _ct);
+        }
+        finally
+        {
+            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+        }
+        await Delay(200, _ct);
+        using (var region = CaptureToRectArea())
+        {
+            using var eRa = region.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+            using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+            var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
+            var hasOcrCd = double.TryParse(text, out var ocrCd) && ocrCd > 0;
+            var isVisualReady = Bv.IsSkillReady(region, kazuha.Index, false);
+            if (!hasOcrCd && isVisualReady)
+            {
+                _logger.LogWarning("战后聚集拾取：万叶长E释放确认失败（OCR：{Text}），跳过后续拾取动作", text);
+                return;
+            }
+
+            kazuha.AfterUseSkill(region);
+        }
         await Delay(50, _ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-        await Delay(100, _ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-        await Delay(100, _ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        for (var i = 0; i < 6; i++)
+        {
+            Simulation.SendInput.Mouse.LeftButtonUp();
+            await Delay(10, _ct);
+            Simulation.SendInput.Mouse.LeftButtonDown();
+            await Delay(35, _ct);
+            Simulation.SendInput.Mouse.LeftButtonUp();
+            await Delay(50, _ct);
+        }
         await Delay(1500, _ct);
-        kazuha.AfterUseSkill();
         _logger.LogInformation("战后聚集拾取：万叶长E动作完成，等待拾取动作结束");
         await Delay(KazuhaPickupPostSkillWaitMs, _ct);
         _logger.LogInformation("战后聚集拾取：万叶长E聚集动作执行完成");

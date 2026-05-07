@@ -681,13 +681,27 @@ public class AutoFightTask : ISoloTask
                         if (picker.TrySwitch(10))
                         {
                             await picker.WaitSkillCd(ct);
-                            picker.UseSkill(true);
+                            Simulation.SendInput.Mouse.LeftButtonUp();
+                            await Delay(10, ct);
+                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                            try
+                            {
+                                await Delay(800, ct);
+                            }
+                            finally
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                            }
                             await Delay(50, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                            await Delay(100, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                            await Delay(100, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                            for (var i = 0; i < 6; i++)
+                            {
+                                Simulation.SendInput.Mouse.LeftButtonUp();
+                                await Delay(10, ct);
+                                Simulation.SendInput.Mouse.LeftButtonDown();
+                                await Delay(35, ct);
+                                Simulation.SendInput.Mouse.LeftButtonUp();
+                                await Delay(50, ct);
+                            }
                             await Delay(1500, ct);
                             picker.AfterUseSkill();
                         }
