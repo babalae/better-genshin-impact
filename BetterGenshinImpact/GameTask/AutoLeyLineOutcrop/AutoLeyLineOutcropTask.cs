@@ -1110,14 +1110,21 @@ public class AutoLeyLineOutcropTask : ISoloTask
             kazuha.AfterUseSkill(region);
         }
         await Delay(50, _ct);
-        for (var i = 0; i < 6; i++)
+        try
+        {
+            for (var i = 0; i < 6; i++)
+            {
+                Simulation.SendInput.Mouse.LeftButtonUp();
+                await Delay(10, _ct);
+                Simulation.SendInput.Mouse.LeftButtonDown();
+                await Delay(35, _ct);
+                Simulation.SendInput.Mouse.LeftButtonUp();
+                await Delay(50, _ct);
+            }
+        }
+        finally
         {
             Simulation.SendInput.Mouse.LeftButtonUp();
-            await Delay(10, _ct);
-            Simulation.SendInput.Mouse.LeftButtonDown();
-            await Delay(35, _ct);
-            Simulation.SendInput.Mouse.LeftButtonUp();
-            await Delay(50, _ct);
         }
         await Delay(1500, _ct);
         _logger.LogInformation("战后聚集拾取：万叶长E动作完成，等待拾取动作结束");
