@@ -102,11 +102,23 @@ namespace BetterGenshinImpact.Core.Script
 
         private string? ResolvePhysicalPath(DocumentSettings settings, DocumentInfo? sourceInfo, string specifier)
         {
-            string? referrer = sourceInfo?.Name;
-            if (!string.IsNullOrEmpty(referrer) && Uri.TryCreate(referrer, UriKind.Absolute, out var uri) && uri.IsFile)
+            string? referrer = null;
+            if (sourceInfo.HasValue)
             {
-                referrer = uri.LocalPath;
+                var sourceUri = sourceInfo.Value.Uri;
+                if (sourceUri != null && sourceUri.IsAbsoluteUri && sourceUri.IsFile)
+                {
+                    referrer = sourceUri.LocalPath;
+                }
+                else if (!string.IsNullOrEmpty(sourceInfo.Value.Name))
+                {
+                    if (Uri.TryCreate(sourceInfo.Value.Name, UriKind.Absolute, out var nameUri) && nameUri.IsFile)
+                    {
+                        referrer = nameUri.LocalPath;
+                    }
+                }
             }
+
             return ResolvePathInternal(settings.SearchPath, referrer, specifier);
         }
 
