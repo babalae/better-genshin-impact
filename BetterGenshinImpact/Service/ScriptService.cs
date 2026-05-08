@@ -366,14 +366,14 @@ public partial class ScriptService : IScriptService
                             }
                             catch (Exception e)
                             {
-                                if (e is ScriptEngineException see && IsTaskCanceledInside(see))
+                                if (IsTaskCanceledInside(e))
                                 {
                                     _logger.LogInformation("取消执行");
                                     throw;
                                 }
 
-                                _logger.LogDebug(e, "执行脚本时发生异常");
                                 _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                                _logger.LogDebug(e, "执行脚本时发生异常");
                                 if (!RunnerContext.Instance.IsPreExecution && taskProgress != null && taskProgress.CurrentScriptGroupProjectInfo != null)
                                 {
                                     taskProgress.CurrentScriptGroupProjectInfo.Status = 2;
