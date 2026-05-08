@@ -1674,6 +1674,101 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 从Git仓库读取文件内容
     /// </summary>
+    /// <summary>
+    /// 将中央仓库中的单个文件导出到本地。
+    /// </summary>
+    /// <param name="relPath">相对于仓库 `repo/` 目录的路径。</param>
+    /// <param name="localPath">本地目标文件路径。</param>
+    /// <returns>是否导出成功。</returns>
+    public bool ExportFileFromCenterRepo(string relPath, string localPath)
+    {
+        try
+        {
+            var normalizedRelPath = NormalizeRepoRelativePath(relPath);
+            var repoPath = CenterRepoPath;
+            var localDirectory = Path.GetDirectoryName(localPath);
+            if (!string.IsNullOrEmpty(localDirectory))
+            {
+                Directory.CreateDirectory(localDirectory);
+            }
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                if (!TryGetBlobByRelativePath(repo, normalizedRelPath, out var blob))
+                {
+                    return false;
+                }
+
+                using var contentStream = blob.GetContentStream();
+                using var fileStream = File.Create(localPath);
+                contentStream.CopyTo(fileStream);
+                return true;
+            }
+
+            var sourceFilePath = Path.Combine(repoPath, "repo", normalizedRelPath);
+            if (!File.Exists(sourceFilePath))
+            {
+                return false;
+            }
+
+            File.Copy(sourceFilePath, localPath, true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "导出仓库文件失败: {RelPath}", relPath);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 将中央仓库目录下指定扩展名的文件递归导出到本地。
+    /// </summary>
+    /// <param name="relDir">相对于仓库 `repo/` 目录的路径。</param>
+    /// <param name="targetDir">本地目标目录。</param>
+    /// <param name="extensionWithDot">要导出的文件扩展名。</param>
+    public void ExportFilesFromCenterRepo(string relDir, string targetDir, string extensionWithDot)
+    {
+        try
+        {
+            var normalizedRelDir = NormalizeRepoRelativePath(relDir);
+            var normalizedExtension = extensionWithDot.StartsWith(".")
+                ? extensionWithDot
+                : "." + extensionWithDot;
+            var repoPath = CenterRepoPath;
+
+            Directory.CreateDirectory(targetDir);
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var rootTree = GetRepoSubdirectoryTree(repo);
+                if (!TryGetTreeByRelativePath(rootTree, normalizedRelDir, out var targetTree))
+                {
+                    return;
+                }
+
+                ExportFilesFromGitTree(targetTree, targetDir, normalizedExtension);
+                return;
+            }
+
+            var sourceDir = string.IsNullOrEmpty(normalizedRelDir)
+                ? Path.Combine(repoPath, "repo")
+                : Path.Combine(repoPath, "repo", normalizedRelDir);
+            if (!Directory.Exists(sourceDir))
+            {
+                return;
+            }
+
+            ExportFilesFromDirectory(sourceDir, targetDir, normalizedExtension);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "导出仓库目录失败: {RelDir}", relDir);
+        }
+    }
+
     private string? ReadFileFromGitRepository(string repoPath, string filePath)
     {
         try
@@ -1687,35 +1782,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             using var repo = new Repository(repoPath);
 
-            var manifestPath = $"repo/{filePath}";
-            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = repo.Head.Tip!.Tree;
-            TreeEntry? entry = null;
-
-            for (int i = 0; i < pathParts.Length; i++)
-            {
-                entry = currentTree[pathParts[i]];
-                if (entry == null)
-                {
-                    return null;
-                }
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                    {
-                        return null;
-                    }
-                    currentTree = (Tree)entry.Target;
-                }
-            }
-
-            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+            if (!TryGetBlobByRelativePath(repo, filePath, out var blob))
             {
                 return null;
             }
 
-            var blob = (Blob)entry.Target;
             using var contentStream = blob.GetContentStream();
             using var reader = new StreamReader(contentStream);
             return reader.ReadToEnd();
@@ -1730,6 +1801,87 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 从Git仓库读取二进制文件内容
     /// </summary>
+    private static bool TryGetBlobByRelativePath(Repository repo, string relPath, out Blob blob)
+    {
+        blob = null!;
+        var manifestPath = $"repo/{NormalizeRepoRelativePath(relPath)}";
+        var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        Tree currentTree = repo.Head.Tip!.Tree;
+        TreeEntry? entry = null;
+
+        for (int i = 0; i < pathParts.Length; i++)
+        {
+            entry = currentTree[pathParts[i]];
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (i < pathParts.Length - 1)
+            {
+                if (entry.TargetType != TreeEntryTargetType.Tree)
+                {
+                    return false;
+                }
+
+                currentTree = (Tree)entry.Target;
+            }
+        }
+
+        if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+        {
+            return false;
+        }
+
+        blob = (Blob)entry.Target;
+        return true;
+    }
+
+    private static void ExportFilesFromGitTree(Tree tree, string targetDir, string extensionWithDot)
+    {
+        foreach (var entry in tree)
+        {
+            switch (entry.TargetType)
+            {
+                case TreeEntryTargetType.Tree:
+                    var childTargetDir = Path.Combine(targetDir, entry.Name);
+                    Directory.CreateDirectory(childTargetDir);
+                    ExportFilesFromGitTree((Tree)entry.Target, childTargetDir, extensionWithDot);
+                    break;
+                case TreeEntryTargetType.Blob when entry.Name.EndsWith(extensionWithDot, StringComparison.OrdinalIgnoreCase):
+                    var filePath = Path.Combine(targetDir, entry.Name);
+                    using (var contentStream = ((Blob)entry.Target).GetContentStream())
+                    using (var fileStream = File.Create(filePath))
+                    {
+                        contentStream.CopyTo(fileStream);
+                    }
+                    break;
+            }
+        }
+    }
+
+    private static void ExportFilesFromDirectory(string sourceDir, string targetDir, string extensionWithDot)
+    {
+        foreach (var directory in Directory.GetDirectories(sourceDir))
+        {
+            var directoryName = Path.GetFileName(directory);
+            var childTargetDir = Path.Combine(targetDir, directoryName);
+            Directory.CreateDirectory(childTargetDir);
+            ExportFilesFromDirectory(directory, childTargetDir, extensionWithDot);
+        }
+
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            if (!file.EndsWith(extensionWithDot, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var targetFilePath = Path.Combine(targetDir, Path.GetFileName(file));
+            File.Copy(file, targetFilePath, true);
+        }
+    }
+
     private byte[]? ReadBinaryFileFromGitRepository(string repoPath, string filePath)
     {
         try
@@ -1743,35 +1895,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             using var repo = new Repository(repoPath);
 
-            var manifestPath = $"repo/{filePath}";
-            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = repo.Head.Tip!.Tree;
-            TreeEntry? entry = null;
-
-            for (int i = 0; i < pathParts.Length; i++)
-            {
-                entry = currentTree[pathParts[i]];
-                if (entry == null)
-                {
-                    return null;
-                }
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                    {
-                        return null;
-                    }
-                    currentTree = (Tree)entry.Target;
-                }
-            }
-
-            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+            if (!TryGetBlobByRelativePath(repo, filePath, out var blob))
             {
                 return null;
             }
 
-            var blob = (Blob)entry.Target;
             using var contentStream = blob.GetContentStream();
             using var memoryStream = new MemoryStream();
             contentStream.CopyTo(memoryStream);

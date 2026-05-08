@@ -26,6 +26,7 @@ public class GearTaskConverter
     private readonly GearTaskFactory _taskFactory;
     private readonly object _mirrorLock = new();
     private bool _pathingRepoMirrorInitialized;
+    private readonly HashSet<string> _exportedPathingRepoDirectories = new(StringComparer.OrdinalIgnoreCase);
 
     public GearTaskConverter(ILogger<GearTaskConverter> logger, GearTaskFactory taskFactory)
     {
@@ -327,6 +328,7 @@ public class GearTaskConverter
     private List<GearTaskData> BuildPathingReferenceChildren(string repoRelativePath)
     {
         var result = new List<GearTaskData>();
+        EnsurePathingRepoDirectoryExported(repoRelativePath);
         var children = ScriptRepoUpdater.Instance.GetChildrenFromCenterRepo(repoRelativePath);
         foreach (var entry in children)
         {
@@ -349,8 +351,10 @@ public class GearTaskConverter
                 continue;
             }
 
-            var executionPath = GetPathingExecutionFilePath(entry.RelativePath);
-            var parameters = new PathingGearTaskParams { Path = executionPath };
+            var parameters = new PathingGearTaskParams
+            {
+                Path = BuildPathingPlaceholderPath(entry.RelativePath, false),
+            };
             result.Add(new GearTaskData
             {
                 Name = Path.GetFileNameWithoutExtension(entry.Name),
@@ -373,7 +377,8 @@ public class GearTaskConverter
         }
 
         var parameters = DeserializePathingParams(taskData.Parameters);
-        if (!string.IsNullOrWhiteSpace(parameters.Path))
+        if (!string.IsNullOrWhiteSpace(parameters.Path)
+            && !TryExtractPathingRepoRelativePath(parameters.Path, out _))
         {
             return taskData;
         }
@@ -473,17 +478,33 @@ public class GearTaskConverter
 
     private string GetPathingExecutionFilePath(string repoRelativeJsonPath)
     {
-        EnsurePathingRepoMirrorInitialized();
+        // Pathing 文件改为按需导出，避免首次转换时全量镜像仓库
 
         var normalized = repoRelativeJsonPath.Replace('\\', '/').Trim('/');
-        var relativeUnderPathing = normalized.StartsWith("pathing/", StringComparison.OrdinalIgnoreCase)
-            ? normalized["pathing/".Length..]
-            : normalized;
-
-        var mirrorRoot = GetPathingRepoMirrorRoot();
-        var target = Path.Combine(mirrorRoot, relativeUnderPathing.Replace('/', Path.DirectorySeparatorChar));
+        var target = GetPathingMirrorPath(normalized);
         if (File.Exists(target))
         {
+            return target;
+        }
+
+        lock (_mirrorLock)
+        {
+            if (File.Exists(target))
+            {
+                return target;
+            }
+
+            var exportDirectory = Path.GetDirectoryName(target);
+            if (!string.IsNullOrEmpty(exportDirectory))
+            {
+                Directory.CreateDirectory(exportDirectory);
+            }
+
+            if (!ScriptRepoUpdater.Instance.ExportFileFromCenterRepo(normalized, target))
+            {
+                throw new FileNotFoundException($"仓库中不存在地图追踪文件: {normalized}");
+            }
+
             return target;
         }
 
@@ -501,6 +522,70 @@ public class GearTaskConverter
         }
         File.WriteAllText(target, content);
         return target;
+    }
+
+    private void EnsurePathingRepoDirectoryExported(string repoRelativePath)
+    {
+        var normalized = repoRelativePath.Replace('\\', '/').Trim('/');
+        if (IsPathingRepoDirectoryExported(normalized))
+        {
+            return;
+        }
+
+        lock (_mirrorLock)
+        {
+            if (IsPathingRepoDirectoryExported(normalized))
+            {
+                return;
+            }
+
+            var targetDirectory = GetPathingMirrorPath(normalized);
+            if (string.Equals(normalized, "pathing", StringComparison.OrdinalIgnoreCase))
+            {
+                var mirrorRoot = GetPathingRepoMirrorRoot();
+                if (Directory.Exists(mirrorRoot))
+                {
+                    Directory.Delete(mirrorRoot, true);
+                }
+            }
+            else if (Directory.Exists(targetDirectory))
+            {
+                Directory.Delete(targetDirectory, true);
+            }
+
+            Directory.CreateDirectory(targetDirectory);
+            ScriptRepoUpdater.Instance.ExportFilesFromCenterRepo(normalized, targetDirectory, ".json");
+            _exportedPathingRepoDirectories.Add(normalized);
+        }
+    }
+
+    private bool IsPathingRepoDirectoryExported(string repoRelativePath)
+    {
+        foreach (var exportedDirectory in _exportedPathingRepoDirectories)
+        {
+            if (string.Equals(exportedDirectory, repoRelativePath, StringComparison.OrdinalIgnoreCase)
+                || repoRelativePath.StartsWith(exportedDirectory + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetPathingMirrorPath(string repoRelativePath)
+    {
+        var normalized = repoRelativePath.Replace('\\', '/').Trim('/');
+        var relativeUnderPathing = normalized.StartsWith("pathing/", StringComparison.OrdinalIgnoreCase)
+            ? normalized["pathing/".Length..]
+            : normalized == "pathing"
+                ? string.Empty
+                : normalized;
+
+        var mirrorRoot = GetPathingRepoMirrorRoot();
+        return string.IsNullOrEmpty(relativeUnderPathing)
+            ? mirrorRoot
+            : Path.Combine(mirrorRoot, relativeUnderPathing.Replace('/', Path.DirectorySeparatorChar));
     }
 
     private void EnsurePathingRepoMirrorInitialized()
