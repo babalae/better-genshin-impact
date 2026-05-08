@@ -215,13 +215,24 @@ public partial class HtmlMaskWindow : Window
         if (!_windows.TryGetValue(windowId, out var window)) return;
         window.Dispatcher.BeginInvoke(() =>
         {
-            // 页面还没加载完，消息留在队列中由 NavigationCompleted 统一推送
-            if (!window._navigationCompleted) return;
-            if (window.WebView.CoreWebView2 == null) return;
-            HtmlMask.FlushPendingMessages(windowId, json =>
+            try
             {
-                window.WebView.CoreWebView2.PostWebMessageAsString(json);
-            });
+                // 页面还没加载完，消息留在队列中由 NavigationCompleted 统一推送
+                if (!window._navigationCompleted) return;
+                if (window.WebView.CoreWebView2 == null) return;
+                HtmlMask.FlushPendingMessages(windowId, json =>
+                {
+                    window.WebView.CoreWebView2.PostWebMessageAsString(json);
+                });
+            }
+            catch (ObjectDisposedException)
+            {
+                // WebView 已被释放，忽略此消息推送
+            }
+            catch (Exception ex)
+            {
+                TaskControl.Logger.LogDebug(ex, "HTML遮罩窗口消息推送异常");
+            }
         });
     }
 
