@@ -94,9 +94,19 @@ public class TaskRunner
         }
         catch (Exception e)
         {
-            Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
-            _logger.LogError(e.Message);
-            _logger.LogDebug(e.StackTrace);
+            if (IsTaskCanceledInside(e))
+            {
+                if (RunnerContext.Instance.IsContinuousRunGroup)
+                {
+                    throw;
+                }
+            }
+            else
+            {
+                Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
+                _logger.LogError(e.Message);
+                _logger.LogDebug(e.StackTrace);
+            }
         }
         finally
         {
@@ -168,12 +178,23 @@ public class TaskRunner
                 }
             }
         });
-        VisionContext.Instance().DrawContent.ClearAll(); 
-        
+        VisionContext.Instance().DrawContent.ClearAll();
+
         // 激活原神窗口
         var maskWindow = MaskWindow.Instance();
         SystemControl.ActivateWindow();
         maskWindow.Invoke(maskWindow.Show);
+    }
+
+    private static bool IsTaskCanceledInside(Exception ex)
+    {
+        var inner = ex.InnerException;
+        while (inner != null)
+        {
+            if (inner is OperationCanceledException) return true;
+            inner = inner.InnerException;
+        }
+        return false;
     }
 
     public void End()

@@ -127,7 +127,7 @@ public class ScriptProject
 
                 string mainScriptPath = Path.Combine(ProjectPath, Manifest.Main);
                 string runtimeCode = loader.RewriteScriptCode(code, mainScriptPath);
-                
+
                 var documentInfo = new DocumentInfo(new Uri(mainScriptPath)) { Category = ModuleCategory.Standard };
                 var evaluation = engine.Evaluate(documentInfo, runtimeCode);
                 if (evaluation is Task task) await task;
