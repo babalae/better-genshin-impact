@@ -25,6 +25,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.GameTask.Common;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -600,8 +601,9 @@ public class Avatar
     {
         // CD 中立即返回，其余场景尝试释放
         using var region1 = CaptureToRectArea();
-        if (IsBurstReadyByClassify(region1) == BurstReadyState.Cooldown)
+        if (IsBurstReadyByClassify(region1) != BurstReadyState.Ready)
         {
+            // Logger.LogInformation("Q在CD，跳过");
             return;
         }
         
@@ -612,6 +614,7 @@ public class Avatar
                 return;
             }
 
+            // Logger.LogInformation("释放Q");
             Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
             Sleep(200, Ct);
 
@@ -627,8 +630,9 @@ public class Avatar
             else
             {
                 // 找到编号块判断是否进入了CD，四星角色没有大招动画
-                if (IsBurstReadyByClassify(region) == BurstReadyState.Cooldown)
+                if (IsBurstReadyByClassify(region) != BurstReadyState.Ready)
                 {
+                    // Logger.LogInformation("释放Q后检查到CD");
                     Sleep(1500, Ct);
                     return;
                 }
@@ -638,29 +642,29 @@ public class Avatar
 
     private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
-        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.QRect);
+        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.QRectForClassify);
         var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
-
+        // Logger.LogInformation("Q技能冷却分类：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
+        
         // 置信度不足时，直接返回未知，避免误判导致漏放/乱放
         if (topClass.Confidence <= 0.7)
         {
-            Logger.LogDebug("Q技能冷却分类置信度不足：{Confidence:F2}，类别：{ClassName}", topClass.Confidence, topClassName);
+            // Logger.LogInformation("Q技能冷却分类置信度不足：{Confidence:F2}，类别：{ClassName}", topClass.Confidence, topClassName);
             return BurstReadyState.Unknown;
         }
 
-        if (topClassName.Contains("cd_1", StringComparison.OrdinalIgnoreCase))
+        if (topClassName.Contains("cd 1", StringComparison.OrdinalIgnoreCase))
         {
             return BurstReadyState.Cooldown;
         }
 
-        if (topClassName.Contains("cd_0", StringComparison.OrdinalIgnoreCase))
+        if (topClassName.Contains("energy 1 cd 0", StringComparison.OrdinalIgnoreCase))
         {
             return BurstReadyState.Ready;
         }
 
-        Logger.LogDebug("Q技能冷却分类出现未知类别：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
         return BurstReadyState.Unknown;
     }
 

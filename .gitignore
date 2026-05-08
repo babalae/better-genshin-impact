@@ -31,10 +31,6 @@ github_actions_cache/
 # Rider
 .idea
 
-.claude
-CLAUDE.md
-AGENTS.md
-
 __pycache__/
 
 

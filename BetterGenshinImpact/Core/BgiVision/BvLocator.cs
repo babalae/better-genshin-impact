@@ -208,4 +208,16 @@ public class BvLocator
         RetryAction = action;
         return this;
     }
+
+    /// <summary>
+    /// 为 JavaScript 提供的动态参数重载
+    /// 解决 ClearScript 无法将 JS 函数隐式转换为 Action 委托的问题
+    /// </summary>
+    /// <param name="action">JS 回调函数</param>
+    /// <returns></returns>
+    public BvLocator WithRetryAction(dynamic action)
+    {
+        RetryAction = (results) => action(results);
+        return this;
+    }
 }
