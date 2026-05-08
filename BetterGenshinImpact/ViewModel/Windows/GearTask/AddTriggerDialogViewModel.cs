@@ -1,24 +1,26 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using BetterGenshinImpact.ViewModel.Pages.Component;
-using BetterGenshinImpact.Model.Gear.Triggers;
-using BetterGenshinImpact.Model;
-using BetterGenshinImpact.Service;
-using Microsoft.Extensions.Logging;
-using Wpf.Ui.Violeta.Controls;
 using BetterGenshinImpact.Helpers.Extensions;
-using System.ComponentModel;
+using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Model.Gear.Triggers;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.Component;
+using Microsoft.Extensions.Logging;
+using Quartz;
 
 namespace BetterGenshinImpact.ViewModel.Windows.GearTask;
 
 /// <summary>
-/// 新增触发器对话框 ViewModel
+/// 新增/编辑触发器对话框 ViewModel。
 /// </summary>
 public partial class AddTriggerDialogViewModel : ObservableObject
 {
+    private const string DefaultCronExpression = "1 0 4 * * ?";
+
     private readonly GearTaskStorageService _storageService;
     private readonly ILogger<AddTriggerDialogViewModel> _logger;
 
@@ -32,7 +34,7 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     private TriggerType _selectedTriggerType = TriggerType.Timed;
 
     [ObservableProperty]
-    private string _cronExpression = "1 0 4 * * ?"; // 默认每天 04:00:01
+    private string _cronExpression = DefaultCronExpression;
 
     [ObservableProperty]
     private CronInputMode _selectedCronInputMode = CronInputMode.Preset;
@@ -106,33 +108,25 @@ public partial class AddTriggerDialogViewModel : ObservableObject
         LoadAvailableTaskDefinitions();
     }
 
-    /// <summary>
-    /// 构造函数，用于指定触发器类型
-    /// </summary>
-    public AddTriggerDialogViewModel(GearTaskStorageService storageService, ILogger<AddTriggerDialogViewModel> logger, TriggerType? predefinedType = null)
+    public AddTriggerDialogViewModel(
+        GearTaskStorageService storageService,
+        ILogger<AddTriggerDialogViewModel> logger,
+        TriggerType? predefinedType = null)
+        : this(storageService, logger)
     {
-        _storageService = storageService;
-        _logger = logger;
-        
-        // 如果指定了预定义类型，则设置并禁用选择
         if (predefinedType.HasValue)
         {
             SelectedTriggerType = predefinedType.Value;
             IsTriggerTypeSelectionEnabled = false;
         }
-        
-        // 生成默认名称
-        GenerateDefaultName();
-        
-        // 加载可用的任务定义
-        LoadAvailableTaskDefinitions();
     }
 
-    public AddTriggerDialogViewModel(GearTaskStorageService storageService, ILogger<AddTriggerDialogViewModel> logger, GearTriggerViewModel existingTrigger)
+    public AddTriggerDialogViewModel(
+        GearTaskStorageService storageService,
+        ILogger<AddTriggerDialogViewModel> logger,
+        GearTriggerViewModel existingTrigger)
+        : this(storageService, logger)
     {
-        _storageService = storageService;
-        _logger = logger;
-
         DialogTitle = "编辑触发器";
         IsTriggerTypeSelectionEnabled = false;
 
@@ -142,21 +136,16 @@ public partial class AddTriggerDialogViewModel : ObservableObject
         SelectedTaskDefinitionName = existingTrigger.TaskDefinitionName;
 
         CronExpression = existingTrigger.TriggerType == TriggerType.Timed
-            ? (existingTrigger.CronExpression ?? CronExpression)
-            : CronExpression;
+            ? existingTrigger.CronExpression ?? DefaultCronExpression
+            : DefaultCronExpression;
         SelectedCronInputMode = existingTrigger.TriggerType == TriggerType.Timed
             ? CronInputMode.Manual
             : CronInputMode.Preset;
 
-        SelectedHotkey = existingTrigger.TriggerType == TriggerType.Hotkey
-            ? existingTrigger.Hotkey
-            : null;
-
+        SelectedHotkey = existingTrigger.TriggerType == TriggerType.Hotkey ? existingTrigger.Hotkey : null;
         HotkeyType = existingTrigger.TriggerType == TriggerType.Hotkey
             ? existingTrigger.HotkeyType
             : HotKeyTypeEnum.KeyboardMonitor;
-
-        LoadAvailableTaskDefinitions();
     }
 
     /// <summary>
@@ -188,9 +177,9 @@ public partial class AddTriggerDialogViewModel : ObservableObject
                     AvailableTaskDefinitions.Add(taskDefinition.Name);
                 }
             }
-            
+
             _logger.LogInformation("已加载 {Count} 个可用的任务定义", AvailableTaskDefinitions.Count);
-            
+
             // 如果有任务定义，默认选择第一个
             if (AvailableTaskDefinitions.Count > 0 && string.IsNullOrWhiteSpace(SelectedTaskDefinitionName))
             {
@@ -229,44 +218,42 @@ public partial class AddTriggerDialogViewModel : ObservableObject
 
     partial void OnSelectedCronInputModeChanged(CronInputMode value)
     {
-        if (SelectedTriggerType != TriggerType.Timed)
+        if (SelectedTriggerType == TriggerType.Timed && string.IsNullOrWhiteSpace(CronExpression))
         {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(CronExpression))
-        {
-            CronExpression = "1 0 4 * * ?";
+            CronExpression = DefaultCronExpression;
         }
     }
 
-    /// <summary>
-    /// 确认创建触发器
-    /// </summary>
     [RelayCommand]
     private void Confirm()
     {
         if (string.IsNullOrWhiteSpace(TriggerName))
         {
-            Toast.Error("请输入触发器名称");
+            ThemedMessageBox.Error("请输入触发器名称", "保存失败");
             return;
         }
 
         if (SelectedTriggerType == TriggerType.Timed && string.IsNullOrWhiteSpace(CronExpression))
         {
-            Toast.Error(SelectedCronInputMode == CronInputMode.Manual
+            var message = SelectedCronInputMode == CronInputMode.Manual
                 ? "请输入 Cron 表达式"
-                : "请先完成定时选择");
+                : "请先完成定时选择";
+            ThemedMessageBox.Error(message, "保存失败");
+            return;
+        }
+
+        if (SelectedTriggerType == TriggerType.Timed && !IsValidCronExpression(CronExpression, out var cronErrorMessage))
+        {
+            ThemedMessageBox.Error(cronErrorMessage, "Cron 表达式错误");
             return;
         }
 
         if (SelectedTriggerType == TriggerType.Hotkey && SelectedHotkey == null)
         {
-            Toast.Error("请选择热键");
+            ThemedMessageBox.Error("请选择热键", "保存失败");
             return;
         }
 
-        // 创建触发器 ViewModel
         CreatedTrigger = new GearTriggerViewModel(TriggerName, SelectedTriggerType)
         {
             IsEnabled = IsEnabled,
@@ -294,7 +281,9 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     [RelayCommand]
     private void SwitchHotKeyType()
     {
-        HotkeyType = HotkeyType == HotKeyTypeEnum.GlobalRegister ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
+        HotkeyType = HotkeyType == HotKeyTypeEnum.GlobalRegister
+            ? HotKeyTypeEnum.KeyboardMonitor
+            : HotKeyTypeEnum.GlobalRegister;
     }
 
     /// <summary>
@@ -303,8 +292,33 @@ public partial class AddTriggerDialogViewModel : ObservableObject
     [RelayCommand]
     private void SelectHotkey()
     {
-        // 移除旧的示例代码，现在使用HotKeyTextBox直接设置
-        // HotKeyTextBox会直接绑定到SelectedHotkey属性
+    }
+
+    private static bool IsValidCronExpression(string? cronExpression, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(cronExpression))
+        {
+            errorMessage = "Cron 表达式不能为空";
+            return false;
+        }
+
+        try
+        {
+            _ = new CronExpression(cronExpression);
+            return true;
+        }
+        catch (FormatException ex)
+        {
+            errorMessage = $"Cron 表达式格式无效：{ex.Message}";
+            return false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Cron 表达式校验失败：{ex.Message}";
+            return false;
+        }
     }
 }
 
@@ -312,6 +326,7 @@ public enum CronInputMode
 {
     [Description("可视化选择")]
     Preset,
+
     [Description("手动 Cron")]
     Manual
 }

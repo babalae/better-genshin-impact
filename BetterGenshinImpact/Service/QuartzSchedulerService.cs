@@ -4,10 +4,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Model.Gear.Triggers.QuartzJob;
+using BetterGenshinImpact.ViewModel.Pages.Component;
 using BetterGenshinImpact.Service.GearTask;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using Quartz.Impl.Matchers;
 
 namespace BetterGenshinImpact.Service;
 
@@ -19,11 +21,38 @@ public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger,
     GearTriggerStorageService triggerStorageService) : IHostedService
 {
     private readonly ILogger<QuartzSchedulerService> _logger = logger;
+    private const string GearGroupName = "gear";
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var (timedTriggers, _) = await triggerStorageService.LoadTriggersAsync();
+        await SyncTimedTriggersAsync(timedTriggers, cancellationToken);
+    }
 
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public async Task SyncTimedTriggersAsync(IEnumerable<GearTriggerViewModel> timedTriggers, CancellationToken cancellationToken = default)
+    {
+        var scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+        var existingJobKeys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.GroupEquals(GearGroupName), cancellationToken);
+
+        if (existingJobKeys.Count > 0)
+        {
+            await scheduler.DeleteJobs(existingJobKeys.ToList(), cancellationToken);
+        }
+
+        var jobsDictionary = BuildJobsDictionary(timedTriggers);
+        if (jobsDictionary.Count > 0)
+        {
+            await scheduler.ScheduleJobs(jobsDictionary, replace: true, cancellationToken);
+        }
+    }
+
+    private static Dictionary<IJobDetail, IReadOnlyCollection<ITrigger>> BuildJobsDictionary(IEnumerable<GearTriggerViewModel> timedTriggers)
+    {
         var allData = timedTriggers
             .Where(t => t.IsEnabled && !string.IsNullOrWhiteSpace(t.CronExpression))
             .Select(t => t.ToTrigger())
@@ -48,12 +77,12 @@ public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger,
             };
 
             var job = JobBuilder.Create<QuartzGearTaskJob>()
-                .WithIdentity($"job:{data.Name}", "gear")
+                .WithIdentity($"job:{data.Name}", GearGroupName)
                 .UsingJobData(jobDataMap)
                 .Build();
 
             var trigger = TriggerBuilder.Create()
-                .WithIdentity($"trigger:{data.Name}", "gear")
+                .WithIdentity($"trigger:{data.Name}", GearGroupName)
                 .WithCronSchedule(data.CronExpression)
                 .ForJob(job)
                 .Build();
@@ -61,16 +90,7 @@ public class QuartzSchedulerService(ILogger<QuartzSchedulerService> logger,
             jobsDictionary.Add(job, new HashSet<ITrigger> { trigger });
         }
 
-        var scheduler = await schedulerFactory.GetScheduler(cancellationToken);
-        if (jobsDictionary.Count > 0)
-        {
-            await scheduler.ScheduleJobs(jobsDictionary, replace: true, cancellationToken);
-        }
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
+        return jobsDictionary;
     }
 
 }

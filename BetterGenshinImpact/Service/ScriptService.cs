@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Group;
@@ -559,7 +560,19 @@ public partial class ScriptService : IScriptService
         var homePageViewModel = App.GetService<HomePageViewModel>();
         if (!homePageViewModel!.TaskDispatcherEnabled)
         {
-            await homePageViewModel.OnStartTriggerAsync();
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher?.CheckAccess() == true)
+            {
+                await homePageViewModel.OnStartTriggerAsync();
+            }
+            else if (dispatcher != null)
+            {
+                await dispatcher.InvokeAsync(homePageViewModel.OnStartTriggerAsync).Task.Unwrap();
+            }
+            else
+            {
+                await homePageViewModel.OnStartTriggerAsync();
+            }
 
             if (waitForMainUi)
             {

@@ -84,3 +84,6 @@
 ```
 dotnet build BetterGenshinImpact.sln -c Debug
 ```
+###其他要求
+
+1. 改动时候请不要删除已有的注释，你可以修改，但是不要删！
