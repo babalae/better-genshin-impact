@@ -54,9 +54,7 @@ namespace BetterGenshinImpact.Core.Script
             {
                 string importPart = match.Groups[1].Value.Trim();
                 string quote = match.Groups[2].Value;
-                string rawPath = match.Groups[3].Value;
-
-                string path = rawPath.Replace("../../../packages", "packages");
+                string path = match.Groups[3].Value.Replace("../../../packages", "packages");
                 string? resourceFullPath = ResolvePathInternal(null, currentFilePath, path);
                 
                 if (resourceFullPath != null && File.Exists(resourceFullPath))
@@ -88,7 +86,12 @@ namespace BetterGenshinImpact.Core.Script
 
         private string? ResolvePhysicalPath(DocumentSettings settings, DocumentInfo? sourceInfo, string specifier)
         {
-            return ResolvePathInternal(settings.SearchPath, sourceInfo?.Name, specifier);
+            string? referrer = sourceInfo?.Name;
+            if (!string.IsNullOrEmpty(referrer) && Uri.TryCreate(referrer, UriKind.Absolute, out var uri) && uri.IsFile)
+            {
+                referrer = uri.LocalPath;
+            }
+            return ResolvePathInternal(settings.SearchPath, referrer, specifier);
         }
 
         private string? ResolvePathInternal(string? searchPath, string? referrer, string specifier)
