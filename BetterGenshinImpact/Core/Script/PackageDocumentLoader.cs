@@ -25,16 +25,21 @@ namespace BetterGenshinImpact.Core.Script
             // ResolvePhysicalPath 可能因 sourceInfo 为空而失败，直接从脚本根目录兜底
             if (targetPath == null || !File.Exists(targetPath))
             {
-                var fullPath = Path.GetFullPath(Path.Combine(_scriptRootPath, specifier.Replace("./", "").Replace("../", "")));
-                if (File.Exists(fullPath))
+                var stripped = Regex.Replace(specifier, @"^(?:\.\.?/)+", "");
+                if (!Path.IsPathRooted(stripped))
                 {
-                    targetPath = fullPath;
+                    var fullPath = Path.GetFullPath(Path.Combine(_scriptRootPath, stripped));
+                    if (fullPath.StartsWith(_scriptRootPath, StringComparison.OrdinalIgnoreCase)
+                        && File.Exists(fullPath))
+                    {
+                        targetPath = fullPath;
+                    }
                 }
             }
 
             if (targetPath == null || !File.Exists(targetPath))
             {
-                return await Default.LoadDocumentAsync(settings, sourceInfo, specifier, category, contextCallback);
+                throw new FileNotFoundException($"无法解析模块导入路径: '{specifier}'", specifier);
             }
 
             // 处理 JS 文件的重写
@@ -52,7 +57,7 @@ namespace BetterGenshinImpact.Core.Script
                 return CacheDocument(new StringDocument(documentInfo, processedCode), false);
             }
 
-            return await Default.LoadDocumentAsync(settings, sourceInfo, specifier, category, contextCallback);
+            throw new FileNotFoundException($"不支持的模块导入类型: '{specifier}' (仅支持 .js 文件)", specifier);
         }
 
         /// <summary>
@@ -72,7 +77,7 @@ namespace BetterGenshinImpact.Core.Script
                 string quote = match.Groups[2].Value;
                 string path = match.Groups[3].Value.Replace("../../../packages", "packages");
                 string? resourceFullPath = ResolvePathInternal(null, currentFilePath, path);
-                
+
                 if (resourceFullPath != null && File.Exists(resourceFullPath))
                 {
                     string normalizedPath = Path.GetRelativePath(_scriptRootPath, resourceFullPath).Replace("\\", "/");
@@ -129,7 +134,6 @@ namespace BetterGenshinImpact.Core.Script
                 return ProbeFile(Path.Combine(_scriptRootPath, specifier));
             }
 
-            // 将 (../)+packages/... 规范化为 packages/...，从脚本根目录解析
             var packagesMatch = Regex.Match(specifier, @"^(?:\.\.\/)+(packages/.*)$");
             if (packagesMatch.Success)
             {

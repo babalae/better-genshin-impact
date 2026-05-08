@@ -647,9 +647,9 @@ public partial class ScriptControlViewModel : ViewModel
                         {
                             project.BuildScriptProjectRelation();
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // ignored
+                            _logger.LogWarning(ex, "复制配置组后重建项目关联失败: {FolderName}", project.FolderName);
                         }
                     }
                     ScriptGroups.Add(newScriptGroup);
