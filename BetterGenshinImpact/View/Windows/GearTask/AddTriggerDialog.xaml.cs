@@ -5,6 +5,7 @@ using BetterGenshinImpact.ViewModel.Windows.GearTask;
 using BetterGenshinImpact.ViewModel.Pages.Component;
 using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.GearTask;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.View.Windows.GearTask;

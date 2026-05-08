@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Model.Gear;
 using BetterGenshinImpact.Model.Gear.Tasks;
+using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.ViewModel.Pages.Component;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,59 +115,6 @@ public partial class GearTaskExecutor : ObservableObject
             IsExecuting = false;
         }
     }
-
-    /// <summary>
-    /// 直接执行 GearTaskData
-    /// </summary>
-    /// <param name="taskData">任务数据</param>
-    /// <param name="ct">取消令牌</param>
-    /// <returns></returns>
-    public async Task ExecuteTaskDataAsync(GearTaskData taskData, CancellationToken ct = default)
-    {
-        if (IsExecuting)
-        {
-            throw new InvalidOperationException("任务执行器正在运行中，请等待当前任务完成");
-        }
-
-        try
-        {
-            IsExecuting = true;
-            StatusMessage = "正在执行任务...";
-            Progress = 0;
-
-            _logger.LogInformation("开始执行任务: {TaskName}", taskData.Name);
-            
-            // 转换为可执行的任务
-            var executableTask = await _taskConverter.ConvertTaskDataAsync(taskData);
-            
-            // 使用执行管理器执行任务
-            await _executionManager.ExecuteWithTrackingAsync(executableTask, ct);
-            
-            StatusMessage = "任务执行完成";
-            Progress = 100;
-            _logger.LogInformation("任务执行完成: {TaskName}", taskData.Name);
-        }
-        catch (OperationCanceledException)
-        {
-            StatusMessage = "任务执行已取消";
-            _logger.LogInformation("任务执行已取消: {TaskName}", taskData.Name);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"任务执行失败: {ex.Message}";
-            _logger.LogError(ex, "执行任务时发生错误: {TaskName}", taskData.Name);
-            throw;
-        }
-        finally
-        {
-            IsExecuting = false;
-        }
-    }
-
-
-
-
 
     /// <summary>
     /// 停止当前执行的任务

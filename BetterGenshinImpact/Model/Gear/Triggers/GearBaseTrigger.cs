@@ -24,13 +24,4 @@ public abstract class GearBaseTrigger
     /// </summary>
     public string TaskDefinitionName { get; set; } = string.Empty;
 
-    /// <summary>
-    /// 执行任务
-    /// </summary>
-    public async Task Trigger()
-    {
-        var gearTaskExecutor = App.GetRequiredService<GearTaskExecutor>();
-        await gearTaskExecutor.ExecuteTaskDefinitionAsync(TaskDefinitionName);
-    }
-
 }

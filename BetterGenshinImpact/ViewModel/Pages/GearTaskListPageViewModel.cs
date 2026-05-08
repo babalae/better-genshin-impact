@@ -13,6 +13,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.GearTask;
 using BetterGenshinImpact.ViewModel.Windows;

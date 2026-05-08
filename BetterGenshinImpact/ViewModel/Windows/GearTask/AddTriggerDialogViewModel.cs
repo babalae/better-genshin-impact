@@ -7,6 +7,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.Component;
 using Microsoft.Extensions.Logging;

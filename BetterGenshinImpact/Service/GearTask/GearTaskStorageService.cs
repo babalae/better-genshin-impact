@@ -1,16 +1,15 @@
-using BetterGenshinImpact.Model.Gear;
-using BetterGenshinImpact.ViewModel.Pages.Component;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Model.Gear;
 using BetterGenshinImpact.Service.GearTask.Model;
+using BetterGenshinImpact.ViewModel.Pages.Component;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
-namespace BetterGenshinImpact.Service;
+namespace BetterGenshinImpact.Service.GearTask;
 
 /// <summary>
 /// 齿轮任务存储服务，负责任务定义的 JSON 持久化
@@ -89,7 +88,7 @@ public class GearTaskStorageService
             }
             
             var viewModel = ConvertToViewModel(data);
-            _logger.LogInformation("任务定义 '{TaskName}' 已从 {FilePath} 加载", data.Name, filePath);
+            _logger.LogInformation("任务定义 '{TaskName}' 已加载", data.Name);
             
             return viewModel;
         }
