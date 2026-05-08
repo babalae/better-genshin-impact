@@ -193,9 +193,9 @@ public class TaskControl
     /// <param name="ct">用于监控任务取消的取消令牌</param>
     public static async Task SimulateHoldActionAsync(GIActions action, int holdMs, CancellationToken ct)
     {
-        Simulation.SendInput.SimulateAction(action, KeyType.KeyDown);
         try
         {
+            Simulation.SendInput.SimulateAction(action, KeyType.KeyDown);
             await Delay(holdMs, ct);
         }
         finally
