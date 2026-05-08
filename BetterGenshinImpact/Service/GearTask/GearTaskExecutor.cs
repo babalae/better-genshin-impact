@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model.Gear;
 using BetterGenshinImpact.Model.Gear.Tasks;
 using BetterGenshinImpact.Service.GearTask;
@@ -92,7 +94,9 @@ public partial class GearTaskExecutor : ObservableObject
             var rootTask = await _taskConverter.ConvertTaskDataAsync(rootTaskData);
             
             // 使用执行管理器执行任务
-            await _executionManager.ExecuteWithTrackingAsync(rootTask, ct);
+            CancellationContext.Instance.Set();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, CancellationContext.Instance.GetActiveToken());
+            await _executionManager.ExecuteWithTrackingAsync(rootTask, linkedCts.Token);
             
             StatusMessage = "任务执行完成";
             Progress = 100;
@@ -112,6 +116,8 @@ public partial class GearTaskExecutor : ObservableObject
         }
         finally
         {
+            CancellationContext.Instance.Clear();
+            RunnerContext.Instance.Clear();
             IsExecuting = false;
         }
     }

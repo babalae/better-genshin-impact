@@ -1,8 +1,6 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.GearTask;
@@ -55,8 +53,7 @@ public class QuartzGearTaskJob : IJob
                 }
 
                 var executor = App.GetRequiredService<GearTaskExecutor>();
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, CancellationContext.Instance.GetActiveToken());
-                await executor.ExecuteTaskDefinitionAsync(taskDefinitionName, linkedCts.Token);
+                await executor.ExecuteTaskDefinitionAsync(taskDefinitionName, context.CancellationToken);
 
                 _logger.LogInformation("触发器 {TriggerName} 的任务定义执行完成", triggerName);
             }

@@ -350,7 +350,7 @@ public partial class GearTaskListPageViewModel : ViewModel
                 return;
             }
 
-            await executor.ExecuteTaskDefinitionAsync(taskDefinition.Name, CancellationContext.Instance.GetActiveToken());
+            await executor.ExecuteTaskDefinitionAsync(taskDefinition.Name);
         }
         catch (Exception ex)
         {
