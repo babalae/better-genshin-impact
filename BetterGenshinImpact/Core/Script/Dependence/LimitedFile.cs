@@ -52,6 +52,28 @@ public class LimitedFile(string rootPath)
     }
 
     /// <summary>
+    /// 创建指定路径的目录，如果已存在则跳过
+    /// </summary>
+    /// <param name="folderPath">文件夹路径（相对于根目录）</param>
+    /// <returns>是否创建成功或目录已存在</returns>
+    public bool CreateDirectory(string folderPath)
+    {
+        try
+        {
+            // 对传入的文件夹路径进行标准化
+            string fullPath = NormalizePath(folderPath);
+            // 如果目录不存在，自动创建
+            if (!Directory.Exists(fullPath)){Directory.CreateDirectory(fullPath);}
+            return true;
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError("CreateDir 异常: {Message}", ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 判断指定路径是否为文件夹。
     /// </summary>
     /// <param name="path">文件或文件夹路径（相对于根目录）。</param>
