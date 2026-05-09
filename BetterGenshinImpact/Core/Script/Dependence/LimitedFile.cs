@@ -17,8 +17,9 @@ public class LimitedFile(string rootPath)
     /// 读取指定文件夹内所有文件和文件夹的路径（非递归方式）。
     /// </summary>
     /// <param name="folderPath">文件夹路径（相对于根目录）</param>
+    /// <param name="createIfNotExists">目录不存在时是否自动创建，默认为 true</param>
     /// <returns>文件夹内所有文件和文件夹的路径数组</returns>
-    public string[] ReadPathSync(string folderPath)
+    public string[] ReadPathSync(string folderPath, bool createIfNotExists = true)
     {
         try
         {
@@ -26,9 +27,14 @@ public class LimitedFile(string rootPath)
             string normalizedFolderPath = NormalizePath(folderPath);
 
             // 确保目录存在
-            if (!Directory.Exists(normalizedFolderPath))
+            if (createIfNotExists && !Directory.Exists(normalizedFolderPath))
             {
                 Directory.CreateDirectory(normalizedFolderPath);
+            }
+            else if (!Directory.Exists(normalizedFolderPath))
+            {
+                TaskControl.Logger.LogError("ReadPathSync 目录不存在: {Path}", normalizedFolderPath);
+                return Array.Empty<string>();
             }
 
             // 获取指定文件夹下的所有文件（非递归）
