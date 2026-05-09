@@ -39,5 +39,5 @@ public class StrategyFile
     /// </summary>
     /// <param name="subPath">相对于 User\AutoFight 的子目录路径，默认为根目录</param>
     /// <returns>文件夹内所有文件和文件夹的相对路径数组，出错时返回空数组</returns>
-    public string[] ReadPathSync(string subPath = "./") => _strategyFile.ReadPathSync(subPath, false);
+    public string[] ReadPathSync(string subPath = "./") => _strategyFile.ReadPathSync(subPath);
 }

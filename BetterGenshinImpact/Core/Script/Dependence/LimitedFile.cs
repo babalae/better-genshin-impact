@@ -15,33 +15,28 @@ public class LimitedFile(string rootPath)
 {
     /// <summary>
     /// 读取指定文件夹内所有文件和文件夹的路径（非递归方式）。
+    /// 目录不存在时返回空数组
     /// </summary>
     /// <param name="folderPath">文件夹路径（相对于根目录）</param>
-    /// <param name="createIfNotExists">目录不存在时是否自动创建，默认为 true</param>
     /// <returns>文件夹内所有文件和文件夹的路径数组</returns>
-    public string[] ReadPathSync(string folderPath, bool createIfNotExists = true)
+    public string[] ReadPathSync(string folderPath)
     {
         try
         {
             // 对传入的文件夹路径进行标准化
-            string normalizedFolderPath = NormalizePath(folderPath);
+            string fullPath = NormalizePath(folderPath);
 
-            // 确保目录存在
-            if (createIfNotExists && !Directory.Exists(normalizedFolderPath))
+            if (!Directory.Exists(fullPath))
             {
-                Directory.CreateDirectory(normalizedFolderPath);
-            }
-            else if (!Directory.Exists(normalizedFolderPath))
-            {
-                TaskControl.Logger.LogError("ReadPathSync 目录不存在: {Path}", normalizedFolderPath);
+                TaskControl.Logger.LogError("ReadPathSync 目录不存在: {Path}", fullPath);
                 return Array.Empty<string>();
             }
 
             // 获取指定文件夹下的所有文件（非递归）
-            string[] files = Directory.GetFiles(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+            string[] files = Directory.GetFiles(fullPath, "*", SearchOption.TopDirectoryOnly);
 
             // 获取指定文件夹下的所有子文件夹（非递归）
-            string[] directories = Directory.GetDirectories(normalizedFolderPath, "*", SearchOption.TopDirectoryOnly);
+            string[] directories = Directory.GetDirectories(fullPath, "*", SearchOption.TopDirectoryOnly);
 
             // 合并文件和文件夹路径
             string[] combined = files.Concat(directories).ToArray();
@@ -51,7 +46,6 @@ public class LimitedFile(string rootPath)
         }
         catch (Exception ex)
         {
-            // 记录异常并返回空数组
             TaskControl.Logger.LogError("ReadPathSync 异常: {Message}", ex.Message);
             return Array.Empty<string>();
         }

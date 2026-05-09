@@ -92,7 +92,7 @@ public class AutoPathingScript
     /// </summary>
     /// <param name="subPath">相对于 User\AutoPathing 的子目录路径，默认为相对根目录</param>
     /// <returns>文件夹内所有文件和文件夹的相对路径数组，出错时返回空数组</returns>
-    public string[] ReadPathSync(string subPath = "./") => AutoPathingFile.ReadPathSync(subPath, false);
+    public string[] ReadPathSync(string subPath = "./") => AutoPathingFile.ReadPathSync(subPath);
 
     /// <summary>
     /// LimitedFile 实例，用于操作 AutoPathing 目录
