@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator;
@@ -24,6 +24,11 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
+using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.GameTask.Common;
+using Compunet.YoloSharp;
+using Compunet.YoloSharp.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
@@ -86,7 +91,23 @@ public class Avatar
     /// 战斗场景
     /// </summary>
     public CombatScenes CombatScenes { get; set; }
-    
+
+    /// <summary>
+    /// 脱困方向数组（前/后/左/右）
+    /// </summary>
+    private static readonly GIActions[] UnstuckDirections =
+    {
+        GIActions.MoveForward,
+        GIActions.MoveBackward,
+        GIActions.MoveLeft,
+        GIActions.MoveRight
+    };
+
+    private static readonly Random UnstuckRandom = new();
+
+    private static readonly Lazy<BgiYoloPredictor> QBurstClassifierLazy = new(() =>
+        App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiQClassify));
+
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
@@ -121,29 +142,44 @@ public class Avatar
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
+                // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
+                Sleep(800, ct);
                 using var ra = CaptureToRectArea();
-                if (!SwimmingConfirm(ra)) //二次确认
+                if (!SwimmingConfirm(ra))
                 {
                     return;
                 }
                 
                 Logger.LogInformation("游泳检测：尝试回到战斗地点");
-                var cts = new CancellationTokenSource();
-                var pathExecutor = new PathExecutor(cts.Token);
+                
+                // 保存原始 MoveMode，用于 finally 还原
+                var originalMoveMode = AutoFightTask.FightWaypoint.MoveMode;
+                // 链接外部取消令牌，确保外部取消时能及时响应；using 确保自动 Dispose
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 
                 try
                 {
-                    pathExecutor.MovementController.FaceTo(AutoFightTask.FightWaypoint).Wait(2000,cts.Token);
-                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Fly.Code; // 改为跳飞
+                    var pathExecutor = new PathExecutor(cts.Token);
+                    
+                    // FaceTo 朝向战斗点，超时 2 秒
+                    cts.CancelAfter(2000);
+                    pathExecutor.MovementController.FaceTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                    
+                    // 重置超时，MoveTo 超时 15 秒
+                    cts.CancelAfter(15000);
+                    // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
+                    AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
                     Simulation.SendInput.Mouse.RightButtonDown();
-                    pathExecutor.MovementController.MoveTo(AutoFightTask.FightWaypoint).Wait(15000,cts.Token);
-                    cts.Cancel();
-                    AutoFightTask.FightWaypoint = null;
-                    Simulation.SendInput.Mouse.RightButtonUp();
+                    pathExecutor.MovementController.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
+                    Logger.LogInformation("游泳检测：移动结束");
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    Logger.LogError("游泳检测：回到战斗地点任务被取消");
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger.LogWarning("游泳检测：回到战斗地点超时");
                 }
                 catch (Exception ex)
                 {
@@ -151,6 +187,11 @@ public class Avatar
                 }
                 finally
                 {
+                    // 确保所有资源和状态在任何路径都被正确清理
+                    cts.Cancel(); // 终止 PathExecutor 内部截屏循环
+                    AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
+                    AutoFightTask.FightWaypoint = null;
+                    Simulation.SendInput.Mouse.RightButtonUp();
                     Simulation.ReleaseAllKey();
                 }
                 
@@ -158,7 +199,7 @@ public class Avatar
                 if (!SwimmingConfirm(bitmap2))
                 {
                     Logger.LogInformation("游泳检测：游泳脱困成功");
-                   return;
+                    return;
                 }
                 
                 Logger.LogWarning("游泳检测：回到战斗地点失败");
@@ -229,6 +270,13 @@ public class Avatar
             SimulateSwitchAction(Index);
             // Debug.WriteLine($"切换到{Index}号位");
             // Cv2.ImWrite($"log/切换.png", region.SrcMat);
+
+            // 第10次重试时，战斗状态下执行脱困动作
+            if (i == 10 && AutoFightTask.FightStatusFlag)
+            {
+                PerformUnstuckAction(Ct);
+            }
+
             Sleep(250, Ct);
         }
     }
@@ -259,12 +307,19 @@ public class Avatar
             }
             else
             {
-                if (i == tryTimes - 1)
+                if (i == tryTimes - 1 && tryTimes == 4) //默认状态，没有特意设置重试次数的情况下，最后一次重试失败才输出日志
                 {
                     Logger.LogWarning("切换角色失败，最后一次尝试，当前角色编号:{CurrentIndex}，期望角色编号:{ExpectedIndex}", CombatScenes.GetActiveAvatarIndex(region, context), Index);
                 }
+                else
+                {
+                    // 特意需要脱困情形下，会设置重试次数激活脱困检测，第10次重试时(2.5秒切换失败，超过角色的大招动画时间)，如在盾奶位功能中次数会到第十次。
+                    if (i == 9 && AutoFightTask.FightStatusFlag)
+                    {
+                        PerformUnstuckAction(Ct);
+                    }
+                }
             }
-
 
             SimulateSwitchAction(Index);
 
@@ -299,6 +354,23 @@ public class Avatar
             default:
                 break;
         }
+    }
+
+    /// <summary>
+    /// 战斗中切换角色卡住时的脱困动作：跳跃 → 随机方向移动+切换 → 攻击 → 释放按键
+    /// </summary>
+    private void PerformUnstuckAction(CancellationToken ct)
+    {
+        var direction = UnstuckDirections[UnstuckRandom.Next(4)];
+        Logger.LogWarning("切换角色卡住，执行脱困（方向：{Dir}）", direction);
+
+        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        Sleep(200, ct);
+        Simulation.SendInput.SimulateAction(direction, KeyType.KeyDown);
+        SimulateSwitchAction(Index);
+        Sleep(1000, ct);
+        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        Simulation.ReleaseAllKey();
     }
 
     /// <summary>
@@ -527,6 +599,14 @@ public class Avatar
     /// </summary>
     public void UseBurst()
     {
+        // CD 中立即返回，其余场景尝试释放
+        using var region1 = CaptureToRectArea();
+        if (IsBurstReadyByClassify(region1) != BurstReadyState.Ready)
+        {
+            // Logger.LogInformation("Q在CD，跳过");
+            return;
+        }
+        
         for (var i = 0; i < 10; i++)
         {
             if (Ct is { IsCancellationRequested: true })
@@ -534,6 +614,7 @@ public class Avatar
                 return;
             }
 
+            // Logger.LogInformation("释放Q");
             Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
             Sleep(200, Ct);
 
@@ -546,7 +627,45 @@ public class Avatar
                 Sleep(1500, Ct);
                 return;
             }
+            else
+            {
+                // 找到编号块判断是否进入了CD，四星角色没有大招动画
+                if (IsBurstReadyByClassify(region) != BurstReadyState.Ready)
+                {
+                    // Logger.LogInformation("释放Q后检查到CD");
+                    Sleep(1500, Ct);
+                    return;
+                }
+            }
         }
+    }
+
+    private static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
+    {
+        using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Instance.QRectForClassify);
+        var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
+        var topClass = result.GetTopClass();
+        var topClassName = topClass.Name.Name;
+        // Logger.LogInformation("Q技能冷却分类：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
+        
+        // 置信度不足时，直接返回未知，避免误判导致漏放/乱放
+        if (topClass.Confidence <= 0.7)
+        {
+            // Logger.LogInformation("Q技能冷却分类置信度不足：{Confidence:F2}，类别：{ClassName}", topClass.Confidence, topClassName);
+            return BurstReadyState.Unknown;
+        }
+
+        if (topClassName.Contains("cd 1", StringComparison.OrdinalIgnoreCase))
+        {
+            return BurstReadyState.Cooldown;
+        }
+
+        if (topClassName.Contains("energy 1 cd 0", StringComparison.OrdinalIgnoreCase))
+        {
+            return BurstReadyState.Ready;
+        }
+
+        return BurstReadyState.Unknown;
     }
 
     // /// <summary>

@@ -9,13 +9,12 @@ using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
 using System;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static Vanara.PInvoke.User32;
 
 namespace BetterGenshinImpact.GameTask.AutoEat;
 
 /// <summary>
 /// 自动吃药触发器
-/// 检测红血状态时自动使用Recovery.png，检测到Resurrection.png时按z复活
+/// 检测红血状态时自动使用Recovery.png，检测到Resurrection.png时按快捷使用小道具键复活
 /// </summary>
 public class AutoEatTrigger : ITaskTrigger
 {
@@ -94,8 +93,8 @@ public class AutoEatTrigger : ITaskTrigger
                 // 检查复活CD（2秒）
                 if ((now - _lastResurrectionTime).TotalSeconds >= 2)
                 {
-                    // 按z键复活
-                    Simulation.SendInput.Keyboard.KeyPress(VK.VK_Z);
+                    // 走原神动作映射，跟随“快捷使用小道具”键位配置
+                    Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
                     _lastResurrectionTime = now;
                     _logger.LogInformation("检测到复活图标，自动复活");
                 }

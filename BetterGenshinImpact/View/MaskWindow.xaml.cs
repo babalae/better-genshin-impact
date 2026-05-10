@@ -441,6 +441,20 @@ public partial class MaskWindow : Window
         {
         }
     }
+    
+    public void BeginInvoke(Action action)
+    {
+        try
+        {
+            Dispatcher.BeginInvoke(action);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
 
     public void HideSelf()
     {

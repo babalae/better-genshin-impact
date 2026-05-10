@@ -32,7 +32,8 @@ namespace BetterGenshinImpact.Core.Script
             {
                 string content = await File.ReadAllTextAsync(targetPath);
                 string processedCode = RewriteScriptCode(content, targetPath);
-                return new StringDocument(new DocumentInfo(targetPath) { Category = ModuleCategory.Standard }, processedCode);
+                var documentInfo = new DocumentInfo(new Uri(targetPath)) { Category = ModuleCategory.Standard };
+                return new StringDocument(documentInfo, processedCode);
             }
 
             return await Default.LoadDocumentAsync(settings, sourceInfo, specifier, category, contextCallback);

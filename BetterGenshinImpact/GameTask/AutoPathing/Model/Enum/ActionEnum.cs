@@ -47,6 +47,8 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
 
     /// <summary>Action specifying mineral node excavation. 矿物节点挖矿操作。</summary>
     public static readonly ActionEnum Mining = new("mining", "挖矿", ActionUseWaypointTypeEnum.Custom);
+    /// <summary>Action specifying Linnea's unique mining interaction. 莉奈娅专用挖矿交互。</summary>
+    public static readonly ActionEnum LinneaMining = new("linnea_mining", "莉奈娅挖矿", ActionUseWaypointTypeEnum.Custom);
     
     /// <summary>Action indicating diagnostic console dumping. 诊断控制台日志输出。</summary>
     public static readonly ActionEnum LogOutput = new("log_output", "输出日志", ActionUseWaypointTypeEnum.Custom);

@@ -26,6 +26,7 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -39,6 +40,8 @@ using System.Globalization;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
 
@@ -48,6 +51,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 {
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
+    private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
+    private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
 
     [ObservableProperty]
@@ -66,6 +71,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         var list = GetAllNonDirectoryHotkey(HotKeySettingModels);
         foreach (var hotKeyConfig in list)
         {
+            _acceptedHotKeys[hotKeyConfig.ConfigPropertyName] = hotKeyConfig.HotKey;
             hotKeyConfig.RegisterHotKey();
             hotKeyConfig.PropertyChanged += (sender, e) =>
             {
@@ -77,16 +83,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     if (e.PropertyName == "HotKey")
                     {
                         Debug.WriteLine($"{model.FunctionName} 快捷键变更为 {model.HotKey}");
-                        var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName, BindingFlags.Public | BindingFlags.Instance);
-                        if (null != pi && pi.CanWrite)
+                        if (_rollingBackHotKeyProperties.Remove(model.ConfigPropertyName))
                         {
-                            var str = model.HotKey.ToString();
-                            if (str == "< None >")
-                            {
-                                str = "";
-                            }
-
-                            pi.SetValue(Config.HotKeyConfig, str, null);
+                            UpdateHotKeyConfig(model);
+                        }
+                        else
+                        {
+                            var newHotKey = model.HotKey;
+                            var previousHotKey = _acceptedHotKeys.GetValueOrDefault(model.ConfigPropertyName, HotKey.None);
+                            UpdateHotKeyConfig(model);
+                            _acceptedHotKeys[model.ConfigPropertyName] = newHotKey;
+                            ShowGameKeyBindingConflictWarning(model, newHotKey, previousHotKey);
                         }
                     }
 
@@ -107,6 +114,145 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     model.RegisterHotKey();
                 }
             };
+        }
+    }
+
+    private void ShowGameKeyBindingConflictWarning(HotKeySettingModel model, HotKey newHotKey, HotKey previousHotKey)
+    {
+        if (!TryConvertToGameKeyId(model.HotKey, out var hotKeyId))
+        {
+            return;
+        }
+
+        var conflictLines = GetGameKeyBindingConflictLines(hotKeyId);
+        if (conflictLines.Count == 0)
+        {
+            return;
+        }
+
+        var message = $"{model.FunctionName}使用{hotKeyId.ToName()}键会与原神键位冲突：\n\n"
+                      + string.Join("\n", conflictLines)
+                      + "\n\n会导致游戏内动作和 BetterGI 功能同时触发，建议更换为其他按键。是否继续使用？";
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            if (model.HotKey != newHotKey)
+            {
+                return;
+            }
+
+            var result = ThemedMessageBox.Warning(message, "快捷键冲突提醒", MessageBoxButton.OKCancel, MessageBoxResult.Cancel);
+            if (result == MessageBoxResult.Cancel && model.HotKey == newHotKey)
+            {
+                _acceptedHotKeys[model.ConfigPropertyName] = previousHotKey;
+                _rollingBackHotKeyProperties.Add(model.ConfigPropertyName);
+                model.HotKey = previousHotKey;
+            }
+        });
+    }
+
+    private static bool TryConvertToGameKeyId(HotKey hotKey, out KeyId keyId)
+    {
+        keyId = KeyId.Unknown;
+
+        if (hotKey.IsEmpty)
+        {
+            return false;
+        }
+
+        if (hotKey.MouseButton is MouseButton.XButton1 or MouseButton.XButton2)
+        {
+            keyId = KeyIdConverter.FromMouseButton(hotKey.MouseButton);
+            return keyId is not KeyId.Unknown and not KeyId.None;
+        }
+
+        if (hotKey.Modifiers != ModifierKeys.None || hotKey.Key == Key.None)
+        {
+            return false;
+        }
+
+        keyId = KeyIdConverter.FromInputKey(hotKey.Key);
+        return keyId is not KeyId.Unknown and not KeyId.None;
+    }
+
+    private List<string> GetGameKeyBindingConflictLines(KeyId hotKeyId)
+    {
+        var lines = new List<string>();
+        foreach (var pi in typeof(KeyBindingsConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (pi.PropertyType != typeof(KeyId))
+            {
+                continue;
+            }
+
+            if (pi.GetValue(Config.KeyBindingsConfig) is KeyId gameKeyId && gameKeyId == hotKeyId)
+            {
+                lines.Add($"- {GetGameKeyBindingActionName(pi.Name)}（{gameKeyId.ToName()}）");
+            }
+        }
+
+        return lines;
+    }
+
+    private static string GetGameKeyBindingActionName(string propertyName)
+    {
+        return propertyName switch
+        {
+            nameof(KeyBindingsConfig.MoveForward) => "向前移动",
+            nameof(KeyBindingsConfig.MoveBackward) => "向后移动",
+            nameof(KeyBindingsConfig.MoveLeft) => "向左移动",
+            nameof(KeyBindingsConfig.MoveRight) => "向右移动",
+            nameof(KeyBindingsConfig.SwitchToWalkOrRun) => "切换走/跑；特定操作模式下向下移动",
+            nameof(KeyBindingsConfig.NormalAttack) => "普通攻击",
+            nameof(KeyBindingsConfig.ElementalSkill) => "元素战技",
+            nameof(KeyBindingsConfig.ElementalBurst) => "元素爆发",
+            nameof(KeyBindingsConfig.SprintKeyboard) => "冲刺（键盘）",
+            nameof(KeyBindingsConfig.SprintMouse) => "冲刺（鼠标）",
+            nameof(KeyBindingsConfig.SwitchAimingMode) => "切换瞄准模式",
+            nameof(KeyBindingsConfig.Jump) => "跳跃；特定操作模式下向上移动",
+            nameof(KeyBindingsConfig.Drop) => "落下",
+            nameof(KeyBindingsConfig.PickUpOrInteract) => "拾取/交互（自动拾取由AutoPick模块管理）",
+            nameof(KeyBindingsConfig.QuickUseGadget) => "快捷使用小道具",
+            nameof(KeyBindingsConfig.InteractionInSomeMode) => "特定玩法内交互操作",
+            nameof(KeyBindingsConfig.QuestNavigation) => "开启任务追踪",
+            nameof(KeyBindingsConfig.AbandonChallenge) => "中断挑战",
+            nameof(KeyBindingsConfig.SwitchMember1) => "切换小队角色1",
+            nameof(KeyBindingsConfig.SwitchMember2) => "切换小队角色2",
+            nameof(KeyBindingsConfig.SwitchMember3) => "切换小队角色3",
+            nameof(KeyBindingsConfig.SwitchMember4) => "切换小队角色4",
+            nameof(KeyBindingsConfig.SwitchMember5) => "切换小队角色5",
+            nameof(KeyBindingsConfig.ShortcutWheel) => "呼出快捷轮盘",
+            nameof(KeyBindingsConfig.OpenInventory) => "打开背包",
+            nameof(KeyBindingsConfig.OpenCharacterScreen) => "打开角色界面",
+            nameof(KeyBindingsConfig.OpenMap) => "打开地图",
+            nameof(KeyBindingsConfig.OpenPaimonMenu) => "打开派蒙界面",
+            nameof(KeyBindingsConfig.OpenAdventurerHandbook) => "打开冒险之证界面",
+            nameof(KeyBindingsConfig.OpenCoOpScreen) => "打开多人游戏界面",
+            nameof(KeyBindingsConfig.OpenWishScreen) => "打开祈愿界面",
+            nameof(KeyBindingsConfig.OpenBattlePassScreen) => "打开纪行界面",
+            nameof(KeyBindingsConfig.OpenTheEventsMenu) => "打开活动面板",
+            nameof(KeyBindingsConfig.OpenTheSettingsMenu) => "打开玩法系统界面（尘歌壶内猫尾酒馆内）",
+            nameof(KeyBindingsConfig.OpenTheFurnishingScreen) => "打开摆设界面（尘歌壶内）",
+            nameof(KeyBindingsConfig.OpenStellarReunion) => "打开星之归还（条件符合期间生效）",
+            nameof(KeyBindingsConfig.OpenQuestMenu) => "开关任务菜单",
+            nameof(KeyBindingsConfig.OpenNotificationDetails) => "打开通知详情",
+            nameof(KeyBindingsConfig.OpenChatScreen) => "打开聊天界面",
+            nameof(KeyBindingsConfig.OpenSpecialEnvironmentInformation) => "打开特殊环境说明",
+            nameof(KeyBindingsConfig.CheckTutorialDetails) => "查看教程详情",
+            nameof(KeyBindingsConfig.ElementalSight) => "长按打开元素视野",
+            nameof(KeyBindingsConfig.ShowCursor) => "呼出鼠标",
+            nameof(KeyBindingsConfig.OpenPartySetupScreen) => "打开队伍配置界面",
+            nameof(KeyBindingsConfig.OpenFriendsScreen) => "打开好友界面",
+            nameof(KeyBindingsConfig.HideUI) => "隐藏主界面",
+            _ => propertyName
+        };
+    }
+
+    private void UpdateHotKeyConfig(HotKeySettingModel model)
+    {
+        var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName, BindingFlags.Public | BindingFlags.Instance);
+        if (null != pi && pi.CanWrite)
+        {
+            pi.SetValue(Config.HotKeyConfig, model.HotKey.IsEmpty ? "" : model.HotKey.ToString(), null);
         }
     }
 

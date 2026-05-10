@@ -40,9 +40,9 @@ public class AutoFightHandler : IActionHandler
     private async Task StartFightAsync(CancellationToken ct, object? config = null, WaypointForTrack? waypointForTrack = null)
     {
         TaskControl.Logger.LogInformation("执行动作: 【自动战斗】");
-        
+
         AutoFightParam taskParams;
-        if (config is PathingPartyConfig partyConfig && partyConfig.AutoFightEnabled)
+        if (config is PathingPartyConfig { AutoFightEnabled: true } partyConfig)
         {
             taskParams = CreateFightParam(partyConfig.AutoFightConfig);
         }
@@ -117,9 +117,10 @@ public class AutoFightHandler : IActionHandler
     private string GetStrategyPath(AutoFightConfig? config)
     {
         ArgumentNullException.ThrowIfNull(config);
-        
+
         var strategyName = config.StrategyName;
-        var path = "根据队伍自动选择".Equals(strategyName, StringComparison.OrdinalIgnoreCase) 
+        var path = "根据队伍自动选择".Equals(strategyName, StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrEmpty(strategyName)
             ? Global.Absolute(@"User\AutoFight\")
             : Global.Absolute($@"User\AutoFight\{strategyName}.txt");
 

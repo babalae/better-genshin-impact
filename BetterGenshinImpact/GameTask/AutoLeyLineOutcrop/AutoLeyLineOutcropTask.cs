@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Config;
@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -81,6 +82,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private const string OcrFlowOverlayKey = "AutoLeyLineOutcrop.OcrFlow";
     private const string OcrFightOverlayKey = "AutoLeyLineOutcrop.OcrFight";
     private const int OcrOverlayRenderLeadMs = 300;
+    private const int KazuhaPickupPostSkillWaitMs = 3000;
+    private static readonly TimeSpan LeyLineFightSeekInitialDelay = TimeSpan.FromSeconds(2);
     private static readonly Rect HandbookTrackActionButtonRoi = new(ScaleTo1080(1120), ScaleTo1080(680), ScaleTo1080(700), ScaleTo1080(320));
     private static readonly System.Drawing.Pen OcrOverlayPen = new(System.Drawing.Color.Lime, 2);
     private static readonly object PickLock = new();
@@ -1085,11 +1088,36 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         _logger.LogInformation("战后聚集拾取：万叶已切换，等待元素战技CD");
         await kazuha.WaitSkillCd(_ct);
-        kazuha.UseSkill(true);
-        await Delay(50, _ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        await SimulateHoldElementalSkillAsync(1000, _ct);
+        await Delay(200, _ct);
+
+        // 获取游戏画面，进行 OCR 及视觉状态双重验证，以确认长E技能是否真正释放成功
+        using (var region = CaptureToRectArea())
+        {
+            // 裁剪技能 CD 区域并做 HSV 颜色过滤，分离出白色的 CD 数字
+            using var eRa = region.DeriveCrop(AutoFightAssets.Instance.ECooldownRect);
+            using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
+            var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
+            
+            // 如果成功读到了大于 0 的 CD 数值，说明技能已释放
+            var hasOcrCd = double.TryParse(text, out var ocrCd) && ocrCd > 0;  
+            // 视觉上判断当前技能图标是否高亮就绪，如果不亮（false）也说明技能释放进入了冷却
+            var isVisualReady = Bv.IsSkillReady(region, kazuha.Index, false);  
+            
+            // 当 OCR 没读出 CD（可能网络卡顿技能没放出来），并且视觉上技能图标依然亮着就绪时，判断为释放失败
+            if (!hasOcrCd && isVisualReady)
+            {
+                _logger.LogWarning("战后聚集拾取：万叶长E释放确认失败（OCR：{Text}），跳过后续拾取动作", text);
+                return;
+            }
+
+            // 更新技能冷却记录，防止干扰后续冷却判断
+            kazuha.AfterUseSkill(region);
+        }
+        await SimulateMouseLeftClickLoopAsync(6, _ct);
         await Delay(1500, _ct);
-        kazuha.AfterUseSkill();
+        _logger.LogInformation("战后聚集拾取：万叶长E动作完成，等待拾取动作结束");
+        await Delay(KazuhaPickupPostSkillWaitMs, _ct);
         _logger.LogInformation("战后聚集拾取：万叶长E聚集动作执行完成");
     }
 
@@ -1189,7 +1217,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         var fightCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
         using var autoFightConfigScope = UseLeyLineAutoFightConfigScope();
-        // Ley line uses OCR-based finish detection; disable auto-fight finish detect.
+        // 地脉花战斗拆成两条并行链路：
+        // 1. AutoFightTask 持续执行战斗脚本，不负责任何结束判定。
+        // 2. RecognizeTextInRegion 只通过 OCR 判定胜负，并在轮询间隙补一次内部寻敌辅助。
         var fightTask = StartAutoFightWithoutFinishDetect(fightCts.Token);
         var fightResult = await RecognizeTextInRegion(timeoutSeconds * 1000);
         fightCts.Cancel();
@@ -1278,19 +1308,26 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         var start = DateTime.UtcNow;
         var noTextCount = 0;
+        var fightTextDetectedAt = DateTime.MinValue;
+        var lastSeekAssistAt = DateTime.MinValue;
+        var seekEnemyEnabled = _taskParam.FightConfig.SeekEnemyEnabled;
+        var seekEnemyInterval = TimeSpan.FromSeconds(Math.Clamp(_taskParam.FightConfig.SeekEnemyIntervalSeconds, 1, 60));
+        var seekEnemyRotaryFactor = Math.Clamp(_taskParam.FightConfig.SeekEnemyRotaryFactor, 1, 13);
         var successKeywords = new[] { "挑战达成", "战斗胜利", "挑战成功" };
         var failureKeywords = new[] { "挑战失败" };
 
         while ((DateTime.UtcNow - start).TotalMilliseconds < timeoutMs)
         {
-            using var capture = CaptureToRectArea();
-            using var ocrOverlayScope = DrawOcrOverlayScope(capture, OcrFightOverlayKey, _ocrRo1!.RegionOfInterest, _ocrRo2!.RegionOfInterest);
-            await WaitOcrOverlayRenderTick();
             string text;
             bool foundText;
-            var result = capture.Find(_ocrRo1!);
-            text = result.Text;
-            foundText = RecognizeFightText(capture);
+            using (var capture = CaptureToRectArea())
+            using (var ocrOverlayScope = DrawOcrOverlayScope(capture, OcrFightOverlayKey, _ocrRo1!.RegionOfInterest, _ocrRo2!.RegionOfInterest))
+            {
+                await WaitOcrOverlayRenderTick();
+                var result = capture.Find(_ocrRo1!);
+                text = result.Text;
+                foundText = RecognizeFightText(capture);
+            }
 
             if (successKeywords.Any(text.Contains))
             {
@@ -1314,13 +1351,57 @@ public class AutoLeyLineOutcropTask : ISoloTask
             }
             else
             {
+                var now = DateTime.UtcNow;
+                if (fightTextDetectedAt == DateTime.MinValue)
+                {
+                    fightTextDetectedAt = now;
+                }
+
                 noTextCount = 0;
+                if (ShouldRunLeyLineFightSeek(seekEnemyEnabled, now, fightTextDetectedAt, lastSeekAssistAt, seekEnemyInterval))
+                {
+                    lastSeekAssistAt = now;
+                    await TrySeekEnemyDuringLeyLineFight(seekEnemyRotaryFactor);
+                }
             }
 
             await Delay(1000, _ct);
         }
 
         return false;
+    }
+
+    private static bool ShouldRunLeyLineFightSeek(bool seekEnemyEnabled, DateTime now, DateTime fightTextDetectedAt, DateTime lastSeekAssistAt, TimeSpan seekEnemyInterval)
+    {
+        if (!seekEnemyEnabled)
+        {
+            return false;
+        }
+
+        if (fightTextDetectedAt == DateTime.MinValue)
+        {
+            return false;
+        }
+
+        if (now - fightTextDetectedAt < LeyLineFightSeekInitialDelay)
+        {
+            return false;
+        }
+
+        return lastSeekAssistAt == DateTime.MinValue || now - lastSeekAssistAt >= seekEnemyInterval;
+    }
+
+    private async Task TrySeekEnemyDuringLeyLineFight(int rotaryFactor)
+    {
+        try
+        {
+            // isEndCheck=true prevents AutoFightSeek from falling back to any party-screen finish check.
+            await AutoFightSeek.SeekAndFightAsync(_logger, 0, 0, _ct, true, rotaryFactor);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "地脉花战斗中内部寻敌异常");
+        }
     }
 
     private bool RecognizeFightText(ImageRegion captureRegion)
@@ -1913,7 +1994,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         Simulation.SendInput.Mouse.LeftButtonUp();
         await Delay(60, _ct);
 
-        var (success, _) = AutoDomainTask.PressUseResin(promptRegions, resinName);
+        var (success, _) = AutoDomainTask.PressUseResin(promptRegions, resinName, Name);
         if (success)
         {
             _logger.LogDebug("奖励页面已尝试使用树脂：{ResinName}", resinName);

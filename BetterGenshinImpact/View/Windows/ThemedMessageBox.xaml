@@ -5,10 +5,11 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
-                 Width="480"
-                 Height="240"
-                 MinWidth="400"
+                 Width="560"
+                 SizeToContent="Height"
+                 MinWidth="440"
                  MinHeight="200"
+                 MaxHeight="360"
                  ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
                  ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ExtendsContentIntoTitleBar="True"
@@ -23,7 +24,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -35,7 +36,7 @@
                      ShowMinimize="False" />
 
         <!-- 内容区域 -->
-        <Grid Grid.Row="1" Margin="24,12,24,12">
+        <Grid Grid.Row="1" Margin="24,16,24,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -47,25 +48,29 @@
                           Symbol="Info24"
                           FontSize="48"
                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                          VerticalAlignment="Center"
-                          Margin="0,0,16,0" />
+                          VerticalAlignment="Top"
+                          Margin="0,4,16,0" />
 
             <!-- 消息内容 -->
-            <ui:TextBlock Grid.Column="1"
-                         x:Name="MessageTextBlock"
-                         TextAlignment="Left"
-                         TextWrapping="Wrap"
-                         FontSize="14"
-                         VerticalAlignment="Center"
-                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <ScrollViewer Grid.Column="1"
+                          MaxHeight="140"
+                          Padding="0,0,8,0"
+                          VerticalScrollBarVisibility="Auto">
+                <ui:TextBlock x:Name="MessageTextBlock"
+                              TextAlignment="Left"
+                              TextWrapping="Wrap"
+                              FontSize="14"
+                              VerticalAlignment="Top"
+                              Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            </ScrollViewer>
         </Grid>
 
         <!-- 按钮区域 -->
         <StackPanel Grid.Row="2" 
                     x:Name="ButtonPanel"
                     Orientation="Horizontal"
-                    HorizontalAlignment="Center"
-                    Margin="24,0,24,24">
+                    HorizontalAlignment="Right"
+                    Margin="24,0,24,18">
 
             <!-- 主按钮 -->
             <ui:Button x:Name="PrimaryButton"

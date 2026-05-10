@@ -424,9 +424,108 @@ public class PathExecutor
         }
     }
 
-    /// <summary>
-    /// 切换角色 / Switches avatar.
-    /// </summary>
+    private async Task MoveCloseTo(WaypointForTrack waypoint)
+    {
+        ImageRegion screen;
+        Point2f position;
+        int targetOrientation;
+        Logger.LogDebug("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+
+        var stepsTaken = 0;
+        while (!ct.IsCancellationRequested)
+        {
+            stepsTaken++;
+            if (stepsTaken > 25)
+            {
+                Logger.LogWarning("精确接近超时");
+                break;
+            }
+
+            screen = CaptureToRectArea();
+
+            EndJudgment(screen);
+
+            position = await GetPosition(screen, waypoint);
+            if (Navigation.GetDistance(waypoint, position) < 2)
+            {
+                Logger.LogDebug("已到达路径点");
+                break;
+            }
+
+            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            await WaitUntilRotatedTo(targetOrientation, 2);
+            // 小碎步接近
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            Thread.Sleep(60);
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
+            await Delay(20, ct);
+        }
+
+        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+
+        // 到达目的地后停顿一秒
+        await Delay(1000, ct);
+    }
+
+    private async Task BeforeMoveCloseToTarget(WaypointForTrack waypoint)
+    {
+        if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
+        {
+            await ActionFactory.GetBeforeHandler(ActionEnum.StopFlying.Code).RunAsync(ct, waypoint);
+        }
+    }
+
+    private async Task BeforeMoveToTarget(WaypointForTrack waypoint)
+    {
+        if (waypoint.Action == ActionEnum.UpDownGrabLeaf.Code)
+        {
+            Simulation.SendInput.Mouse.MiddleButtonClick();
+            await Delay(300, ct);
+            var screen = CaptureToRectArea();
+            var position = await GetPosition(screen, waypoint);
+            var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
+            await WaitUntilRotatedTo(targetOrientation, 10);
+            var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
+            await handler.RunAsync(ct, waypoint);
+        }
+        else if (waypoint.Action == ActionEnum.LogOutput.Code)
+        {
+            Logger.LogInformation(waypoint.LogInfo);
+        }
+    }
+
+    private async Task AfterMoveToTarget(WaypointForTrack waypoint)
+    {
+        if (waypoint.Action == ActionEnum.NahidaCollect.Code
+            || waypoint.Action == ActionEnum.PickAround.Code
+            || waypoint.Action == ActionEnum.Fight.Code
+            || waypoint.Action == ActionEnum.HydroCollect.Code
+            || waypoint.Action == ActionEnum.ElectroCollect.Code
+            || waypoint.Action == ActionEnum.AnemoCollect.Code
+            || waypoint.Action == ActionEnum.PyroCollect.Code
+            || waypoint.Action == ActionEnum.CombatScript.Code
+            || waypoint.Action == ActionEnum.Mining.Code
+            || waypoint.Action == ActionEnum.LinneaMining.Code
+            || waypoint.Action == ActionEnum.Fishing.Code
+            || waypoint.Action == ActionEnum.ExitAndRelogin.Code
+            || waypoint.Action == ActionEnum.EnterAndExitWonderland.Code
+            || waypoint.Action == ActionEnum.SetTime.Code
+            || waypoint.Action == ActionEnum.UseGadget.Code
+            || waypoint.Action == ActionEnum.PickUpCollect.Code)
+        {
+            var handler = ActionFactory.GetAfterHandler(waypoint.Action);
+            //,PartyConfig
+            await handler.RunAsync(ct, waypoint, PartyConfig);
+            //统计结束战斗的次数
+            if (waypoint.Action == ActionEnum.Fight.Code)
+            {
+                SuccessFight++;
+            }
+            await Delay(1000, ct);
+        }
+    }
+
     private async Task<Avatar?> SwitchAvatar(string index, bool needSkill = false)
     {
         return await _partyManager.SwitchAvatar(index, needSkill);
