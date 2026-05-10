@@ -445,7 +445,7 @@
     </UserControl.Resources>
 
     <!-- 布局 -->
-    <Grid Margin="16">
+    <Grid Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />

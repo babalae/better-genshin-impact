@@ -132,7 +132,10 @@
                                     BorderThickness="1"
                                     CornerRadius="12">
                                 <ui:TextBlock FontSize="10"
+                                              HorizontalAlignment="Center"
+                                              Margin="0,5,0,0"
                                               VerticalAlignment="Center"
+                                              TextAlignment="Center"
                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                               Text="{Binding ModifiedTime, StringFormat='{}{0:MM-dd HH:mm}'}" />
                             </Border>
