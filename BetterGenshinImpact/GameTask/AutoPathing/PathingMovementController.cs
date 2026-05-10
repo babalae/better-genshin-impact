@@ -5,22 +5,28 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.AutoPathing.Strategy.Movement;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
+
+public class PathingMovementActions
+{
+    public Func<ImageRegion> CaptureAction { get; set; } = null!;
+    public Func<ImageRegion, bool> EndJudgmentAction { get; set; } = null!;
+    public Func<ImageRegion?, Task> ResolveAnomaliesAction { get; set; } = null!;
+    public Func<int, int, Task> WaitUntilRotatedToAction { get; set; } = null!;
+    public Func<string, Task<Avatar?>> SwitchAvatarAction { get; set; } = null!;
+    public Func<Task> UseElementalSkillAction { get; set; } = null!;
+    public Func<PathingPartyConfig> PartyConfigGetter { get; set; } = null!;
+}
 
 /// <summary>
 /// 寻路移动控制器 / Pathing movement controller.
@@ -40,13 +46,7 @@ public class PathingMovementController
     private readonly CameraRotateTask _rotateTask;
     private readonly TrapEscaper _trapEscaper;
     private readonly Suspend.PathExecutorSuspend _pathExecutorSuspend;
-    private readonly Func<ImageRegion> _captureAction;
-    private readonly Func<ImageRegion, bool> _endJudgmentAction;
-    private readonly Func<ImageRegion?, Task> _resolveAnomaliesAction;
-    private readonly Func<int, int, Task> _waitUntilRotatedToAction;
-    private readonly Func<string, Task<Avatar?>> _switchAvatarAction;
-    private readonly Func<Task> _useElementalSkillAction;
-    private readonly Func<PathingPartyConfig> _partyConfigGetter;
+    private readonly PathingMovementActions _actions;
     private DateTime _moveToStartTime;
     private DateTime _elementalSkillLastUseTime = DateTime.MinValue;
     private DateTime _useGadgetLastUseTime = DateTime.MinValue;
@@ -64,26 +64,14 @@ public class PathingMovementController
         CameraRotateTask rotateTask,
         TrapEscaper trapEscaper,
         Suspend.PathExecutorSuspend pathExecutorSuspend,
-        Func<ImageRegion> captureAction,
-        Func<ImageRegion, bool> endJudgmentAction,
-        Func<ImageRegion?, Task> resolveAnomaliesAction,
-        Func<int, int, Task> waitUntilRotatedToAction,
-        Func<string, Task<Avatar?>> switchAvatarAction,
-        Func<Task> useElementalSkillAction,
-        Func<PathingPartyConfig> partyConfigGetter)
+        PathingMovementActions actions)
     {
         _ct = ct;
         _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
         _rotateTask = rotateTask ?? throw new ArgumentNullException(nameof(rotateTask));
         _trapEscaper = trapEscaper ?? throw new ArgumentNullException(nameof(trapEscaper));
         _pathExecutorSuspend = pathExecutorSuspend ?? throw new ArgumentNullException(nameof(pathExecutorSuspend));
-        _captureAction = captureAction ?? throw new ArgumentNullException(nameof(captureAction));
-        _endJudgmentAction = endJudgmentAction ?? throw new ArgumentNullException(nameof(endJudgmentAction));
-        _resolveAnomaliesAction = resolveAnomaliesAction ?? throw new ArgumentNullException(nameof(resolveAnomaliesAction));
-        _waitUntilRotatedToAction = waitUntilRotatedToAction ?? throw new ArgumentNullException(nameof(waitUntilRotatedToAction));
-        _switchAvatarAction = switchAvatarAction ?? throw new ArgumentNullException(nameof(switchAvatarAction));
-        _useElementalSkillAction = useElementalSkillAction ?? throw new ArgumentNullException(nameof(useElementalSkillAction));
-        _partyConfigGetter = partyConfigGetter ?? throw new ArgumentNullException(nameof(partyConfigGetter));
+        _actions = actions ?? throw new ArgumentNullException(nameof(actions));
         
         _moveModeHandlers = new List<IMoveModeHandler>()
         {
@@ -112,13 +100,13 @@ public class PathingMovementController
     /// <returns>异步任务结果 / Asynchronous task result.</returns>
     public async Task<bool> FaceTo(WaypointForTrack waypoint)
     {
-        using var screen = _captureAction();
-        if (_endJudgmentAction(screen)) return true;
+        using var screen = _actions.CaptureAction();
+        if (_actions.EndJudgmentAction(screen)) return true;
 
         var position = await _navigator.GetPosition(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
         Logger.LogDebug("[寻路系统] 正在调整角色朝向，目标坐标：({X}, {Y})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _waitUntilRotatedToAction(targetOrientation, 2);
+        await _actions.WaitUntilRotatedToAction(targetOrientation, 2);
         await Delay(500, _ct);
 
         return false;
@@ -137,8 +125,8 @@ public class PathingMovementController
     public async Task<bool> MoveTo(WaypointForTrack waypoint, WaypointForTrack? previousWaypoint = null, WaypointForTrack? nextWaypoint = null)
     {
         ArgumentNullException.ThrowIfNull(waypoint);
-        var partyConfig = _partyConfigGetter();
-        await _switchAvatarAction(partyConfig.MainAvatarIndex);
+        var partyConfig = _actions.PartyConfigGetter();
+        await _actions.SwitchAvatarAction(partyConfig.MainAvatarIndex);
 
         Point2f position = await InitialCoarseApproach(waypoint);
         _moveToStartTime = DateTime.UtcNow;
@@ -147,7 +135,7 @@ public class PathingMovementController
         {
             CancellationToken = _ct,
             PartyConfigGetter = () => partyConfig,
-            UseElementalSkillAction = _useElementalSkillAction,
+            UseElementalSkillAction = _actions.UseElementalSkillAction,
             GetElementalSkillLastUseTime = () => _elementalSkillLastUseTime,
             SetElementalSkillLastUseTime = t => _elementalSkillLastUseTime = t,
             GetUseGadgetLastUseTime = () => _useGadgetLastUseTime,
@@ -192,7 +180,7 @@ public class PathingMovementController
             // 终点感知
             new BTSequence(
                 new BTCondition(() => {
-                    if (_endJudgmentAction(moveContext.Screen))
+                    if (_actions.EndJudgmentAction(moveContext.Screen))
                     {
                         exitBecauseEndJudgment = true;
                         isRouteCompleted = true;
@@ -218,7 +206,7 @@ public class PathingMovementController
                         }
                         position = await HandleInertialPositioning(waypoint, newPosition, moveContext.Screen, DateTime.UtcNow);
                         distance = Navigation.GetDistance(waypoint, position);
-                        Logger.LogDebug("[寻路系统] 正在向目标点移动，当前实时距离：{Distance:F1}", distance);
+                        //Logger.LogDebug("[寻路系统] 正在向目标点移动，当前实时距离：{Distance:F1}", distance);
 
                         // 【自进化寻路】定距抽样刻录真实坐标足迹 (每2.0距离记录一次)
                         if (position.X != 0 && position.Y != 0)
@@ -248,7 +236,7 @@ public class PathingMovementController
                     new BTSequence(
                         new BTCondition(() => distance < ARRIVE_DISTANCE_THRESHOLD),
                         new BTAction(() => {
-                            Logger.LogInformation("[寻路系统] 成功抵达目标路径点附近（距离 < {Threshold:F1}）。", ARRIVE_DISTANCE_THRESHOLD);
+                            // Logger.LogInformation("[寻路系统] 成功抵达目标路径点附近（距离 < {Threshold:F1}）。", ARRIVE_DISTANCE_THRESHOLD);
                             isRouteCompleted = true;
                             return BTStatus.Success;
                         })
@@ -309,10 +297,13 @@ public class PathingMovementController
             while (await ticker.WaitForNextTickAsync(_ct))
             {
                 moveContext.Num++;
-                using var screen = _captureAction();
+                using var screen = _actions.CaptureAction();
                 moveContext.Screen = screen;
                 
                 await rootNode.TickAsync();
+                
+                // Clear the reference so we don't accidentally hold onto a disposed object in other branches
+                moveContext.Screen = null!;
                 
                 if (caughtException != null)
                 {
@@ -350,11 +341,11 @@ public class PathingMovementController
 
     private async Task<Point2f> InitialCoarseApproach(WaypointForTrack waypoint)
     {
-        using var screen = _captureAction();
+        using var screen = _actions.CaptureAction();
         var result = await _navigator.GetPositionAndTime(screen, waypoint);
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, result.Item1);
         Logger.LogDebug("[寻路系统] 启动初步接近，开始转向目标坐标：({X}, {Y})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-        await _waitUntilRotatedToAction(targetOrientation, 5);
+        await _actions.WaitUntilRotatedToAction(targetOrientation, 5);
         return result.Item1;
     }
 
@@ -382,7 +373,7 @@ public class PathingMovementController
 
         if (_inertialTracker.DistanceTooFarRetryCount > 0 && _inertialTracker.DistanceTooFarRetryCount % 10 == 0)
         {
-            await _resolveAnomaliesAction(screen);
+            await _actions.ResolveAnomaliesAction(screen);
             Logger.LogInformation("[寻路系统] 正在尝试通过异常处理重置推算基准，上次有效坐标：({X:F1}, {Y:F1})", _inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
             Navigation.SetPrevPosition(_inertialTracker.LastValidPosition.X, _inertialTracker.LastValidPosition.Y);
             await Delay(500, _ct);
@@ -450,8 +441,8 @@ public class PathingMovementController
             float tt = t * t;
             float uu = u * u;
             
-            float targetX = uu * position.X + 2 * u * t * (float)waypoint.X + tt * (float)nextWaypoint.X;
-            float targetY = uu * position.Y + 2 * u * t * (float)waypoint.Y + tt * (float)nextWaypoint.Y;
+            float targetX = uu * position.X + 2 * u * t * (float)waypoint.X + tt * (float)nextWaypoint!.X;
+            float targetY = uu * position.Y + 2 * u * t * (float)waypoint.Y + tt * (float)nextWaypoint!.Y;
             
             var virtualWaypoint = new Waypoint { X = targetX, Y = targetY };
             targetOrientation = Navigation.GetTargetOrientation(virtualWaypoint, position);
@@ -509,7 +500,7 @@ public class PathingMovementController
                 }
                 
                 // 去除这里原先那种硬生生的堵塞 UI 线程的做法
-                // 注释掉：await _waitUntilRotatedToAction(targetOrientation, 2);
+                // 注释掉：await _actions.WaitUntilRotatedToAction(targetOrientation, 2);
             }
         }
         else
@@ -594,7 +585,7 @@ public class PathingMovementController
             // 目标判定达成
             new BTSequence(
                 new BTCondition(() => {
-                    if (_endJudgmentAction(screen))
+                    if (_actions.EndJudgmentAction(screen))
                     {
                         exitBecauseEndJudgment = true;
                         isRouteCompleted = true;
@@ -625,7 +616,7 @@ public class PathingMovementController
                         }
                         
                         if (lostRetryCount % 3 == 0)
-                            await _resolveAnomaliesAction(screen);
+                            await _actions.ResolveAnomaliesAction(screen);
 
                         Logger.LogWarning("[精细寻路] 视觉坐标信号断开时间过长，安全停止本次路径微调...");
                         isRouteCompleted = true;
@@ -666,7 +657,7 @@ public class PathingMovementController
                     new BTSequence(
                         new BTAction(async () => {
                             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-                            await _waitUntilRotatedToAction(targetOrientation, distance < 3.5f ? 5 : 2);
+                            await _actions.WaitUntilRotatedToAction(targetOrientation, distance < 3.5f ? 5 : 2);
                             
                             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                             await Delay(distance < 3.5f ? pulseForwardMs / 2 : pulseForwardMs, _ct);
@@ -682,10 +673,12 @@ public class PathingMovementController
         while (await microTicker.WaitForNextTickAsync(_ct))
         {
             stepsTaken++;
-            using var currentScreen = _captureAction();
+            using var currentScreen = _actions.CaptureAction();
             screen = currentScreen;
             
             await rootNode.TickAsync();
+            
+            screen = null!;
             
             if (isRouteCompleted)
             {

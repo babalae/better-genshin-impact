@@ -30,13 +30,13 @@ public static class ActionFactory
         ["wonderland_cycle"] = new EnterAndExitWonderlandHandler(),
         ["set_time"] = new SetTimeHandler(),
         ["use_gadget"] = new UseGadgetHandler(),
-        ["pick_up_collect"] = new PickUpCollectHandler()
+        ["pick_up_collect"] = new PickUpCollectHandler(),
+        ["stop_flying"] = new StopFlyingHandler()
     };
 
     private static readonly Dictionary<string, IActionHandler> BeforeHandlers = new(StringComparer.OrdinalIgnoreCase)
     {
         ["up_down_grab_leaf"] = new UpDownGrabLeafHandler(),
-        ["stop_flying"] = new StopFlyingHandler(),
         ["log_output"] = new LogOutputHandler()
     };
 

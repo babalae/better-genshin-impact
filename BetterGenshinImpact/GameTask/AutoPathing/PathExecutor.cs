@@ -106,13 +106,16 @@ public partial class PathExecutor
             _rotateTask,
             _trapEscaper,
             pathExecutorSuspend,
-            () => CaptureToRectArea(),
-            EndJudgment,
-            ResolveAnomalies,
-            WaitUntilRotatedTo,
-            index => SwitchAvatar(index),
-            UseElementalSkill,
-            () => PartyConfig);
+            new PathingMovementActions
+            {
+                CaptureAction = () => CaptureToRectArea(),
+                EndJudgmentAction = EndJudgment,
+                ResolveAnomaliesAction = ResolveAnomalies,
+                WaitUntilRotatedToAction = WaitUntilRotatedTo,
+                SwitchAvatarAction = index => SwitchAvatar(index),
+                UseElementalSkillAction = UseElementalSkill,
+                PartyConfigGetter = () => PartyConfig
+            });
             
         MovementController.OnRouteTraversed = (prev, target, actualTraj) => {
             RouteTelemetryManager.RecordSuccessfulRoute(prev, target, actualTraj);
@@ -266,6 +269,7 @@ public partial class PathExecutor
                 {
                     _navigator.StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
+                    throw;
                 }
                 catch (RetryNoCountException retryException)
                 {
