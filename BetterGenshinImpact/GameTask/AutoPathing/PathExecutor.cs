@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -106,13 +106,16 @@ public class PathExecutor
             _rotateTask,
             _trapEscaper,
             pathExecutorSuspend,
-            () => CaptureToRectArea(),
-            EndJudgment,
-            ResolveAnomalies,
-            WaitUntilRotatedTo,
-            index => SwitchAvatar(index),
-            UseElementalSkill,
-            () => PartyConfig);
+            new PathingMovementActions
+            {
+                CaptureAction = () => CaptureToRectArea(),
+                EndJudgmentAction = EndJudgment,
+                ResolveAnomaliesAction = ResolveAnomalies,
+                WaitUntilRotatedToAction = WaitUntilRotatedTo,
+                SwitchAvatarAction = index => SwitchAvatar(index),
+                UseElementalSkillAction = UseElementalSkill,
+                PartyConfigGetter = () => PartyConfig
+            });
             
         MovementController.OnRouteTraversed = (prev, target, actualTraj) => {
             RouteTelemetryManager.RecordSuccessfulRoute(prev, target, actualTraj);
@@ -261,6 +264,7 @@ public class PathExecutor
                 {
                     _navigator.StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
+                    throw;
                 }
                 catch (RetryNoCountException retryException)
                 {
