@@ -20,56 +20,144 @@
              mc:Ignorable="d">
 
     <UserControl.Resources>
+        <Style x:Key="TaskDefinitionListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+
+        <Style x:Key="TaskDefinitionListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border Background="Transparent"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TaskDefinitionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- 任务定义项模板 -->
         <DataTemplate x:Key="TaskDefinitionItemTemplate" DataType="{x:Type component:GearTaskDefinitionViewModel}">
-            <Border Background="{DynamicResource CardBackground}"
-                    BorderBrush="{DynamicResource CardBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Margin="2"
-                    Padding="8">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                                <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
+            <Border Style="{StaticResource TaskDefinitionCardStyle}">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    
-                    <ui:TextBlock Grid.Row="0"
-                                  FontWeight="SemiBold"
-                                  Text="{Binding Name}"
-                                  TextTrimming="CharacterEllipsis" />
-                    
-                    <ui:TextBlock Grid.Row="1"
-                                  Margin="0,4,0,0"
-                                  FontSize="12"
-                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="{Binding Description}"
-                                  TextTrimming="CharacterEllipsis"
-                                  TextWrapping="NoWrap"
-                                  HorizontalAlignment="Left"
-                                  MaxWidth="280"
-                                  MaxHeight="40" />
-                    
-                    <StackPanel Grid.Row="2"
-                                Margin="0,4,0,0"
-                                Orientation="Horizontal">
-                        <ui:TextBlock FontSize="10"
-                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding ModifiedTime, StringFormat='修改: {0:MM-dd HH:mm}'}" />
-                    </StackPanel>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border x:Name="SelectionIndicator"
+                            Grid.Column="0"
+                            Margin="0,1,8,1"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="2"
+                            Opacity="0" />
+
+                    <Border x:Name="IconBadge"
+                            Grid.Column="1"
+                            Width="24"
+                            Height="24"
+                            Margin="0,0,10,0"
+                            VerticalAlignment="Top"
+                            Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <ui:SymbolIcon x:Name="FolderIcon"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Symbol="Folder24" />
+                    </Border>
+
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ui:TextBlock Grid.Column="0"
+                                          VerticalAlignment="Center"
+                                          FontSize="13"
+                                          FontWeight="SemiBold"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                          Text="{Binding Name}"
+                                          TextTrimming="CharacterEllipsis" />
+
+                            <Border Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Padding="10,0"
+                                    Height="24"
+                                    VerticalAlignment="Top"
+                                    Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <ui:TextBlock FontSize="10"
+                                              VerticalAlignment="Center"
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                              Text="{Binding ModifiedTime, StringFormat='{}{0:MM-dd HH:mm}'}" />
+                            </Border>
+                        </Grid>
+
+                        <ui:TextBlock Grid.Row="1"
+                                      Margin="0,4,0,0"
+                                      FontSize="12"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding Description}"
+                                      TextTrimming="CharacterEllipsis"
+                                      TextWrapping="NoWrap" />
+                    </Grid>
                 </Grid>
             </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter TargetName="SelectionIndicator" Property="Opacity" Value="0.35" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter TargetName="SelectionIndicator" Property="Opacity" Value="1" />
+                    <Setter TargetName="IconBadge" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter TargetName="FolderIcon" Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
 
         <!-- 右键菜单 -->
@@ -159,13 +247,12 @@
                 <ListBox ItemsSource="{Binding TaskDefinitions}"
                          SelectedItem="{Binding SelectedTaskDefinition}"
                          ItemTemplate="{StaticResource TaskDefinitionItemTemplate}"
-                         Background="Transparent"
-                         BorderThickness="0"
+                         Style="{StaticResource TaskDefinitionListBoxStyle}"
+                         ItemContainerStyle="{StaticResource TaskDefinitionListBoxItemStyle}"
                          dd:DragDrop.IsDragSource="True"
                          dd:DragDrop.IsDropTarget="True"
                          dd:DragDrop.DropHandler="{Binding}"
-                         dd:DragDrop.UseDefaultDragAdorner="True"
-                         Padding="4">
+                         dd:DragDrop.UseDefaultDragAdorner="True">
                     <ListBox.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="新增任务定义"
@@ -184,21 +271,6 @@
                                       Icon="{ui:SymbolIcon Delete24}" />
                         </ContextMenu>
                     </ListBox.ContextMenu>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="Margin" Value="0" />
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="Transparent" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
                     <b:Interaction.Triggers>
                         <b:EventTrigger EventName="SelectionChanged">
                             <b:InvokeCommandAction Command="{Binding SelectTaskDefinitionCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=ListBox}}" />

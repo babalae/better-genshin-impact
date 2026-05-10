@@ -87,3 +87,5 @@ dotnet build BetterGenshinImpact.sln -c Debug
 ###其他要求
 
 1. 改动时候请不要删除已有的注释，你可以修改，但是不要删！
+2. 存在不确定点时主动提问
+3. 仅单次使用的代码，不做过度抽象封装

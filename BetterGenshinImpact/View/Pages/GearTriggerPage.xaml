@@ -38,8 +38,8 @@
                                 </Grid.RowDefinitions>
 
                                 <Border Grid.Row="0"
-                                        Margin="20,20,20,0"
-                                        Padding="6"
+                                        Margin="16,16,16,0"
+                                        Padding="5"
                                         Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
                                         BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
                                         BorderThickness="1"
@@ -51,7 +51,7 @@
 
                                 <Border x:Name="contentPanel"
                                         Grid.Row="1"
-                                        Margin="20,12,20,20"
+                                        Margin="16,8,16,16"
                                         Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
                                         BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
                                         BorderThickness="1"
@@ -77,7 +77,7 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                <Setter Property="Padding" Value="18,11" />
+                <Setter Property="Padding" Value="14,8" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type TabItem}">
@@ -85,7 +85,7 @@
                                   Background="Transparent"
                                   SnapsToDevicePixels="True">
                                 <Border x:Name="mainBorder"
-                                        Margin="0,0,8,0"
+                                        Margin="0,0,6,0"
                                         Background="Transparent"
                                         BorderBrush="Transparent"
                                         BorderThickness="0"
@@ -143,13 +143,13 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="999" />
-                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="Padding" Value="12,6" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
             <Style x:Key="TriggerToolbarBorderStyle" TargetType="Border">
-                <Setter Property="Margin" Value="16,10,16,0" />
-                <Setter Property="Padding" Value="18,12" />
+                <Setter Property="Margin" Value="16,8,16,0" />
+                <Setter Property="Padding" Value="14,10" />
                 <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
@@ -157,8 +157,8 @@
             </Style>
 
             <Style x:Key="TriggerHeaderBorderStyle" TargetType="Border">
-                <Setter Property="Margin" Value="20,14,20,0" />
-                <Setter Property="Padding" Value="18,6,18,8" />
+                <Setter Property="Margin" Value="16,10,16,0" />
+                <Setter Property="Padding" Value="14,4,14,6" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="0,0,0,1" />
@@ -176,7 +176,7 @@
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
                 <Setter Property="Padding" Value="0" />
-                <Setter Property="Margin" Value="20,10,20,0" />
+                <Setter Property="Margin" Value="16,6,16,0" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Template">
@@ -198,7 +198,7 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1.5" />
                 <Setter Property="CornerRadius" Value="8" />
-                <Setter Property="Padding" Value="16,14" />
+                <Setter Property="Padding" Value="14,10" />
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListViewItem}}" Value="True">
                         <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
@@ -291,7 +291,7 @@
                 <Grid>
                     <Border x:Name="RowAccent"
                             Width="4"
-                            Margin="4,8,0,8"
+                            Margin="4,6,0,6"
                             HorizontalAlignment="Left"
                             Background="{DynamicResource AccentFillColorDefaultBrush}"
                             CornerRadius="2"
@@ -318,7 +318,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           FontWeight="SemiBold"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           Text="{Binding Name}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding Name}" />
@@ -329,7 +329,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           Foreground="{DynamicResource AccentTextFillColorSecondaryBrush}"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           Text="{Binding HotkeyDisplayText}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding HotkeyDisplayText}"
@@ -341,7 +341,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           Foreground="{DynamicResource AccentTextFillColorSecondaryBrush}"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           Text="{Binding HotkeyTypeName}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding HotkeyTypeName}"
@@ -353,7 +353,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           Text="{Binding TaskDefinitionName, TargetNullValue='未设置'}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding TaskDefinitionName}" />
@@ -375,7 +375,7 @@
                 <Grid>
                     <Border x:Name="RowAccent"
                             Width="4"
-                            Margin="4,8,0,8"
+                            Margin="4,6,0,6"
                             HorizontalAlignment="Left"
                             Background="{DynamicResource AccentFillColorDefaultBrush}"
                             CornerRadius="2"
@@ -401,7 +401,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           FontWeight="SemiBold"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           Text="{Binding Name}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding Name}" />
@@ -412,7 +412,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           FontFamily="Consolas"
                                           Text="{Binding CronExpression, TargetNullValue='未设置'}"
                                           TextTrimming="CharacterEllipsis"
@@ -424,7 +424,7 @@
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
-                                          Padding="5,0"
+                                          Padding="4,0"
                                           Text="{Binding TaskDefinitionName, TargetNullValue='未设置'}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding TaskDefinitionName}" />
@@ -445,7 +445,7 @@
     </UserControl.Resources>
 
     <!-- 布局 -->
-    <Grid Margin="18,14,18,18">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -471,17 +471,17 @@
                                            Command="{Binding AddTimedTriggerCommand}"
                                            Icon="{ui:SymbolIcon Add24}"
                                            Appearance="Primary"
-                                           Margin="0,0,8,8" />
+                                           Margin="0,0,6,6" />
                                 <ui:Button Content="编辑选中项"
                                            Command="{Binding EditTriggerCommand}"
                                            Icon="{ui:SymbolIcon Edit24}"
                                            Appearance="Secondary"
-                                           Margin="0,0,8,8" />
+                                           Margin="0,0,6,6" />
                                 <ui:Button Content="删除选中项"
                                            Command="{Binding DeleteTriggerCommand}"
                                            Icon="{ui:SymbolIcon Delete24}"
                                            Appearance="Secondary"
-                                           Margin="0,0,8,8" />
+                                           Margin="0,0,6,6" />
                             </WrapPanel>
                         </Border>
 
@@ -491,7 +491,7 @@
 
                         <!-- 可滚动的列表内容 -->
                         <Grid Grid.Row="2"
-                              Margin="0,8,0,16">
+                              Margin="0,6,0,12">
                             <ui:ListView ItemsSource="{Binding TimedTriggers}"
                                          SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
                                          ItemContainerStyle="{StaticResource TriggerListViewItemStyle}"
@@ -515,7 +515,7 @@
                                               FontSize="16"
                                               FontWeight="SemiBold"
                                               Text="还没有定时触发器" />
-                                <ui:TextBlock Margin="0,6,0,0"
+                                <ui:TextBlock Margin="0,4,0,0"
                                               HorizontalAlignment="Center"
                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                               Text="点击上方按钮，先创建一个自动执行的定时触发器。" />
@@ -539,17 +539,17 @@
                                            Command="{Binding AddHotkeyTriggerCommand}"
                                            Icon="{ui:SymbolIcon Add24}"
                                            Appearance="Primary"
-                                           Margin="0,0,8,8" />
+                                           Margin="0,0,6,6" />
                                 <ui:Button Content="编辑选中项"
                                            Command="{Binding EditTriggerCommand}"
                                            Icon="{ui:SymbolIcon Edit24}"
                                            Appearance="Secondary"
-                                           Margin="0,0,8,8" />
+                                           Margin="0,0,6,6" />
                                 <ui:Button Content="删除选中项"
                                            Command="{Binding DeleteTriggerCommand}"
                                            Icon="{ui:SymbolIcon Delete24}"
                                            Appearance="Secondary"
-                                           Margin="0,0,8,8" />
+                                           Margin="0,0,6,6" />
                             </WrapPanel>
                         </Border>
 
@@ -559,7 +559,7 @@
 
                         <!-- 可滚动的列表内容 -->
                         <Grid Grid.Row="2"
-                              Margin="0,8,0,16">
+                              Margin="0,6,0,12">
                             <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
                                          SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
                                          ItemContainerStyle="{StaticResource TriggerListViewItemStyle}"
@@ -583,7 +583,7 @@
                                               FontSize="16"
                                               FontWeight="SemiBold"
                                               Text="还没有快捷键触发器" />
-                                <ui:TextBlock Margin="0,6,0,0"
+                                <ui:TextBlock Margin="0,4,0,0"
                                               HorizontalAlignment="Center"
                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                               Text="绑定一个按键后，就能更快地手动触发任务。" />
