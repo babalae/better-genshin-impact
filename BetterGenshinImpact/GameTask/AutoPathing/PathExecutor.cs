@@ -38,6 +38,7 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.Service.GearTask.Execution;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
@@ -101,6 +102,10 @@ public class PathExecutor
     // 最近一次获取派遣奖励的时间
     private DateTime _lastGetExpeditionRewardsTime = DateTime.MinValue;
 
+    private PathingGearTaskResumeState? _resumeState;
+
+    public IPathingRuntimeNotifier RuntimeNotifier { get; set; } = NullPathingRuntimeNotifier.Instance;
+
 
     //当到达恢复点位
     public void TryCloseSkipOtherOperations()
@@ -126,6 +131,25 @@ public class PathExecutor
         _skipOtherOperations = true;
         RecordWaypoints = CurWaypoints;
         RecordWaypoint = CurWaypoint;
+    }
+
+    public void ApplyResumeState(PathingGearTaskResumeState state)
+    {
+        _resumeState = state;
+        _skipOtherOperations = state.SkipOtherOperations;
+    }
+
+    public PathingGearTaskResumeState CaptureResumeState()
+    {
+        return new PathingGearTaskResumeState
+        {
+            PathFile = string.Empty,
+            WaypointGroupIndex = CurWaypoints.Item1,
+            WaypointIndex = CurWaypoint.Item1,
+            SkipOtherOperations = _skipOtherOperations,
+            LastAction = CurWaypoint.Item2?.Action,
+            CaptureTime = DateTime.Now,
+        };
     }
 
     public async Task Pathing(PathingTask task)
@@ -181,7 +205,9 @@ public class PathExecutor
                     foreach (var waypoint in waypoints) // 一条路径
                     {
                         CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
+                        await NotifyWaypointEnteredAsync(waypoint);
                         TryCloseSkipOtherOperations();
+                        await NotifyResumePointUpdatedAsync("路径断点已更新");
                         await RecoverWhenLowHp(waypoint); // 低血量恢复
 
                         if (waypoint.Type == WaypointType.Teleport.Code)
@@ -203,6 +229,8 @@ public class PathExecutor
                                 }
                             }
                             await HandleTeleportWaypoint(waypoint);
+                            await RuntimeNotifier.NotifyTeleportCompletedAsync(CurWaypoints.Item1, CurWaypoint.Item1, waypoint.X, waypoint.Y, ct);
+                            await NotifyWaypointCompletedAsync(waypoint);
                         }
                         else
                         {
@@ -235,7 +263,13 @@ public class PathExecutor
 
                                 // 执行 action
                                 await AfterMoveToTarget(waypoint);
+                                if (!string.IsNullOrWhiteSpace(waypoint.Action))
+                                {
+                                    await RuntimeNotifier.NotifyActionCompletedAsync(CurWaypoints.Item1, CurWaypoint.Item1, waypoint.Action, waypoint.X, waypoint.Y, ct);
+                                }
                             }
+
+                            await NotifyWaypointCompletedAsync(waypoint);
                         }
                     }
 
@@ -715,6 +749,46 @@ public class PathExecutor
             .ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)tpX, (float)tpY));
         Navigation.SetPrevPosition(tprX, tprY); // 通过上一个位置直接进行局部特征匹配
         await Delay(500, ct); // 多等一会
+    }
+
+    private async Task NotifyWaypointEnteredAsync(WaypointForTrack waypoint)
+    {
+        ApplyResumeSkipPolicy();
+        await RuntimeNotifier.NotifyWaypointEnteredAsync(CurWaypoints.Item1, CurWaypoint.Item1, waypoint.Action, waypoint.X, waypoint.Y, ct);
+    }
+
+    private async Task NotifyWaypointCompletedAsync(WaypointForTrack waypoint)
+    {
+        await RuntimeNotifier.NotifyWaypointCompletedAsync(CurWaypoints.Item1, CurWaypoint.Item1, waypoint.Action, waypoint.X, waypoint.Y, ct);
+    }
+
+    private async Task NotifyResumePointUpdatedAsync(string message)
+    {
+        var state = CaptureResumeState();
+        await RuntimeNotifier.NotifyResumePointUpdatedAsync(state, message, ct);
+    }
+
+    private void ApplyResumeSkipPolicy()
+    {
+        if (_resumeState == null)
+        {
+            return;
+        }
+
+        if (CurWaypoints.Item1 < _resumeState.WaypointGroupIndex)
+        {
+            _skipOtherOperations = true;
+            return;
+        }
+
+        if (CurWaypoints.Item1 == _resumeState.WaypointGroupIndex && CurWaypoint.Item1 < _resumeState.WaypointIndex)
+        {
+            _skipOtherOperations = true;
+            return;
+        }
+
+        _skipOtherOperations = false;
+        _resumeState = null;
     }
 
     public async Task FaceTo(WaypointForTrack waypoint)
