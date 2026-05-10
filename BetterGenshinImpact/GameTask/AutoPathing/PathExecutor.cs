@@ -445,7 +445,7 @@ public class PathExecutor
 
             EndJudgment(screen);
 
-            position = await GetPosition(screen, waypoint);
+            position = await _navigator.GetPosition(screen, waypoint);
             if (Navigation.GetDistance(waypoint, position) < 2)
             {
                 Logger.LogDebug("已到达路径点");
@@ -483,7 +483,7 @@ public class PathExecutor
             Simulation.SendInput.Mouse.MiddleButtonClick();
             await Delay(300, ct);
             var screen = CaptureToRectArea();
-            var position = await GetPosition(screen, waypoint);
+            var position = await _navigator.GetPosition(screen, waypoint);
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             await WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
