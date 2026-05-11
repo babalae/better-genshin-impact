@@ -22,6 +22,9 @@ public partial class GearTaskViewModel : ObservableObject
     [ObservableProperty]
     private string _taskType = string.Empty;
 
+    [ObservableProperty]
+    private string _latestExecutionResult = string.Empty;
+
     private bool _isEnabled = true;
     
     /// <summary>

@@ -1,77 +1,141 @@
-using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Logging;
-using System.Linq;
 using System;
 using System.Collections.Generic;
-using BetterGenshinImpact.ViewModel.Pages.Component;
-using BetterGenshinImpact.Service;
-using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.GearTask;
+using BetterGenshinImpact.Service.GearTask.Execution;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.GearTask;
+using BetterGenshinImpact.ViewModel.Pages.Component;
 using BetterGenshinImpact.ViewModel.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 /// <summary>
-/// 任务列表页面ViewModel
+/// 任务列表页面 ViewModel。
 /// </summary>
 public partial class GearTaskListPageViewModel : ViewModel
 {
     private readonly ILogger<GearTaskListPageViewModel> _logger;
     private readonly GearTaskStorageService _storageService;
+    private readonly IGearTaskHistoryStore _historyStore;
+    private readonly GearTaskExecutor _taskExecutor;
 
     /// <summary>
-    /// 任务定义列表（左侧）
+    /// 任务定义列表（左侧）。
     /// </summary>
     [ObservableProperty] private ObservableCollection<GearTaskDefinitionViewModel> _taskDefinitions = new();
 
     /// <summary>
-    /// 当前选中的任务定义
+    /// 当前选中的任务定义。
     /// </summary>
     [ObservableProperty] private GearTaskDefinitionViewModel? _selectedTaskDefinition;
 
     /// <summary>
-    /// 当前任务树根节点（右侧）
+    /// 当前任务树根节点（右侧定义区）。
     /// </summary>
     [ObservableProperty] private GearTaskViewModel _currentTaskTreeRoot = new();
 
     /// <summary>
-    /// 当前选中的任务节点
+    /// 当前选中的任务节点。
     /// </summary>
     [ObservableProperty] private GearTaskViewModel? _selectedTaskNode;
 
-    public GearTaskListPageViewModel(ILogger<GearTaskListPageViewModel> logger, GearTaskStorageService storageService)
+    [ObservableProperty] private int _selectedDetailTabIndex;
+
+    [ObservableProperty] private string _executionRecordTabTitle = "执行记录 (0)";
+
+    [ObservableProperty] private string _latestExecutionStatusText = "暂无执行记录";
+
+    [ObservableProperty] private string _latestResumeNodeText = "-";
+
+    [ObservableProperty] private string _executionSuccessRateText = "-";
+
+    [ObservableProperty] private string _executionAverageDurationText = "-";
+
+    [ObservableProperty] private ObservableCollection<GearTaskExecutionRecordItemViewModel> _recentExecutionRecords = [];
+
+    [ObservableProperty] private GearTaskExecutionRecordItemViewModel? _selectedExecutionRecord;
+
+    [ObservableProperty] private ObservableCollection<GearTaskExecutionNodeItemViewModel> _selectedExecutionNodes = [];
+
+    [ObservableProperty] private bool _canResumeSelectedExecutionRecord;
+
+    public GearTaskExecutor Executor => _taskExecutor;
+
+    public GearTaskListPageViewModel(
+        ILogger<GearTaskListPageViewModel> logger,
+        GearTaskStorageService storageService,
+        IGearTaskHistoryStore historyStore,
+        GearTaskExecutor taskExecutor)
     {
         _logger = logger;
         _storageService = storageService;
+        _historyStore = historyStore;
+        _taskExecutor = taskExecutor;
+
         InitializeData();
 
-        // 监听集合变化，实现自动保存
         TaskDefinitions.CollectionChanged += OnTaskDefinitionsChanged;
-
-        // 监听当前任务树根节点的子集合变化，用于拖拽后自动保存
         CurrentTaskTreeRoot.Children.CollectionChanged += OnCurrentTaskTreeChanged;
     }
 
+    partial void OnSelectedTaskDefinitionChanged(GearTaskDefinitionViewModel? value)
+    {
+        foreach (var task in TaskDefinitions)
+        {
+            task.IsSelected = false;
+        }
+
+        if (value != null)
+        {
+            value.IsSelected = true;
+        }
+
+        CurrentTaskTreeRoot.Children.CollectionChanged -= OnCurrentTaskTreeChanged;
+
+        CurrentTaskTreeRoot = value?.RootTask ?? new GearTaskViewModel();
+
+        CurrentTaskTreeRoot.Children.CollectionChanged += OnCurrentTaskTreeChanged;
+
+        _ = LoadExecutionRecordsForSelectedTaskDefinitionAsync(value);
+    }
+
+    partial void OnSelectedExecutionRecordChanged(GearTaskExecutionRecordItemViewModel? value)
+    {
+        SelectedExecutionNodes.Clear();
+        CanResumeSelectedExecutionRecord = value?.Record.CanResume == true;
+
+        if (value == null)
+        {
+            return;
+        }
+
+        foreach (var node in value.Record.Nodes.OrderBy(n => n.NodeId, Comparer<string>.Create(GearTaskExecutionDisplayHelper.CompareNodeId)))
+        {
+            SelectedExecutionNodes.Add(new GearTaskExecutionNodeItemViewModel(node));
+        }
+    }
+
     /// <summary>
-    /// 任务定义集合变化时的处理
+    /// 任务定义集合变化时，更新顺序并保存。
     /// </summary>
     private async void OnTaskDefinitionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // 当集合发生变化时（包括拖拽重排序），更新Order属性并保存
         try
         {
-            // 更新所有任务定义的Order属性以反映当前顺序
             for (int i = 0; i < TaskDefinitions.Count; i++)
             {
                 if (TaskDefinitions[i].Order != i)
@@ -81,76 +145,71 @@ public partial class GearTaskListPageViewModel : ViewModel
                 }
             }
 
-            // 保存所有受影响的任务定义
             foreach (var taskDef in TaskDefinitions)
             {
                 await _storageService.SaveTaskDefinitionAsync(taskDef);
             }
-
-            _logger.LogInformation("任务定义列表顺序已更新并保存");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "保存任务定义列表顺序时发生错误");
+            _logger.LogError(ex, "保存任务定义顺序失败");
         }
     }
 
     /// <summary>
-    /// 当前任务树集合变化时的处理（用于拖拽后自动保存）
+    /// 根级树结构变化后自动保存。
     /// </summary>
     private async void OnCurrentTaskTreeChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (SelectedTaskDefinition != null)
+        if (SelectedTaskDefinition == null)
         {
-            try
-            {
-                SelectedTaskDefinition.ModifiedTime = DateTime.Now;
-                await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
-                _logger.LogInformation("任务树根级别结构变化，已自动保存任务定义 '{TaskName}'", SelectedTaskDefinition.Name);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", SelectedTaskDefinition.Name);
-            }
+            return;
+        }
+
+        try
+        {
+            SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+            await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "自动保存任务定义失败: {TaskName}", SelectedTaskDefinition.Name);
         }
     }
 
     /// <summary>
-    /// 初始化数据
+    /// 初始化任务定义和历史记录摘要。
     /// </summary>
     private async void InitializeData()
     {
         try
         {
-            // 从 JSON 文件加载任务定义
             var loadedTasks = await _storageService.LoadAllTaskDefinitionsAsync();
-
-            // 按order字段排序
-            var sortedTasks = loadedTasks.OrderBy(t => t.Order).ToList();
-
-            foreach (var task in sortedTasks)
+            foreach (var task in loadedTasks.OrderBy(t => t.Order))
             {
                 TaskDefinitions.Add(task);
-                // 为每个任务定义设置属性变化监听
                 SetupTaskDefinitionPropertyChanged(task);
             }
 
-            // 如果没有加载到任何任务，创建一个示例任务
             if (TaskDefinitions.Count == 0)
             {
                 await CreateSampleTaskAsync();
             }
+
+            await RefreshTaskDefinitionExecutionSummariesAsync();
+            SelectedTaskDefinition ??= TaskDefinitions.FirstOrDefault();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "初始化任务数据时发生错误");
-            // 发生错误时创建示例任务
+            _logger.LogError(ex, "初始化任务列表失败");
             await CreateSampleTaskAsync();
+            await RefreshTaskDefinitionExecutionSummariesAsync();
+            SelectedTaskDefinition ??= TaskDefinitions.FirstOrDefault();
         }
     }
 
     /// <summary>
-    /// 创建示例任务
+    /// 创建示例任务。
     /// </summary>
     private async Task CreateSampleTaskAsync()
     {
@@ -161,176 +220,139 @@ public partial class GearTaskListPageViewModel : ViewModel
             sampleTask.RootTask.AddChild(new GearTaskViewModel("战斗任务1") { TaskType = "战斗任务" });
 
             var subGroup = new GearTaskViewModel("子任务组", true);
-            subGroup.AddChild(new GearTaskViewModel("传送任务1") { TaskType = "传送任务" });
+            subGroup.AddChild(new GearTaskViewModel("传送任务") { TaskType = "传送任务" });
             subGroup.AddChild(new GearTaskViewModel("交互任务1") { TaskType = "交互任务" });
             sampleTask.RootTask.AddChild(subGroup);
         }
 
         TaskDefinitions.Add(sampleTask);
         SetupTaskDefinitionPropertyChanged(sampleTask);
-
-        // 保存示例任务到文件
         await _storageService.SaveTaskDefinitionAsync(sampleTask);
+        await RefreshTaskDefinitionExecutionSummaryAsync(sampleTask);
     }
 
-    /// <summary>
-    /// 选中任务定义时的处理
-    /// </summary>
-    partial void OnSelectedTaskDefinitionChanged(GearTaskDefinitionViewModel? value)
-    {
-        // 清除之前选中项的状态
-        foreach (var task in TaskDefinitions)
-        {
-            task.IsSelected = false;
-        }
-
-        // 设置当前选中项
-        if (value != null)
-        {
-            value.IsSelected = true;
-        }
-
-        // 先解除之前的事件绑定
-        CurrentTaskTreeRoot.Children.CollectionChanged -= OnCurrentTaskTreeChanged;
-
-        // 设置当前任务树根节点
-        if (value?.RootTask != null)
-        {
-            CurrentTaskTreeRoot = value.RootTask;
-        }
-        else
-        {
-            CurrentTaskTreeRoot = new GearTaskViewModel();
-        }
-
-        // 重新绑定事件
-        CurrentTaskTreeRoot.Children.CollectionChanged += OnCurrentTaskTreeChanged;
-    }
-
-    /// <summary>
-    /// 选择任务定义命令
-    /// </summary>
     [RelayCommand]
     private void SelectTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
     {
         SelectedTaskDefinition = taskDefinition;
     }
 
-    /// <summary>
-    /// 添加新的任务定义
-    /// </summary>
     [RelayCommand]
     private async Task AddTaskDefinition()
     {
         var editViewModel = App.GetService<TaskDefinitionEditWindowViewModel>();
-        if (editViewModel == null) return;
+        var editWindow = App.GetService<TaskDefinitionEditWindow>();
+        if (editViewModel == null || editWindow == null)
+        {
+            return;
+        }
 
         editViewModel.Name = $"新任务组{TaskDefinitions.Count + 1}";
-        editViewModel.Description = "";
-
-        var editWindow = App.GetService<TaskDefinitionEditWindow>();
-        if (editWindow == null) return;
+        editViewModel.Description = string.Empty;
 
         editWindow.ViewModel.Name = editViewModel.Name;
         editWindow.ViewModel.Description = editViewModel.Description;
         editWindow.Owner = Application.Current.MainWindow;
 
-        if (editWindow.ShowDialog() == true)
+        if (editWindow.ShowDialog() != true)
         {
-            var newTask = new GearTaskDefinitionViewModel(editWindow.ViewModel.Name, editWindow.ViewModel.Description);
-            // 设置新任务的order为当前最大值+1
-            newTask.Order = TaskDefinitions.Count > 0 ? TaskDefinitions.Max(t => t.Order) + 1 : 0;
-            TaskDefinitions.Add(newTask);
-            SetupTaskDefinitionPropertyChanged(newTask);
-            SelectedTaskDefinition = newTask;
-
-            // 自动保存到文件
-            await _storageService.SaveTaskDefinitionAsync(newTask);
+            return;
         }
+
+        var newTask = new GearTaskDefinitionViewModel(editWindow.ViewModel.Name, editWindow.ViewModel.Description)
+        {
+            Order = TaskDefinitions.Count > 0 ? TaskDefinitions.Max(t => t.Order) + 1 : 0,
+        };
+
+        TaskDefinitions.Add(newTask);
+        SetupTaskDefinitionPropertyChanged(newTask);
+        SelectedTaskDefinition = newTask;
+
+        await _storageService.SaveTaskDefinitionAsync(newTask);
+        await RefreshTaskDefinitionExecutionSummaryAsync(newTask);
     }
 
-    /// <summary>
-    /// 删除任务定义
-    /// </summary>
     [RelayCommand]
     private async Task DeleteTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
     {
-        if (taskDefinition == null) return;
-
-        var result = MessageBox.Show($"确定要删除任务定义 '{taskDefinition.Name}' 吗？", "确认删除",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-        if (result == MessageBoxResult.Yes)
+        if (taskDefinition == null)
         {
-            var taskName = taskDefinition.Name;
-            TaskDefinitions.Remove(taskDefinition);
-            if (SelectedTaskDefinition == taskDefinition)
-            {
-                SelectedTaskDefinition = TaskDefinitions.FirstOrDefault();
-            }
-
-            // 删除对应的 JSON 文件
-            await _storageService.DeleteTaskDefinitionAsync(taskName);
+            return;
         }
+
+        var result = MessageBox.Show(
+            $"确定要删除任务定义 '{taskDefinition.Name}' 吗？",
+            "确认删除",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var taskName = taskDefinition.Name;
+        TaskDefinitions.Remove(taskDefinition);
+        if (SelectedTaskDefinition == taskDefinition)
+        {
+            SelectedTaskDefinition = TaskDefinitions.FirstOrDefault();
+        }
+
+        await _storageService.DeleteTaskDefinitionAsync(taskName);
     }
 
-    /// <summary>
-    /// 编辑选中的任务定义
-    /// </summary>
     [RelayCommand]
     private async Task EditSelectedTaskDefinition()
     {
-        if (SelectedTaskDefinition == null) return;
+        if (SelectedTaskDefinition == null)
+        {
+            return;
+        }
 
         var editViewModel = App.GetService<TaskDefinitionEditWindowViewModel>();
-        if (editViewModel == null) return;
+        var editWindow = App.GetService<TaskDefinitionEditWindow>();
+        if (editViewModel == null || editWindow == null)
+        {
+            return;
+        }
 
         editViewModel.Name = SelectedTaskDefinition.Name;
         editViewModel.Description = SelectedTaskDefinition.Description;
 
-        var editWindow = App.GetService<TaskDefinitionEditWindow>();
-        if (editWindow == null) return;
-
         editWindow.ViewModel.Name = editViewModel.Name;
         editWindow.ViewModel.Description = editViewModel.Description;
         editWindow.Owner = Application.Current.MainWindow;
 
-        if (editWindow.ShowDialog() == true)
+        if (editWindow.ShowDialog() != true)
         {
-            SelectedTaskDefinition.Name = editWindow.ViewModel.Name;
-            SelectedTaskDefinition.Description = editWindow.ViewModel.Description;
-            SelectedTaskDefinition.ModifiedTime = DateTime.Now;
-
-            // 自动保存到文件
-            await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
-
-            _logger.LogInformation("编辑了任务定义: {Name}", SelectedTaskDefinition.Name);
+            return;
         }
+
+        SelectedTaskDefinition.Name = editWindow.ViewModel.Name;
+        SelectedTaskDefinition.Description = editWindow.ViewModel.Description;
+        SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+
+        await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+        await RefreshTaskDefinitionExecutionSummaryAsync(SelectedTaskDefinition);
     }
 
-    /// <summary>
-    /// 删除选中的任务定义
-    /// </summary>
     [RelayCommand]
     private async Task DeleteSelectedTaskDefinition()
     {
-        if (SelectedTaskDefinition == null) return;
+        if (SelectedTaskDefinition == null)
+        {
+            return;
+        }
 
         await DeleteTaskDefinition(SelectedTaskDefinition);
     }
 
-    /// <summary>
-    /// 执行选中的任务定义（整组执行）
-    /// </summary>
     [RelayCommand]
     private async Task ExecuteSelectedTaskDefinition()
     {
         await ExecuteTaskDefinition(SelectedTaskDefinition);
     }
 
-    /// <summary>
-    /// 执行指定任务定义（整组执行）
-    /// </summary>
     [RelayCommand]
     private async Task ExecuteTaskDefinition(GearTaskDefinitionViewModel? taskDefinition)
     {
@@ -341,28 +363,75 @@ public partial class GearTaskListPageViewModel : ViewModel
             return;
         }
 
+        if (_taskExecutor.IsExecuting)
+        {
+            Toast.Warning("已有任务组正在执行，请稍后再试");
+            return;
+        }
+
         try
         {
-            var executor = App.GetRequiredService<GearTaskExecutor>();
-            if (executor.IsExecuting)
-            {
-                Toast.Warning("已有任务组正在执行，请稍后再试");
-                return;
-            }
-
-            await executor.ExecuteTaskDefinitionAsync(taskDefinition.Name);
+            await _taskExecutor.ExecuteTaskDefinitionAsync(taskDefinition.Name);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "执行任务定义失败: {TaskName}", taskDefinition.Name);
             Toast.Error($"执行任务组失败：{ex.Message}");
         }
+        finally
+        {
+            await RefreshTaskDefinitionExecutionSummaryAsync(taskDefinition);
+            if (SelectedTaskDefinition?.Name == taskDefinition.Name)
+            {
+                await LoadExecutionRecordsForSelectedTaskDefinitionAsync(SelectedTaskDefinition);
+            }
+        }
     }
 
+    [RelayCommand]
+    private async Task ResumeSelectedExecutionRecord()
+    {
+        if (SelectedTaskDefinition == null || SelectedExecutionRecord == null)
+        {
+            Toast.Warning("请先选择一条执行记录");
+            return;
+        }
 
-    /// <summary>
-    /// 添加任务节点
-    /// </summary>
+        if (!SelectedExecutionRecord.Record.CanResume)
+        {
+            Toast.Warning("当前记录没有可恢复的断点");
+            return;
+        }
+
+        if (_taskExecutor.IsExecuting)
+        {
+            Toast.Warning("已有任务组正在执行，请稍后再试");
+            return;
+        }
+
+        try
+        {
+            await _taskExecutor.ResumeTaskDefinitionAsync(SelectedTaskDefinition.Name, SelectedExecutionRecord.RecordId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "恢复任务记录失败: {TaskName} {RecordId}", SelectedTaskDefinition.Name, SelectedExecutionRecord.RecordId);
+            Toast.Error($"继续执行失败：{ex.Message}");
+        }
+        finally
+        {
+            await RefreshTaskDefinitionExecutionSummaryAsync(SelectedTaskDefinition);
+            await LoadExecutionRecordsForSelectedTaskDefinitionAsync(SelectedTaskDefinition);
+            SelectedDetailTabIndex = 1;
+        }
+    }
+
+    [RelayCommand]
+    private void StopTaskExecution()
+    {
+        _taskExecutor.StopExecution();
+    }
+
     [RelayCommand]
     private async Task AddTaskNode(string? taskType = null)
     {
@@ -371,114 +440,100 @@ public partial class GearTaskListPageViewModel : ViewModel
             Toast.Warning("请先选择一个任务定义");
             return;
         }
-        // 检查选中的节点是否为任务组，任务节点下不允许添加任务节点
+
         if (SelectedTaskNode != null && !SelectedTaskNode.IsDirectory)
         {
-            Toast.Warning("只有任务组下能够添加任务！");
+            Toast.Warning("只有任务组下才能继续添加任务");
             return;
         }
 
-        // 如果没有指定任务类型，默认为Javascript
         taskType ??= "Javascript";
 
         GearTaskViewModel newTask;
-
-        // 如果是JS脚本类型，使用JS脚本选择窗口
         if (taskType == "Javascript")
         {
             var jsSelectionWindow = new JsScriptSelectionWindow
             {
-                Owner = Application.Current.MainWindow
+                Owner = Application.Current.MainWindow,
             };
 
             jsSelectionWindow.ShowDialog();
-            
-            if (jsSelectionWindow.DialogResult && jsSelectionWindow.ViewModel.SelectedScript != null)
+            if (!jsSelectionWindow.DialogResult || jsSelectionWindow.ViewModel.SelectedScript == null)
             {
-                var selectedScript = jsSelectionWindow.ViewModel.SelectedScript;
-                newTask = new GearTaskViewModel(string.IsNullOrWhiteSpace(selectedScript.Name) ? selectedScript.FolderName : selectedScript.Name)
-                {
-                    TaskType = "Javascript",
-                    Path = @$"{{jsUserFolder}}\{selectedScript.FolderName}\"
-                };
+                return;
             }
-            else
+
+            var selectedScript = jsSelectionWindow.ViewModel.SelectedScript;
+            newTask = new GearTaskViewModel(string.IsNullOrWhiteSpace(selectedScript.Name) ? selectedScript.FolderName : selectedScript.Name)
             {
-                return; // 用户取消了操作
-            }
+                TaskType = "Javascript",
+                Path = $@"{{jsUserFolder}}\{selectedScript.FolderName}\",
+            };
         }
-        // 如果是地图追踪类型，使用地图追踪任务选择窗口
         else if (taskType == "Pathing")
         {
             var pathingSelectionWindow = new PathingTaskSelectionWindow
             {
-                Owner = Application.Current.MainWindow
+                Owner = Application.Current.MainWindow,
             };
 
             pathingSelectionWindow.ShowDialog();
-            
-            if (pathingSelectionWindow.DialogResult && pathingSelectionWindow.SelectedGearTask != null)
+            if (!pathingSelectionWindow.DialogResult || pathingSelectionWindow.SelectedGearTask == null)
             {
-                newTask = pathingSelectionWindow.SelectedGearTask;
+                return;
             }
-            else
-            {
-                return; // 用户取消了操作
-            }
+
+            newTask = pathingSelectionWindow.SelectedGearTask;
         }
-        else if (taskType == "Shell")
+        else if (taskType == "KeyMouse")
         {
             var list = LoadAllKmScripts();
             var folder = KeyMouseRecordPageViewModel.ScriptPath;
             var combobox = new ComboBox
             {
-                VerticalAlignment = VerticalAlignment.Top
+                VerticalAlignment = VerticalAlignment.Top,
             };
 
             foreach (var fileInfo in list)
             {
-                // 计算相对于 KeyMouseScript 文件夹的相对路径
                 var relativePath = Path.GetRelativePath(folder, fileInfo.FullName);
                 combobox.Items.Add(relativePath);
             }
 
-            var str = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
-            if (!string.IsNullOrEmpty(str))
-            {
-                newTask = new GearTaskViewModel(str)
-                {
-                    TaskType = "Javascript",
-                    Path = @$"{{kmUserFolder}}\{str}\"
-                };
-            }
-            else
+            var selected = PromptDialog.Prompt("请选择需要添加的键鼠脚本", "请选择需要添加的键鼠脚本", combobox);
+            if (string.IsNullOrEmpty(selected))
             {
                 return;
             }
+
+            newTask = new GearTaskViewModel(selected)
+            {
+                TaskType = "Javascript",
+                Path = $@"{{kmUserFolder}}\{selected}\",
+            };
         }
         else if (taskType == "Shell")
         {
-            var str = PromptDialog.Prompt("执行 shell 操作存在极大风险！请勿输入你看不懂的指令！以免引发安全隐患并损坏系统！\n执行 shell 的时候，游戏可能会失去焦点", "请输入需要执行的shell");
-            if (!string.IsNullOrEmpty(str))
-            {
-                newTask = new GearTaskViewModel(str)
-                {
-                    TaskType = "Shell",
-                    Parameters = str
-                };
-            }
-            else
+            var command = PromptDialog.Prompt(
+                "执行 shell 操作存在风险，请确认命令内容正确后再执行。",
+                "请输入需要执行的 shell 命令");
+            if (string.IsNullOrEmpty(command))
             {
                 return;
             }
+
+            newTask = new GearTaskViewModel(command)
+            {
+                TaskType = "Shell",
+                Parameters = command,
+            };
         }
         else
         {
-            // 其他类型使用原有的对话框
             var dialogResult = AddTaskNodeDialog.ShowDialog(taskType, Application.Current.MainWindow);
             if (dialogResult == null)
             {
-                return; // 用户取消了操作
+                return;
             }
 
             newTask = new GearTaskViewModel(dialogResult.TaskName)
@@ -487,35 +542,20 @@ public partial class GearTaskListPageViewModel : ViewModel
             };
         }
 
-
-
-        // 如果有选中的节点，则在选中节点下新增
-        // 如果未选择节点，则在根节点下直接新增
         var targetParent = SelectedTaskNode ?? SelectedTaskDefinition.RootTask;
         targetParent.AddChild(newTask);
-
-        // 展开父节点
         targetParent.IsExpanded = true;
-
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
-
-        // 自动保存到文件
         await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
     }
-    
+
     private List<FileInfo> LoadAllKmScripts()
     {
         var folder = KeyMouseRecordPageViewModel.ScriptPath;
-        // 获取所有脚本项目
-        var files = Directory.GetFiles(folder, "*.*",
-            SearchOption.AllDirectories);
-
+        var files = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories);
         return files.Select(file => new FileInfo(file)).ToList();
     }
 
-    /// <summary>
-    /// 添加任务组
-    /// </summary>
     [RelayCommand]
     private async Task AddTaskGroup()
     {
@@ -525,60 +565,50 @@ public partial class GearTaskListPageViewModel : ViewModel
             return;
         }
 
-        // 检查选中的节点是否为任务组，任务节点下不允许添加任务组
         if (SelectedTaskNode != null && !SelectedTaskNode.IsDirectory)
         {
-            Toast.Warning("任务节点下不允许添加任务组，只有任务组下能够添加任务组");
+            Toast.Warning("只有任务组下才能继续添加任务组");
             return;
         }
 
-        // 弹出对话框输入任务组名称
         var groupName = PromptDialog.Prompt("请输入任务组名称:", "添加任务组", $"新任务组{DateTime.Now:HHmmss}");
         if (string.IsNullOrWhiteSpace(groupName))
         {
-            return; // 用户取消了操作
+            return;
         }
 
         var newGroup = new GearTaskViewModel(groupName, true);
-
-        // 如果有选中的节点，则在选中节点下新增
-        // 如果未选择节点，则在根节点下直接新增
         var targetParent = SelectedTaskNode ?? SelectedTaskDefinition.RootTask;
         targetParent.AddChild(newGroup);
-
-        // 展开父节点
         targetParent.IsExpanded = true;
-
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
-
-        // 自动保存到文件
         await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
     }
 
-    /// <summary>
-    /// 删除任务节点
-    /// </summary>
     [RelayCommand]
     private async Task DeleteTaskNode(GearTaskViewModel? taskNode)
     {
-        if (taskNode == null || SelectedTaskDefinition?.RootTask == null) return;
-
-        var result = MessageBox.Show($"确定要删除任务 '{taskNode.Name}' 吗？", "确认删除",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-        if (result == MessageBoxResult.Yes)
+        if (taskNode == null || SelectedTaskDefinition?.RootTask == null)
         {
-            RemoveTaskFromTree(SelectedTaskDefinition.RootTask, taskNode);
-            SelectedTaskDefinition.ModifiedTime = DateTime.Now;
-
-            // 自动保存到文件
-            await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+            return;
         }
+
+        var result = MessageBox.Show(
+            $"确定要删除任务 '{taskNode.Name}' 吗？",
+            "确认删除",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        RemoveTaskFromTree(SelectedTaskDefinition.RootTask, taskNode);
+        SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+        await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
     }
 
-    /// <summary>
-    /// 从树中移除任务节点
-    /// </summary>
     private bool RemoveTaskFromTree(GearTaskViewModel parent, GearTaskViewModel target)
     {
         if (parent.Children.Contains(target))
@@ -599,7 +629,7 @@ public partial class GearTaskListPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 从JSON文件重新加载所有任务定义（内部使用）
+    /// 从 JSON 文件重新加载所有任务定义（内部使用）。
     /// </summary>
     private async Task LoadFromJsonInternal()
     {
@@ -608,41 +638,43 @@ public partial class GearTaskListPageViewModel : ViewModel
             TaskDefinitions.Clear();
             var loadedTasks = await _storageService.LoadAllTaskDefinitionsAsync();
 
-            foreach (var task in loadedTasks)
+            foreach (var task in loadedTasks.OrderBy(t => t.Order))
             {
                 TaskDefinitions.Add(task);
                 SetupTaskDefinitionPropertyChanged(task);
             }
 
-            _logger.LogInformation("从JSON文件重新加载了 {Count} 个任务定义", loadedTasks.Count);
+            await RefreshTaskDefinitionExecutionSummariesAsync();
+            SelectedTaskDefinition ??= TaskDefinitions.FirstOrDefault();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "从JSON文件加载任务定义时发生错误");
+            _logger.LogError(ex, "重新加载任务定义失败");
         }
     }
 
     /// <summary>
-    /// 为任务定义设置属性变化监听器，实现自动保存
+    /// 监听任务定义属性变化，实现自动保存。
     /// </summary>
     private void SetupTaskDefinitionPropertyChanged(GearTaskDefinitionViewModel taskDefinition)
     {
-        taskDefinition.PropertyChanged += async (sender, e) =>
+        taskDefinition.PropertyChanged += async (sender, _) =>
         {
-            if (sender is GearTaskDefinitionViewModel task)
+            if (sender is not GearTaskDefinitionViewModel task)
             {
-                try
-                {
-                    await _storageService.SaveTaskDefinitionAsync(task);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", task.Name);
-                }
+                return;
+            }
+
+            try
+            {
+                await _storageService.SaveTaskDefinitionAsync(task);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "自动保存任务定义失败: {TaskName}", task.Name);
             }
         };
 
-        // 为根任务及其所有子任务设置监听器
         if (taskDefinition.RootTask != null)
         {
             SetupTaskPropertyChangeListener(taskDefinition.RootTask, taskDefinition);
@@ -650,11 +682,11 @@ public partial class GearTaskListPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 递归为任务及其子任务设置属性变化监听器
+    /// 递归监听任务节点和子节点变化。
     /// </summary>
     private void SetupTaskPropertyChangeListener(GearTaskViewModel task, GearTaskDefinitionViewModel parentDefinition)
     {
-        task.PropertyChanged += async (sender, e) =>
+        task.PropertyChanged += async (_, _) =>
         {
             try
             {
@@ -663,18 +695,16 @@ public partial class GearTaskListPageViewModel : ViewModel
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", parentDefinition.Name);
+                _logger.LogError(ex, "自动保存任务定义失败: {TaskName}", parentDefinition.Name);
             }
         };
 
-        // 为子任务设置监听器
         foreach (var child in task.Children)
         {
             SetupTaskPropertyChangeListener(child, parentDefinition);
         }
 
-        // 监听子任务集合变化
-        task.Children.CollectionChanged += async (sender, e) =>
+        task.Children.CollectionChanged += async (_, e) =>
         {
             if (e.NewItems != null)
             {
@@ -684,21 +714,201 @@ public partial class GearTaskListPageViewModel : ViewModel
                 }
             }
 
-            // 任何集合变化都触发保存（包括拖拽重排序）
             try
             {
                 parentDefinition.ModifiedTime = DateTime.Now;
                 await _storageService.SaveTaskDefinitionAsync(parentDefinition);
-                _logger.LogInformation("任务树结构变化，已自动保存任务定义 '{TaskName}'", parentDefinition.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "自动保存任务定义 {TaskName} 时发生错误", parentDefinition.Name);
+                _logger.LogError(ex, "自动保存任务定义失败: {TaskName}", parentDefinition.Name);
             }
         };
     }
 
-    /// <summary>
-    /// 刷新当前任务树显示
-    /// </summary>
+    private async Task RefreshTaskDefinitionExecutionSummariesAsync()
+    {
+        foreach (var taskDefinition in TaskDefinitions)
+        {
+            await RefreshTaskDefinitionExecutionSummaryAsync(taskDefinition);
+        }
+    }
+
+    private async Task RefreshTaskDefinitionExecutionSummaryAsync(GearTaskDefinitionViewModel taskDefinition)
+    {
+        try
+        {
+            var records = await _historyStore.LoadLatestAsync(GetTaskDefinitionFileKey(taskDefinition.Name), 30);
+            ApplyTaskDefinitionExecutionSummary(taskDefinition, records);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "读取任务历史摘要失败: {TaskName}", taskDefinition.Name);
+            ApplyTaskDefinitionExecutionSummary(taskDefinition, []);
+        }
+    }
+
+    private async Task LoadExecutionRecordsForSelectedTaskDefinitionAsync(GearTaskDefinitionViewModel? taskDefinition)
+    {
+        if (taskDefinition == null)
+        {
+            RecentExecutionRecords.Clear();
+            SelectedExecutionRecord = null;
+            SelectedExecutionNodes.Clear();
+            ExecutionRecordTabTitle = "执行记录 (0)";
+            UpdateExecutionOverview([]);
+            ApplyLatestExecutionProjection(null);
+            return;
+        }
+
+        try
+        {
+            var taskName = taskDefinition.Name;
+            var records = await _historyStore.LoadLatestAsync(GetTaskDefinitionFileKey(taskName), 30);
+            if (!string.Equals(SelectedTaskDefinition?.Name, taskName, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            RecentExecutionRecords.Clear();
+            foreach (var record in records)
+            {
+                RecentExecutionRecords.Add(new GearTaskExecutionRecordItemViewModel(record));
+            }
+
+            ExecutionRecordTabTitle = $"执行记录 ({RecentExecutionRecords.Count})";
+            SelectedExecutionRecord = RecentExecutionRecords.FirstOrDefault();
+            UpdateExecutionOverview(records);
+            ApplyLatestExecutionProjection(records.FirstOrDefault());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "加载任务执行记录失败: {TaskName}", taskDefinition.Name);
+            RecentExecutionRecords.Clear();
+            SelectedExecutionRecord = null;
+            SelectedExecutionNodes.Clear();
+            ExecutionRecordTabTitle = "执行记录 (0)";
+            UpdateExecutionOverview([]);
+            ApplyLatestExecutionProjection(null);
+        }
+    }
+
+    private void ApplyTaskDefinitionExecutionSummary(GearTaskDefinitionViewModel taskDefinition, IReadOnlyList<GearTaskExecutionRecord> records)
+    {
+        if (records.Count == 0)
+        {
+            taskDefinition.LatestExecutionSummary = "最近：暂无执行记录";
+            taskDefinition.ExecutionStatisticsSummary = "统计：最近 30 次暂无记录";
+            taskDefinition.ExecutionBadgeText = string.Empty;
+            taskDefinition.HasExecutionBadge = false;
+            return;
+        }
+
+        var latestRecord = records[0];
+        taskDefinition.LatestExecutionSummary =
+            $"最近：{latestRecord.StartTime:MM-dd HH:mm} {GearTaskExecutionDisplayHelper.GetRecordStatusText(latestRecord.Status)}";
+
+        var successCount = records.Count(r => r.Status == GearTaskExecutionRecordStatus.Succeeded);
+        var interruptedCount = records.Count(r =>
+            r.Status == GearTaskExecutionRecordStatus.Interrupted ||
+            r.Status == GearTaskExecutionRecordStatus.Cancelled);
+        var failedCount = records.Count(r => r.Status == GearTaskExecutionRecordStatus.Failed);
+        taskDefinition.ExecutionStatisticsSummary =
+            $"统计：{records.Count} 次内 成功 {successCount} / 中断 {interruptedCount} / 失败 {failedCount}";
+
+        var resumableRecord = records.FirstOrDefault(r => r.CanResume);
+        taskDefinition.HasExecutionBadge = resumableRecord != null;
+        taskDefinition.ExecutionBadgeText = resumableRecord == null ? string.Empty : "最近有中断记录";
+    }
+
+    private void UpdateExecutionOverview(IReadOnlyList<GearTaskExecutionRecord> records)
+    {
+        if (records.Count == 0)
+        {
+            LatestExecutionStatusText = "暂无执行记录";
+            LatestResumeNodeText = "-";
+            ExecutionSuccessRateText = "-";
+            ExecutionAverageDurationText = "-";
+            return;
+        }
+
+        var latestRecord = records[0];
+        LatestExecutionStatusText =
+            $"{latestRecord.StartTime:MM-dd HH:mm} · {GearTaskExecutionDisplayHelper.GetRecordStatusText(latestRecord.Status)}";
+        LatestResumeNodeText = latestRecord.CanResume
+            ? GearTaskExecutionDisplayHelper.BuildResumeNodeText(latestRecord)
+            : "-";
+
+        var successCount = records.Count(r => r.Status == GearTaskExecutionRecordStatus.Succeeded);
+        ExecutionSuccessRateText = $"{Math.Round(successCount * 100d / records.Count):0}%";
+
+        var durations = records
+            .Where(r => r.EndTime.HasValue)
+            .Select(r => r.EndTime!.Value - r.StartTime)
+            .ToList();
+        ExecutionAverageDurationText = durations.Count == 0
+            ? "-"
+            : GearTaskExecutionDisplayHelper.FormatDuration(TimeSpan.FromSeconds(durations.Average(d => d.TotalSeconds)));
+    }
+
+    private void ApplyLatestExecutionProjection(GearTaskExecutionRecord? latestRecord)
+    {
+        ResetTaskNodeExecutionProjection(CurrentTaskTreeRoot);
+        if (latestRecord == null)
+        {
+            return;
+        }
+
+        ApplyNodeExecutionProjection(CurrentTaskTreeRoot, "0", latestRecord);
+    }
+
+    private void ResetTaskNodeExecutionProjection(GearTaskViewModel node)
+    {
+        node.LatestExecutionResult = string.Empty;
+        foreach (var child in node.Children)
+        {
+            ResetTaskNodeExecutionProjection(child);
+        }
+    }
+
+    private void ApplyNodeExecutionProjection(GearTaskViewModel node, string nodeId, GearTaskExecutionRecord latestRecord)
+    {
+        var record = latestRecord.Nodes.FirstOrDefault(n => n.NodeId == nodeId);
+        if (record != null)
+        {
+            node.LatestExecutionResult = BuildNodeExecutionResultText(record, latestRecord);
+        }
+
+        for (var i = 0; i < node.Children.Count; i++)
+        {
+            ApplyNodeExecutionProjection(node.Children[i], $"{nodeId}/{i}", latestRecord);
+        }
+    }
+
+    private static string BuildNodeExecutionResultText(GearTaskExecutionNodeRecord record, GearTaskExecutionRecord latestRecord)
+    {
+        if (latestRecord.CanResume && string.Equals(latestRecord.ResumeNodeId, record.NodeId, StringComparison.Ordinal))
+        {
+            return "最近中断点";
+        }
+
+        return record.Status switch
+        {
+            GearTaskExecutionNodeStatus.Succeeded => "最近成功",
+            GearTaskExecutionNodeStatus.Failed => "最近失败",
+            GearTaskExecutionNodeStatus.Interrupted => "最近中断",
+            GearTaskExecutionNodeStatus.Cancelled => "最近取消",
+            GearTaskExecutionNodeStatus.Running => "最近执行中",
+            GearTaskExecutionNodeStatus.Skipped => "最近跳过",
+            GearTaskExecutionNodeStatus.Pending => "未执行到",
+            _ => record.Status.ToString(),
+        };
+    }
+
+    private static string GetTaskDefinitionFileKey(string name)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var safeName = string.Join("_", name.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        return string.IsNullOrWhiteSpace(safeName) ? "unnamed_task" : safeName;
+    }
 }

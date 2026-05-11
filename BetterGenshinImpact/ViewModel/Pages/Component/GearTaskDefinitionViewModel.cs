@@ -27,6 +27,18 @@ public partial class GearTaskDefinitionViewModel : ObservableObject
     [ObservableProperty]
     private int _order = 0;
 
+    [ObservableProperty]
+    private string _latestExecutionSummary = "最近：暂无执行记录";
+
+    [ObservableProperty]
+    private string _executionStatisticsSummary = "统计：最近 30 次暂无记录";
+
+    [ObservableProperty]
+    private string _executionBadgeText = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasExecutionBadge;
+
     /// <summary>
     /// 任务根节点
     /// </summary>
