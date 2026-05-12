@@ -109,7 +109,7 @@ public class BvLocator
         {
             results = FindAll();
             var b = results.Count > 0;
-            if (RetryAction != null)
+            if (!b && RetryAction != null)
             {
                 await RetryAction(results);
             }
