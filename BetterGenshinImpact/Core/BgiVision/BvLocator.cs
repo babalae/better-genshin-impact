@@ -102,7 +102,7 @@ public class BvLocator
     {
         var actualTimeout = timeout ?? _timeout ?? DefaultTimeout;
         var actualRetryInterval = _retryInterval ?? DefaultRetryInterval;
-        var retryCount = actualTimeout / actualRetryInterval;
+        var retryCount = Math.Max(1, actualTimeout / actualRetryInterval);
 
         List<Region> results = [];
         var retryRes = await NewRetry.WaitForAction(async () =>
@@ -158,7 +158,7 @@ public class BvLocator
     {
         var actualTimeout = timeout ?? _timeout ?? DefaultTimeout;
         var actualRetryInterval = _retryInterval ?? DefaultRetryInterval;
-        var retryCount = actualTimeout / actualRetryInterval;
+        var retryCount = Math.Max(1, actualTimeout / actualRetryInterval);
 
         var retryRes = await NewRetry.WaitForAction(async () =>
         {
@@ -234,6 +234,10 @@ public class BvLocator
     /// <returns></returns>
     public BvLocator WithTimeout(int timeout)
     {
+        if (timeout <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeout), "timeout 必须大于 0");
+        }
         _timeout = timeout;
         return this;
     }
@@ -245,6 +249,10 @@ public class BvLocator
     /// <returns></returns>
     public BvLocator WithRetryInterval(int retryInterval)
     {
+        if (retryInterval <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(retryInterval), "retryInterval 必须大于 0");
+        }
         _retryInterval = retryInterval;
         return this;
     }
@@ -258,15 +266,22 @@ public class BvLocator
     /// <returns></returns>
     public BvLocator WithRetryAction(dynamic action)
     {
-        RetryAction = async (results) =>
+        if (action == null)
         {
-            var taskResult = action(results);
-            // 如果 JS 返回的是 Promise/Task，等待其完成
-            if (taskResult is Task task)
+            RetryAction = null;
+        }
+        else
+        {
+            RetryAction = async (results) =>
             {
-                await task;
-            }
-        };
+                var taskResult = action(results);
+                // 如果 JS 返回的是 Promise/Task，等待其完成
+                if (taskResult is Task task)
+                {
+                    await task;
+                }
+            };
+        }
         return this;
     }
 
