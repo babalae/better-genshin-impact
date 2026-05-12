@@ -21,6 +21,8 @@ public class BvLocator
 {
     private static readonly ILogger Logger = App.GetLogger<BvLocator>();
     private readonly CancellationToken _cancellationToken;
+    private int? _timeout;
+    private int? _retryInterval;
 
     public RecognitionObject RecognitionObject { get; }
 
@@ -98,8 +100,9 @@ public class BvLocator
 
     public async Task<List<Region>> WaitFor(int? timeout = null)
     {
-        var actualTimeout = timeout ?? DefaultTimeout;
-        var retryCount = actualTimeout / DefaultRetryInterval;
+        var actualTimeout = timeout ?? _timeout ?? DefaultTimeout;
+        var actualRetryInterval = _retryInterval ?? DefaultRetryInterval;
+        var retryCount = actualTimeout / actualRetryInterval;
 
         List<Region> results = [];
         var retryRes = await NewRetry.WaitForAction(async () =>
@@ -111,7 +114,7 @@ public class BvLocator
                 await RetryAction(results);
             }
             return b;
-        }, _cancellationToken, retryCount, DefaultRetryInterval);
+        }, _cancellationToken, retryCount, actualRetryInterval);
 
         if (retryRes)
         {
@@ -153,8 +156,9 @@ public class BvLocator
 
     public async Task WaitForDisappear(int? timeout = null)
     {
-        var actualTimeout = timeout ?? DefaultTimeout;
-        var retryCount = actualTimeout / DefaultRetryInterval;
+        var actualTimeout = timeout ?? _timeout ?? DefaultTimeout;
+        var actualRetryInterval = _retryInterval ?? DefaultRetryInterval;
+        var retryCount = actualTimeout / actualRetryInterval;
 
         var retryRes = await NewRetry.WaitForAction(async () =>
         {
@@ -166,7 +170,7 @@ public class BvLocator
             }
 
             return b;
-        }, _cancellationToken, retryCount, DefaultRetryInterval);
+        }, _cancellationToken, retryCount, actualRetryInterval);
 
         if (!retryRes)
         {
@@ -220,6 +224,28 @@ public class BvLocator
                 return Task.CompletedTask;
             };
         }
+        return this;
+    }
+
+    /// <summary>
+    /// 设置超时时间（毫秒）
+    /// </summary>
+    /// <param name="timeout">超时时间（毫秒）</param>
+    /// <returns></returns>
+    public BvLocator WithTimeout(int timeout)
+    {
+        _timeout = timeout;
+        return this;
+    }
+
+    /// <summary>
+    /// 设置重试间隔（毫秒）
+    /// </summary>
+    /// <param name="retryInterval">重试间隔（毫秒）</param>
+    /// <returns></returns>
+    public BvLocator WithRetryInterval(int retryInterval)
+    {
+        _retryInterval = retryInterval;
         return this;
     }
 
