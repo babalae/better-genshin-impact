@@ -229,7 +229,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private List<string> _domainNameList = ["", ..MapLazyAssets.Instance.DomainNameList];
 
-    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭游戏和软件", "关机"];
+    [ObservableProperty] private List<string> _completionActionList = ["无", "关闭游戏", "关闭软件", "关闭游戏和软件", "关机"];
 
     [ObservableProperty] private List<string> _sundayEverySelectedValueList = ["","1", "2", "3"];
     
@@ -649,6 +649,9 @@ public partial class OneDragonFlowViewModel : ViewModel
                 {
                     case "关闭游戏":
                         SystemControl.CloseGame();
+                        break;
+                    case "关闭软件":
+                        Application.Current.Dispatcher.Invoke(() => { Application.Current.Shutdown(); });
                         break;
                     case "关闭游戏和软件":
                         SystemControl.CloseGame();

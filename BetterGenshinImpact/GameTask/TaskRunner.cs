@@ -190,6 +190,7 @@ public class TaskRunner
         TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
 
         VisionContext.Instance().DrawContent.ClearAll();
+        HtmlMaskWindow.CloseAll();
     }
 
 }
