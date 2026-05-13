@@ -728,22 +728,33 @@ public class TpTask
 
     private async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
     {
-        double dpi = TaskContext.Instance().DpiScale;
-        int[] stepX = GenerateSteps((int)(pixelDeltaX / dpi), steps);
-        int[] stepY = GenerateSteps((int)(pixelDeltaY / dpi), steps);
+        // 使用绝对定位方式实现拖拽，避免鼠标相对移动时移出游戏窗口
+        int[] stepX = GenerateSteps(pixelDeltaX, steps);
+        int[] stepY = GenerateSteps(pixelDeltaY, steps);
 
-        // 随机起点以避免地图移动无效
-        GameCaptureRegion.GameRegionMove((rect, _) =>
-            (rect.Width / 2d + Random.Shared.Next(-rect.Width / 6, rect.Width / 6),
-                rect.Height / 2d + Random.Shared.Next(-rect.Height / 6, rect.Height / 6)));
+        var captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+        // 安全边距，防止点击到 UI 元素
+        double edgeMargin = 20 * assetScale;
 
+        // 计算随机起点（游戏区域中心附近），并用绝对坐标移动
+        double startX = captureAreaRect.Width / 2d + Random.Shared.Next(-captureAreaRect.Width / 6, captureAreaRect.Width / 6);
+        double startY = captureAreaRect.Height / 2d + Random.Shared.Next(-captureAreaRect.Height / 6, captureAreaRect.Height / 6);
+        GameCaptureRegion.GameRegionMove((_, _) => (startX, startY));
+
+        // 使用绝对定位逐帧移动鼠标，确保光标始终在游戏窗口内
+        double currentX = startX;
+        double currentY = startY;
         Simulation.SendInput.Mouse.LeftButtonDown();
         for (var i = 0; i < steps; i++)
         {
-            var i1 = i;
             await Delay(_tpConfig.StepIntervalMilliseconds, ct);
-            // Simulation.SendInput.Mouse.MoveMouseBy(stepX[i], stepY[i]);
-            GameCaptureRegion.GameRegionMoveBy((_, scale) => (stepX[i1] * scale, stepY[i1] * scale));
+            currentX += stepX[i] * assetScale;
+            currentY += stepY[i] * assetScale;
+            // 边界约束：确保鼠标不移出游戏捕获区域
+            currentX = Math.Clamp(currentX, edgeMargin, captureAreaRect.Width - edgeMargin);
+            currentY = Math.Clamp(currentY, edgeMargin, captureAreaRect.Height - edgeMargin);
+            GameCaptureRegion.GameRegionMove((_, _) => (currentX, currentY));
         }
 
         Simulation.SendInput.Mouse.LeftButtonUp();
