@@ -135,7 +135,7 @@ issues:
         highConfidence: 0.93
         reviewMin: 0.82
       similarityComment:
-        enabled: true
+        enabled: false
         commentAnchor: issue-bot:similar-issues
         minScore: 0.3
         maxCandidates: 3

@@ -11,8 +11,10 @@ using OpenCvSharp;
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -359,6 +361,43 @@ public static partial class Bv
     {
         using var ra = captureRa.Find(ElementAssets.Instance.PromptDialogLeftBottomStar);
         return ra.IsExist();
+    }
+    
+    
+        
+    /// <summary>
+    /// 通过 OCR 识别当前角色的 UID
+    /// </summary>
+    /// <returns>UID 数字，如果识别失败则返回 0</returns>
+    public static int Uid()
+    {
+        try
+        {
+            var x = 1683;
+            var y = 1051;
+            var width = 234;
+            var height = 28;
+            var scaleTo1080PRatio = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+            
+            x = (int)Math.Round(x * scaleTo1080PRatio);
+            y = (int)Math.Round(y * scaleTo1080PRatio);
+            width = (int)Math.Round(width * scaleTo1080PRatio);
+            height = (int)Math.Round(height * scaleTo1080PRatio);
+            
+            using var region = TaskControl.CaptureToRectArea();
+            var recognitionObjectOcr = RecognitionObject.Ocr(x, y, width, height);
+            var res = region.Find(recognitionObjectOcr);
+            if (res?.Text == null) return 0;
+            var matches = Regex.Matches(res.Text, @"\d+");
+            if (matches.Count == 0) return 0;
+            var numberStr = string.Join("", matches.Select(m => m.Value));
+            return int.TryParse(numberStr, out var uid) ? uid : 0;
+        }
+        catch (Exception e)
+        {
+            TaskControl.Logger.LogError(e, "OCR 识别 UID 异常");
+            return 0;
+        }
     }
 }
 

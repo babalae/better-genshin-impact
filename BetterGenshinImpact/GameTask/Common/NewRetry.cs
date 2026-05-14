@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,6 +81,28 @@ public static class NewRetry
         {
             await TaskControl.Delay(delayMs, ct);
             if (action())
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 重试执行异步 action，直到返回 true 或达到最大重试次数。
+    /// </summary>
+    /// <param name="action">判断条件（异步）</param>
+    /// <param name="ct">取消令牌</param>
+    /// <param name="retryTimes">最大重试次数</param>
+    /// <param name="delayMs">每次重试间隔（毫秒）</param>
+    /// <returns>是否成功</returns>
+    public static async Task<bool> WaitForAction(Func<Task<bool>> action, CancellationToken ct, int retryTimes = 10, int delayMs = 1000)
+    {
+        for (var i = 0; i < retryTimes; i++)
+        {
+            await TaskControl.Delay(delayMs, ct);
+            if (await action())
             {
                 return true;
             }

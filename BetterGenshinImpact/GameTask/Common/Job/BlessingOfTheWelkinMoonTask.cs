@@ -34,8 +34,9 @@ public class BlessingOfTheWelkinMoonTask
                         if (j == 0)
                         {
                             // 双击快速跳过
-                            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
-                            TaskContext.Instance().PostMessageSimulator.LeftButtonClickBackground();
+                            GameCaptureRegion.GameRegion1080PPosClick(100, 100);
+                            await Task.Delay(100, ct);
+                            GameCaptureRegion.GameRegion1080PPosClick(100, 100);
                         }
                         await Delay(500, ct);
                         using var ra2 = CaptureToRectArea();

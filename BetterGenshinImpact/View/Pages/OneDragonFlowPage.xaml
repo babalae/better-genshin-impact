@@ -71,7 +71,54 @@
             Grid.Row="0"
             Margin="0,0,10,0"
             Icon="{ui:SymbolIcon Add24}"
-            Command="{Binding AddTaskGroupCommand}" />
+            x:Name="AddTaskGroupButton"
+            Click="AddTaskGroupButton_Click" />
+            
+        <!-- 添加配置组弹窗 -->
+        <Popup x:Name="AddConfigGroupPopup"
+               Placement="Absolute"
+               AllowsTransparency="True"
+               PopupAnimation="Fade"
+               StaysOpen="False">
+            <Border CornerRadius="8"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                    BorderThickness="1"
+                    MinWidth="300"
+                    MaxHeight="400">
+                <StackPanel Margin="16">
+                    <TextBlock Text="选择增加的配置组（可多选）"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Margin="0,0,0,12"
+                               HorizontalAlignment="Center"/>
+                    
+                    <ScrollViewer MaxHeight="250" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="ScriptGroupItemsControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}"
+                                              Tag="{Binding}"
+                                              Margin="0,2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    
+                    <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Center" 
+                                Margin="0,12,0,0">
+                        <Button Content="确认" 
+                                Width="70" 
+                                Margin="0,0,10,0"
+                                Click="ConfirmButton_Click"/>
+                        <Button Content="取消" 
+                                Width="70"
+                                Click="CancelButton_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
     <Grid DockPanel.Dock="Top"
         Margin="0,0,0,10">

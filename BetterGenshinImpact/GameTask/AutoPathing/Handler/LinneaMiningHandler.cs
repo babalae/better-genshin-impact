@@ -44,10 +44,10 @@ public class LinneaMiningHandler : IActionHandler
 
     private static (int mineCount, int scanRounds) ParseParams(string? actionParams)
     {
-        if (string.IsNullOrEmpty(actionParams)) return (1, 5);
+        if (string.IsNullOrEmpty(actionParams)) return (LinneaMiningTask.DefaultMineCount, LinneaMiningTask.DefaultScanRounds);
 
         var parts = actionParams.Split(',');
-        var mineCount = 1;
+        var mineCount = -1;
         var scanRounds = -1;
 
         foreach (var part in parts)
@@ -65,14 +65,15 @@ public class LinneaMiningHandler : IActionHandler
             }
             else if (int.TryParse(trimmed, out var num))
             {
-                if (mineCount == 1 && scanRounds == -1)
+                if (mineCount == -1)
                     mineCount = Clamp(num, 1, 999);
                 else if (scanRounds == -1)
                     scanRounds = Clamp(num, 1, 999);
             }
         }
 
-        if (scanRounds == -1) scanRounds = 5;
+        if (mineCount == -1) mineCount = LinneaMiningTask.DefaultMineCount;
+        if (scanRounds == -1) scanRounds = LinneaMiningTask.DefaultScanRounds;
         if (scanRounds < mineCount) scanRounds = mineCount;
 
         return (mineCount, scanRounds);

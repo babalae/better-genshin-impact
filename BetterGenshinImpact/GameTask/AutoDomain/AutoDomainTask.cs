@@ -1271,13 +1271,13 @@ public class AutoDomainTask : ISoloTask
         Bv.ClickBlackConfirmButton(CaptureToRectArea());
     }
 
-    public static (bool, int) PressUseResin(ImageRegion ra, string resinName)
+    public static (bool, int) PressUseResin(ImageRegion ra, string resinName, string logPrefix = "自动秘境")
     {
         var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-        return PressUseResin(regionList, resinName);
+        return PressUseResin(regionList, resinName, logPrefix);
     }
 
-    public static (bool, int) PressUseResin(List<Region> regionList, string resinName)
+    public static (bool, int) PressUseResin(List<Region> regionList, string resinName, string logPrefix = "自动秘境")
     {
         if (resinName == "原粹树脂20" || resinName == "原粹树脂40")
         {
@@ -1301,18 +1301,18 @@ public class AutoDomainTask : ISoloTask
                     // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了。使用双击
                     Sleep(60);
                     useKey.Click();
-                    var num = GetResinNum(resinKey, resinName);
-                    Logger.LogInformation("自动秘境：使用 {ResinName}, 数量：{Num}", resinName, num);
+                    var num = GetResinNum(resinKey, resinName, logPrefix);
+                    Logger.LogInformation("{LogPrefix}：使用 {ResinName}, 数量：{Num}", logPrefix, resinName, num);
                     return (true, num);
                 }
                 else
                 {
-                    Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                    Logger.LogWarning("{LogPrefix}：未找到 {ResinName} 的使用按键", logPrefix, resinName);
                 }
             }
             else
             {
-                Logger.LogWarning("自动秘境：未找到 {ResinName} 的使用按键", resinName);
+                Logger.LogWarning("{LogPrefix}：未找到 {ResinName} 的使用按键", logPrefix, resinName);
             }
         }
 
@@ -1359,7 +1359,7 @@ public class AutoDomainTask : ISoloTask
         }, TimeSpan.FromMilliseconds(500), 10);
     }
 
-    private static int GetResinNum(Region region, string resinName)
+    private static int GetResinNum(Region region, string resinName, string logPrefix)
     {
         if (resinName == "原粹树脂")
         {
@@ -1373,7 +1373,7 @@ public class AutoDomainTask : ISoloTask
             }
             else
             {
-                Logger.LogWarning("自动秘境：未识别到原粹树脂消耗体力数量，默认按20计算");
+                Logger.LogWarning("{LogPrefix}：未识别到原粹树脂消耗体力数量，默认按20计算", logPrefix);
                 return 20;
             }
         }
