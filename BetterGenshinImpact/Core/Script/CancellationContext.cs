@@ -1,42 +1,99 @@
-﻿using BetterGenshinImpact.Model;
+﻿using System;
+using BetterGenshinImpact.Model;
 using System.Threading;
 
 namespace BetterGenshinImpact.Core.Script;
 
 public class CancellationContext : Singleton<CancellationContext>
 {
-    public CancellationTokenSource Cts { get; set; } = new();
+    private readonly object _sync = new();
+    public CancellationTokenSource Cts { get; private set; } = new();
     public bool IsManualStop { get; private set; }
+
+    public bool IsCancellationRequested
+    {
+        get
+        {
+            lock (_sync) 
+            {
+                return !disposed && Cts.IsCancellationRequested; 
+            }
+        }
+    }
 
     private bool disposed;
 
     public void Set()
     {
-        Cts = new CancellationTokenSource();
-        IsManualStop = false;
-        disposed = false;
+        lock (_sync)
+        {
+            Cts = new CancellationTokenSource();
+            IsManualStop = false;
+            disposed = false;
+        }
     }
 
     public void ManualCancel()
     {
-        if (!disposed)
+        CancellationTokenSource cts;
+        lock (_sync)
         {
+            if (disposed)
+            {
+                return;
+            }
+
             IsManualStop = true;
-            Cts.Cancel();
+            cts = Cts;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 并发 Clear 可能已释放 CTS，这里视为已取消/已清理。
         }
     }
 
     public void Cancel()
     {
-        if (!disposed)
+        CancellationTokenSource cts;
+        lock (_sync)
         {
-            Cts.Cancel();
+            if (disposed)
+            {
+                return;
+            }
+
+            cts = Cts;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 并发 Clear 可能已释放 CTS，这里视为已取消/已清理。
         }
     }
 
     public void Clear()
     {
-        Cts.Dispose();
-        disposed = true;
+        CancellationTokenSource cts;
+        lock (_sync)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            cts = Cts;
+            disposed = true;
+        }
+
+        cts.Dispose();
     }
 }

@@ -56,6 +56,12 @@ public class BgiOnnxModel
         Register("BgiAvatarSide", @"Assets\Model\Common\avatar_side_classify_sim.onnx");
 
     /// <summary>
+    /// Q技能冷却分类模型
+    /// </summary>
+    public static readonly BgiOnnxModel BgiQClassify =
+        Register("BgiQClassify", @"Assets\Model\Common\q_classify_sim.onnx");
+
+    /// <summary>
     /// paddleOCR V4 检测模型
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrDetV4 =

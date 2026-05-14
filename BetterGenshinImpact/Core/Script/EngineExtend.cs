@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
@@ -77,6 +77,7 @@ public class EngineExtend
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
+        engine.AddHostObject("strategyFile", new StrategyFile());
         //鼠标回调
         engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
         // 添加C#的类型
@@ -88,6 +89,9 @@ public class EngineExtend
         engine.AddHostType("BvImage", typeof(BvImage));
 
         engine.AddHostObject("host", new CustomHostFunctions());
+
+        // HTML 遮罩
+        engine.AddHostObject("htmlMask", new HtmlMask(workDir));
 
         // 导入 JavaScript 模块
         // https://microsoft.github.io/ClearScript/2023/01/24/module-interop.html

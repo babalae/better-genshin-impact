@@ -704,12 +704,12 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
             if (resinStatus.CondensedResinCount > 0)
             {
-                AutoDomainTask.PressUseResin(ra, "浓缩树脂");
+                AutoDomainTask.PressUseResin(ra, "浓缩树脂", Name);
                 resinStatus.CondensedResinCount -= 1;
             }
             else if (resinStatus.OriginalResinCount >= 20)
             {
-                var (_, num) = AutoDomainTask.PressUseResin(ra, "原粹树脂");
+                var (_, num) = AutoDomainTask.PressUseResin(ra, "原粹树脂", Name);
                 resinStatus.OriginalResinCount -= num;
             }
 
@@ -724,7 +724,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             {
                 if (record.RemainCount > 0)
                 {
-                    var (success, _) = AutoDomainTask.PressUseResin(textList, record.Name);
+                    var (success, _) = AutoDomainTask.PressUseResin(textList, record.Name, Name);
                     if (success)
                     {
                         record.RemainCount -= 1;

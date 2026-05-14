@@ -49,6 +49,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
     public bool UseBackgroundOperation { get; private set; }
 
     public bool IsUseInteractionKey { get; set; } = false;
+    
+    private const int PlayingFlagDisappearDelaySeconds = 10; // 播放标识消失后继续识别的秒数
 
     private readonly AutoSkipAssets _autoSkipAssets;
 
@@ -188,7 +190,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             TryBringToFrontAfterBackgroundDialog();
         }
 
-        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= 5)
+        if (!isPlaying && (DateTime.Now - _prevPlayingTime).TotalSeconds <= PlayingFlagDisappearDelaySeconds)
         {
             // 关闭弹出页
             if (_config.ClosePopupPagedEnabled)
@@ -277,8 +279,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-        if ((DateTime.Now - _prevPlayingTime).TotalMilliseconds <= 800
-            || (DateTime.Now - _prevBringToFrontTime).TotalSeconds <= 2)
+        if ((DateTime.Now - _prevPlayingTime).TotalSeconds <= PlayingFlagDisappearDelaySeconds
+            || (DateTime.Now - _prevBringToFrontTime).TotalSeconds <= 3)
         {
             return;
         }
@@ -861,6 +863,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
             _prevCloseItemTime = DateTime.Now;
             _logger.LogInformation("自动剧情：{Text} 面积 {Area}", "点击底部三角形",area);
+            _prevPlayingTime  = DateTime.Now; // 此时认为还在自动剧情
             return;
         }
     }
@@ -935,6 +938,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
 
             _logger.LogInformation("自动剧情：关闭角色弹窗");
+            _prevPlayingTime  = DateTime.Now; // 此时认为还在自动剧情
             return;
         }
     }

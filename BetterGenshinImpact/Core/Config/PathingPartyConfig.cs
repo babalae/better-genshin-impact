@@ -13,7 +13,7 @@ public partial class PathingPartyConfig : ObservableObject
 {
     // 配置是否启用，不启用会使用地图追踪内的条件配置
     [ObservableProperty]
-    private bool _enabled = false;
+    private bool _enabled = true;
     
     // 是否启用自动拾取
     [ObservableProperty]
@@ -124,7 +124,7 @@ public partial class PathingPartyConfig : ObservableObject
 
     //启用自动战斗配置
     [ObservableProperty]
-    private bool _autoFightEnabled = false;
+    private bool _autoFightEnabled = true;
 
     [ObservableProperty]
     private AutoFightConfig _autoFightConfig = new();

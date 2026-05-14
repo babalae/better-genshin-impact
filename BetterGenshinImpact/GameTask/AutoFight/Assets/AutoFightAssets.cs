@@ -22,6 +22,7 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
     public Rect ERect;
     public Rect ECooldownRect;
     public Rect QRect;
+    public Rect QRectForClassify;
     public Rect ZCooldownRect;
     public Rect EndTipsUpperRect; // 挑战达成提示
     public Rect EndTipsRect;
@@ -78,6 +79,8 @@ public class AutoFightAssets : BaseAssets<AutoFightAssets>
             (int)(41 * AssetScale), (int)(18 * AssetScale));
         QRect = new Rect(CaptureRect.Width - (int)(157 * AssetScale), CaptureRect.Height - (int)(165 * AssetScale),
             (int)(110 * AssetScale), (int)(110 * AssetScale));
+        QRectForClassify = new Rect(CaptureRect.Width - (int)(172 * AssetScale), CaptureRect.Height - (int)(166 * AssetScale),
+            (int)(137 * AssetScale), (int)(137 * AssetScale));
         ZCooldownRect = new Rect(CaptureRect.Width - (int)(130 * AssetScale), (int)(814 * AssetScale),
             (int)(60 * AssetScale), (int)(24 * AssetScale));
         // 小道具位置 1920-133,800,60,50
