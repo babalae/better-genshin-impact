@@ -528,7 +528,7 @@ public class AutoFightTask : ISoloTask
                     // 经验值检测未通过，跳过拾取（但仍执行扫描拾取逻辑）
                     if (_taskParam is { PickDropsAfterFightEnabled: true })
                     {
-                        await new ScanPickTask().Start(ct);
+                        await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
                     }
                     return;
                 }
@@ -802,7 +802,7 @@ public class AutoFightTask : ISoloTask
         if (_taskParam is { PickDropsAfterFightEnabled: true } )
         {
             // 执行扫描掉落物光柱并靠近的功能
-            await new ScanPickTask().Start(ct);
+            await new ScanPickTask().Start(ct, _taskParam.PickDropsAfterFightSeconds);
         }
     }
 
