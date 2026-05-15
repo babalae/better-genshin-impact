@@ -151,6 +151,7 @@ public partial class App : Application
                 // services.AddSingleton<TcgViewModel>();
 
                 // My Services
+                services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<TaskTriggerDispatcher>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());

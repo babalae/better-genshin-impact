@@ -288,6 +288,95 @@
                         </d:FlowDocument>
                     </RichTextBox>
                 </overlay:AdjustableOverlayItem>
+
+                <!-- 指标栏复用可拖拽容器；单项固定宽度，只允许在指标之间换行，避免中文标签被拆开。 -->
+                <overlay:AdjustableOverlayItem x:Name="MetricsWrapper"
+                                               Padding="4,2"
+                                               Background="#00000000"
+                                               BorderBrush="#00000000"
+                                               BorderThickness="0"
+                                               MinWidth="260"
+                                               MinHeight="24"
+                                               IsEditEnabled="{Binding Config.MaskWindowConfig.OverlayLayoutEditEnabled}"
+                                               LayoutKey="Metrics"
+                                               SnapsToDevicePixels="True"
+                                               UseLayoutRounding="True"
+                                               Visibility="{Binding IsOverlayMetricsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Canvas.Left>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.MetricsLeftRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </Canvas.Left>
+                    <Canvas.Top>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.MetricsTopRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </Canvas.Top>
+                    <overlay:AdjustableOverlayItem.Width>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.MetricsWidthRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualWidth" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Width>
+                    <overlay:AdjustableOverlayItem.Height>
+                        <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
+                            <Binding Path="Config.MaskWindowConfig.MetricsHeightRatio" />
+                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="ActualHeight" />
+                        </MultiBinding>
+                    </overlay:AdjustableOverlayItem.Height>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="LayoutCommitted">
+                            <b:InvokeCommandAction Command="{Binding OverlayLayoutCommittedCommand}"
+                                                   PassEventArgsToCommand="True" />
+                        </b:EventTrigger>
+                        <b:EventTrigger EventName="PreviewMouseRightButtonDown">
+                            <b:InvokeCommandAction Command="{Binding ExitOverlayLayoutEditModeCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                    <overlay:AdjustableOverlayItem.Effect>
+                        <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="0" />
+                    </overlay:AdjustableOverlayItem.Effect>
+                    <ItemsControl HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Top"
+                                  ClipToBounds="True"
+                                  IsHitTestVisible="False"
+                                  ItemsSource="{Binding OverlayMetricDisplayItems}"
+                                  Opacity="{Binding Config.MaskWindowConfig.TextOpacity}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!-- 列宽和设置页的三列顺序保持一致，拖窄后也按完整指标项折行。 -->
+                                <WrapPanel ItemWidth="116" ItemHeight="16" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Width="116" Height="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="68" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
+                                               FontSize="12"
+                                               Foreground="LightGray"
+                                               LineHeight="15"
+                                               Text="{Binding Name}"
+                                               TextWrapping="NoWrap" />
+                                    <TextBlock Grid.Column="1"
+                                               FontFamily="Cascadia Mono, Consolas, Courier New, monospace, /Resources/Fonts/MiSans-Regular.ttf#MiSans"
+                                               FontSize="12"
+                                               Foreground="LightGray"
+                                               LineHeight="15"
+                                               Text="{Binding Value}"
+                                               TextTrimming="CharacterEllipsis"
+                                               TextWrapping="NoWrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </overlay:AdjustableOverlayItem>
             </Canvas>
 
             <Grid Grid.Row="0"
@@ -423,7 +512,7 @@
                     CornerRadius="4"
                     Opacity="0.5"
                     IsHitTestVisible="False"
-                    Visibility="{Binding Config.MaskWindowConfig.ShowFps, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    Visibility="Collapsed">
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            FontFamily="{StaticResource DigitalThemeFontFamily}"
