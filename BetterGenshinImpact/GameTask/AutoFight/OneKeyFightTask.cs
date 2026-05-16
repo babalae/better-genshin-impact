@@ -1,4 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.Model;
@@ -74,6 +75,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             else
             {
                 _cts.Cancel();
+                Simulation.ReleaseAllKey();
             }
         }
     }
@@ -89,6 +91,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         if (IsHoldOnMode())
         {
             _cts?.Cancel();
+            Simulation.ReleaseAllKey();
         }
     }
 
@@ -179,9 +182,9 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                     // 通用化战斗策略
                     foreach (var command in combatCommands)
                     {
+                        if (ct.IsCancellationRequested) break;
                         if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
                         {
-                            // 跳过强制首轮指令
                             continue;
                         }
                         command.Execute(activeAvatar);
