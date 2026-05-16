@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Component;
 
@@ -51,6 +55,12 @@ public partial class GearTaskViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<GearTaskViewModel> _children = new();
+
+    /// <summary>
+    /// 任务组配置，对应调度器 v1 的配置组设置。
+    /// </summary>
+    [ObservableProperty]
+    private ScriptGroupConfig? _groupConfig;
 
     /// <summary>
     /// 任务参数，存储为JSON字符串
@@ -162,6 +172,7 @@ public partial class GearTaskViewModel : ObservableObject
             IsEnabled = IsEnabled,
             IsDirectory = IsDirectory,
             Parameters = Parameters,
+            GroupConfig = CloneGroupConfig(GroupConfig),
             Priority = Priority,
             Tags = Tags,
             CreatedTime = CreatedTime,
@@ -174,5 +185,16 @@ public partial class GearTaskViewModel : ObservableObject
         }
 
         return clone;
+    }
+
+    private static ScriptGroupConfig? CloneGroupConfig(ScriptGroupConfig? source)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        var json = JsonSerializer.Serialize(source, ConfigService.JsonOptions);
+        return JsonConvert.DeserializeObject<ScriptGroupConfig>(json);
     }
 }

@@ -448,6 +448,13 @@
                 </MenuItem.Icon>
             </MenuItem>
             <Separator />
+            <MenuItem Header="任务组设置"
+                      Command="{Binding OpenTaskGroupSettingsCommand}"
+                      CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}">
+                <MenuItem.Icon>
+                    <ui:SymbolIcon Symbol="Settings24" />
+                </MenuItem.Icon>
+            </MenuItem>
             <MenuItem Header="删除"
                       Command="{Binding DeleteTaskNodeCommand}"
                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}">
@@ -621,11 +628,15 @@
                                             <MenuItem Header="Shell" Command="{Binding AddTaskNodeCommand}" CommandParameter="Shell" />
                                             <MenuItem Header="C# 方法" Command="{Binding AddTaskNodeCommand}" CommandParameter="CSharp" />
                                         </ContextMenu>
-                                    </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton.Flyout>
                                 </ui:DropDownButton>
                                 <ui:Button Command="{Binding AddTaskGroupCommand}"
                                            Content="添加组"
                                            Icon="{ui:SymbolIcon Folder24}" />
+                                <ui:Button Command="{Binding OpenSelectedTaskGroupSettingsCommand}"
+                                           Content="组设置"
+                                           Margin="10,0,0,0"
+                                           Icon="{ui:SymbolIcon Settings24}" />
                             </StackPanel>
 
                             <!-- 任务树 -->
@@ -702,6 +713,13 @@
                                                     <ui:GridViewColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <ui:Button Command="{Binding DataContext.OpenTaskGroupSettingsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                           CommandParameter="{Binding}"
+                                                                           Icon="{ui:SymbolIcon Settings24}"
+                                                                           Appearance="Transparent"
+                                                                           Padding="4"
+                                                                           ToolTip="任务组设置"
+                                                                           Visibility="{Binding IsDirectory, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                                 <ui:Button Command="{Binding DataContext.DeleteTaskNodeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                            CommandParameter="{Binding}"
                                                                            Icon="{ui:SymbolIcon Delete24}"
