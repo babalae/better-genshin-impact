@@ -28,37 +28,30 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type TabControl}">
-                            <Grid x:Name="templateRoot"
-                                  Background="{TemplateBinding Background}"
-                                  ClipToBounds="True"
-                                  SnapsToDevicePixels="True">
+                            <Grid Background="{TemplateBinding Background}" ClipToBounds="True" SnapsToDevicePixels="True">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
                                 <Border Grid.Row="0"
-                                        Margin="16,16,16,0"
-                                        Padding="5"
-                                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
-                                        BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8">
-                                    <TabPanel x:Name="headerPanel"
-                                              Background="Transparent"
-                                              IsItemsHost="True" />
-                                </Border>
-
-                                <Border x:Name="contentPanel"
-                                        Grid.Row="1"
-                                        Margin="16,8,16,16"
+                                        Margin="0,0,0,10"
+                                        Padding="6"
                                         Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
                                         BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
                                         BorderThickness="1"
                                         CornerRadius="10">
+                                    <TabPanel IsItemsHost="True" Background="Transparent" />
+                                </Border>
+
+                                <Border Grid.Row="1"
+                                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="12">
                                     <Border Margin="1"
                                             Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                            CornerRadius="19">
+                                            CornerRadius="11">
                                         <ContentPresenter x:Name="PART_SelectedContentHost"
                                                           Margin="{TemplateBinding Padding}"
                                                           Content="{TemplateBinding SelectedContent}"
@@ -77,21 +70,18 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="Padding" Value="16,9" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="{x:Type TabItem}">
-                            <Grid x:Name="templateRoot"
-                                  Background="Transparent"
-                                  SnapsToDevicePixels="True">
+                            <Grid Background="Transparent" SnapsToDevicePixels="True">
                                 <Border x:Name="mainBorder"
                                         Margin="0,0,6,0"
                                         Background="Transparent"
                                         BorderBrush="Transparent"
                                         BorderThickness="0"
                                         CornerRadius="8">
-                                    <ContentPresenter x:Name="contentPresenter"
-                                                      Margin="{TemplateBinding Padding}"
+                                    <ContentPresenter Margin="{TemplateBinding Padding}"
                                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                       Content="{TemplateBinding Header}"
@@ -99,12 +89,12 @@
                                                       ContentTemplate="{TemplateBinding HeaderTemplate}"
                                                       RecognizesAccessKey="True"
                                                       SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                </Border>
-                                <Border x:Name="selectionIndicator"
-                                        Width="48"
-                                        Height="3"
-                                        Margin="0,0,5,5"
-                                        HorizontalAlignment="Center"
+                            </Border>
+                            <Border x:Name="selectionIndicator"
+                                    Width="44"
+                                    Height="3"
+                                    Margin="0,0,5,5"
+                                    HorizontalAlignment="Center"
                                         VerticalAlignment="Bottom"
                                         Background="{DynamicResource AccentFillColorDefaultBrush}"
                                         CornerRadius="1.5"
@@ -124,27 +114,10 @@
                                     <Setter TargetName="mainBorder" Property="Background"
                                             Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                                 </Trigger>
-                                <MultiTrigger>
-                                    <MultiTrigger.Conditions>
-                                        <Condition Property="IsSelected" Value="True" />
-                                        <Condition Property="IsMouseOver" Value="True" />
-                                    </MultiTrigger.Conditions>
-                                    <Setter TargetName="mainBorder" Property="Background"
-                                            Value="{DynamicResource ControlFillColorDefaultBrush}" />
-                                </MultiTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
-            </Style>
-
-            <Style x:Key="SummaryBadgeStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="999" />
-                <Setter Property="Padding" Value="12,6" />
-                <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
             <Style x:Key="TriggerToolbarBorderStyle" TargetType="Border">
@@ -445,17 +418,10 @@
     </UserControl.Resources>
 
     <!-- 布局 -->
-    <Grid Margin="0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Grid Margin="24,16,24,12">
 
         <!-- 左侧：触发器设置 -->
-        <Border Grid.Row="1"
-                BorderThickness="1"
-                CornerRadius="8">
-            <TabControl Style="{StaticResource ConsistentTabControlStyle}">
+        <TabControl Style="{StaticResource ConsistentTabControlStyle}">
                 <TabItem Header="定时触发" Style="{StaticResource ConsistentTabItemStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -592,6 +558,5 @@
                     </Grid>
                 </TabItem>
             </TabControl>
-        </Border>
     </Grid>
 </UserControl>
