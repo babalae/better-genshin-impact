@@ -185,6 +185,7 @@ public class GearTaskStorageService
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,
             Order = viewModel.Order,
+            GroupConfig = viewModel.GroupConfig,
             RootTask = viewModel.RootTask != null ? ConvertTaskToData(viewModel.RootTask) : null
         };
     }
@@ -229,6 +230,7 @@ public class GearTaskStorageService
             CreatedTime = data.CreatedTime,
             ModifiedTime = data.ModifiedTime,
             Order = data.Order,
+            GroupConfig = data.GroupConfig ?? new(),
             RootTask = data.RootTask != null ? ConvertTaskToViewModel(data.RootTask) : null
         };
         

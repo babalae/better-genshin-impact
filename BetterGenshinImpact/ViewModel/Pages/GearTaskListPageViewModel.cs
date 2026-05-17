@@ -1,24 +1,32 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.Service.GearTask.Execution;
+using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.GearTask;
 using BetterGenshinImpact.ViewModel.Pages.Component;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Wpf.Ui;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -433,6 +441,37 @@ public partial class GearTaskListPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private async Task OpenSelectedTaskDefinitionSettings()
+    {
+        if (SelectedTaskDefinition == null)
+        {
+            Toast.Warning("请先选择一个任务定义");
+            return;
+        }
+
+        var dialogWindow = new Wpf.Ui.Controls.FluentWindow
+        {
+            Title = "任务组设置",
+            Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedTaskDefinition.GroupConfig)),
+            Width = 800,
+            Height = 600,
+            MinWidth = 800,
+            MaxWidth = 800,
+            MinHeight = 600,
+            Owner = Application.Current.MainWindow,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ExtendsContentIntoTitleBar = true,
+            WindowBackdropType = Wpf.Ui.Controls.WindowBackdropType.Auto,
+        };
+        dialogWindow.SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
+
+        dialogWindow.ShowDialog();
+
+        SelectedTaskDefinition.ModifiedTime = DateTime.Now;
+        await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
+    }
+
+    [RelayCommand]
     private async Task AddTaskNode(string? taskType = null)
     {
         if (SelectedTaskDefinition?.RootTask == null)
@@ -679,6 +718,11 @@ public partial class GearTaskListPageViewModel : ViewModel
         {
             SetupTaskPropertyChangeListener(taskDefinition.RootTask, taskDefinition);
         }
+
+        if (taskDefinition.GroupConfig != null)
+        {
+            SetupTaskGroupConfigChangeListener(taskDefinition.GroupConfig, taskDefinition);
+        }
     }
 
     /// <summary>
@@ -724,6 +768,115 @@ public partial class GearTaskListPageViewModel : ViewModel
                 _logger.LogError(ex, "自动保存任务定义失败: {TaskName}", parentDefinition.Name);
             }
         };
+    }
+
+    /// <summary>
+    /// 递归监听任务组配置及其子配置变化，实现自动保存。
+    /// </summary>
+    private void SetupTaskGroupConfigChangeListener(object configObject, GearTaskDefinitionViewModel parentDefinition)
+    {
+        var visited = new HashSet<object>();
+        SubscribeTaskGroupConfigChanges(configObject, parentDefinition, visited);
+    }
+
+    private void SubscribeTaskGroupConfigChanges(object? current, GearTaskDefinitionViewModel parentDefinition, HashSet<object> visited)
+    {
+        if (current == null || !visited.Add(current))
+        {
+            return;
+        }
+
+        if (current is INotifyPropertyChanged notifyPropertyChanged)
+        {
+            notifyPropertyChanged.PropertyChanged += async (_, _) =>
+            {
+                try
+                {
+                    parentDefinition.ModifiedTime = DateTime.Now;
+                    await _storageService.SaveTaskDefinitionAsync(parentDefinition);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "任务组配置自动保存失败: {TaskName}", parentDefinition.Name);
+                }
+            };
+        }
+
+        if (current is INotifyCollectionChanged notifyCollectionChanged)
+        {
+            notifyCollectionChanged.CollectionChanged += async (_, e) =>
+            {
+                if (e.NewItems != null)
+                {
+                    foreach (var item in e.NewItems)
+                    {
+                        SubscribeTaskGroupConfigChanges(item, parentDefinition, visited);
+                    }
+                }
+
+                try
+                {
+                    parentDefinition.ModifiedTime = DateTime.Now;
+                    await _storageService.SaveTaskDefinitionAsync(parentDefinition);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "任务组配置自动保存失败: {TaskName}", parentDefinition.Name);
+                }
+            };
+        }
+
+        foreach (var child in EnumerateConfigChildren(current))
+        {
+            SubscribeTaskGroupConfigChanges(child, parentDefinition, visited);
+        }
+    }
+
+    private static IEnumerable<object> EnumerateConfigChildren(object current)
+    {
+        var properties = current.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        foreach (var property in properties)
+        {
+            if (!property.CanRead || property.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
+            if (property.PropertyType == typeof(string) || property.PropertyType.IsValueType)
+            {
+                continue;
+            }
+
+            object? value;
+            try
+            {
+                value = property.GetValue(current);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (value == null || value is string)
+            {
+                continue;
+            }
+
+            if (value is IEnumerable enumerable)
+            {
+                foreach (var item in enumerable)
+                {
+                    if (item != null && item is not string)
+                    {
+                        yield return item;
+                    }
+                }
+
+                continue;
+            }
+
+            yield return value;
+        }
     }
 
     private async Task RefreshTaskDefinitionExecutionSummariesAsync()

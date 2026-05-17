@@ -138,6 +138,13 @@
                                 <ui:SymbolIcon Symbol="Map24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="采集与锄地"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:GatheringAndFarmingPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Map24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                         <!--  Script16  -->
                         <ui:NavigationViewItem Content="录制回放"
                                                NavigationCacheMode="Enabled"

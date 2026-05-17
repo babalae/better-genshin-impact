@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using BetterGenshinImpact.Core.Script.Group;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Component;
@@ -38,6 +38,9 @@ public partial class GearTaskDefinitionViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _hasExecutionBadge;
+
+    [ObservableProperty]
+    private ScriptGroupConfig _groupConfig = new();
 
     /// <summary>
     /// 任务根节点

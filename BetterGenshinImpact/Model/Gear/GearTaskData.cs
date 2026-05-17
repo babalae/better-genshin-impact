@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Script.Group;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,9 @@ public class GearTaskDefinitionData
 
     [JsonProperty("order")]
     public int Order { get; set; } = 0;
+
+    [JsonProperty("group_config")]
+    public ScriptGroupConfig GroupConfig { get; set; } = new();
 
     [JsonProperty("root_task")]
     public GearTaskData? RootTask { get; set; }

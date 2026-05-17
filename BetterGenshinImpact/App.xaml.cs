@@ -156,6 +156,7 @@ public partial class App : Application
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();
+                services.AddView<GatheringAndFarmingPage, GatheringAndFarmingPageViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();

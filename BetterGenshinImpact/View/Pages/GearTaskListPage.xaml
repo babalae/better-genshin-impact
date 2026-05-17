@@ -621,11 +621,15 @@
                                             <MenuItem Header="Shell" Command="{Binding AddTaskNodeCommand}" CommandParameter="Shell" />
                                             <MenuItem Header="C# 方法" Command="{Binding AddTaskNodeCommand}" CommandParameter="CSharp" />
                                         </ContextMenu>
-                                    </ui:DropDownButton.Flyout>
+                                </ui:DropDownButton.Flyout>
                                 </ui:DropDownButton>
                                 <ui:Button Command="{Binding AddTaskGroupCommand}"
                                            Content="添加组"
-                                           Icon="{ui:SymbolIcon Folder24}" />
+                                           Icon="{ui:SymbolIcon Folder24}"
+                                           Margin="0,0,10,0" />
+                                <ui:Button Command="{Binding OpenSelectedTaskDefinitionSettingsCommand}"
+                                           Content="设置"
+                                           Icon="{ui:SymbolIcon Settings24}" />
                             </StackPanel>
 
                             <!-- 任务树 -->
