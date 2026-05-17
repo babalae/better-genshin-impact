@@ -145,6 +145,35 @@ public class HtmlMask : IDisposable
     /// </summary>
     public bool Exists(string id) => HtmlMaskWindow.Exists(id);
 
+    /// <summary>
+    /// 设置窗口的点击穿透模式
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    /// <param name="enabled">true=点击穿透，false=可交互</param>
+    public void SetClickThrough(string windowId, bool enabled)
+    {
+        HtmlMaskWindow.SetClickThrough(windowId, enabled);
+    }
+
+    /// <summary>
+    /// 获取窗口的点击穿透状态
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    /// <returns>true=点击穿透，false=可交互</returns>
+    public bool GetClickThrough(string windowId)
+    {
+        return HtmlMaskWindow.GetClickThrough(windowId);
+    }
+
+    /// <summary>
+    /// 切换窗口的点击穿透模式
+    /// </summary>
+    /// <param name="windowId">窗口ID</param>
+    public void ToggleClickThrough(string windowId)
+    {
+        HtmlMaskWindow.ToggleClickThrough(windowId);
+    }
+
     #endregion
 
     #region 消息通信

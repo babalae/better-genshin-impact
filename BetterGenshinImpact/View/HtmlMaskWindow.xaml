@@ -9,7 +9,9 @@
         WindowStartupLocation="Manual"
         ShowInTaskbar="False"
         Topmost="True">
-    <Grid>
-        <wv2:WebView2 x:Name="WebView" DefaultBackgroundColor="Transparent"/>
-    </Grid>
+    <Border x:Name="ClickThroughBorder" Background="Transparent">
+        <Grid>
+            <wv2:WebView2 x:Name="WebView" DefaultBackgroundColor="Transparent"/>
+        </Grid>
+    </Border>
 </Window>

@@ -67,12 +67,14 @@ public class LinneaMiningTask
 
     private readonly int _scanRounds;
     private readonly int _mineCount;
+    private readonly bool _preferRight;
     private int _debugIndex;
 
     public LinneaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = DefaultMineCount)
     {
         _scanRounds = scanRounds;
         _mineCount = mineCount;
+        _preferRight = scanRounds > 1;
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>()
             .CreateYoloPredictor(BgiOnnxModel.BgiMine);
         ClusterDistanceThreshold = BaseClusterDistance * _widthScale;
@@ -359,7 +361,7 @@ public class LinneaMiningTask
                 }
             }
 
-            clusters.Add(new MineralCluster(rect, AreaRatioThreshold));
+            clusters.Add(new MineralCluster(rect, AreaRatioThreshold, _preferRight));
         }
 
         return clusters;
@@ -379,14 +381,16 @@ public class MineralCluster
     public double TargetWidth { get; private set; }
     public double TargetHeight { get; private set; }
 
-    public MineralCluster(Rect firstRect, double areaRatioThreshold = 5)
+    public MineralCluster(Rect firstRect, double areaRatioThreshold = 5, bool preferRight = true)
     {
         AreaRatioThreshold = areaRatioThreshold;
+        PreferRight = preferRight;
         Rects.Add(firstRect);
         RecalculateCenter();
     }
 
     private readonly double AreaRatioThreshold;
+    private readonly bool PreferRight;
 
     public bool TryAddRect(Rect rect)
     {
@@ -403,19 +407,28 @@ public class MineralCluster
         CenterX = Rects.Average(r => r.X + r.Width / 2.0);
         CenterY = Rects.Average(r => r.Y + r.Height / 2.0);
 
-        // 按距离质心排序，取最近2个中靠右的
-        var candidates = Rects
+        var sorted = Rects
             .Select(r => (cx: r.X + r.Width / 2.0, cy: r.Y + r.Height / 2.0,
                 dist: Math.Pow(r.X + r.Width / 2.0 - CenterX, 2) + Math.Pow(r.Y + r.Height / 2.0 - CenterY, 2),
                 w: (double)r.Width, h: (double)r.Height))
             .OrderBy(t => t.dist)
-            .Take(2)
-            .OrderByDescending(t => t.cx)
-            .First();
+            .ToList();
 
-        TargetX = candidates.cx;
-        TargetY = candidates.cy;
-        TargetWidth = candidates.w;
-        TargetHeight = candidates.h;
+        (double cx, double cy, double dist, double w, double h) target;
+        if (PreferRight && sorted.Count >= 2)
+        {
+            // 多轮旋转时：取最近2个中靠右的，对冲左转偏移
+            target = sorted.Take(2).OrderByDescending(t => t.cx).First();
+        }
+        else
+        {
+            // 单轮时：直接选最近的
+            target = sorted.First();
+        }
+
+        TargetX = target.cx;
+        TargetY = target.cy;
+        TargetWidth = target.w;
+        TargetHeight = target.h;
     }
 }

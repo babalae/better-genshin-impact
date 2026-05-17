@@ -680,15 +680,20 @@ public class AutoFightTask : ISoloTask
                         await Delay(200, ct);
                         if (picker.TrySwitch(10))
                         {
+                            // 等待元素战技 CD 就绪
                             await picker.WaitSkillCd(ct);
-                            picker.UseSkill(true);
-                            await Delay(50, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                            await Delay(100, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-                            await Delay(100, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                            
+                            // 调用统一的辅助方法，模拟万叶长按 E 的输入序列：
+                            // 包含释放鼠标左键前摇防卡键 -> E 键 KeyDown -> 延时 800ms -> E 键 KeyUp -> 延时 50ms
+                            await SimulateHoldElementalSkillAsync(800, ct);    
+                            
+                            // 调用统一的辅助方法，模拟 6 次鼠标左键连续点击：
+                            // 配合万叶长 E 的滞空特性执行下落攻击，内部包含 try/finally 以保证取消任务时安全释放左键
+                            await SimulateMouseLeftClickLoopAsync(6, ct);      
+                            
+                            // 等待下落攻击和聚怪拾取动作彻底结束
                             await Delay(1500, ct);
+                            // 截图并更新技能最新冷却时间
                             picker.AfterUseSkill();
                         }
                     }
