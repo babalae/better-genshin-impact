@@ -1,0 +1,528 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.GatheringAndFarmingPage"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:GatheringAndFarmingPageViewModel}"
+             d:DesignHeight="860"
+             d:DesignWidth="1200"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <Style x:Key="SummaryCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16,14" />
+        </Style>
+
+        <Style x:Key="CharacterCardStyle" TargetType="Border">
+            <Setter Property="Width" Value="336" />
+            <Setter Property="Margin" Value="0,0,12,12" />
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style x:Key="MaterialButtonStyle" TargetType="Button">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="RootBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{ui:ThemeResource ControlFillColorSecondaryBrush}" />
+                                <Setter TargetName="RootBorder" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="RootBorder" Property="Background" Value="{ui:ThemeResource ControlFillColorDefaultBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TrackTileStyle" TargetType="Button" BasedOn="{StaticResource MaterialButtonStyle}">
+            <Setter Property="Width" Value="220" />
+            <Setter Property="Margin" Value="0,0,12,12" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+
+        <Style x:Key="ConsistentTabControlStyle" TargetType="TabControl" BasedOn="{StaticResource {x:Type TabControl}}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid Background="{TemplateBinding Background}" ClipToBounds="True" SnapsToDevicePixels="True">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    Margin="0,0,0,10"
+                                    Padding="6"
+                                    Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="10">
+                                <TabPanel IsItemsHost="True" Background="Transparent" />
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Border Margin="1"
+                                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                        CornerRadius="11">
+                                    <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      Content="{TemplateBinding SelectedContent}"
+                                                      ContentStringFormat="{TemplateBinding SelectedContentStringFormat}"
+                                                      ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </Border>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ConsistentTabItemStyle" TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Grid Background="Transparent" SnapsToDevicePixels="True">
+                            <Border x:Name="mainBorder"
+                                    Margin="0,0,6,0"
+                                    Background="Transparent"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    CornerRadius="8">
+                                <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  Content="{TemplateBinding Header}"
+                                                  ContentStringFormat="{TemplateBinding HeaderStringFormat}"
+                                                  ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                                  RecognizesAccessKey="True"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Border>
+                            <Border x:Name="selectionIndicator"
+                                    Width="44"
+                                    Height="3"
+                                    Margin="0,0,5,5"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="1.5"
+                                    Opacity="0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <Setter TargetName="mainBorder" Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+                                <Setter TargetName="mainBorder" Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+                                <Setter TargetName="mainBorder" Property="BorderThickness" Value="1" />
+                                <Setter TargetName="selectionIndicator" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="mainBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="24,16,24,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock FontSize="24" FontWeight="SemiBold" Text="采集与锄地" />
+                <TextBlock Margin="0,8,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap">
+                    统一收纳角色培养素材、食材与特产、掉落物和矿石的快捷入口。角色页会展示 3 个常用升级素材，点击素材图标后会先向用户确认，再执行自动匹配到的地图追踪任务。
+                </TextBlock>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Top">
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding OpenMapPathingCommand}"
+                           Content="地图追踪"
+                           Icon="{ui:SymbolIcon Map24}" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding OpenScriptRepoCommand}"
+                           Content="脚本仓库" />
+                <ui:Button Command="{Binding RefreshPathingIndexCommand}"
+                           Content="刷新路线索引" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,16,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="本地地图追踪任务" />
+                    <TextBlock Margin="0,8,0,0"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Text="{Binding AvailablePathingTaskCount}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="{Binding TaskIndexSummary}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="素材入口数量" />
+                    <TextBlock Margin="0,8,0,0"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Text="{Binding TrackEntryCount}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="角色页、素材页、掉落物页和矿石页共享同一套追踪确认逻辑。" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="4" Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="使用建议" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               TextWrapping="Wrap">
+                        素材名称会优先按任务文件名精确匹配，其次按相对路径模糊匹配。若未找到路线，请先在脚本仓库或地图追踪页准备对应任务。
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TabControl Grid.Row="2"
+                    Style="{StaticResource ConsistentTabControlStyle}">
+            <TabItem Header="角色" Style="{StaticResource ConsistentTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Margin="0,0,0,14"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="角色卡片默认展示 3 个常用升级素材。点击素材图标后会先弹出确认框，再执行匹配到的地图追踪任务。"
+                                   TextWrapping="Wrap" />
+
+                        <ItemsControl ItemsSource="{Binding Characters}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource CharacterCardStyle}">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,14">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Width="54"
+                                                        Height="54"
+                                                        Background="{Binding AccentSurfaceBrush}"
+                                                        BorderBrush="{Binding AccentBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="27">
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               FontSize="22"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{Binding AccentBrush}"
+                                                               Text="{Binding AvatarText}" />
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                    <TextBlock Margin="0,4,0,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                               Text="{Binding Subtitle}" />
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <TextBlock Margin="0,0,0,10"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       Text="常用升级素材"
+                                                       TextWrapping="Wrap" />
+
+                                            <ItemsControl ItemsSource="{Binding Materials}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Style="{StaticResource MaterialButtonStyle}"
+                                                                Command="{Binding DataContext.TrackMaterialCommand, ElementName=Root}"
+                                                                CommandParameter="{Binding}">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+
+                                                                <Border Width="40"
+                                                                        Height="40"
+                                                                        Background="{Binding AccentSurfaceBrush}"
+                                                                        BorderBrush="{Binding AccentBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="20">
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               FontSize="16"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{Binding AccentBrush}"
+                                                                               Text="{Binding ShortLabel}" />
+                                                                </Border>
+
+                                                                <StackPanel Grid.Column="1"
+                                                                            Margin="10,0,0,0"
+                                                                            VerticalAlignment="Center">
+                                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                                    <TextBlock Margin="0,3,0,0"
+                                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                               Text="{Binding Description}"
+                                                                               TextWrapping="Wrap" />
+                                                                </StackPanel>
+
+                                                                <TextBlock Grid.Column="2"
+                                                                           Margin="12,0,0,0"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{Binding AccentBrush}"
+                                                                           Text="追踪" />
+                                                            </Grid>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="食材与特产" Style="{StaticResource ConsistentTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding FoodAndSpecialtySections}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="16,16,16,4">
+                                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Title}" />
+                                    <TextBlock Margin="0,6,0,12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding Description}"
+                                               TextWrapping="Wrap" />
+
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource TrackTileStyle}"
+                                                        Command="{Binding DataContext.TrackMaterialCommand, ElementName=Root}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel>
+                                                        <Border Width="46"
+                                                                Height="46"
+                                                                Margin="0,0,0,12"
+                                                                Background="{Binding AccentSurfaceBrush}"
+                                                                BorderBrush="{Binding AccentBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="23">
+                                                            <TextBlock HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="18"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{Binding AccentBrush}"
+                                                                       Text="{Binding ShortLabel}" />
+                                                        </Border>
+                                                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}" />
+                                                        <TextBlock Margin="0,6,0,0"
+                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                   Text="{Binding Description}"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Margin="0,10,0,0"
+                                                                   Foreground="{Binding AccentBrush}"
+                                                                   Text="点击开始追踪" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="掉落物" Style="{StaticResource ConsistentTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Margin="0,0,0,12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="适合快速补充怪物系列路线。这里推荐把常刷对象单独准备成地图追踪任务，方便一键执行。"
+                                   TextWrapping="Wrap" />
+
+                        <ItemsControl ItemsSource="{Binding DropItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource TrackTileStyle}"
+                                            Command="{Binding DataContext.TrackMaterialCommand, ElementName=Root}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel>
+                                            <Border Width="46"
+                                                    Height="46"
+                                                    Margin="0,0,0,12"
+                                                    Background="{Binding AccentSurfaceBrush}"
+                                                    BorderBrush="{Binding AccentBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="23">
+                                                <TextBlock HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="18"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{Binding AccentBrush}"
+                                                           Text="{Binding ShortLabel}" />
+                                            </Border>
+                                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}" />
+                                            <TextBlock Margin="0,6,0,0"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding Description}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,10,0,0"
+                                                       Foreground="{Binding AccentBrush}"
+                                                       Text="点击开始追踪" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="矿石" Style="{StaticResource ConsistentTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Margin="0,0,0,12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="矿石页更偏向长线补货，建议把常刷路线做成每日或隔日脚本。点击卡片后同样会先确认再执行。"
+                                   TextWrapping="Wrap" />
+
+                        <ItemsControl ItemsSource="{Binding OreItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource TrackTileStyle}"
+                                            Command="{Binding DataContext.TrackMaterialCommand, ElementName=Root}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel>
+                                            <Border Width="46"
+                                                    Height="46"
+                                                    Margin="0,0,0,12"
+                                                    Background="{Binding AccentSurfaceBrush}"
+                                                    BorderBrush="{Binding AccentBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="23">
+                                                <TextBlock HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="18"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{Binding AccentBrush}"
+                                                           Text="{Binding ShortLabel}" />
+                                            </Border>
+                                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Name}" />
+                                            <TextBlock Margin="0,6,0,0"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding Description}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Margin="0,10,0,0"
+                                                       Foreground="{Binding AccentBrush}"
+                                                       Text="点击开始追踪" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>
