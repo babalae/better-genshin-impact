@@ -321,6 +321,13 @@ public class AutoFightTask : ISoloTask
                 while (!cts2.Token.IsCancellationRequested)
                 {
                     round++; // 每个完整循环视为一个回合
+                    if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
+                    {
+                        Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
+                        fightEndFlag = true;
+                        timeOutFlag = true;
+                        break;
+                    }
                     // 所有战斗角色都可以被取消
 
                     #region 本次战斗的跳过战斗判定
@@ -343,6 +350,7 @@ public class AutoFightTask : ISoloTask
 
                     #endregion
                     
+                    var hasExecutableCommandThisRound = false;
                     for (var i = 0; i < combatCommands.Count; i++)
                     {
                         var command = combatCommands[i];
@@ -352,6 +360,7 @@ public class AutoFightTask : ISoloTask
                         {
                             continue;
                         }
+                        hasExecutableCommandThisRound = true;
                         var lastCommand = i == 0 ? command : combatCommands[i - 1];
                         
                         #region 盾奶位技能优先功能
@@ -487,6 +496,11 @@ public class AutoFightTask : ISoloTask
                         }
                     }
 
+                    if (!hasExecutableCommandThisRound)
+                    {
+                        await Delay(50, ct);
+                        continue;
+                    }
 
                     if (fightEndFlag)
                     {
