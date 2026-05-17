@@ -9,7 +9,6 @@ using BetterGenshinImpact.Model.Gear.Tasks;
 using BetterGenshinImpact.Model.Gear.Parameter;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Service.GearTask;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -73,9 +72,8 @@ public class GearTaskConverter
     /// </summary>
     /// <param name="taskData">任务数据</param>
     /// <param name="parent">父任务</param>
-    /// <param name="inheritedGroupConfig">从父任务组继承下来的配置</param>
     /// <returns>转换后的任务</returns>
-    public async Task<BaseGearTask> ConvertTaskDataAsync(GearTaskData taskData, BaseGearTask? parent = null, ScriptGroupConfig? inheritedGroupConfig = null)
+    public async Task<BaseGearTask> ConvertTaskDataAsync(GearTaskData taskData, BaseGearTask? parent = null)
     {
         if (taskData == null)
         {
@@ -84,7 +82,6 @@ public class GearTaskConverter
 
         try
         {
-            var currentGroupConfig = GearTaskGroupConfigHelper.Deserialize(taskData.GroupConfigJson) ?? inheritedGroupConfig;
             BaseGearTask task;
             
             // 如果是目录类型或者任务被禁用，创建容器任务
@@ -109,7 +106,7 @@ public class GearTaskConverter
             else
             {
                 // 使用工厂创建具体的任务实例
-                var preparedTaskData = PrepareTaskDataForExecution(taskData, currentGroupConfig);
+                var preparedTaskData = PrepareTaskDataForExecution(taskData);
                 task = await _taskFactory.CreateTaskAsync(preparedTaskData);
                 task.Father = parent;
                 
@@ -126,7 +123,7 @@ public class GearTaskConverter
                 {
                     try
                     {
-                        var childTask = await ConvertTaskDataAsync(childData, task, currentGroupConfig);
+                        var childTask = await ConvertTaskDataAsync(childData, task);
                         task.Children.Add(childTask);
                     }
                     catch (Exception ex)
@@ -372,60 +369,23 @@ public class GearTaskConverter
         return result;
     }
 
-    private GearTaskData PrepareTaskDataForExecution(GearTaskData taskData, ScriptGroupConfig? groupConfig)
+    private GearTaskData PrepareTaskDataForExecution(GearTaskData taskData)
     {
-        if (string.Equals(taskData.TaskType, "Javascript", StringComparison.OrdinalIgnoreCase))
-        {
-            return PrepareJavascriptTaskDataForExecution(taskData, groupConfig);
-        }
-
         if (!string.Equals(taskData.TaskType, "Pathing", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.Equals(taskData.TaskType, "Shell", StringComparison.OrdinalIgnoreCase) &&
-                groupConfig?.EnableShellConfig == true)
-            {
-                return CreateCopiedTaskData(taskData, JsonConvert.SerializeObject(groupConfig.ShellConfig));
-            }
-
             return taskData;
         }
 
-        return PreparePathingTaskDataForExecution(taskData, groupConfig);
-    }
-
-    private GearTaskData PrepareJavascriptTaskDataForExecution(GearTaskData taskData, ScriptGroupConfig? groupConfig)
-    {
-        var parameters = DeserializeJavascriptParams(taskData.Parameters);
-        if (string.IsNullOrWhiteSpace(parameters.FolderName))
-        {
-            parameters.FolderName = ExtractTaskFolderName(taskData.Path);
-        }
-
-        if (parameters.PathingPartyConfig == null && groupConfig != null)
-        {
-            parameters.PathingPartyConfig = groupConfig.PathingConfig;
-        }
-
-        return CreateCopiedTaskData(taskData, JsonConvert.SerializeObject(parameters));
-    }
-
-    private GearTaskData PreparePathingTaskDataForExecution(GearTaskData taskData, ScriptGroupConfig? groupConfig)
-    {
         var parameters = DeserializePathingParams(taskData.Parameters);
-        if (parameters.PathingPartyConfig == null && groupConfig != null)
-        {
-            parameters.PathingPartyConfig = groupConfig.PathingConfig;
-        }
-
         if (!string.IsNullOrWhiteSpace(parameters.Path)
             && !TryExtractPathingRepoRelativePath(parameters.Path, out _))
         {
-            return CreateCopiedTaskData(taskData, JsonConvert.SerializeObject(parameters));
+            return taskData;
         }
 
         if (string.IsNullOrWhiteSpace(taskData.Path))
         {
-            return CreateCopiedTaskData(taskData, JsonConvert.SerializeObject(parameters));
+            return taskData;
         }
 
         if (TryExtractPathingRepoRelativePath(taskData.Path, out var repoRelativePath)
@@ -438,7 +398,20 @@ public class GearTaskConverter
             parameters.Path = taskData.Path.Trim().TrimEnd('\\', '/');
         }
 
-        return CreateCopiedTaskData(taskData, JsonConvert.SerializeObject(parameters));
+        return new GearTaskData
+        {
+            Name = taskData.Name,
+            TaskType = taskData.TaskType,
+            Path = taskData.Path,
+            IsEnabled = taskData.IsEnabled,
+            IsDirectory = taskData.IsDirectory,
+            IsExpanded = taskData.IsExpanded,
+            Parameters = JsonConvert.SerializeObject(parameters),
+            CreatedTime = taskData.CreatedTime,
+            ModifiedTime = taskData.ModifiedTime,
+            Priority = taskData.Priority,
+            Children = taskData.Children
+        };
     }
 
     private PathingGearTaskParams DeserializePathingParams(string? parametersJson)
@@ -456,61 +429,6 @@ public class GearTaskConverter
         {
             return new PathingGearTaskParams();
         }
-    }
-
-    private JavascriptGearTaskParams DeserializeJavascriptParams(string? parametersJson)
-    {
-        if (string.IsNullOrWhiteSpace(parametersJson))
-        {
-            return new JavascriptGearTaskParams();
-        }
-
-        try
-        {
-            return JsonConvert.DeserializeObject<JavascriptGearTaskParams>(parametersJson) ?? new JavascriptGearTaskParams();
-        }
-        catch
-        {
-            return new JavascriptGearTaskParams();
-        }
-    }
-
-    private static GearTaskData CreateCopiedTaskData(GearTaskData taskData, string parametersJson)
-    {
-        return new GearTaskData
-        {
-            Name = taskData.Name,
-            TaskType = taskData.TaskType,
-            Path = taskData.Path,
-            IsEnabled = taskData.IsEnabled,
-            IsDirectory = taskData.IsDirectory,
-            IsExpanded = taskData.IsExpanded,
-            GroupConfigJson = taskData.GroupConfigJson,
-            Parameters = parametersJson,
-            CreatedTime = taskData.CreatedTime,
-            ModifiedTime = taskData.ModifiedTime,
-            Priority = taskData.Priority,
-            Children = taskData.Children
-        };
-    }
-
-    private static string ExtractTaskFolderName(string? sourcePath)
-    {
-        if (string.IsNullOrWhiteSpace(sourcePath))
-        {
-            return string.Empty;
-        }
-
-        var trimmedPath = sourcePath.Trim().TrimEnd('\\', '/');
-        if (string.IsNullOrWhiteSpace(trimmedPath))
-        {
-            return string.Empty;
-        }
-
-        var lastSeparatorIndex = Math.Max(trimmedPath.LastIndexOf('\\'), trimmedPath.LastIndexOf('/'));
-        return lastSeparatorIndex >= 0 && lastSeparatorIndex < trimmedPath.Length - 1
-            ? trimmedPath[(lastSeparatorIndex + 1)..]
-            : trimmedPath;
     }
 
     private static string BuildPathingPlaceholderPath(string repoRelativePath, bool isDirectory)

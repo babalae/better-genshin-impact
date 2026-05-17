@@ -54,9 +54,6 @@ public class GearTaskData
     [JsonProperty("parameters")]
     public string? Parameters { get; set; } = "{}";
 
-    [JsonProperty("group_config_json")]
-    public string? GroupConfigJson { get; set; }
-
     [JsonProperty("created_time")]
     public DateTime CreatedTime { get; set; } = DateTime.Now;
 

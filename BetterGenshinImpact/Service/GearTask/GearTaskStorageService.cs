@@ -207,7 +207,6 @@ public class GearTaskStorageService
             // 当 Children 存在值的情况下，IsDirectory 必定为 true
             IsDirectory = children.Count > 0 || viewModel.IsDirectory,
             IsExpanded = viewModel.IsExpanded,
-            GroupConfigJson = GearTaskGroupConfigHelper.Serialize(viewModel.GroupConfig),
             Parameters = viewModel.Parameters,
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,
@@ -251,7 +250,6 @@ public class GearTaskStorageService
             IsEnabled = data.IsEnabled,
             IsDirectory = data.IsDirectory,
             IsExpanded = data.IsExpanded,
-            GroupConfig = GearTaskGroupConfigHelper.Deserialize(data.GroupConfigJson),
             Parameters = data.Parameters,
             CreatedTime = data.CreatedTime,
             ModifiedTime = data.ModifiedTime,

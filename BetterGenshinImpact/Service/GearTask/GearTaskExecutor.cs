@@ -7,7 +7,6 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model.Gear;
 using BetterGenshinImpact.Model.Gear.Tasks;
-using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.Service.GearTask.Execution;
 using BetterGenshinImpact.ViewModel.Pages.Component;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -262,7 +261,6 @@ public partial class GearTaskExecutor : ObservableObject, IGearTaskEventConsumer
             Path = viewModel.Path,
             IsEnabled = viewModel.IsEnabled,
             IsDirectory = viewModel.IsDirectory,
-            GroupConfigJson = GearTaskGroupConfigHelper.Serialize(viewModel.GroupConfig),
             Parameters = viewModel.Parameters,
             CreatedTime = viewModel.CreatedTime,
             ModifiedTime = viewModel.ModifiedTime,

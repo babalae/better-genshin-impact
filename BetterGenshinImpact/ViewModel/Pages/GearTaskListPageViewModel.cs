@@ -9,25 +9,17 @@ using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Script.Group;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.GearTask;
 using BetterGenshinImpact.Service.GearTask.Execution;
-using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.GearTask;
 using BetterGenshinImpact.ViewModel.Pages.Component;
-using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
-using MessageBoxButton = System.Windows.MessageBoxButton;
-using MessageBoxResult = System.Windows.MessageBoxResult;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -594,18 +586,6 @@ public partial class GearTaskListPageViewModel : ViewModel
     }
 
     [RelayCommand]
-    private async Task OpenSelectedTaskGroupSettings()
-    {
-        await OpenTaskGroupSettingsInternalAsync(SelectedTaskNode);
-    }
-
-    [RelayCommand]
-    private async Task OpenTaskGroupSettings(GearTaskViewModel? taskNode)
-    {
-        await OpenTaskGroupSettingsInternalAsync(taskNode);
-    }
-
-    [RelayCommand]
     private async Task DeleteTaskNode(GearTaskViewModel? taskNode)
     {
         if (taskNode == null || SelectedTaskDefinition?.RootTask == null)
@@ -627,52 +607,6 @@ public partial class GearTaskListPageViewModel : ViewModel
         RemoveTaskFromTree(SelectedTaskDefinition.RootTask, taskNode);
         SelectedTaskDefinition.ModifiedTime = DateTime.Now;
         await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
-    }
-
-    private async Task OpenTaskGroupSettingsInternalAsync(GearTaskViewModel? taskNode)
-    {
-        if (SelectedTaskDefinition == null)
-        {
-            Toast.Warning("请先选择一个任务定义");
-            return;
-        }
-
-        if (taskNode == null || !taskNode.IsDirectory)
-        {
-            Toast.Warning("请先选择一个任务组");
-            return;
-        }
-
-        taskNode.GroupConfig ??= new ScriptGroupConfig();
-
-        var dialogWindow = new FluentWindow
-        {
-            Title = "任务组设置",
-            Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, taskNode.GroupConfig)),
-            Width = 800,
-            Height = 600,
-            MinWidth = 800,
-            MaxWidth = 800,
-            MinHeight = 600,
-            Owner = Application.Current.MainWindow,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ExtendsContentIntoTitleBar = true,
-            WindowBackdropType = WindowBackdropType.Auto,
-        };
-        dialogWindow.SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(dialogWindow);
-        dialogWindow.ShowDialog();
-
-        try
-        {
-            taskNode.ModifiedTime = DateTime.Now;
-            SelectedTaskDefinition.ModifiedTime = DateTime.Now;
-            await _storageService.SaveTaskDefinitionAsync(SelectedTaskDefinition);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "保存任务组设置失败: {TaskName}", taskNode.Name);
-            ThemedMessageBox.Error($"保存任务组设置失败：{ex.Message}", "保存失败");
-        }
     }
 
     private bool RemoveTaskFromTree(GearTaskViewModel parent, GearTaskViewModel target)
