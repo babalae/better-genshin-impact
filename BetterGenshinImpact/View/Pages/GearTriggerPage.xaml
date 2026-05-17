@@ -20,6 +20,24 @@
 
     <UserControl.Resources>
         <ResourceDictionary>
+            <Style x:Key="TimedTabActionButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectedIndex, RelativeSource={RelativeSource AncestorType=TabControl}}" Value="0">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="HotkeyTabActionButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectedIndex, RelativeSource={RelativeSource AncestorType=TabControl}}" Value="1">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            
             <Style x:Key="ConsistentTabControlStyle" TargetType="TabControl"
                    BasedOn="{StaticResource {x:Type TabControl}}">
                 <Setter Property="Background" Value="Transparent" />
@@ -41,7 +59,30 @@
                                         BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
                                         BorderThickness="1"
                                         CornerRadius="10">
-                                    <TabPanel IsItemsHost="True" Background="Transparent" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TabPanel Grid.Column="0" IsItemsHost="True" Background="Transparent" />
+
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    VerticalAlignment="Center"
+                                                    Margin="12,0,0,0">
+                                            <ui:Button Style="{StaticResource TimedTabActionButtonStyle}"
+                                                       Content="新增定时触发器"
+                                                       Command="{Binding DataContext.AddTimedTriggerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                       Icon="{ui:SymbolIcon Add24}"
+                                                       Appearance="Primary" />
+                                            <ui:Button Style="{StaticResource HotkeyTabActionButtonStyle}"
+                                                       Content="新增快捷键触发器"
+                                                       Command="{Binding DataContext.AddHotkeyTriggerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                       Icon="{ui:SymbolIcon Add24}"
+                                                       Appearance="Primary" />
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
 
                                 <Border Grid.Row="1"
@@ -470,24 +511,15 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="16,12,16,0">
-                            <ui:Button HorizontalAlignment="Right"
-                                       Content="新增定时触发器"
-                                       Command="{Binding AddTimedTriggerCommand}"
-                                       Icon="{ui:SymbolIcon Add24}"
-                                       Appearance="Primary" />
-                        </Grid>
-
                         <!-- 固定表格头部 -->
-                        <ContentPresenter Grid.Row="1"
+                        <ContentPresenter Grid.Row="0"
                                           ContentTemplate="{StaticResource TimedTableHeaderTemplate}" />
 
                         <!-- 可滚动的列表内容 -->
-                        <Grid Grid.Row="2"
+                        <Grid Grid.Row="1"
                               Margin="0,6,0,12">
                             <ui:ListView ItemsSource="{Binding TimedTriggers}"
                                          ItemContainerStyle="{StaticResource TriggerListViewItemStyle}"
@@ -524,24 +556,15 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="16,12,16,0">
-                            <ui:Button HorizontalAlignment="Right"
-                                       Content="新增快捷键触发器"
-                                       Command="{Binding AddHotkeyTriggerCommand}"
-                                       Icon="{ui:SymbolIcon Add24}"
-                                       Appearance="Primary" />
-                        </Grid>
-
                         <!-- 固定表格头部 -->
-                        <ContentPresenter Grid.Row="1"
+                        <ContentPresenter Grid.Row="0"
                                           ContentTemplate="{StaticResource TableHeaderTemplate}" />
 
                         <!-- 可滚动的列表内容 -->
-                        <Grid Grid.Row="2"
+                        <Grid Grid.Row="1"
                               Margin="0,6,0,12">
                             <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
                                          ItemContainerStyle="{StaticResource TriggerListViewItemStyle}"

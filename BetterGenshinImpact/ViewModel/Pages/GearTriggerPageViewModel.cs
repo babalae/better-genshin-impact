@@ -198,6 +198,17 @@ public partial class GearTriggerPageViewModel : ViewModel
             return;
         }
 
+        var triggerTypeName = trigger.TriggerType == TriggerType.Timed ? "定时触发器" : "快捷键触发器";
+        var result = await ThemedMessageBox.ShowAsync(
+            $"确定要删除{triggerTypeName}「{trigger.Name}」吗？",
+            "确认删除",
+            System.Windows.MessageBoxButton.YesNo,
+            ThemedMessageBox.MessageBoxIcon.Question);
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
         switch (trigger.TriggerType)
         {
             case TriggerType.Timed:
