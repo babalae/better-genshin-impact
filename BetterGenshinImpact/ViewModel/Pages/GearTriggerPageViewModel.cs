@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Model.Gear.Triggers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.GearTask;
@@ -28,12 +27,6 @@ public partial class GearTriggerPageViewModel : ViewModel
     [ObservableProperty]
     private ObservableCollection<GearTriggerViewModel> _hotkeyTriggers = new();
 
-    [ObservableProperty]
-    private GearTriggerViewModel? _selectedTrigger;
-
-    [ObservableProperty]
-    private GearTaskDefinitionViewModel? _selectedTaskDefinition;
-
     public GearTriggerPageViewModel(
         ILogger<GearTriggerPageViewModel> logger,
         GearTriggerStorageService storageService,
@@ -42,11 +35,6 @@ public partial class GearTriggerPageViewModel : ViewModel
         _logger = logger;
         _storageService = storageService;
         _quartzSchedulerService = quartzSchedulerService;
-    }
-
-    partial void OnSelectedTriggerChanged(GearTriggerViewModel? value)
-    {
-        EditTriggerCommand.NotifyCanExecuteChanged();
     }
 
     public override void OnNavigatedTo()
@@ -175,7 +163,6 @@ public partial class GearTriggerPageViewModel : ViewModel
         };
 
         TimedTriggers.Add(newTrigger);
-        SelectedTrigger = newTrigger;
         newTrigger.UpdateNextRunTime();
 
         await SaveTriggersAsync();
@@ -199,70 +186,63 @@ public partial class GearTriggerPageViewModel : ViewModel
         };
 
         HotkeyTriggers.Add(newTrigger);
-        SelectedTrigger = newTrigger;
 
         await SaveTriggersAsync();
     }
 
     [RelayCommand]
-    private async Task DeleteTrigger()
+    private async Task DeleteTriggerItem(GearTriggerViewModel? trigger)
     {
-        if (SelectedTrigger == null)
+        if (trigger == null)
         {
             return;
         }
 
-        switch (SelectedTrigger.TriggerType)
+        switch (trigger.TriggerType)
         {
             case TriggerType.Timed:
-                TimedTriggers.Remove(SelectedTrigger);
+                TimedTriggers.Remove(trigger);
                 break;
             case TriggerType.Hotkey:
-                HotkeyTriggers.Remove(SelectedTrigger);
+                HotkeyTriggers.Remove(trigger);
                 break;
         }
 
-        SelectedTrigger = null;
         await SaveTriggersAsync();
     }
 
-    private bool CanEditTrigger()
+    [RelayCommand]
+    private async Task EditTriggerItem(GearTriggerViewModel? trigger)
     {
-        return SelectedTrigger != null;
-    }
-
-    [RelayCommand(CanExecute = nameof(CanEditTrigger))]
-    private async Task EditTrigger()
-    {
-        if (SelectedTrigger is not { } selectedTrigger)
+        if (trigger == null)
         {
             return;
         }
 
-        var dialog = AddTriggerDialog.ShowEditTriggerDialog(selectedTrigger);
+        var dialog = AddTriggerDialog.ShowEditTriggerDialog(trigger);
         if (dialog == null)
         {
             return;
         }
 
-        selectedTrigger.Name = dialog.TriggerName;
-        selectedTrigger.IsEnabled = dialog.IsEnabled;
-        selectedTrigger.TaskDefinitionName = dialog.SelectedTaskDefinitionName;
+        trigger.Name = dialog.TriggerName;
+        trigger.IsEnabled = dialog.IsEnabled;
+        trigger.TaskDefinitionName = dialog.SelectedTaskDefinitionName;
 
-        if (selectedTrigger.TriggerType == TriggerType.Timed)
+        if (trigger.TriggerType == TriggerType.Timed)
         {
-            selectedTrigger.CronExpression = dialog.CronExpression;
-            selectedTrigger.Hotkey = null;
+            trigger.CronExpression = dialog.CronExpression;
+            trigger.Hotkey = null;
         }
-        else if (selectedTrigger.TriggerType == TriggerType.Hotkey)
+        else if (trigger.TriggerType == TriggerType.Hotkey)
         {
-            selectedTrigger.Hotkey = dialog.SelectedHotkey;
-            selectedTrigger.HotkeyType = dialog.HotkeyType;
-            selectedTrigger.CronExpression = null;
+            trigger.Hotkey = dialog.SelectedHotkey;
+            trigger.HotkeyType = dialog.HotkeyType;
+            trigger.CronExpression = null;
         }
 
-        selectedTrigger.ModifiedTime = DateTime.Now;
-        selectedTrigger.UpdateNextRunTime();
+        trigger.ModifiedTime = DateTime.Now;
+        trigger.UpdateNextRunTime();
 
         await SaveTriggersAsync();
     }

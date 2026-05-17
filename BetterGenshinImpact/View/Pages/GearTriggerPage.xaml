@@ -194,6 +194,7 @@
                             <ColumnDefinition Width="150" />  <!-- 快捷键 -->
                             <ColumnDefinition Width="120" />  <!-- 快捷键类型 -->
                             <ColumnDefinition Width="*" />    <!-- 关联任务 -->
+                            <ColumnDefinition Width="116" />  <!-- 操作 -->
                         </Grid.ColumnDefinitions>
 
                         <ui:TextBlock Grid.Column="0"
@@ -221,6 +222,11 @@
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                       FontWeight="SemiBold"
                                       Text="关联任务" />
+                        <ui:TextBlock Grid.Column="5"
+                                      HorizontalAlignment="Center"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      FontWeight="SemiBold"
+                                      Text="操作" />
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -234,6 +240,7 @@
                             <ColumnDefinition Width="220" />  <!-- 触发器名称 -->
                             <ColumnDefinition Width="220" />  <!-- CRON表达式 -->
                             <ColumnDefinition Width="*" />    <!-- 关联任务 -->
+                            <ColumnDefinition Width="116" />  <!-- 操作 -->
                         </Grid.ColumnDefinitions>
 
                         <ui:TextBlock Grid.Column="0"
@@ -256,6 +263,11 @@
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                       FontWeight="SemiBold"
                                       Text="关联任务" />
+                        <ui:TextBlock Grid.Column="4"
+                                      HorizontalAlignment="Center"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      FontWeight="SemiBold"
+                                      Text="操作" />
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -277,6 +289,7 @@
                                 <ColumnDefinition Width="150" />  <!-- 快捷键 -->
                                 <ColumnDefinition Width="120" />  <!-- 快捷键类型 -->
                                 <ColumnDefinition Width="*" />    <!-- 关联任务 -->
+                                <ColumnDefinition Width="116" />  <!-- 操作 -->
                             </Grid.ColumnDefinitions>
 
                             <!-- 启用状态 -->
@@ -330,6 +343,21 @@
                                           Text="{Binding TaskDefinitionName, TargetNullValue='未设置'}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding TaskDefinitionName}" />
+
+                            <StackPanel Grid.Column="5"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <ui:Button Command="{Binding DataContext.EditTriggerItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}"
+                                           Icon="{ui:SymbolIcon Edit24}"
+                                           Margin="0,0,4,0"
+                                           ToolTip="编辑" />
+                                <ui:Button Command="{Binding DataContext.DeleteTriggerItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}"
+                                           Icon="{ui:SymbolIcon Delete24}"
+                                           ToolTip="删除" />
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </Grid>
@@ -360,6 +388,7 @@
                                 <ColumnDefinition Width="220" />  <!-- 触发器名称 -->
                                 <ColumnDefinition Width="220" />  <!-- CRON表达式 -->
                                 <ColumnDefinition Width="*" />    <!-- 关联任务 -->
+                                <ColumnDefinition Width="116" />  <!-- 操作 -->
                             </Grid.ColumnDefinitions>
 
                             <!-- 启用状态 -->
@@ -401,6 +430,21 @@
                                           Text="{Binding TaskDefinitionName, TargetNullValue='未设置'}"
                                           TextTrimming="CharacterEllipsis"
                                           ToolTip="{Binding TaskDefinitionName}" />
+
+                            <StackPanel Grid.Column="4"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <ui:Button Command="{Binding DataContext.EditTriggerItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}"
+                                           Icon="{ui:SymbolIcon Edit24}"
+                                           Margin="0,0,4,0"
+                                           ToolTip="编辑" />
+                                <ui:Button Command="{Binding DataContext.DeleteTriggerItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                           CommandParameter="{Binding}"
+                                           Icon="{ui:SymbolIcon Delete24}"
+                                           ToolTip="删除" />
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </Grid>
@@ -430,26 +474,13 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <!-- 工具栏 -->
-                        <Border Grid.Row="0" Style="{StaticResource TriggerToolbarBorderStyle}">
-                            <WrapPanel VerticalAlignment="Center">
-                                <ui:Button Content="新增定时触发器"
-                                           Command="{Binding AddTimedTriggerCommand}"
-                                           Icon="{ui:SymbolIcon Add24}"
-                                           Appearance="Primary"
-                                           Margin="0,0,6,6" />
-                                <ui:Button Content="编辑选中项"
-                                           Command="{Binding EditTriggerCommand}"
-                                           Icon="{ui:SymbolIcon Edit24}"
-                                           Appearance="Secondary"
-                                           Margin="0,0,6,6" />
-                                <ui:Button Content="删除选中项"
-                                           Command="{Binding DeleteTriggerCommand}"
-                                           Icon="{ui:SymbolIcon Delete24}"
-                                           Appearance="Secondary"
-                                           Margin="0,0,6,6" />
-                            </WrapPanel>
-                        </Border>
+                        <Grid Grid.Row="0" Margin="16,12,16,0">
+                            <ui:Button HorizontalAlignment="Right"
+                                       Content="新增定时触发器"
+                                       Command="{Binding AddTimedTriggerCommand}"
+                                       Icon="{ui:SymbolIcon Add24}"
+                                       Appearance="Primary" />
+                        </Grid>
 
                         <!-- 固定表格头部 -->
                         <ContentPresenter Grid.Row="1"
@@ -459,7 +490,6 @@
                         <Grid Grid.Row="2"
                               Margin="0,6,0,12">
                             <ui:ListView ItemsSource="{Binding TimedTriggers}"
-                                         SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
                                          ItemContainerStyle="{StaticResource TriggerListViewItemStyle}"
                                          ItemTemplate="{StaticResource TimedTriggerItemTemplate}"
                                          Style="{StaticResource TriggerListViewStyle}" />
@@ -498,26 +528,13 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <!-- 工具栏 -->
-                        <Border Grid.Row="0" Style="{StaticResource TriggerToolbarBorderStyle}">
-                            <WrapPanel VerticalAlignment="Center">
-                                <ui:Button Content="新增快捷键触发器"
-                                           Command="{Binding AddHotkeyTriggerCommand}"
-                                           Icon="{ui:SymbolIcon Add24}"
-                                           Appearance="Primary"
-                                           Margin="0,0,6,6" />
-                                <ui:Button Content="编辑选中项"
-                                           Command="{Binding EditTriggerCommand}"
-                                           Icon="{ui:SymbolIcon Edit24}"
-                                           Appearance="Secondary"
-                                           Margin="0,0,6,6" />
-                                <ui:Button Content="删除选中项"
-                                           Command="{Binding DeleteTriggerCommand}"
-                                           Icon="{ui:SymbolIcon Delete24}"
-                                           Appearance="Secondary"
-                                           Margin="0,0,6,6" />
-                            </WrapPanel>
-                        </Border>
+                        <Grid Grid.Row="0" Margin="16,12,16,0">
+                            <ui:Button HorizontalAlignment="Right"
+                                       Content="新增快捷键触发器"
+                                       Command="{Binding AddHotkeyTriggerCommand}"
+                                       Icon="{ui:SymbolIcon Add24}"
+                                       Appearance="Primary" />
+                        </Grid>
 
                         <!-- 固定表格头部 -->
                         <ContentPresenter Grid.Row="1"
@@ -527,7 +544,6 @@
                         <Grid Grid.Row="2"
                               Margin="0,6,0,12">
                             <ui:ListView ItemsSource="{Binding HotkeyTriggers}"
-                                         SelectedItem="{Binding SelectedTrigger, Mode=TwoWay}"
                                          ItemContainerStyle="{StaticResource TriggerListViewItemStyle}"
                                          ItemTemplate="{StaticResource TriggerItemTemplate}"
                                          Style="{StaticResource TriggerListViewStyle}" />
