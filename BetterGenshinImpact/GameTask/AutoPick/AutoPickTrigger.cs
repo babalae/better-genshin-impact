@@ -383,32 +383,22 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     private string RecognizePickItemByClassify(ImageRegion captureRectArea, Region foundRectArea)
     {
-        if (!BgiOnnxModel.IsModelExist(BgiOnnxModel.BgiPickClassify))
-        {
-            if (!_loggedPickModelMissing)
-            {
-                _logger.LogWarning("拾取分类模型不存在：{Path}", BgiOnnxModel.BgiPickClassify.ModalPath);
-                _loggedPickModelMissing = true;
-            }
-
-            return string.Empty;
-        }
-
         using var itemRegion = captureRectArea.DeriveCrop(GetPickModelRect(foundRectArea));
         var result = PickClassifierLazy.Value.Predictor.Classify(itemRegion.CacheImage);
         var topClass = result.GetTopClass();
+        // Debug.WriteLine($"AutoPickTrigger: 拾取，{topClass.Name.Name} {topClass.Confidence:F2}");
         if (topClass.Confidence <= 0.75)
         {
-            Debug.WriteLine($"AutoPickTrigger: 拾取分类置信度不足，{topClass.Name.Name} {topClass.Confidence:F2}");
             return string.Empty;
         }
+        // itemRegion.SrcMat.SaveImage(Global.Absolute("log\\pick.png"));
 
         return topClass.Name.Name;
     }
 
     private static Rect GetPickModelRect(Region foundRectArea)
     {
-        return new Rect(foundRectArea.X + 20, foundRectArea.Y - 16, 64, 64);
+        return new Rect(foundRectArea.Right + 20, foundRectArea.Y - 16, 64, 64);
     }
 
     private bool DoNotPick(string text)
