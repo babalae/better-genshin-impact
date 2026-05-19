@@ -281,55 +281,9 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        string text;
-        if (config.ItemRecognitionMode == nameof(PickItemRecognitionModeEnum.Classify))
-        {
-            text = ClassifyPickItem(content.CaptureRectArea, foundRectArea);
-        }
-        else if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
-        {
-            var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
-            text = TextInferenceFactory.Pick.Value.Inference(textMat);
-        }
-        else
-        {
-            using var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
-            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
-            // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
-            // 如果找到有效区域
-            if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
-            {
-                // 截取只包含文字的区域
-                using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
-                    boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
-                text = OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
+        var text = RecognizePickItem(content, foundRectArea, textRect, config);
 
-                // if (RuntimeHelper.IsDebug)
-                // {
-                //     // 如果不等于正确文字，则保存图片
-                //     if (text != "烹饪")
-                //     {
-                //         var path = Global.Absolute("log/pick");
-                //         Directory.CreateDirectory(path);
-                //         var str = $"{DateTime.Now:yyyyMMddHHmmssfff}";
-                //         // textMat.SaveImage(Path.Combine(path, $"pick_ocr_ori_{str}.png"));
-                //         // 画上 boundingRect
-                //         Cv2.Rectangle(textMat, boundingRect, new Scalar(0, 0, 255), 1);
-                //         textMat.SaveImage(Path.Combine(path, $"pick_ocr_rect_{str}.png"));
-                //         bin.SaveImage(Path.Combine(path, $"bin_{str}.png"));
-                //     }
-                // }
-            }
-            else
-            {
-                Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
-                text = OcrFactory.Paddle.Ocr(textMat);
-            }
-        }
-
-        speedTimer.Record(config.ItemRecognitionMode == nameof(PickItemRecognitionModeEnum.Classify)
-            ? "物品分类识别"
-            : "文字识别");
+        speedTimer.Record("识别");
         if (!string.IsNullOrEmpty(text))
         {
             // 处理OCR识别结果，清理无效字符并确保引号配对
@@ -389,7 +343,45 @@ public partial class AutoPickTrigger : ITaskTrigger
         speedTimer.DebugPrint();
     }
 
-    private string ClassifyPickItem(ImageRegion captureRectArea, Region foundRectArea)
+    private string RecognizePickItem(CaptureContent content, Region foundRectArea, Rect textRect, AutoPickConfig config)
+    {
+        if (config.ItemRecognitionMode == nameof(PickItemRecognitionModeEnum.Classify))
+        {
+            return RecognizePickItemByClassify(content.CaptureRectArea, foundRectArea);
+        }
+        else
+        {
+            return RecognizePickItemByOcr(content, textRect, config);
+        }
+    }
+
+    private string RecognizePickItemByOcr(CaptureContent content, Rect textRect, AutoPickConfig config)
+    {
+        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
+        {
+            using var greyTextMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
+            return TextInferenceFactory.Pick.Value.Inference(greyTextMat);
+        }
+        else
+        {
+            using var textMat = new Mat(content.CaptureRectArea.SrcMat, textRect);
+            var boundingRect = TextRectExtractor.GetTextBoundingRect(textMat);
+            // var boundingRect = new Rect(); // 不使用自己写的文字区域提取
+            // 如果找到有效区域
+            if (boundingRect.X < 20 && boundingRect.Width > 5 && boundingRect.Height > 5)
+            {
+                // 截取只包含文字的区域
+                using var textOnlyMat = new Mat(textMat, new Rect(0, 0,
+                    boundingRect.Right + 5 < textMat.Width ? boundingRect.Right + 5 : textMat.Width, textMat.Height));
+                return OcrFactory.Paddle.OcrWithoutDetector(textOnlyMat);
+            }
+
+            Debug.WriteLine("-- 无法识别到有效文字区域，尝试直接OCR DET");
+            return OcrFactory.Paddle.Ocr(textMat);
+        }
+    }
+
+    private string RecognizePickItemByClassify(ImageRegion captureRectArea, Region foundRectArea)
     {
         if (!BgiOnnxModel.IsModelExist(BgiOnnxModel.BgiPickClassify))
         {
@@ -454,7 +446,7 @@ public partial class AutoPickTrigger : ITaskTrigger
         {
             return true;
         }
-        
+
         if (text.Contains("月谕圣牌"))
         {
             return true;
