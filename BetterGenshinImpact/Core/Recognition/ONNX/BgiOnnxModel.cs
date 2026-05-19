@@ -61,6 +61,9 @@ public class BgiOnnxModel
     public static readonly BgiOnnxModel BgiQClassify =
         Register("BgiQClassify", @"Assets\Model\Common\q_classify_sim.onnx");
 
+    public static readonly BgiOnnxModel BgiPickClassify =
+        Register("BgiPickClassify", @"Assets\Model\Common\pick.onnx");
+
     /// <summary>
     /// paddleOCR V4 检测模型
     /// </summary>

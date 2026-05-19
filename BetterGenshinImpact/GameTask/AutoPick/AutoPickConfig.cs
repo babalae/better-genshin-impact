@@ -38,6 +38,14 @@ namespace BetterGenshinImpact.GameTask.AutoPick
         private string _ocrEngine = PickOcrEngineEnum.Paddle.ToString();
 
         /// <summary>
+        /// 拾取内容识别方式
+        /// - Ocr
+        /// - Model
+        /// </summary>
+        [ObservableProperty]
+        private string _itemRecognitionMode = PickItemRecognitionModeEnum.Ocr.ToString();
+
+        /// <summary>
         /// 急速模式
         /// 无视文字识别结果，直接拾取
         /// </summary>

@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX.SVTR;
 using BetterGenshinImpact.Core.Script.Dependence.Model.TimerConfig;
@@ -8,6 +9,8 @@ using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
+using Compunet.YoloSharp.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -19,6 +22,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.GameTask.Model.Area;
+using Compunet.YoloSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -157,6 +161,12 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// </summary>
     private int _prevClickFrameIndex = -1;
 
+
+    private static readonly Lazy<BgiYoloPredictor> PickClassifierLazy = new(() =>
+        App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiPickClassify));
+
+    private bool _loggedPickModelMissing;
+
     //private int _fastModePickCount = 0;
 
     public void OnCapture(CaptureContent content)
@@ -272,7 +282,11 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         string text;
-        if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
+        if (config.ItemRecognitionMode == nameof(PickItemRecognitionModeEnum.Classify))
+        {
+            text = ClassifyPickItem(content.CaptureRectArea, foundRectArea);
+        }
+        else if (config.OcrEngine == nameof(PickOcrEngineEnum.Yap))
         {
             var textMat = new Mat(content.CaptureRectArea.CacheGreyMat, textRect);
             text = TextInferenceFactory.Pick.Value.Inference(textMat);
@@ -313,11 +327,16 @@ public partial class AutoPickTrigger : ITaskTrigger
             }
         }
 
-        speedTimer.Record("文字识别");
+        speedTimer.Record(config.ItemRecognitionMode == nameof(PickItemRecognitionModeEnum.Classify)
+            ? "物品分类识别"
+            : "文字识别");
         if (!string.IsNullOrEmpty(text))
         {
             // 处理OCR识别结果，清理无效字符并确保引号配对
-            text = ProcessOcrText(text);
+            if (config.ItemRecognitionMode != nameof(PickItemRecognitionModeEnum.Classify))
+            {
+                text = ProcessOcrText(text);
+            }
 
             if (DoNotPick(text))
             {
@@ -368,6 +387,36 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.DebugPrint();
+    }
+
+    private string ClassifyPickItem(ImageRegion captureRectArea, Region foundRectArea)
+    {
+        if (!BgiOnnxModel.IsModelExist(BgiOnnxModel.BgiPickClassify))
+        {
+            if (!_loggedPickModelMissing)
+            {
+                _logger.LogWarning("拾取分类模型不存在：{Path}", BgiOnnxModel.BgiPickClassify.ModalPath);
+                _loggedPickModelMissing = true;
+            }
+
+            return string.Empty;
+        }
+
+        using var itemRegion = captureRectArea.DeriveCrop(GetPickModelRect(foundRectArea));
+        var result = PickClassifierLazy.Value.Predictor.Classify(itemRegion.CacheImage);
+        var topClass = result.GetTopClass();
+        if (topClass.Confidence <= 0.75)
+        {
+            Debug.WriteLine($"AutoPickTrigger: 拾取分类置信度不足，{topClass.Name.Name} {topClass.Confidence:F2}");
+            return string.Empty;
+        }
+
+        return topClass.Name.Name;
+    }
+
+    private static Rect GetPickModelRect(Region foundRectArea)
+    {
+        return new Rect(foundRectArea.X + 20, foundRectArea.Y - 16, 64, 64);
     }
 
     private bool DoNotPick(string text)
