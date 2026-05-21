@@ -208,12 +208,9 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 CancelChooseOptionWait("对话或选项已变化");
             }
-            else if (UpdateChooseOptionWait())
-            {
-                return;
-            }
             else
             {
+                UpdateChooseOptionWait();
                 return;
             }
         }

@@ -47,6 +47,16 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
 
     public void ReadAvailableSamples(List<float> destination)
     {
+        ReadAvailableSamplesCore(destination);
+    }
+
+    public void DiscardAvailableSamples()
+    {
+        ReadAvailableSamplesCore(null);
+    }
+
+    private void ReadAvailableSamplesCore(List<float>? destination)
+    {
         while (true)
         {
             _captureClient.GetNextPacketSize(out var packetFrameCount).ThrowIfFailed();
@@ -66,11 +76,19 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
                 var sampleCount = checked((int)frameCount);
                 if ((flags & AUDCLNT_BUFFERFLAGS.AUDCLNT_BUFFERFLAGS_SILENT) != 0)
                 {
-                    for (var i = 0; i < sampleCount; i++)
+                    if (destination != null)
                     {
-                        destination.Add(0f);
+                        for (var i = 0; i < sampleCount; i++)
+                        {
+                            destination.Add(0f);
+                        }
                     }
 
+                    continue;
+                }
+
+                if (destination == null)
+                {
                     continue;
                 }
 
@@ -86,12 +104,6 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
                 _captureClient.ReleaseBuffer(frameCount).ThrowIfFailed();
             }
         }
-    }
-
-    public void DiscardAvailableSamples()
-    {
-        var samples = new List<float>();
-        ReadAvailableSamples(samples);
     }
 
     public void Dispose()
@@ -171,7 +183,7 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
             Marshal.StructureToPtr(parameters, parametersPointer, false);
             var propVariant = PropVariant.FromBlob(parametersPointer, (uint)size);
 
-            var handler = new AudioInterfaceActivationHandler();
+            using var handler = new AudioInterfaceActivationHandler();
             var audioClientId = typeof(IAudioClient).GUID;
             Marshal.ThrowExceptionForHR(ActivateAudioInterfaceAsyncNative(
                 VirtualAudioDeviceProcessLoopback,
@@ -305,9 +317,10 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
     }
 
     [ComVisible(true)]
-    private sealed class AudioInterfaceActivationHandler : IActivateAudioInterfaceCompletionHandler
+    private sealed class AudioInterfaceActivationHandler : IActivateAudioInterfaceCompletionHandler, IDisposable
     {
         private readonly ManualResetEventSlim _completed = new(false);
+        private volatile bool _disposed;
         private Exception? _exception;
         private IAudioClient? _audioClient;
 
@@ -326,7 +339,16 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
             }
             finally
             {
-                _completed.Set();
+                if (!_disposed)
+                {
+                    try
+                    {
+                        _completed.Set();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
             }
         }
 
@@ -343,6 +365,12 @@ internal sealed class ProcessLoopbackAudioCapture : IDisposable
             }
 
             return _audioClient ?? throw new InvalidOperationException("进程音频接口激活失败");
+        }
+
+        public void Dispose()
+        {
+            _disposed = true;
+            _completed.Dispose();
         }
     }
 }
