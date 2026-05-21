@@ -2075,5 +2075,41 @@
     "nameEn": "Linnea",
     "skillCD": 18,
     "weapon": "10"
+  },
+  {
+    "alias": [
+      "洛恩",
+      "Lohen"
+    ],
+    "burstCD": 15,
+    "id": "10000129",
+    "name": "洛恩",
+    "nameEn": "Lohen",
+    "skillCD": 18,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "尼可",
+      "Nicole"
+    ],
+    "burstCD": 15,
+    "id": "10000131",
+    "name": "尼可",
+    "nameEn": "Nicole",
+    "skillCD": 16,
+    "weapon": "10"
+  },
+  {
+    "alias": [
+      "布伦妮",
+      "Prune"
+    ],
+    "burstCD": 18,
+    "id": "10000132",
+    "name": "布伦妮",
+    "nameEn": "Prune",
+    "skillCD": 15,
+    "weapon": "10"
   }
 ]
