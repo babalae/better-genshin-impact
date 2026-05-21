@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using Fischless.GameCapture;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -1095,9 +1096,13 @@ public class TpTask
     private bool CheckMapChooseIcon(ImageRegion imageRegion)
     {
         var hasMapChooseIcon = false;
+        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == CaptureModes.WindowsGraphicsCaptureHdr.ToString();
 
         // 全匹配一遍
-        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(imageRegion.CacheGreyMat[_assets.MapChooseIconRoi], _assets.MapChooseIconGreyMatList);
+        using var mapChooseIconRoi = imageRegion.CacheGreyMat[_assets.MapChooseIconRoi].Clone();
+        var rResultList = isHdrCapture
+            ? MatchTemplateHelper.MatchMultiPicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList, 0.7)
+            : MatchTemplateHelper.MatchMultiPicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList);
         // 按高度排序
         if (rResultList.Count > 0)
         {
@@ -1111,7 +1116,7 @@ public class TpTask
                 {
                     // RecognitionType = RecognitionTypes.Ocr,
                     RecognitionType = RecognitionTypes.ColorRangeAndOcr,
-                    LowerColor = new Scalar(249, 249, 249), // 只取白色文字
+                    LowerColor = isHdrCapture ? new Scalar(120, 120, 120) : new Scalar(249, 249, 249),
                     UpperColor = new Scalar(255, 255, 255),
                 });
                 if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)
