@@ -126,13 +126,12 @@ internal class QuickTeleportTrigger : ITaskTrigger
     private bool CheckMapChooseIcon(CaptureContent content)
     {
         var hasMapChooseIcon = false;
-        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == CaptureModes.WindowsGraphicsCaptureHdr.ToString();
+        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
 
         // 全匹配一遍
         using var mapChooseIconRoi = content.CaptureRectArea.CacheGreyMat[_assets.MapChooseIconRoi].Clone();
-        var rResultList = isHdrCapture
-            ? MatchTemplateHelper.MatchMultiPicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList, 0.7)
-            : MatchTemplateHelper.MatchMultiPicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList);
+        var rResultList = MatchTemplateHelper.MatchMultiPicForOnePic(mapChooseIconRoi, _assets.MapChooseIconGreyMatList, isHdrCapture ? 0.7 : 0.8);
+
         // 按高度排序
         if (rResultList.Count > 0)
         {
@@ -144,9 +143,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 using var ra = content.CaptureRectArea.DeriveCrop(_assets.MapChooseIconRoi.X + iconRect.X + iconRect.Width, _assets.MapChooseIconRoi.Y + iconRect.Y - 8, 200, iconRect.Height + 16);
                 using var textRegion = ra.Find(new RecognitionObject
                 {
-                    // RecognitionType = RecognitionTypes.Ocr,
-                    RecognitionType = RecognitionTypes.ColorRangeAndOcr,
-                    LowerColor = isHdrCapture ? new Scalar(120, 120, 120) : new Scalar(249, 249, 249),
+                    RecognitionType = isHdrCapture ? RecognitionTypes.Ocr : RecognitionTypes.ColorRangeAndOcr,
+                    LowerColor = new Scalar(249, 249, 249), // 只取白色文字
                     UpperColor = new Scalar(255, 255, 255),
                 });
                 if (string.IsNullOrEmpty(textRegion.Text) || textRegion.Text.Length == 1)
