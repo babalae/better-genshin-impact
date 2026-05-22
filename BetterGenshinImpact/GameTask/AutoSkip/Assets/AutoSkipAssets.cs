@@ -272,7 +272,7 @@ public class AutoSkipAssets : BaseAssets<AutoSkipAssets>
             RecognitionType = RecognitionTypes.TemplateMatch,
             TemplateImageMat = GameTaskManager.LoadAssetImage("AutoSkip", "controller_talk_choice.png"),
             DrawOnWindow = true,
-            RegionOfInterest = OptionRoi
+            Use3Channels = true,
         }.InitTemplate();
         // 调节音量按钮
         ControllerAdjustVolumeButtonRo = new RecognitionObject

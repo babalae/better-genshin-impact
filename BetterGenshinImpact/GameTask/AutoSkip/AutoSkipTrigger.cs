@@ -239,7 +239,14 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
 
             // 对话选项选择
-            // TODO 手柄模式非快速跳过对话适配
+            // 手柄模式非快速跳过对话适配-直接去找聊天对话选项，找到一个直接点击
+            using var ra = content.CaptureRectArea.Find(AutoSkipAssets.Instance.ControllerChoiceButtonRo);
+            bool hasOptionController = ra.IsExist();
+            // _logger.LogWarning($"hasOptionController check result: {hasOptionController}");
+            if (hasOptionController && IsControllerMode)
+            {
+                _postMessageSimulatorController?.ButtonBPress();
+            }
             bool hasOption;
             if (UseBackgroundOperation || IsUseInteractionKey)
             {
