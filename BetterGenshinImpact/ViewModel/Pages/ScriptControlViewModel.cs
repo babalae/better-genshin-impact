@@ -640,6 +640,18 @@ public partial class ScriptControlViewModel : ViewModel
                 if (newScriptGroup != null)
                 {
                     newScriptGroup.Name = str;
+                    ScriptGroup.ResetGroupInfo(newScriptGroup);
+                    foreach (var project in newScriptGroup.Projects)
+                    {
+                        try
+                        {
+                            project.BuildScriptProjectRelation();
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
                     ScriptGroups.Add(newScriptGroup);
                 }
 
