@@ -159,7 +159,12 @@ internal static class RuntimeHelper
         try
         {
             handle = EventWaitHandle.OpenExisting(instanceName);
-            _ = TrySendSingleInstanceActivationArgs(instanceName, Environment.GetCommandLineArgs().Skip(1).ToArray());
+            string[] activationArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+            if (!TrySendSingleInstanceActivationArgsWithRetry(instanceName, activationArgs))
+            {
+                Debug.WriteLine("Failed to forward single instance activation args.");
+            }
+
             handle.Set();
             callback?.Invoke(false);
             Environment.Exit(0xFFFF);
@@ -188,6 +193,27 @@ internal static class RuntimeHelper
     private static string GetSingleInstanceActivationPipeName(string instanceName)
     {
         return $"{instanceName}.Activation";
+    }
+
+    private static bool TrySendSingleInstanceActivationArgsWithRetry(string instanceName, string[] args)
+    {
+        const int maxAttempts = 10;
+        const int retryDelayMilliseconds = 100;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            if (TrySendSingleInstanceActivationArgs(instanceName, args))
+            {
+                return true;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                Thread.Sleep(retryDelayMilliseconds);
+            }
+        }
+
+        return false;
     }
 
     private static bool TrySendSingleInstanceActivationArgs(string instanceName, string[] args)

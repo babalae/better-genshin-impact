@@ -538,10 +538,18 @@ public partial class OneDragonFlowViewModel : ViewModel
             else
             {
                 _logger.LogWarning("Command line one dragon config not found: {Name}", cmdOptions.OneDragonConfigName);
+                Toast.Warning($"未找到一条龙配置：{cmdOptions.OneDragonConfigName}");
+                return;
             }
         }
 
-        Toast.Information($"Command line one dragon: {SelectedConfig.Name}");
+        if (SelectedConfig == null)
+        {
+            _logger.LogWarning("No one dragon config is loaded for command line activation");
+            return;
+        }
+
+        Toast.Information($"命令行一条龙「{SelectedConfig.Name}」。");
         await OnOneKeyExecute();
     }
 
