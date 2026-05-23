@@ -518,6 +518,34 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    public async Task StartFromCommandLineOptionsAsync(CommandLineOptions cmdOptions)
+    {
+        if (cmdOptions.Action != CommandLineAction.StartOneDragon)
+        {
+            return;
+        }
+
+        if (cmdOptions.OneDragonConfigName != null)
+        {
+            _logger.LogInformation("Command line one dragon config: {Name}", cmdOptions.OneDragonConfigName);
+            var argsOneDragonConfig = ConfigList.FirstOrDefault(x =>
+                string.Equals(x.Name, cmdOptions.OneDragonConfigName, StringComparison.Ordinal));
+            if (argsOneDragonConfig != null)
+            {
+                SelectedConfig = argsOneDragonConfig;
+                OnConfigDropDownChanged();
+            }
+            else
+            {
+                _logger.LogWarning("Command line one dragon config not found: {Name}", cmdOptions.OneDragonConfigName);
+            }
+        }
+
+        Toast.Information($"Command line one dragon: {SelectedConfig.Name}");
+        await OnOneKeyExecute();
+    }
+
+
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
