@@ -52,7 +52,7 @@ public partial class OneDragonFlowConfig : ObservableObject
 
     // 每周秘境的全局限时奖励选项，单日留空时使用
     [ObservableProperty]
-    private string _sundaySelectedValue = "0";
+    private string _sundayWeeklySelectedValue = "0";
     
     // 尘歌壶传送方式，1. 地图传送 2. 尘歌壶道具
     [ObservableProperty]
@@ -214,7 +214,7 @@ public partial class OneDragonFlowConfig : ObservableObject
     private string _sundayDomainName = string.Empty;
 
     [ObservableProperty]
-    private string _sundayDaySelectedValue = "0";
+    private string _sundaySelectedValue = "0";
 
     // 完成后操作
     [ObservableProperty]
@@ -235,8 +235,8 @@ public partial class OneDragonFlowConfig : ObservableObject
                 DayOfWeek.Thursday => (GetWeeklyPartyName(ThursdayPartyName), GetWeeklyDomainName(ThursdayDomainName), GetWeeklySelectedValue(ThursdaySelectedValue)),
                 DayOfWeek.Friday => (GetWeeklyPartyName(FridayPartyName), GetWeeklyDomainName(FridayDomainName), GetWeeklySelectedValue(FridaySelectedValue)),
                 DayOfWeek.Saturday => (GetWeeklyPartyName(SaturdayPartyName), GetWeeklyDomainName(SaturdayDomainName), GetWeeklySelectedValue(SaturdaySelectedValue)),
-                DayOfWeek.Sunday => (GetWeeklyPartyName(SundayPartyName), GetWeeklyDomainName(SundayDomainName), GetWeeklySelectedValue(SundayDaySelectedValue)),
-                _ => (PartyName, DomainName,SundaySelectedValue)
+                DayOfWeek.Sunday => (GetWeeklyPartyName(SundayPartyName), GetWeeklyDomainName(SundayDomainName), GetWeeklySelectedValue(SundaySelectedValue)),
+                _ => (PartyName, DomainName, SundayWeeklySelectedValue)
             };
         }
         else
@@ -257,7 +257,7 @@ public partial class OneDragonFlowConfig : ObservableObject
 
     private string GetWeeklySelectedValue(string selectedValue)
     {
-        return string.IsNullOrWhiteSpace(selectedValue) || selectedValue == "0" ? SundaySelectedValue : selectedValue;
+        return string.IsNullOrWhiteSpace(selectedValue) || selectedValue == "0" ? SundayWeeklySelectedValue : selectedValue;
     }
 
     public bool ShouldRunLeyLineToday()
