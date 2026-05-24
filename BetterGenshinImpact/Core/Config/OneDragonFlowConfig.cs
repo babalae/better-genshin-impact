@@ -46,11 +46,11 @@ public partial class OneDragonFlowConfig : ObservableObject
     [ObservableProperty]
     private int _minResinToKeep = 0;
     
-    // 领取每日奖励的好感数量
+    // 普通周日或限时奖励选项
     [ObservableProperty]
     private string _sundayEverySelectedValue = "0";
-    
-    // 领取每日奖励的好感数量
+
+    // 每周秘境的全局限时奖励选项，单日留空时使用
     [ObservableProperty]
     private string _sundaySelectedValue = "0";
     
@@ -151,6 +151,9 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     [ObservableProperty]
     private string _mondayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _mondaySelectedValue = "0";
     
     
     //周二
@@ -159,6 +162,9 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     [ObservableProperty]
     private string _tuesdayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _tuesdaySelectedValue = "0";
     
     //周三
     [ObservableProperty]
@@ -166,6 +172,9 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     [ObservableProperty]
     private string _wednesdayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _wednesdaySelectedValue = "0";
     
     //周四
     [ObservableProperty]
@@ -173,6 +182,9 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     [ObservableProperty]
     private string _thursdayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _thursdaySelectedValue = "0";
     
     //周五
     [ObservableProperty]
@@ -180,6 +192,9 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     [ObservableProperty]
     private string _fridayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _fridaySelectedValue = "0";
     
     //周六
     [ObservableProperty]
@@ -187,6 +202,9 @@ public partial class OneDragonFlowConfig : ObservableObject
     
     [ObservableProperty]
     private string _saturdayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _saturdaySelectedValue = "0";
     
     //周日
     [ObservableProperty]
@@ -194,6 +212,9 @@ public partial class OneDragonFlowConfig : ObservableObject
 
     [ObservableProperty]
     private string _sundayDomainName = string.Empty;
+
+    [ObservableProperty]
+    private string _sundayDaySelectedValue = "0";
 
     // 完成后操作
     [ObservableProperty]
@@ -208,20 +229,35 @@ public partial class OneDragonFlowConfig : ObservableObject
             var dayOfWeek = (serverTime.Hour >= 4 ? serverTime : serverTime.AddDays(-1)).DayOfWeek;
             return dayOfWeek switch
             {
-                DayOfWeek.Monday => (MondayPartyName, MondayDomainName,SundaySelectedValue),
-                DayOfWeek.Tuesday => (TuesdayPartyName, TuesdayDomainName,SundaySelectedValue),
-                DayOfWeek.Wednesday => (WednesdayPartyName, WednesdayDomainName,SundaySelectedValue),
-                DayOfWeek.Thursday => (ThursdayPartyName, ThursdayDomainName,SundaySelectedValue),
-                DayOfWeek.Friday => (FridayPartyName, FridayDomainName,SundaySelectedValue),
-                DayOfWeek.Saturday => (SaturdayPartyName, SaturdayDomainName,SundaySelectedValue),
-                DayOfWeek.Sunday => (SundayPartyName, SundayDomainName,SundaySelectedValue),
+                DayOfWeek.Monday => (GetWeeklyPartyName(MondayPartyName), GetWeeklyDomainName(MondayDomainName), GetWeeklySelectedValue(MondaySelectedValue)),
+                DayOfWeek.Tuesday => (GetWeeklyPartyName(TuesdayPartyName), GetWeeklyDomainName(TuesdayDomainName), GetWeeklySelectedValue(TuesdaySelectedValue)),
+                DayOfWeek.Wednesday => (GetWeeklyPartyName(WednesdayPartyName), GetWeeklyDomainName(WednesdayDomainName), GetWeeklySelectedValue(WednesdaySelectedValue)),
+                DayOfWeek.Thursday => (GetWeeklyPartyName(ThursdayPartyName), GetWeeklyDomainName(ThursdayDomainName), GetWeeklySelectedValue(ThursdaySelectedValue)),
+                DayOfWeek.Friday => (GetWeeklyPartyName(FridayPartyName), GetWeeklyDomainName(FridayDomainName), GetWeeklySelectedValue(FridaySelectedValue)),
+                DayOfWeek.Saturday => (GetWeeklyPartyName(SaturdayPartyName), GetWeeklyDomainName(SaturdayDomainName), GetWeeklySelectedValue(SaturdaySelectedValue)),
+                DayOfWeek.Sunday => (GetWeeklyPartyName(SundayPartyName), GetWeeklyDomainName(SundayDomainName), GetWeeklySelectedValue(SundayDaySelectedValue)),
                 _ => (PartyName, DomainName,SundaySelectedValue)
             };
         }
         else
         {
-            return (PartyName, DomainName,SundayEverySelectedValue);
+            return (PartyName, DomainName, SundayEverySelectedValue);
         }
+    }
+
+    private string GetWeeklyPartyName(string partyName)
+    {
+        return string.IsNullOrWhiteSpace(partyName) ? PartyName : partyName;
+    }
+
+    private string GetWeeklyDomainName(string domainName)
+    {
+        return string.IsNullOrWhiteSpace(domainName) ? DomainName : domainName;
+    }
+
+    private string GetWeeklySelectedValue(string selectedValue)
+    {
+        return string.IsNullOrWhiteSpace(selectedValue) || selectedValue == "0" ? SundaySelectedValue : selectedValue;
     }
 
     public bool ShouldRunLeyLineToday()

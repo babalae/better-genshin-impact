@@ -5,6 +5,7 @@
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -21,7 +22,7 @@
              FontFamily="{StaticResource TextThemeFontFamily}"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
-    
+
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
@@ -463,7 +464,7 @@
                                             MaxWidth="800"
                                             Margin="20,0,36,0"
                                             Text="{Binding SelectedConfig.PartyName, Mode=TwoWay}"
-                                            PlaceholderText="填写队伍名称"
+                                            PlaceholderText="留空则不切换队伍"
                                             TextAlignment="Center"
                                             TextWrapping="Wrap" />
                             </Grid>
@@ -499,6 +500,7 @@
                                           Width="100"
                                           HorizontalAlignment="Left"
                                           Margin="10,0,10,0"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                 <ui:TextBlock Grid.Row="0"
@@ -578,240 +580,325 @@
                                               Text="周期始于凌晨 4:00 ，如周一 4:00 至周二 3:59 刷取周一秘境" 
                                               TextWrapping="Wrap">
                                 </ui:TextBlock>
-                           
-                            <Grid Margin="16">
+
+                            <Grid Margin="20,16,20,4">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Column="0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="日期"
+                                              TextAlignment="Center" />
+                                <ui:TextBlock Grid.Column="1"
+                                              Margin="8,0,8,0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              HorizontalAlignment="Center"
+                                              Text="队伍"
+                                              TextAlignment="Center" />
+                                <ui:TextBlock Grid.Column="2"
+                                              Margin="8,0,8,0"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="秘境"
+                                              TextAlignment="Center" />
+                                <ui:TextBlock Grid.Column="3"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="奖励"
+                                              TextAlignment="Center" />
+                            </Grid>
+
+                            <Grid Margin="20,8,20,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBlock Grid.Column="0"
+                                              HorizontalAlignment="Center"
+                                              Text="默认"
+                                              VerticalAlignment="Center" />
+                                <ui:TextBox Grid.Column="1"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            Text="{Binding SelectedConfig.PartyName, Mode=TwoWay}"
+                                            TextAlignment="Center"
+                                            TextWrapping="Wrap"
+                                            PlaceholderText="留空则不切换队伍" />
+                                <vio:CascadingComboBox Grid.Column="2"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                          ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                          SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}" />
+                            </Grid>
+                           
+                            <Grid Margin="20,16,20,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周一"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.MondayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.MondaySelectedValue, Mode=TwoWay}" />
                             </Grid>
-                            <Grid Margin="16">
+                            <Grid Margin="20,16,20,16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周二"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.TuesdayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.TuesdaySelectedValue, Mode=TwoWay}" />
                             </Grid>
-                            <Grid Margin="16">
+                            <Grid Margin="20,16,20,16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周三"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.WednesdayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.WednesdaySelectedValue, Mode=TwoWay}" />
 
                             </Grid>
-                            <Grid Margin="16">
+                            <Grid Margin="20,16,20,16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周四"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.ThursdayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.ThursdaySelectedValue, Mode=TwoWay}" />
 
                             </Grid>
-                            <Grid Margin="16">
+                            <Grid Margin="20,16,20,16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周五"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.FridayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.FridaySelectedValue, Mode=TwoWay}" />
 
 
                             </Grid>
-                            <Grid Margin="16">
+                            <Grid Margin="20,16,20,16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周六"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.SaturdayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.SaturdaySelectedValue, Mode=TwoWay}" />
 
                             </Grid>
-                            <Grid Margin="16">
+                            <Grid Margin="20,16,20,16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="3*" />
+                                    <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
-                                              Margin="38,0,0,0"
                                               HorizontalAlignment="Center"
                                               Text="周日"
                                               VerticalAlignment="Center" />
                                 <ui:TextBox Grid.Row="0"
                                             Grid.Column="1"
-                                            MinWidth="140"
-                                            Margin="5,0,12,0"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
                                             Text="{Binding SelectedConfig.SundayPartyName, Mode=TwoWay}"
                                             TextWrapping="Wrap"
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
-                                            PlaceholderText="填写队伍名称 " />
+                                            PlaceholderText="留空使用默认队伍" />
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.Column="2"
-                                          Width="100"
-                                          Margin="0,0,36,0"
+                                          MinWidth="0"
+                                          Margin="8,0,8,0"
+                                          HorizontalAlignment="Stretch"
+                                          behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
-                                <Border Grid.Row="1"
-                                        Grid.Column="0"
-                                        Grid.ColumnSpan="3"
-                                        Grid.RowSpan="2"
-                                        Margin="0,21,100,10"
-                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
-                                        BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Width="Auto"
-                                        HorizontalAlignment="Right"
-                                        Padding="10">
-                                    <ui:TextBlock FontTypography="Body"
-                                                  FontSize="13" 
-                                                  Text="周日或限时三种奖励,从上往下(1/2/3)序号:"
-                                                  TextAlignment="Justify"
-                                                  TextWrapping="Wrap" />
-                                </Border>
-                                <ComboBox Grid.Row="1"
-                                          Grid.Column="2"
-                                          Grid.RowSpan="2"
-                                          Margin="20,11,37,0"
-                                          HorizontalAlignment="Right"
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="3"
+                                          MinWidth="56"
+                                          HorizontalContentAlignment="Center"
                                           VerticalAlignment="Center"
-                                          ItemsSource="{Binding SundaySelectedValueList , Mode=TwoWay}"
-                                          SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}">
-                                </ComboBox>
+                                          ItemsSource="{Binding SundaySelectedValueList}"
+                                          SelectedItem="{Binding SelectedConfig.SundayDaySelectedValue, Mode=TwoWay}" />
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
