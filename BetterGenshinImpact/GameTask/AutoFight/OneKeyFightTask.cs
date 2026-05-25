@@ -8,9 +8,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -32,6 +34,9 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
     private CombatScenes? _currentCombatScenes;
+    // 宏启动前快照当前按下的键，停止时只释放宏期间新增的按键
+    private HashSet<User32.VK> _preMacroKeys = [];
+    private bool _hasMacroSnapshot = false;
 
     public void KeyDown()
     {
@@ -53,9 +58,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
+                SnapshotPressedKeys();
                 _cts = new CancellationTokenSource();
                 _fightTask = FightTask(_cts.Token);
-                if (!_fightTask.IsCompleted)
+                if (_fightTask.IsCompleted)
+                {
+                    RollbackSnapshot();
+                }
+                else
                 {
                     _fightTask.Start();
                 }
@@ -65,9 +75,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
+                SnapshotPressedKeys();
                 _cts = new CancellationTokenSource();
                 _fightTask = FightTask(_cts.Token);
-                if (!_fightTask.IsCompleted)
+                if (_fightTask.IsCompleted)
+                {
+                    RollbackSnapshot();
+                }
+                else
                 {
                     _fightTask.Start();
                 }
@@ -75,7 +90,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             else
             {
                 _cts.Cancel();
-                Simulation.ReleaseAllKey();
+                ReleaseMacroOnlyKeys();
             }
         }
     }
@@ -83,15 +98,16 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public void KeyUp()
     {
         _isKeyDown = false;
+        // 清理放在 IsEnabled 之前，确保停止时始终释放按键
+        if (IsHoldOnMode() && _hasMacroSnapshot)
+        {
+            _cts?.Cancel();
+            ReleaseMacroOnlyKeys();
+        }
+
         if (!IsEnabled())
         {
             return;
-        }
-
-        if (IsHoldOnMode())
-        {
-            _cts?.Cancel();
-            Simulation.ReleaseAllKey();
         }
     }
 
@@ -170,29 +186,37 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             return new Task(() =>
             {
-                var round = 1;
-                while (!ct.IsCancellationRequested && IsEnabled())
+                try
                 {
-                    Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
-                    if (IsHoldOnMode() && !_isKeyDown)
+                    var round = 1;
+                    while (!ct.IsCancellationRequested && IsEnabled())
                     {
-                        break;
-                    }
-
-                    // 通用化战斗策略
-                    foreach (var command in combatCommands)
-                    {
-                        if (ct.IsCancellationRequested) break;
-                        if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
+                        Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
+                        if (IsHoldOnMode() && !_isKeyDown)
                         {
-                            continue;
+                            break;
                         }
-                        command.Execute(activeAvatar);
-                    }
-                    round++;
-                }
 
-                Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
+                        // 通用化战斗策略
+                        foreach (var command in combatCommands)
+                        {
+                            if (ct.IsCancellationRequested) break;
+                            if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
+                            {
+                                continue;
+                            }
+                            command.Execute(activeAvatar);
+                        }
+                        round++;
+                    }
+
+                    Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
+                }
+                finally
+                {
+                    // 确保任何退出路径都清理快照和 CTS，避免残留状态影响下次操作
+                    RollbackSnapshot();
+                }
             });
         }
         else
@@ -257,5 +281,52 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public static bool IsTickMode()
     {
         return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == TickMode;
+    }
+
+    // 记录宏启动前已按下的键，停止时只释放不在快照中的键
+    private void SnapshotPressedKeys()
+    {
+        _preMacroKeys = [];
+        foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+        {
+            if ((User32.GetAsyncKeyState((int)key) & 0x8000) != 0)
+            {
+                _preMacroKeys.Add(key);
+            }
+        }
+        _hasMacroSnapshot = true;
+    }
+
+    // 停止宏时释放键，但保留用户事先按着的（在快照中的键跳过释放）
+    private void ReleaseMacroOnlyKeys()
+    {
+        if (!_hasMacroSnapshot) return;
+
+        var hWnd = TaskContext.Instance().GameHandle;
+        // PostMessage 替代 SendInput，避免钩子上下文中 SendInput 触发递归死锁
+        var postMsg = Simulation.PostMessage(hWnd);
+        foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+        {
+            if ((User32.GetAsyncKeyState((int)key) & 0x8000) != 0 && !_preMacroKeys.Contains(key))
+            {
+                postMsg.KeyUp(key);
+            }
+        }
+        // 鼠标键不做快照检查，统一释放
+        postMsg.LeftButtonUp();
+        postMsg.RightButtonUp();
+        User32.PostMessage(hWnd, 0x208, IntPtr.Zero, IntPtr.Zero); // WM_MBUTTONUP
+
+        _preMacroKeys.Clear();
+        _hasMacroSnapshot = false;
+    }
+
+    // FightTask 提前返回时撤销本轮快照，避免残留状态影响下次
+    private void RollbackSnapshot()
+    {
+        _preMacroKeys.Clear();
+        _hasMacroSnapshot = false;
+        _cts?.Dispose();
+        _cts = null;
     }
 }
