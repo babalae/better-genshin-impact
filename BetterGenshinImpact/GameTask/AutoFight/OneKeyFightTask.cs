@@ -186,29 +186,37 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             return new Task(() =>
             {
-                var round = 1;
-                while (!ct.IsCancellationRequested && IsEnabled())
+                try
                 {
-                    Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
-                    if (IsHoldOnMode() && !_isKeyDown)
+                    var round = 1;
+                    while (!ct.IsCancellationRequested && IsEnabled())
                     {
-                        break;
-                    }
-
-                    // 通用化战斗策略
-                    foreach (var command in combatCommands)
-                    {
-                        if (ct.IsCancellationRequested) break;
-                        if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
+                        Logger.LogInformation("→ {Name}执行宏 (第{Round}轮)", activeAvatar.Name, round);
+                        if (IsHoldOnMode() && !_isKeyDown)
                         {
-                            continue;
+                            break;
                         }
-                        command.Execute(activeAvatar);
-                    }
-                    round++;
-                }
 
-                Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
+                        // 通用化战斗策略
+                        foreach (var command in combatCommands)
+                        {
+                            if (ct.IsCancellationRequested) break;
+                            if (command.ActivatingRound != null && command.ActivatingRound.Count > 0 && !command.ActivatingRound.Contains(round))
+                            {
+                                continue;
+                            }
+                            command.Execute(activeAvatar);
+                        }
+                        round++;
+                    }
+
+                    Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
+                }
+                finally
+                {
+                    // 确保任何退出路径都清理快照和 CTS，避免残留状态影响下次操作
+                    RollbackSnapshot();
+                }
             });
         }
         else
