@@ -638,7 +638,7 @@
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
                                           ItemsSource="{Binding SundaySelectedValueList}"
-                                          SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.SundayWeeklySelectedValue, Mode=TwoWay}" />
                             </Grid>
                            
                             <Grid Margin="20,16,20,16">
@@ -898,7 +898,7 @@
                                           HorizontalContentAlignment="Center"
                                           VerticalAlignment="Center"
                                           ItemsSource="{Binding SundaySelectedValueList}"
-                                          SelectedItem="{Binding SelectedConfig.SundayDaySelectedValue, Mode=TwoWay}" />
+                                          SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}" />
                             </Grid>
                         </StackPanel>
                     </ui:CardExpander>
