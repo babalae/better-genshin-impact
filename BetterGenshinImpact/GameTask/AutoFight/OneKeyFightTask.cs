@@ -37,9 +37,12 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private HashSet<User32.VK> _preMacroKeys = [];
     private bool _hasMacroSnapshot = false;
 
-    // Vanara User32.VK 枚举不含鼠标键
+    // Vanara User32.VK 枚举不含鼠标键，与 GlobalMethod 支持范围对齐
     private static readonly User32.VK VK_LBUTTON = (User32.VK)0x01;
     private static readonly User32.VK VK_RBUTTON = (User32.VK)0x02;
+    private static readonly User32.VK VK_MBUTTON = (User32.VK)0x04;
+    private static readonly User32.VK VK_XBUTTON1 = (User32.VK)0x05;
+    private static readonly User32.VK VK_XBUTTON2 = (User32.VK)0x06;
 
     public void KeyDown()
     {
@@ -283,9 +286,12 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                 _preMacroKeys.Add(key);
             }
         }
-        // 鼠标键不在 VK 枚举中，单独捕获
+        // 鼠标键不在 VK 枚举中，单独捕获（与 GlobalMethod 支持范围对齐）
         if ((User32.GetAsyncKeyState((int)VK_LBUTTON) & 0x8000) != 0) _preMacroKeys.Add(VK_LBUTTON);
         if ((User32.GetAsyncKeyState((int)VK_RBUTTON) & 0x8000) != 0) _preMacroKeys.Add(VK_RBUTTON);
+        if ((User32.GetAsyncKeyState((int)VK_MBUTTON) & 0x8000) != 0) _preMacroKeys.Add(VK_MBUTTON);
+        if ((User32.GetAsyncKeyState((int)VK_XBUTTON1) & 0x8000) != 0) _preMacroKeys.Add(VK_XBUTTON1);
+        if ((User32.GetAsyncKeyState((int)VK_XBUTTON2) & 0x8000) != 0) _preMacroKeys.Add(VK_XBUTTON2);
         _hasMacroSnapshot = true;
     }
 
@@ -315,6 +321,21 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             !_preMacroKeys.Contains(VK_RBUTTON))
         {
             postMsg.RightButtonUp();
+        }
+        if ((User32.GetAsyncKeyState((int)VK_MBUTTON) & 0x8000) != 0 &&
+            !_preMacroKeys.Contains(VK_MBUTTON))
+        {
+            User32.PostMessage(hWnd, 0x208, IntPtr.Zero, IntPtr.Zero); // WM_MBUTTONUP
+        }
+        if ((User32.GetAsyncKeyState((int)VK_XBUTTON1) & 0x8000) != 0 &&
+            !_preMacroKeys.Contains(VK_XBUTTON1))
+        {
+            User32.PostMessage(hWnd, 0x20C, (IntPtr)0x0020, IntPtr.Zero); // WM_XBUTTONUP + MK_XBUTTON1
+        }
+        if ((User32.GetAsyncKeyState((int)VK_XBUTTON2) & 0x8000) != 0 &&
+            !_preMacroKeys.Contains(VK_XBUTTON2))
+        {
+            User32.PostMessage(hWnd, 0x20C, (IntPtr)0x0040, IntPtr.Zero); // WM_XBUTTONUP + MK_XBUTTON2
         }
 
         _preMacroKeys.Clear();
