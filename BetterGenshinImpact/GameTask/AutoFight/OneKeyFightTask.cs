@@ -8,9 +8,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -32,6 +34,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
     private CombatScenes? _currentCombatScenes;
+    private HashSet<User32.VK> _preMacroKeys = [];
 
     public void KeyDown()
     {
@@ -53,6 +56,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
+                SnapshotPressedKeys();
                 _cts = new CancellationTokenSource();
                 _fightTask = FightTask(_cts.Token);
                 if (!_fightTask.IsCompleted)
@@ -65,6 +69,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
+                SnapshotPressedKeys();
                 _cts = new CancellationTokenSource();
                 _fightTask = FightTask(_cts.Token);
                 if (!_fightTask.IsCompleted)
@@ -75,7 +80,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             else
             {
                 _cts.Cancel();
-                Simulation.ReleaseAllKey();
+                ReleaseMacroOnlyKeys();
             }
         }
     }
@@ -83,15 +88,16 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public void KeyUp()
     {
         _isKeyDown = false;
-        if (!IsEnabled())
-        {
-            return;
-        }
-
+        // 取消/释放放在 IsEnabled 之前，确保停止动作始终清理输入状态
         if (IsHoldOnMode())
         {
             _cts?.Cancel();
-            Simulation.ReleaseAllKey();
+            ReleaseMacroOnlyKeys();
+        }
+
+        if (!IsEnabled())
+        {
+            return;
         }
     }
 
@@ -257,5 +263,36 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public static bool IsTickMode()
     {
         return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == TickMode;
+    }
+
+    /// <summary>
+    /// 快照宏启动前已按下的键，停止时只释放宏期间按下的键
+    /// </summary>
+    private void SnapshotPressedKeys()
+    {
+        _preMacroKeys = [];
+        foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+        {
+            if ((User32.GetAsyncKeyState((int)key) & 0x8000) != 0)
+            {
+                _preMacroKeys.Add(key);
+            }
+        }
+    }
+
+    private void ReleaseMacroOnlyKeys()
+    {
+        // 用 PostMessage 释放键，避免钩子上下文中 SendInput 导致递归
+        var hWnd = TaskContext.Instance().GameHandle;
+        var postMsg = Simulation.PostMessage(hWnd);
+        foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+        {
+            if ((User32.GetAsyncKeyState((int)key) & 0x8000) != 0 && !_preMacroKeys.Contains(key))
+            {
+                postMsg.KeyUp(key);
+            }
+        }
+        postMsg.LeftButtonUp();
+        postMsg.RightButtonUp();
     }
 }
