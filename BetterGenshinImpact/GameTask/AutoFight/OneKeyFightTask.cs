@@ -34,6 +34,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
     private CombatScenes? _currentCombatScenes;
+    // 宏启动前快照当前按下的键，停止时只释放宏期间新增的按键
     private HashSet<User32.VK> _preMacroKeys = [];
     private bool _hasMacroSnapshot = false;
 
@@ -97,6 +98,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public void KeyUp()
     {
         _isKeyDown = false;
+        // 清理放在 IsEnabled 之前，确保停止时始终释放按键
         if (IsHoldOnMode() && _hasMacroSnapshot)
         {
             _cts?.Cancel();
@@ -273,6 +275,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == TickMode;
     }
 
+    // 记录宏启动前已按下的键，停止时只释放不在快照中的键
     private void SnapshotPressedKeys()
     {
         _preMacroKeys = [];
@@ -286,11 +289,13 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         _hasMacroSnapshot = true;
     }
 
+    // 停止宏时释放键，但保留用户事先按着的（在快照中的键跳过释放）
     private void ReleaseMacroOnlyKeys()
     {
         if (!_hasMacroSnapshot) return;
 
         var hWnd = TaskContext.Instance().GameHandle;
+        // PostMessage 替代 SendInput，避免钩子上下文中 SendInput 触发递归死锁
         var postMsg = Simulation.PostMessage(hWnd);
         foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
         {
@@ -308,6 +313,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         _hasMacroSnapshot = false;
     }
 
+    // FightTask 提前返回时撤销本轮快照，避免残留状态影响下次
     private void RollbackSnapshot()
     {
         _preMacroKeys.Clear();
