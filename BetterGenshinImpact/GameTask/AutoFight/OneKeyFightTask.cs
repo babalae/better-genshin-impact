@@ -330,12 +330,13 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         if ((User32.GetAsyncKeyState((int)VK_XBUTTON1) & 0x8000) != 0 &&
             !_preMacroKeys.Contains(VK_XBUTTON1))
         {
-            User32.PostMessage(hWnd, 0x20C, (IntPtr)0x0020, IntPtr.Zero); // WM_XBUTTONUP + MK_XBUTTON1
+            User32.PostMessage(hWnd, 0x20C, (IntPtr)(0x0020 | (0x0001 << 16)), IntPtr.Zero); // LOWORD=MK_XBUTTON1, HIWORD=XBUTTON1
         }
         if ((User32.GetAsyncKeyState((int)VK_XBUTTON2) & 0x8000) != 0 &&
             !_preMacroKeys.Contains(VK_XBUTTON2))
         {
-            User32.PostMessage(hWnd, 0x20C, (IntPtr)0x0040, IntPtr.Zero); // WM_XBUTTONUP + MK_XBUTTON2
+            User32.PostMessage(hWnd, 0x20C, (IntPtr)(0x0040 | (0x0002 << 16)), IntPtr.Zero); // LOWORD=MK_XBUTTON2, HIWORD=XBUTTON2
+        }
         }
 
         _preMacroKeys.Clear();
