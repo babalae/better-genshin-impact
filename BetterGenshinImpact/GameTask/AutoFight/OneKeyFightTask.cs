@@ -8,9 +8,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
@@ -32,6 +34,8 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
     private CombatScenes? _currentCombatScenes;
+    private HashSet<User32.VK> _preMacroKeys = [];
+    private bool _hasMacroSnapshot = false;
 
     public void KeyDown()
     {
@@ -53,9 +57,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
+                SnapshotPressedKeys();
                 _cts = new CancellationTokenSource();
                 _fightTask = FightTask(_cts.Token);
-                if (!_fightTask.IsCompleted)
+                if (_fightTask.IsCompleted)
+                {
+                    RollbackSnapshot();
+                }
+                else
                 {
                     _fightTask.Start();
                 }
@@ -65,9 +74,14 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
+                SnapshotPressedKeys();
                 _cts = new CancellationTokenSource();
                 _fightTask = FightTask(_cts.Token);
-                if (!_fightTask.IsCompleted)
+                if (_fightTask.IsCompleted)
+                {
+                    RollbackSnapshot();
+                }
+                else
                 {
                     _fightTask.Start();
                 }
@@ -75,7 +89,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             else
             {
                 _cts.Cancel();
-                Simulation.ReleaseAllKey();
+                ReleaseMacroOnlyKeys();
             }
         }
     }
@@ -83,15 +97,15 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public void KeyUp()
     {
         _isKeyDown = false;
+        if (IsHoldOnMode() && _hasMacroSnapshot)
+        {
+            _cts?.Cancel();
+            ReleaseMacroOnlyKeys();
+        }
+
         if (!IsEnabled())
         {
             return;
-        }
-
-        if (IsHoldOnMode())
-        {
-            _cts?.Cancel();
-            Simulation.ReleaseAllKey();
         }
     }
 
@@ -257,5 +271,48 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public static bool IsTickMode()
     {
         return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == TickMode;
+    }
+
+    private void SnapshotPressedKeys()
+    {
+        _preMacroKeys = [];
+        foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+        {
+            if ((User32.GetAsyncKeyState((int)key) & 0x8000) != 0)
+            {
+                _preMacroKeys.Add(key);
+            }
+        }
+        _hasMacroSnapshot = true;
+    }
+
+    private void ReleaseMacroOnlyKeys()
+    {
+        if (!_hasMacroSnapshot) return;
+
+        var hWnd = TaskContext.Instance().GameHandle;
+        var postMsg = Simulation.PostMessage(hWnd);
+        foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+        {
+            if ((User32.GetAsyncKeyState((int)key) & 0x8000) != 0 && !_preMacroKeys.Contains(key))
+            {
+                postMsg.KeyUp(key);
+            }
+        }
+        // 鼠标键不做快照检查，统一释放
+        postMsg.LeftButtonUp();
+        postMsg.RightButtonUp();
+        User32.PostMessage(hWnd, 0x208, IntPtr.Zero, IntPtr.Zero); // WM_MBUTTONUP
+
+        _preMacroKeys.Clear();
+        _hasMacroSnapshot = false;
+    }
+
+    private void RollbackSnapshot()
+    {
+        _preMacroKeys.Clear();
+        _hasMacroSnapshot = false;
+        _cts?.Dispose();
+        _cts = null;
     }
 }
