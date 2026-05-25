@@ -35,6 +35,11 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
 
     private CombatScenes? _currentCombatScenes;
     private HashSet<User32.VK> _preMacroKeys = [];
+    private bool _hasMacroSnapshot = false;
+
+    // Vanara User32.VK 枚举不含鼠标键
+    private static readonly User32.VK VK_LBUTTON = (User32.VK)0x01;
+    private static readonly User32.VK VK_RBUTTON = (User32.VK)0x02;
 
     public void KeyDown()
     {
@@ -80,7 +85,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             else
             {
                 _cts.Cancel();
-                ReleaseMacroOnlyKeys();
+                if (_hasMacroSnapshot) ReleaseMacroOnlyKeys();
             }
         }
     }
@@ -89,7 +94,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     {
         _isKeyDown = false;
         // 取消/释放放在 IsEnabled 之前，确保停止动作始终清理输入状态
-        if (IsHoldOnMode())
+        if (IsHoldOnMode() && _hasMacroSnapshot)
         {
             _cts?.Cancel();
             ReleaseMacroOnlyKeys();
@@ -278,10 +283,19 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                 _preMacroKeys.Add(key);
             }
         }
+        // 鼠标键不在 VK 枚举中，单独捕获
+        if ((User32.GetAsyncKeyState((int)VK_LBUTTON) & 0x8000) != 0) _preMacroKeys.Add(VK_LBUTTON);
+        if ((User32.GetAsyncKeyState((int)VK_RBUTTON) & 0x8000) != 0) _preMacroKeys.Add(VK_RBUTTON);
+        _hasMacroSnapshot = true;
     }
 
     private void ReleaseMacroOnlyKeys()
     {
+        if (!_hasMacroSnapshot)
+        {
+            return;
+        }
+
         // 用 PostMessage 释放键，避免钩子上下文中 SendInput 导致递归
         var hWnd = TaskContext.Instance().GameHandle;
         var postMsg = Simulation.PostMessage(hWnd);
@@ -292,7 +306,18 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                 postMsg.KeyUp(key);
             }
         }
-        postMsg.LeftButtonUp();
-        postMsg.RightButtonUp();
+        if ((User32.GetAsyncKeyState((int)VK_LBUTTON) & 0x8000) != 0 &&
+            !_preMacroKeys.Contains(VK_LBUTTON))
+        {
+            postMsg.LeftButtonUp();
+        }
+        if ((User32.GetAsyncKeyState((int)VK_RBUTTON) & 0x8000) != 0 &&
+            !_preMacroKeys.Contains(VK_RBUTTON))
+        {
+            postMsg.RightButtonUp();
+        }
+
+        _preMacroKeys.Clear();
+        _hasMacroSnapshot = false;
     }
 }
