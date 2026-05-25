@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 
-namespace BetterGenshinImpact.GameTask.AutoSkip;
+namespace BetterGenshinImpact.GameTask.AutoSkip.Audio;
 
 internal sealed class SileroVadDetector : IDisposable
 {

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace BetterGenshinImpact.GameTask.AutoSkip;
+namespace BetterGenshinImpact.GameTask.AutoSkip.Audio;
 
 internal sealed class DialogueOptionVoiceDetector : IDisposable
 {

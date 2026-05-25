@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 
-namespace BetterGenshinImpact.GameTask.AutoSkip;
+namespace BetterGenshinImpact.GameTask.AutoSkip.Audio;
 
 internal sealed class DialogueOptionAudioWaiter
 {

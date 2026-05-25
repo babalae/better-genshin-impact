@@ -5,7 +5,7 @@ using System.Threading;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.CoreAudio;
 
-namespace BetterGenshinImpact.GameTask.AutoSkip;
+namespace BetterGenshinImpact.GameTask.AutoSkip.Audio;
 
 internal sealed class ProcessLoopbackAudioCapture : IDisposable
 {
