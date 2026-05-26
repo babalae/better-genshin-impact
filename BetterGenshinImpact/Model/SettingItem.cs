@@ -136,7 +136,12 @@ public class SettingItem
                         }
                         else if (ctx[Name] is JsonElement j2)
                         {
-                            ctx[Name] = j2.Deserialize<List<string>>() ?? new List<string>();
+                            var parsed = j2.Deserialize<List<string>>();
+                            if (parsed == null)
+                            {
+                                throw new JsonException($"Setting '{Name}' expects a JSON array of strings, but got: {j2}");
+                            }
+                            ctx[Name] = parsed;
                         }
                         else if (ctx[Name] is List<object> listOfObjects)
                         {

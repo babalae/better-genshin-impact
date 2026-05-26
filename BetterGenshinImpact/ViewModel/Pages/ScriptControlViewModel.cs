@@ -666,6 +666,23 @@ public partial class ScriptControlViewModel : ViewModel
     /// <summary>
     /// 将 ExpandoObject 中因 JSON 序列化/反序列化产生的 JsonElement 值转换回原始类型
     /// </summary>
+    private static object? ConvertJsonElementValue(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Number => element.TryGetInt64(out var l) ? l : element.GetDouble(),
+            JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElementValue).ToList(),
+            JsonValueKind.Null => null,
+            _ => element.ToString()
+        };
+    }
+
+    /// <summary>
+    /// 将 ExpandoObject 中因 JSON 序列化/反序列化产生的 JsonElement 值转换回原始类型
+    /// </summary>
     private static void ConvertJsonElementSettings(ExpandoObject? settings)
     {
         if (settings is not IDictionary<string, object?> dict) return;
@@ -674,19 +691,7 @@ public partial class ScriptControlViewModel : ViewModel
         foreach (var key in keys)
         {
             if (dict[key] is JsonElement element)
-            {
-                dict[key] = element.ValueKind switch
-                {
-                    JsonValueKind.String => element.GetString(),
-                    JsonValueKind.True => true,
-                    JsonValueKind.False => false,
-                    JsonValueKind.Number => element.TryGetInt64(out var l) ? (object)l : element.GetDouble(),
-                    JsonValueKind.Array => element.EnumerateArray()
-                        .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString()! : e.ToString())
-                        .ToList(),
-                    _ => dict[key]
-                };
-            }
+                dict[key] = ConvertJsonElementValue(element);
         }
     }
 
