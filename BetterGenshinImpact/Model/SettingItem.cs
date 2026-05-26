@@ -134,6 +134,10 @@ public class SettingItem
                                 ctx[Name] = new List<string>();
                             }
                         }
+                        else if (ctx[Name] is JsonElement j2)
+                        {
+                            ctx[Name] = j2.Deserialize<List<string>>() ?? new List<string>();
+                        }
                         else if (ctx[Name] is List<object> listOfObjects)
                         {
                             ctx[Name] = listOfObjects.Select(i => (string)i).ToList();

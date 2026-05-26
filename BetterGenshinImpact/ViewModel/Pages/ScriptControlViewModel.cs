@@ -651,11 +651,41 @@ public partial class ScriptControlViewModel : ViewModel
                         {
                             // ignored
                         }
+
+                        // JSON 反序列化后 ExpandoObject 中的值转换回原始类型
+                        ConvertJsonElementSettings(project.JsScriptSettingsObject);
                     }
                     ScriptGroups.Add(newScriptGroup);
                 }
 
                 //WriteScriptGroup(newScriptGroup);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 将 ExpandoObject 中因 JSON 序列化/反序列化产生的 JsonElement 值转换回原始类型
+    /// </summary>
+    private static void ConvertJsonElementSettings(ExpandoObject? settings)
+    {
+        if (settings is not IDictionary<string, object?> dict) return;
+
+        var keys = dict.Keys.ToList();
+        foreach (var key in keys)
+        {
+            if (dict[key] is JsonElement element)
+            {
+                dict[key] = element.ValueKind switch
+                {
+                    JsonValueKind.String => element.GetString(),
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.Number => element.TryGetInt64(out var l) ? (object)l : element.GetDouble(),
+                    JsonValueKind.Array => element.EnumerateArray()
+                        .Select(e => e.ValueKind == JsonValueKind.String ? e.GetString()! : e.ToString())
+                        .ToList(),
+                    _ => dict[key]
+                };
             }
         }
     }
