@@ -62,6 +62,12 @@ public class BgiOnnxModel
         Register("BgiQClassify", @"Assets\Model\Common\q_classify_sim.onnx");
 
     /// <summary>
+    /// Silero 人声检测模型
+    /// </summary>
+    public static readonly BgiOnnxModel SileroVad =
+        Register("SileroVad", @"Assets\Model\Vad\silero_vad.onnx");
+
+    /// <summary>
     /// paddleOCR V4 检测模型
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrDetV4 =
