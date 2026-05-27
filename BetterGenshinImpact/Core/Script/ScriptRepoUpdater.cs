@@ -67,7 +67,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     // 仓储临时目录 用于下载与解压
     public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
-
+    
     // // 中央仓库信息地址
     // public static readonly List<string> CenterRepoInfoUrls =
     // [
@@ -1377,6 +1377,229 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
+    /// 获取仓库内指定相对目录下的直接子项（目录和文件）。
+    /// relDir 为相对于 repo/ 的路径，例如 "pathing"、"pathing/璃月"。
+    /// </summary>
+    public List<RepoTreeEntryInfo> GetChildrenFromCenterRepo(string relDir)
+    {
+        var result = new List<RepoTreeEntryInfo>();
+        try
+        {
+            var normalizedRelDir = NormalizeRepoRelativePath(relDir);
+            var repoPath = CenterRepoPath;
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var rootTree = GetRepoSubdirectoryTree(repo);
+                if (!TryGetTreeByRelativePath(rootTree, normalizedRelDir, out var targetTree))
+                {
+                    return result;
+                }
+
+                foreach (var entry in targetTree)
+                {
+                    if (entry.TargetType != TreeEntryTargetType.Tree && entry.TargetType != TreeEntryTargetType.Blob)
+                    {
+                        continue;
+                    }
+
+                    var childRelPath = string.IsNullOrEmpty(normalizedRelDir)
+                        ? entry.Name
+                        : $"{normalizedRelDir}/{entry.Name}";
+
+                    result.Add(new RepoTreeEntryInfo
+                    {
+                        Name = entry.Name,
+                        RelativePath = childRelPath,
+                        IsDirectory = entry.TargetType == TreeEntryTargetType.Tree
+                    });
+                }
+            }
+            else
+            {
+                var dirPath = string.IsNullOrEmpty(normalizedRelDir)
+                    ? Path.Combine(repoPath, "repo")
+                    : Path.Combine(repoPath, "repo", normalizedRelDir);
+
+                if (!Directory.Exists(dirPath))
+                {
+                    return result;
+                }
+
+                foreach (var dir in Directory.GetDirectories(dirPath))
+                {
+                    var name = Path.GetFileName(dir);
+                    var childRelPath = string.IsNullOrEmpty(normalizedRelDir)
+                        ? name
+                        : $"{normalizedRelDir}/{name}";
+                    result.Add(new RepoTreeEntryInfo
+                    {
+                        Name = name,
+                        RelativePath = childRelPath,
+                        IsDirectory = true
+                    });
+                }
+
+                foreach (var file in Directory.GetFiles(dirPath))
+                {
+                    var name = Path.GetFileName(file);
+                    var childRelPath = string.IsNullOrEmpty(normalizedRelDir)
+                        ? name
+                        : $"{normalizedRelDir}/{name}";
+                    result.Add(new RepoTreeEntryInfo
+                    {
+                        Name = name,
+                        RelativePath = childRelPath,
+                        IsDirectory = false
+                    });
+                }
+            }
+
+            return result
+                .OrderByDescending(x => x.IsDirectory)
+                .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取仓库子项失败: {RelDir}", relDir);
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 判断仓库内相对目录是否存在。
+    /// relDir 为相对于 repo/ 的路径。
+    /// </summary>
+    public bool DirectoryExistsInCenterRepo(string relDir)
+    {
+        try
+        {
+            var normalizedRelDir = NormalizeRepoRelativePath(relDir);
+            var repoPath = CenterRepoPath;
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var rootTree = GetRepoSubdirectoryTree(repo);
+                return TryGetTreeByRelativePath(rootTree, normalizedRelDir, out _);
+            }
+
+            var dirPath = string.IsNullOrEmpty(normalizedRelDir)
+                ? Path.Combine(repoPath, "repo")
+                : Path.Combine(repoPath, "repo", normalizedRelDir);
+            return Directory.Exists(dirPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "判断仓库目录是否存在失败: {RelDir}", relDir);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 统计仓库内指定目录下匹配扩展名的文件数量。
+    /// relDir 为相对于 repo/ 的路径，支持递归统计。
+    /// </summary>
+    public int CountFilesInCenterRepo(string relDir, string extensionWithDot, bool recursive)
+    {
+        try
+        {
+            var normalizedRelDir = NormalizeRepoRelativePath(relDir);
+            var extension = extensionWithDot.StartsWith(".")
+                ? extensionWithDot
+                : "." + extensionWithDot;
+            var repoPath = CenterRepoPath;
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var rootTree = GetRepoSubdirectoryTree(repo);
+                if (!TryGetTreeByRelativePath(rootTree, normalizedRelDir, out var targetTree))
+                {
+                    return 0;
+                }
+
+                return recursive
+                    ? CountFilesByExtensionInTreeRecursive(targetTree, extension)
+                    : targetTree.Count(e => e.TargetType == TreeEntryTargetType.Blob
+                                            && e.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var dirPath = string.IsNullOrEmpty(normalizedRelDir)
+                ? Path.Combine(repoPath, "repo")
+                : Path.Combine(repoPath, "repo", normalizedRelDir);
+            if (!Directory.Exists(dirPath))
+            {
+                return 0;
+            }
+
+            var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            return Directory.GetFiles(dirPath, "*" + extension, option).Length;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "统计仓库文件失败: {RelDir}", relDir);
+            return 0;
+        }
+    }
+
+    private static string NormalizeRepoRelativePath(string relPath)
+    {
+        if (string.IsNullOrWhiteSpace(relPath))
+        {
+            return string.Empty;
+        }
+
+        var normalized = relPath.Replace('\\', '/').Trim('/');
+        return normalized;
+    }
+
+    private static bool TryGetTreeByRelativePath(Tree rootTree, string relDir, out Tree tree)
+    {
+        tree = rootTree;
+        if (string.IsNullOrEmpty(relDir))
+        {
+            return true;
+        }
+
+        var parts = relDir.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            var entry = tree[part];
+            if (entry == null || entry.TargetType != TreeEntryTargetType.Tree)
+            {
+                return false;
+            }
+            tree = (Tree)entry.Target;
+        }
+
+        return true;
+    }
+
+    private static int CountFilesByExtensionInTreeRecursive(Tree tree, string extensionWithDot)
+    {
+        int count = 0;
+        foreach (var entry in tree)
+        {
+            if (entry.TargetType == TreeEntryTargetType.Blob)
+            {
+                if (entry.Name.EndsWith(extensionWithDot, StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            }
+            else if (entry.TargetType == TreeEntryTargetType.Tree)
+            {
+                count += CountFilesByExtensionInTreeRecursive((Tree)entry.Target, extensionWithDot);
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
     /// 从中央仓库读取文件内容
     /// </summary>
     /// <param name="relPath">相对于仓库根目录的路径</param>
@@ -1451,6 +1674,101 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 从Git仓库读取文件内容
     /// </summary>
+    /// <summary>
+    /// 将中央仓库中的单个文件导出到本地。
+    /// </summary>
+    /// <param name="relPath">相对于仓库 `repo/` 目录的路径。</param>
+    /// <param name="localPath">本地目标文件路径。</param>
+    /// <returns>是否导出成功。</returns>
+    public bool ExportFileFromCenterRepo(string relPath, string localPath)
+    {
+        try
+        {
+            var normalizedRelPath = NormalizeRepoRelativePath(relPath);
+            var repoPath = CenterRepoPath;
+            var localDirectory = Path.GetDirectoryName(localPath);
+            if (!string.IsNullOrEmpty(localDirectory))
+            {
+                Directory.CreateDirectory(localDirectory);
+            }
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                if (!TryGetBlobByRelativePath(repo, normalizedRelPath, out var blob))
+                {
+                    return false;
+                }
+
+                using var contentStream = blob.GetContentStream();
+                using var fileStream = File.Create(localPath);
+                contentStream.CopyTo(fileStream);
+                return true;
+            }
+
+            var sourceFilePath = Path.Combine(repoPath, "repo", normalizedRelPath);
+            if (!File.Exists(sourceFilePath))
+            {
+                return false;
+            }
+
+            File.Copy(sourceFilePath, localPath, true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "导出仓库文件失败: {RelPath}", relPath);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 将中央仓库目录下指定扩展名的文件递归导出到本地。
+    /// </summary>
+    /// <param name="relDir">相对于仓库 `repo/` 目录的路径。</param>
+    /// <param name="targetDir">本地目标目录。</param>
+    /// <param name="extensionWithDot">要导出的文件扩展名。</param>
+    public void ExportFilesFromCenterRepo(string relDir, string targetDir, string extensionWithDot)
+    {
+        try
+        {
+            var normalizedRelDir = NormalizeRepoRelativePath(relDir);
+            var normalizedExtension = extensionWithDot.StartsWith(".")
+                ? extensionWithDot
+                : "." + extensionWithDot;
+            var repoPath = CenterRepoPath;
+
+            Directory.CreateDirectory(targetDir);
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var rootTree = GetRepoSubdirectoryTree(repo);
+                if (!TryGetTreeByRelativePath(rootTree, normalizedRelDir, out var targetTree))
+                {
+                    return;
+                }
+
+                ExportFilesFromGitTree(targetTree, targetDir, normalizedExtension);
+                return;
+            }
+
+            var sourceDir = string.IsNullOrEmpty(normalizedRelDir)
+                ? Path.Combine(repoPath, "repo")
+                : Path.Combine(repoPath, "repo", normalizedRelDir);
+            if (!Directory.Exists(sourceDir))
+            {
+                return;
+            }
+
+            ExportFilesFromDirectory(sourceDir, targetDir, normalizedExtension);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "导出仓库目录失败: {RelDir}", relDir);
+        }
+    }
+
     private string? ReadFileFromGitRepository(string repoPath, string filePath)
     {
         try
@@ -1464,35 +1782,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             using var repo = new Repository(repoPath);
 
-            var manifestPath = $"repo/{filePath}";
-            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = repo.Head.Tip!.Tree;
-            TreeEntry? entry = null;
-
-            for (int i = 0; i < pathParts.Length; i++)
-            {
-                entry = currentTree[pathParts[i]];
-                if (entry == null)
-                {
-                    return null;
-                }
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                    {
-                        return null;
-                    }
-                    currentTree = (Tree)entry.Target;
-                }
-            }
-
-            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+            if (!TryGetBlobByRelativePath(repo, filePath, out var blob))
             {
                 return null;
             }
 
-            var blob = (Blob)entry.Target;
             using var contentStream = blob.GetContentStream();
             using var reader = new StreamReader(contentStream);
             return reader.ReadToEnd();
@@ -1507,6 +1801,87 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 从Git仓库读取二进制文件内容
     /// </summary>
+    private static bool TryGetBlobByRelativePath(Repository repo, string relPath, out Blob blob)
+    {
+        blob = null!;
+        var manifestPath = $"repo/{NormalizeRepoRelativePath(relPath)}";
+        var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        Tree currentTree = repo.Head.Tip!.Tree;
+        TreeEntry? entry = null;
+
+        for (int i = 0; i < pathParts.Length; i++)
+        {
+            entry = currentTree[pathParts[i]];
+            if (entry == null)
+            {
+                return false;
+            }
+
+            if (i < pathParts.Length - 1)
+            {
+                if (entry.TargetType != TreeEntryTargetType.Tree)
+                {
+                    return false;
+                }
+
+                currentTree = (Tree)entry.Target;
+            }
+        }
+
+        if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+        {
+            return false;
+        }
+
+        blob = (Blob)entry.Target;
+        return true;
+    }
+
+    private static void ExportFilesFromGitTree(Tree tree, string targetDir, string extensionWithDot)
+    {
+        foreach (var entry in tree)
+        {
+            switch (entry.TargetType)
+            {
+                case TreeEntryTargetType.Tree:
+                    var childTargetDir = Path.Combine(targetDir, entry.Name);
+                    Directory.CreateDirectory(childTargetDir);
+                    ExportFilesFromGitTree((Tree)entry.Target, childTargetDir, extensionWithDot);
+                    break;
+                case TreeEntryTargetType.Blob when entry.Name.EndsWith(extensionWithDot, StringComparison.OrdinalIgnoreCase):
+                    var filePath = Path.Combine(targetDir, entry.Name);
+                    using (var contentStream = ((Blob)entry.Target).GetContentStream())
+                    using (var fileStream = File.Create(filePath))
+                    {
+                        contentStream.CopyTo(fileStream);
+                    }
+                    break;
+            }
+        }
+    }
+
+    private static void ExportFilesFromDirectory(string sourceDir, string targetDir, string extensionWithDot)
+    {
+        foreach (var directory in Directory.GetDirectories(sourceDir))
+        {
+            var directoryName = Path.GetFileName(directory);
+            var childTargetDir = Path.Combine(targetDir, directoryName);
+            Directory.CreateDirectory(childTargetDir);
+            ExportFilesFromDirectory(directory, childTargetDir, extensionWithDot);
+        }
+
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            if (!file.EndsWith(extensionWithDot, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var targetFilePath = Path.Combine(targetDir, Path.GetFileName(file));
+            File.Copy(file, targetFilePath, true);
+        }
+    }
+
     private byte[]? ReadBinaryFileFromGitRepository(string repoPath, string filePath)
     {
         try
@@ -1520,35 +1895,11 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             using var repo = new Repository(repoPath);
 
-            var manifestPath = $"repo/{filePath}";
-            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = repo.Head.Tip!.Tree;
-            TreeEntry? entry = null;
-
-            for (int i = 0; i < pathParts.Length; i++)
-            {
-                entry = currentTree[pathParts[i]];
-                if (entry == null)
-                {
-                    return null;
-                }
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                    {
-                        return null;
-                    }
-                    currentTree = (Tree)entry.Target;
-                }
-            }
-
-            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
+            if (!TryGetBlobByRelativePath(repo, filePath, out var blob))
             {
                 return null;
             }
 
-            var blob = (Blob)entry.Target;
             using var contentStream = blob.GetContentStream();
             using var memoryStream = new MemoryStream();
             contentStream.CopyTo(memoryStream);
@@ -3338,4 +3689,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogError(ex, $"恢复脚本文件时发生错误: {scriptPath}");
         }
     }
+}
+
+public sealed class RepoTreeEntryInfo
+{
+    public string Name { get; init; } = string.Empty;
+
+    public string RelativePath { get; init; } = string.Empty;
+
+    public bool IsDirectory { get; init; }
 }

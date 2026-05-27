@@ -24,7 +24,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class KeyMouseRecordPageViewModel : ViewModel
 {
     private readonly ILogger<KeyMouseRecordPageViewModel> _logger = App.GetLogger<KeyMouseRecordPageViewModel>();
-    private readonly string scriptPath = Global.Absolute(@"User\KeyMouseScript");
+    public static readonly string ScriptPath = Global.Absolute(@"User\KeyMouseScript");
 
     [ObservableProperty]
     private ObservableCollection<KeyMouseScriptItem> _scriptItems = [];
@@ -45,7 +45,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     private void InitScriptListViewData()
     {
         ScriptItems.Clear();
-        var fileInfos = LoadScriptFiles(scriptPath)
+        var fileInfos = LoadScriptFiles(ScriptPath)
             .OrderByDescending(f => f.CreationTime)
             .ToList();
         foreach (var f in fileInfos)
@@ -102,7 +102,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
             {
                 var macro = GlobalKeyMouseRecord.Instance.StopRecord();
                 // Genshin Copilot Macro
-                File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{DateTime.Now:yyyyMMddHHmmssffff}.json"), macro);
+                File.WriteAllText(Path.Combine(ScriptPath, $"BetterGI_GCM_{DateTime.Now:yyyyMMddHHmmssffff}.json"), macro);
                 // 刷新ListView
                 InitScriptListViewData();
                 IsRecording = false;
@@ -140,7 +140,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     [RelayCommand]
     public void OnOpenScriptFolder()
     {
-        Process.Start("explorer.exe", scriptPath);
+        Process.Start("explorer.exe", ScriptPath);
     }
 
     [RelayCommand]
