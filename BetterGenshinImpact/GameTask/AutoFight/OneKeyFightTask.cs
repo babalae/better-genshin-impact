@@ -22,7 +22,8 @@ namespace BetterGenshinImpact.GameTask.AutoFight;
 /// </summary>
 public class OneKeyFightTask : Singleton<OneKeyFightTask>
 {
-    public static readonly string HoldOnMode = "按住时重复";
+    public static readonly string HoldOnMode = "按住时重复(新)";
+    public static readonly string HoldFinishMode = "按住时重复(旧)";
     public static readonly string TickMode = "触发";
 
     private Dictionary<string, List<CombatCommand>>? _avatarMacros;
@@ -37,6 +38,8 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     // 宏启动前快照当前按下的键，停止时只释放宏期间新增的按键
     private HashSet<User32.VK> _preMacroKeys = [];
     private bool _hasMacroSnapshot = false;
+    // 代际编号：每次启动新 Task 时递增，旧 Task 的 finally 判断自己过期了就不清理全局状态
+    private int _macroGen = 0;
 
     public void KeyDown()
     {
@@ -54,13 +57,15 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             Logger.LogInformation("加载一键宏配置完成");
         }
 
-        if (IsHoldOnMode())
+        if (IsHoldOnMode() || IsHoldFinishMode())
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
                 SnapshotPressedKeys();
+                _macroGen++;
                 _cts = new CancellationTokenSource();
-                _fightTask = FightTask(_cts.Token);
+                var gen = _macroGen;
+                _fightTask = FightTask(_cts.Token, gen);
                 if (_fightTask.IsCompleted)
                 {
                     RollbackSnapshot();
@@ -70,14 +75,30 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                     _fightTask.Start();
                 }
             }
+            else if (IsHoldFinishMode())
+            {
+                // 覆盖重新运行：取消旧的 Task，启动新的
+                _preMacroKeys.Clear();
+                _hasMacroSnapshot = false;
+                _macroGen++;
+                _cts?.Cancel();
+                _cts?.Dispose();
+                SnapshotPressedKeys();
+                _cts = new CancellationTokenSource();
+                var gen = _macroGen;
+                _fightTask = FightTask(_cts.Token, gen);
+                _fightTask.Start();
+            }
         }
         else if (IsTickMode())
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
                 SnapshotPressedKeys();
+                _macroGen++;
                 _cts = new CancellationTokenSource();
-                _fightTask = FightTask(_cts.Token);
+                var gen = _macroGen;
+                _fightTask = FightTask(_cts.Token, gen);
                 if (_fightTask.IsCompleted)
                 {
                     RollbackSnapshot();
@@ -104,6 +125,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
             _cts?.Cancel();
             ReleaseMacroOnlyKeys();
         }
+        // HoldFinish 模式：只标记松手，让 Task 执行完当前轮后在 finally 中自动清理
 
         if (!IsEnabled())
         {
@@ -145,7 +167,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     /// <summary>
     /// 循环执行战斗宏
     /// </summary>
-    private Task FightTask(CancellationToken ct)
+    private Task FightTask(CancellationToken ct, int gen = 0)
     {
         var imageRegion = CaptureToRectArea();
         var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
@@ -208,6 +230,12 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                             command.Execute(activeAvatar);
                         }
                         round++;
+
+                        // HoldFinish：执行完本轮再检查松手信号
+                        if (IsHoldFinishMode() && !_isKeyDown)
+                        {
+                            break;
+                        }
                     }
 
                     Logger.LogInformation("→ {Name}停止宏", activeAvatar.Name);
@@ -215,7 +243,12 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
                 finally
                 {
                     // 确保任何退出路径都清理快照和 CTS，避免残留状态影响下次操作
-                    RollbackSnapshot();
+                    // 代际检查：如果已被覆盖（gen != _macroGen），不动全局字段
+                    if (gen == _macroGen)
+                    {
+                        ReleaseMacroOnlyKeys();
+                        RollbackSnapshot();
+                    }
                 }
             });
         }
@@ -276,6 +309,11 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     public static bool IsHoldOnMode()
     {
         return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == HoldOnMode;
+    }
+
+    public static bool IsHoldFinishMode()
+    {
+        return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == HoldFinishMode;
     }
 
     public static bool IsTickMode()
