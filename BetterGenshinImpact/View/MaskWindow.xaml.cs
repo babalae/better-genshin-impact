@@ -336,18 +336,19 @@ public partial class MaskWindow : Window
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 1000)
+        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 200)
         {
-            (p.Inlines as System.Collections.IList).RemoveAt(0);
+            var inlines = p.Inlines as System.Collections.IList;
+            while (p.Inlines.Count > 100)
+            {
+                inlines!.RemoveAt(0);
+            }
         }
 
-        var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
-        if (textRange.Text.Length > 10000)
+        if (LogTextBoxWrapper.IsVisible)
         {
-            LogTextBox.Document.Blocks.Clear();
+            LogTextBox.ScrollToEnd();
         }
-
-        LogTextBox.ScrollToEnd();
     }
 
     private void MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
