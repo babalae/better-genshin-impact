@@ -19,4 +19,8 @@ public enum CaptureModes
     [Description("WindowsGraphicsCapture（HDR）")]
     [DefaultValue(3)]
     WindowsGraphicsCaptureHdr = 3,
+
+    [Description("Wine (Wayland)")]
+    [DefaultValue(4)]
+    Wayland = 4,
 }

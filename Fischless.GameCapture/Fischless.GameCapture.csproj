@@ -25,4 +25,7 @@
 		<PackageReference Include="System.Drawing.Common" Version="10.0.7" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="Wayland\screencast_daemon.py" />
+	</ItemGroup>
 </Project>
