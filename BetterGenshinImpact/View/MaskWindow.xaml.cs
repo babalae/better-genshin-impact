@@ -140,6 +140,12 @@ public partial class MaskWindow : Window
     {
         if (IsVisible)
         {
+            // When the mask becomes visible again, TextChanged events that fired while
+            // the window was hidden were not processed, so manually scroll to the end.
+            if (LogTextBoxWrapper.IsVisible)
+            {
+                LogTextBox.ScrollToEnd();
+            }
             return;
         }
 
