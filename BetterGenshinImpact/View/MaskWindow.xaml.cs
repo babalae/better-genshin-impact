@@ -198,6 +198,15 @@ public partial class MaskWindow : Window
         PrintSystemInfo();
 
         PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
+        LogTextBoxWrapper.IsVisibleChanged += LogTextBoxWrapperOnIsVisibleChanged;
+    }
+
+    private void LogTextBoxWrapperOnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (LogTextBoxWrapper.IsVisible)
+        {
+            LogTextBox.ScrollToEnd();
+        }
     }
 
     private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
@@ -212,6 +221,7 @@ public partial class MaskWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
+        LogTextBoxWrapper.IsVisibleChanged -= LogTextBoxWrapperOnIsVisibleChanged;
         IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
         StateChanged -= MaskWindowOnStateChanged;
 
