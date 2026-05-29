@@ -674,10 +674,20 @@ public partial class ScriptControlViewModel : ViewModel
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Number => element.TryGetInt64(out var l) ? l : element.GetDouble(),
-            JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElementValue).ToList(),
+            JsonValueKind.Array => ConvertJsonArray(element),
             JsonValueKind.Null => null,
             _ => element.ToString()
         };
+    }
+
+    private static object ConvertJsonArray(JsonElement element)
+    {
+        var items = element.EnumerateArray().Select(ConvertJsonElementValue).ToList();
+        // 若全为字符串，返回强类型 List<string> 以匹配 multi-checkbox 等下游逻辑
+        if (items.All(i => i is string))
+            return items.Cast<string>().ToList();
+        // 否则返回 List<object> 以匹配现有类型检查
+        return items.Where(i => i != null).Cast<object>().ToList();
     }
 
     /// <summary>
