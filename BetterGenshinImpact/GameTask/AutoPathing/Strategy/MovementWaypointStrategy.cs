@@ -32,10 +32,16 @@ public class MovementWaypointStrategy : IWaypointStrategy
         await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
 
         // 2. 将具体的移动方式委托给对应的行为策略
-        await PerformLocomotionAsync(executor, waypoint);
+        if (await PerformLocomotionAsync(executor, waypoint))
+        {
+            return true;
+        }
 
         // 3. 接近点位的处理（如抵达指定坐标点前如果需要停飞或最后调整）
-        await PerformProximityAsync(executor, waypoint);
+        if (await PerformProximityAsync(executor, waypoint))
+        {
+            return true;
+        }
 
         // 4. 后置动作及状态结算（如：重置战斗目标、收集状态等）
         await CompleteNavigationAsync(executor, waypoint);
@@ -43,19 +49,18 @@ public class MovementWaypointStrategy : IWaypointStrategy
         return false;
     }
 
-    private async Task PerformLocomotionAsync(PathExecutor executor, WaypointForTrack waypoint)
+    private async Task<bool> PerformLocomotionAsync(PathExecutor executor, WaypointForTrack waypoint)
     {
         if (string.Equals(waypoint.Type, WaypointType.Orientation.Code, StringComparison.OrdinalIgnoreCase))
         {
-            await executor.MovementController.FaceTo(waypoint);
-            return;
+            return await executor.MovementController.FaceTo(waypoint);
         }
         
         // 如果前置处理动作声明能够覆盖控制权（如由飞越四叶印自主解决移动），则完全跳过框架级别的位移
         var handler = ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
         if (handler != null && handler.OverridesLocomotion)
         {
-            return;
+            return false;
         }
         
         WaypointForTrack? previousWaypoint = null;
@@ -72,10 +77,10 @@ public class MovementWaypointStrategy : IWaypointStrategy
             nextWaypoint = waypoints[currentIndex + 1];
         }
         
-        await executor.MovementController.MoveTo(waypoint, previousWaypoint, nextWaypoint);
+        return await executor.MovementController.MoveTo(waypoint, previousWaypoint, nextWaypoint);
     }
 
-    private async Task PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
+    private async Task<bool> PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
     {
         // 检查某些在即将到达前才触发的条件，如即将靠岸/落地前停止飞行
         if (string.Equals(waypoint.MoveMode, MoveModeEnum.Fly.Code, StringComparison.OrdinalIgnoreCase) && 
@@ -86,8 +91,10 @@ public class MovementWaypointStrategy : IWaypointStrategy
 
         if (executor.IsTargetPoint(waypoint))
         {
-            await executor.MovementController.MoveCloseTo(waypoint);
+            return await executor.MovementController.MoveCloseTo(waypoint);
         }
+
+        return false;
     }
 
     private async Task CompleteNavigationAsync(PathExecutor executor, WaypointForTrack waypoint)

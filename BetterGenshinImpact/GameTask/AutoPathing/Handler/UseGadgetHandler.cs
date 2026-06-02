@@ -25,13 +25,12 @@ public class UseGadgetHandler : IActionHandler
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行动作: 【使用小道具】");
-        Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
-
         var actionParams = waypointForTrack?.ActionParams ?? string.Empty;
+
+        Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
 
         if (actionParams.Contains("not_wait", StringComparison.OrdinalIgnoreCase))
         {
-            Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
             await Delay(300, ct);
             return;
         }

@@ -17,7 +17,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -360,12 +359,13 @@ public class PathExecutor
         foreach (var p in positions)
         {
             if (p == null) continue;
+            var pointExtParams = p.PointExtParams;
 
             var wft = new WaypointForTrack(p, task.Info.MapName, task.Info.MapMatchMethod)
             {
-                Misidentification = p.PointExtParams.Misidentification,
-                MonsterTag = p.PointExtParams.MonsterTag,
-                EnableMonsterLootSplit = p.PointExtParams != null && p.PointExtParams.EnableMonsterLootSplit
+                Misidentification = pointExtParams?.Misidentification,
+                MonsterTag = pointExtParams?.MonsterTag,
+                EnableMonsterLootSplit = pointExtParams?.EnableMonsterLootSplit == true
             };
 
             if (wft.Type == WaypointType.Teleport.Code && tempList.Count > 0)
@@ -422,50 +422,6 @@ public class PathExecutor
         {
             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         }
-    }
-
-    private async Task MoveCloseTo(WaypointForTrack waypoint)
-    {
-        ImageRegion screen;
-        Point2f position;
-        int targetOrientation;
-        Logger.LogDebug("精确接近目标点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
-
-        var stepsTaken = 0;
-        while (!ct.IsCancellationRequested)
-        {
-            stepsTaken++;
-            if (stepsTaken > 25)
-            {
-                Logger.LogWarning("精确接近超时");
-                break;
-            }
-
-            screen = CaptureToRectArea();
-
-            EndJudgment(screen);
-
-            position = await _navigator.GetPosition(screen, waypoint);
-            if (Navigation.GetDistance(waypoint, position) < 2)
-            {
-                Logger.LogDebug("已到达路径点");
-                break;
-            }
-
-            targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-            await WaitUntilRotatedTo(targetOrientation, 2);
-            // 小碎步接近
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            Thread.Sleep(60);
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(60).KeyUp(User32.VK.VK_W);
-            await Delay(20, ct);
-        }
-
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-
-        // 到达目的地后停顿一秒
-        await Delay(1000, ct);
     }
 
     private async Task BeforeMoveCloseToTarget(WaypointForTrack waypoint)

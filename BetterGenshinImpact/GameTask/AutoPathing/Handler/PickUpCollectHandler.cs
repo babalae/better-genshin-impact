@@ -208,7 +208,6 @@ public class PickUpCollectHandler : IActionHandler
         catch (Exception ex)
         {
             Logger.LogError(ex, $"PickUpCollectHandler 执行拾取技能时发生异常: {ex.Message}");
-            throw; // 保证异常不被静默吞弃，交由外部处理
         }
     }
     

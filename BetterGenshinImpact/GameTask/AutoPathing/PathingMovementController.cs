@@ -660,8 +660,14 @@ public class PathingMovementController
                             await _actions.WaitUntilRotatedToAction(targetOrientation, distance < 3.5f ? 5 : 2);
                             
                             Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                            await Delay(distance < 3.5f ? pulseForwardMs / 2 : pulseForwardMs, _ct);
-                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                            try
+                            {
+                                await Delay(distance < 3.5f ? pulseForwardMs / 2 : pulseForwardMs, _ct);
+                            }
+                            finally
+                            {
+                                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                            }
                             
                             return BTStatus.Running; // 微位移循环结束，等待下一个帧
                         })
@@ -670,24 +676,30 @@ public class PathingMovementController
             )
         );
 
-        while (await microTicker.WaitForNextTickAsync(_ct))
+        try
         {
-            stepsTaken++;
-            using var currentScreen = _actions.CaptureAction();
-            screen = currentScreen;
-            
-            await rootNode.TickAsync();
-            
-            screen = null!;
-            
-            if (isRouteCompleted)
+            while (await microTicker.WaitForNextTickAsync(_ct))
             {
-                break; // 打断微循环计时流
-            }
-        }
+                stepsTaken++;
+                using var currentScreen = _actions.CaptureAction();
+                screen = currentScreen;
 
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-        await Delay(1000, _ct);
-        return exitBecauseEndJudgment;
+                await rootNode.TickAsync();
+
+                screen = null!;
+
+                if (isRouteCompleted)
+                {
+                    break; // 打断微循环计时流
+                }
+            }
+
+            await Delay(1000, _ct);
+            return exitBecauseEndJudgment;
+        }
+        finally
+        {
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        }
     }
 }

@@ -10,8 +10,15 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Movement;
 /// </summary>
 public class StuckDetector
 {
+    private readonly Func<DateTime> _utcNowProvider;
     private readonly Queue<Point2f> _prevPositions = new(8);
-    private DateTime _lastPositionRecord = DateTime.UtcNow;
+    private DateTime _lastPositionRecord;
+
+    public StuckDetector(Func<DateTime>? utcNowProvider = null)
+    {
+        _utcNowProvider = utcNowProvider ?? (() => DateTime.UtcNow);
+        _lastPositionRecord = _utcNowProvider();
+    }
 
     /// <summary>
     /// 被困的记录次数
@@ -24,7 +31,7 @@ public class StuckDetector
     public void Reset()
     {
         ClearQueue();
-        _lastPositionRecord = DateTime.UtcNow;
+        _lastPositionRecord = _utcNowProvider();
         InTrapCount = 0;
     }
 
@@ -42,9 +49,10 @@ public class StuckDetector
     /// </summary>
     public bool CheckStuck(Point2f position, int additionalTimeInMs)
     {
-        if ((DateTime.UtcNow - _lastPositionRecord).TotalMilliseconds > 1000 + additionalTimeInMs)
+        var now = _utcNowProvider();
+        if ((now - _lastPositionRecord).TotalMilliseconds > 1000 + additionalTimeInMs)
         {
-            _lastPositionRecord = DateTime.UtcNow;
+            _lastPositionRecord = now;
             _prevPositions.Enqueue(position);
             
             if (_prevPositions.Count > 8)

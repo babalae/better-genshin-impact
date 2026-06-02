@@ -480,7 +480,7 @@ public class TpTask
                     Logger.LogWarning(e.Message + "  重试");
                 }
             }
-            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException || e.GetType().Name == "NormalEndException")
+            catch (Exception e) when (e is NormalEndException || e is TaskCanceledException)
             {
                 throw;
             }

@@ -28,8 +28,16 @@ public class InertialTracker
     /// </summary>
     public void Reset(Point2f initialPosition)
     {
+        Reset(initialPosition, DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// 使用指定时间初始化导航推算器，便于确定性测试
+    /// </summary>
+    public void Reset(Point2f initialPosition, DateTime now)
+    {
         _lastValidPosition = initialPosition;
-        _lastValidTime = DateTime.UtcNow;
+        _lastValidTime = now;
         _currentVelocity = new Point2f(0f, 0f);
         DistanceTooFarRetryCount = 0;
     }
