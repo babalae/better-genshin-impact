@@ -26,8 +26,9 @@ public class DomainNameToCascadingItemConverter : IValueConverter
 
     public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is ICascadingItem item)
-            return item.Tag as string;
-        return null;
+        if (value is ICascadingItem { Tag: string name } && !string.IsNullOrWhiteSpace(name))
+            return name;
+
+        return Binding.DoNothing;
     }
 }

@@ -717,7 +717,7 @@
         "nameEn": "wriothesley",
         "type": "character",
         "name": "莱欧斯利",
-        "hp": 10,
+        "hp": 11,
         "energy": 3,
         "element": "冰元素",
         "weapon": "法器",
@@ -4671,6 +4671,83 @@
         ]
     },
     {
+        "id": 1418,
+        "nameEn": "flins",
+        "type": "character",
+        "name": "菲林斯",
+        "hp": 10,
+        "energy": 4,
+        "element": "雷元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "pocztowy_demonspear",
+                "name": "扈圣魔枪",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ancient_rite_arcane_light",
+                "name": "古律·孤灯遗秘",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "ancient_ritual_cometh_the_night",
+                "name": "旧仪·夜客致访",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1104,
+                        "nameEn": "electro",
+                        "type": "雷元素",
+                        "count": 4
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 4
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_old_world_secrets",
+                "name": "月兆祝赐·旧世潜藏",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1501,
         "nameEn": "sucrose",
         "type": "character",
@@ -5296,7 +5373,7 @@
         "nameEn": "xianyun",
         "type": "character",
         "name": "闲云",
-        "hp": 10,
+        "hp": 11,
         "energy": 2,
         "element": "风元素",
         "weapon": "法器",
@@ -7217,6 +7294,83 @@
             {
                 "nameEn": "lingering_fragrance",
                 "name": "余薰",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1711,
+        "nameEn": "lauma",
+        "type": "character",
+        "name": "菈乌玛",
+        "hp": 11,
+        "energy": 2,
+        "element": "草元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "peregrination_of_linnunrata",
+                "name": "林麓旅踏",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "runo_dawnless_rest_of_karsikko",
+                "name": "圣言述咏·终宵永眠",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "runo_all_hearts_become_the_beating_moon",
+                "name": "圣言述咏·众心为月",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1107,
+                        "nameEn": "dendro",
+                        "type": "草元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_natures_chorus",
+                "name": "月兆祝赐·千籁恩宠",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -9512,6 +9666,75 @@
                     "被动技能"
                 ],
                 "cost": []
+            }
+        ]
+    },
+    {
+        "id": 2605,
+        "nameEn": "experimental_field_generator",
+        "type": "character",
+        "name": "实验性场力发生装置",
+        "hp": 11,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "其他武器",
+        "skills": [
+            {
+                "nameEn": "gravity_application_crush",
+                "name": "重力应用程式·砸击",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "gravity_application_point_null",
+                "name": "重力应用程式·点状抵消",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "gravity_application_field_reduction",
+                "name": "重力应用程式·削减场域",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
             }
         ]
     },

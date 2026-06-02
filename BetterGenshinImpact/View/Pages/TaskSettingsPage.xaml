@@ -4,6 +4,7 @@
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
       xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -1326,6 +1327,7 @@
                               Grid.Column="1"
                               Width="180"
                               Margin="0,0,36,0"
+                              behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                               ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                               SelectedCascadingItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                 </Grid>

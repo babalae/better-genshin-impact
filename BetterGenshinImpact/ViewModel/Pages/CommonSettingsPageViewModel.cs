@@ -82,17 +82,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
     [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
-        new string[] { "zh-Hans", "zh-Hant", "en"}
-            .ToFrozenDictionary(
-                c => c,
-                c =>
-                {
-                    CultureInfo.CurrentUICulture = new CultureInfo(c);
-                    var stringLocalizer = App.GetService<IStringLocalizer<CultureInfoNameToKVPConverter>>() ??
-                                          throw new NullReferenceException();
-                    return stringLocalizer["简体中文"].ToString();
-                }
-            );
+        new[] { "zh-Hans", "zh-Hant", "en", "ja" }
+            .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
 
     [RelayCommand]
     private async Task OnUpdateUiLanguageAsync()
