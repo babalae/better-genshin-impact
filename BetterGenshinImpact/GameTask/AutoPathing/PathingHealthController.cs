@@ -49,8 +49,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Domain
         /// <param name="avatarId">角色ID / Avatar ID.</param>
         /// <param name="isInstant">是否瞬间完成 / Whether it's instant.</param>
         /// <param name="ct">取消令牌 / Cancellation token.</param>
-        /// <returns>异步任务 / Asynchronous task.</returns>
-        Task SwitchToAvatarAsync(string avatarId, bool isInstant = false, CancellationToken ct = default);
+        /// <returns>切换后的角色，失败时返回 null / Switched avatar, or null when switching failed.</returns>
+        Task<Avatar?> SwitchToAvatarAsync(string avatarId, bool isInstant = false, CancellationToken ct = default);
     }
 
     /// <summary>
@@ -146,6 +146,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Domain
     /// </summary>
     public class SigewinneHealerStrategy : IHealerStrategy
     {
+        private const int SkillBounceAnimationDelayMilliseconds = 8000;
+
         /// <inheritdoc />
         public string TargetAvatarName => "希格雯";
 
@@ -155,7 +157,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Domain
             ArgumentNullException.ThrowIfNull(inputService);
 
             inputService.ExecuteAction(GIActions.ElementalSkill);
-            await Task.Delay(11000, ct); 
+            await Task.Delay(SkillBounceAnimationDelayMilliseconds, ct);
         }
     }
 
@@ -292,7 +294,12 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
                     if (avatar.TrySwitch())
                     {
                         await strategy.ExecuteHealSequenceAsync(_inputService, ct);
-                        await _partyService.SwitchToAvatarAsync(mainAvatarId, false, ct);
+                        var mainAvatar = await _partyService.SwitchToAvatarAsync(mainAvatarId, false, ct);
+                        if (mainAvatar == null)
+                        {
+                            _logger.LogWarning("治疗后切回主角色失败，放弃本次队伍治疗判定。");
+                            return false;
+                        }
                         await Task.Delay(4000, ct); 
                         return true;
                     }
@@ -340,7 +347,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
         {
             private readonly Func<string, bool, Task<Avatar?>> _switchAvatarFunc;
             public LegacyPartyService(Func<string, bool, Task<Avatar?>> switchAvatarFunc) => _switchAvatarFunc = switchAvatarFunc ?? throw new ArgumentNullException(nameof(switchAvatarFunc));
-            public async Task SwitchToAvatarAsync(string avatarId, bool isInstant = false, CancellationToken ct = default) => await _switchAvatarFunc(avatarId, isInstant);
+            public async Task<Avatar?> SwitchToAvatarAsync(string avatarId, bool isInstant = false, CancellationToken ct = default) => await _switchAvatarFunc(avatarId, isInstant);
         }
         
         private class LegacyInputService : IInputService
@@ -354,7 +361,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing
             public LegacyTeleportService(CancellationToken ct) => _ct = ct;
             public async Task TeleportToStatueOfTheSevenAsync(CancellationToken ct)
             {
-                var tpTask = new TpTask(ct);
+                var effectiveCt = ct == default ? _ct : ct;
+                var tpTask = new TpTask(effectiveCt);
                 await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
             }
         }

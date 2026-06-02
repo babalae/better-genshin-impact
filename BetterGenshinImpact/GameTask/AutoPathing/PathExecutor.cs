@@ -16,7 +16,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -366,12 +365,13 @@ public partial class PathExecutor
         foreach (var p in positions)
         {
             if (p == null) continue;
+            var pointExtParams = p.PointExtParams;
 
             var wft = new WaypointForTrack(p, task.Info.MapName, task.Info.MapMatchMethod)
             {
-                Misidentification = p.PointExtParams.Misidentification,
-                MonsterTag = p.PointExtParams.MonsterTag,
-                EnableMonsterLootSplit = p.PointExtParams != null && p.PointExtParams.EnableMonsterLootSplit
+                Misidentification = pointExtParams?.Misidentification,
+                MonsterTag = pointExtParams?.MonsterTag,
+                EnableMonsterLootSplit = pointExtParams?.EnableMonsterLootSplit == true
             };
 
             if (wft.Type == WaypointType.Teleport.Code && tempList.Count > 0)

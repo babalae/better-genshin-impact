@@ -45,7 +45,10 @@ public class SetTimeHandler : IActionHandler
         if (secondColon >= 0)
         {
             string skipStr = actionParams.Substring(secondColon + 1);
-            skipAnimation = bool.TryParse(skipStr, out bool skip) && skip;
+            if (bool.TryParse(skipStr, out bool skip))
+            {
+                skipAnimation = skip;
+            }
         }
 
         await _setTimeTask.DoOnce(hour, minute, ct, skipAnimation);

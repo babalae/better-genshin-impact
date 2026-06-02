@@ -131,6 +131,7 @@ public class PathExecutorSuspend : ISuspendable
 
         //暂定恢复时，重置移动时的时间，防止因暂停而导致超时
         _pathExecutor.MovementController.ResetMoveToStartTime(now);
+        _pathExecutor.IsPositionAndTimeSuspended = false;
         _isSuspended = false;
         _resuming = true;
         _resumeRetryConsumed = false;
@@ -141,6 +142,7 @@ public class PathExecutorSuspend : ISuspendable
     /// <inheritdoc/>
     public void Reset()
     {
+        _pathExecutor.IsPositionAndTimeSuspended = false;
         _isSuspended = false;
         _suspendTimeUtc = DateTime.MinValue;
         _lastSuspendDuration = TimeSpan.Zero;

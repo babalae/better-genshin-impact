@@ -82,11 +82,7 @@ public class TeleportWaypointStrategy : IWaypointStrategy
     {
         if (executor.CurWaypoints.Item1 > 0)
         {
-            var prevWaypoints = waypointsList[executor.CurWaypoints.Item1 - 1];
-            if (prevWaypoints.Count > 0)
-            {
-                await Delay(PreTeleportDelayMs, executor.ct);
-            }
+            await Delay(PreTeleportDelayMs, executor.ct);
         }
 
         await HandleTeleportWaypoint(executor, waypoint);
@@ -147,18 +143,25 @@ public class TeleportWaypointStrategy : IWaypointStrategy
         bool changeBigMap = false;
         string? adventurersGuildCountry = TaskContext.Instance().Config?.OtherConfig?.AutoFetchDispatchAdventurersGuildCountry;
         
-        if (!RunnerContext.Instance.isAutoFetchDispatch 
-            && !string.IsNullOrEmpty(adventurersGuildCountry) 
+        var runnerContext = RunnerContext.Instance;
+        if (!runnerContext.isAutoFetchDispatch
+            && !string.IsNullOrEmpty(adventurersGuildCountry)
             && adventurersGuildCountry != "无")
         {
+            executor._lastGetExpeditionRewardsTime = DateTime.UtcNow;
+
             if (TryDetectExpeditionRewards())
             {
+                if (!runnerContext.TryBeginAutoFetchDispatch())
+                {
+                    return false;
+                }
+
                 changeBigMap = true;
                 Logger.LogInformation("开始自动领取派遣任务！");
                 try
                 {
-                    RunnerContext.Instance.isAutoFetchDispatch = true;
-                    await RunnerContext.Instance.StopAutoPickRunTask(
+                    await runnerContext.StopAutoPickRunTask(
                         async () => await new GoToAdventurersGuildTask().Start(adventurersGuildCountry, executor.ct, null, true),
                         5);
                     Logger.LogInformation("自动领取派遣结束，回归原任务！");
@@ -169,8 +172,7 @@ public class TeleportWaypointStrategy : IWaypointStrategy
                 }
                 finally
                 {
-                    RunnerContext.Instance.isAutoFetchDispatch = false;
-                    executor._lastGetExpeditionRewardsTime = DateTime.UtcNow;
+                    runnerContext.EndAutoFetchDispatch();
                 }
             }
         }
@@ -187,7 +189,7 @@ public class TeleportWaypointStrategy : IWaypointStrategy
     {
         try
         {
-            var rectArea = CaptureToRectArea();
+            using var rectArea = CaptureToRectArea();
             if (rectArea == null || rectArea.SrcMat == null || rectArea.SrcMat.IsDisposed)
             {
                 return false;

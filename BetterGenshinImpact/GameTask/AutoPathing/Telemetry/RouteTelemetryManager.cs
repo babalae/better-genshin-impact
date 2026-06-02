@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -26,7 +27,7 @@ public class RouteTelemetryManager
 {
     private static readonly string SaveDir = Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"));
     private readonly ConcurrentBag<RouteTelemetryRecord> _records = new();
-    private bool _isSaving = false;
+    private int _isSaving;
 
     // 当前正在执行的路径片段对应的锚点（起点），常常是最近使用过的传送点
     public WaypointForTrack? CurrentAnchorContext { get; set; }
@@ -139,7 +140,7 @@ public class RouteTelemetryManager
         _records.Add(record);
 
         // 无论收集几条，只要有新的路段成功时，尝试调度一次异步存盘。
-        if (_records.Count >= 1 && !_isSaving)
+        if (_records.Count >= 1)
         {
             _ = SaveRecordsAsync();
         }
@@ -192,8 +193,8 @@ public class RouteTelemetryManager
 
     private async Task SaveRecordsAsync()
     {
-        if (_isSaving || _records.IsEmpty) return;
-        _isSaving = true;
+        if (_records.IsEmpty) return;
+        if (Interlocked.CompareExchange(ref _isSaving, 1, 0) != 0) return;
 
         try
         {
@@ -240,7 +241,11 @@ public class RouteTelemetryManager
         }
         finally
         {
-            _isSaving = false;
+            Interlocked.Exchange(ref _isSaving, 0);
+            if (!_records.IsEmpty)
+            {
+                _ = SaveRecordsAsync();
+            }
         }
     }
 }
