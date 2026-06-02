@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler.Parameters;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -25,20 +26,14 @@ public class UseGadgetHandler : IActionHandler
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行动作: 【使用小道具】");
-        var actionParams = waypointForTrack?.ActionParams ?? string.Empty;
+        var options = UseGadgetOptions.Parse(waypointForTrack?.ActionParams);
 
         Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
 
-        if (actionParams.Contains("not_wait", StringComparison.OrdinalIgnoreCase))
+        if (options.Mode == UseGadgetMode.Once)
         {
             await Delay(300, ct);
             return;
-        }
-
-        double maxWaitSeconds = 100;
-        if (!string.IsNullOrWhiteSpace(actionParams))
-        {
-            double.TryParse(actionParams, out maxWaitSeconds);
         }
 
         using var screen = CaptureToRectArea();
@@ -53,13 +48,13 @@ public class UseGadgetHandler : IActionHandler
         {
             Logger.LogInformation("小道具正在冷却中，需等待：{Cd}秒", cd);
             
-            var waitTimeMs = cd > maxWaitSeconds 
-                ? (int)(maxWaitSeconds * 1000) 
+            var waitTimeMs = cd > options.MaxWaitSeconds
+                ? (int)(options.MaxWaitSeconds * 1000)
                 : (int)(cd * 1000) + 100;
 
-            if (cd > maxWaitSeconds)
+            if (cd > options.MaxWaitSeconds)
             {
-                Logger.LogDebug("CD 超过最大允许时限，截断等待时长为: {Max}秒", maxWaitSeconds);
+                Logger.LogDebug("CD 超过最大允许时限，截断等待时长为: {Max}秒", options.MaxWaitSeconds);
             }
 
             await Delay(waitTimeMs, ct);
