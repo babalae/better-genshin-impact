@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoPathing.Handler.Parameters;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.Job;
 
@@ -20,37 +21,11 @@ public class SetTimeHandler : IActionHandler
     {
         Logger.LogInformation("执行动作: 【修改时间】");
 
-        if (string.IsNullOrWhiteSpace(waypointForTrack?.ActionParams))
+        if (!SetTimeOptions.TryParse(waypointForTrack?.ActionParams, out var options) || options == null)
         {
             return;
         }
 
-        string actionParams = waypointForTrack.ActionParams;
-        int firstColon = actionParams.IndexOf(':');
-        if (firstColon < 0) return;
-
-        int secondColon = actionParams.IndexOf(':', firstColon + 1);
-        
-        string hourStr = actionParams.Substring(0, firstColon);
-        string minuteStr = secondColon < 0 
-            ? actionParams.Substring(firstColon + 1) 
-            : actionParams.Substring(firstColon + 1, secondColon - firstColon - 1);
-
-        if (!int.TryParse(hourStr, out int hour) || !int.TryParse(minuteStr, out int minute))
-        {
-            return;
-        }
-
-        bool skipAnimation = true;
-        if (secondColon >= 0)
-        {
-            string skipStr = actionParams.Substring(secondColon + 1);
-            if (bool.TryParse(skipStr, out bool skip))
-            {
-                skipAnimation = skip;
-            }
-        }
-
-        await _setTimeTask.DoOnce(hour, minute, ct, skipAnimation);
+        await _setTimeTask.DoOnce(options.Hour, options.Minute, ct, options.SkipAnimation);
     }
 }
