@@ -636,26 +636,9 @@ public partial class ScriptControlViewModel : ViewModel
             }
             else
             {
-                var newScriptGroup = JsonSerializer.Deserialize<ScriptGroup>(JsonSerializer.Serialize(item));
-                if (newScriptGroup != null)
-                {
-                    newScriptGroup.Name = str;
-                    ScriptGroup.ResetGroupInfo(newScriptGroup);
-                    foreach (var project in newScriptGroup.Projects)
-                    {
-                        try
-                        {
-                            project.BuildScriptProjectRelation();
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-                    }
-                    ScriptGroups.Add(newScriptGroup);
-                }
-
-                //WriteScriptGroup(newScriptGroup);
+                var newScriptGroup = ScriptGroup.FromJson(JsonSerializer.Serialize(item));
+                newScriptGroup.Name = str;
+                ScriptGroups.Add(newScriptGroup);
             }
         }
     }
