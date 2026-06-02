@@ -599,12 +599,12 @@ public class TpTask
             double moveMouseLength = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY);
             int moveSteps = Math.Max((int)moveMouseLength / 10, 3); // 每次移动的步数最小为 3，避免除 0 错误
 
-            await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
+            var (actualMoveMouseX, actualMoveMouseY) = await MouseMoveMap(moveMouseX, moveMouseY, moveSteps);
 
             // 推算理论上的移动后坐标 (惯性预测)
             Point2f predictedPoint = mapCenterPoint + new Point2f(
-                (float)(moveMouseX * currentZoomLevel / _tpConfig.MapScaleFactor),
-                (float)(moveMouseY * currentZoomLevel / _tpConfig.MapScaleFactor));
+                (float)(actualMoveMouseX * currentZoomLevel / _tpConfig.MapScaleFactor),
+                (float)(actualMoveMouseY * currentZoomLevel / _tpConfig.MapScaleFactor));
 
             try
             {
@@ -612,7 +612,7 @@ public class TpTask
                 
                 // 计算识别坐标与预测坐标的偏差
                 double jumpDistance = Math.Sqrt(Math.Pow(newCenterPoint.X - predictedPoint.X, 2) + Math.Pow(newCenterPoint.Y - predictedPoint.Y, 2));
-                double expectedMoveLen = Math.Sqrt(moveMouseX * moveMouseX + moveMouseY * moveMouseY) * currentZoomLevel / _tpConfig.MapScaleFactor;
+                double expectedMoveLen = Math.Sqrt(actualMoveMouseX * actualMoveMouseX + actualMoveMouseY * actualMoveMouseY) * currentZoomLevel / _tpConfig.MapScaleFactor;
                 
                 // 如果实际识别坐标产生超出物理可能的远距离跳跃 (比如原本只移动了50单位，但是坐标跳跃了300单位以上)
                 // 则判定为低特征区域产生的误识别（假阳性），抛出异常进入下面的盲走抓取逻辑
@@ -726,9 +726,10 @@ public class TpTask
         await Delay(100, ct);
     }
 
-    private async Task MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
+    private async Task<(double actualDeltaX, double actualDeltaY)> MouseMoveMap(int pixelDeltaX, int pixelDeltaY, int steps = 10)
     {
         // 使用绝对定位方式实现拖拽，避免鼠标相对移动时移出游戏窗口
+        steps = Math.Max(steps, 1);
         int[] stepX = GenerateSteps(pixelDeltaX, steps);
         int[] stepY = GenerateSteps(pixelDeltaY, steps);
 
@@ -736,28 +737,64 @@ public class TpTask
         var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
         // 安全边距，防止点击到 UI 元素
         double edgeMargin = 20 * assetScale;
+        double minX = edgeMargin;
+        double minY = edgeMargin;
+        double maxX = captureAreaRect.Width - edgeMargin;
+        double maxY = captureAreaRect.Height - edgeMargin;
+
+        double targetDeltaX = pixelDeltaX * assetScale;
+        double targetDeltaY = pixelDeltaY * assetScale;
+        double startX = PickDragStart(captureAreaRect.Width, minX, maxX, targetDeltaX);
+        double startY = PickDragStart(captureAreaRect.Height, minY, maxY, targetDeltaY);
 
         // 计算随机起点（游戏区域中心附近），并用绝对坐标移动
-        double startX = captureAreaRect.Width / 2d + Random.Shared.Next(-captureAreaRect.Width / 6, captureAreaRect.Width / 6);
-        double startY = captureAreaRect.Height / 2d + Random.Shared.Next(-captureAreaRect.Height / 6, captureAreaRect.Height / 6);
         GameCaptureRegion.GameRegionMove((_, _) => (startX, startY));
 
         // 使用绝对定位逐帧移动鼠标，确保光标始终在游戏窗口内
         double currentX = startX;
         double currentY = startY;
         Simulation.SendInput.Mouse.LeftButtonDown();
-        for (var i = 0; i < steps; i++)
+        try
         {
-            await Delay(_tpConfig.StepIntervalMilliseconds, ct);
-            currentX += stepX[i] * assetScale;
-            currentY += stepY[i] * assetScale;
-            // 边界约束：确保鼠标不移出游戏捕获区域
-            currentX = Math.Clamp(currentX, edgeMargin, captureAreaRect.Width - edgeMargin);
-            currentY = Math.Clamp(currentY, edgeMargin, captureAreaRect.Height - edgeMargin);
-            GameCaptureRegion.GameRegionMove((_, _) => (currentX, currentY));
+            for (var i = 0; i < steps; i++)
+            {
+                await Delay(_tpConfig.StepIntervalMilliseconds, ct);
+                currentX += stepX[i] * assetScale;
+                currentY += stepY[i] * assetScale;
+                // 边界约束：确保鼠标不移出游戏捕获区域
+                currentX = Math.Clamp(currentX, minX, maxX);
+                currentY = Math.Clamp(currentY, minY, maxY);
+                GameCaptureRegion.GameRegionMove((_, _) => (currentX, currentY));
+            }
+        }
+        finally
+        {
+            Simulation.SendInput.Mouse.LeftButtonUp();
         }
 
-        Simulation.SendInput.Mouse.LeftButtonUp();
+        return ((currentX - startX) / assetScale, (currentY - startY) / assetScale);
+    }
+
+    private static double PickDragStart(double length, double min, double max, double delta)
+    {
+        double validMin = delta < 0 ? min - delta : min;
+        double validMax = delta > 0 ? max - delta : max;
+        if (validMin > validMax)
+        {
+            return delta > 0 ? min : max;
+        }
+
+        double centerMin = length / 2d - length / 6d;
+        double centerMax = length / 2d + length / 6d;
+        double randomMin = Math.Max(validMin, centerMin);
+        double randomMax = Math.Min(validMax, centerMax);
+        if (randomMin > randomMax)
+        {
+            randomMin = validMin;
+            randomMax = validMax;
+        }
+
+        return randomMin + Random.Shared.NextDouble() * (randomMax - randomMin);
     }
 
     private int[] GenerateSteps(int delta, int steps)
