@@ -18,6 +18,7 @@
             <FontFamily x:Key="TextThemeFontFamily">/Resources/Fonts/MiSans-Regular.ttf#MiSans</FontFamily>
             <FontFamily x:Key="DigitalThemeFontFamily">/Resources/Fonts/deluge-led.ttf#Deluge LED</FontFamily>
             <bgivc:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
+            <bgivc:AutoBossNameToCascadingItemConverter x:Key="AutoBossNameConverter" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <bgivc:BooleanToVisibilityRevertConverter x:Key="BooleanToVisibilityRevertConverter" />
             <bgivc:BooleanToEnableTextConverter x:Key="BooleanToEnableTextConverter" />

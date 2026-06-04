@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoFishing;
@@ -192,6 +193,10 @@ public class Dispatcher
                 await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
                 return null;
 
+            case "AutoBoss":
+                await new AutoBossTask(new AutoBossParam()).Start(cancellationToken);
+                return null;
+
             case "AutoFishing":
                 await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
                     cancellationToken);
@@ -328,6 +333,23 @@ public class Dispatcher
         CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;  
         await new AutoDomainTask(param).Start(cancellationToken);  
     }  
+
+    /// <summary>
+    /// 运行自动首领讨伐任务
+    /// </summary>
+    /// <param name="param">自动首领讨伐任务参数</param>
+    /// <param name="customCt">自定义取消令牌</param>
+    /// <returns></returns>
+    public async Task RunAutoBossTask(AutoBossParam param, CancellationToken? customCt = null)
+    {
+        if (param == null)
+        {
+            throw new ArgumentNullException(nameof(param), "自动首领讨伐任务参数不能为空");
+        }
+
+        CancellationToken cancellationToken = customCt ?? CancellationContext.Instance.Cts.Token;
+        await new AutoBossTask(param).Start(cancellationToken);
+    }
   
     /// <summary>  
     /// 运行自动战斗任务
