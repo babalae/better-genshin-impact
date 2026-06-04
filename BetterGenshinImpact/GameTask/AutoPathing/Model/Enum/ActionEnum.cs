@@ -91,6 +91,7 @@ public class ActionEnum(string code, string msg, ActionUseWaypointTypeEnum useWa
             yield return PyroCollect;
             yield return CombatScript;
             yield return Mining;
+            yield return LinneaMining;
             yield return LogOutput;
             yield return Fishing;
             yield return ExitAndRelogin;

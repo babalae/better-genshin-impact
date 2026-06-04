@@ -20,6 +20,9 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 [Serializable]
 public class PathingTask
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     /// <summary>
     /// 实际存储的文件名
     /// </summary>

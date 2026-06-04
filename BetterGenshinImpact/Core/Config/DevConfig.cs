@@ -13,4 +13,12 @@ public partial class DevConfig : ObservableObject
     // 录制地图名称
     [ObservableProperty]
     private string _recordMapName = MapTypes.Teyvat.ToString();
+
+    // 路线录制默认作者
+    [ObservableProperty]
+    private string _recordDefaultAuthorName = string.Empty;
+
+    // 路线录制默认作者链接
+    [ObservableProperty]
+    private string _recordDefaultAuthorLinks = string.Empty;
 }

@@ -157,7 +157,11 @@ public partial class MapPathingViewModel : ViewModel
     {
         if (_mapPathingDevWindow == null || !_mapPathingDevWindow.IsVisible)
         {
-            _mapPathingDevWindow = new MapPathingDevWindow();
+            _mapPathingDevWindow = new MapPathingDevWindow
+            {
+                Owner = GetCurrentOwnerWindow(),
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
             _mapPathingDevWindow.Closed += (s, e) => _mapPathingDevWindow = null;
             _mapPathingDevWindow.Show();
         }
@@ -165,6 +169,14 @@ public partial class MapPathingViewModel : ViewModel
         {
             _mapPathingDevWindow.Activate();
         }
+    }
+
+    private static Window? GetCurrentOwnerWindow()
+    {
+        return Application.Current.Windows
+                   .OfType<Window>()
+                   .FirstOrDefault(w => w.IsActive)
+               ?? Application.Current.MainWindow;
     }
 
     [RelayCommand]

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 
@@ -9,6 +10,8 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 [Serializable]
 public class Waypoint
 {
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
 
 
@@ -16,6 +19,8 @@ public class Waypoint
     //异常识别处理
     public class Misidentification
     {
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
         //何时处理   pathTooFar  路径过远  Unrecognized 未识别
         public List<string> Type { get; set; }= ["unrecognized"];
@@ -26,6 +31,9 @@ public class Waypoint
     }
     public class ExtParams
     {
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
         public Misidentification Misidentification { get; set; } = new();
         public string Description { get; set; } = "";
         //normal 小怪,elite 精英,legendary 传奇
