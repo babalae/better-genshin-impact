@@ -1,0 +1,44 @@
+{
+  "info": {
+    "authors": [],
+    "bgi_version": "0.52.0",
+    "map_match_method": "SIFT",
+    "description": "",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1763000407374,
+    "map_name": "Teyvat",
+    "name": "重拳出击鸭",
+    "tags": [],
+    "type": "collect",
+    "version": "1.0"
+  },
+  "positions": [
+    {
+      "action": "",
+      "action_params": "",
+      "id": 1,
+      "move_mode": "walk",
+      "type": "teleport",
+      "x": 10018.619140625,
+      "y": 1538.62646484375
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 2,
+      "move_mode": "walk",
+      "type": "path",
+      "x": 10041.8623046875,
+      "y": 1483.87255859375
+    },
+    {
+      "action": "combat_script",
+      "action_params": "keypress(f),wait(3),keypress(f),wait(1),keypress(f),wait(1),keypress(f)",
+      "id": 3,
+      "move_mode": "walk",
+      "type": "target",
+      "x": 10044.5068359375,
+      "y": 1473.15869140625
+    }
+  ]
+}

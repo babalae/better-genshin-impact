@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "熔岩辉龙像前往",
+    "type": "collect",
+    "authors": [
+      {
+        "name": "Tool_tingsu",
+        "links": ""
+      }
+    ],
+    "version": "1.0",
+    "description": "",
+    "map_name": "Teyvat",
+    "bgi_version": "0.52.0",
+    "map_match_method": "TemplateMatch",
+    "tags": [],
+    "last_modified_time": 1753792755970,
+    "enable_monster_loot_split": false
+  },
+  "positions": [
+    {
+      "id": 1,
+      "x": 9884.259765625,
+      "y": -2216.931640625,
+      "type": "teleport",
+      "move_mode": "walk",
+      "action": "force_tp",
+      "action_params": ""
+    },
+    {
+      "id": 2,
+      "x": 9894.6767578125,
+      "y": -2228.0947265625,
+      "type": "path",
+      "move_mode": "fly",
+      "action": "stop_flying",
+      "action_params": ""
+    },
+    {
+      "id": 3,
+      "x": 9914.0439453125,
+      "y": -2248.6640625,
+      "type": "path",
+      "move_mode": "walk",
+      "action": "",
+      "action_params": ""
+    }
+  ]
+}
