@@ -210,6 +210,7 @@ public partial class App : Application
     /// </summary>
     protected override async void OnStartup(StartupEventArgs e)
     {
+        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.Normal;
         // Wine 平台适配
         WinePlatformAddon.ApplyApplicationConfig();
         base.OnStartup(e);
