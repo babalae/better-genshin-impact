@@ -17,6 +17,8 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
+using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Web.WebView2.Core;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
@@ -28,6 +30,7 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 public class PathRecorder : Singleton<PathRecorder>
 {
     private WebpageWindow? _webWindow;
+    private bool _isRecording;
 
     /// <summary>
     /// Default serialization format bounds ignoring null payloads strictly mapped to lowercase snake_case schemas.
@@ -44,6 +47,10 @@ public class PathRecorder : Singleton<PathRecorder>
     };
 
     private PathingTask _pathingTask = new();
+
+    public PathingTask CurrentTask => _pathingTask;
+
+    public bool IsRecording => _isRecording;
 
     /// <summary>
     /// Retrieves the current diagnostic record map classification scope setting bounding to dev environments.
@@ -72,6 +79,7 @@ public class PathRecorder : Singleton<PathRecorder>
 
         Navigation.WarmUp(matchingMethod);
         _pathingTask = new PathingTask();
+        _isRecording = true;
         TaskControl.Logger?.LogInformation("开始路径点记录");
         
         if (GetMapName() == nameof(MapTypes.Teyvat))
@@ -114,6 +122,8 @@ public class PathRecorder : Singleton<PathRecorder>
             TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
             AddPosToEditor(waypoint.X, waypoint.Y);
         }
+
+        PublishRecorderTask();
     }
 
     /// <summary>
@@ -152,6 +162,16 @@ public class PathRecorder : Singleton<PathRecorder>
         _pathingTask.Positions.Add(waypoint);
         TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
         AddPosToEditor(waypoint.X, waypoint.Y);
+        PublishRecorderTask();
+    }
+
+    public void AddWaypoint(Waypoint waypoint)
+    {
+        ArgumentNullException.ThrowIfNull(waypoint);
+        _pathingTask.Positions.Add(waypoint);
+        TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
+        AddPosToEditor(waypoint.X, waypoint.Y);
+        PublishRecorderTask();
     }
 
     /// <summary>
@@ -165,14 +185,31 @@ public class PathRecorder : Singleton<PathRecorder>
             var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
             if (string.IsNullOrEmpty(matchingMethod)) matchingMethod = "Default";
 
-            _pathingTask.Info = new PathingTaskInfo
+            if (string.IsNullOrWhiteSpace(_pathingTask.Info.Name))
             {
-                Name = "未命名路线",
-                Type = PathingTaskType.Collect.Code,
-                MapName = GetMapName(),
-                MapMatchMethod = matchingMethod,
-                BgiVersion = Global.Version
-            };
+                _pathingTask.Info.Name = "未命名路线";
+            }
+
+            if (string.IsNullOrWhiteSpace(_pathingTask.Info.Type))
+            {
+                _pathingTask.Info.Type = PathingTaskType.Collect.Code;
+            }
+
+            if (string.IsNullOrWhiteSpace(_pathingTask.Info.MapName))
+            {
+                _pathingTask.Info.MapName = GetMapName();
+            }
+
+            if (string.IsNullOrWhiteSpace(_pathingTask.Info.MapMatchMethod))
+            {
+                _pathingTask.Info.MapMatchMethod = matchingMethod;
+            }
+
+            if (string.IsNullOrWhiteSpace(_pathingTask.Info.BgiVersion))
+            {
+                _pathingTask.Info.BgiVersion = Global.Version;
+            }
+
             var name = $@"{DateTime.Now:yyyyMMdd_HHmmss}.json";
             
             if (MapPathingViewModel.PathJsonPath != null)
@@ -188,6 +225,22 @@ public class PathRecorder : Singleton<PathRecorder>
             TaskControl.Logger?.LogInformation("如果要重新录制新的路径，请在录制编辑器中删除已有路径或创建新的路径");
             TaskControl.Logger?.LogInformation("修改完毕后请务必记得导出路径！");
         }
+
+        _isRecording = false;
+        PublishRecorderTask();
+    }
+
+    public void ReplaceTask(PathingTask pathingTask)
+    {
+        ArgumentNullException.ThrowIfNull(pathingTask);
+        _pathingTask = pathingTask;
+        PublishRecorderTask();
+    }
+
+    private void PublishRecorderTask()
+    {
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this, "UpdateRecorderPathing", new object(), _pathingTask));
     }
 
     /// <summary>

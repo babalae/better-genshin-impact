@@ -116,8 +116,11 @@ public class PathExecutor
                 PartyConfigGetter = () => PartyConfig
             });
             
-        MovementController.OnRouteTraversed = (prev, target, actualTraj) => {
-            RouteTelemetryManager.RecordSuccessfulRoute(prev, target, actualTraj);
+        MovementController.OnRouteTraversed = (prev, target, actualTraj, duration) => {
+            RouteTelemetryManager.RecordSuccessfulRoute(prev, target, actualTraj, duration);
+        };
+        MovementController.OnRouteTraversalFailed = (prev, target, actualTraj, reason) => {
+            RouteTelemetryManager.RecordFailedRoute(prev, target, actualTraj, reason);
         };
     }
 
@@ -224,6 +227,7 @@ public class PathExecutor
                     foreach (var waypoint in waypoints) // 一条路径
                     {
                         CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
+                        PublishCurrentWaypoint(waypoint);
                         _navigator.TryCloseSkipOtherOperations();
                         
                         var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
@@ -323,6 +327,12 @@ public class PathExecutor
         LogScreenResolution();
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
             "UpdateCurrentPathing", new object(), task));
+    }
+
+    private void PublishCurrentWaypoint(WaypointForTrack waypoint)
+    {
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this,
+            "UpdateCurrentWaypoint", new object(), waypoint));
     }
 
     /// <summary>

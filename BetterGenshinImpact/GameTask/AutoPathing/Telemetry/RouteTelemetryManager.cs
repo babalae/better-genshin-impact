@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 
@@ -27,6 +29,8 @@ public class RouteTelemetryManager
 {
     private static readonly string SaveDir = Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"));
     private readonly ConcurrentBag<RouteTelemetryRecord> _records = new();
+    private readonly RouteHealthStore _healthStore = new(SaveDir);
+    private readonly RouteNavigationGraphBuilder _navigationGraphBuilder = new(SaveDir);
     private int _isSaving;
 
     // 当前正在执行的路径片段对应的锚点（起点），常常是最近使用过的传送点
@@ -56,18 +60,23 @@ public class RouteTelemetryManager
         {
             Directory.CreateDirectory(SaveDir);
         }
+
+        ScheduleNavigationGraphBuild();
     }
 
     /// <summary>
     /// 当一条寻路指令成功结束时，记录其真实轨迹并异步落盘
     /// </summary>
-    public void RecordSuccessfulRoute(WaypointForTrack? previous, WaypointForTrack target, List<Point2f> actualTrajectory)
+    public void RecordSuccessfulRoute(WaypointForTrack? previous, WaypointForTrack target, List<Point2f> actualTrajectory, TimeSpan duration)
     {
         if (!TaskContext.Instance().Config.PathingConditionConfig.EnableRouteTelemetry) return;
         if (actualTrajectory == null || actualTrajectory.Count < 2) return;
 
         var startPoint = actualTrajectory.First();
         var endPoint = actualTrajectory.Last();
+        var anchorId = CreateAnchorId(target);
+        var identity = RouteSegmentIdentity.Create(previous, target, startPoint, anchorId);
+        var routeDistance = CalculateRouteDistance(actualTrajectory);
 
         // 计算切入角度 inbound angle (起终点的方向，用于辅助区分同一XY但由于高度不同可能存在的反重力层)
         var dx = endPoint.X - startPoint.X;
@@ -81,61 +90,28 @@ public class RouteTelemetryManager
             .Distinct()
             .ToList();
 
-        // 获取并构建起点的传送门锚点标识
-        string anchorId = "Unknown";
-        if (CurrentAnchorContext != null)
-        {
-            var cx = CurrentAnchorContext.X;
-            var cy = CurrentAnchorContext.Y;
-            var mapName = target.MapName ?? "Teyvat";
-
-            // 执行坐标转换：将 UI 图像坐标转换为游戏内实际 1024 缩放比例的真坐标，对齐 tp.json
-            var mapProvider = MapManager.GetMap(mapName, null);
-            if (mapProvider != null)
-            {
-                var gamePoint = mapProvider.ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f((float)cx, (float)cy));
-                if (gamePoint.HasValue)
-                {
-                    cx = gamePoint.Value.X;
-                    cy = gamePoint.Value.Y;
-                }
-            }
-
-            if (CurrentAnchorContext.Type == Model.Enum.WaypointType.Teleport.Code)
-            {
-                if (MapLazyAssets.Instance.ScenesDic.TryGetValue(mapName, out var scene) && scene.Points.Count > 0)
-                {
-                    // 由于 tp.json 已经包含了所有的传送点，这里不再做距离容差限制，直接无条件采用最近传送点的绝对真实坐标
-                    var nearest = scene.Points.MinBy(tp => Math.Pow(tp.X - cx, 2) + Math.Pow(tp.Y - cy, 2))!;
-                    anchorId = $"TP_{Math.Round(nearest.X)}_{Math.Round(nearest.Y)}";
-                }
-                else
-                {
-                    anchorId = $"TP_{Math.Round(cx)}_{Math.Round(cy)}";
-                }
-            }
-            else
-            {
-                anchorId = $"START_{Math.Round(cx)}_{Math.Round(cy)}";
-            }
-        }
-
         var record = new RouteTelemetryRecord
         {
             RecordId = Guid.NewGuid().ToString("N"),
             Timestamp = DateTime.UtcNow,
+            SegmentId = identity.SegmentId,
             MapName = target.MapName ?? "Teyvat",
             AnchorId = anchorId,
             // 使用1位小数四舍五入作为段标识的特征聚类
-            SegmentKey = $"({Math.Round(startPoint.X, 1)}, {Math.Round(startPoint.Y, 1)})->({Math.Round(endPoint.X, 1)}, {Math.Round(endPoint.Y, 1)})",
+            SegmentKey = identity.SegmentKey,
             MoveMode = target.MoveMode,
+            Action = identity.Action,
+            ActionParams = identity.ActionParams,
             InboundAngle = Math.Round(inboundAngle, 1),
+            RouteDistance = Math.Round(routeDistance, 2),
+            DurationMs = Math.Round(duration.TotalMilliseconds, 0),
             PickedItems = recentPicked,
             // 保存整条有效轨线
             Points = actualTrajectory.Select(p => new TelemetryPoint2D { X = p.X, Y = p.Y }).ToList()
         };
 
         TryBindSemanticResource(record, endPoint);
+        _healthStore.RecordSuccess(identity, routeDistance, duration);
 
         _records.Add(record);
 
@@ -241,6 +217,7 @@ public class RouteTelemetryManager
         }
         finally
         {
+            ScheduleNavigationGraphBuild();
             Interlocked.Exchange(ref _isSaving, 0);
             if (!_records.IsEmpty)
             {
@@ -248,12 +225,98 @@ public class RouteTelemetryManager
             }
         }
     }
+
+    public void RecordFailedRoute(WaypointForTrack? previous, WaypointForTrack target, List<Point2f> actualTrajectory, string reason)
+    {
+        if (!TaskContext.Instance().Config.PathingConditionConfig.EnableRouteTelemetry) return;
+        if (target == null) return;
+
+        var startPoint = actualTrajectory is { Count: > 0 }
+            ? actualTrajectory.First()
+            : previous == null
+                ? new Point2f((float)target.X, (float)target.Y)
+                : new Point2f((float)previous.X, (float)previous.Y);
+
+        var anchorId = CreateAnchorId(target);
+        var identity = RouteSegmentIdentity.Create(previous, target, startPoint, anchorId);
+        _healthStore.RecordFailure(identity, string.IsNullOrWhiteSpace(reason) ? "unknown failure" : reason);
+        ScheduleNavigationGraphBuild();
+    }
+
+    private void ScheduleNavigationGraphBuild()
+    {
+        _navigationGraphBuilder.ScheduleBuild(_healthStore.GetSnapshot());
+    }
+
+    private string CreateAnchorId(WaypointForTrack target)
+    {
+        string anchorId = "Unknown";
+        if (CurrentAnchorContext == null)
+        {
+            return anchorId;
+        }
+
+        var cx = CurrentAnchorContext.X;
+        var cy = CurrentAnchorContext.Y;
+        var mapName = target.MapName ?? "Teyvat";
+
+        // 执行坐标转换：将 UI 图像坐标转换为游戏内实际 1024 缩放比例的真坐标，对齐 tp.json
+        var mapProvider = MapManager.GetMap(mapName, null);
+        if (mapProvider != null)
+        {
+            var gamePoint = mapProvider.ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f((float)cx, (float)cy));
+            if (gamePoint.HasValue)
+            {
+                cx = gamePoint.Value.X;
+                cy = gamePoint.Value.Y;
+            }
+        }
+
+        if (CurrentAnchorContext.Type == Model.Enum.WaypointType.Teleport.Code)
+        {
+            if (MapLazyAssets.Instance.ScenesDic.TryGetValue(mapName, out var scene) && scene.Points.Count > 0)
+            {
+                // 由于 tp.json 已经包含了所有的传送点，这里不再做距离容差限制，直接无条件采用最近传送点的绝对真实坐标
+                var nearest = scene.Points.MinBy(tp => Math.Pow(tp.X - cx, 2) + Math.Pow(tp.Y - cy, 2))!;
+                anchorId = $"TP_{Math.Round(nearest.X)}_{Math.Round(nearest.Y)}";
+            }
+            else
+            {
+                anchorId = $"TP_{Math.Round(cx)}_{Math.Round(cy)}";
+            }
+        }
+        else
+        {
+            anchorId = $"START_{Math.Round(cx)}_{Math.Round(cy)}";
+        }
+
+        return anchorId;
+    }
+
+    private static double CalculateRouteDistance(List<Point2f> points)
+    {
+        if (points.Count < 2)
+        {
+            return 0;
+        }
+
+        double distance = 0;
+        for (var i = 1; i < points.Count; i++)
+        {
+            var dx = points[i].X - points[i - 1].X;
+            var dy = points[i].Y - points[i - 1].Y;
+            distance += Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        return distance;
+    }
 }
 
 public class RouteTelemetryRecord
 {
     public string RecordId { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
+    public string SegmentId { get; set; } = string.Empty;
     public string MapName { get; set; } = string.Empty;
     
     // 原点标识：通常表明该段路线属于哪一个起步的传送门节点
@@ -261,23 +324,38 @@ public class RouteTelemetryRecord
     
     public string SegmentKey { get; set; } = string.Empty;
     public string MoveMode { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
+    public string ActionParams { get; set; } = string.Empty;
     public double InboundAngle { get; set; }
+    public double RouteDistance { get; set; }
+    public double DurationMs { get; set; }
     
     // 是否为双向路径：绝大多数常规移动（步行、奔跑、冲刺、游泳等）是双向的，而像飞行、下落等有高低差限制的通常是单向的。
     public bool IsBidirectional
     {
         get
         {
-            if (string.IsNullOrEmpty(MoveMode)) return true;
-            // 飞行、跳跃、攀爬 等一般具有高度单向性限制
-            if (MoveMode.Contains("fly", StringComparison.OrdinalIgnoreCase) ||
-                MoveMode.Contains("jump", StringComparison.OrdinalIgnoreCase) ||
-                MoveMode.Contains("climb", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-            return true;
+            return IsBidirectionalForAction();
         }
+    }
+
+    public bool IsBidirectionalForAction(string? fallbackAction = null)
+    {
+        var action = string.IsNullOrWhiteSpace(Action) ? fallbackAction : Action;
+        if (string.Equals(action, ActionEnum.UpDownGrabLeaf.Code, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(MoveMode)) return true;
+        // 飞行、跳跃、攀爬 等一般具有高度单向性限制
+        if (MoveMode.Contains("fly", StringComparison.OrdinalIgnoreCase) ||
+            MoveMode.Contains("jump", StringComparison.OrdinalIgnoreCase) ||
+            MoveMode.Contains("climb", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        return true;
     }
     
     // 如果该路段的终点靠近了玩家正在追踪的大地图资源，则关联它，使路段具备“语义”属性。
@@ -288,6 +366,9 @@ public class RouteTelemetryRecord
     public List<string> PickedItems { get; set; } = new();
 
     public List<TelemetryPoint2D> Points { get; set; } = new();
+
+    [JsonIgnore]
+    public string SourceFileName { get; set; } = string.Empty;
 }
 
 public class TelemetryPoint2D

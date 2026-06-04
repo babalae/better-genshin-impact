@@ -684,6 +684,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
         ));
 
+        devDirectory.Children.Add(new HotKeySettingModel(
+            "实时追踪地图跟随开关",
+            nameof(Config.HotKeyConfig.MapViewerFollowHotkey),
+            Config.HotKeyConfig.MapViewerFollowHotkey,
+            Config.HotKeyConfig.MapViewerFollowHotkeyType,
+            (_, _) =>
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ToggleMapFollowCurrent", new object(), new object()));
+            }
+        ));
+
         var pathRecorder = PathRecorder.Instance;
         var pathRecording = false;
 

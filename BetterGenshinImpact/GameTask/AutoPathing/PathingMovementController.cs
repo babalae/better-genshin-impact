@@ -114,7 +114,9 @@ public class PathingMovementController
 
     // 【自进化寻路】提供给上层调用的路线记录回调，无论有无偏差，只要成功走完，都记录下来用于生成提瓦特主干道。
     // 参数: (起步点, 终点, 真实摸索出的生还轨迹)
-    public Action<WaypointForTrack?, WaypointForTrack, List<Point2f>>? OnRouteTraversed { get; set; }
+    public Action<WaypointForTrack?, WaypointForTrack, List<Point2f>, TimeSpan>? OnRouteTraversed { get; set; }
+
+    public Action<WaypointForTrack?, WaypointForTrack, List<Point2f>, string>? OnRouteTraversalFailed { get; set; }
 
     /// <summary>
     /// 移动至指定的路径点 / Moves to the specified waypoint.
@@ -158,10 +160,12 @@ public class PathingMovementController
         double distance = 0;
         bool isRouteCompleted = false;
         bool exitBecauseEndJudgment = false;
+        bool reachedTargetPoint = false;
         Exception? caughtException = null;
 
         // 【自进化寻路】遥测采集数据
         var actualTrajectory = new List<Point2f>();
+        var routeStartTime = DateTime.UtcNow;
 
         // 【架构颠覆: 组合式行为树 (Behavior Tree)】
         var rootNode = new BTSelector(
@@ -237,6 +241,7 @@ public class PathingMovementController
                         new BTCondition(() => distance < ARRIVE_DISTANCE_THRESHOLD),
                         new BTAction(() => {
                             // Logger.LogInformation("[寻路系统] 成功抵达目标路径点附近（距离 < {Threshold:F1}）。", ARRIVE_DISTANCE_THRESHOLD);
+                            reachedTargetPoint = true;
                             isRouteCompleted = true;
                             return BTStatus.Success;
                         })
@@ -312,16 +317,28 @@ public class PathingMovementController
 
                 if (isRouteCompleted)
                 {
-                    // 【自进化寻路】完赛统计：抵达终点即刻作为提瓦特可行走主干道向外供出
-                    if (OnRouteTraversed != null)
+                    if (reachedTargetPoint || exitBecauseEndJudgment)
                     {
-                        actualTrajectory.Add(new Point2f((float)waypoint.X, (float)waypoint.Y)); 
-                        OnRouteTraversed.Invoke(previousWaypoint, waypoint, actualTrajectory);
+                        // 【自进化寻路】完赛统计：抵达终点即刻作为提瓦特可行走主干道向外供出
+                        if (OnRouteTraversed != null)
+                        {
+                            actualTrajectory.Add(new Point2f((float)waypoint.X, (float)waypoint.Y));
+                            OnRouteTraversed.Invoke(previousWaypoint, waypoint, actualTrajectory, DateTime.UtcNow - routeStartTime);
+                        }
+                    }
+                    else
+                    {
+                        OnRouteTraversalFailed?.Invoke(previousWaypoint, waypoint, actualTrajectory, "movement branch ended before reaching target");
                     }
 
                     return exitBecauseEndJudgment;
                 }
             }
+        }
+        catch (Exception ex) when (ex is not TaskCanceledException and not OperationCanceledException)
+        {
+            OnRouteTraversalFailed?.Invoke(previousWaypoint, waypoint, actualTrajectory, $"{ex.GetType().Name}: {ex.Message}");
+            throw;
         }
         finally
         {
