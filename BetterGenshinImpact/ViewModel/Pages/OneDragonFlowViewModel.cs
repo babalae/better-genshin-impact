@@ -21,6 +21,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using BetterGenshinImpact.Core.Script.Project;
@@ -240,11 +241,15 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private List<string> _secretTreasureObjectList = ["布匹","须臾树脂","大英雄的经验","流浪者的经验","精锻用魔矿","摩拉","祝圣精华","祝圣油膏"];
     
     [ObservableProperty] private List<string> _sereniteaPotTpTypes = ["地图传送", "尘歌壶道具"];
+
+    [ObservableProperty] private AutoFightViewModel? _autoFightViewModel;
     
     public AllConfig Config { get; set; } = TaskContext.Instance().Config;
 
     public OneDragonFlowViewModel()
     {
+        AutoFightViewModel = new AutoFightViewModel(Config);
+
         ConfigList.CollectionChanged += (sender, e) =>
         {
             if (e.NewItems != null)
@@ -428,6 +433,12 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         SaveConfig();
         Toast.Information("排序已保存");
+    }
+
+    [RelayCommand]
+    private void OnStrategyDropDownOpened(string type)
+    {
+        AutoFightViewModel?.OnStrategyDropDownOpened(type);
     }
 
     public void SetSomeSelectedConfig(OneDragonFlowConfig? selected)
