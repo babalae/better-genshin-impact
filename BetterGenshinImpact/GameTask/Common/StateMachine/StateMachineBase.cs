@@ -938,7 +938,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
     /// 自动使用当前状态注册的邻接状态作为期望状态
     /// </summary>
     /// <param name="timeoutMs">超时时间（毫秒）</param>
-    /// <returns>转换到的状态，如果没有注册邻接状态或等待超时则返回 default</returns>
+    /// <returns>转换到的状态；没有注册邻接状态、源状态保持超时或中间态等待超时时返回 default</returns>
     protected async Task<TState> EnsureNextStateTransition(int? timeoutMs = null)
     {
         var result = await WaitNextStateTransition(timeoutMs);

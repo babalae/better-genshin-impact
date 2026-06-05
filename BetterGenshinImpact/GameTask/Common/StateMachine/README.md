@@ -273,7 +273,7 @@ if (CurrentStateRetryCount > 3)
 | `CurrentStateRetryTimeout` | 当前状态的时间上限，使用次数策略时为 null |
 | `CurrentStateRetryUsesTimeout` | 当前状态是否使用时间策略 |
 | `CurrentStateRetryInterval` | 当前状态 retry 后的循环间隔 |
-| `CurrentStateTransitionTimeout` | 当前状态源状态保持多久后触发 retry |
+| `CurrentStateTransitionTimeout` | 仅在当前状态 Handler 返回 `Success` 后生效；从 `Success` 返回后开始计时，源状态持续可见超过此时长会触发 retry |
 
 这些属性都是只读保护属性，节点不能直接改框架内部计数。
 
