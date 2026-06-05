@@ -298,9 +298,7 @@ public class AutoBossTask : ISoloTask
         }
 
         var originalResin = resinLimit - missingResin;
-        _logger.LogInformation("剩余树脂 {Count}", originalResin);
-        _logger.LogDebug("{Name}：战前原粹树脂 {Count}/{Limit}，全部恢复 {FullRecoveryTime}，缺失 {MissingCount}",
-            Name, originalResin, resinLimit, FormatRecoveryTime(fullRecoveryTime), missingResin);
+        _logger.LogInformation("{Name}：剩余树脂 {Count}",Name, originalResin);
         return new OriginalResinInfo(originalResin, resinLimit);
     }
 
@@ -329,7 +327,7 @@ public class AutoBossTask : ISoloTask
     }
 
     /// <summary>
-    /// 读取树脂详情弹窗中的全部恢复时间。
+    /// 读取树脂详情弹窗中的全部恢复时间；已完全恢复时返回零时长。
     /// </summary>
     private TimeSpan RecognizeFullRecoveryTime(ImageRegion capture, int resinIconLeft, int resinIconBottom)
     {
@@ -337,7 +335,7 @@ public class AutoBossTask : ISoloTask
         var detailRect = new Rect(
             resinIconLeft - 23,
             resinIconBottom + 29,
-            180,
+            220,
             150);
         using var detailRegion = capture.DeriveCrop(detailRect);
         var result = OcrFactory.Paddle.OcrResult(detailRegion.SrcMat);
@@ -364,6 +362,11 @@ public class AutoBossTask : ISoloTask
 
     private static TimeSpan ExtractFullRecoveryTime(string text)
     {
+        if (text.Contains("原粹树脂已完全恢复", StringComparison.Ordinal))
+        {
+            return TimeSpan.Zero;
+        }
+
         var fullRecoveryMatch = Regex.Match(text, @"全部恢复(?<time>\d{1,3}:\d{2}:\d{2})");
         if (fullRecoveryMatch.Success)
         {
