@@ -1703,7 +1703,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="用于首领战斗"
+                                  Text="仅用于首领讨伐，不覆盖其他策略设置"
                                   TextWrapping="Wrap" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
@@ -1721,7 +1721,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="3"
-                              Width="180"
+                              Width="200"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
                               SelectedItem="{Binding Config.AutoBossConfig.StrategyName, Mode=TwoWay}">
@@ -1746,7 +1746,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="指定要讨伐的首领"
+                                  Text="选择首领"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -1756,7 +1756,7 @@
                     <vio:CascadingComboBox Grid.Row="0"
                                            Grid.RowSpan="2"
                                            Grid.Column="1"
-                                           Width="220"
+                                           Width="200"
                                            Margin="0,0,36,0"
                                            behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                            ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
@@ -1775,7 +1775,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="自动切换到指定队伍"
+                                  Text="切换队伍"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"

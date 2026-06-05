@@ -298,7 +298,7 @@ public class AutoBossTask : ISoloTask
         }
 
         var originalResin = resinLimit - missingResin;
-        _logger.LogInformation("{Name}：剩余树脂 {Count}",Name, originalResin);
+        _logger.LogInformation("{Name}：剩余树脂 {Count}", Name, originalResin);
         return new OriginalResinInfo(originalResin, resinLimit);
     }
 
@@ -307,7 +307,7 @@ public class AutoBossTask : ISoloTask
     /// </summary>
     private int RecognizeOriginalResinLimit(ImageRegion capture, int resinIconRight)
     {
-        var countRect = new Rect(resinIconRight + ScaleX(25), ScaleY(37), ScaleX(110), ScaleY(24));
+        var countRect = new Rect(resinIconRight + ScaleX(25), ScaleY(37), ScaleX(120), ScaleY(24));
         using var countRegion = capture.DeriveCrop(countRect);
         var countText = OcrFactory.Paddle.OcrWithoutDetector(countRegion.SrcMat);
         var digits = Regex.Replace(StringUtils.ConvertFullWidthNumToHalfWidth(countText), @"\D", "");
@@ -333,7 +333,7 @@ public class AutoBossTask : ISoloTask
     {
         // 该偏移来自截图实际像素，不随 AssetScale 缩放。
         var detailRect = new Rect(
-            resinIconLeft - 23,
+            resinIconLeft - 13,
             resinIconBottom + 29,
             220,
             150);
@@ -860,36 +860,20 @@ public class AutoBossTask : ISoloTask
     }
 
     /// <summary>
-    /// 使用所选自动战斗策略执行首领战斗，并周期性检测战斗是否结束。
+    /// 使用所选自动战斗策略执行首领战斗，并复用自动战斗的结束检测。
     /// </summary>
     private async Task RunAutoFight()
     {
         _logger.LogInformation("{Name}：执行战斗策略", Name);
-        var combatScenes = GetCombatScenesWithRetry();
-        var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
-        var delayTime = ParseCheckEndDelay(TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.CheckEndDelay);
-        var detectDelayTime = ParseBeforeDetectDelay(TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig.BeforeDetectDelay);
-        CombatCommand? lastCommand = null;
 
-        combatScenes.BeforeTask(_ct);
-        AutoFightTask.FightStatusFlag = true;
-        AutoFightSeek.RotationCount = 0;
+        // 保留原 AutoBoss 行为：战斗开始前先切到策略首个角色。
+        var combatScenes = GetCombatScenesWithRetry();
+        FindCombatScriptAndSwitchAvatar(combatScenes);
+
+        var taskParam = BuildAutoFightParamForBoss();
         try
         {
-            while (!_ct.IsCancellationRequested)
-            {
-                foreach (var command in combatCommands)
-                {
-                    _ct.ThrowIfCancellationRequested();
-                    command.Execute(combatScenes, lastCommand);
-                    lastCommand = command;
-                }
-
-                if (await CheckFightFinish(delayTime, detectDelayTime))
-                {
-                    return;
-                }
-            }
+            await new AutoFightTask(taskParam).Start(_ct);
         }
         catch (NormalEndException e)
         {
@@ -898,136 +882,27 @@ public class AutoBossTask : ISoloTask
         finally
         {
             combatScenes.AfterTask();
-            Simulation.ReleaseAllKey();
-            AutoFightTask.FightStatusFlag = false;
         }
     }
 
     /// <summary>
-    /// 检测首领战斗是否已经结束，优先使用自动战斗的旋转找怪检测，必要时打开编队界面做兜底判断。
+    /// 构造 AutoBoss 专用自动战斗参数：复用战斗检测配置，但不执行任何战后拾取。
     /// </summary>
-    /// <param name="delayTime">每轮检测前的等待毫秒数。</param>
-    /// <param name="detectDelayTime">打开检测界面后的等待毫秒数。</param>
-    /// <returns>识别到战斗结束时返回 true，否则返回 false。</returns>
-    private async Task<bool> CheckFightFinish(int delayTime, int detectDelayTime)
+    private AutoFightParam BuildAutoFightParamForBoss()
     {
-        var finishDetectConfig = TaskContext.Instance().Config.AutoFightConfig.FinishDetectConfig;
-        if (finishDetectConfig.RotateFindEnemyEnabled)
+        var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, TaskContext.Instance().Config.AutoFightConfig)
         {
-            bool? result;
-            try
-            {
-                result = await AutoFightSeek.SeekAndFightAsync(
-                    _logger,
-                    detectDelayTime,
-                    delayTime,
-                    _ct,
-                    rotaryFactor: finishDetectConfig.RotaryFactor);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "SeekAndFightAsync 方法发生异常");
-                result = false;
-            }
+            FightFinishDetectEnabled = true,
+            PickDropsAfterFightEnabled = false,
+            KazuhaPickupEnabled = false,
+            QinDoublePickUp = false,
+            ExpBasedPickupEnabled = false,
+            KazuhaPartyName = string.Empty,
+            BattleThresholdForLoot = -1,
+            OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite"
+        };
 
-            AutoFightSeek.RotationCount = result == null ? AutoFightSeek.RotationCount + 1 : 0;
-            if (result != null)
-            {
-                return result.Value;
-            }
-        }
-
-        if (!finishDetectConfig.RotateFindEnemyEnabled)
-        {
-            await Delay(delayTime, _ct);
-        }
-
-        _logger.LogInformation("打开编队界面检查战斗是否结束");
-        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(detectDelayTime, _ct);
-
-        using var ra = CaptureToRectArea();
-        var progressColor = ra.SrcMat.At<Vec3b>(50, 790);
-        var whiteTile = ra.SrcMat.At<Vec3b>(50, 768);
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
-        if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
-            IsYellow(progressColor.Item2, progressColor.Item1, progressColor.Item0))
-        {
-            _logger.LogInformation("识别到战斗结束");
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
-            return true;
-        }
-
-        _logger.LogInformation("未识别到战斗结束: yellow{B},{G},{R};white{WhiteB},{WhiteG},{WhiteR}",
-            progressColor.Item0, progressColor.Item1, progressColor.Item2,
-            whiteTile.Item0, whiteTile.Item1, whiteTile.Item2);
-        return false;
-    }
-
-    /// <summary>
-    /// 解析自动战斗配置中的结束检测等待时间。
-    /// </summary>
-    /// <param name="input">自动战斗配置字符串，单位为秒。</param>
-    /// <returns>毫秒格式的等待时间；无法解析时返回默认值。</returns>
-    private static int ParseCheckEndDelay(string input)
-    {
-        const int defaultDelay = 1500;
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return defaultDelay;
-        }
-
-        foreach (var segment in input.Split(';', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var parts = segment.Split(',');
-            if (parts.Length == 1 &&
-                double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds))
-            {
-                return Math.Max(0, (int)(seconds * 1000));
-            }
-        }
-
-        return defaultDelay;
-    }
-
-    /// <summary>
-    /// 解析打开检测界面后的等待时间。
-    /// </summary>
-    /// <param name="input">自动战斗配置字符串，单位为秒。</param>
-    /// <returns>毫秒格式的等待时间；无法解析时返回默认值。</returns>
-    private static int ParseBeforeDetectDelay(string input)
-    {
-        return double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
-            ? Math.Max(0, (int)(seconds * 1000))
-            : 450;
-    }
-
-    /// <summary>
-    /// 判断 RGB 颜色是否位于战斗结束进度条使用的黄色范围。
-    /// </summary>
-    /// <param name="r">红色通道。</param>
-    /// <param name="g">绿色通道。</param>
-    /// <param name="b">蓝色通道。</param>
-    /// <returns>颜色落在黄色阈值内时返回 true。</returns>
-    private static bool IsYellow(int r, int g, int b)
-    {
-        return r is >= 200 and <= 255 &&
-               g is >= 200 and <= 255 &&
-               b is >= 0 and <= 100;
-    }
-
-    /// <summary>
-    /// 判断 RGB 颜色是否位于白色范围，用于辅助确认编队界面的战斗结束状态。
-    /// </summary>
-    /// <param name="r">红色通道。</param>
-    /// <param name="g">绿色通道。</param>
-    /// <param name="b">蓝色通道。</param>
-    /// <returns>颜色落在白色阈值内时返回 true。</returns>
-    private static bool IsWhite(int r, int g, int b)
-    {
-        return r is >= 240 and <= 255 &&
-               g is >= 240 and <= 255 &&
-               b is >= 240 and <= 255;
+        return taskParam;
     }
 
     /// <summary>

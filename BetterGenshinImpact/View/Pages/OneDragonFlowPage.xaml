@@ -1133,7 +1133,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="用于首领战斗"
+                                              Text="仅用于首领讨伐，不覆盖其他策略设置"
                                               TextWrapping="Wrap" />
                                 <ComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
@@ -1163,7 +1163,7 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="指定要讨伐的首领"
+                                              Text="选择首领"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
@@ -1192,7 +1192,7 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="自动切换到指定队伍"
+                                              Text="切换队伍"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
