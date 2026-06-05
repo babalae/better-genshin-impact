@@ -696,7 +696,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ));
 
         var pathRecorder = PathRecorder.Instance;
-        var pathRecording = false;
 
         devDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止路径记录器",
@@ -705,7 +704,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.PathRecorderHotkeyType,
             (_, _) =>
             {
-                if (pathRecording)
+                if (pathRecorder.IsRecording)
                 {
                     pathRecorder.Save();
                 }
@@ -713,8 +712,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 {
                     Task.Run(() => { pathRecorder.Start(); });
                 }
-
-                pathRecording = !pathRecording;
             }
         ));
 
@@ -725,11 +722,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AddWaypointHotkeyType,
             (_, _) =>
             {
-                if (pathRecording)
+                if (pathRecorder.IsRecording)
                 {
                     Task.Run(() => { pathRecorder.AddWaypoint(); });
-
+                    return;
                 }
+
+                _logger.LogWarning("路径记录器未启动，已忽略添加路径点快捷键");
             }
         ));
 

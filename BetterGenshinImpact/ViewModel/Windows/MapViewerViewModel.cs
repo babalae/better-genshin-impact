@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Data;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -31,7 +36,10 @@ using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Win32;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
 using WpfPoint = System.Windows.Point;
+using WpfWindow = System.Windows.Window;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -40,10 +48,8 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 /// </summary>
 public partial class MapViewerViewModel : ObservableObject
 {
-    private static readonly JsonSerializerOptions JsonDisplayOptions = new(PathRecorder.JsonOptions)
-    {
-        WriteIndented = true
-    };
+    private const int CoordinateStorageDecimals = 4;
+    private const int CoordinateDisplayDecimals = 2;
 
     [ObservableProperty]
     private WriteableBitmap _mapBitmap;
@@ -80,6 +86,9 @@ public partial class MapViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _routeProgressText = "0%";
+
+    [ObservableProperty]
+    private string _routeProgressPointText = "0 / 0 个点";
 
     [ObservableProperty]
     private string _nextWaypointText = "-";
@@ -119,6 +128,9 @@ public partial class MapViewerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isViewSettingsOpen;
+
+    [ObservableProperty]
+    private bool _isRecordAdvancedSettingsOpen;
 
     [ObservableProperty]
     private bool _isSidePanelVisible = true;
@@ -180,17 +192,40 @@ public partial class MapViewerViewModel : ObservableObject
     [ObservableProperty]
     private RecordedWaypointViewModel? _selectedRecordedWaypoint;
 
+    private List<Waypoint>? _recordedWaypointClipboard;
+    private string? _recordedWaypointClipboardText;
+
     public ObservableCollection<RecordedWaypointViewModel> RecordedWaypoints { get; } = [];
 
+    public ICollectionView RecordedWaypointView { get; }
+
     public ObservableCollection<MapEditorOption> WaypointTypeOptions { get; } = new(
-        WaypointType.Values.Select(i => new MapEditorOption(i.Code, $"{i.Msg} ({i.Code})")));
+        WaypointType.Values.Select(i => new MapEditorOption(i.Code, i.Msg)));
 
     public ObservableCollection<MapEditorOption> MoveModeOptions { get; } = new(
-        MoveModeEnum.Values.Select(i => new MapEditorOption(i.Code, $"{i.Msg} ({i.Code})")));
+        MoveModeEnum.Values.Select(i => new MapEditorOption(i.Code, i.Msg)));
 
     public ObservableCollection<MapEditorOption> ActionOptions { get; } = new(
         new[] { new MapEditorOption(string.Empty, "无") }.Concat(
-            ActionEnum.Values.Select(i => new MapEditorOption(i.Code, $"{i.Msg} ({i.Code})"))));
+            ActionEnum.Values.Select(i => new MapEditorOption(i.Code, i.Msg))));
+
+    public ObservableCollection<MapEditorOption> WaypointFilterDimensions { get; } =
+    [
+        new("type", "点位类型"),
+        new("moveMode", "移动方式"),
+        new("action", "动作")
+    ];
+
+    public ObservableCollection<WaypointFilterOption> ActiveWaypointFilterOptions { get; } = [];
+
+    [ObservableProperty]
+    private MapEditorOption? _selectedWaypointFilterDimension;
+
+    [ObservableProperty]
+    private bool _isWaypointFilterPopupOpen;
+
+    [ObservableProperty]
+    private string _waypointFilterSummary = "全部";
 
     public ObservableCollection<MapEditorOption> MapLayerOptions { get; } = new(
         Enum.GetValues<MapTypes>().Select(i => new MapEditorOption(i.ToString(), i.GetDescription())));
@@ -208,8 +243,8 @@ public partial class MapViewerViewModel : ObservableObject
     public System.Windows.GridLength SideColumnWidth => !IsSidePanelVisible
         ? new System.Windows.GridLength(0)
         : IsRecorderMode
-            ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star)
-            : new System.Windows.GridLength(360);
+            ? new System.Windows.GridLength(460)
+            : new System.Windows.GridLength(380);
 
     public System.Windows.Visibility SidePanelVisibility => IsSidePanelVisible
         ? System.Windows.Visibility.Visible
@@ -227,6 +262,14 @@ public partial class MapViewerViewModel : ObservableObject
         ? System.Windows.Visibility.Visible
         : System.Windows.Visibility.Collapsed;
 
+    public System.Windows.Visibility RecorderMainVisibility => IsRecorderMode
+        ? System.Windows.Visibility.Visible
+        : System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility DebugMainVisibility => IsRecorderMode
+        ? System.Windows.Visibility.Collapsed
+        : System.Windows.Visibility.Visible;
+
     public System.Windows.Visibility RecordedWaypointListVisibility => RecordedWaypoints.Count > 0
         ? System.Windows.Visibility.Visible
         : System.Windows.Visibility.Collapsed;
@@ -235,7 +278,49 @@ public partial class MapViewerViewModel : ObservableObject
         ? System.Windows.Visibility.Visible
         : System.Windows.Visibility.Collapsed;
 
+    public System.Windows.Visibility SelectedWaypointEditorVisibility => SelectedRecordedWaypoint == null
+        ? System.Windows.Visibility.Collapsed
+        : System.Windows.Visibility.Visible;
+
+    public System.Windows.Visibility SelectedWaypointEmptyVisibility => SelectedRecordedWaypoint == null
+        ? System.Windows.Visibility.Visible
+        : System.Windows.Visibility.Collapsed;
+
     public string SidePanelToggleText => IsSidePanelVisible ? "隐藏信息" : "显示信息";
+
+    public bool HasRecordedWaypoints => RecordedWaypoints.Count > 0;
+
+    public bool CanRunTracking => !IsRecorderMode || HasRecordedWaypoints;
+
+    public string RecordedWaypointCountText => $"{RecordedWaypoints.Count} 个点";
+
+    public string RecordFileStateText => string.IsNullOrWhiteSpace(_recordFilePath)
+        ? "未保存"
+        : Path.GetFileName(_recordFilePath);
+
+    public string RecordSummaryText => $"{(IsRecorderMode ? "录制模式" : "调试模式")} · {RecordedWaypoints.Count} 个点 · {RecordFileStateText}";
+
+    public string RouteEmptyStatusText => RecordedWaypoints.Count == 0
+        ? "暂无路线，请先录制或加载路线"
+        : $"路线：{RecordFileName} · {RecordedWaypoints.Count} 个点";
+
+    public string SelectedWaypointEditorTitle => SelectedRecordedWaypoint == null
+        ? "当前编辑点位"
+        : $"当前编辑点位：#{SelectedRecordedWaypoint.Index} {SelectedRecordedWaypoint.TypeDisplayText}";
+
+    public string MapStatusText => $"模式：{(IsRecorderMode ? "录制" : "调试")} / {(IsFollowingCurrent ? "跟随" : "固定")}    缩放：{MapZoomText}";
+
+    public string FollowZoomText => $"{FollowZoom:F1}x";
+
+    public string CurrentPositionDetailText => TrimDebugValue(CurrentPositionText, "当前位置：");
+
+    public string SelectedTargetDetailText => TrimDebugValue(SelectedTargetText, "目标点：");
+
+    public string ClipRectDetailText => TrimDebugValue(ClipRectText, "视野：");
+
+    public string LastRefreshDetailText => TrimDebugValue(LastRefreshText, "刷新：");
+
+    public string RouteDistanceDetailText => TrimDebugValue(RouteDistanceText, "距离：");
 
     public string FollowHotkeyText => string.IsNullOrWhiteSpace(TaskContext.Instance().Config.HotKeyConfig.MapViewerFollowHotkey)
         ? "未绑定"
@@ -289,6 +374,8 @@ public partial class MapViewerViewModel : ObservableObject
 
     private bool _showRouteProgressAsPercent = true;
 
+    public WpfWindow? DialogOwner { get; set; }
+
     public MapViewerViewModel(string mapName)
     {
         if (string.IsNullOrEmpty(mapName))
@@ -303,8 +390,11 @@ public partial class MapViewerViewModel : ObservableObject
         RecordAuthorName = DefaultRecordAuthorName;
         RecordAuthorLinks = DefaultRecordAuthorLinks;
         _mapBitmap = new WriteableBitmap(1, 1, 96, 96, PixelFormats.Bgra32, null);
+        RecordedWaypointView = CollectionViewSource.GetDefaultView(RecordedWaypoints);
+        RecordedWaypointView.Filter = FilterRecordedWaypoint;
         RecordedWaypoints.CollectionChanged += OnRecordedWaypointsCollectionChanged;
-        WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
+        SelectedWaypointFilterDimension = WaypointFilterDimensions.FirstOrDefault();
+        WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (_, msg) =>
         {
             if (msg.PropertyName == "SendCurrentPosition")
             {
@@ -359,22 +449,201 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 UIDispatcherHelper.BeginInvoke(() => HandleMapPointSelected(targetPoint));
             }
-            else if (msg.PropertyName == "UpdateRecorderPathing" && sender is not MapViewerViewModel && msg.NewValue is PathingTask recorderTask)
+            else if (msg.PropertyName == "UpdateRecorderPathing" && msg.Sender is not MapViewerViewModel && msg.NewValue is PathingTask recorderTask)
             {
-                UIDispatcherHelper.BeginInvoke(() => LoadRecorderTask(recorderTask));
+                UIDispatcherHelper.BeginInvoke(() =>
+                {
+                    IsRecorderMode = true;
+                    IsDebugMode = false;
+                    LoadRecorderTask(recorderTask);
+                });
             }
         });
     }
 
     private void OnRecordedWaypointsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.OldItems != null)
+        {
+            foreach (RecordedWaypointViewModel waypoint in e.OldItems)
+            {
+                waypoint.PropertyChanged -= OnRecordedWaypointPropertyChanged;
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (RecordedWaypointViewModel waypoint in e.NewItems)
+            {
+                waypoint.PropertyChanged += OnRecordedWaypointPropertyChanged;
+            }
+        }
+
+        RefreshWaypointFilters();
+        RefreshRecorderSummaryProperties();
+    }
+
+    private void OnRecordedWaypointPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RecordedWaypointViewModel.Type)
+            or nameof(RecordedWaypointViewModel.MoveMode)
+            or nameof(RecordedWaypointViewModel.Action)
+            or nameof(RecordedWaypointViewModel.TypeDisplayText)
+            or nameof(RecordedWaypointViewModel.MoveModeDisplayText)
+            or nameof(RecordedWaypointViewModel.ActionDisplayText))
+        {
+            RefreshWaypointFilters();
+        }
+    }
+
+    partial void OnSelectedWaypointFilterDimensionChanged(MapEditorOption? value)
+    {
+        RefreshWaypointFilters([]);
+    }
+
+    [RelayCommand]
+    private void ToggleWaypointFilterPopup()
+    {
+        IsWaypointFilterPopupOpen = !IsWaypointFilterPopupOpen;
+    }
+
+    [RelayCommand]
+    private void ClearWaypointFilter()
+    {
+        foreach (var option in ActiveWaypointFilterOptions)
+        {
+            option.IsSelected = false;
+        }
+
+        RefreshWaypointFilterView();
+    }
+
+    private bool FilterRecordedWaypoint(object item)
+    {
+        if (item is not RecordedWaypointViewModel waypoint)
+        {
+            return false;
+        }
+
+        var selectedCodes = ActiveWaypointFilterOptions
+            .Where(i => i.IsSelected)
+            .Select(i => i.Code)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (selectedCodes.Count == 0)
+        {
+            return true;
+        }
+
+        return selectedCodes.Contains(GetWaypointFilterCode(waypoint));
+    }
+
+    private void RefreshWaypointFilters(IEnumerable<string>? selectedCodes = null)
+    {
+        var retainedCodes = (selectedCodes ?? ActiveWaypointFilterOptions.Where(i => i.IsSelected).Select(i => i.Code))
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var option in ActiveWaypointFilterOptions)
+        {
+            option.PropertyChanged -= OnWaypointFilterOptionPropertyChanged;
+        }
+
+        ActiveWaypointFilterOptions.Clear();
+        var options = BuildWaypointFilterOptions()
+            .OrderBy(i => i.DisplayName, StringComparer.CurrentCulture)
+            .ToList();
+
+        foreach (var option in options)
+        {
+            option.IsSelected = retainedCodes.Contains(option.Code);
+            option.PropertyChanged += OnWaypointFilterOptionPropertyChanged;
+            ActiveWaypointFilterOptions.Add(option);
+        }
+
+        RefreshWaypointFilterView();
+    }
+
+    private IEnumerable<WaypointFilterOption> BuildWaypointFilterOptions()
+    {
+        return (SelectedWaypointFilterDimension?.Code switch
+            {
+                "moveMode" => MoveModeOptions,
+                "action" => ActionOptions,
+                _ => WaypointTypeOptions
+            })
+            .Select(i => new WaypointFilterOption(i.Code, i.DisplayName));
+    }
+
+    private void OnWaypointFilterOptionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WaypointFilterOption.IsSelected))
+        {
+            RefreshWaypointFilterView();
+        }
+    }
+
+    private void RefreshWaypointFilterView()
+    {
+        RecordedWaypointView.Refresh();
+        var selected = ActiveWaypointFilterOptions.Where(i => i.IsSelected).Select(i => i.DisplayName).ToList();
+        WaypointFilterSummary = selected.Count == 0
+            ? "全部"
+            : selected.Count <= 2
+                ? string.Join("、", selected)
+                : $"{selected[0]}、{selected[1]} +{selected.Count - 2}";
+    }
+
+    private string GetWaypointFilterCode(RecordedWaypointViewModel waypoint)
+    {
+        return SelectedWaypointFilterDimension?.Code switch
+        {
+            "moveMode" => string.IsNullOrWhiteSpace(waypoint.MoveMode) ? MoveModeEnum.Walk.Code : waypoint.MoveMode,
+            "action" => string.IsNullOrWhiteSpace(waypoint.Action) ? string.Empty : waypoint.Action,
+            _ => string.IsNullOrWhiteSpace(waypoint.Type) ? WaypointType.Path.Code : waypoint.Type
+        };
+    }
+
+    private void RefreshRecorderSummaryProperties()
+    {
         OnPropertyChanged(nameof(RecordedWaypointListVisibility));
         OnPropertyChanged(nameof(RecordedWaypointEmptyVisibility));
+        OnPropertyChanged(nameof(HasRecordedWaypoints));
+        OnPropertyChanged(nameof(CanRunTracking));
+        OnPropertyChanged(nameof(RecordedWaypointCountText));
+        OnPropertyChanged(nameof(RecordFileStateText));
+        OnPropertyChanged(nameof(RecordSummaryText));
+        OnPropertyChanged(nameof(RouteEmptyStatusText));
     }
 
     partial void OnIsFollowingCurrentChanged(bool value)
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SetMapFollowCurrent", new object(), value));
+        OnPropertyChanged(nameof(MapStatusText));
+    }
+
+    partial void OnCurrentPositionTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(CurrentPositionDetailText));
+    }
+
+    partial void OnSelectedTargetTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(SelectedTargetDetailText));
+    }
+
+    partial void OnClipRectTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(ClipRectDetailText));
+    }
+
+    partial void OnLastRefreshTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(LastRefreshDetailText));
+    }
+
+    partial void OnRouteDistanceTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(RouteDistanceDetailText));
     }
 
     partial void OnIsRecorderModeChanged(bool value)
@@ -386,8 +655,12 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SetMapViewerRecorderMode", new object(), value));
+        OnPropertyChanged(nameof(RecorderMainVisibility));
+        OnPropertyChanged(nameof(DebugMainVisibility));
         RefreshLayoutProperties();
-        if (!HasJsonEdits)
+        RefreshRecorderSummaryProperties();
+        OnPropertyChanged(nameof(MapStatusText));
+        if (value && !HasJsonEdits)
         {
             PublishRecorderPath();
         }
@@ -400,7 +673,11 @@ public partial class MapViewerViewModel : ObservableObject
             IsRecorderMode = !value;
         }
 
+        OnPropertyChanged(nameof(RecorderMainVisibility));
+        OnPropertyChanged(nameof(DebugMainVisibility));
         RefreshLayoutProperties();
+        RefreshRecorderSummaryProperties();
+        OnPropertyChanged(nameof(MapStatusText));
     }
 
     partial void OnIsJsonEditorModeChanged(bool value)
@@ -421,7 +698,50 @@ public partial class MapViewerViewModel : ObservableObject
 
     partial void OnSelectedRecordedWaypointChanged(RecordedWaypointViewModel? value)
     {
-        if (value == null)
+        OnPropertyChanged(nameof(SelectedWaypointEditorVisibility));
+        OnPropertyChanged(nameof(SelectedWaypointEmptyVisibility));
+        OnPropertyChanged(nameof(SelectedWaypointEditorTitle));
+
+        if (!RecordedWaypoints.Any(i => i.IsSelected))
+        {
+            if (value != null && RecordedWaypoints.Contains(value))
+            {
+                value.IsSelected = true;
+            }
+
+            PublishSelectedRecorderWaypoints();
+        }
+    }
+
+    public void SyncRecordedWaypointSelection(IList selectedItems)
+    {
+        var selected = selectedItems.OfType<RecordedWaypointViewModel>()
+            .Where(i => RecordedWaypoints.Contains(i))
+            .OrderBy(i => RecordedWaypoints.IndexOf(i))
+            .ToList();
+        var selectedSet = selected.ToHashSet();
+
+        foreach (var waypoint in RecordedWaypoints)
+        {
+            var isSelected = selectedSet.Contains(waypoint);
+            if (waypoint.IsSelected != isSelected)
+            {
+                waypoint.IsSelected = isSelected;
+            }
+        }
+
+        PublishSelectedRecorderWaypoints(selected);
+    }
+
+    private void PublishSelectedRecorderWaypoints(IEnumerable<RecordedWaypointViewModel>? selectedWaypoints = null)
+    {
+        var selected = (selectedWaypoints ?? RecordedWaypoints.Where(i => i.IsSelected))
+            .Where(i => RecordedWaypoints.Contains(i))
+            .OrderBy(i => RecordedWaypoints.IndexOf(i))
+            .Select(i => new Point2f((float)i.X, (float)i.Y))
+            .ToList();
+
+        if (selected.Count == 0)
         {
             WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
                 this, "ClearSelectedRecorderWaypoint", new object(), new object()));
@@ -429,7 +749,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
-            this, "SelectRecorderWaypointPosition", new object(), new Point2f((float)value.X, (float)value.Y)));
+            this, "SelectRecorderWaypointPositions", new object(), selected));
     }
 
     partial void OnDebugJsonTextChanged(string value)
@@ -445,7 +765,28 @@ public partial class MapViewerViewModel : ObservableObject
 
     partial void OnRecordFileNameChanged(string value)
     {
+        OnPropertyChanged(nameof(RouteEmptyStatusText));
         PublishRecorderPath();
+    }
+
+    partial void OnRecordFilePathTextChanged(string value)
+    {
+        RefreshRecorderSummaryProperties();
+    }
+
+    partial void OnMapZoomTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(MapStatusText));
+    }
+
+    partial void OnFollowZoomChanged(double value)
+    {
+        OnPropertyChanged(nameof(FollowZoomText));
+    }
+
+    partial void OnRecordStatusTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(RecordSummaryText));
     }
 
     partial void OnRecordDescriptionChanged(string value)
@@ -626,6 +967,7 @@ public partial class MapViewerViewModel : ObservableObject
         RouteDistanceText = "距离：-";
         RouteProgressValue = 0;
         RouteProgressText = "0%";
+        RouteProgressPointText = "0 / 0 个点";
         _currentRoutePoints = [];
         _routeTotalDistance = 0;
         _routeCompletedDistance = 0;
@@ -683,6 +1025,12 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleRecordAdvancedSettings()
+    {
+        IsRecordAdvancedSettingsOpen = !IsRecordAdvancedSettingsOpen;
+    }
+
+    [RelayCommand]
     private void ToggleSidePanel()
     {
         IsSidePanelVisible = !IsSidePanelVisible;
@@ -698,24 +1046,126 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void SwitchToDebugMode()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner, saveToFileOnApply: false))
         {
             return;
         }
 
         IsRecorderMode = false;
+        IsDebugMode = true;
     }
 
     [RelayCommand]
     private void SwitchToRecorderMode()
     {
         IsRecorderMode = true;
+        IsDebugMode = false;
+    }
+
+    public bool HandleRecorderShortcut(Key key, ModifierKeys modifiers, IList selectedItems, bool isTextInputFocused)
+    {
+        if (!IsRecorderMode || IsJsonEditorMode)
+        {
+            return false;
+        }
+
+        var hasCtrl = modifiers.HasFlag(ModifierKeys.Control);
+        var hasShift = modifiers.HasFlag(ModifierKeys.Shift);
+        var onlyCtrl = modifiers == ModifierKeys.Control;
+        var ctrlShift = modifiers == (ModifierKeys.Control | ModifierKeys.Shift);
+
+        if (hasCtrl && key == Key.S)
+        {
+            if (hasShift)
+            {
+                SaveRecordingAs();
+            }
+            else
+            {
+                SaveRecording();
+            }
+
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.Z)
+        {
+            UndoRecorderEdit();
+            return true;
+        }
+
+        if ((onlyCtrl && key == Key.Y) || (ctrlShift && key == Key.Z))
+        {
+            RedoRecorderEdit();
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.N)
+        {
+            NewRecording();
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.O)
+        {
+            ImportRecording();
+            return true;
+        }
+
+        if (ctrlShift && key == Key.O)
+        {
+            ImportAndMergeRecordings();
+            return true;
+        }
+
+        if (isTextInputFocused)
+        {
+            return false;
+        }
+
+        if (onlyCtrl && key == Key.C)
+        {
+            CopySelectedRecordedWaypoints(selectedItems);
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.X)
+        {
+            CutSelectedRecordedWaypoints(selectedItems);
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.V)
+        {
+            PasteRecordedWaypoints(selectedItems);
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.A)
+        {
+            SelectAllRecordedWaypoints(selectedItems);
+            return true;
+        }
+
+        if (onlyCtrl && key == Key.D)
+        {
+            DuplicateSelectedRecordedWaypoints(selectedItems);
+            return true;
+        }
+
+        if (key == Key.Delete)
+        {
+            DeleteSelectedRecordedWaypoints(selectedItems);
+            return true;
+        }
+
+        return false;
     }
 
     [RelayCommand]
     private void SwitchToRecorderUiEditor()
     {
-        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: null))
+        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: DialogOwner))
         {
             return;
         }
@@ -726,8 +1176,12 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void SwitchToRecorderJsonEditor()
     {
+        if (!IsRecorderMode)
+        {
+            return;
+        }
+
         RefreshDebugJson();
-        IsRecorderMode = true;
         IsJsonEditorMode = true;
         RecordStatusText = "录制器：JSON 编辑中";
     }
@@ -735,12 +1189,22 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void ApplyJsonEdits()
     {
-        TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: null);
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: DialogOwner);
     }
 
     [RelayCommand]
     private void RefreshJsonFromUi()
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         RefreshDebugJson();
         RecordStatusText = "录制器：已从表单重新生成 JSON";
     }
@@ -748,12 +1212,14 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private async Task StartRecording()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
 
         IsRecorderMode = true;
+        IsTopmost = false;
+        TryActivateGenshinWindow();
         RecordStatusText = "录制器：启动中...";
         await Task.Run(() => PathRecorder.Instance.Start());
         LoadRecorderTask(PathRecorder.Instance.CurrentTask);
@@ -763,7 +1229,7 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private async Task AddCurrentWaypoint()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
@@ -778,20 +1244,33 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void SaveRecording()
     {
-        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: null))
+        if (!CanEditRecorder())
         {
             return;
         }
 
-        var task = BuildRecordedTask();
-        var filePath = ResolveRecordFilePath(false);
+        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: DialogOwner))
+        {
+            return;
+        }
+
+        if (!TryGetRequiredRecordName(out var routeName))
+        {
+            return;
+        }
+
+        var filePath = ResolveRecordFilePath(false, routeName);
         if (string.IsNullOrWhiteSpace(filePath))
         {
             return;
         }
 
+        var task = BuildRecordedTask();
+        task.Info.Name = routeName;
         task.SaveToFile(filePath);
         _recordFilePath = filePath;
+        task.FullPath = filePath;
+        task.FileName = Path.GetFileName(filePath);
         RecordFilePathText = $"文件：{filePath}";
         PathRecorder.Instance.ReplaceTask(task);
         LoadRecorderTask(task);
@@ -801,20 +1280,33 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void SaveRecordingAs()
     {
-        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: null))
+        if (!CanEditRecorder())
         {
             return;
         }
 
-        var filePath = ResolveRecordFilePath(true);
+        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: DialogOwner))
+        {
+            return;
+        }
+
+        if (!TryGetRequiredRecordName(out var routeName))
+        {
+            return;
+        }
+
+        var filePath = ResolveRecordFilePath(true, routeName);
         if (string.IsNullOrWhiteSpace(filePath))
         {
             return;
         }
 
         var task = BuildRecordedTask();
+        task.Info.Name = routeName;
         task.SaveToFile(filePath);
         _recordFilePath = filePath;
+        task.FullPath = filePath;
+        task.FileName = Path.GetFileName(filePath);
         RecordFilePathText = $"文件：{filePath}";
         PathRecorder.Instance.ReplaceTask(task);
         LoadRecorderTask(task);
@@ -824,7 +1316,12 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void ImportRecording()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
@@ -848,14 +1345,18 @@ public partial class MapViewerViewModel : ObservableObject
         _recordFilePath = dialog.FileName;
         RecordFilePathText = $"文件：{dialog.FileName}";
         LoadRecorderTask(task);
-        IsRecorderMode = true;
         RecordStatusText = $"录制器：已导入 / {Path.GetFileName(dialog.FileName)}";
     }
 
     [RelayCommand]
     private void ImportAndMergeRecordings()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
@@ -914,7 +1415,12 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void SplitRecordingByTeleport()
     {
-        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: null))
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (!TryApplyJsonEdits(saveToFile: false, allowFilePicker: false, owner: DialogOwner))
         {
             return;
         }
@@ -927,20 +1433,24 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
-        var baseFilePath = ResolveRecordFilePath(string.IsNullOrWhiteSpace(_recordFilePath));
+        if (!TryGetRequiredRecordName(out var routeName))
+        {
+            return;
+        }
+
+        var baseFilePath = ResolveRecordFilePath(string.IsNullOrWhiteSpace(_recordFilePath), routeName);
         if (string.IsNullOrWhiteSpace(baseFilePath))
         {
             return;
         }
 
         var directory = Path.GetDirectoryName(baseFilePath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        var baseName = Path.GetFileNameWithoutExtension(baseFilePath);
         for (var i = 0; i < groups.Count; i++)
         {
             var splitTask = ClonePathingTask(task);
-            splitTask.Info.Name = $"{task.Info.Name}_{i + 1}";
+            splitTask.Info.Name = $"{routeName}_{i + 1}";
             splitTask.Positions = groups[i];
-            splitTask.SaveToFile(Path.Combine(directory, $"{baseName}_{i + 1}.json"));
+            splitTask.SaveToFile(Path.Combine(directory, $"{splitTask.Info.Name}.json"));
         }
 
         RecordStatusText = $"录制器：已按传送点拆分为 {groups.Count} 个文件";
@@ -949,7 +1459,7 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private async Task RunRecording()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
@@ -960,7 +1470,7 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private async Task RunRecordingFromWaypoint(RecordedWaypointViewModel? waypoint)
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
@@ -973,7 +1483,12 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void NewRecording()
     {
-        if (!ConfirmJsonEditsBeforeLeavingRecorder(null))
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
         {
             return;
         }
@@ -999,6 +1514,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void AddPathPointFromTarget()
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         if (!TryParseTargetPoint(out var targetPoint))
         {
             RecordStatusText = "录制器：请先点击地图选择点";
@@ -1017,6 +1537,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void CopyRecordedWaypoint(RecordedWaypointViewModel? waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         waypoint ??= SelectedRecordedWaypoint;
         if (waypoint == null)
         {
@@ -1031,9 +1556,154 @@ public partial class MapViewerViewModel : ObservableObject
         PublishRecorderPath();
     }
 
+    private void CopySelectedRecordedWaypoints(IList selectedItems)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypoints(selectedItems);
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        CopyWaypointsToClipboard(selected);
+        RecordStatusText = $"录制器：已复制 {selected.Count} 个点";
+    }
+
+    private void CutSelectedRecordedWaypoints(IList selectedItems)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypoints(selectedItems);
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        CopyWaypointsToClipboard(selected);
+        RemoveRecordedWaypoints(selected);
+        RecordStatusText = $"录制器：已剪切 {selected.Count} 个点";
+    }
+
+    private void PasteRecordedWaypoints(IList selectedItems)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (TryReadPathingTaskFromClipboard(out var task, out var routeErrorMessage))
+        {
+            selectedItems.Clear();
+            _recordFilePath = null;
+            RecordFilePathText = "文件：未保存";
+            LoadRecorderTask(task);
+            PathRecorder.Instance.ReplaceTask(task);
+            IsJsonEditorMode = false;
+            RecordStatusText = $"录制器：已从剪贴板载入路线 / {RecordFileName}";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(routeErrorMessage))
+        {
+            RecordStatusText = $"录制器：剪贴板路线无效 / {routeErrorMessage}";
+            return;
+        }
+
+        var waypoints = ReadWaypointsFromClipboard();
+        if (waypoints.Count == 0)
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypoints(selectedItems);
+        var insertIndex = selected.Count == 0
+            ? RecordedWaypoints.Count
+            : RecordedWaypoints.IndexOf(selected.Last()) + 1;
+
+        var pasted = waypoints.Select(i => CreateRecordedWaypointViewModel(i)).ToList();
+        for (var i = 0; i < pasted.Count; i++)
+        {
+            RecordedWaypoints.Insert(insertIndex + i, pasted[i]);
+        }
+
+        selectedItems.Clear();
+        foreach (var item in pasted)
+        {
+            selectedItems.Add(item);
+        }
+
+        SelectedRecordedWaypoint = pasted.FirstOrDefault();
+        ReindexRecordedWaypoints();
+        PublishRecorderPath();
+        RecordStatusText = $"录制器：已粘贴 {pasted.Count} 个点";
+    }
+
+    private void DuplicateSelectedRecordedWaypoints(IList selectedItems)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypoints(selectedItems);
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        CopyWaypointsToClipboard(selected);
+        PasteRecordedWaypoints(selectedItems);
+    }
+
+    private void DeleteSelectedRecordedWaypoints(IList selectedItems)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypoints(selectedItems);
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        RemoveRecordedWaypoints(selected);
+        RecordStatusText = $"录制器：已删除 {selected.Count} 个点";
+    }
+
+    private void SelectAllRecordedWaypoints(IList selectedItems)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        selectedItems.Clear();
+        foreach (var item in RecordedWaypointView.Cast<RecordedWaypointViewModel>())
+        {
+            selectedItems.Add(item);
+        }
+
+        SelectedRecordedWaypoint = selectedItems.OfType<RecordedWaypointViewModel>().FirstOrDefault();
+        RecordStatusText = $"录制器：已选中 {selectedItems.Count} 个点";
+    }
+
     [RelayCommand]
     private void ToggleWaypointLock(RecordedWaypointViewModel? waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         waypoint ??= SelectedRecordedWaypoint;
         if (waypoint == null)
         {
@@ -1058,6 +1728,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void OpenWaypointAdvancedEditor(RecordedWaypointViewModel? waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         waypoint ??= SelectedRecordedWaypoint;
         if (waypoint == null)
         {
@@ -1073,13 +1748,37 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void EditRecordedWaypoint(RecordedWaypointViewModel? waypoint)
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        waypoint ??= SelectedRecordedWaypoint;
+        if (waypoint == null)
+        {
+            return;
+        }
+
+        SelectedRecordedWaypoint = waypoint;
+    }
+
+    [RelayCommand]
     private void ClearRecordedWaypoints()
     {
-        var result = ThemedMessageBox.Warning(
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var result = ThemedMessageBox.Show(
             "确定要清除所有路线点吗？此操作可以用撤销恢复。",
             "清空路线点",
-            System.Windows.MessageBoxButton.OKCancel,
-            System.Windows.MessageBoxResult.Cancel);
+            MessageBoxButton.OKCancel,
+            ThemedMessageBox.MessageBoxIcon.Warning,
+            MessageBoxResult.Cancel,
+            DialogOwner);
         if (result != System.Windows.MessageBoxResult.OK)
         {
             return;
@@ -1094,6 +1793,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void ApplyDefaultAuthor()
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         RecordAuthorName = DefaultRecordAuthorName.Trim();
         RecordAuthorLinks = DefaultRecordAuthorLinks.Trim();
         PublishRecorderPath();
@@ -1102,6 +1806,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void UndoRecorderEdit()
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         if (_recorderHistoryIndex <= 0)
         {
             return;
@@ -1113,6 +1822,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void RedoRecorderEdit()
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         if (_recorderHistoryIndex >= _recorderHistory.Count - 1)
         {
             return;
@@ -1124,8 +1838,25 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void DeleteRecordedWaypoint(RecordedWaypointViewModel? waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         waypoint ??= SelectedRecordedWaypoint;
         if (waypoint == null)
+        {
+            return;
+        }
+
+        var result = ThemedMessageBox.Show(
+            $"确定要删除第 {waypoint.Index} 个路线点吗？此操作可以用撤销恢复。",
+            "删除路线点",
+            MessageBoxButton.OKCancel,
+            ThemedMessageBox.MessageBoxIcon.Warning,
+            MessageBoxResult.Cancel,
+            DialogOwner);
+        if (result != System.Windows.MessageBoxResult.OK)
         {
             return;
         }
@@ -1139,6 +1870,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void MoveRecordedWaypointUp(RecordedWaypointViewModel? waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         waypoint ??= SelectedRecordedWaypoint;
         if (waypoint == null)
         {
@@ -1159,6 +1895,11 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void MoveRecordedWaypointDown(RecordedWaypointViewModel? waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         waypoint ??= SelectedRecordedWaypoint;
         if (waypoint == null)
         {
@@ -1236,10 +1977,10 @@ public partial class MapViewerViewModel : ObservableObject
         var sourceX = localX / displayedWidth * _lastClipGlobalRect.Width;
         var sourceY = localY / displayedHeight * _lastClipGlobalRect.Height;
         var selectedPoint = new Point2f(
-            (float)Math.Round(_lastClipGlobalRect.X + sourceX, 1),
-            (float)Math.Round(_lastClipGlobalRect.Y + sourceY, 1));
+            (float)RoundCoordinate(_lastClipGlobalRect.X + sourceX),
+            (float)RoundCoordinate(_lastClipGlobalRect.Y + sourceY));
 
-        SelectedTargetText = $"目标点：{selectedPoint.X:F1}, {selectedPoint.Y:F1}";
+        SelectedTargetText = $"目标点：{FormatCoordinate(selectedPoint.X)}, {FormatCoordinate(selectedPoint.Y)}";
         _selectedTargetPoint = selectedPoint;
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SelectPathingTargetPosition", new object(), selectedPoint));
     }
@@ -1247,7 +1988,7 @@ public partial class MapViewerViewModel : ObservableObject
     private void HandleMapPointSelected(Point2f targetPoint)
     {
         _selectedTargetPoint = targetPoint;
-        SelectedTargetText = $"目标点：{targetPoint.X:F1}, {targetPoint.Y:F1}";
+        SelectedTargetText = $"目标点：{FormatCoordinate(targetPoint.X)}, {FormatCoordinate(targetPoint.Y)}";
         if (!IsRecorderMode)
         {
             return;
@@ -1255,8 +1996,8 @@ public partial class MapViewerViewModel : ObservableObject
 
         if (UpdateSelectedPointOnMapClick && SelectedRecordedWaypoint != null)
         {
-            SelectedRecordedWaypoint.X = Math.Round(targetPoint.X, 1);
-            SelectedRecordedWaypoint.Y = Math.Round(targetPoint.Y, 1);
+            SelectedRecordedWaypoint.X = RoundCoordinate(targetPoint.X);
+            SelectedRecordedWaypoint.Y = RoundCoordinate(targetPoint.Y);
             RecordStatusText = $"录制器：已更新第 {SelectedRecordedWaypoint.Index} 点";
             PublishRecorderPath();
             return;
@@ -1264,8 +2005,8 @@ public partial class MapViewerViewModel : ObservableObject
 
         AddRecordedWaypoint(new Waypoint
         {
-            X = Math.Round(targetPoint.X, 1),
-            Y = Math.Round(targetPoint.Y, 1),
+            X = RoundCoordinate(targetPoint.X),
+            Y = RoundCoordinate(targetPoint.Y),
             Type = WaypointType.Path.Code,
             MoveMode = MoveModeEnum.Walk.Code
         });
@@ -1285,6 +2026,11 @@ public partial class MapViewerViewModel : ObservableObject
 
     private void AddRecordedWaypoint(Waypoint waypoint)
     {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
         var viewModel = CreateRecordedWaypointViewModel(waypoint);
         var lockedIndex = RecordedWaypoints.ToList().FindIndex(i => i.IsLocked);
         if (lockedIndex >= 0)
@@ -1306,27 +2052,244 @@ public partial class MapViewerViewModel : ObservableObject
         PublishRecorderPath();
     }
 
-    private string? ResolveRecordFilePath(bool forcePicker)
+    private List<RecordedWaypointViewModel> GetSelectedRecordedWaypoints(IList selectedItems)
+    {
+        var selected = selectedItems.OfType<RecordedWaypointViewModel>()
+            .Where(i => RecordedWaypoints.Contains(i))
+            .OrderBy(i => RecordedWaypoints.IndexOf(i))
+            .ToList();
+
+        if (selected.Count == 0 && SelectedRecordedWaypoint != null && RecordedWaypoints.Contains(SelectedRecordedWaypoint))
+        {
+            selected.Add(SelectedRecordedWaypoint);
+        }
+
+        return selected;
+    }
+
+    private void CopyWaypointsToClipboard(List<RecordedWaypointViewModel> selected)
+    {
+        _recordedWaypointClipboard = selected.Select(i => i.ToWaypoint()).ToList();
+        _recordedWaypointClipboardText = JsonSerializer.Serialize(_recordedWaypointClipboard, PathRecorder.JsonOptions);
+        try
+        {
+            System.Windows.Clipboard.SetText(_recordedWaypointClipboardText);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private bool TryReadPathingTaskFromClipboard(out PathingTask task, out string? errorMessage)
+    {
+        task = new PathingTask();
+        errorMessage = null;
+
+        try
+        {
+            if (!System.Windows.Clipboard.ContainsText())
+            {
+                return false;
+            }
+
+            var text = System.Windows.Clipboard.GetText();
+            if (!LooksLikePathingTaskJson(text))
+            {
+                return false;
+            }
+
+            if (TryBuildTaskFromJsonEditor(text, out task, out var validationError))
+            {
+                return true;
+            }
+
+            errorMessage = validationError.Replace(Environment.NewLine, " ");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return false;
+        }
+    }
+
+    private static bool LooksLikePathingTaskJson(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            var root = document.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                   && root.TryGetProperty("info", out var info)
+                   && info.ValueKind == JsonValueKind.Object
+                   && root.TryGetProperty("positions", out var positions)
+                   && positions.ValueKind == JsonValueKind.Array;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return false;
+        }
+    }
+
+    private List<Waypoint> ReadWaypointsFromClipboard()
+    {
+        var clipboardHadText = false;
+        try
+        {
+            if (System.Windows.Clipboard.ContainsText())
+            {
+                clipboardHadText = true;
+                var text = System.Windows.Clipboard.GetText();
+
+                try
+                {
+                    var waypoints = JsonSerializer.Deserialize<List<Waypoint>>(text, PathRecorder.JsonOptions);
+                    if (waypoints is { Count: > 0 })
+                    {
+                        return waypoints.Select(CloneWaypoint).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
+        if (clipboardHadText)
+        {
+            return [];
+        }
+
+        return !string.IsNullOrWhiteSpace(_recordedWaypointClipboardText)
+               && _recordedWaypointClipboard is { Count: > 0 }
+            ? _recordedWaypointClipboard.Select(CloneWaypoint).ToList()
+            : [];
+    }
+
+    private void RemoveRecordedWaypoints(List<RecordedWaypointViewModel> selected)
+    {
+        var nextIndex = selected.Count == 0 ? -1 : RecordedWaypoints.IndexOf(selected.Last());
+        foreach (var item in selected)
+        {
+            RecordedWaypoints.Remove(item);
+        }
+
+        ReindexRecordedWaypoints();
+        if (RecordedWaypoints.Count == 0)
+        {
+            SelectedRecordedWaypoint = null;
+        }
+        else
+        {
+            SelectedRecordedWaypoint = RecordedWaypoints[Math.Clamp(nextIndex, 0, RecordedWaypoints.Count - 1)];
+        }
+
+        PublishRecorderPath();
+    }
+
+    private static Waypoint CloneWaypoint(Waypoint waypoint)
+    {
+        var json = JsonSerializer.Serialize(waypoint, PathRecorder.JsonOptions);
+        return JsonSerializer.Deserialize<Waypoint>(json, PathRecorder.JsonOptions) ?? new Waypoint();
+    }
+
+    private bool CanEditRecorder()
+    {
+        if (IsRecorderMode)
+        {
+            return true;
+        }
+
+        RecordStatusText = "录制器：调试模式下不可修改路线信息";
+        return false;
+    }
+
+    private static void TryActivateGenshinWindow()
+    {
+        var handle = SystemControl.FindGenshinImpactHandle();
+        if (handle == 0)
+        {
+            handle = SystemControl.FindHandleByWindowName();
+        }
+
+        if (handle == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            SystemControl.ActivateWindow(handle);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private bool TryGetRequiredRecordName(out string routeName)
+    {
+        routeName = (RecordFileName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(routeName))
+        {
+            ThemedMessageBox.Error("路线名称不能为空。保存路线前请先填写路线名称。", "路线名称必填", MessageBoxButton.OK, MessageBoxResult.OK);
+            RecordStatusText = "录制器：路线名称不能为空";
+            return false;
+        }
+
+        if (routeName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            ThemedMessageBox.Error("路线名称必须和文件名保持一致，因此不能包含 Windows 文件名非法字符。", "路线名称无效", MessageBoxButton.OK, MessageBoxResult.OK);
+            RecordStatusText = "录制器：路线名称包含非法字符";
+            return false;
+        }
+
+        RecordFileName = routeName;
+        return true;
+    }
+
+    private string? ResolveRecordFilePath(bool forcePicker, string routeName)
     {
         if (!forcePicker && !string.IsNullOrWhiteSpace(_recordFilePath))
         {
-            return _recordFilePath;
+            var directory = Path.GetDirectoryName(_recordFilePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                return Path.Combine(directory, $"{routeName}.json");
+            }
         }
 
-        var safeName = string.IsNullOrWhiteSpace(RecordFileName)
-            ? "未命名路线"
-            : string.Join("_", RecordFileName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
         var dialog = new SaveFileDialog
         {
             Title = "保存路线 JSON",
             Filter = "路线 JSON (*.json)|*.json|所有文件 (*.*)|*.*",
-            FileName = $"{safeName}.json",
+            FileName = $"{routeName}.json",
             InitialDirectory = Directory.Exists(MapPathingViewModel.PathJsonPath)
                 ? MapPathingViewModel.PathJsonPath
                 : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
         };
 
-        return dialog.ShowDialog() == true ? dialog.FileName : null;
+        if (dialog.ShowDialog() != true)
+        {
+            return null;
+        }
+
+        var selectedDirectory = Path.GetDirectoryName(dialog.FileName);
+        return string.IsNullOrWhiteSpace(selectedDirectory)
+            ? null
+            : Path.Combine(selectedDirectory, $"{routeName}.json");
     }
 
     private void LoadRecorderTask(PathingTask task)
@@ -1337,7 +2300,11 @@ public partial class MapViewerViewModel : ObservableObject
         task.Info ??= new PathingTaskInfo();
         task.Positions ??= [];
         RecordedWaypoints.Clear();
-        RecordFileName = string.IsNullOrWhiteSpace(task.Info.Name) ? "未命名路线" : task.Info.Name;
+        var taskName = !string.IsNullOrWhiteSpace(task.FullPath)
+            ? Path.GetFileNameWithoutExtension(task.FullPath)
+            : task.Info.Name;
+        RecordFileName = string.IsNullOrWhiteSpace(taskName) ? "未命名路线" : taskName.Trim();
+        task.Info.Name = RecordFileName;
         RecordDescription = task.Info.Description ?? string.Empty;
         var author = task.Info.Authors.FirstOrDefault(i => !string.IsNullOrWhiteSpace(i.Name));
         RecordAuthorName = author?.Name ?? task.Info.Author ?? string.Empty;
@@ -1368,12 +2335,25 @@ public partial class MapViewerViewModel : ObservableObject
         var viewModel = new RecordedWaypointViewModel(waypoint);
         viewModel.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(RecordedWaypointViewModel.IsLocked))
+            if (e.PropertyName is nameof(RecordedWaypointViewModel.IsLocked)
+                or nameof(RecordedWaypointViewModel.IsSelected))
             {
                 return;
             }
 
+            if (ReferenceEquals(viewModel, SelectedRecordedWaypoint)
+                && (e.PropertyName == nameof(RecordedWaypointViewModel.TypeDisplayText)
+                    || e.PropertyName == nameof(RecordedWaypointViewModel.Index)))
+            {
+                OnPropertyChanged(nameof(SelectedWaypointEditorTitle));
+            }
+
             PublishRecorderPath();
+            if (viewModel.IsSelected
+                && e.PropertyName is nameof(RecordedWaypointViewModel.X) or nameof(RecordedWaypointViewModel.Y))
+            {
+                PublishSelectedRecorderWaypoints();
+            }
         };
         return viewModel;
     }
@@ -1388,7 +2368,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private PathingTask BuildRecordedTask()
     {
-        var safeName = string.IsNullOrWhiteSpace(RecordFileName) ? "未命名路线" : RecordFileName.Trim();
+        var safeName = (RecordFileName ?? string.Empty).Trim();
         var task = _recordTaskTemplate ?? new PathingTask();
         task.Info ??= new PathingTaskInfo();
         task.Info.Name = safeName;
@@ -1418,7 +2398,7 @@ public partial class MapViewerViewModel : ObservableObject
         return task;
     }
 
-    public bool ConfirmJsonEditsBeforeLeavingRecorder(System.Windows.Window? owner)
+    public bool ConfirmJsonEditsBeforeLeavingRecorder(System.Windows.Window? owner, bool saveToFileOnApply = true)
     {
         if (!HasJsonEdits)
         {
@@ -1427,11 +2407,12 @@ public partial class MapViewerViewModel : ObservableObject
 
         if (AutoSaveJsonEdits)
         {
-            return TryApplyJsonEdits(saveToFile: true, allowFilePicker: true, owner);
+            return TryApplyJsonEdits(saveToFile: saveToFileOnApply, allowFilePicker: saveToFileOnApply, owner);
         }
 
+        var applyText = saveToFileOnApply ? "保存并应用" : "应用";
         var result = ThemedMessageBox.Show(
-            "JSON 已修改，是否保存并应用？\n选择“否”将丢弃本次 JSON 编辑，选择“取消”留在当前界面。",
+            $"JSON 已修改，是否{applyText}？\n选择“否”将丢弃本次 JSON 编辑，选择“取消”留在当前界面。",
             "保存 JSON 修改",
             System.Windows.MessageBoxButton.YesNoCancel,
             ThemedMessageBox.MessageBoxIcon.Warning,
@@ -1450,12 +2431,12 @@ public partial class MapViewerViewModel : ObservableObject
             return true;
         }
 
-        return TryApplyJsonEdits(saveToFile: true, allowFilePicker: true, owner);
+        return TryApplyJsonEdits(saveToFile: saveToFileOnApply, allowFilePicker: saveToFileOnApply, owner);
     }
 
     private void PublishRecorderPath()
     {
-        if (_isRestoringRecorderHistory)
+        if (_isRestoringRecorderHistory || !IsRecorderMode)
         {
             return;
         }
@@ -1476,6 +2457,7 @@ public partial class MapViewerViewModel : ObservableObject
         _routeTotalDistance = EstimateDistance(_currentRoutePoints);
         _routeCompletedDistance = 0;
         RouteProgressValue = 0;
+        RouteProgressPointText = $"0 / {_currentRoutePoints.Count} 个点";
         RefreshRouteProgressText();
         HasCurrentPathing = points.Count > 0;
         TaskName = string.IsNullOrWhiteSpace(pathingTask.Info.Name)
@@ -1495,7 +2477,7 @@ public partial class MapViewerViewModel : ObservableObject
         try
         {
             _isRefreshingJson = true;
-            DebugJsonText = JsonSerializer.Serialize(task ?? BuildRecordedTask(), JsonDisplayOptions);
+            DebugJsonText = (task ?? BuildRecordedTask()).ToJsonString();
             HasJsonEdits = false;
         }
         catch (Exception ex)
@@ -1529,7 +2511,13 @@ public partial class MapViewerViewModel : ObservableObject
 
         if (saveToFile)
         {
-            var filePath = ResolveRecordFilePath(!allowFilePicker || string.IsNullOrWhiteSpace(_recordFilePath));
+            if (!TryGetRequiredRecordName(out var routeName))
+            {
+                return false;
+            }
+
+            task.Info.Name = routeName;
+            var filePath = ResolveRecordFilePath(!allowFilePicker || string.IsNullOrWhiteSpace(_recordFilePath), routeName);
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 return false;
@@ -1537,6 +2525,8 @@ public partial class MapViewerViewModel : ObservableObject
 
             task.SaveToFile(filePath);
             _recordFilePath = filePath;
+            task.FullPath = filePath;
+            task.FileName = Path.GetFileName(filePath);
             RecordFilePathText = $"文件：{filePath}";
             RecordStatusText = $"录制器：JSON 已应用并保存 / {Path.GetFileName(filePath)}";
         }
@@ -1557,6 +2547,19 @@ public partial class MapViewerViewModel : ObservableObject
             task = PathingTask.BuildFromJson(json);
             task.Info ??= new PathingTaskInfo();
             task.Positions ??= [];
+            if (string.IsNullOrWhiteSpace(task.Info.Name))
+            {
+                errorMessage = "路线名称 info.name 不能为空。";
+                return false;
+            }
+
+            task.Info.Name = task.Info.Name.Trim();
+            if (task.Info.Name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                errorMessage = "路线名称 info.name 必须和文件名保持一致，不能包含 Windows 文件名非法字符。";
+                return false;
+            }
+
             if (!string.IsNullOrWhiteSpace(task.Info.BgiVersion) && Global.IsNewVersion(task.Info.BgiVersion))
             {
                 errorMessage = $"路线要求 BetterGI 版本 {task.Info.BgiVersion}，当前版本为 {Global.Version}。";
@@ -1586,7 +2589,7 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
-        var snapshot = JsonSerializer.Serialize(BuildRecordedTask(), JsonDisplayOptions);
+        var snapshot = BuildRecordedTask().ToJsonString();
         if (_recorderHistoryIndex >= 0 && _recorderHistoryIndex < _recorderHistory.Count && _recorderHistory[_recorderHistoryIndex] == snapshot)
         {
             return;
@@ -1695,7 +2698,7 @@ public partial class MapViewerViewModel : ObservableObject
 
     private static PathingTask ClonePathingTask(PathingTask task)
     {
-        var json = JsonSerializer.Serialize(task, PathRecorder.JsonOptions);
+        var json = task.ToJsonString();
         return PathingTask.BuildFromJson(json);
     }
 
@@ -1717,7 +2720,7 @@ public partial class MapViewerViewModel : ObservableObject
     {
         NextWaypointText = waypoint == null
             ? "-"
-            : $"{GetWaypointGameX(waypoint):F1}, {GetWaypointGameY(waypoint):F1}";
+            : $"{FormatCoordinate(GetWaypointGameX(waypoint))}, {FormatCoordinate(GetWaypointGameY(waypoint))}";
         NextWaypointActionText = FormatAction(waypoint?.Action);
         NextWaypointActionParamsText = string.IsNullOrWhiteSpace(waypoint?.ActionParams)
             ? "-"
@@ -1732,6 +2735,7 @@ public partial class MapViewerViewModel : ObservableObject
         {
             RouteProgressValue = 0;
             _routeCompletedDistance = 0;
+            RouteProgressPointText = $"0 / {_currentRoutePoints.Count} 个点";
             RefreshRouteProgressText();
             return;
         }
@@ -1743,6 +2747,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         _routeCompletedDistance = EstimateDistance(_currentRoutePoints.Take(currentIndex).ToList());
+        RouteProgressPointText = $"{currentIndex} / {_currentRoutePoints.Count} 个点";
         RouteProgressValue = Math.Clamp(_routeCompletedDistance / _routeTotalDistance * 100.0, 0, 100);
         RefreshRouteProgressText();
     }
@@ -1766,13 +2771,11 @@ public partial class MapViewerViewModel : ObservableObject
     {
         if (_routeTotalDistance <= 0)
         {
-            RouteProgressText = _showRouteProgressAsPercent ? "0%" : "0 / 0";
+            RouteProgressText = "0%";
             return;
         }
 
-        RouteProgressText = _showRouteProgressAsPercent
-            ? $"{RouteProgressValue:F0}%"
-            : $"{_routeCompletedDistance:F1} / {_routeTotalDistance:F1}";
+        RouteProgressText = $"{RouteProgressValue:F0}%";
     }
 
     private static double GetWaypointGameX(Waypoint waypoint)
@@ -1793,7 +2796,7 @@ public partial class MapViewerViewModel : ObservableObject
             var gamePoint = MapManager.GetMap(MapName, matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(imagePoint);
             if (gamePoint is { } point)
             {
-                return $"当前位置：{point.X:F1}, {point.Y:F1}";
+                return $"当前位置：{FormatCoordinate(point.X)}, {FormatCoordinate(point.Y)}";
             }
         }
         catch (Exception ex)
@@ -1801,7 +2804,43 @@ public partial class MapViewerViewModel : ObservableObject
             Debug.WriteLine(ex);
         }
 
-        return $"当前位置：{imagePoint.X:F1}, {imagePoint.Y:F1}";
+        return $"当前位置：{FormatCoordinate(imagePoint.X)}, {FormatCoordinate(imagePoint.Y)}";
+    }
+
+    internal static double RoundCoordinate(double value)
+    {
+        return Math.Round(value, CoordinateStorageDecimals, MidpointRounding.AwayFromZero);
+    }
+
+    internal static string FormatCoordinate(double value)
+    {
+        return RoundCoordinate(value).ToString($"F{CoordinateDisplayDecimals}", CultureInfo.InvariantCulture);
+    }
+
+    internal static bool TryParseCoordinate(string? text, out double value)
+    {
+        value = 0;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalized = text.Trim();
+        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.CurrentCulture, out var parsed)
+            && !double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
+        {
+            return false;
+        }
+
+        value = RoundCoordinate(parsed);
+        return true;
+    }
+
+    private static string TrimDebugValue(string value, string prefix)
+    {
+        return value.StartsWith(prefix, StringComparison.Ordinal)
+            ? value[prefix.Length..]
+            : value;
     }
 
     private static string FormatAction(string? action)
@@ -1812,9 +2851,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         var message = ActionEnum.GetMsgByCode(action);
-        return string.Equals(message, action, StringComparison.OrdinalIgnoreCase)
-            ? action
-            : $"{message} ({action})";
+        return message;
     }
 
     private static string FormatMoveMode(string? moveMode)
@@ -1825,9 +2862,7 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         var message = MoveModeEnum.GetMsgByCode(moveMode);
-        return string.Equals(message, moveMode, StringComparison.OrdinalIgnoreCase)
-            ? moveMode
-            : $"{message} ({moveMode})";
+        return message;
     }
 
     private static string GetMapDisplayName(string mapName)
@@ -1925,7 +2960,10 @@ public partial class MapViewerViewModel : ObservableObject
             DrawCircle(taskMat, startPoint, circleColor, thickness);
 
             // 绘制线
-            DrawLine(taskMat, startPoint, endPoint, lineColor, 1);
+            if (points[i + 1].Type != WaypointType.Teleport.Code)
+            {
+                DrawLine(taskMat, startPoint, endPoint, lineColor, 1);
+            }
         }
 
         // 绘制最后一个点
@@ -1994,6 +3032,16 @@ public partial class MapViewerViewModel : ObservableObject
     }
 }
 
+public partial class WaypointFilterOption(string code, string displayName) : ObservableObject
+{
+    public string Code { get; } = code;
+
+    public string DisplayName { get; } = displayName;
+
+    [ObservableProperty]
+    private bool _isSelected;
+}
+
 public sealed record MapEditorOption(string Code, string DisplayName);
 
 public partial class RecordedWaypointViewModel : ObservableObject
@@ -2035,6 +3083,9 @@ public partial class RecordedWaypointViewModel : ObservableObject
     private bool _enableMonsterLootSplit;
 
     [ObservableProperty]
+    private bool _isSelected;
+
+    [ObservableProperty]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -2049,15 +3100,55 @@ public partial class RecordedWaypointViewModel : ObservableObject
     [ObservableProperty]
     private string _actionParameterHint = "动作参数";
 
-    public string CoordinateText => $"{X:F1}, {Y:F1}";
+    public string CoordinateText => $"{MapViewerViewModel.FormatCoordinate(X)}, {MapViewerViewModel.FormatCoordinate(Y)}";
+
+    public string CoordinateXText => MapViewerViewModel.FormatCoordinate(X);
+
+    public string CoordinateYText => MapViewerViewModel.FormatCoordinate(Y);
+
+    public string XText
+    {
+        get => MapViewerViewModel.FormatCoordinate(X);
+        set
+        {
+            if (MapViewerViewModel.TryParseCoordinate(value, out var parsed))
+            {
+                X = parsed;
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public string YText
+    {
+        get => MapViewerViewModel.FormatCoordinate(Y);
+        set
+        {
+            if (MapViewerViewModel.TryParseCoordinate(value, out var parsed))
+            {
+                Y = parsed;
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    public string TypeDisplayText => WaypointType.GetMsgByCode(Type);
+
+    public string MoveModeDisplayText => MoveModeEnum.GetMsgByCode(MoveMode);
+
+    public string ActionDisplayText => string.IsNullOrWhiteSpace(Action)
+        ? "无动作"
+        : ActionEnum.GetMsgByCode(Action);
 
     public RecordedWaypointViewModel(Waypoint waypoint)
     {
         _extensionData = waypoint.ExtensionData;
         _extParamsExtensionData = waypoint.PointExtParams?.ExtensionData;
         _misidentificationExtensionData = waypoint.PointExtParams?.Misidentification?.ExtensionData;
-        X = Math.Round(waypoint.X, 1);
-        Y = Math.Round(waypoint.Y, 1);
+        X = MapViewerViewModel.RoundCoordinate(waypoint.X);
+        Y = MapViewerViewModel.RoundCoordinate(waypoint.Y);
         Type = string.IsNullOrWhiteSpace(waypoint.Type) ? WaypointType.Path.Code : waypoint.Type;
         MoveMode = string.IsNullOrWhiteSpace(waypoint.MoveMode) ? MoveModeEnum.Walk.Code : waypoint.MoveMode;
         Action = waypoint.Action ?? string.Empty;
@@ -2074,15 +3165,30 @@ public partial class RecordedWaypointViewModel : ObservableObject
     partial void OnXChanged(double value)
     {
         OnPropertyChanged(nameof(CoordinateText));
+        OnPropertyChanged(nameof(CoordinateXText));
+        OnPropertyChanged(nameof(XText));
     }
 
     partial void OnYChanged(double value)
     {
         OnPropertyChanged(nameof(CoordinateText));
+        OnPropertyChanged(nameof(CoordinateYText));
+        OnPropertyChanged(nameof(YText));
+    }
+
+    partial void OnTypeChanged(string value)
+    {
+        OnPropertyChanged(nameof(TypeDisplayText));
+    }
+
+    partial void OnMoveModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(MoveModeDisplayText));
     }
 
     partial void OnActionChanged(string? value)
     {
+        OnPropertyChanged(nameof(ActionDisplayText));
         RefreshActionParameterHint();
         if (value == ActionEnum.CombatScript.Code && string.IsNullOrWhiteSpace(ActionParams))
         {
@@ -2112,8 +3218,8 @@ public partial class RecordedWaypointViewModel : ObservableObject
         return new Waypoint
         {
             ExtensionData = _extensionData,
-            X = X,
-            Y = Y,
+            X = MapViewerViewModel.RoundCoordinate(X),
+            Y = MapViewerViewModel.RoundCoordinate(Y),
             Type = string.IsNullOrWhiteSpace(Type) ? WaypointType.Path.Code : Type,
             MoveMode = string.IsNullOrWhiteSpace(MoveMode) ? MoveModeEnum.Walk.Code : MoveMode,
             Action = string.IsNullOrWhiteSpace(Action) ? null : Action,
