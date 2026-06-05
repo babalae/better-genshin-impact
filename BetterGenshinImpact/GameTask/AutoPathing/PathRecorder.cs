@@ -7,7 +7,9 @@ using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
@@ -29,8 +31,12 @@ namespace BetterGenshinImpact.GameTask.AutoPathing;
 /// </summary>
 public class PathRecorder : Singleton<PathRecorder>
 {
+    private const int CoordinateStorageDecimals = 4;
+    private const int CoordinateDisplayDecimals = 2;
+
     private WebpageWindow? _webWindow;
     private bool _isRecording;
+    private int _wpfEditorConnectionCount;
 
     /// <summary>
     /// Default serialization format bounds ignoring null payloads strictly mapped to lowercase snake_case schemas.
@@ -51,6 +57,26 @@ public class PathRecorder : Singleton<PathRecorder>
     public PathingTask CurrentTask => _pathingTask;
 
     public bool IsRecording => _isRecording;
+
+    private bool HasActiveEditor => _webWindow != null || Volatile.Read(ref _wpfEditorConnectionCount) > 0;
+
+    public void RegisterWpfEditor()
+    {
+        Interlocked.Increment(ref _wpfEditorConnectionCount);
+        if (_isRecording || _pathingTask.Positions.Count > 0)
+        {
+            PublishRecorderTask();
+        }
+    }
+
+    public void UnregisterWpfEditor()
+    {
+        var count = Interlocked.Decrement(ref _wpfEditorConnectionCount);
+        if (count < 0)
+        {
+            Interlocked.Exchange(ref _wpfEditorConnectionCount, 0);
+        }
+    }
 
     /// <summary>
     /// Retrieves the current diagnostic record map classification scope setting bounding to dev environments.
@@ -74,13 +100,21 @@ public class PathRecorder : Singleton<PathRecorder>
     /// </summary>
     public void Start()
     {
+        if (_isRecording)
+        {
+            TaskControl.Logger?.LogInformation("路径点记录已在进行中");
+            return;
+        }
+
         var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
         if (string.IsNullOrEmpty(matchingMethod)) return;
 
-        Navigation.WarmUp(matchingMethod);
         _pathingTask = new PathingTask();
         _isRecording = true;
         TaskControl.Logger?.LogInformation("开始路径点记录");
+        PublishRecorderTask();
+
+        Navigation.WarmUp(matchingMethod);
         
         if (GetMapName() == nameof(MapTypes.Teyvat))
         {
@@ -107,19 +141,19 @@ public class PathRecorder : Singleton<PathRecorder>
             position = nullablePosition.Value;
         }
         
-        waypoint.X = position.X;
-        waypoint.Y = position.Y;
+        waypoint.X = RoundCoordinate(position.X);
+        waypoint.Y = RoundCoordinate(position.Y);
         waypoint.Type = WaypointType.Teleport.Code;
         waypoint.MoveMode = MoveModeEnum.Walk.Code;
         _pathingTask.Positions.Add(waypoint);
         
         if (_webWindow == null)
         {
-            TaskControl.Logger?.LogInformation("已创建初始路径点({x},{y})", waypoint.X, waypoint.Y);
+            TaskControl.Logger?.LogInformation("已创建初始路径点({x},{y})", FormatCoordinate(waypoint.X), FormatCoordinate(waypoint.Y));
         }
         else
         {
-            TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
+            TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", FormatCoordinate(waypoint.X), FormatCoordinate(waypoint.Y));
             AddPosToEditor(waypoint.X, waypoint.Y);
         }
 
@@ -156,11 +190,11 @@ public class PathRecorder : Singleton<PathRecorder>
             position = nullablePosition.Value;
         }
 
-        waypoint.X = position.X;
-        waypoint.Y = position.Y;
+        waypoint.X = RoundCoordinate(position.X);
+        waypoint.Y = RoundCoordinate(position.Y);
         waypoint.Type = string.IsNullOrEmpty(waypointType) ? WaypointType.Path.Code : waypointType;
         _pathingTask.Positions.Add(waypoint);
-        TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
+        TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", FormatCoordinate(waypoint.X), FormatCoordinate(waypoint.Y));
         AddPosToEditor(waypoint.X, waypoint.Y);
         PublishRecorderTask();
     }
@@ -168,8 +202,10 @@ public class PathRecorder : Singleton<PathRecorder>
     public void AddWaypoint(Waypoint waypoint)
     {
         ArgumentNullException.ThrowIfNull(waypoint);
+        waypoint.X = RoundCoordinate(waypoint.X);
+        waypoint.Y = RoundCoordinate(waypoint.Y);
         _pathingTask.Positions.Add(waypoint);
-        TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", waypoint.X, waypoint.Y);
+        TaskControl.Logger?.LogInformation("已添加途径点({x},{y})", FormatCoordinate(waypoint.X), FormatCoordinate(waypoint.Y));
         AddPosToEditor(waypoint.X, waypoint.Y);
         PublishRecorderTask();
     }
@@ -180,7 +216,7 @@ public class PathRecorder : Singleton<PathRecorder>
     /// </summary>
     public void Save()
     {
-        if (_webWindow == null)
+        if (!HasActiveEditor)
         {
             var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
             if (string.IsNullOrEmpty(matchingMethod)) matchingMethod = "Default";
@@ -241,6 +277,16 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
             this, "UpdateRecorderPathing", new object(), _pathingTask));
+    }
+
+    private static double RoundCoordinate(double value)
+    {
+        return Math.Round(value, CoordinateStorageDecimals, MidpointRounding.AwayFromZero);
+    }
+
+    private static string FormatCoordinate(double value)
+    {
+        return RoundCoordinate(value).ToString($"F{CoordinateDisplayDecimals}", CultureInfo.InvariantCulture);
     }
 
     /// <summary>

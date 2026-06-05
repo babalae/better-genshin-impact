@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Map;
@@ -57,12 +58,16 @@ public sealed class MapTileViewerControl : FrameworkElement
     private readonly Pen _recordPathPen = new(new SolidColorBrush(Color.FromRgb(255, 178, 72)), 2);
     private readonly Pen _targetPen = new(new SolidColorBrush(Color.FromRgb(255, 99, 99)), 2);
     private readonly Pen _teleportOutlinePen = new(new SolidColorBrush(Color.FromRgb(230, 245, 255)), 1.4);
+    private readonly Pen _selectedRecorderOuterPen = new(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 2);
+    private readonly Pen _selectedRecorderInnerPen = new(new SolidColorBrush(Color.FromRgb(35, 200, 210)), 3);
     private readonly Brush _currentBrush = new SolidColorBrush(Color.FromRgb(80, 220, 120));
     private readonly Brush _targetBrush = new SolidColorBrush(Color.FromRgb(255, 99, 99));
     private readonly Brush _teleportBrush = new SolidColorBrush(Color.FromRgb(77, 174, 255));
     private readonly Brush _goddessBrush = new SolidColorBrush(Color.FromRgb(84, 238, 225));
     private readonly Brush _domainBrush = new SolidColorBrush(Color.FromRgb(179, 136, 255));
     private readonly Brush _labelBrush = new SolidColorBrush(Color.FromArgb(210, 32, 32, 32));
+    private readonly Brush _selectedRecorderHaloBrush = new SolidColorBrush(Color.FromArgb(86, 35, 200, 210));
+    private readonly Brush _selectedRecorderFillBrush = new SolidColorBrush(Color.FromRgb(35, 200, 210));
     private readonly Typeface _typeface = new("Segoe UI");
 
     private Mat _mapImage = new();
@@ -85,8 +90,9 @@ public sealed class MapTileViewerControl : FrameworkElement
     private Point2f? _currentPoint;
     private Point2f? _targetPoint;
     private Point2f? _selectedRecorderPoint;
+    private List<Point2f> _selectedRecorderPoints = [];
     private List<Point2f> _pathPoints = [];
-    private List<Point2f> _recordedPoints = [];
+    private List<RecordedMapPoint> _recordedPoints = [];
     private List<MapTeleportPoint> _teleportPoints = [];
     private MapTeleportPoint? _hoverTeleportPoint;
     private bool _isRecorderMode;
@@ -160,7 +166,7 @@ public sealed class MapTileViewerControl : FrameworkElement
 
         if (msg.PropertyName == "UpdateRecorderPathing" && msg.NewValue is PathingTask recorderTask)
         {
-            _recordedPoints = recorderTask.Positions.Select(ConvertToMapPoint).ToList();
+            _recordedPoints = recorderTask.Positions.Select(CreateRecordedMapPoint).ToList();
             InvalidateVisual();
             return;
         }
@@ -168,6 +174,25 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (msg.PropertyName == "SelectRecorderWaypointPosition" && msg.NewValue is Point2f recorderPoint)
         {
             _selectedRecorderPoint = ConvertGameCoordinateToImagePoint(recorderPoint);
+            _selectedRecorderPoints = [_selectedRecorderPoint.Value];
+            InvalidateVisual();
+            return;
+        }
+
+        if (msg.PropertyName == "SelectRecorderWaypointPositions" && msg.NewValue is IEnumerable<Point2f> recorderPoints)
+        {
+            _selectedRecorderPoints = recorderPoints
+                .Select(ConvertGameCoordinateToImagePoint)
+                .ToList();
+            _selectedRecorderPoint = _selectedRecorderPoints.Count == 1
+                ? _selectedRecorderPoints[0]
+                : null;
+
+            if (_selectedRecorderPoints.Count > 1)
+            {
+                FitPoints(_selectedRecorderPoints);
+            }
+
             InvalidateVisual();
             return;
         }
@@ -175,6 +200,7 @@ public sealed class MapTileViewerControl : FrameworkElement
         if (msg.PropertyName == "ClearSelectedRecorderWaypoint")
         {
             _selectedRecorderPoint = null;
+            _selectedRecorderPoints = [];
             InvalidateVisual();
             return;
         }
@@ -285,7 +311,7 @@ public sealed class MapTileViewerControl : FrameworkElement
         DrawPath(drawingContext);
         DrawRecordedPath(drawingContext);
         DrawSelectedRecorderPoint(drawingContext);
-        DrawMarker(drawingContext, _targetPoint, _targetBrush, _targetPen, "目标");
+        DrawTargetMarker(drawingContext, _targetPoint);
         DrawCurrentMarker(drawingContext);
         DrawHud(drawingContext);
     }
@@ -855,20 +881,20 @@ public sealed class MapTileViewerControl : FrameworkElement
 
         if (_recordedPoints.Count >= 2)
         {
-            var geometry = new StreamGeometry();
-            using (var context = geometry.Open())
+            for (var i = 0; i < _recordedPoints.Count - 1; i++)
             {
-                context.BeginFigure(MapToScreen(_recordedPoints[0]), false, false);
-                context.PolyLineTo(_recordedPoints.Skip(1).Select(MapToScreen).ToList(), true, false);
-            }
+                if (IsTeleportWaypoint(_recordedPoints[i + 1].Type))
+                {
+                    continue;
+                }
 
-            geometry.Freeze();
-            dc.DrawGeometry(null, _recordPathPen, geometry);
+                dc.DrawLine(_recordPathPen, MapToScreen(_recordedPoints[i].Point), MapToScreen(_recordedPoints[i + 1].Point));
+            }
         }
 
         for (var i = 0; i < _recordedPoints.Count; i++)
         {
-            var point = MapToScreen(_recordedPoints[i]);
+            var point = MapToScreen(_recordedPoints[i].Point);
             dc.DrawEllipse(new SolidColorBrush(Color.FromRgb(255, 178, 72)), new Pen(Brushes.White, 1), point, 6, 6);
             var indexText = CreateText((i + 1).ToString());
             dc.DrawText(indexText, new WpfPoint(point.X + 8, point.Y - 14));
@@ -877,18 +903,33 @@ public sealed class MapTileViewerControl : FrameworkElement
 
     private void DrawSelectedRecorderPoint(DrawingContext dc)
     {
-        if (_selectedRecorderPoint == null)
+        if (_selectedRecorderPoints.Count == 0)
         {
+            if (_selectedRecorderPoint == null)
+            {
+                return;
+            }
+
+            DrawSelectedRecorderMarker(dc, _selectedRecorderPoint.Value);
             return;
         }
 
-        var point = MapToScreen(_selectedRecorderPoint.Value);
-        var pen = new Pen(new SolidColorBrush(Color.FromRgb(255, 236, 120)), 3);
-        dc.DrawEllipse(null, pen, point, 16, 16);
-        dc.DrawEllipse(null, new Pen(Brushes.Black, 1), point, 20, 20);
+        foreach (var selectedPoint in _selectedRecorderPoints)
+        {
+            DrawSelectedRecorderMarker(dc, selectedPoint);
+        }
     }
 
-    private void DrawMarker(DrawingContext dc, Point2f? mapPoint, Brush brush, Pen? pen, string label)
+    private void DrawSelectedRecorderMarker(DrawingContext dc, Point2f mapPoint)
+    {
+        var point = MapToScreen(mapPoint);
+        dc.DrawEllipse(_selectedRecorderHaloBrush, null, point, 19, 19);
+        dc.DrawEllipse(null, _selectedRecorderOuterPen, point, 15, 15);
+        dc.DrawEllipse(null, _selectedRecorderInnerPen, point, 11, 11);
+        dc.DrawEllipse(_selectedRecorderFillBrush, null, point, 4.5, 4.5);
+    }
+
+    private void DrawTargetMarker(DrawingContext dc, Point2f? mapPoint)
     {
         if (mapPoint == null)
         {
@@ -896,11 +937,19 @@ public sealed class MapTileViewerControl : FrameworkElement
         }
 
         var point = MapToScreen(mapPoint.Value);
-        dc.DrawEllipse(brush, pen, point, 8, 8);
-        dc.DrawEllipse(null, new Pen(Brushes.White, 2), point, 12, 12);
-        var text = CreateText(label);
-        dc.DrawRoundedRectangle(_labelBrush, null, new WpfRect(point.X + 12, point.Y - 12, text.Width + 12, 24), 5, 5);
-        dc.DrawText(text, new WpfPoint(point.X + 18, point.Y - 10));
+        var haloBrush = new SolidColorBrush(Color.FromArgb(56, 255, 99, 99));
+        var shadowBrush = new SolidColorBrush(Color.FromArgb(82, 0, 0, 0));
+        var whitePen = new Pen(Brushes.White, 2.2);
+        var targetPen = new Pen(_targetBrush, 2);
+
+        dc.DrawEllipse(shadowBrush, null, new WpfPoint(point.X + 1, point.Y + 2), 15, 15);
+        dc.DrawEllipse(haloBrush, null, point, 16, 16);
+        dc.DrawEllipse(null, whitePen, point, 10, 10);
+        dc.DrawEllipse(_targetBrush, _targetPen, point, 7, 7);
+        dc.DrawLine(targetPen, new WpfPoint(point.X - 18, point.Y), new WpfPoint(point.X - 11, point.Y));
+        dc.DrawLine(targetPen, new WpfPoint(point.X + 11, point.Y), new WpfPoint(point.X + 18, point.Y));
+        dc.DrawLine(targetPen, new WpfPoint(point.X, point.Y - 18), new WpfPoint(point.X, point.Y - 11));
+        dc.DrawLine(targetPen, new WpfPoint(point.X, point.Y + 11), new WpfPoint(point.X, point.Y + 18));
     }
 
     private void DrawCurrentMarker(DrawingContext dc)
@@ -1165,6 +1214,27 @@ public sealed class MapTileViewerControl : FrameworkElement
         PublishZoom();
     }
 
+    private void FitPoints(IReadOnlyList<Point2f> points)
+    {
+        if (points.Count == 0 || ActualWidth <= 0 || ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var minX = points.Min(p => p.X);
+        var minY = points.Min(p => p.Y);
+        var maxX = points.Max(p => p.X);
+        var maxY = points.Max(p => p.Y);
+        var width = Math.Max(220, maxX - minX);
+        var height = Math.Max(220, maxY - minY);
+        var availableWidth = Math.Max(120, ActualWidth - 120);
+        var availableHeight = Math.Max(120, ActualHeight - 120);
+        _zoom = Math.Clamp(Math.Min(availableWidth / width, availableHeight / height), 0.12, 8);
+        _pan = new WpfPoint(ActualWidth / 2 - (minX + width / 2) * _zoom, ActualHeight / 2 - (minY + height / 2) * _zoom);
+        SetFollowCurrentPosition(false);
+        PublishZoom();
+    }
+
     private void CenterOn(Point2f point)
     {
         if (ActualWidth <= 0 || ActualHeight <= 0)
@@ -1343,6 +1413,16 @@ public sealed class MapTileViewerControl : FrameworkElement
         return ConvertGameCoordinateToImagePoint(new Point2f((float)waypoint.X, (float)waypoint.Y));
     }
 
+    private RecordedMapPoint CreateRecordedMapPoint(Waypoint waypoint)
+    {
+        return new RecordedMapPoint(ConvertToMapPoint(waypoint), waypoint.Type);
+    }
+
+    private static bool IsTeleportWaypoint(string? type)
+    {
+        return string.Equals(type, WaypointType.Teleport.Code, StringComparison.OrdinalIgnoreCase);
+    }
+
     private Point2f ConvertGameCoordinateToImagePoint(Point2f point)
     {
         return ConvertFeatureImageCoordinateToDisplayPoint(ConvertGameCoordinateToFeatureImagePoint(point));
@@ -1448,6 +1528,8 @@ public sealed class MapTileViewerControl : FrameworkElement
     private readonly record struct TileKey(int X, int Y);
 
     private sealed record LoadedMapResult(int Version, string MapName, Mat Image, BitmapSource? Bitmap, double SourceScaleX, double SourceScaleY);
+
+    private sealed record RecordedMapPoint(Point2f Point, string? Type);
 
     private sealed record MapTeleportPoint(Point2f DisplayPoint, double GameX, double GameY, string Name, string Type);
 
