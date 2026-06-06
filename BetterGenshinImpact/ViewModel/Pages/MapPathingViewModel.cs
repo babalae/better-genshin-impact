@@ -47,7 +47,7 @@ public partial class MapPathingViewModel : ViewModel
     [ObservableProperty]
     private bool _isRightClickSelection;
 
-    private MapPathingDevWindow? _mapPathingDevWindow;
+    private MapViewer? _mapViewer;
     private readonly IScriptService _scriptService;
 
     public AllConfig Config { get; set; }
@@ -154,19 +154,22 @@ public partial class MapPathingViewModel : ViewModel
     [RelayCommand]
     public void OnOpenDevTools()
     {
-        if (_mapPathingDevWindow == null || !_mapPathingDevWindow.IsVisible)
+        if (_mapViewer == null || !_mapViewer.IsVisible)
         {
-            _mapPathingDevWindow = new MapPathingDevWindow
+            var mapName = string.IsNullOrWhiteSpace(Config.DevConfig.RecordMapName)
+                ? "Teyvat"
+                : Config.DevConfig.RecordMapName;
+            _mapViewer = new MapViewer(mapName)
             {
                 Owner = GetCurrentOwnerWindow(),
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
-            _mapPathingDevWindow.Closed += (s, e) => _mapPathingDevWindow = null;
-            _mapPathingDevWindow.Show();
+            _mapViewer.Closed += (s, e) => _mapViewer = null;
+            _mapViewer.Show();
         }
         else
         {
-            _mapPathingDevWindow.Activate();
+            _mapViewer.Activate();
         }
     }
 
