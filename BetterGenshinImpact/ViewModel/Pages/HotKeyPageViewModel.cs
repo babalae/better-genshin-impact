@@ -710,6 +710,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
                 else
                 {
+                    WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+                        this, "PreparePathRecorderStart", new object(), new object()));
                     Task.Run(() => { pathRecorder.Start(); });
                 }
             }

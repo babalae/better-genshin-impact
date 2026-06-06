@@ -31,8 +31,10 @@ using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
+using BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.View.Controls;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Win32;
@@ -50,6 +52,9 @@ public partial class MapViewerViewModel : ObservableObject
 {
     private const int CoordinateStorageDecimals = 4;
     private const int CoordinateDisplayDecimals = 2;
+    private readonly string _routeSaveDir = Global.Absolute(Path.Combine("User", "AutoPathing", "Routes"));
+    private readonly RouteNavigationGraphProvider _graphProvider;
+    private readonly RouteNavigationPlanner _routeNavigationPlanner;
 
     [ObservableProperty]
     private WriteableBitmap _mapBitmap;
@@ -106,7 +111,7 @@ public partial class MapViewerViewModel : ObservableObject
     private bool _hasCurrentPathing;
 
     [ObservableProperty]
-    private bool _isTopmost = true;
+    private bool _isTopmost = TaskContext.Instance().Config.DevConfig.MapViewerTopmost;
 
     [ObservableProperty]
     private bool _isFollowingCurrent = true;
@@ -151,6 +156,9 @@ public partial class MapViewerViewModel : ObservableObject
     private string _recordStatusText = "录制器：未开始";
 
     [ObservableProperty]
+    private bool _isPathRecorderRecording;
+
+    [ObservableProperty]
     private string _recordFileName = "未命名路线";
 
     [ObservableProperty]
@@ -192,10 +200,105 @@ public partial class MapViewerViewModel : ObservableObject
     [ObservableProperty]
     private RecordedWaypointViewModel? _selectedRecordedWaypoint;
 
+    [ObservableProperty]
+    private RecordedRouteViewModel? _selectedRecordedRoute;
+
+    [ObservableProperty]
+    private bool _isRouteFileBrowserOpen;
+
+    [ObservableProperty]
+    private string _routeBrowserRelativePath = string.Empty;
+
+    [ObservableProperty]
+    private string _routeBrowserStatusText = "User\\AutoPathing";
+
+    [ObservableProperty]
+    private string _routeBrowserImportStatusText = "选择 JSON 文件后导入";
+
+    [ObservableProperty]
+    private bool _isCombatScriptManagerOpen;
+
+    [ObservableProperty]
+    private string _newCombatScriptValue = string.Empty;
+
+    [ObservableProperty]
+    private bool _newCombatScriptIsDefault;
+
+    [ObservableProperty]
+    private double _currentImageX = 1024;
+
+    [ObservableProperty]
+    private double _currentImageY = 1024;
+
+    [ObservableProperty]
+    private bool _followRoutePlanningCurrentPosition = true;
+
+    [ObservableProperty]
+    private double _targetImageX = 1200;
+
+    [ObservableProperty]
+    private double _targetImageY = 1200;
+
+    [ObservableProperty]
+    private bool _allowTeleport = true;
+
+    [ObservableProperty]
+    private bool _allowUnknownStartConnector = true;
+
+    [ObservableProperty]
+    private bool _allowUnknownTargetConnector = true;
+
+    [ObservableProperty]
+    private bool _allowDisabledEdges;
+
+    [ObservableProperty]
+    private string _targetMoveMode = string.Empty;
+
+    [ObservableProperty]
+    private string _targetAction = string.Empty;
+
+    [ObservableProperty]
+    private string _planSummary = "等待规划";
+
+    [ObservableProperty]
+    private string _graphStatus = string.Empty;
+
+    [ObservableProperty]
+    private string _graphSummary = "等待刷新";
+
+    [ObservableProperty]
+    private string _healthSummary = "等待刷新";
+
+    [ObservableProperty]
+    private string _targetPickSummary = "点击地图可选择目标点";
+
+    [ObservableProperty]
+    private bool _hasPlan;
+
+    [ObservableProperty]
+    private bool _isPlanning;
+
+    [ObservableProperty]
+    private bool _isRefreshingRouteDiagnostics;
+
     private List<Waypoint>? _recordedWaypointClipboard;
     private string? _recordedWaypointClipboardText;
 
     public ObservableCollection<RecordedWaypointViewModel> RecordedWaypoints { get; } = [];
+
+    public ObservableCollection<RecordedRouteViewModel> RecordedRoutes { get; } = [];
+
+    public ObservableCollection<RouteFileBrowserItemViewModel> RouteBrowserItems { get; } = [];
+
+    public ObservableCollection<CombatScriptOptionViewModel> CombatScripts { get; } = [];
+
+    public ObservableCollection<RoutePlanEdgeRow> PlannedEdges { get; } = [];
+
+    public ObservableCollection<RouteNearbyNodeRow> NearbyNodes { get; } = [];
+
+    public ObservableCollection<RouteNearbyEdgeRow> NearbyEdges { get; } = [];
+
+    public ObservableCollection<RouteHealthRow> HealthRows { get; } = [];
 
     public ICollectionView RecordedWaypointView { get; }
 
@@ -204,6 +307,10 @@ public partial class MapViewerViewModel : ObservableObject
 
     public ObservableCollection<MapEditorOption> MoveModeOptions { get; } = new(
         MoveModeEnum.Values.Select(i => new MapEditorOption(i.Code, i.Msg)));
+
+    public ObservableCollection<MapEditorOption> TargetMoveModeOptions { get; } = new(
+        new[] { new MapEditorOption(string.Empty, "沿用最后一段") }.Concat(
+            MoveModeEnum.Values.Select(i => new MapEditorOption(i.Code, i.Msg))));
 
     public ObservableCollection<MapEditorOption> ActionOptions { get; } = new(
         new[] { new MapEditorOption(string.Empty, "无") }.Concat(
@@ -240,11 +347,11 @@ public partial class MapViewerViewModel : ObservableObject
 
     public System.Windows.GridLength SplitterColumnWidth => IsSidePanelVisible ? new System.Windows.GridLength(6) : new System.Windows.GridLength(0);
 
-    public System.Windows.GridLength SideColumnWidth => !IsSidePanelVisible
-        ? new System.Windows.GridLength(0)
-        : IsRecorderMode
-            ? new System.Windows.GridLength(460)
-            : new System.Windows.GridLength(380);
+    public System.Windows.GridLength SideColumnWidth => IsSidePanelVisible
+        ? new System.Windows.GridLength(580)
+        : new System.Windows.GridLength(0);
+
+    public double SideColumnMinWidth => IsSidePanelVisible ? 520 : 0;
 
     public System.Windows.Visibility SidePanelVisibility => IsSidePanelVisible
         ? System.Windows.Visibility.Visible
@@ -304,6 +411,26 @@ public partial class MapViewerViewModel : ObservableObject
         ? "暂无路线，请先录制或加载路线"
         : $"路线：{RecordFileName} · {RecordedWaypoints.Count} 个点";
 
+    public bool HasRecordedRoutes => RecordedRoutes.Count > 0;
+
+    public string RecordedRouteCountText => $"{RecordedRoutes.Count} 条路线";
+
+    public string RouteListEmptyText => RecordedRoutes.Count == 0
+        ? "暂无路线"
+        : string.Empty;
+
+    public string RouteBrowserSelectionText
+    {
+        get
+        {
+            var selectedCount = RouteBrowserItems.Count(i => i.IsSelected && i.IsJsonFile);
+            var jsonCount = RouteBrowserItems.Count(i => i.IsJsonFile);
+            return selectedCount == 0
+                ? $"{jsonCount} 个 JSON"
+                : $"已选 {selectedCount} / {jsonCount}";
+        }
+    }
+
     public string SelectedWaypointEditorTitle => SelectedRecordedWaypoint == null
         ? "当前编辑点位"
         : $"当前编辑点位：#{SelectedRecordedWaypoint.Index} {SelectedRecordedWaypoint.TypeDisplayText}";
@@ -325,6 +452,19 @@ public partial class MapViewerViewModel : ObservableObject
     public string FollowHotkeyText => string.IsNullOrWhiteSpace(TaskContext.Instance().Config.HotKeyConfig.MapViewerFollowHotkey)
         ? "未绑定"
         : TaskContext.Instance().Config.HotKeyConfig.MapViewerFollowHotkey;
+
+    public string PathRecorderHotkeyText => FormatHotkeyText(TaskContext.Instance().Config.HotKeyConfig.PathRecorderHotkey);
+
+    public string AddWaypointHotkeyText => FormatHotkeyText(TaskContext.Instance().Config.HotKeyConfig.AddWaypointHotkey);
+
+    public string RecordingToggleText => IsPathRecorderRecording ? "停止录制" : "开始录制";
+
+    public string RecordingToggleToolTip =>
+        $"启动/停止录制：{PathRecorderHotkeyText}\n添加当前位置：{AddWaypointHotkeyText}";
+
+    public string RouteGraphFilePath => Path.Combine(_routeSaveDir, RouteNavigationGraphBuilder.GraphFileName);
+
+    public string RouteHealthFilePath => Path.Combine(_routeSaveDir, "route_health.json");
 
     // private readonly Mat _all256Map = new(Global.Absolute(@"Assets/Map/mainMap256Block.png"));
 
@@ -366,6 +506,16 @@ public partial class MapViewerViewModel : ObservableObject
 
     private bool _isRestoringRecorderHistory;
 
+    private bool _isSwitchingRecordedRoute;
+
+    private bool _isLoadingRouteBrowser;
+
+    private bool _isLoadingCombatScripts;
+
+    private bool _isUpdatingWaypointFromMap;
+
+    private bool _isRefreshingRouteDiagnosticsLite;
+
     private List<Waypoint> _currentRoutePoints = [];
 
     private double _routeTotalDistance;
@@ -378,6 +528,9 @@ public partial class MapViewerViewModel : ObservableObject
 
     public MapViewerViewModel(string mapName)
     {
+        _graphProvider = new RouteNavigationGraphProvider(_routeSaveDir);
+        _routeNavigationPlanner = new RouteNavigationPlanner(_graphProvider);
+
         if (string.IsNullOrEmpty(mapName))
         {
             mapName = nameof(MapTypes.Teyvat);
@@ -393,27 +546,42 @@ public partial class MapViewerViewModel : ObservableObject
         RecordedWaypointView = CollectionViewSource.GetDefaultView(RecordedWaypoints);
         RecordedWaypointView.Filter = FilterRecordedWaypoint;
         RecordedWaypoints.CollectionChanged += OnRecordedWaypointsCollectionChanged;
+        RecordedRoutes.CollectionChanged += OnRecordedRoutesCollectionChanged;
+        RouteBrowserItems.CollectionChanged += OnRouteBrowserItemsCollectionChanged;
+        CombatScripts.CollectionChanged += OnCombatScriptsCollectionChanged;
         SelectedWaypointFilterDimension = WaypointFilterDimensions.FirstOrDefault();
+        LoadCombatScripts();
+        IsPathRecorderRecording = PathRecorder.Instance.IsRecording;
         WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (_, msg) =>
         {
             if (msg.PropertyName == "SendCurrentPosition")
             {
+                if (msg.NewValue is not Point2f point)
+                {
+                    return;
+                }
+
+                if (point.X == 0 && point.Y == 0)
+                {
+                    return;
+                }
+
                 if (!ShouldRefreshMapBitmap())
                 {
+                    if (FollowRoutePlanningCurrentPosition)
+                    {
+                        UIDispatcherHelper.BeginInvoke(() => UpdateRoutePlanningCurrentPosition(point));
+                    }
+
                     return;
                 }
 
                 UIDispatcherHelper.BeginInvoke(() =>
                 {
-                    var point = (Point2f)msg.NewValue;
-                    if (point.X == 0 && point.Y == 0)
-                    {
-                        return;
-                    }
-
                     _lastPosition = point;
                     CurrentPositionText = FormatCurrentPosition(point);
                     LastRefreshText = $"刷新：{DateTime.Now:HH:mm:ss}";
+                    UpdateRoutePlanningCurrentPosition(point);
                 });
             }
             else if (msg.PropertyName == "UpdateCurrentPathing")
@@ -445,6 +613,10 @@ public partial class MapViewerViewModel : ObservableObject
                     }
                 });
             }
+            else if (msg.PropertyName == "PreparePathRecorderStart")
+            {
+                UIDispatcherHelper.BeginInvoke(PrepareForRecordingStart);
+            }
             else if (msg.PropertyName == "SelectPathingTargetPosition" && msg.NewValue is Point2f targetPoint)
             {
                 UIDispatcherHelper.BeginInvoke(() => HandleMapPointSelected(targetPoint));
@@ -453,12 +625,23 @@ public partial class MapViewerViewModel : ObservableObject
             {
                 UIDispatcherHelper.BeginInvoke(() =>
                 {
+                    IsPathRecorderRecording = PathRecorder.Instance.IsRecording;
                     IsRecorderMode = true;
                     IsDebugMode = false;
                     LoadRecorderTask(recorderTask);
                 });
             }
+            else if (msg.PropertyName == "SelectRecorderWaypointIndex" && msg.NewValue is int waypointIndex)
+            {
+                UIDispatcherHelper.BeginInvoke(() => SelectRecordedWaypointByIndex(waypointIndex));
+            }
+            else if (msg.PropertyName == "MoveRecorderWaypointPosition" && msg.NewValue is RecorderWaypointMapUpdate update)
+            {
+                UIDispatcherHelper.BeginInvoke(() => MoveRecordedWaypointFromMap(update.Index, update.Point));
+            }
         });
+
+        _ = RefreshRouteDiagnosticsLiteAsync();
     }
 
     private void OnRecordedWaypointsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -483,6 +666,114 @@ public partial class MapViewerViewModel : ObservableObject
         RefreshRecorderSummaryProperties();
     }
 
+    private void OnRecordedRoutesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (RecordedRouteViewModel route in e.OldItems)
+            {
+                route.PropertyChanged -= OnRecordedRoutePropertyChanged;
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (RecordedRouteViewModel route in e.NewItems)
+            {
+                route.PropertyChanged += OnRecordedRoutePropertyChanged;
+            }
+        }
+
+        RefreshRouteListProperties();
+        PublishRecordedRouteList();
+    }
+
+    private void OnRecordedRoutePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RecordedRouteViewModel.Name)
+            or nameof(RecordedRouteViewModel.PointCount)
+            or nameof(RecordedRouteViewModel.MapDisplayText)
+            or nameof(RecordedRouteViewModel.FileDisplayText))
+        {
+            RefreshRouteListProperties();
+            PublishRecordedRouteList();
+        }
+    }
+
+    private void OnRouteBrowserItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (RouteFileBrowserItemViewModel item in e.OldItems)
+            {
+                item.PropertyChanged -= OnRouteBrowserItemPropertyChanged;
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (RouteFileBrowserItemViewModel item in e.NewItems)
+            {
+                item.PropertyChanged += OnRouteBrowserItemPropertyChanged;
+            }
+        }
+
+        OnPropertyChanged(nameof(RouteBrowserSelectionText));
+    }
+
+    private void OnRouteBrowserItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RouteFileBrowserItemViewModel.IsSelected))
+        {
+            OnPropertyChanged(nameof(RouteBrowserSelectionText));
+        }
+    }
+
+    private void OnCombatScriptsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems != null)
+        {
+            foreach (CombatScriptOptionViewModel item in e.OldItems)
+            {
+                item.PropertyChanged -= OnCombatScriptPropertyChanged;
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (CombatScriptOptionViewModel item in e.NewItems)
+            {
+                item.PropertyChanged += OnCombatScriptPropertyChanged;
+            }
+        }
+
+        if (_isLoadingCombatScripts)
+        {
+            return;
+        }
+
+        SaveCombatScripts();
+    }
+
+    private void OnCombatScriptPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_isLoadingCombatScripts)
+        {
+            return;
+        }
+
+        if (e.PropertyName == nameof(CombatScriptOptionViewModel.IsDefault)
+            && sender is CombatScriptOptionViewModel { IsDefault: true } selected)
+        {
+            foreach (var item in CombatScripts.Where(i => !ReferenceEquals(i, selected)))
+            {
+                item.IsDefault = false;
+            }
+        }
+
+        SaveCombatScripts();
+    }
+
     private void OnRecordedWaypointPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(RecordedWaypointViewModel.Type)
@@ -493,6 +784,39 @@ public partial class MapViewerViewModel : ObservableObject
             or nameof(RecordedWaypointViewModel.ActionDisplayText))
         {
             RefreshWaypointFilters();
+        }
+
+        if (e.PropertyName is nameof(RecordedWaypointViewModel.X)
+            or nameof(RecordedWaypointViewModel.Y)
+            or nameof(RecordedWaypointViewModel.Type)
+            or nameof(RecordedWaypointViewModel.MoveMode)
+            or nameof(RecordedWaypointViewModel.Action)
+            or nameof(RecordedWaypointViewModel.ActionParams)
+            or nameof(RecordedWaypointViewModel.Description)
+            or nameof(RecordedWaypointViewModel.MonsterTag)
+            or nameof(RecordedWaypointViewModel.EnableMonsterLootSplit)
+            or nameof(RecordedWaypointViewModel.MisidentificationTypesText)
+            or nameof(RecordedWaypointViewModel.MisidentificationHandlingMode)
+            or nameof(RecordedWaypointViewModel.MisidentificationArrivalTime))
+        {
+            if (_isUpdatingWaypointFromMap)
+            {
+                return;
+            }
+
+            if (e.PropertyName == nameof(RecordedWaypointViewModel.Action)
+                && sender is RecordedWaypointViewModel waypoint
+                && string.Equals(waypoint.Action, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(waypoint.ActionParams))
+            {
+                waypoint.ActionParams = GetDefaultCombatScriptValue();
+            }
+
+            PublishRecorderPath();
+            if (sender is RecordedWaypointViewModel selectedWaypoint && selectedWaypoint.IsSelected)
+            {
+                PublishSelectedRecorderWaypoints();
+            }
         }
     }
 
@@ -615,6 +939,13 @@ public partial class MapViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(RouteEmptyStatusText));
     }
 
+    private void RefreshRouteListProperties()
+    {
+        OnPropertyChanged(nameof(HasRecordedRoutes));
+        OnPropertyChanged(nameof(RecordedRouteCountText));
+        OnPropertyChanged(nameof(RouteListEmptyText));
+    }
+
     partial void OnIsFollowingCurrentChanged(bool value)
     {
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SetMapFollowCurrent", new object(), value));
@@ -713,6 +1044,31 @@ public partial class MapViewerViewModel : ObservableObject
         }
     }
 
+    partial void OnSelectedRecordedRouteChanged(RecordedRouteViewModel? value)
+    {
+        if (_isSwitchingRecordedRoute)
+        {
+            return;
+        }
+
+        LoadRecordedRoute(value);
+    }
+
+    partial void OnRouteBrowserRelativePathChanged(string value)
+    {
+        RouteBrowserStatusText = string.IsNullOrWhiteSpace(value)
+            ? "User\\AutoPathing"
+            : value;
+    }
+
+    partial void OnIsRouteFileBrowserOpenChanged(bool value)
+    {
+        if (value && !_isLoadingRouteBrowser)
+        {
+            LoadRouteBrowserItems(RouteBrowserRelativePath);
+        }
+    }
+
     public void SyncRecordedWaypointSelection(IList selectedItems)
     {
         var selected = selectedItems.OfType<RecordedWaypointViewModel>()
@@ -769,6 +1125,11 @@ public partial class MapViewerViewModel : ObservableObject
         PublishRecorderPath();
     }
 
+    partial void OnIsTopmostChanged(bool value)
+    {
+        TaskContext.Instance().Config.DevConfig.MapViewerTopmost = value;
+    }
+
     partial void OnRecordFilePathTextChanged(string value)
     {
         RefreshRecorderSummaryProperties();
@@ -787,6 +1148,11 @@ public partial class MapViewerViewModel : ObservableObject
     partial void OnRecordStatusTextChanged(string value)
     {
         OnPropertyChanged(nameof(RecordSummaryText));
+    }
+
+    partial void OnIsPathRecorderRecordingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(RecordingToggleText));
     }
 
     partial void OnRecordDescriptionChanged(string value)
@@ -837,9 +1203,16 @@ public partial class MapViewerViewModel : ObservableObject
     partial void OnMapNameChanged(string value)
     {
         MapDisplayName = GetMapDisplayName(value);
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            TaskContext.Instance().Config.DevConfig.RecordMapName = value;
+        }
+
         SelectedTargetText = "目标点：点击地图选择";
         _selectedTargetPoint = null;
         ClearPathing();
+        PublishRecordedRouteList();
+        _ = RefreshRouteDiagnosticsLiteAsync();
     }
 
     private bool ShouldRefreshMapBitmap()
@@ -983,8 +1356,7 @@ public partial class MapViewerViewModel : ObservableObject
     [RelayCommand]
     private void RefreshCurrentView()
     {
-        IsFollowingCurrent = true;
-        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "ResetMapView", new object(), new object()));
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "LocateCurrentMapView", new object(), new object()));
     }
 
     [RelayCommand]
@@ -1019,6 +1391,17 @@ public partial class MapViewerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SetMapLayer(MapEditorOption? option)
+    {
+        if (option == null || string.IsNullOrWhiteSpace(option.Code))
+        {
+            return;
+        }
+
+        MapName = option.Code;
+    }
+
+    [RelayCommand]
     private void ToggleViewSettings()
     {
         IsViewSettingsOpen = !IsViewSettingsOpen;
@@ -1041,6 +1424,291 @@ public partial class MapViewerViewModel : ObservableObject
     {
         _showRouteProgressAsPercent = !_showRouteProgressAsPercent;
         RefreshRouteProgressText();
+    }
+
+    [RelayCommand]
+    private async Task RebuildRouteGraphAsync()
+    {
+        if (IsRefreshingRouteDiagnostics)
+        {
+            return;
+        }
+
+        IsRefreshingRouteDiagnostics = true;
+        GraphSummary = "正在重建路网...";
+        try
+        {
+            await Task.Run(() =>
+            {
+                var healthEntries = new RouteHealthStore(_routeSaveDir).GetSnapshot();
+                new RouteNavigationGraphBuilder(_routeSaveDir).BuildNow(healthEntries);
+            });
+
+            IsRefreshingRouteDiagnostics = false;
+            await RefreshRouteGraphDiagnosticsAsync();
+        }
+        catch (Exception ex)
+        {
+            GraphSummary = $"重建失败：{ex.Message}";
+        }
+        finally
+        {
+            IsRefreshingRouteDiagnostics = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshRouteDiagnosticsLiteAsync()
+    {
+        if (_isRefreshingRouteDiagnosticsLite)
+        {
+            return;
+        }
+
+        _isRefreshingRouteDiagnosticsLite = true;
+        HealthSummary = "正在后台刷新健康数据...";
+        var mapName = MapName;
+
+        try
+        {
+            var result = await Task.Run(() => BuildRouteLiteDiagnostics(mapName));
+
+            HealthSummary = result.HealthSummary;
+            GraphSummary = result.GraphSummary;
+
+            NearbyNodes.Clear();
+            NearbyEdges.Clear();
+            HealthRows.Clear();
+
+            foreach (var row in result.HealthRows)
+            {
+                HealthRows.Add(row);
+            }
+        }
+        catch (Exception ex)
+        {
+            HealthSummary = $"健康数据刷新失败：{ex.Message}";
+        }
+        finally
+        {
+            _isRefreshingRouteDiagnosticsLite = false;
+        }
+    }
+
+    private RouteLiteDiagnosticsResult BuildRouteLiteDiagnostics(string mapName)
+    {
+        var graphExists = File.Exists(RouteGraphFilePath);
+        var graphSizeMb = graphExists ? new FileInfo(RouteGraphFilePath).Length / 1024.0 / 1024.0 : 0;
+        var healthExists = File.Exists(RouteHealthFilePath);
+        var telemetryCount = Directory.Exists(_routeSaveDir)
+            ? Directory.EnumerateFiles(_routeSaveDir, "*_Telemetry.json", SearchOption.TopDirectoryOnly).Count()
+            : 0;
+
+        var healthEntries = new RouteHealthStore(_routeSaveDir).GetSnapshot();
+        var healthSummary = healthExists
+            ? $"Health {healthEntries.Count} 条，Telemetry {telemetryCount} 个文件"
+            : $"Health 文件不存在，Telemetry {telemetryCount} 个文件";
+        var graphSummary = graphExists
+            ? $"Graph 文件 {graphSizeMb:F1} MB，点击“查询附近”加载路网"
+            : "路网文件不存在";
+
+        var normalizedMapName = RouteGraphGeometry.NormalizeMapName(mapName);
+        var healthRows = healthEntries
+            .Where(e => string.Equals(RouteGraphGeometry.NormalizeMapName(e.MapName), normalizedMapName, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(e => e.Status == RouteHealthStatus.Disabled ? 0 : e.Status == RouteHealthStatus.Risky ? 1 : 2)
+            .ThenByDescending(e => e.FailureCount)
+            .ThenByDescending(e => e.LastSeenUtc)
+            .Take(80)
+            .Select(entry => new RouteHealthRow
+            {
+                SegmentId = ShortRouteId(entry.SegmentId),
+                Status = entry.Status,
+                Success = entry.SuccessCount,
+                Failure = entry.FailureCount,
+                Rate = entry.SuccessRate,
+                MoveMode = entry.MoveMode,
+                Action = entry.Action,
+                LastFailure = entry.LastFailureReason
+            })
+            .ToList();
+
+        return new RouteLiteDiagnosticsResult(graphSummary, healthSummary, healthRows);
+    }
+
+    [RelayCommand]
+    private async Task RefreshRouteGraphDiagnosticsAsync()
+    {
+        if (IsRefreshingRouteDiagnostics)
+        {
+            return;
+        }
+
+        IsRefreshingRouteDiagnostics = true;
+        NearbyNodes.Clear();
+        NearbyEdges.Clear();
+        GraphSummary = "正在后台加载路网...";
+
+        try
+        {
+            var targetPoint = new RouteGraphPoint(TargetImageX, TargetImageY);
+            var result = await Task.Run(() =>
+            {
+                if (!_graphProvider.TryGetSnapshot(out var graph, forceReload: true) || graph.IsEmpty)
+                {
+                    return RouteGraphDiagnosticsResult.Empty(File.Exists(RouteGraphFilePath) ? "路网为空或读取失败" : "路网文件不存在");
+                }
+
+                var normalizedMapName = RouteGraphGeometry.NormalizeMapName(MapName);
+                var mapNodeCount = graph.Nodes.Count(n => string.Equals(RouteGraphGeometry.NormalizeMapName(n.MapName), normalizedMapName, StringComparison.OrdinalIgnoreCase));
+                var mapEdgeCount = graph.Edges.Count(e => string.Equals(RouteGraphGeometry.NormalizeMapName(e.MapName), normalizedMapName, StringComparison.OrdinalIgnoreCase));
+                var nearbyNodes = graph.FindNearestNodes(MapName, targetPoint, 8, 220)
+                    .Select(candidate => new RouteNearbyNodeRow
+                    {
+                        NodeId = ShortRouteId(candidate.Node.NodeId),
+                        X = candidate.Node.X,
+                        Y = candidate.Node.Y,
+                        Distance = candidate.Distance,
+                        Anchors = candidate.Node.AnchorIds.Count,
+                        Resources = candidate.Node.ResourceIds.Count + candidate.Node.ResourceLabelIds.Count
+                    })
+                    .ToList();
+                var nearbyEdges = graph.FindNearestEdges(MapName, targetPoint, 8, 120)
+                    .Select(projection => new RouteNearbyEdgeRow
+                    {
+                        EdgeId = ShortRouteId(projection.Edge.EdgeId),
+                        Distance = projection.Distance,
+                        Cost = projection.Edge.Cost,
+                        MoveMode = projection.Edge.MoveMode,
+                        Action = projection.Edge.Action,
+                        HealthStatus = projection.Edge.HealthStatus,
+                        Reverse = projection.Edge.IsSyntheticReverse
+                    })
+                    .ToList();
+
+                return new RouteGraphDiagnosticsResult(
+                    $"当前地图 Nodes {mapNodeCount} / Edges {mapEdgeCount}；全局 Nodes {graph.Nodes.Count} / Edges {graph.Edges.Count} / Teleports {graph.Teleports.Count}",
+                    nearbyNodes,
+                    nearbyEdges);
+            });
+
+            GraphSummary = result.Summary;
+            foreach (var node in result.NearbyNodes)
+            {
+                NearbyNodes.Add(node);
+            }
+
+            foreach (var edge in result.NearbyEdges)
+            {
+                NearbyEdges.Add(edge);
+            }
+        }
+        catch (Exception ex)
+        {
+            GraphSummary = $"路网查询失败：{ex.Message}";
+        }
+        finally
+        {
+            IsRefreshingRouteDiagnostics = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenRoutesFolder()
+    {
+        Directory.CreateDirectory(_routeSaveDir);
+        Process.Start(new ProcessStartInfo(_routeSaveDir) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private async Task PlanRouteAsync()
+    {
+        if (IsPlanning)
+        {
+            return;
+        }
+
+        PlannedEdges.Clear();
+        HasPlan = false;
+        IsPlanning = true;
+        PlanSummary = "正在规划...";
+
+        try
+        {
+            var request = new RouteNavigationPlanRequest
+            {
+                MapName = MapName,
+                CurrentImagePoint = new RouteGraphPoint(CurrentImageX, CurrentImageY),
+                TargetImagePoint = new RouteGraphPoint(TargetImageX, TargetImageY),
+                TaskName = "路网规划测试",
+                TargetMoveMode = string.IsNullOrWhiteSpace(TargetMoveMode) ? null : TargetMoveMode.Trim(),
+                TargetAction = string.IsNullOrWhiteSpace(TargetAction) ? null : TargetAction.Trim()
+            };
+
+            var options = new RouteNavigationPlanOptions
+            {
+                AllowTeleport = AllowTeleport,
+                AllowUnknownStartConnector = AllowUnknownStartConnector,
+                AllowUnknownTargetConnector = AllowUnknownTargetConnector,
+                AllowDisabledEdges = AllowDisabledEdges
+            };
+
+            var result = await Task.Run(() =>
+            {
+                var succeeded = _routeNavigationPlanner.TryPlan(request, out var plannedRoute, options);
+                return new { Succeeded = succeeded, Plan = plannedRoute };
+            });
+
+            var plan = result.Plan;
+
+            if (!result.Succeeded)
+            {
+                PlanSummary = $"规划失败：{plan.FailureReason}";
+                GraphStatus = File.Exists(RouteGraphFilePath) ? RouteGraphFilePath : "路网文件不存在";
+                return;
+            }
+
+            HasPlan = true;
+            var generatedTargetMoveMode = plan.Task?.Positions.LastOrDefault()?.MoveMode ?? "-";
+            PlanSummary =
+                $"成功：Cost {plan.Cost:F2}，Edges {plan.Edges.Count}，" +
+                $"传送 {(plan.UsesTeleport ? "是" : "否")}，" +
+                $"起点吸附 {plan.StartAttachDistance:F1}，终点吸附 {plan.TargetAttachDistance:F1}，" +
+                $"终点模式 {generatedTargetMoveMode}";
+            GraphStatus =
+                $"StartUnknown {FormatRouteBool(plan.RequiresUnknownStartConnector)} / " +
+                $"TargetUnknown {FormatRouteBool(plan.RequiresUnknownTargetConnector)} / " +
+                $"Frontier {plan.FrontierNode?.NodeId ?? "-"}";
+
+            for (var i = 0; i < plan.Edges.Count; i++)
+            {
+                var edge = plan.Edges[i];
+                PlannedEdges.Add(new RoutePlanEdgeRow
+                {
+                    Index = i + 1,
+                    FromNodeId = ShortRouteId(edge.FromNodeId),
+                    ToNodeId = ShortRouteId(edge.ToNodeId),
+                    Cost = edge.Cost,
+                    MoveMode = edge.MoveMode,
+                    Action = edge.Action,
+                    HealthStatus = edge.HealthStatus,
+                    IsSyntheticReverse = edge.IsSyntheticReverse,
+                    IsBidirectionalCandidate = edge.IsBidirectionalCandidate
+                });
+            }
+
+            if (plan.Task != null)
+            {
+                WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "UpdateCurrentPathing", new object(), plan.Task));
+            }
+        }
+        catch (Exception ex)
+        {
+            PlanSummary = $"规划异常：{ex.Message}";
+        }
+        finally
+        {
+            IsPlanning = false;
+        }
     }
 
     [RelayCommand]
@@ -1209,6 +1877,36 @@ public partial class MapViewerViewModel : ObservableObject
         RecordStatusText = "录制器：已从表单重新生成 JSON";
     }
 
+    private void PrepareForRecordingStart()
+    {
+        IsRecorderMode = true;
+        IsTopmost = false;
+        if (!string.IsNullOrWhiteSpace(MapName))
+        {
+            TaskContext.Instance().Config.DevConfig.RecordMapName = MapName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(RecordMapMatchMethod))
+        {
+            TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod = RecordMapMatchMethod;
+        }
+
+        TryActivateGenshinWindow();
+        RecordStatusText = "录制器：启动中...";
+    }
+
+    [RelayCommand]
+    private async Task ToggleRecording()
+    {
+        if (PathRecorder.Instance.IsRecording)
+        {
+            await StopRecording();
+            return;
+        }
+
+        await StartRecording();
+    }
+
     [RelayCommand]
     private async Task StartRecording()
     {
@@ -1217,13 +1915,29 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
-        IsRecorderMode = true;
-        IsTopmost = false;
-        TryActivateGenshinWindow();
-        RecordStatusText = "录制器：启动中...";
-        await Task.Run(() => PathRecorder.Instance.Start());
+        PrepareForRecordingStart();
+        var started = await Task.Run(() => PathRecorder.Instance.Start());
         LoadRecorderTask(PathRecorder.Instance.CurrentTask);
-        RecordStatusText = $"录制器：录制中 / {RecordedWaypoints.Count} 点";
+        IsPathRecorderRecording = started && PathRecorder.Instance.IsRecording;
+        RecordStatusText = started && PathRecorder.Instance.IsRecording
+            ? $"录制器：录制中 / {RecordedWaypoints.Count} 点"
+            : "录制器：启动失败 / 未识别当前位置";
+    }
+
+    [RelayCommand]
+    private async Task StopRecording()
+    {
+        if (!PathRecorder.Instance.IsRecording)
+        {
+            IsPathRecorderRecording = false;
+            RecordStatusText = "录制器：未开始";
+            return;
+        }
+
+        await Task.Run(() => PathRecorder.Instance.Save());
+        LoadRecorderTask(PathRecorder.Instance.CurrentTask);
+        IsPathRecorderRecording = PathRecorder.Instance.IsRecording;
+        RecordStatusText = $"录制器：已停止 / {RecordedWaypoints.Count} 点";
     }
 
     [RelayCommand]
@@ -1238,6 +1952,7 @@ public partial class MapViewerViewModel : ObservableObject
         RecordStatusText = "录制器：识别当前位置...";
         await Task.Run(() => PathRecorder.Instance.AddWaypoint());
         LoadRecorderTask(PathRecorder.Instance.CurrentTask);
+        IsPathRecorderRecording = PathRecorder.Instance.IsRecording;
         RecordStatusText = $"录制器：录制中 / {RecordedWaypoints.Count} 点";
     }
 
@@ -1272,8 +1987,9 @@ public partial class MapViewerViewModel : ObservableObject
         task.FullPath = filePath;
         task.FileName = Path.GetFileName(filePath);
         RecordFilePathText = $"文件：{filePath}";
-        PathRecorder.Instance.ReplaceTask(task);
+        PathRecorder.Instance.ReplaceTask(task, publish: false);
         LoadRecorderTask(task);
+        UpdateSelectedRecordedRoute(task, filePath);
         RecordStatusText = $"录制器：已保存 / {Path.GetFileName(filePath)}";
     }
 
@@ -1308,8 +2024,9 @@ public partial class MapViewerViewModel : ObservableObject
         task.FullPath = filePath;
         task.FileName = Path.GetFileName(filePath);
         RecordFilePathText = $"文件：{filePath}";
-        PathRecorder.Instance.ReplaceTask(task);
+        PathRecorder.Instance.ReplaceTask(task, publish: false);
         LoadRecorderTask(task);
+        UpdateSelectedRecordedRoute(task, filePath);
         RecordStatusText = $"录制器：已另存 / {Path.GetFileName(filePath)}";
     }
 
@@ -1326,30 +2043,22 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
-        var dialog = new OpenFileDialog
-        {
-            Title = "导入路线 JSON",
-            Filter = "路线 JSON (*.json)|*.json|所有文件 (*.*)|*.*",
-            InitialDirectory = Directory.Exists(MapPathingViewModel.PathJsonPath)
-                ? MapPathingViewModel.PathJsonPath
-                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-        };
-
-        if (dialog.ShowDialog() != true)
-        {
-            return;
-        }
-
-        var task = PathingTask.BuildFromFilePath(dialog.FileName);
-        MapName = string.IsNullOrWhiteSpace(task.Info.MapName) ? MapName : task.Info.MapName;
-        _recordFilePath = dialog.FileName;
-        RecordFilePathText = $"文件：{dialog.FileName}";
-        LoadRecorderTask(task);
-        RecordStatusText = $"录制器：已导入 / {Path.GetFileName(dialog.FileName)}";
+        OpenRouteFileBrowser();
     }
 
     [RelayCommand]
-    private void ImportAndMergeRecordings()
+    private void ImportFromSystemDialog()
+    {
+        ImportRecordingsFromSystemDialog(mergeIntoCurrent: false, multiselect: false);
+    }
+
+    [RelayCommand]
+    private void ImportMultipleRecordings()
+    {
+        ImportRecordingsFromSystemDialog(mergeIntoCurrent: false, multiselect: true);
+    }
+
+    private void ImportRecordingsFromSystemDialog(bool mergeIntoCurrent, bool multiselect)
     {
         if (!CanEditRecorder())
         {
@@ -1363,15 +2072,367 @@ public partial class MapViewerViewModel : ObservableObject
 
         var dialog = new OpenFileDialog
         {
-            Title = "合并路线 JSON",
+            Title = mergeIntoCurrent ? "合并路线 JSON" : "导入路线 JSON",
             Filter = "路线 JSON (*.json)|*.json|所有文件 (*.*)|*.*",
-            Multiselect = true,
+            Multiselect = multiselect,
             InitialDirectory = Directory.Exists(MapPathingViewModel.PathJsonPath)
                 ? MapPathingViewModel.PathJsonPath
                 : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
         };
 
-        if (dialog.ShowDialog() != true || dialog.FileNames.Length == 0)
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        if (mergeIntoCurrent)
+        {
+            MergeImportedFilesIntoCurrent(dialog.FileNames);
+            return;
+        }
+
+        ImportRouteFilesToList(dialog.FileNames);
+    }
+
+    [RelayCommand]
+    private void OpenRouteFileBrowser()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (!ConfirmJsonEditsBeforeLeavingRecorder(DialogOwner))
+        {
+            return;
+        }
+
+        IsRouteFileBrowserOpen = true;
+        LoadRouteBrowserItems(RouteBrowserRelativePath);
+    }
+
+    [RelayCommand]
+    private void CloseRouteFileBrowser()
+    {
+        IsRouteFileBrowserOpen = false;
+    }
+
+    [RelayCommand]
+    private void RouteBrowserGoBack()
+    {
+        if (string.IsNullOrWhiteSpace(RouteBrowserRelativePath))
+        {
+            return;
+        }
+
+        var parent = Path.GetDirectoryName(RouteBrowserRelativePath);
+        LoadRouteBrowserItems(parent ?? string.Empty);
+    }
+
+    [RelayCommand]
+    private void RouteBrowserGoRoot()
+    {
+        LoadRouteBrowserItems(string.Empty);
+    }
+
+    [RelayCommand]
+    private void RouteBrowserRefresh()
+    {
+        LoadRouteBrowserItems(RouteBrowserRelativePath);
+    }
+
+    [RelayCommand]
+    private void RouteBrowserOpenItem(RouteFileBrowserItemViewModel? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        if (item.IsDirectory)
+        {
+            LoadRouteBrowserItems(item.RelativePath);
+            return;
+        }
+
+        if (item.IsJsonFile)
+        {
+            item.IsSelected = !item.IsSelected;
+        }
+    }
+
+    [RelayCommand]
+    private void RouteBrowserSelectAll()
+    {
+        var jsonItems = RouteBrowserItems.Where(i => i.IsJsonFile).ToList();
+        if (jsonItems.Count == 0)
+        {
+            return;
+        }
+
+        var shouldSelect = jsonItems.Any(i => !i.IsSelected);
+        foreach (var item in jsonItems)
+        {
+            item.IsSelected = shouldSelect;
+        }
+    }
+
+    [RelayCommand]
+    private void ImportSelectedBrowserFiles()
+    {
+        var selectedFiles = RouteBrowserItems
+            .Where(i => i is { IsSelected: true, IsJsonFile: true })
+            .Select(i => i.FullPath)
+            .ToList();
+        if (selectedFiles.Count == 0)
+        {
+            RouteBrowserImportStatusText = "请选择至少一个 JSON 文件";
+            return;
+        }
+
+        ImportRouteFilesToList(selectedFiles);
+        RouteBrowserImportStatusText = $"已导入 {selectedFiles.Count} 个文件";
+        IsRouteFileBrowserOpen = false;
+    }
+
+    private void LoadRouteBrowserItems(string? relativePath)
+    {
+        _isLoadingRouteBrowser = true;
+        try
+        {
+            Directory.CreateDirectory(MapPathingViewModel.PathJsonPath);
+            var safeRelativePath = NormalizeRouteBrowserRelativePath(relativePath);
+            var directory = ResolveRouteBrowserPath(safeRelativePath);
+            if (directory == null || !Directory.Exists(directory))
+            {
+                safeRelativePath = string.Empty;
+                directory = MapPathingViewModel.PathJsonPath;
+            }
+
+            RouteBrowserRelativePath = safeRelativePath;
+            RouteBrowserItems.Clear();
+            foreach (var item in Directory.GetDirectories(directory)
+                         .OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase)
+                         .Select(path => RouteFileBrowserItemViewModel.Create(path, MapPathingViewModel.PathJsonPath, isDirectory: true))
+                         .Concat(Directory.GetFiles(directory)
+                             .OrderBy(Path.GetFileName, StringComparer.CurrentCultureIgnoreCase)
+                             .Select(path => RouteFileBrowserItemViewModel.Create(path, MapPathingViewModel.PathJsonPath, isDirectory: false))))
+            {
+                RouteBrowserItems.Add(item);
+            }
+
+            RouteBrowserImportStatusText = RouteBrowserItems.Count == 0
+                ? "当前目录为空"
+                : "选择 JSON 文件后导入";
+            OnPropertyChanged(nameof(RouteBrowserSelectionText));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            RouteBrowserImportStatusText = $"读取目录失败：{ex.Message}";
+        }
+        finally
+        {
+            _isLoadingRouteBrowser = false;
+        }
+    }
+
+    private static string NormalizeRouteBrowserRelativePath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath) || relativePath == ".")
+        {
+            return string.Empty;
+        }
+
+        var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar).Trim();
+        normalized = normalized.Trim(Path.DirectorySeparatorChar);
+        return normalized.Contains("..", StringComparison.Ordinal)
+            ? string.Empty
+            : normalized;
+    }
+
+    private static string? ResolveRouteBrowserPath(string? relativePath)
+    {
+        var root = Path.GetFullPath(MapPathingViewModel.PathJsonPath);
+        var candidate = string.IsNullOrWhiteSpace(relativePath)
+            ? root
+            : Path.GetFullPath(Path.Combine(root, relativePath));
+        return (candidate.Equals(root, StringComparison.OrdinalIgnoreCase)
+                || candidate.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            ? candidate
+            : null;
+    }
+
+    [RelayCommand]
+    private void OpenCombatScriptManager()
+    {
+        IsCombatScriptManagerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseCombatScriptManager()
+    {
+        IsCombatScriptManagerOpen = false;
+    }
+
+    [RelayCommand]
+    private void AddCombatScript()
+    {
+        var value = (NewCombatScriptValue ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            RecordStatusText = "录制器：战斗策略不能为空";
+            return;
+        }
+
+        if (CombatScripts.Any(i => string.Equals(i.Value, value, StringComparison.Ordinal)))
+        {
+            RecordStatusText = "录制器：战斗策略已存在";
+            return;
+        }
+
+        var option = new CombatScriptOptionViewModel(value, NewCombatScriptIsDefault || CombatScripts.Count == 0);
+        CombatScripts.Add(option);
+        if (option.IsDefault)
+        {
+            SetDefaultCombatScript(option);
+        }
+
+        NewCombatScriptValue = string.Empty;
+        NewCombatScriptIsDefault = false;
+        RecordStatusText = "录制器：已添加战斗策略";
+    }
+
+    [RelayCommand]
+    private void DeleteCombatScript(CombatScriptOptionViewModel? option)
+    {
+        if (option == null)
+        {
+            return;
+        }
+
+        var wasDefault = option.IsDefault;
+        CombatScripts.Remove(option);
+        if (wasDefault && CombatScripts.Count > 0)
+        {
+            CombatScripts[0].IsDefault = true;
+        }
+
+        RecordStatusText = "录制器：已删除战斗策略";
+    }
+
+    [RelayCommand]
+    private void SetDefaultCombatScript(CombatScriptOptionViewModel? option)
+    {
+        if (option == null)
+        {
+            return;
+        }
+
+        foreach (var item in CombatScripts)
+        {
+            item.IsDefault = ReferenceEquals(item, option);
+        }
+
+        SaveCombatScripts();
+    }
+
+    private string GetDefaultCombatScriptValue()
+    {
+        return CombatScripts.FirstOrDefault(i => i.IsDefault)?.Value ?? string.Empty;
+    }
+
+    private void AddCombatScriptFromWaypointIfNeeded(Waypoint waypoint)
+    {
+        if (!string.Equals(waypoint.Action, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(waypoint.ActionParams)
+            || CombatScripts.Any(i => string.Equals(i.Value, waypoint.ActionParams, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        CombatScripts.Add(new CombatScriptOptionViewModel(waypoint.ActionParams.Trim(), CombatScripts.Count == 0));
+    }
+
+    private void LoadCombatScripts()
+    {
+        try
+        {
+            _isLoadingCombatScripts = true;
+            var path = GetCombatScriptStorePath();
+            if (!File.Exists(path))
+            {
+                return;
+            }
+
+            var json = File.ReadAllText(path);
+            var items = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CombatScriptOptionStoreItem>>(json) ?? [];
+            foreach (var item in items.Where(i => !string.IsNullOrWhiteSpace(i.Value)))
+            {
+                CombatScripts.Add(new CombatScriptOptionViewModel(item.Value.Trim(), item.Def));
+            }
+
+            EnsureSingleDefaultCombatScript();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+        finally
+        {
+            _isLoadingCombatScripts = false;
+        }
+    }
+
+    private void SaveCombatScripts()
+    {
+        try
+        {
+            var path = GetCombatScriptStorePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? MapPathingViewModel.PathJsonPath);
+            EnsureSingleDefaultCombatScript();
+            var items = CombatScripts
+                .Where(i => !string.IsNullOrWhiteSpace(i.Value))
+                .Select(i => new CombatScriptOptionStoreItem { Value = i.Value.Trim(), Def = i.IsDefault })
+                .ToList();
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(items, Newtonsoft.Json.Formatting.Indented);
+            File.WriteAllText(path, json, new System.Text.UTF8Encoding(false));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+    }
+
+    private void EnsureSingleDefaultCombatScript()
+    {
+        var defaults = CombatScripts.Where(i => i.IsDefault).ToList();
+        if (defaults.Count == 0 && CombatScripts.Count > 0)
+        {
+            CombatScripts[0].IsDefault = true;
+            return;
+        }
+
+        foreach (var item in defaults.Skip(1))
+        {
+            item.IsDefault = false;
+        }
+    }
+
+    private static string GetCombatScriptStorePath()
+    {
+        return Path.Combine(MapPathingViewModel.PathJsonPath, ".editor", "combat_scripts.json");
+    }
+
+    [RelayCommand]
+    private void ImportAndMergeRecordings()
+    {
+        ImportRecordingsFromSystemDialog(mergeIntoCurrent: true, multiselect: true);
+    }
+
+    private void MergeImportedFilesIntoCurrent(IReadOnlyList<string> fileNames)
+    {
+        if (fileNames.Count == 0)
         {
             return;
         }
@@ -1379,21 +2440,24 @@ public partial class MapViewerViewModel : ObservableObject
         var appendCount = 0;
         if (RecordedWaypoints.Count == 0)
         {
-            var firstTask = PathingTask.BuildFromFilePath(dialog.FileNames[0]);
+            var firstTask = PathingTask.BuildFromFilePath(fileNames[0]);
             if (firstTask == null)
             {
+                ThemedMessageBox.Error("路线文件解析失败，可能是 JSON 格式无效或要求的 BetterGI 版本高于当前版本。", "导入路线失败", MessageBoxButton.OK, MessageBoxResult.OK);
                 return;
             }
 
             MapName = string.IsNullOrWhiteSpace(firstTask.Info.MapName) ? MapName : firstTask.Info.MapName;
+            _recordFilePath = firstTask.FullPath;
+            RecordFilePathText = $"文件：{firstTask.FullPath}";
             LoadRecorderTask(firstTask);
             appendCount += firstTask.Positions.Count;
         }
 
         var startIndex = appendCount > 0 ? 1 : 0;
-        for (var i = startIndex; i < dialog.FileNames.Length; i++)
+        for (var i = startIndex; i < fileNames.Count; i++)
         {
-            var task = PathingTask.BuildFromFilePath(dialog.FileNames[i]);
+            var task = PathingTask.BuildFromFilePath(fileNames[i]);
             if (task == null)
             {
                 continue;
@@ -1408,7 +2472,7 @@ public partial class MapViewerViewModel : ObservableObject
 
         ReindexRecordedWaypoints();
         SelectedRecordedWaypoint = RecordedWaypoints.FirstOrDefault();
-        RecordStatusText = $"录制器：已合并 {dialog.FileNames.Length} 个文件 / {appendCount} 点";
+        RecordStatusText = $"录制器：已合并 {fileNames.Count} 个文件 / {appendCount} 点";
         PublishRecorderPath();
     }
 
@@ -1433,27 +2497,212 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
-        if (!TryGetRequiredRecordName(out var routeName))
+        var routeName = string.IsNullOrWhiteSpace(task.Info.Name) ? RecordFileName : task.Info.Name.Trim();
+        var selectedIndex = SelectedRecordedRoute == null ? RecordedRoutes.Count : RecordedRoutes.IndexOf(SelectedRecordedRoute);
+        if (selectedIndex < 0)
         {
-            return;
+            selectedIndex = RecordedRoutes.Count;
         }
 
-        var baseFilePath = ResolveRecordFilePath(string.IsNullOrWhiteSpace(_recordFilePath), routeName);
-        if (string.IsNullOrWhiteSpace(baseFilePath))
+        if (SelectedRecordedRoute != null)
         {
-            return;
+            RecordedRoutes.Remove(SelectedRecordedRoute);
         }
 
-        var directory = Path.GetDirectoryName(baseFilePath) ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var firstSplitRoute = default(RecordedRouteViewModel);
         for (var i = 0; i < groups.Count; i++)
         {
             var splitTask = ClonePathingTask(task);
-            splitTask.Info.Name = $"{routeName}_{i + 1}";
+            splitTask.Info.Name = i == 0 ? routeName : $"{routeName}_{i + 1}";
             splitTask.Positions = groups[i];
-            splitTask.SaveToFile(Path.Combine(directory, $"{splitTask.Info.Name}.json"));
+            splitTask.FullPath = string.Empty;
+            splitTask.FileName = string.Empty;
+            var splitRoute = CreateRecordedRoute(splitTask, string.Empty);
+            RecordedRoutes.Insert(Math.Min(selectedIndex + i, RecordedRoutes.Count), splitRoute);
+            firstSplitRoute ??= splitRoute;
         }
 
-        RecordStatusText = $"录制器：已按传送点拆分为 {groups.Count} 个文件";
+        SelectRecordedRouteWithoutReload(firstSplitRoute);
+        if (firstSplitRoute != null)
+        {
+            LoadRecordedRoute(firstSplitRoute);
+        }
+
+        RecordStatusText = $"录制器：已按传送点拆分为 {groups.Count} 条路线";
+    }
+
+    [RelayCommand]
+    private void DeleteSelectedRecordedRoute()
+    {
+        if (!CanEditRecorder() || SelectedRecordedRoute == null)
+        {
+            return;
+        }
+
+        var route = SelectedRecordedRoute;
+        var index = RecordedRoutes.IndexOf(route);
+        RecordedRoutes.Remove(route);
+        if (RecordedRoutes.Count == 0)
+        {
+            NewRecording();
+            return;
+        }
+
+        SelectedRecordedRoute = RecordedRoutes[Math.Clamp(index, 0, RecordedRoutes.Count - 1)];
+        RecordStatusText = $"录制器：已删除路线 / {route.Name}";
+    }
+
+    [RelayCommand]
+    private void MergeRecordedRoutes()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (RecordedRoutes.Count <= 1)
+        {
+            RecordStatusText = "录制器：至少需要两条路线才能合并";
+            return;
+        }
+
+        var baseRoute = SelectedRecordedRoute ?? RecordedRoutes[0];
+        var baseTask = ClonePathingTask(baseRoute.Task);
+        baseTask.Positions = RecordedRoutes
+            .SelectMany(route => route.Task.Positions.Select(CloneWaypoint))
+            .ToList();
+        baseTask.Info.Name = string.IsNullOrWhiteSpace(baseTask.Info.Name) ? baseRoute.Name : baseTask.Info.Name;
+        baseTask.FullPath = string.Empty;
+        baseTask.FileName = string.Empty;
+
+        RecordedRoutes.Clear();
+        var mergedRoute = CreateRecordedRoute(baseTask, string.Empty);
+        RecordedRoutes.Add(mergedRoute);
+        SelectRecordedRouteWithoutReload(mergedRoute);
+        LoadRecordedRoute(mergedRoute);
+        RecordStatusText = $"录制器：已合并为 1 条路线 / {baseTask.Positions.Count} 点";
+    }
+
+    private void ImportRouteFilesToList(IReadOnlyList<string> fileNames)
+    {
+        if (fileNames.Count == 0)
+        {
+            return;
+        }
+
+        var successCount = 0;
+        var failedFiles = new List<string>();
+        RecordedRouteViewModel? firstImported = null;
+        foreach (var fileName in fileNames)
+        {
+            try
+            {
+                var task = PathingTask.BuildFromFilePath(fileName);
+                if (task == null)
+                {
+                    failedFiles.Add(Path.GetFileName(fileName));
+                    continue;
+                }
+
+                var route = AddRecordedRoute(task, fileName, select: firstImported == null && SelectedRecordedRoute == null);
+                firstImported ??= route;
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                failedFiles.Add(Path.GetFileName(fileName));
+            }
+        }
+
+        if (firstImported != null)
+        {
+            SelectedRecordedRoute = firstImported;
+        }
+
+        RecordStatusText = failedFiles.Count == 0
+            ? $"录制器：已导入 {successCount} 条路线"
+            : $"录制器：已导入 {successCount} 条路线 / {failedFiles.Count} 个失败";
+    }
+
+    private RecordedRouteViewModel AddRecordedRoute(PathingTask task, string? filePath, bool select)
+    {
+        task.Info ??= new PathingTaskInfo();
+        task.Positions ??= [];
+        if (!string.IsNullOrWhiteSpace(filePath))
+        {
+            task.FullPath = filePath;
+            task.FileName = Path.GetFileName(filePath);
+        }
+
+        if (string.IsNullOrWhiteSpace(task.Info.Name))
+        {
+            task.Info.Name = !string.IsNullOrWhiteSpace(filePath)
+                ? Path.GetFileNameWithoutExtension(filePath)
+                : "未命名路线";
+        }
+
+        var route = CreateRecordedRoute(task, filePath ?? task.FullPath);
+        RecordedRoutes.Add(route);
+        if (select)
+        {
+            SelectedRecordedRoute = route;
+        }
+
+        return route;
+    }
+
+    private RecordedRouteViewModel CreateRecordedRoute(PathingTask task, string? filePath)
+    {
+        return new RecordedRouteViewModel(ClonePathingTask(task), filePath ?? task.FullPath);
+    }
+
+    private void LoadRecordedRoute(RecordedRouteViewModel? route)
+    {
+        if (route == null)
+        {
+            return;
+        }
+
+        _isSwitchingRecordedRoute = true;
+        try
+        {
+            foreach (var item in RecordedRoutes)
+            {
+                item.IsSelected = ReferenceEquals(item, route);
+            }
+
+            var task = ClonePathingTask(route.Task);
+            MapName = string.IsNullOrWhiteSpace(task.Info.MapName) ? MapName : task.Info.MapName;
+            _recordFilePath = string.IsNullOrWhiteSpace(route.FilePath) ? null : route.FilePath;
+            RecordFilePathText = string.IsNullOrWhiteSpace(_recordFilePath) ? "文件：未保存" : $"文件：{_recordFilePath}";
+            LoadRecorderTask(task);
+            PathRecorder.Instance.ReplaceTask(task, publish: false);
+            RecordStatusText = $"录制器：已选择路线 / {route.Name}";
+        }
+        finally
+        {
+            _isSwitchingRecordedRoute = false;
+        }
+
+        PublishRecorderPath();
+    }
+
+    private void SelectRecordedRouteWithoutReload(RecordedRouteViewModel? route)
+    {
+        _isSwitchingRecordedRoute = true;
+        try
+        {
+            SelectedRecordedRoute = route;
+            foreach (var item in RecordedRoutes)
+            {
+                item.IsSelected = ReferenceEquals(item, route);
+            }
+        }
+        finally
+        {
+            _isSwitchingRecordedRoute = false;
+        }
     }
 
     [RelayCommand]
@@ -1507,6 +2756,9 @@ public partial class MapViewerViewModel : ObservableObject
         RecordEnableMonsterLootSplit = false;
         RecordMapMatchMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
         RecordStatusText = "录制器：新路线";
+        var newRoute = CreateRecordedRoute(BuildRecordedTask(), string.Empty);
+        RecordedRoutes.Add(newRoute);
+        SelectRecordedRouteWithoutReload(newRoute);
         RefreshDebugJson();
         PublishRecorderPath();
     }
@@ -1573,6 +2825,24 @@ public partial class MapViewerViewModel : ObservableObject
         RecordStatusText = $"录制器：已复制 {selected.Count} 个点";
     }
 
+    [RelayCommand]
+    private void CopyWaypointSelection()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypointsFromState();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        CopyWaypointsToClipboard(selected);
+        RecordStatusText = $"录制器：已复制 {selected.Count} 个点";
+    }
+
     private void CutSelectedRecordedWaypoints(IList selectedItems)
     {
         if (!CanEditRecorder())
@@ -1581,6 +2851,25 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         var selected = GetSelectedRecordedWaypoints(selectedItems);
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        CopyWaypointsToClipboard(selected);
+        RemoveRecordedWaypoints(selected);
+        RecordStatusText = $"录制器：已剪切 {selected.Count} 个点";
+    }
+
+    [RelayCommand]
+    private void CutWaypointSelection()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypointsFromState();
         if (selected.Count == 0)
         {
             return;
@@ -1604,7 +2893,7 @@ public partial class MapViewerViewModel : ObservableObject
             _recordFilePath = null;
             RecordFilePathText = "文件：未保存";
             LoadRecorderTask(task);
-            PathRecorder.Instance.ReplaceTask(task);
+            PathRecorder.Instance.ReplaceTask(task, publish: false);
             IsJsonEditorMode = false;
             RecordStatusText = $"录制器：已从剪贴板载入路线 / {RecordFileName}";
             return;
@@ -1645,6 +2934,67 @@ public partial class MapViewerViewModel : ObservableObject
         RecordStatusText = $"录制器：已粘贴 {pasted.Count} 个点";
     }
 
+    [RelayCommand]
+    private void PasteWaypointSelection()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        if (TryReadPathingTaskFromClipboard(out var task, out var routeErrorMessage))
+        {
+            _recordFilePath = null;
+            RecordFilePathText = "文件：未保存";
+            LoadRecorderTask(task);
+            PathRecorder.Instance.ReplaceTask(task, publish: false);
+            IsJsonEditorMode = false;
+            ClearWaypointSelectionState();
+            RecordStatusText = $"录制器：已从剪贴板载入路线 / {RecordFileName}";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(routeErrorMessage))
+        {
+            RecordStatusText = $"录制器：剪贴板路线无效 / {routeErrorMessage}";
+            return;
+        }
+
+        var waypoints = ReadWaypointsFromClipboard();
+        if (waypoints.Count == 0)
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypointsFromState();
+        var insertIndex = selected.Count == 0
+            ? RecordedWaypoints.Count
+            : RecordedWaypoints.IndexOf(selected.Last()) + 1;
+
+        var pasted = waypoints.Select(i => CreateRecordedWaypointViewModel(i)).ToList();
+        for (var i = 0; i < pasted.Count; i++)
+        {
+            RecordedWaypoints.Insert(insertIndex + i, pasted[i]);
+        }
+
+        ClearWaypointSelectionState();
+        foreach (var item in pasted)
+        {
+            item.IsSelected = true;
+        }
+
+        SelectedRecordedWaypoint = pasted.FirstOrDefault();
+        ReindexRecordedWaypoints();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectRecordedWaypointRows",
+            new object(),
+            pasted));
+        PublishSelectedRecorderWaypoints(pasted);
+        PublishRecorderPath();
+        RecordStatusText = $"录制器：已粘贴 {pasted.Count} 个点";
+    }
+
     private void DuplicateSelectedRecordedWaypoints(IList selectedItems)
     {
         if (!CanEditRecorder())
@@ -1662,6 +3012,24 @@ public partial class MapViewerViewModel : ObservableObject
         PasteRecordedWaypoints(selectedItems);
     }
 
+    [RelayCommand]
+    private void DuplicateWaypointSelection()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypointsFromState();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        CopyWaypointsToClipboard(selected);
+        PasteWaypointSelection();
+    }
+
     private void DeleteSelectedRecordedWaypoints(IList selectedItems)
     {
         if (!CanEditRecorder())
@@ -1670,6 +3038,24 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         var selected = GetSelectedRecordedWaypoints(selectedItems);
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        RemoveRecordedWaypoints(selected);
+        RecordStatusText = $"录制器：已删除 {selected.Count} 个点";
+    }
+
+    [RelayCommand]
+    private void DeleteWaypointSelection()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        var selected = GetSelectedRecordedWaypointsFromState();
         if (selected.Count == 0)
         {
             return;
@@ -1694,6 +3080,34 @@ public partial class MapViewerViewModel : ObservableObject
 
         SelectedRecordedWaypoint = selectedItems.OfType<RecordedWaypointViewModel>().FirstOrDefault();
         RecordStatusText = $"录制器：已选中 {selectedItems.Count} 个点";
+    }
+
+    [RelayCommand]
+    private void SelectAllWaypointSelection()
+    {
+        if (!CanEditRecorder())
+        {
+            return;
+        }
+
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "SelectAllRecordedWaypointRows",
+            new object(),
+            new object()));
+    }
+
+    [RelayCommand]
+    private void ClearWaypointSelection()
+    {
+        ClearWaypointSelectionState();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "ClearRecordedWaypointRowsSelection",
+            new object(),
+            new object()));
+        PublishSelectedRecorderWaypoints();
+        RecordStatusText = "录制器：已取消点位选择";
     }
 
     [RelayCommand]
@@ -1985,10 +3399,25 @@ public partial class MapViewerViewModel : ObservableObject
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(this, "SelectPathingTargetPosition", new object(), selectedPoint));
     }
 
+    private void UpdateRoutePlanningCurrentPosition(Point2f point)
+    {
+        if (!FollowRoutePlanningCurrentPosition)
+        {
+            return;
+        }
+
+        CurrentImageX = Math.Round(point.X, 1);
+        CurrentImageY = Math.Round(point.Y, 1);
+    }
+
     private void HandleMapPointSelected(Point2f targetPoint)
     {
         _selectedTargetPoint = targetPoint;
         SelectedTargetText = $"目标点：{FormatCoordinate(targetPoint.X)}, {FormatCoordinate(targetPoint.Y)}";
+        TargetImageX = Math.Round(targetPoint.X, 1);
+        TargetImageY = Math.Round(targetPoint.Y, 1);
+        TargetPickSummary = $"目标点：{TargetImageX:F1}, {TargetImageY:F1}";
+        _ = RefreshRouteDiagnosticsLiteAsync();
         if (!IsRecorderMode)
         {
             return;
@@ -2010,6 +3439,47 @@ public partial class MapViewerViewModel : ObservableObject
             Type = WaypointType.Path.Code,
             MoveMode = MoveModeEnum.Walk.Code
         });
+    }
+
+    private void SelectRecordedWaypointByIndex(int waypointIndex)
+    {
+        if (waypointIndex < 0 || waypointIndex >= RecordedWaypoints.Count)
+        {
+            return;
+        }
+
+        SelectedRecordedWaypoint = RecordedWaypoints[waypointIndex];
+        foreach (var item in RecordedWaypoints)
+        {
+            item.IsSelected = ReferenceEquals(item, SelectedRecordedWaypoint);
+        }
+
+        PublishSelectedRecorderWaypoints();
+    }
+
+    private void MoveRecordedWaypointFromMap(int waypointIndex, Point2f point)
+    {
+        if (!CanEditRecorder() || waypointIndex < 0 || waypointIndex >= RecordedWaypoints.Count)
+        {
+            return;
+        }
+
+        var waypoint = RecordedWaypoints[waypointIndex];
+        _isUpdatingWaypointFromMap = true;
+        try
+        {
+            waypoint.X = RoundCoordinate(point.X);
+            waypoint.Y = RoundCoordinate(point.Y);
+        }
+        finally
+        {
+            _isUpdatingWaypointFromMap = false;
+        }
+
+        SelectedRecordedWaypoint = waypoint;
+        RecordStatusText = $"录制器：已移动第 {waypoint.Index} 点";
+        PublishSelectedRecorderWaypoints();
+        PublishRecorderPath();
     }
 
     private bool TryParseTargetPoint(out Point2f targetPoint)
@@ -2065,6 +3535,31 @@ public partial class MapViewerViewModel : ObservableObject
         }
 
         return selected;
+    }
+
+    private List<RecordedWaypointViewModel> GetSelectedRecordedWaypointsFromState()
+    {
+        var selected = RecordedWaypoints
+            .Where(i => i.IsSelected)
+            .OrderBy(i => RecordedWaypoints.IndexOf(i))
+            .ToList();
+
+        if (selected.Count == 0 && SelectedRecordedWaypoint != null && RecordedWaypoints.Contains(SelectedRecordedWaypoint))
+        {
+            selected.Add(SelectedRecordedWaypoint);
+        }
+
+        return selected;
+    }
+
+    private void ClearWaypointSelectionState()
+    {
+        foreach (var waypoint in RecordedWaypoints)
+        {
+            waypoint.IsSelected = false;
+        }
+
+        SelectedRecordedWaypoint = null;
     }
 
     private void CopyWaypointsToClipboard(List<RecordedWaypointViewModel> selected)
@@ -2317,6 +3812,7 @@ public partial class MapViewerViewModel : ObservableObject
             : task.Info.MapMatchMethod;
         foreach (var waypoint in task.Positions)
         {
+            AddCombatScriptFromWaypointIfNeeded(waypoint);
             RecordedWaypoints.Add(CreateRecordedWaypointViewModel(waypoint));
         }
 
@@ -2441,13 +3937,55 @@ public partial class MapViewerViewModel : ObservableObject
             return;
         }
 
-        RefreshDebugJson();
+        var task = BuildRecordedTask();
+        UpdateSelectedRecordedRoute(task, _recordFilePath);
+        PathRecorder.Instance.ReplaceTask(task, publish: false);
+        RefreshDebugJson(task);
         WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
             this,
             "UpdateRecorderPathing",
             new object(),
-            BuildRecordedTask()));
-        SnapshotRecorderState();
+            task));
+        PublishRecordedRouteList();
+        SnapshotRecorderState(task);
+    }
+
+    private void UpdateSelectedRecordedRoute(PathingTask task, string? filePath)
+    {
+        if (_isSwitchingRecordedRoute)
+        {
+            return;
+        }
+
+        var route = SelectedRecordedRoute;
+        if (route == null)
+        {
+            route = CreateRecordedRoute(task, filePath ?? string.Empty);
+            RecordedRoutes.Add(route);
+            SelectRecordedRouteWithoutReload(route);
+            return;
+        }
+
+        route.ReplaceTask(ClonePathingTask(task), filePath ?? route.FilePath);
+    }
+
+    private void PublishRecordedRouteList()
+    {
+        if (!IsRecorderMode)
+        {
+            return;
+        }
+
+        var tasks = RecordedRoutes
+            .Select(i => i.Task)
+            .Where(task => string.IsNullOrWhiteSpace(task.Info?.MapName)
+                           || string.Equals(task.Info.MapName, MapName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        WeakReferenceMessenger.Default.Send(new PropertyChangedMessage<object>(
+            this,
+            "UpdateRecorderRouteList",
+            new object(),
+            tasks));
     }
 
     private void UpdateTaskSummary(PathingTask pathingTask)
@@ -2507,7 +4045,7 @@ public partial class MapViewerViewModel : ObservableObject
 
         MapName = string.IsNullOrWhiteSpace(task.Info.MapName) ? MapName : task.Info.MapName;
         LoadRecorderTask(task);
-        PathRecorder.Instance.ReplaceTask(task);
+        PathRecorder.Instance.ReplaceTask(task, publish: false);
 
         if (saveToFile)
         {
@@ -2582,14 +4120,14 @@ public partial class MapViewerViewModel : ObservableObject
         return TryBuildTaskFromJsonEditor(DebugJsonText, out task, out errorMessage);
     }
 
-    private void SnapshotRecorderState()
+    private void SnapshotRecorderState(PathingTask? task = null)
     {
         if (_isRestoringRecorderHistory)
         {
             return;
         }
 
-        var snapshot = BuildRecordedTask().ToJsonString();
+        var snapshot = (task ?? BuildRecordedTask()).ToJsonString();
         if (_recorderHistoryIndex >= 0 && _recorderHistoryIndex < _recorderHistory.Count && _recorderHistory[_recorderHistoryIndex] == snapshot)
         {
             return;
@@ -2627,7 +4165,7 @@ public partial class MapViewerViewModel : ObservableObject
         try
         {
             LoadRecorderTask(task);
-            PathRecorder.Instance.ReplaceTask(task);
+            PathRecorder.Instance.ReplaceTask(task, publish: false);
         }
         finally
         {
@@ -2707,6 +4245,7 @@ public partial class MapViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(MapColumnWidth));
         OnPropertyChanged(nameof(SplitterColumnWidth));
         OnPropertyChanged(nameof(SideColumnWidth));
+        OnPropertyChanged(nameof(SideColumnMinWidth));
         OnPropertyChanged(nameof(SidePanelVisibility));
         OnPropertyChanged(nameof(SidePanelHiddenVisibility));
         OnPropertyChanged(nameof(SidePanelToggleText));
@@ -2841,6 +4380,26 @@ public partial class MapViewerViewModel : ObservableObject
         return value.StartsWith(prefix, StringComparison.Ordinal)
             ? value[prefix.Length..]
             : value;
+    }
+
+    private static string FormatRouteBool(bool value)
+    {
+        return value ? "是" : "否";
+    }
+
+    private static string FormatHotkeyText(string? hotkey)
+    {
+        return string.IsNullOrWhiteSpace(hotkey) ? "未绑定" : hotkey;
+    }
+
+    private static string ShortRouteId(string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return "-";
+        }
+
+        return nodeId.Length <= 14 ? nodeId : nodeId[..14];
     }
 
     private static string FormatAction(string? action)
@@ -3044,6 +4603,130 @@ public partial class WaypointFilterOption(string code, string displayName) : Obs
 
 public sealed record MapEditorOption(string Code, string DisplayName);
 
+public partial class RecordedRouteViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private string _name = "未命名路线";
+
+    [ObservableProperty]
+    private string _mapName = nameof(MapTypes.Teyvat);
+
+    [ObservableProperty]
+    private string _filePath = string.Empty;
+
+    [ObservableProperty]
+    private int _pointCount;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public PathingTask Task { get; private set; }
+
+    public string PointCountText => $"{PointCount} 点";
+
+    public string MapDisplayText => string.IsNullOrWhiteSpace(MapName) ? nameof(MapTypes.Teyvat) : MapName;
+
+    public string FileDisplayText => string.IsNullOrWhiteSpace(FilePath) ? "未保存" : Path.GetFileName(FilePath);
+
+    public RecordedRouteViewModel(PathingTask task, string? filePath)
+    {
+        Task = new PathingTask();
+        ReplaceTask(task, filePath);
+    }
+
+    public void ReplaceTask(PathingTask task, string? filePath)
+    {
+        task.Info ??= new PathingTaskInfo();
+        task.Positions ??= [];
+        Task = PathingTask.BuildFromJson(task.ToJsonString());
+        if (!string.IsNullOrWhiteSpace(filePath))
+        {
+            Task.FullPath = filePath;
+            Task.FileName = Path.GetFileName(filePath);
+        }
+
+        Name = string.IsNullOrWhiteSpace(Task.Info.Name) ? "未命名路线" : Task.Info.Name.Trim();
+        MapName = string.IsNullOrWhiteSpace(Task.Info.MapName) ? nameof(MapTypes.Teyvat) : Task.Info.MapName;
+        FilePath = filePath ?? Task.FullPath ?? string.Empty;
+        PointCount = Task.Positions.Count;
+    }
+
+    partial void OnNameChanged(string value)
+    {
+        Task.Info ??= new PathingTaskInfo();
+        Task.Info.Name = string.IsNullOrWhiteSpace(value) ? "未命名路线" : value.Trim();
+    }
+
+    partial void OnMapNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(MapDisplayText));
+    }
+
+    partial void OnFilePathChanged(string value)
+    {
+        OnPropertyChanged(nameof(FileDisplayText));
+    }
+
+    partial void OnPointCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(PointCountText));
+    }
+}
+
+public partial class RouteFileBrowserItemViewModel : ObservableObject
+{
+    public string Name { get; private init; } = string.Empty;
+
+    public string RelativePath { get; private init; } = string.Empty;
+
+    public string FullPath { get; private init; } = string.Empty;
+
+    public bool IsDirectory { get; private init; }
+
+    public bool IsJsonFile => !IsDirectory && string.Equals(Path.GetExtension(Name), ".json", StringComparison.OrdinalIgnoreCase);
+
+    public string KindText => IsDirectory ? "DIR" : IsJsonFile ? "JSON" : "FILE";
+
+    public string ActionText => IsDirectory ? "进入" : "选择";
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public static RouteFileBrowserItemViewModel Create(string path, string root, bool isDirectory)
+    {
+        return new RouteFileBrowserItemViewModel
+        {
+            Name = Path.GetFileName(path),
+            FullPath = path,
+            RelativePath = Path.GetRelativePath(root, path),
+            IsDirectory = isDirectory
+        };
+    }
+}
+
+public partial class CombatScriptOptionViewModel(string value, bool isDefault) : ObservableObject
+{
+    [ObservableProperty]
+    private string _value = value;
+
+    [ObservableProperty]
+    private bool _isDefault = isDefault;
+
+    public string DefaultText => IsDefault ? "默认" : string.Empty;
+
+    partial void OnIsDefaultChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DefaultText));
+    }
+}
+
+public sealed class CombatScriptOptionStoreItem
+{
+    public string Value { get; set; } = string.Empty;
+
+    public bool Def { get; set; }
+}
+
 public partial class RecordedWaypointViewModel : ObservableObject
 {
     private readonly Dictionary<string, JsonElement>? _extensionData;
@@ -3100,6 +4783,20 @@ public partial class RecordedWaypointViewModel : ObservableObject
     [ObservableProperty]
     private string _actionParameterHint = "动作参数";
 
+    public bool MisidentificationUnrecognized
+    {
+        get => HasMisidentificationType("unrecognized");
+        set => SetMisidentificationType("unrecognized", value);
+    }
+
+    public bool MisidentificationPathTooFar
+    {
+        get => HasMisidentificationType("pathTooFar");
+        set => SetMisidentificationType("pathTooFar", value);
+    }
+
+    public bool IsMisidentificationArrivalTimeEnabled => string.Equals(MisidentificationHandlingMode, "scheduledArrival", StringComparison.OrdinalIgnoreCase);
+
     public string CoordinateText => $"{MapViewerViewModel.FormatCoordinate(X)}, {MapViewerViewModel.FormatCoordinate(Y)}";
 
     public string CoordinateXText => MapViewerViewModel.FormatCoordinate(X);
@@ -3141,6 +4838,16 @@ public partial class RecordedWaypointViewModel : ObservableObject
     public string ActionDisplayText => string.IsNullOrWhiteSpace(Action)
         ? "无动作"
         : ActionEnum.GetMsgByCode(Action);
+
+    public System.Windows.Visibility CombatScriptParameterVisibility =>
+        string.Equals(Action, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+
+    public System.Windows.Visibility GeneralActionParameterVisibility =>
+        string.Equals(Action, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase)
+            ? System.Windows.Visibility.Collapsed
+            : System.Windows.Visibility.Visible;
 
     public RecordedWaypointViewModel(Waypoint waypoint)
     {
@@ -3189,6 +4896,8 @@ public partial class RecordedWaypointViewModel : ObservableObject
     partial void OnActionChanged(string? value)
     {
         OnPropertyChanged(nameof(ActionDisplayText));
+        OnPropertyChanged(nameof(CombatScriptParameterVisibility));
+        OnPropertyChanged(nameof(GeneralActionParameterVisibility));
         RefreshActionParameterHint();
         if (value == ActionEnum.CombatScript.Code && string.IsNullOrWhiteSpace(ActionParams))
         {
@@ -3198,6 +4907,46 @@ public partial class RecordedWaypointViewModel : ObservableObject
         {
             ActionParams = "";
         }
+    }
+
+    partial void OnMisidentificationTypesTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(MisidentificationUnrecognized));
+        OnPropertyChanged(nameof(MisidentificationPathTooFar));
+    }
+
+    partial void OnMisidentificationHandlingModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsMisidentificationArrivalTimeEnabled));
+    }
+
+    private bool HasMisidentificationType(string type)
+    {
+        return GetMisidentificationTypes()
+            .Any(i => string.Equals(i, type, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SetMisidentificationType(string type, bool value)
+    {
+        var types = GetMisidentificationTypes()
+            .Where(i => !string.Equals(i, type, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (value)
+        {
+            types.Add(type);
+        }
+
+        MisidentificationTypesText = MapViewerViewModel.JoinExtTypes(types.Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private string[] GetMisidentificationTypes()
+    {
+        if (string.IsNullOrWhiteSpace(MisidentificationTypesText))
+        {
+            return [];
+        }
+
+        return MapViewerViewModel.SplitExtTypes(MisidentificationTypesText);
     }
 
     private void RefreshActionParameterHint()
