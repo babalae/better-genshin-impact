@@ -6,10 +6,10 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:windows="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
                  Title="高级参数"
-                 Width="620"
-                 Height="430"
-                 MinWidth="520"
-                 MinHeight="360"
+                 Width="680"
+                 Height="500"
+                 MinWidth="600"
+                 MinHeight="440"
                  d:DataContext="{d:DesignInstance Type=windows:RecordedWaypointViewModel}"
                  ExtendsContentIntoTitleBar="True"
                  ResizeMode="CanResize"
@@ -38,11 +38,12 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="84" />
+                    <ColumnDefinition Width="96" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
@@ -67,47 +68,64 @@
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            Text="怪物标签" />
-                <ui:TextBox Grid.Row="2"
-                            Grid.Column="1"
-                            Margin="0,10,0,0"
-                            MinHeight="34"
-                            Text="{Binding MonsterTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <ComboBox Grid.Row="2"
+                          Grid.Column="1"
+                          Height="34"
+                          Margin="0,10,0,0"
+                          SelectedValue="{Binding MonsterTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Content="无" Tag="" />
+                    <ComboBoxItem Content="小怪" Tag="normal" />
+                    <ComboBoxItem Content="精英" Tag="elite" />
+                    <ComboBoxItem Content="传奇" Tag="legendary" />
+                </ComboBox>
 
                 <TextBlock Grid.Row="3"
                            Margin="0,10,12,0"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="误识别" />
-                <ui:TextBox Grid.Row="3"
+                           Text="异常识别" />
+                <StackPanel Grid.Row="3"
                             Grid.Column="1"
                             Margin="0,10,0,0"
-                            MinHeight="34"
-                            Text="{Binding MisidentificationTypesText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            Orientation="Horizontal">
+                    <CheckBox VerticalAlignment="Center"
+                              Content="未识别"
+                              IsChecked="{Binding MisidentificationUnrecognized, Mode=TwoWay}" />
+                    <CheckBox Margin="18,0,0,0"
+                              VerticalAlignment="Center"
+                              Content="路径过远"
+                              IsChecked="{Binding MisidentificationPathTooFar, Mode=TwoWay}" />
+                </StackPanel>
 
-                <Grid Grid.Row="4"
+                <TextBlock Grid.Row="4"
+                           Margin="0,10,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="处理方式" />
+                <ComboBox Grid.Row="4"
+                          Grid.Column="1"
+                          Height="34"
+                          Margin="0,10,0,0"
+                          SelectedValue="{Binding MisidentificationHandlingMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Content="取上一个识别到的点位置" Tag="previousDetectedPoint" />
+                    <ComboBoxItem Content="大地图识别" Tag="mapRecognition" />
+                </ComboBox>
+
+                <Grid Grid.Row="5"
                       Grid.Column="1"
                       Margin="0,10,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="92" />
-                        <ColumnDefinition Width="120" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBox MinHeight="34"
-                                PlaceholderText="处理方式"
-                                Text="{Binding MisidentificationHandlingMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <ui:NumberBox Grid.Column="1"
-                                  Margin="10,0,0,0"
-                                  Minimum="0"
-                                  SmallChange="100"
-                                  Value="{Binding MisidentificationArrivalTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <CheckBox Grid.Column="2"
-                              Margin="14,0,0,0"
+                    <CheckBox Grid.Column="0"
                               VerticalAlignment="Center"
-                              Content="区分拾取"
+                              Content="此点位区分怪物拾取"
                               IsChecked="{Binding EnableMonsterLootSplit, Mode=TwoWay}" />
                 </Grid>
 
-                <ui:Button Grid.Row="5"
+                <ui:Button Grid.Row="6"
                            Grid.ColumnSpan="2"
                            Width="96"
                            Height="34"

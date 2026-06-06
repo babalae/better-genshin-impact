@@ -14,6 +14,10 @@ public partial class DevConfig : ObservableObject
     [ObservableProperty]
     private string _recordMapName = MapTypes.Teyvat.ToString();
 
+    // 实时追踪地图窗口是否置顶
+    [ObservableProperty]
+    private bool _mapViewerTopmost;
+
     // 路线录制默认作者
     [ObservableProperty]
     private string _recordDefaultAuthorName = string.Empty;
