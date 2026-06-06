@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -120,29 +121,37 @@ public class AutoBossTask : ISoloTask
     /// </summary>
     private async Task RunBossLoop()
     {
+        // 1.切换队伍
         await Prepare();
-
+        
         var rewardCount = 0;
         var shouldNavigateToBoss = true;
+        //2.根据剩余次数判断是否继续
         while (ShouldContinueBeforeRound(rewardCount))
         {
             _ct.ThrowIfCancellationRequested();
             _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, rewardCount + 1, _taskParam.BossName);
-
+            
+            //3.树脂不足则退出
             if (!await EnsureResinBeforeRound())
             {
                 _logger.LogInformation("{Name}：原粹树脂不足或补充失败，结束任务", Name);
                 break;
             }
-
+            
+            //4.首次讨伐 or 回过七天神像 则需要重新寻路到首领
             if (shouldNavigateToBoss)
             {
                 await NavigateToBoss();
             }
-
+            
+            //5.开始战斗
             await RunAutoFight();
+            
+            //6.寻路到征讨之花
             await NavigateToReward();
-
+            
+            //7.交互征讨之花
             var rewardSuccess = await TakeReward();
             if (!rewardSuccess)
             {
@@ -155,7 +164,7 @@ public class AutoBossTask : ISoloTask
             {
                 break;
             }
-
+            
             if (_taskParam.ReturnToStatueAfterEachRound)
             {
                 _logger.LogInformation("{Name}：返回七天神像", Name);
@@ -165,6 +174,7 @@ public class AutoBossTask : ISoloTask
             }
             else
             {
+                // 就近回到首领附近继续讨伐
                 await RepositionAfterFight();
                 shouldNavigateToBoss = false;
             }
@@ -1098,40 +1108,122 @@ public class AutoBossTask : ISoloTask
     /// <exception cref="TimeoutException">长时间无法找到或靠近征讨之花时抛出。</exception>
     private async Task NavigateToReward()
     {
-        var page = new BvPage(_ct);
-        var rewardRect = ScaleRect(1210, 515, 200, 50);
-        var climbRect = ScaleRect(1686, 1030, 60, 23);
-        var advanceCount = 0;
-        var adjustCount = 0;
-        var isMovingForward = false;
-        const int forwardCheckInterval = 100;
-        const int maxAdvanceCount = 200;
+        using var navigationCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
+        var page = new BvPage(navigationCts.Token);
 
-        Simulation.SendInput.Mouse.MiddleButtonClick();
-        await Delay(800, _ct);
-        Simulation.SendInput.Mouse.MoveMouseBy(0, 1030);
-        await Delay(400, _ct);
-        Simulation.SendInput.Mouse.MoveMouseBy(0, 920);
-        await Delay(400, _ct);
-        Simulation.SendInput.Mouse.MoveMouseBy(0, 710);
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
+
+        var navigationStopwatch = Stopwatch.StartNew();
+        var navigationTimeout = TimeSpan.FromSeconds(15);
+        var adjustCameraTask = AdjustRewardCameraTask(page, navigationCts);
+        var moveToRewardTask = MoveToRewardTask(page, navigationCts);
 
         try
         {
-            while (true)
+            while (!navigationCts.IsCancellationRequested)
             {
-                _ct.ThrowIfCancellationRequested();
-                if (page.Locator("接触征讨之花", rewardRect).IsExist())
+                navigationCts.Token.ThrowIfCancellationRequested();
+                if (navigationStopwatch.Elapsed >= navigationTimeout)
+                {
+                    throw new TimeoutException("超时未找到征讨之花交互选项");
+                }
+
+                if (HasRewardPrompt(page))
                 {
                     _logger.LogInformation("{Name}：已到达征讨之花", Name);
+                    navigationCts.Cancel();
                     return;
                 }
 
-                if (advanceCount > maxAdvanceCount)
-                {
-                    throw new TimeoutException("前进到征讨之花超时");
-                }
+                var completedTask = await Task.WhenAny(Task.Delay(500, navigationCts.Token), adjustCameraTask, moveToRewardTask);
+                navigationCts.Token.ThrowIfCancellationRequested();
 
+                if (completedTask == adjustCameraTask || completedTask == moveToRewardTask)
+                {
+                    navigationCts.Cancel();
+                    await completedTask;
+                    throw new TimeoutException("前往征讨之花任务异常结束");
+                }
+            }
+        }
+        finally
+        {
+            navigationCts.Cancel();
+            try
+            {
+                await Task.WhenAll(adjustCameraTask, moveToRewardTask);
+            }
+            catch
+            {
+                // The main loop observes task failures; shutdown also cancels both background tasks.
+            }
+
+            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+        }
+    }
+
+    private bool HasRewardPrompt(BvPage page)
+    {
+        var rewardRect = ScaleRect(1210, 300, 200, 400);
+        return page.Ocr(rewardRect).Any(region => region.Text.Contains("接触征讨之花"));
+    }
+
+    private async Task AdjustRewardCameraTask(BvPage page, CancellationTokenSource navigationCts)
+    {
+        var ct = navigationCts.Token;
+        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        //将图标控制在屏幕中间，大约截图宽度的45%-55%之间
+        var minTargetX = captureRect.Width * 0.45;
+        var maxTargetX = captureRect.Width * 0.55;
+        var centerX = captureRect.Width / 2.0;
+        var halfHeight = captureRect.Height / 2.0;
+
+        while (!ct.IsCancellationRequested)
+        {
+            ct.ThrowIfCancellationRequested();
+            var boxRegions = page.Locator(AutoBossAssets.Instance.RewardBoxRo).FindAll();
+            if (boxRegions.Count < 1)
+            {
+                _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", Name);
+                Simulation.SendInput.Mouse.MoveMouseBy(ScaleX(200), 0);
+                await Delay(250, ct);
+                continue;
+            }
+
+            var icon = boxRegions[0];
+
+            if (icon.Y > halfHeight)
+            {
+                Simulation.SendInput.Mouse.MoveMouseBy(0, (int)Math.Round(halfHeight));
+                await Delay(125, ct);
+                Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(centerX), 0);
+                await Delay(125, ct);
+                continue;
+            }
+
+            if (icon.X < minTargetX || icon.X > maxTargetX)
+            {
+                Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(icon.X - centerX), 0);
+            }
+
+            await Delay(250, ct);
+        }
+    }
+
+    private async Task MoveToRewardTask(BvPage page, CancellationTokenSource navigationCts)
+    {
+        var ct = navigationCts.Token;
+        var climbRect = ScaleRect(1686, 1030, 60, 23);
+        var jumpCount = 0;
+        var isMovingForward = false;
+
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                ct.ThrowIfCancellationRequested();
                 if (page.Locator("Space", climbRect).IsExist())
                 {
                     if (isMovingForward)
@@ -1142,74 +1234,30 @@ public class AutoBossTask : ISoloTask
 
                     _logger.LogInformation("{Name}：检测到攀爬状态，尝试脱离", Name);
                     Simulation.SendInput.SimulateAction(GIActions.Drop);
-                    await Delay(1000, _ct);
+                    await Delay(1000, ct);
                     Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-                    await Delay(800, _ct);
+                    await Delay(800, ct);
                     Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    continue;
+                }
+
+                if (!isMovingForward)
+                {
                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     isMovingForward = true;
-                    await Delay(800, _ct);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    isMovingForward = false;
-                    continue;
                 }
 
-                var boxRegions = page.Locator(AutoBossAssets.Instance.RewardBoxRo).FindAll();
-                if (boxRegions.Count < 1)
+                await Delay(1000, ct);
+                jumpCount++;
+                if (jumpCount % 2 == 0)
                 {
-                    if (isMovingForward)
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                        isMovingForward = false;
-                    }
-
-                    adjustCount++;
-                    if (adjustCount > 50)
-                    {
-                        throw new TimeoutException("调整视野寻找征讨之花超时");
-                    }
-
-                    _logger.LogDebug("{Name}：未找到征讨之花图标，调整视角重试", Name);
-                    Simulation.SendInput.Mouse.MoveMouseBy(200, 0);
-                    await Delay(500, _ct);
-                    continue;
+                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    await Delay(100, ct);
                 }
 
-                var icon = boxRegions[0];
-                if (icon.X >= ScaleX(900) && icon.X <= ScaleX(1020) && icon.Y < ScaleY(540))
-                {
-                    adjustCount = 0;
-                    if (!isMovingForward)
-                    {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                        isMovingForward = true;
-                    }
-
-                    advanceCount++;
-                    await Delay(forwardCheckInterval, _ct);
-                    continue;
-                }
-
-                if (isMovingForward)
-                {
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    isMovingForward = false;
-                }
-
-                adjustCount++;
-                if (adjustCount > 50)
-                {
-                    throw new TimeoutException("调整视野寻找征讨之花超时");
-                }
-
-                if (icon.Y >= ScaleY(520))
-                {
-                    Simulation.SendInput.Mouse.MoveMouseBy(0, 920);
-                }
-
-                var distanceToCenter = icon.X - ScaleX(960);
-                Simulation.SendInput.Mouse.MoveMouseBy((int)(Math.Round((double)distanceToCenter) * 0.8), 0);
-                await Delay(100, _ct);
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                isMovingForward = false;
+                await Delay(200, ct);
             }
         }
         finally
