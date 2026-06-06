@@ -385,6 +385,15 @@ public sealed class RouteNavigationEdge
         var averageDurationMs = health?.AverageDurationMs > 0 ? health.AverageDurationMs : record.DurationMs;
         var healthStatus = health?.Status ?? RouteHealthStatus.Unknown;
         var baseCost = averageDurationMs > 0 ? averageDurationMs / 1000.0 : averageDistance;
+        var action = string.IsNullOrWhiteSpace(record.Action) ? health?.Action ?? string.Empty : record.Action;
+        var actionParams = string.IsNullOrWhiteSpace(record.ActionParams) ? health?.ActionParams ?? string.Empty : record.ActionParams;
+        var cost = baseCost
+            * GetHealthPenalty(healthStatus)
+            * GetSamplePenalty(health)
+            * GetFailureRatePenalty(health)
+            * GetMoveModePenalty(record.MoveMode)
+            * GetActionPenalty(action)
+            * GetStalePenalty(health);
 
         return new RouteNavigationEdge
         {
@@ -396,15 +405,15 @@ public sealed class RouteNavigationEdge
             AnchorId = record.AnchorId,
             SegmentKey = record.SegmentKey,
             MoveMode = record.MoveMode,
-            Action = string.IsNullOrWhiteSpace(record.Action) ? health?.Action ?? string.Empty : record.Action,
-            ActionParams = string.IsNullOrWhiteSpace(record.ActionParams) ? health?.ActionParams ?? string.Empty : record.ActionParams,
+            Action = action,
+            ActionParams = actionParams,
             IsBidirectionalCandidate = record.IsBidirectionalForAction(health?.Action),
             IsSyntheticReverse = isSyntheticReverse,
             HealthStatus = healthStatus,
             SuccessRate = health?.SuccessRate ?? 0,
             SuccessCount = health?.SuccessCount ?? 0,
             FailureCount = health?.FailureCount ?? 0,
-            Cost = Math.Round(baseCost * GetHealthPenalty(healthStatus), 2),
+            Cost = Math.Round(cost, 2),
             AverageDistance = Math.Round(averageDistance, 2),
             AverageDurationMs = Math.Round(averageDurationMs, 0),
             LastFailureReason = health?.LastFailureReason ?? string.Empty,
@@ -424,9 +433,11 @@ public sealed class RouteNavigationEdge
             return [];
         }
 
-        return isSyntheticReverse
+        var resolvedPoints = isSyntheticReverse
             ? points.AsEnumerable().Reverse().ToList()
             : points;
+
+        return RoutePolylineSimplifier.Simplify(resolvedPoints);
     }
 
     private static double CalculatePointDistance(List<TelemetryPoint2D>? points)
@@ -456,6 +467,173 @@ public sealed class RouteNavigationEdge
             RouteHealthStatus.Disabled => 1000.0,
             _ => 3.0
         };
+    }
+
+    private static double GetSamplePenalty(RouteHealthEntry? health)
+    {
+        if (health == null)
+        {
+            return 1.15;
+        }
+
+        var total = health.SuccessCount + health.FailureCount;
+        if (total <= 1)
+        {
+            return 1.2;
+        }
+
+        return total < 3 ? 1.1 : 1.0;
+    }
+
+    private static double GetFailureRatePenalty(RouteHealthEntry? health)
+    {
+        if (health == null)
+        {
+            return 1.0;
+        }
+
+        var total = health.SuccessCount + health.FailureCount;
+        if (total == 0)
+        {
+            return 1.0;
+        }
+
+        var failureRate = (double)health.FailureCount / total;
+        return 1.0 + Math.Min(2.0, failureRate * 2.0);
+    }
+
+    private static double GetMoveModePenalty(string? moveMode)
+    {
+        if (string.IsNullOrWhiteSpace(moveMode))
+        {
+            return 1.0;
+        }
+
+        if (moveMode.Contains("fly", StringComparison.OrdinalIgnoreCase) ||
+            moveMode.Contains("climb", StringComparison.OrdinalIgnoreCase) ||
+            moveMode.Contains("jump", StringComparison.OrdinalIgnoreCase))
+        {
+            return 1.35;
+        }
+
+        return 1.0;
+    }
+
+    private static double GetActionPenalty(string? action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            return 1.0;
+        }
+
+        // 带交互/战斗语义的边可以复用，但不应在普通全图导航中被过度偏好。
+        return 1.25;
+    }
+
+    private static double GetStalePenalty(RouteHealthEntry? health)
+    {
+        if (health?.LastSuccessUtc == null)
+        {
+            return 1.0;
+        }
+
+        var ageDays = (DateTime.UtcNow - health.LastSuccessUtc.Value).TotalDays;
+        if (ageDays <= 14)
+        {
+            return 1.0;
+        }
+
+        return Math.Min(1.5, 1.0 + ((ageDays - 14) / 180.0));
+    }
+}
+
+internal static class RoutePolylineSimplifier
+{
+    private const int MinPointCount = 20;
+    private const double Tolerance = 2.0;
+
+    public static List<TelemetryPoint2D> Simplify(IReadOnlyList<TelemetryPoint2D> points)
+    {
+        if (points.Count < 2)
+        {
+            return [];
+        }
+
+        if (points.Count < MinPointCount || Tolerance <= 0)
+        {
+            return points.Select(ClonePoint).ToList();
+        }
+
+        var keep = new bool[points.Count];
+        keep[0] = true;
+        keep[^1] = true;
+        SimplifySection(points, 0, points.Count - 1, Tolerance * Tolerance, keep);
+
+        var result = new List<TelemetryPoint2D>();
+        for (var i = 0; i < points.Count; i++)
+        {
+            if (keep[i])
+            {
+                result.Add(ClonePoint(points[i]));
+            }
+        }
+
+        return result;
+    }
+
+    private static void SimplifySection(IReadOnlyList<TelemetryPoint2D> points, int start, int end, double toleranceSquared, bool[] keep)
+    {
+        if (end <= start + 1)
+        {
+            return;
+        }
+
+        var maxDistanceSquared = 0.0;
+        var index = -1;
+        for (var i = start + 1; i < end; i++)
+        {
+            var distanceSquared = PerpendicularDistanceSquared(points[i], points[start], points[end]);
+            if (distanceSquared > maxDistanceSquared)
+            {
+                maxDistanceSquared = distanceSquared;
+                index = i;
+            }
+        }
+
+        if (index < 0 || maxDistanceSquared <= toleranceSquared)
+        {
+            return;
+        }
+
+        keep[index] = true;
+        SimplifySection(points, start, index, toleranceSquared, keep);
+        SimplifySection(points, index, end, toleranceSquared, keep);
+    }
+
+    private static double PerpendicularDistanceSquared(TelemetryPoint2D point, TelemetryPoint2D lineStart, TelemetryPoint2D lineEnd)
+    {
+        var dx = lineEnd.X - lineStart.X;
+        var dy = lineEnd.Y - lineStart.Y;
+        var lengthSquared = (dx * dx) + (dy * dy);
+        if (lengthSquared <= 0)
+        {
+            var px = point.X - lineStart.X;
+            var py = point.Y - lineStart.Y;
+            return (px * px) + (py * py);
+        }
+
+        var t = (((point.X - lineStart.X) * dx) + ((point.Y - lineStart.Y) * dy)) / lengthSquared;
+        t = Math.Clamp(t, 0, 1);
+        var projectedX = lineStart.X + (t * dx);
+        var projectedY = lineStart.Y + (t * dy);
+        var distanceX = point.X - projectedX;
+        var distanceY = point.Y - projectedY;
+        return (distanceX * distanceX) + (distanceY * distanceY);
+    }
+
+    private static TelemetryPoint2D ClonePoint(TelemetryPoint2D point)
+    {
+        return new TelemetryPoint2D { X = point.X, Y = point.Y };
     }
 }
 

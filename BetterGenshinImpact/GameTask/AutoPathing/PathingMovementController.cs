@@ -437,7 +437,7 @@ public class PathingMovementController
     private float _pidLastError = 0f;
     private DateTime _pidLastTime = DateTime.MinValue;
 
-    private async Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount, WaypointForTrack? nextWaypoint = null)
+    private Task<int> AlignOrientation(WaypointForTrack waypoint, Point2f position, ImageRegion screen, int loopNum, int consecutiveCount, WaypointForTrack? nextWaypoint = null)
     {
         int targetOrientation;
         var currentDistance = Navigation.GetDistance(waypoint, position);
@@ -478,7 +478,7 @@ public class PathingMovementController
         {
             consecutiveCount = 0;
             _pidIntegral = 0;
-            return consecutiveCount;
+            return Task.FromResult(consecutiveCount);
         }
         
         // 动态转角容差：距离近时容差变大以防打圈，平时要求5度内
@@ -528,7 +528,7 @@ public class PathingMovementController
         }
 
         _pidLastError = diff;
-        return consecutiveCount;
+        return Task.FromResult(consecutiveCount);
     }
 
     private async Task<bool?> ApplyMoveModeHandlers(WaypointForTrack waypoint, PathingMovementContext context)

@@ -15,7 +15,7 @@ public class PathingMovementContext
     public CancellationToken CancellationToken { get; set; }
     
     /// <summary>当前画面的图像区域</summary>
-    public ImageRegion Screen { get; set; }
+    public ImageRegion Screen { get; set; } = null!;
     
     /// <summary>当前循环尝试次数/时间参考</summary>
     public int Num { get; set; }
@@ -24,10 +24,10 @@ public class PathingMovementContext
     public double Distance { get; set; }
 
     /// <summary>获取队伍配置</summary>
-    public Func<PathingPartyConfig> PartyConfigGetter { get; set; }
+    public Func<PathingPartyConfig> PartyConfigGetter { get; set; } = null!;
     
     /// <summary>释放元素战技的回调方法</summary>
-    public Func<Task> UseElementalSkillAction { get; set; }
+    public Func<Task> UseElementalSkillAction { get; set; } = null!;
 
     /// <summary>快速移动模式（加速跑等）启用状态</summary>
     public bool FastMode { get; set; }
@@ -36,15 +36,14 @@ public class PathingMovementContext
     public DateTime FastModeColdTime { get; set; }
 
     /// <summary>获取最后一次使用元素战技的时间</summary>
-    public Func<DateTime> GetElementalSkillLastUseTime { get; set; }
+    public Func<DateTime> GetElementalSkillLastUseTime { get; set; } = null!;
     
     /// <summary>设置最后一次使用元素战技的时间</summary>
-    public Action<DateTime> SetElementalSkillLastUseTime { get; set; }
+    public Action<DateTime> SetElementalSkillLastUseTime { get; set; } = null!;
 
     /// <summary>获取最后一次使用小道具的时间</summary>
-    public Func<DateTime> GetUseGadgetLastUseTime { get; set; }
+    public Func<DateTime> GetUseGadgetLastUseTime { get; set; } = null!;
     
     /// <summary>设置最后一次使用小道具的时间</summary>
-    public Action<DateTime> SetUseGadgetLastUseTime { get; set; }
+    public Action<DateTime> SetUseGadgetLastUseTime { get; set; } = null!;
 }
-

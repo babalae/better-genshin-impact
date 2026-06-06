@@ -28,8 +28,12 @@ public class MovementWaypointStrategy : IWaypointStrategy
         if (executor == null) throw new ArgumentNullException(nameof(executor));
         if (waypoint == null) throw new ArgumentNullException(nameof(waypoint));
 
-        // 1. 前置动作（如：解包飞行、日志输出、抓取叶子等）
-        await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
+        // 1. 前置动作（如：解包飞行、日志输出、抓取叶子等）。
+        // 路线重试追进度时应跳过这些非移动操作，避免四叶印/日志等动作在恢复阶段重复触发。
+        if (!executor._navigator.SkipOtherOperations)
+        {
+            await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
+        }
 
         // 2. 将具体的移动方式委托给对应的行为策略
         if (await PerformLocomotionAsync(executor, waypoint))
@@ -38,13 +42,14 @@ public class MovementWaypointStrategy : IWaypointStrategy
         }
 
         // 3. 接近点位的处理（如抵达指定坐标点前如果需要停飞或最后调整）
-        if (await PerformProximityAsync(executor, waypoint))
+        var proximityActionExecuted = await PerformProximityAsync(executor, waypoint);
+        if (proximityActionExecuted.ShouldStop)
         {
             return true;
         }
 
         // 4. 后置动作及状态结算（如：重置战斗目标、收集状态等）
-        await CompleteNavigationAsync(executor, waypoint);
+        await CompleteNavigationAsync(executor, waypoint, proximityActionExecuted.ActionExecuted);
 
         return false;
     }
@@ -57,7 +62,9 @@ public class MovementWaypointStrategy : IWaypointStrategy
         }
         
         // 如果前置处理动作声明能够覆盖控制权（如由飞越四叶印自主解决移动），则完全跳过框架级别的位移
-        var handler = ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
+        var handler = executor._navigator.SkipOtherOperations
+            ? null
+            : ActionFactory.GetBeforeHandler(waypoint.Action ?? string.Empty);
         if (handler != null && handler.OverridesLocomotion)
         {
             return false;
@@ -80,25 +87,32 @@ public class MovementWaypointStrategy : IWaypointStrategy
         return await executor.MovementController.MoveTo(waypoint, previousWaypoint, nextWaypoint);
     }
 
-    private async Task<bool> PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
+    private async Task<(bool ShouldStop, bool ActionExecuted)> PerformProximityAsync(PathExecutor executor, WaypointForTrack waypoint)
     {
+        var actionExecuted = false;
+
         // 检查某些在即将到达前才触发的条件，如即将靠岸/落地前停止飞行
         if (string.Equals(waypoint.MoveMode, MoveModeEnum.Fly.Code, StringComparison.OrdinalIgnoreCase) && 
             string.Equals(waypoint.Action, ActionEnum.StopFlying.Code, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteHandlerAsync(ActionFactory.GetBeforeHandler, waypoint, executor);
+            actionExecuted = await ExecuteHandlerAsync(ActionFactory.GetAfterHandler, waypoint, executor);
         }
 
         if (executor.IsTargetPoint(waypoint))
         {
-            return await executor.MovementController.MoveCloseTo(waypoint);
+            return (await executor.MovementController.MoveCloseTo(waypoint), actionExecuted);
         }
 
-        return false;
+        return (false, actionExecuted);
     }
 
-    private async Task CompleteNavigationAsync(PathExecutor executor, WaypointForTrack waypoint)
+    private async Task CompleteNavigationAsync(PathExecutor executor, WaypointForTrack waypoint, bool actionAlreadyExecuted)
     {
+        if (actionAlreadyExecuted)
+        {
+            return;
+        }
+
         bool hasValidAction = !string.IsNullOrEmpty(waypoint.Action);
         bool shouldExecuteAction = (hasValidAction && !executor._navigator.SkipOtherOperations) ||
                                    string.Equals(waypoint.Action, ActionEnum.CombatScript.Code, StringComparison.OrdinalIgnoreCase);
@@ -124,15 +138,18 @@ public class MovementWaypointStrategy : IWaypointStrategy
         }
     }
 
-    private async Task ExecuteHandlerAsync(Func<string, IActionHandler?> factoryMethod, WaypointForTrack waypoint, PathExecutor executor)
+    private async Task<bool> ExecuteHandlerAsync(Func<string, IActionHandler?> factoryMethod, WaypointForTrack waypoint, PathExecutor executor)
     {
-        if (string.IsNullOrEmpty(waypoint.Action)) return;
+        if (string.IsNullOrEmpty(waypoint.Action)) return false;
         
         var handler = factoryMethod(waypoint.Action);
         if (handler != null)
         {
             // 通过 config 传递 executor 上下文，交给 handler 自己决策细节
             await handler.RunAsync(executor.ct, waypoint, executor);
+            return true;
         }
+
+        return false;
     }
 }

@@ -1,42 +1,23 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator;
-using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
-using BetterGenshinImpact.GameTask.AutoSkip;
-using BetterGenshinImpact.GameTask.AutoSkip.Assets;
-using BetterGenshinImpact.GameTask.AutoTrackPath;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
-using BetterGenshinImpact.GameTask.Common;
-using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
-using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.Common.Element.Assets;
-using BetterGenshinImpact.GameTask.Common.Exceptions;
-using BetterGenshinImpact.GameTask.Common.Map.Maps;
-using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoPathing.Strategy;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
@@ -143,6 +124,13 @@ public class PathExecutor
     internal CombatScenes? _combatScenes => _partyManager.CombatScenes;
 
     internal const int RetryTimes = 2;
+
+    private enum PathingSegmentResult
+    {
+        Completed,
+        StopPathingSucceeded,
+        StopPathingFailed
+    }
     
     /// <summary>
     /// Gets or sets the current waypoint array.
@@ -175,6 +163,8 @@ public class PathExecutor
     public async Task Pathing(PathingTask task)
     {
         ArgumentNullException.ThrowIfNull(task);
+        SuccessEnd = false;
+        SuccessFight = 0;
 
         const string sdKey = "PathExecutor";
         var sd = RunnerContext.Instance.SuspendableDictionary;
@@ -204,85 +194,42 @@ public class PathExecutor
             InitializePathing(task);
             // 转换、按传送点分割路径
             var waypointsList = ConvertWaypointsForTrack(task.Positions, task);
+            if (waypointsList.Count == 0)
+            {
+                Logger.LogWarning("没有可执行路径段，寻路结束");
+                return;
+            }
 
             await Delay(100, ct);
             Navigation.WarmUp(task.Info.MapMatchMethod); // 提前加载地图特征点
 
-            var waypoints = waypointsList.FirstOrDefault() ?? new();
-            RouteTelemetryManager.CurrentAnchorContext = waypoints.FirstOrDefault();
-            CurWaypoints = (0, waypoints);
-            
-            for (var i = 0; i < RetryTimes; i++)
+            for (var segmentIndex = 0; segmentIndex < waypointsList.Count; segmentIndex++)
             {
-                try
+                var waypoints = waypointsList[segmentIndex];
+                if (waypoints.Count == 0)
                 {
-                    await ResolveAnomalies(); // 异常场景处理
+                    continue;
+                }
 
-                    // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
-                    if (waypoints.Count > 0 && waypoints[0].Type != WaypointType.Teleport.Code)
-                    {
-                        Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
-                    }
+                Logger.LogInformation("开始执行路径段 {SegmentIndex}/{SegmentCount}，点位数 {WaypointCount}",
+                    segmentIndex + 1,
+                    waypointsList.Count,
+                    waypoints.Count);
 
-                    foreach (var waypoint in waypoints) // 一条路径
-                    {
-                        CurWaypoint = (waypoints.FindIndex(wps => wps == waypoint), waypoint);
-                        PublishCurrentWaypoint(waypoint);
-                        _navigator.TryCloseSkipOtherOperations();
-                        
-                        var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
-                        if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
-                        {
-                            throw new RetryException("神像回血完成后重试路线");
-                        }
-
-                        var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
-                        if (await strategy.ExecuteAsync(this, waypoint, waypointsList))
-                        {
-                            SuccessEnd = true;
-                            return;
-                        }
-                    }
-
+                var segmentResult = await ExecuteWaypointSegmentAsync(segmentIndex, waypoints, waypointsList);
+                if (segmentResult == PathingSegmentResult.StopPathingSucceeded)
+                {
                     SuccessEnd = true;
-                    break;
+                    return;
                 }
-                catch (HandledException handledExc)
+
+                if (segmentResult == PathingSegmentResult.StopPathingFailed)
                 {
-                    Logger.LogWarning(handledExc.Message);
-                    break;
-                }
-                catch (TaskCanceledException)
-                {
-                    if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
-                    {
-                        throw;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                catch (RetryException retryException)
-                {
-                    _navigator.StartSkipOtherOperations();
-                    Logger.LogWarning(retryException.Message);
-                    throw;
-                }
-                catch (RetryNoCountException retryException)
-                {
-                    //特殊情况下，重试不消耗次数
-                    i--;
-                    _navigator.StartSkipOtherOperations();
-                    Logger.LogWarning(retryException.Message);
-                }
-                finally
-                {
-                    // 不管咋样，松开所有按键
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                    return;
                 }
             }
+
+            SuccessEnd = true;
         }
         finally
         {
@@ -293,6 +240,86 @@ public class PathExecutor
             // 触发遥测落盘策略，强制当前积累的路线无论多少都全量写入 JSON 文件
             _ = RouteTelemetryManager.FlushAsync();
         }
+    }
+
+    private async Task<PathingSegmentResult> ExecuteWaypointSegmentAsync(
+        int segmentIndex,
+        List<WaypointForTrack> waypoints,
+        List<List<WaypointForTrack>> waypointsList)
+    {
+        RouteTelemetryManager.CurrentAnchorContext = waypoints.FirstOrDefault();
+        CurWaypoints = (segmentIndex, waypoints);
+
+        for (var i = 0; i < RetryTimes; i++)
+        {
+            try
+            {
+                await ResolveAnomalies(); // 异常场景处理
+
+                // 如果首个点是非TP点位，强制设置在这个点位附近优先做局部匹配
+                if (waypoints.Count > 0 && waypoints[0].Type != WaypointType.Teleport.Code)
+                {
+                    Navigation.SetPrevPosition((float)waypoints[0].X, (float)waypoints[0].Y);
+                }
+
+                for (var waypointIndex = 0; waypointIndex < waypoints.Count; waypointIndex++) // 一条路径段
+                {
+                    var waypoint = waypoints[waypointIndex];
+                    CurWaypoint = (waypointIndex, waypoint);
+                    PublishCurrentWaypoint(waypoint);
+                    _navigator.TryCloseSkipOtherOperations();
+
+                    var recoveryRes = await _healthController.CheckAndAttemptRecoveryAsync(waypoint, _combatScenes, PartyConfig, ct); // 低血量恢复
+                    if (recoveryRes == Domain.HealthRecoveryResult.TeleportedToStatueRequiresRetry)
+                    {
+                        throw new RetryException("神像回血完成后重试路线");
+                    }
+
+                    var strategy = WaypointStrategyFactory.GetStrategy(waypoint.Type);
+                    if (await strategy.ExecuteAsync(this, waypoint, waypointsList))
+                    {
+                        return PathingSegmentResult.StopPathingSucceeded;
+                    }
+                }
+
+                return PathingSegmentResult.Completed;
+            }
+            catch (HandledException handledExc)
+            {
+                Logger.LogWarning(handledExc.Message);
+                return PathingSegmentResult.StopPathingFailed;
+            }
+            catch (TaskCanceledException)
+            {
+                if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
+                {
+                    throw;
+                }
+
+                return PathingSegmentResult.StopPathingFailed;
+            }
+            catch (RetryException retryException)
+            {
+                _navigator.StartSkipOtherOperations();
+                Logger.LogWarning(retryException.Message);
+                throw;
+            }
+            catch (RetryNoCountException retryException)
+            {
+                // 特殊情况下，重试不消耗次数
+                i--;
+                _navigator.StartSkipOtherOperations();
+                Logger.LogWarning(retryException.Message);
+            }
+            finally
+            {
+                // 不管咋样，松开所有按键
+                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+            }
+        }
+
+        return PathingSegmentResult.StopPathingFailed;
     }
 
     /// <summary>
@@ -373,8 +400,8 @@ public class PathExecutor
 
             var wft = new WaypointForTrack(p, task.Info.MapName, task.Info.MapMatchMethod)
             {
-                Misidentification = pointExtParams?.Misidentification,
-                MonsterTag = pointExtParams?.MonsterTag,
+                Misidentification = pointExtParams?.Misidentification ?? new Waypoint.Misidentification(),
+                MonsterTag = pointExtParams?.MonsterTag ?? string.Empty,
                 EnableMonsterLootSplit = pointExtParams?.EnableMonsterLootSplit == true
             };
 
@@ -438,7 +465,11 @@ public class PathExecutor
     {
         if (waypoint.MoveMode == MoveModeEnum.Fly.Code && waypoint.Action == ActionEnum.StopFlying.Code)
         {
-            await ActionFactory.GetBeforeHandler(ActionEnum.StopFlying.Code).RunAsync(ct, waypoint);
+            var handler = ActionFactory.GetAfterHandler(ActionEnum.StopFlying.Code);
+            if (handler != null)
+            {
+                await handler.RunAsync(ct, waypoint);
+            }
         }
     }
 
@@ -453,7 +484,10 @@ public class PathExecutor
             var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
             await WaitUntilRotatedTo(targetOrientation, 10);
             var handler = ActionFactory.GetBeforeHandler(waypoint.Action);
-            await handler.RunAsync(ct, waypoint);
+            if (handler != null)
+            {
+                await handler.RunAsync(ct, waypoint);
+            }
         }
         else if (waypoint.Action == ActionEnum.LogOutput.Code)
         {
@@ -482,6 +516,11 @@ public class PathExecutor
         {
             var handler = ActionFactory.GetAfterHandler(waypoint.Action);
             //,PartyConfig
+            if (handler == null)
+            {
+                return;
+            }
+
             await handler.RunAsync(ct, waypoint, PartyConfig);
             //统计结束战斗的次数
             if (waypoint.Action == ActionEnum.Fight.Code)

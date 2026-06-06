@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.Model.MaskMap;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Telemetry;
 
@@ -66,6 +67,7 @@ public sealed class RouteNavigationPlanner
             Task = task,
             Cost = Math.Round(searchResult.TotalCost, 2),
             Edges = searchResult.Edges,
+            Segments = BuildPlanSegments(request, graph, searchResult),
             UsesTeleport = searchResult.Start.Teleport != null,
             Teleport = searchResult.Start.Teleport,
             RequiresUnknownStartConnector = searchResult.Start.RequiresUnknownConnector,
@@ -76,6 +78,85 @@ public sealed class RouteNavigationPlanner
             TargetImagePoint = request.TargetImagePoint
         };
         return true;
+    }
+
+    private static List<RouteNavigationPlanSegment> BuildPlanSegments(
+        RouteNavigationPlanRequest request,
+        RouteNavigationGraphSnapshot graph,
+        RoutePlanSearchResult searchResult)
+    {
+        var segments = new List<RouteNavigationPlanSegment>();
+        var currentPoint = request.CurrentImagePoint;
+
+        if (searchResult.Start.Teleport != null)
+        {
+            segments.Add(new RouteNavigationPlanSegment
+            {
+                Kind = RouteNavigationPlanSegmentKind.Teleport,
+                From = request.CurrentImagePoint,
+                To = searchResult.Start.Teleport.SpawnImagePoint,
+                Teleport = searchResult.Start.Teleport,
+                Cost = searchResult.Start.InitialCost,
+                Polyline = [request.CurrentImagePoint, searchResult.Start.Teleport.SpawnImagePoint]
+            });
+            currentPoint = searchResult.Start.Teleport.SpawnImagePoint;
+        }
+
+        var startPoint = new RouteGraphPoint(searchResult.Start.Node.X, searchResult.Start.Node.Y);
+        if (searchResult.Start.RequiresUnknownConnector || RouteGraphGeometry.Distance(currentPoint, startPoint) > 0)
+        {
+            segments.Add(new RouteNavigationPlanSegment
+            {
+                Kind = searchResult.Start.RequiresUnknownConnector
+                    ? RouteNavigationPlanSegmentKind.UnknownStartConnector
+                    : RouteNavigationPlanSegmentKind.StartConnector,
+                From = currentPoint,
+                To = startPoint,
+                Cost = searchResult.Start.InitialCost,
+                Polyline = [currentPoint, startPoint]
+            });
+        }
+
+        foreach (var edge in searchResult.Edges)
+        {
+            var points = ResolveEdgePoints(graph, edge);
+            if (points.Count < 2)
+            {
+                continue;
+            }
+
+            segments.Add(new RouteNavigationPlanSegment
+            {
+                Kind = RouteNavigationPlanSegmentKind.GraphEdge,
+                From = points[0],
+                To = points[^1],
+                SourceEdgeId = edge.EdgeId,
+                SourceSegmentId = edge.SegmentId,
+                MoveMode = edge.MoveMode,
+                Action = edge.Action,
+                ActionParams = edge.ActionParams,
+                HealthStatus = edge.HealthStatus,
+                Cost = ResolveEdgeCost(edge),
+                Polyline = points
+            });
+        }
+
+        var targetAttachPoint = new RouteGraphPoint(searchResult.Target.Node.X, searchResult.Target.Node.Y);
+        if (searchResult.Target.RequiresUnknownConnector || RouteGraphGeometry.Distance(targetAttachPoint, request.TargetImagePoint) > 0)
+        {
+            segments.Add(new RouteNavigationPlanSegment
+            {
+                Kind = searchResult.Target.RequiresUnknownConnector
+                    ? RouteNavigationPlanSegmentKind.UnknownTargetConnector
+                    : RouteNavigationPlanSegmentKind.TargetConnector,
+                From = targetAttachPoint,
+                To = request.TargetImagePoint,
+                Cost = searchResult.Target.AttachCost,
+                Polyline = [targetAttachPoint, request.TargetImagePoint]
+            });
+        }
+
+        return segments;
     }
 
     private static List<RoutePlanStartCandidate> BuildStartCandidates(
@@ -162,6 +243,30 @@ public sealed class RouteNavigationPlanner
         RouteNavigationPlanRequest request,
         RouteNavigationPlanOptions options)
     {
+        var semanticTargets = graph.FindResourceNodes(
+                request.MapName,
+                request.TargetResourceId,
+                request.TargetResourceLabelId,
+                request.TargetImagePoint,
+                options.TargetNodeCandidateLimit,
+                options.ResourceSemanticMaxDistance)
+            .Select(node =>
+            {
+                var distance = RouteGraphGeometry.Distance(request.TargetImagePoint, new RouteGraphPoint(node.X, node.Y));
+                return new RoutePlanTargetCandidate(
+                    node,
+                    distance,
+                    distance * options.TargetAttachCostWeight * options.ResourceSemanticAttachCostMultiplier,
+                    false,
+                    true);
+            })
+            .ToList();
+
+        if (semanticTargets.Count > 0)
+        {
+            return semanticTargets;
+        }
+
         var result = graph.FindNearestNodes(
                 request.MapName,
                 request.TargetImagePoint,
@@ -171,6 +276,7 @@ public sealed class RouteNavigationPlanner
                 candidate.Node,
                 candidate.Distance,
                 candidate.Distance * options.TargetAttachCostWeight,
+                false,
                 false))
             .ToList();
 
@@ -188,7 +294,8 @@ public sealed class RouteNavigationPlanner
                 candidate.Node,
                 candidate.Distance,
                 candidate.Distance * options.UnknownConnectorCostWeight,
-                true))
+                true,
+                false))
             .ToList();
     }
 
@@ -341,6 +448,7 @@ public sealed class RouteNavigationPlanner
                 BgiVersion = Global.Version
             }
         };
+        AppendResourceItem(task, request);
 
         var map = MapManager.GetMap(task.Info.MapName, task.Info.MapMatchMethod);
         if (map == null)
@@ -415,6 +523,28 @@ public sealed class RouteNavigationPlanner
 
         var lastEdgeMoveMode = searchResult.Edges.LastOrDefault()?.MoveMode;
         return string.IsNullOrWhiteSpace(lastEdgeMoveMode) ? MoveModeEnum.Walk.Code : lastEdgeMoveMode;
+    }
+
+    private static void AppendResourceItem(PathingTask task, RouteNavigationPlanRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.TargetResourceName) &&
+            string.IsNullOrWhiteSpace(request.TargetResourceId) &&
+            string.IsNullOrWhiteSpace(request.TargetResourceLabelId))
+        {
+            return;
+        }
+
+        var materialName = !string.IsNullOrWhiteSpace(request.TargetResourceName)
+            ? request.TargetResourceName
+            : !string.IsNullOrWhiteSpace(request.TargetResourceLabelId)
+                ? $"Label:{request.TargetResourceLabelId}"
+                : $"Resource:{request.TargetResourceId}";
+
+        task.Info.Items.Add(new MaterialInfo
+        {
+            Material = materialName,
+            Count = "1"
+        });
     }
 
     private static bool TryAddImageWaypoint(
@@ -502,6 +632,114 @@ public sealed class RouteNavigationPlanRequest
     public string? TargetAction { get; init; }
 
     public string? TargetActionParams { get; init; }
+
+    public string? TargetResourceId { get; init; }
+
+    public string? TargetResourceLabelId { get; init; }
+
+    public string? TargetResourceName { get; init; }
+
+    public static RouteNavigationPlanRequest FromMaskMapPoint(
+        MaskMapPoint point,
+        RouteGraphPoint currentImagePoint,
+        string mapName,
+        string? mapMatchMethod = null,
+        RouteResourceCollectStrategy? strategy = null,
+        string? resourceName = null,
+        string taskName = "资源点路网导航")
+    {
+        ArgumentNullException.ThrowIfNull(point);
+        strategy ??= RouteResourceCollectStrategy.ResolveDefault(point.LabelId, resourceName);
+
+        return new RouteNavigationPlanRequest
+        {
+            MapName = mapName,
+            MapMatchMethod = mapMatchMethod,
+            CurrentImagePoint = currentImagePoint,
+            TargetImagePoint = new RouteGraphPoint(point.ImageX, point.ImageY),
+            TaskName = string.IsNullOrWhiteSpace(strategy.TaskName) ? taskName : strategy.TaskName,
+            TargetMoveMode = strategy.MoveMode,
+            TargetAction = strategy.Action,
+            TargetActionParams = strategy.ActionParams,
+            TargetResourceId = point.Id,
+            TargetResourceLabelId = point.LabelId,
+            TargetResourceName = string.IsNullOrWhiteSpace(strategy.ResourceName) ? resourceName : strategy.ResourceName
+        };
+    }
+}
+
+public sealed class RouteResourceCollectStrategy
+{
+    public static RouteResourceCollectStrategy Default { get; } = new();
+
+    public string? Action { get; init; }
+
+    public string? ActionParams { get; init; }
+
+    public string? MoveMode { get; init; }
+
+    public string? ResourceName { get; init; }
+
+    public string? TaskName { get; init; }
+
+    public static RouteResourceCollectStrategy ResolveDefault(string? labelId, string? resourceName)
+    {
+        if (string.IsNullOrWhiteSpace(resourceName))
+        {
+            return Default;
+        }
+
+        var normalizedName = resourceName.Trim();
+        if (ContainsAny(normalizedName, "矿", "水晶", "魔晶", "铁块", "白铁", "紫晶", "萃凝晶"))
+        {
+            return new RouteResourceCollectStrategy
+            {
+                Action = ActionEnum.Mining.Code,
+                ResourceName = normalizedName,
+                TaskName = $"采集：{normalizedName}"
+            };
+        }
+
+        if (ContainsAny(normalizedName, "钓鱼", "鱼"))
+        {
+            return new RouteResourceCollectStrategy
+            {
+                Action = ActionEnum.Fishing.Code,
+                ResourceName = normalizedName,
+                TaskName = $"采集：{normalizedName}"
+            };
+        }
+
+        if (ContainsAny(normalizedName, "漂浮灵", "丘丘", "史莱姆", "骗骗花", "蕈兽", "圣骸", "镀金旅团", "愚人众", "龙蜥", "遗迹", "隙境原体"))
+        {
+            return new RouteResourceCollectStrategy
+            {
+                Action = ActionEnum.Fight.Code,
+                ResourceName = normalizedName,
+                TaskName = $"讨伐：{normalizedName}"
+            };
+        }
+
+        if (ContainsAny(normalizedName, "蒲公英", "绯樱", "烈焰花", "冰雾花", "电气水晶"))
+        {
+            return new RouteResourceCollectStrategy
+            {
+                ResourceName = normalizedName,
+                TaskName = $"采集：{normalizedName}"
+            };
+        }
+
+        return new RouteResourceCollectStrategy
+        {
+            ResourceName = normalizedName,
+            TaskName = $"采集：{normalizedName}"
+        };
+    }
+
+    private static bool ContainsAny(string value, params string[] keywords)
+    {
+        return keywords.Any(keyword => value.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+    }
 }
 
 public sealed class RouteNavigationPlanOptions
@@ -543,6 +781,10 @@ public sealed class RouteNavigationPlanOptions
     public double OutputPointMinDistance { get; init; } = 3.0;
 
     public double TargetOutputMinDistance { get; init; } = 2.0;
+
+    public double ResourceSemanticMaxDistance { get; init; } = 80.0;
+
+    public double ResourceSemanticAttachCostMultiplier { get; init; } = 0.5;
 }
 
 public sealed class RouteNavigationPlan
@@ -556,6 +798,8 @@ public sealed class RouteNavigationPlan
     public double Cost { get; init; }
 
     public List<RouteNavigationEdge> Edges { get; init; } = [];
+
+    public List<RouteNavigationPlanSegment> Segments { get; init; } = [];
 
     public bool UsesTeleport { get; init; }
 
@@ -583,6 +827,43 @@ public sealed class RouteNavigationPlan
     }
 }
 
+public enum RouteNavigationPlanSegmentKind
+{
+    Teleport,
+    StartConnector,
+    UnknownStartConnector,
+    GraphEdge,
+    TargetConnector,
+    UnknownTargetConnector
+}
+
+public sealed class RouteNavigationPlanSegment
+{
+    public RouteNavigationPlanSegmentKind Kind { get; init; }
+
+    public RouteGraphPoint From { get; init; }
+
+    public RouteGraphPoint To { get; init; }
+
+    public string SourceEdgeId { get; init; } = string.Empty;
+
+    public string SourceSegmentId { get; init; } = string.Empty;
+
+    public string MoveMode { get; init; } = string.Empty;
+
+    public string Action { get; init; } = string.Empty;
+
+    public string ActionParams { get; init; } = string.Empty;
+
+    public string HealthStatus { get; init; } = string.Empty;
+
+    public double Cost { get; init; }
+
+    public RouteGraphTeleportEntry? Teleport { get; init; }
+
+    public List<RouteGraphPoint> Polyline { get; init; } = [];
+}
+
 internal sealed record RoutePlanStartCandidate(
     RouteNavigationNode Node,
     RouteGraphTeleportEntry? Teleport,
@@ -594,7 +875,8 @@ internal sealed record RoutePlanTargetCandidate(
     RouteNavigationNode Node,
     double AttachDistance,
     double AttachCost,
-    bool RequiresUnknownConnector);
+    bool RequiresUnknownConnector,
+    bool MatchedResourceSemantic);
 
 internal sealed record RoutePlanPreviousStep(string PreviousNodeId, RouteNavigationEdge Edge);
 
@@ -606,7 +888,7 @@ internal sealed record RoutePlanSearchResult(
 {
     public static RoutePlanSearchResult Empty { get; } = new(
         new RoutePlanStartCandidate(new RouteNavigationNode(), null, 0, 0, false),
-        new RoutePlanTargetCandidate(new RouteNavigationNode(), 0, 0, false),
+        new RoutePlanTargetCandidate(new RouteNavigationNode(), 0, 0, false, false),
         [],
         0);
 }

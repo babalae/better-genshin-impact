@@ -98,16 +98,20 @@ public class PathRecorder : Singleton<PathRecorder>
     /// Originates a recording trajectory bootstrapping spatial engines with zero-point teleport contexts.
     /// 开启录制轨迹，使用初始传送锚点及零点计算环境来引导空间追踪引擎。
     /// </summary>
-    public void Start()
+    public bool Start()
     {
         if (_isRecording)
         {
             TaskControl.Logger?.LogInformation("路径点记录已在进行中");
-            return;
+            return true;
         }
 
         var matchingMethod = TaskContext.Instance()?.Config?.PathingConditionConfig?.MapMatchingMethod;
-        if (string.IsNullOrEmpty(matchingMethod)) return;
+        if (string.IsNullOrEmpty(matchingMethod))
+        {
+            TaskControl.Logger?.LogWarning("路径点记录启动失败：地图匹配方式为空");
+            return false;
+        }
 
         _pathingTask = new PathingTask();
         _isRecording = true;
@@ -123,18 +127,23 @@ public class PathRecorder : Singleton<PathRecorder>
 
         var waypoint = new Waypoint();
         var screen = TaskControl.CaptureToRectArea();
-        if (screen == null) return;
+        if (screen == null)
+        {
+            return CancelStart("路径点记录启动失败：无法获取游戏截图");
+        }
 
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
         var mapBase = MapManager.GetMap(GetMapName(), matchingMethod);
-        if (mapBase == null) return;
+        if (mapBase == null)
+        {
+            return CancelStart("路径点记录启动失败：无法加载地图");
+        }
         
         var nullablePosition = mapBase.ConvertImageCoordinatesToGenshinMapCoordinates(position);
         
         if (nullablePosition == null)
         {
-            TaskControl.Logger?.LogWarning("未识别到当前位置！");
-            return;
+            return CancelStart("路径点记录启动失败：未识别到当前位置");
         }
         else
         {
@@ -158,6 +167,7 @@ public class PathRecorder : Singleton<PathRecorder>
         }
 
         PublishRecorderTask();
+        return true;
     }
 
     /// <summary>
@@ -266,11 +276,22 @@ public class PathRecorder : Singleton<PathRecorder>
         PublishRecorderTask();
     }
 
-    public void ReplaceTask(PathingTask pathingTask)
+    public void ReplaceTask(PathingTask pathingTask, bool publish = true)
     {
         ArgumentNullException.ThrowIfNull(pathingTask);
         _pathingTask = pathingTask;
+        if (publish)
+        {
+            PublishRecorderTask();
+        }
+    }
+
+    private bool CancelStart(string message)
+    {
+        TaskControl.Logger?.LogWarning(message);
+        _isRecording = false;
         PublishRecorderTask();
+        return false;
     }
 
     private void PublishRecorderTask()

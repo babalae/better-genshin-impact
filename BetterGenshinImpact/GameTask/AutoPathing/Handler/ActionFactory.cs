@@ -12,33 +12,35 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public static class ActionFactory
 {
-    private static readonly Dictionary<string, IActionHandler> AfterHandlers = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, Func<IActionHandler>> AfterHandlerFactories = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["nahida_collect"] = new NahidaCollectHandler(),
-        ["pick_around"] = new PickAroundHandler(),
-        ["fight"] = new AutoFightHandler(),
-        ["normal_attack"] = new NormalAttackHandler(),
-        ["elemental_skill"] = new ElementalSkillHandler(),
-        ["hydro_collect"] = new ElementalCollectHandler(ElementalType.Hydro),
-        ["electro_collect"] = new ElementalCollectHandler(ElementalType.Electro),
-        ["anemo_collect"] = new ElementalCollectHandler(ElementalType.Anemo),
-        ["pyro_collect"] = new ElementalCollectHandler(ElementalType.Pyro),  
-        ["combat_script"] = new CombatScriptHandler(),
-        ["mining"] = new MiningHandler(),
-        ["linnea_mining"] = new LinneaMiningHandler(),
-        ["fishing"] = new FishingHandler(),
-        ["exit_and_relogin"] = new ExitAndReloginHandler(),
-        ["wonderland_cycle"] = new EnterAndExitWonderlandHandler(),
-        ["set_time"] = new SetTimeHandler(),
-        ["use_gadget"] = new UseGadgetHandler(),
-        ["pick_up_collect"] = new PickUpCollectHandler(),
-        ["stop_flying"] = new StopFlyingHandler()
+        ["nahida_collect"] = () => new NahidaCollectHandler(),
+        ["pick_around"] = () => new PickAroundHandler(),
+        ["fight"] = () => new AutoFightHandler(),
+#pragma warning disable CS0618 // 保留旧路线动作的兼容性映射，执行时已由更高层配置替代。
+        ["normal_attack"] = () => new NormalAttackHandler(),
+        ["elemental_skill"] = () => new ElementalSkillHandler(),
+#pragma warning restore CS0618
+        ["hydro_collect"] = () => new ElementalCollectHandler(ElementalType.Hydro),
+        ["electro_collect"] = () => new ElementalCollectHandler(ElementalType.Electro),
+        ["anemo_collect"] = () => new ElementalCollectHandler(ElementalType.Anemo),
+        ["pyro_collect"] = () => new ElementalCollectHandler(ElementalType.Pyro),
+        ["combat_script"] = () => new CombatScriptHandler(),
+        ["mining"] = () => new MiningHandler(),
+        ["linnea_mining"] = () => new LinneaMiningHandler(),
+        ["fishing"] = () => new FishingHandler(),
+        ["exit_and_relogin"] = () => new ExitAndReloginHandler(),
+        ["wonderland_cycle"] = () => new EnterAndExitWonderlandHandler(),
+        ["set_time"] = () => new SetTimeHandler(),
+        ["use_gadget"] = () => new UseGadgetHandler(),
+        ["pick_up_collect"] = () => new PickUpCollectHandler(),
+        ["stop_flying"] = () => new StopFlyingHandler()
     };
 
-    private static readonly Dictionary<string, IActionHandler> BeforeHandlers = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, Func<IActionHandler>> BeforeHandlerFactories = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["up_down_grab_leaf"] = new UpDownGrabLeafHandler(),
-        ["log_output"] = new LogOutputHandler()
+        ["up_down_grab_leaf"] = () => new UpDownGrabLeafHandler(),
+        ["log_output"] = () => new LogOutputHandler()
     };
 
     /// <summary>
@@ -51,7 +53,7 @@ public static class ActionFactory
         if (string.IsNullOrWhiteSpace(handlerType))
             return null;
 
-        return AfterHandlers.TryGetValue(handlerType, out var handler) ? handler : null;
+        return AfterHandlerFactories.TryGetValue(handlerType, out var factory) ? factory() : null;
     }
 
     /// <summary>
@@ -67,6 +69,6 @@ public static class ActionFactory
         if (string.IsNullOrWhiteSpace(handlerType))
             return null;
 
-        return BeforeHandlers.TryGetValue(handlerType, out var handler) ? handler : null;
+        return BeforeHandlerFactories.TryGetValue(handlerType, out var factory) ? factory() : null;
     }
 }

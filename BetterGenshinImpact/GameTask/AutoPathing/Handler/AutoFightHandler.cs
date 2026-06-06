@@ -104,6 +104,7 @@ public class AutoFightHandler : IActionHandler
     /// <returns>实例化完毕并包含策略路径的 <see cref="AutoFightParam"/> 参数对象。</returns>
     private AutoFightParam CreateFightParam(AutoFightConfig? config)
     {
+        config ??= TaskContext.Instance().Config.AutoFightConfig;
         return new AutoFightParam(GetStrategyPath(config), config);
     }
 
@@ -132,4 +133,3 @@ public class AutoFightHandler : IActionHandler
         return path;
     }
 }
-

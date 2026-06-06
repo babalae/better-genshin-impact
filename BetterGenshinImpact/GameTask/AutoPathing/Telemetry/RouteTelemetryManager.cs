@@ -261,7 +261,7 @@ public class RouteTelemetryManager
         var mapName = target.MapName ?? "Teyvat";
 
         // 执行坐标转换：将 UI 图像坐标转换为游戏内实际 1024 缩放比例的真坐标，对齐 tp.json
-        var mapProvider = MapManager.GetMap(mapName, null);
+        var mapProvider = MapManager.GetMap(mapName, string.Empty);
         if (mapProvider != null)
         {
             var gamePoint = mapProvider.ConvertImageCoordinatesToGenshinMapCoordinates(new Point2f((float)cx, (float)cy));
